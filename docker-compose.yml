@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # FastAPI Application
+  api:
+    container_name: a64core-api-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=True
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DB_NAME=a64core_db
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=rootpassword
+      - MYSQL_DB_NAME=a64core_db
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./logs:/app/logs  # Centralized logging
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - a64core-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MongoDB Database
+  mongodb:
+    container_name: a64core-mongodb-dev
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=a64core_db
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./logs/mongodb:/var/log/mongodb  # MongoDB logs
+    networks:
+      - a64core-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MySQL Database
+  mysql:
+    container_name: a64core-mysql-dev
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=a64core_db
+      - MYSQL_USER=a64user
+      - MYSQL_PASSWORD=a64password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./logs/mysql:/var/log/mysql  # MySQL logs
+    networks:
+      - a64core-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Adminer - Database Management UI
+  adminer:
+    container_name: a64core-adminer-dev
+    image: adminer:latest
+    ports:
+      - "8080:8080"
+    networks:
+      - a64core-network
+    restart: unless-stopped
+    depends_on:
+      - mysql
+      - mongodb
+
+networks:
+  a64core-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  mysql_data:
+    driver: local
