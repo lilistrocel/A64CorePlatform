@@ -79,3 +79,4 @@ secrets/
 *.pem
 *.key
 *.crt
+nul
