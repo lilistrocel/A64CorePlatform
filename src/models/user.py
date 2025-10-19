@@ -195,3 +195,30 @@ class VerificationTokenInDB(BaseModel):
     isUsed: bool = False
     createdAt: datetime
     usedAt: Optional[datetime] = None
+
+
+class UserRoleUpdate(BaseModel):
+    """Request model for updating user role (admin/super_admin only)"""
+    role: UserRole = Field(..., description="New role for the user")
+
+
+class UserStatusUpdate(BaseModel):
+    """Request model for updating user status (admin/super_admin only)"""
+    isActive: bool = Field(..., description="User active status")
+
+
+class UserListResponse(BaseModel):
+    """Response model for paginated user list"""
+    data: list[UserResponse]
+    total: int
+    page: int
+    perPage: int
+    totalPages: int
+
+
+class UserListFilters(BaseModel):
+    """Query parameters for filtering user list"""
+    role: Optional[UserRole] = None
+    isActive: Optional[bool] = None
+    isEmailVerified: Optional[bool] = None
+    search: Optional[str] = Field(None, max_length=200, description="Search in email, firstName, lastName")

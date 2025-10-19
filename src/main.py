@@ -8,14 +8,18 @@ sets up middleware, routes, and error handlers.
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import logging
 from typing import Dict, Any
+from pathlib import Path
 
 from .api import health
 from .api.routes import api_router
 from .config.settings import settings
 from .services.database import mongodb, mysql
+from .services.port_manager import init_port_manager, get_port_manager
+from .services.module_manager import module_manager
 
 # Configure logging
 logging.basicConfig(
@@ -65,6 +69,12 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         }
     )
 
+# Mount static files for admin interface
+public_dir = Path(__file__).parent.parent / "public"
+if public_dir.exists():
+    app.mount("/admin", StaticFiles(directory=str(public_dir / "admin"), html=True), name="admin")
+    logger.info(f"Admin interface mounted at /admin")
+
 # Include routers
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(api_router, prefix="/api/v1")
@@ -106,6 +116,17 @@ async def startup_event() -> None:
         logger.info("MySQL connected successfully")
     except Exception as e:
         logger.error(f"Failed to connect to MySQL: {e}")
+
+    # Initialize Port Manager
+    try:
+        await init_port_manager(mongodb.get_database())
+        logger.info("Port Manager initialized successfully")
+
+        # Inject Port Manager into Module Manager
+        module_manager.port_manager = get_port_manager()
+        logger.info("Port Manager injected into Module Manager")
+    except Exception as e:
+        logger.error(f"Failed to initialize Port Manager: {e}")
 
 # Shutdown event
 @app.on_event("shutdown")

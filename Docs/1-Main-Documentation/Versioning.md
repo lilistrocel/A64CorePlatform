@@ -39,16 +39,17 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ## Current Versions
 
-**Last Updated:** 2025-10-16
+**Last Updated:** 2025-10-17
 
 ### Platform Version
-**A64 Core Platform:** `1.0.0`
+**A64 Core Platform:** `1.3.0`
 
 ### API Versions
 | API Component | Version | Status | Supported Until |
 |---------------|---------|--------|-----------------|
-| API Hub (FastAPI) | 1.0.0 | Active | - |
-| API v1 Endpoints | 1.0.0 | Active | - |
+| API Hub (FastAPI) | 1.3.0 | Active | - |
+| API v1 Endpoints | 1.3.0 | Active | - |
+| Module Management System | 1.3.0 | Active | - |
 
 ### Database Versions
 | Database | Version | Schema Version | Notes |
@@ -62,26 +63,131 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 | Docker | 20.10+ | Required minimum |
 | Docker Compose | 2.0+ | Required minimum |
 | Python | 3.11 | Runtime version |
+| Redis | 7.0 | Module management caching |
+| NGINX | 1.25 | Reverse proxy |
 | Node.js | TBD | Future implementation |
 
 ### Service Versions
 | Service | Version | Status | Dependencies |
 |---------|---------|--------|--------------|
-| API Hub | 1.0.0 | Active | Python 3.11, FastAPI 0.109.0 |
+| API Hub | 1.3.0 | Active | Python 3.11, FastAPI 0.109.0 |
+| Module Management | 1.3.0 | Active | Docker SDK 7.0.0, Redis 5.0.1 |
 | Web UI | TBD | Planned | Node.js (TBD) |
 | Embedded Systems Interface | TBD | Planned | Python 3.11 |
 
 ### Docker Images
 | Image | Tag | Build Date | Size |
 |-------|-----|------------|------|
-| a64core/api | 1.0.0 | 2025-10-16 | TBD |
-| a64core/api | latest | 2025-10-16 | TBD |
+| a64core/api | 1.3.0 | 2025-10-17 | TBD |
+| a64core/api | latest | 2025-10-17 | TBD |
 
 ## Version History
 
 ### Platform Version History
 
-#### v1.0.0 - 2025-10-16 (Current)
+#### v1.3.0 - 2025-10-17 (Current)
+**Type:** Minor Release - Module Management System
+
+**Added:**
+- **Module Management System** - Docker Compose-based modular architecture
+- 6 module management API endpoints (install, list, status, uninstall, audit log, health)
+- License key validation with 3 modes (format, offline, online)
+- License key encryption (Fernet + PBKDF2HMAC with 100k iterations)
+- Container security sandboxing (no privileges, resource limits, non-root user)
+- Docker image validation (trusted registries only, no 'latest' tags)
+- Module limits enforcement (50 total, 10 per user)
+- Comprehensive audit logging with 90-day TTL
+- Runtime metrics collection (CPU, memory, network)
+- Module lifecycle management (6 states)
+- Health monitoring (3 states)
+- RBAC enforcement (super_admin only)
+- MongoDB indexes for module collections
+- Redis integration for caching
+- NGINX reverse proxy integration
+- Docker socket mounting for container management
+
+**New Services:**
+- `redis` - Redis 7 for caching & rate limiting
+- `nginx` - NGINX 1.25 for reverse proxy
+
+**New Collections (MongoDB):**
+- `installed_modules` - Module metadata & state
+- `module_audit_log` - Audit trail (90-day TTL)
+
+**New Models:**
+- 10 Module Pydantic models with validation
+
+**New Services (Code):**
+- ModuleManager service (5 core methods)
+- Encryption utility (Fernet with PBKDF2)
+- License validator utility (3 validation modes)
+
+**Dependencies Added:**
+- docker 7.0.0 - Docker SDK for Python
+- PyYAML 6.0.1 - docker-compose.yml manipulation
+- redis 5.0.1 - Redis client
+- cryptography 41.0.7 - License encryption
+- jsonschema 4.20.0 - Module config validation
+
+**Documentation:**
+- Updated API-Structure.md with module endpoints
+- Updated System-Architecture.md with module system
+- Updated Versioning.md (this document)
+- Created Modular-System-Implementation-Plan.md
+- Created Security-Risk-Mitigation-Plan.md
+
+**Security:**
+- Docker socket access (CRITICAL risk, mitigated by RBAC & sandboxing)
+- Container sandboxing (no privileges, capabilities dropped)
+- License key encryption (Fernet symmetric encryption)
+- Trusted registry validation
+- Audit logging (immutable trail)
+
+---
+
+#### v1.2.0 - 2025-10-17
+**Type:** Minor Release - Admin User Management
+
+**Added:**
+- Admin User Management System
+- 5 admin endpoints for user management
+- Super admin role and permissions
+- Admin web interface at /admin/
+- Role-based authorization (super_admin and admin)
+- User filtering and search capabilities
+- Pagination support (default 20, max 100 per page)
+- Soft delete functionality (90-day retention)
+- Self-modification prevention
+- Super admin protection
+
+**Infrastructure:**
+- Admin web interface (HTML/JS single-page app)
+- Public file serving from /app/public/
+
+---
+
+#### v1.1.0 - 2025-10-16
+**Type:** Minor Release - Authentication System
+
+**Added:**
+- Complete authentication system (JWT-based)
+- Email verification with JWT tokens (24hr expiry)
+- Password reset flow with JWT tokens (1hr expiry)
+- Login rate limiting (5 attempts, 15min lockout)
+- Role-based rate limiting (5 roles with different limits)
+- Rotating refresh tokens (one-time use)
+- 9 authentication endpoints
+- Database indexes with TTL for automatic token cleanup
+
+**Security:**
+- bcrypt password hashing (cost factor 12)
+- JWT token signing (HS256)
+- Refresh token rotation
+- Token revocation on logout/password reset
+
+---
+
+#### v1.0.0 - 2025-10-16
 **Type:** Initial Release
 
 **Added:**
@@ -178,9 +284,12 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ### Component Compatibility
 
-| API Hub | MongoDB | MySQL | Python | Docker | Status |
-|---------|---------|-------|--------|--------|--------|
-| 1.0.0 | 7.0 | 8.0 | 3.11 | 20.10+ | ✅ Compatible |
+| API Hub | MongoDB | MySQL | Python | Docker | Redis | NGINX | Status |
+|---------|---------|-------|--------|--------|-------|-------|--------|
+| 1.3.0 | 7.0 | 8.0 | 3.11 | 20.10+ | 7.0 | 1.25 | ✅ Compatible |
+| 1.2.0 | 7.0 | 8.0 | 3.11 | 20.10+ | N/A | N/A | ✅ Compatible |
+| 1.1.0 | 7.0 | 8.0 | 3.11 | 20.10+ | N/A | N/A | ✅ Compatible |
+| 1.0.0 | 7.0 | 8.0 | 3.11 | 20.10+ | N/A | N/A | ✅ Compatible |
 
 ### API Version Compatibility
 

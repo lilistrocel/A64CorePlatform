@@ -25,19 +25,23 @@ This document serves as the **single source of truth** for the A64 Core Platform
 
 ### Project Information
 - **Name:** A64 Core Platform API Hub
-- **Type:** RESTful API Backend with Authentication & User Management
-- **Version:** v1.1.0
-- **Architecture Pattern:** Layered Architecture (Service Layer Pattern)
-- **Deployment:** Docker Containerized Microservices
+- **Type:** RESTful API Backend with Authentication & Modular App Management
+- **Version:** v1.3.0
+- **Architecture Pattern:** Layered Architecture (Service Layer Pattern) + Modular Container Orchestration
+- **Deployment:** Docker Compose Multi-Container Architecture
 
 ### Core Purpose
 A secure, scalable API platform providing:
-1. **Authentication & Authorization** - JWT-based auth with RBAC
-2. **User Management** - Complete user lifecycle management
-3. **Email Verification** - Automated email verification flow
-4. **Password Management** - Secure password reset flow
-5. **Rate Limiting** - Role-based and login attempt limiting
-6. **Extensible API Framework** - Foundation for future features
+1. **Authentication & Authorization** - JWT-based auth with RBAC (5 roles)
+2. **User Management** - Complete user lifecycle management with admin controls
+3. **Admin Management System** - Web-based admin panel for user administration
+4. **Module Management System** - Docker Compose-based modular app installation & lifecycle management
+5. **Email Verification** - Automated email verification flow
+6. **Password Management** - Secure password reset flow
+7. **Rate Limiting** - Role-based and login attempt limiting
+8. **License Validation** - Multi-mode license validation with encryption
+9. **Container Orchestration** - Dynamic Docker container management
+10. **Extensible API Framework** - Foundation for future features
 
 ---
 
@@ -122,15 +126,26 @@ A secure, scalable API platform providing:
 - **passlib[bcrypt]** - Password hashing (bcrypt, cost factor 12)
 - **python-jose[cryptography]** - JWT token creation/verification (HS256)
 - **pydantic[email]** - Email validation
+- **cryptography 41.0.7** - License key encryption (Fernet + PBKDF2HMAC)
+
+### Module Management Libraries
+- **docker 7.0.0** - Docker SDK for Python (container management)
+- **PyYAML 6.0.1** - docker-compose.yml manipulation
+- **redis 5.0.1** - Redis client for caching & rate limiting
+- **jsonschema 4.20.0** - Module config validation
 
 ### Container & Orchestration
 - **Docker** - Application containerization
 - **Docker Compose** - Multi-container orchestration
+- **Docker Socket Mounting** - Module management (API container manages sibling containers)
 - **Services:**
-  - `api` - FastAPI application
+  - `api` - FastAPI application (with Docker socket access)
   - `mongodb` - MongoDB database
   - `mysql` - MySQL database
+  - `redis` - Redis cache (for rate limiting & module system)
+  - `nginx` - Reverse proxy & load balancer
   - `adminer` - Database management UI
+  - **Dynamic modules** - Installed modules as sibling containers
 
 ### Development Tools
 - **Git** - Version control
@@ -149,16 +164,20 @@ A64CorePlatform/
 │   ├── api/                      # API layer
 │   │   ├── v1/                   # API version 1
 │   │   │   ├── auth.py           # Authentication endpoints (9 routes)
-│   │   │   └── users.py          # User management endpoints (7 routes)
+│   │   │   ├── users.py          # User management endpoints (7 routes)
+│   │   │   ├── admin.py          # Admin endpoints (5 routes)
+│   │   │   └── modules.py        # Module management endpoints (6 routes)
 │   │   ├── health.py             # Health check endpoints
 │   │   └── routes.py             # Router aggregation
 │   │
 │   ├── models/                   # Data models
-│   │   └── user.py               # User & auth Pydantic models (16 models)
+│   │   ├── user.py               # User & auth Pydantic models (16 models)
+│   │   └── module.py             # Module Pydantic models (10 models)
 │   │
 │   ├── services/                 # Business logic layer
 │   │   ├── auth_service.py       # Authentication service (8 methods)
 │   │   ├── user_service.py       # User management service (8 methods)
+│   │   ├── module_manager.py     # Module management service (5 methods)
 │   │   └── database.py           # Database connection managers
 │   │
 │   ├── middleware/               # Request/response middleware
@@ -168,7 +187,9 @@ A64CorePlatform/
 │   │
 │   ├── utils/                    # Utility functions
 │   │   ├── security.py           # Password & JWT utilities (10 functions)
-│   │   └── email.py              # Email sending utilities (3 functions)
+│   │   ├── email.py              # Email sending utilities (3 functions)
+│   │   ├── encryption.py         # License key encryption (Fernet + PBKDF2)
+│   │   └── license_validator.py  # License validation (format/offline/online)
 │   │
 │   ├── config/                   # Configuration
 │   │   └── settings.py           # Environment-based settings
@@ -511,6 +532,92 @@ Response → User
 - email: non-unique
 - tokenType: non-unique
 - expiresAt: TTL index (auto-delete expired tokens)
+```
+
+#### installed_modules Collection (Module Management System)
+```javascript
+{
+  _id: ObjectId,
+  module_name: String,              // Unique module identifier (lowercase-with-hyphens)
+  display_name: String,             // Human-readable name
+  description: String,              // Module description
+  docker_image: String,             // Docker image (registry/name:version)
+  version: String,                  // Semantic version (e.g., "1.0.0")
+  license_key_encrypted: String,    // Fernet encrypted license key
+  ports: Array[String],             // Port mappings ["8001:8000"]
+  environment: Object,              // Environment variables
+  volumes: Array[String],           // Volume mappings
+  cpu_limit: String,                // CPU limit (e.g., "1.0")
+  memory_limit: String,             // Memory limit (e.g., "512m")
+  network_mode: String,             // Docker network
+  depends_on: Array[String],        // Service dependencies
+  health_check: Object,             // Health check configuration
+  route_prefix: String,             // NGINX route (e.g., "/analytics")
+
+  // Module state
+  status: String,                   // pending, installing, running, stopped, error, uninstalling
+  health: String,                   // healthy, unhealthy, unknown
+  container_id: String,             // Docker container ID
+  container_name: String,           // Docker container name
+
+  // Audit fields
+  installed_by_user_id: String (UUID),
+  installed_by_email: String,
+  installed_at: Date,
+  updated_at: Date,
+
+  // Error tracking
+  error_message: String,
+  error_count: Number,
+  last_error_at: Date
+}
+
+// Indexes
+- module_name: unique
+- status: non-unique
+- health: non-unique
+- installed_by_user_id: non-unique
+- installed_at: descending
+- updated_at: descending
+- container_id: non-unique
+```
+
+#### module_audit_log Collection (Module Management System)
+```javascript
+{
+  _id: ObjectId,
+  operation: String,                // install, uninstall, start, stop, restart
+  module_name: String,
+  module_version: String,
+
+  // User context
+  user_id: String (UUID),
+  user_email: String,
+  user_role: String,
+
+  // Result
+  status: String,                   // success, failure, pending
+  error_message: String,
+
+  // Request metadata
+  ip_address: String,
+  user_agent: String,
+
+  // Timing
+  timestamp: Date,
+  duration_seconds: Number,
+
+  // Additional context
+  metadata: Object                  // Operation-specific data
+}
+
+// Indexes
+- module_name: non-unique
+- operation: non-unique
+- user_id: non-unique
+- status: non-unique
+- timestamp: descending
+- timestamp: TTL index (90 days auto-delete)
 ```
 
 ### MySQL Tables
@@ -1038,6 +1145,39 @@ logs/
 ---
 
 ## Version History
+
+### v1.3.0 - 2025-10-17
+- ✅ **Module Management System** implemented
+- ✅ Docker Compose-based modular architecture
+- ✅ 6 module management endpoints (install, list, status, uninstall, audit log, health)
+- ✅ License key validation (format, offline, online modes)
+- ✅ License key encryption (Fernet + PBKDF2HMAC with 100k iterations)
+- ✅ Container security sandboxing (no privileges, resource limits, non-root, capabilities dropped)
+- ✅ Docker image validation (trusted registries, no 'latest' tags)
+- ✅ Module limits (50 total system-wide, 10 per user)
+- ✅ Comprehensive audit logging (immutable trail, 90-day TTL)
+- ✅ Runtime metrics collection (CPU, memory, network stats)
+- ✅ Module lifecycle management (6 states: pending, installing, running, stopped, error, uninstalling)
+- ✅ Health monitoring (3 states: healthy, unhealthy, unknown)
+- ✅ RBAC enforcement (super_admin only access)
+- ✅ MongoDB indexes optimized for module queries
+- ✅ Redis integration for caching
+- ✅ NGINX reverse proxy integration
+- ✅ Docker socket mounting for container management
+- ✅ Module Pydantic models (10 models with validation)
+- ✅ ModuleManager service (5 core methods)
+- ✅ Encryption utility (Fernet with PBKDF2 key derivation)
+- ✅ License validator utility (3 validation modes)
+
+### v1.2.0 - 2025-10-17
+- ✅ Admin User Management System
+- ✅ 5 admin endpoints
+- ✅ Super admin role
+- ✅ Admin web interface at /admin/
+- ✅ Role-based authorization
+- ✅ User filtering and search
+- ✅ Pagination support
+- ✅ Soft delete functionality
 
 ### v1.1.0 - 2025-10-16
 - ✅ Complete authentication system

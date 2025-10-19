@@ -177,3 +177,49 @@ def can_change_role(
 
     # Others cannot assign roles
     return False
+
+
+def require_role(allowed_roles: List[UserRole], current_user) -> None:
+    """
+    Check if user has one of the allowed roles
+
+    Raises HTTPException if user doesn't have required role.
+    Used in non-dependency contexts (e.g., inside route handlers).
+
+    Args:
+        allowed_roles: List of allowed roles
+        current_user: User object (UserResponse) or dict from get_current_user
+
+    Raises:
+        HTTPException: 403 if user lacks required role
+    """
+    # Handle both dict and UserResponse/Pydantic model
+    if isinstance(current_user, dict):
+        user_role_str = current_user.get("role")
+    else:
+        # Pydantic model (UserResponse)
+        user_role_str = current_user.role if hasattr(current_user, 'role') else None
+
+    if not user_role_str:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User role not found"
+        )
+
+    # Handle if already a UserRole enum
+    if isinstance(user_role_str, UserRole):
+        user_role = user_role_str
+    else:
+        try:
+            user_role = UserRole(user_role_str)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid user role"
+            )
+
+    if user_role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Insufficient permissions. Required roles: {[r.value for r in allowed_roles]}"
+        )

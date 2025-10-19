@@ -31,6 +31,10 @@ def hash_password(password: str) -> str:
 
     Security: Uses bcrypt with cost factor 12 (User-Structure.md)
     """
+    # Truncate password to 72 bytes for bcrypt compatibility
+    # Reason: bcrypt has a 72-byte limit
+    if len(password.encode('utf-8')) > 72:
+        password = password[:72]
     return pwd_context.hash(password)
 
 

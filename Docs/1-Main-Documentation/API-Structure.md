@@ -378,8 +378,213 @@ POST /api/v1/auth/reset-password
 
 ---
 
+### Admin - User Management
+**Status:** ✅ **IMPLEMENTED**
+
+#### List All Users
+```
+GET /api/v1/admin/users
+```
+**Purpose:** List all users with pagination and filters (admin/super_admin only)
+**Authentication:** Required (Bearer Token - Admin or Super Admin)
+**Rate Limit:** By user role (Admin: 500/min, Super Admin: 1000/min)
+**Query Parameters:**
+- `page` (integer, default: 1): Page number
+- `per_page` (integer, default: 20, max: 100): Items per page
+- `role` (string, optional): Filter by role (super_admin, admin, moderator, user, guest)
+- `is_active` (boolean, optional): Filter by active status
+- `is_email_verified` (boolean, optional): Filter by email verification
+- `search` (string, optional): Search in email, firstName, lastName
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "userId": "uuid-here",
+      "email": "user@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "user",
+      "isActive": true,
+      "isEmailVerified": true,
+      "phone": "+1234567890",
+      "avatar": "https://example.com/avatar.jpg",
+      "timezone": "America/New_York",
+      "locale": "en",
+      "lastLoginAt": "2025-10-16T10:30:00.000Z",
+      "createdAt": "2025-10-16T10:00:00.000Z",
+      "updatedAt": "2025-10-16T10:30:00.000Z"
+    }
+  ],
+  "total": 100,
+  "page": 1,
+  "perPage": 20,
+  "totalPages": 5
+}
+```
+**Errors:**
+- 401: Unauthorized
+- 403: Forbidden (insufficient permissions)
+
+---
+
+#### Get User by ID
+```
+GET /api/v1/admin/users/{userId}
+```
+**Purpose:** Get detailed user information by ID (admin/super_admin only)
+**Authentication:** Required (Bearer Token - Admin or Super Admin)
+**Rate Limit:** By user role
+**Path Parameters:**
+- `userId`: UUID of user to retrieve
+
+**Response:** 200 OK
+```json
+{
+  "userId": "uuid-here",
+  "email": "user@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "role": "user",
+  "isActive": true,
+  "isEmailVerified": true,
+  "phone": "+1234567890",
+  "avatar": "https://example.com/avatar.jpg",
+  "timezone": "America/New_York",
+  "locale": "en",
+  "lastLoginAt": "2025-10-16T10:30:00.000Z",
+  "createdAt": "2025-10-16T10:00:00.000Z",
+  "updatedAt": "2025-10-16T10:30:00.000Z"
+}
+```
+**Errors:**
+- 401: Unauthorized
+- 403: Forbidden
+- 404: User not found
+
+---
+
+#### Update User Role
+```
+PATCH /api/v1/admin/users/{userId}/role
+```
+**Purpose:** Change user's role (admin/super_admin only)
+**Authentication:** Required (Bearer Token - Admin or Super Admin)
+**Rate Limit:** By user role
+**Path Parameters:**
+- `userId`: UUID of user to update
+
+**Request Body:**
+```json
+{
+  "role": "moderator"
+}
+```
+**Permissions:**
+- **Super Admin:** Can assign any role (super_admin, admin, moderator, user, guest)
+- **Admin:** Can only assign moderator, user, guest (cannot create other admins)
+
+**Response:** 200 OK
+```json
+{
+  "userId": "uuid-here",
+  "email": "user@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "role": "moderator",
+  "isActive": true,
+  "isEmailVerified": true,
+  "createdAt": "2025-10-16T10:00:00.000Z",
+  "updatedAt": "2025-10-16T10:35:00.000Z"
+}
+```
+**Errors:**
+- 401: Unauthorized
+- 403: Forbidden (insufficient permissions or trying to modify own role)
+- 404: User not found
+
+**Security:**
+- Users cannot modify their own role
+- Only super admins can modify other super admin roles
+- Admins cannot create other admins or super admins
+
+---
+
+#### Update User Status
+```
+PATCH /api/v1/admin/users/{userId}/status
+```
+**Purpose:** Activate or deactivate user account (admin/super_admin only)
+**Authentication:** Required (Bearer Token - Admin or Super Admin)
+**Rate Limit:** By user role
+**Path Parameters:**
+- `userId`: UUID of user to update
+
+**Request Body:**
+```json
+{
+  "isActive": false
+}
+```
+**Response:** 200 OK
+```json
+{
+  "userId": "uuid-here",
+  "email": "user@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "role": "user",
+  "isActive": false,
+  "isEmailVerified": true,
+  "createdAt": "2025-10-16T10:00:00.000Z",
+  "updatedAt": "2025-10-16T10:35:00.000Z"
+}
+```
+**Errors:**
+- 401: Unauthorized
+- 403: Forbidden (trying to modify own status or insufficient permissions)
+- 404: User not found
+
+**Security:**
+- Users cannot modify their own status
+- Only super admins can modify other super admin accounts
+
+---
+
+#### Delete User (Soft Delete)
+```
+DELETE /api/v1/admin/users/{userId}
+```
+**Purpose:** Soft delete user account (sets deletedAt timestamp)
+**Authentication:** Required (Bearer Token - Admin or Super Admin)
+**Rate Limit:** By user role
+**Path Parameters:**
+- `userId`: UUID of user to delete
+
+**Response:** 200 OK
+```json
+{
+  "message": "User deleted successfully",
+  "userId": "uuid-here",
+  "deletedAt": "2025-10-16T10:40:00.000Z"
+}
+```
+**Errors:**
+- 401: Unauthorized
+- 403: Forbidden (trying to delete own account or insufficient permissions)
+- 404: User not found
+
+**Note:**
+- Performs soft delete (user can be restored within 90 days)
+- Hard delete happens automatically after 90 days
+- Users cannot delete their own account
+- Only super admins can delete other super admin accounts
+
+---
+
 ### Users
-*To be implemented*
+**Status:** ⚠️ **PARTIALLY IMPLEMENTED**
 
 #### Get Current User
 ```
@@ -468,6 +673,277 @@ DELETE /api/v1/users/{userId}
 - `userId`: UUID of user to delete
 
 **Response:** 204 No Content
+
+---
+
+### Module Management
+**Status:** ✅ **IMPLEMENTED** (v1.3.0)
+
+#### Module System Health Check
+```
+GET /api/v1/modules/health
+```
+**Purpose:** Check if module management system is operational
+**Authentication:** None
+**Rate Limit:** None
+**Response:** 200 OK (healthy) / 503 Service Unavailable (unhealthy)
+```json
+{
+  "status": "healthy",
+  "components": {
+    "docker": "healthy",
+    "database": "healthy",
+    "license_validator": "healthy"
+  },
+  "timestamp": "2025-10-17T10:30:00.000Z"
+}
+```
+**Errors:**
+- 503: Module system unhealthy (Docker daemon unreachable)
+
+---
+
+#### Install Module
+```
+POST /api/v1/modules/install
+```
+**Purpose:** Install a new Docker-based module with license validation
+**Authentication:** Required (Bearer Token - Super Admin only)
+**Rate Limit:** 10 requests/minute
+**Request Body:**
+```json
+{
+  "module_name": "analytics-dashboard",
+  "display_name": "Analytics Dashboard",
+  "description": "Real-time analytics and reporting dashboard",
+  "docker_image": "myregistry.com/analytics:1.0.0",
+  "version": "1.0.0",
+  "license_key": "XXX-YYY-ZZZ-AAA-BBB",
+  "ports": ["8001:8000"],
+  "environment": {
+    "DATABASE_URL": "mongodb://mongodb:27017/analytics",
+    "DEBUG": "false"
+  },
+  "volumes": ["./modules/analytics/data:/app/data"],
+  "cpu_limit": "1.0",
+  "memory_limit": "512m",
+  "network_mode": "a64core-network",
+  "depends_on": ["mongodb", "redis"],
+  "health_check": {
+    "test": "curl -f http://localhost:8000/health || exit 1",
+    "interval": "30s",
+    "timeout": "10s",
+    "retries": "3",
+    "start_period": "40s"
+  },
+  "route_prefix": "/analytics"
+}
+```
+**Response:** 202 Accepted
+```json
+{
+  "message": "Module 'analytics-dashboard' installed successfully",
+  "module_name": "analytics-dashboard",
+  "status": "installing"
+}
+```
+**Errors:**
+- 400: Validation failed (invalid license, format errors, limits exceeded)
+- 403: Forbidden (not super_admin)
+- 409: Conflict (module already installed)
+- 500: Installation failed (Docker error, network error)
+
+**Security:**
+- License keys validated before installation
+- Docker images must be from trusted registries
+- 'latest' tag not allowed (must specify exact version)
+- Containers run with security restrictions (no privileges, resource limits)
+- Maximum 50 total modules, 10 per user
+
+---
+
+#### List Installed Modules
+```
+GET /api/v1/modules/installed
+```
+**Purpose:** Get paginated list of all installed modules
+**Authentication:** Required (Bearer Token - Super Admin only)
+**Rate Limit:** By user role
+**Query Parameters:**
+- `page` (integer, default: 1): Page number
+- `per_page` (integer, default: 20, max: 100): Items per page
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "module_name": "analytics-dashboard",
+      "display_name": "Analytics Dashboard",
+      "description": "Real-time analytics and reporting dashboard",
+      "docker_image": "myregistry.com/analytics:1.0.0",
+      "version": "1.0.0",
+      "status": "running",
+      "health": "healthy",
+      "container_id": "abc123def456",
+      "container_name": "a64core-analytics-dashboard",
+      "ports": ["8001:8000"],
+      "route_prefix": "/analytics",
+      "cpu_limit": "1.0",
+      "memory_limit": "512m",
+      "installed_by_email": "admin@a64platform.com",
+      "installed_at": "2025-10-17T10:30:00.000Z",
+      "updated_at": "2025-10-17T10:30:00.000Z"
+    }
+  ],
+  "meta": {
+    "total": 5,
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 1
+  }
+}
+```
+**Errors:**
+- 403: Forbidden (not super_admin)
+- 500: Query failed
+
+**Module Status Values:**
+- `pending`: Installation queued
+- `installing`: Currently being installed
+- `running`: Successfully running
+- `stopped`: Stopped but installed
+- `error`: Installation or runtime error
+- `uninstalling`: Currently being removed
+
+**Module Health Values:**
+- `healthy`: Container running and responding
+- `unhealthy`: Container running but not responding
+- `unknown`: Health check not configured
+
+---
+
+#### Get Module Status
+```
+GET /api/v1/modules/{module_name}/status
+```
+**Purpose:** Get detailed status and runtime metrics for a specific module
+**Authentication:** Required (Bearer Token - Super Admin only)
+**Rate Limit:** By user role
+**Path Parameters:**
+- `module_name`: Module name (e.g., "analytics-dashboard")
+
+**Response:** 200 OK
+```json
+{
+  "module_name": "analytics-dashboard",
+  "display_name": "Analytics Dashboard",
+  "status": "running",
+  "health": "healthy",
+  "container_id": "abc123def456",
+  "container_name": "a64core-analytics-dashboard",
+  "uptime_seconds": 86400,
+  "restart_count": 0,
+  "cpu_usage_percent": 5.2,
+  "memory_usage_mb": 256.8,
+  "memory_limit_mb": 512.0,
+  "network_rx_bytes": 1024000,
+  "network_tx_bytes": 512000,
+  "container_state": "running",
+  "started_at": "2025-10-16T10:30:00.000Z",
+  "error_message": null,
+  "error_count": 0,
+  "last_error_at": null
+}
+```
+**Errors:**
+- 403: Forbidden (not super_admin)
+- 404: Module not found
+- 500: Query failed
+
+---
+
+#### Uninstall Module
+```
+DELETE /api/v1/modules/{module_name}
+```
+**Purpose:** Uninstall a module and remove its container
+**Authentication:** Required (Bearer Token - Super Admin only)
+**Rate Limit:** 10 requests/minute
+**Path Parameters:**
+- `module_name`: Module name to uninstall
+
+**Response:** 200 OK
+```json
+{
+  "message": "Module 'analytics-dashboard' uninstalled successfully",
+  "module_name": "analytics-dashboard"
+}
+```
+**Errors:**
+- 403: Forbidden (not super_admin)
+- 404: Module not found
+- 500: Uninstallation failed
+
+**Warning:** This operation cannot be undone. All module data in the container will be lost. Backup important data before uninstalling.
+
+---
+
+#### Get Module Audit Log
+```
+GET /api/v1/modules/audit-log
+```
+**Purpose:** Get audit log of all module operations with filtering
+**Authentication:** Required (Bearer Token - Super Admin only)
+**Rate Limit:** By user role
+**Query Parameters:**
+- `page` (integer, default: 1): Page number
+- `per_page` (integer, default: 50, max: 100): Items per page
+- `module_name` (string, optional): Filter by module name
+- `operation` (string, optional): Filter by operation (install, uninstall, start, stop)
+- `status` (string, optional): Filter by status (success, failure)
+- `user_id` (string, optional): Filter by user ID
+
+**Response:** 200 OK
+```json
+{
+  "data": [
+    {
+      "operation": "install",
+      "module_name": "analytics-dashboard",
+      "module_version": "1.0.0",
+      "user_id": "0224a4f2-916d-4434-8f50-871fa9f65cd6",
+      "user_email": "admin@a64platform.com",
+      "user_role": "super_admin",
+      "status": "success",
+      "error_message": null,
+      "timestamp": "2025-10-17T10:30:00.000Z",
+      "duration_seconds": 45.2,
+      "metadata": {
+        "docker_image": "myregistry.com/analytics:1.0.0",
+        "container_id": "abc123def456"
+      }
+    }
+  ],
+  "meta": {
+    "total": 25,
+    "page": 1,
+    "per_page": 50,
+    "total_pages": 1
+  },
+  "filters": {
+    "module_name": null,
+    "operation": null,
+    "status": null,
+    "user_id": null
+  }
+}
+```
+**Errors:**
+- 403: Forbidden (not super_admin)
+- 500: Query failed
+
+**Note:** Audit logs are automatically deleted after 90 days (TTL index).
 
 ---
 
@@ -564,6 +1040,34 @@ All error responses follow this structure:
 | `INTERNAL_ERROR` | 500 | Unexpected server error |
 
 ## API Changelog
+
+### v1.3.0 - 2025-10-17
+- ✅ **Module Management System** implemented
+- ✅ 6 module management endpoints (install, list, status, uninstall, audit log, health check)
+- ✅ Docker Compose-based modular architecture
+- ✅ License key validation (format, offline, online modes)
+- ✅ License key encryption (Fernet + PBKDF2HMAC)
+- ✅ Container security sandboxing (no privileges, resource limits, non-root)
+- ✅ Docker image validation (trusted registries, no 'latest' tags)
+- ✅ Module limits (50 total, 10 per user)
+- ✅ Comprehensive audit logging (90-day TTL)
+- ✅ Runtime metrics (CPU, memory, network stats)
+- ✅ Module lifecycle management (pending, installing, running, stopped, error, uninstalling)
+- ✅ Health monitoring (healthy, unhealthy, unknown)
+- ✅ Super admin only access (RBAC enforcement)
+- ✅ MongoDB indexes for module collections (optimized queries)
+
+### v1.2.0 - 2025-10-17
+- ✅ **Admin User Management System** implemented
+- ✅ 5 admin endpoints for user management (list, get, update role, update status, delete)
+- ✅ Super admin role and permissions
+- ✅ Admin web interface at `/admin/`
+- ✅ Role-based authorization (super_admin and admin)
+- ✅ User filtering and search (by role, status, email verification)
+- ✅ Pagination support (default 20, max 100 per page)
+- ✅ Soft delete functionality (90-day retention)
+- ✅ Self-modification prevention (cannot change own role/status)
+- ✅ Super admin protection (only super admins can manage other super admins)
 
 ### v1.1.0 - 2025-10-16
 - ✅ Complete authentication system implemented

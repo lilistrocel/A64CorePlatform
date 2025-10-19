@@ -87,6 +87,26 @@ class MongoDBManager:
                 expireAfterSeconds=0  # TTL index for automatic deletion
             )
 
+            # Installed modules collection indexes (Module Management System)
+            await cls.db.installed_modules.create_index("module_name", unique=True)
+            await cls.db.installed_modules.create_index("status")
+            await cls.db.installed_modules.create_index("health")
+            await cls.db.installed_modules.create_index("installed_by_user_id")
+            await cls.db.installed_modules.create_index([("installed_at", -1)])
+            await cls.db.installed_modules.create_index([("updated_at", -1)])
+            await cls.db.installed_modules.create_index("container_id")
+
+            # Module audit log collection indexes (Module Management System)
+            await cls.db.module_audit_log.create_index("module_name")
+            await cls.db.module_audit_log.create_index("operation")
+            await cls.db.module_audit_log.create_index("user_id")
+            await cls.db.module_audit_log.create_index("status")
+            await cls.db.module_audit_log.create_index([("timestamp", -1)])
+            await cls.db.module_audit_log.create_index(
+                "timestamp",
+                expireAfterSeconds=7776000  # TTL index: 90 days (90*24*60*60)
+            )
+
             logger.info("MongoDB indexes created successfully")
         except Exception as e:
             logger.error(f"Error creating MongoDB indexes: {e}")

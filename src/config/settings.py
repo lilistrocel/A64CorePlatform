@@ -58,7 +58,9 @@ class Settings(BaseSettings):
 
     class Config:
         """Pydantic config class"""
-        env_file = ".env"
+        # Disable .env file loading - use environment variables only
+        # This prevents parsing errors with comma-separated values
+        env_file = None
         env_file_encoding = "utf-8"
         case_sensitive = True
 
