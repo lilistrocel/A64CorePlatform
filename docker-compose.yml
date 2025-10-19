@@ -194,6 +194,37 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # User Portal (Frontend) - Development Mode
+  user-portal:
+    container_name: a64core-user-portal-dev
+    build:
+      context: .
+      dockerfile: frontend/user-portal/Dockerfile
+      target: development  # Use development stage
+    ports:
+      - "5173:5173"  # Vite dev server
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost/api  # API endpoint through nginx
+    volumes:
+      - ./frontend/shared:/app/shared  # Hot-reload for shared library
+      - ./frontend/user-portal/src:/app/user-portal/src  # Hot-reload for user-portal source
+      - ./frontend/user-portal/public:/app/user-portal/public
+      - ./frontend/user-portal/index.html:/app/user-portal/index.html
+      - ./frontend/user-portal/vite.config.ts:/app/user-portal/vite.config.ts
+      # Exclude node_modules from volume (use container's)
+      - /app/node_modules
+      - /app/shared/node_modules
+      - /app/user-portal/node_modules
+    networks:
+      - a64core-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   a64core-network:
     driver: bridge

@@ -354,6 +354,54 @@ Naming Conventions:
 - File names: kebab-case for modules (e.g., user-service.js, auth-middleware.js)
 - Boolean variables: prefix with is/has/should (e.g., isValid, hasPermission)
 
+React/TypeScript/Styled-Components Standards
+
+CRITICAL: For ALL UI development work, ALWAYS check Docs/1-Main-Documentation/UI-Standards.md FIRST
+- This document contains comprehensive UI development standards
+- Covers React, TypeScript, styled-components, form handling, state management
+- MUST be followed to avoid DOM prop warnings and React errors
+- Reference this document before creating or modifying ANY UI components
+
+Quick Reference - Styled-Components DOM Props:
+❌ NEVER pass custom props directly to DOM elements
+✅ ALWAYS use transient props ($ prefix) for styled-component props
+
+Wrong:
+```typescript
+const StyledButton = styled.button<{ variant: string }>`
+  background: ${({ variant }) => variant === 'primary' ? 'blue' : 'gray'};
+`;
+<StyledButton variant="primary">Click</StyledButton>  // ❌ 'variant' passed to DOM
+```
+
+Correct:
+```typescript
+const StyledButton = styled.button<{ $variant: string }>`
+  background: ${({ $variant }) => $variant === 'primary' ? 'blue' : 'gray'};
+`;
+export function Button({ variant = 'primary', ...props }) {
+  return <StyledButton $variant={variant} {...props}>Click</StyledButton>;  // ✅ $variant filtered
+}
+```
+
+Component Props Pattern:
+1. Public interface: Normal prop names (variant, fullWidth, size)
+2. Internal styled-component: Transient props ($variant, $fullWidth, $size)
+3. Component function: Converts public props to transient props
+
+React Router Standards:
+✅ ALWAYS add future flags to BrowserRouter to avoid deprecation warnings:
+```typescript
+<BrowserRouter
+  future={{
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  }}
+>
+```
+
+For complete UI development standards, see: Docs/1-Main-Documentation/UI-Standards.md
+
 Python Standards
 Syntax Rules:
 - Follow PEP 8 style guide
@@ -1045,6 +1093,258 @@ export default function () {
 
 REMEMBER: Performance testing is NOT optional. It protects against performance regressions and ensures good user experience!
 
+🌐 CORS (Cross-Origin Resource Sharing) Standards
+
+CRITICAL: CORS Configuration is MANDATORY for Frontend-Backend Communication
+CORS errors are one of the most common issues in development. Follow these standards to avoid "No 'Access-Control-Allow-Origin' header" errors.
+
+Understanding CORS
+CORS (Cross-Origin Resource Sharing) is a security mechanism that controls which origins can access your API:
+- **Origin:** Protocol + Domain + Port (e.g., http://localhost:5173)
+- **Cross-Origin Request:** When frontend and backend are on different origins
+- **Same-Origin:** http://localhost:5173 → http://localhost:5173 ✅
+- **Cross-Origin:** http://localhost:5173 → http://localhost:8000 ❌ (different port)
+
+Common CORS Error:
+```
+Access to XMLHttpRequest at 'http://localhost:8000/api/v1/auth/login' from origin 'http://localhost:5173'
+has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+```
+
+CORS Configuration Requirements
+
+Backend (FastAPI/Python) CORS Configuration:
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# Development CORS configuration
+if settings.ENVIRONMENT == "development":
+    origins = [
+        "http://localhost:5173",      # Vite dev server
+        "http://localhost:3000",      # Alternative React dev server
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ]
+else:
+    # Production CORS configuration
+    origins = [
+        "https://yourdomain.com",
+        "https://www.yourdomain.com",
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,              # Allowed origins
+    allow_credentials=True,             # Allow cookies/auth headers
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],                # Allow all headers (or specify)
+    expose_headers=["*"],               # Expose headers to frontend
+    max_age=600,                        # Cache preflight requests (10 min)
+)
+```
+
+Backend (Node.js/Express) CORS Configuration:
+```javascript
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+
+// Development CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://yourdomain.com', 'https://www.yourdomain.com']
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+  credentials: true,                    // Allow cookies/auth headers
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600,                          // Cache preflight (10 min)
+};
+
+app.use(cors(corsOptions));
+```
+
+Nginx Proxy Configuration (Production):
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://user-portal:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API with CORS headers
+    location /api/ {
+        proxy_pass http://api:8000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # CORS headers (if not handled by backend)
+        add_header 'Access-Control-Allow-Origin' 'https://yourdomain.com' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, X-Requested-With' always;
+        add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+        # Handle preflight requests
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' 'https://yourdomain.com' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, X-Requested-With' always;
+            add_header 'Access-Control-Max-Age' 600;
+            add_header 'Content-Type' 'text/plain charset=UTF-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+    }
+}
+```
+
+CORS Security Best Practices
+
+Development Environment:
+✅ DO:
+- Allow localhost origins (http://localhost:5173, http://127.0.0.1:5173)
+- Use specific ports, not wildcards
+- Enable credentials: true for authentication
+
+❌ DON'T:
+- Use allow_origins=["*"] with credentials=True (not allowed by browsers)
+- Forget to include 127.0.0.1 variants
+- Use production origins in development config
+
+Production Environment:
+✅ DO:
+- Use specific domain names only (https://yourdomain.com)
+- Use HTTPS (never HTTP in production)
+- Whitelist only necessary origins
+- Use environment variables for origin configuration
+- Set max_age for preflight caching (reduces requests)
+
+❌ DON'T:
+- Use allow_origins=["*"] in production
+- Allow HTTP origins in production
+- Include development origins (localhost)
+- Expose sensitive headers unnecessarily
+
+Frontend Configuration
+
+API Base URL Configuration:
+```typescript
+// src/config/api.config.ts
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+export const apiConfig = {
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  withCredentials: true,  // Required if backend allows credentials
+};
+```
+
+Axios Configuration with Credentials:
+```typescript
+// src/services/api.ts
+import axios from 'axios';
+import { apiConfig } from '../config/api.config';
+
+const api = axios.create({
+  baseURL: apiConfig.baseURL,
+  timeout: apiConfig.timeout,
+  withCredentials: apiConfig.withCredentials,  // Send cookies/auth
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export default api;
+```
+
+Environment Variables (.env):
+```bash
+# Development
+VITE_API_BASE_URL=http://localhost:8000
+
+# Production
+VITE_API_BASE_URL=https://api.yourdomain.com
+```
+
+CORS Troubleshooting
+
+Common CORS Errors and Solutions:
+
+1. "No 'Access-Control-Allow-Origin' header is present"
+   - Cause: Backend not configured with CORS middleware
+   - Solution: Add CORSMiddleware to backend with correct origins
+
+2. "The 'Access-Control-Allow-Origin' header contains multiple values"
+   - Cause: Both backend and proxy (Nginx) adding CORS headers
+   - Solution: Only add CORS headers in ONE place (prefer backend)
+
+3. "Credentials flag is 'true', but 'Access-Control-Allow-Origin' is '*'"
+   - Cause: Cannot use wildcard (*) with credentials
+   - Solution: Specify exact origins when using credentials=True
+
+4. "Method not allowed in Access-Control-Allow-Methods"
+   - Cause: Backend CORS config doesn't allow specific HTTP method
+   - Solution: Add method to allow_methods list (e.g., PATCH, DELETE)
+
+5. "Request header field X is not allowed by Access-Control-Allow-Headers"
+   - Cause: Custom header not allowed
+   - Solution: Add header to allow_headers or use ["*"]
+
+CORS Preflight Requests:
+- Browsers send OPTIONS request before actual request (preflight)
+- Preflight checks if actual request is allowed
+- Backend must respond to OPTIONS with 200/204 and CORS headers
+- Use max_age to cache preflight responses and reduce requests
+
+CORS Testing Checklist:
+Before deployment:
+- [ ] Backend CORS middleware configured with correct origins
+- [ ] Environment-specific origins (dev vs prod)
+- [ ] Credentials enabled if using authentication
+- [ ] All required HTTP methods allowed
+- [ ] Preflight requests handled (OPTIONS)
+- [ ] Frontend withCredentials set correctly
+- [ ] API base URL uses environment variables
+- [ ] Test with actual frontend (not just Postman/curl)
+- [ ] Test authentication flow end-to-end
+- [ ] No wildcard (*) in production with credentials
+
+Docker Development Setup:
+When using Docker Compose with separate frontend/backend containers:
+```yaml
+# docker-compose.yml
+services:
+  api:
+    environment:
+      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+      - ENVIRONMENT=development
+
+  user-portal:
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    ports:
+      - "5173:5173"
+```
+
+For complete CORS configuration examples, see: Docs/1-Main-Documentation/UI-Standards.md
+
+REMEMBER: CORS errors mean your backend is not configured to accept requests from your frontend origin. Fix CORS on the backend, not the frontend!
+
 ⚠️ Important Notes
 
 Test your code - No feature is complete without tests
@@ -1052,3 +1352,4 @@ Performance testing - ALWAYS include performance tests in system testing
 Documentation is complete only when both code AND documentation are updated
 Security is mandatory - Code with security vulnerabilities will be rejected
 Consistency is key - Follow these standards without exception
+CORS configuration - ALWAYS configure CORS when frontend and backend are separate

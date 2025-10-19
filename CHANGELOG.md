@@ -7,14 +7,227 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Complete Authentication System (User Portal)**
+  - JWT-based login/register with token persistence
+  - Axios interceptor for automatic token attachment
+  - Token refresh logic for expired tokens
+  - Zustand store with persist middleware for auth state
+  - Protected routes with proper user loading
+  - Logout functionality with token cleanup
+
+- **Enhanced CCM Dashboard**
+  - Dashboard API service with widget data endpoints
+  - Dashboard Zustand store for state management
+  - Per-widget loading and error states
+  - Refresh all widgets functionality
+  - Error banner with dismiss button
+  - Empty state for no widgets
+  - Mock data support for development
+  - Ready for backend API integration
+
+- **Interactive Chart Widgets**
+  - ChartWidget component with Recharts library
+  - Line charts for trend analysis (single/multi-series)
+  - Bar charts for comparisons (single/multi-series)
+  - Pie charts for distribution visualization
+  - Responsive chart sizing (mobile to desktop)
+  - Interactive tooltips and legends
+  - Per-chart loading, error, and empty states
+  - Refresh functionality per chart
+  - Custom color support via series configuration
+  - 3 chart widgets with mock data (sales trend, revenue breakdown, user activity)
+  - Flexible widget sizing system (medium, large, wide, full-width)
+  - 4-column responsive grid layout on desktop
+
+- **Drag-and-Drop Dashboard Customization**
+  - react-grid-layout integration for widget repositioning
+  - Edit mode toggle for enabling/disabling drag-and-drop
+  - Persistent layout storage via Zustand persist middleware
+  - Auto-generated default layout based on widget sizes
+  - Reset layout functionality to restore defaults
+  - Visual edit mode banner for user guidance
+  - Layout saved to localStorage and persists across sessions
+  - Configurable row heights (150px per row)
+  - Edit/Done/Reset control buttons in dashboard header
+  - Automatic overlap detection and layout regeneration
+  - Collision prevention during drag operations
+  - Proper widget height calculation (charts = 3 rows, stats = 1 row)
+  - Resize snapping to grid boundaries
+
+- **Fully Responsive Dashboard Layout**
+  - Dynamic column count based on viewport width
+  - Mobile (< 768px): 2 columns for optimal viewing
+  - Tablet (768-1024px): 3 columns
+  - Desktop (≥ 1024px): 4 columns
+  - Bidirectional layout adjustment (mobile ↔ desktop)
+  - Auto-reflow widgets when screen size changes
+  - Widget width adapts to breakpoint (maintains size ratios)
+  - Dynamic container width measurement
+  - No horizontal scrolling on any device
+  - Touch-friendly spacing on mobile
+
+- **Responsive UI System**
+  - Mobile-first responsive design across all pages
+  - Login/Register pages - fully responsive with no white space
+  - Dashboard - responsive grid (1-4 columns based on screen)
+  - Profile & Settings - responsive layouts
+  - MainLayout with mobile hamburger menu
+  - Fixed viewport handling (no horizontal scroll)
+  - Global styles with overflow-x hidden
+
+- **Frontend Docker Integration**
+  - Multi-stage Dockerfile for user-portal (development + production)
+  - Docker Compose service configuration for frontend
+  - Nginx reverse proxy routing for frontend application
+  - Hot-reload development mode with Vite HMR via Docker
+  - Production build with optimized static asset serving
+  - Volume mounts for instant code updates in development
+  - WebSocket proxy support for Vite HMR
+  - Comprehensive Docker setup documentation
+
+- **Frontend Proof of Concept (POC)**
+  - React 18 + TypeScript 5 user portal
+  - Monorepo structure with npm workspaces
+  - Shared component library (@a64core/shared)
+  - Centralized design system (theme, colors, typography)
+  - CCM Dashboard with draggable widgets
+  - StatWidget component with trends and metrics
+  - styled-components for CSS-in-JS
+  - Vite 5 for fast development builds
+
+### Changed
+- **Nginx Configuration**
+  - Added user-portal upstream backend
+  - Added WebSocket upgrade headers for HMR
+  - Frontend SPA routing on / (fallback to index.html)
+  - API routes prioritized over frontend routes
+
+- **Docker Compose**
+  - Added user-portal service with hot-reload volumes
+  - Separate development and production configurations
+  - Cross-platform volume exclusions for node_modules
+
+### Documentation
+- New: `Docker-Frontend-Setup.md` - Complete Docker frontend guide
+- New: `Frontend-Implementation-Plan.md` - 18-week roadmap
+- New: `Frontend-Architecture.md` - Technical architecture
+- New: `CCM-Architecture.md` - Dashboard system design
+- New: `Widget-Development-Guide.md` - Widget creation guide
+- New: `UI-Standards.md` - Design system documentation
+- New: `Enhanced-Dashboard-Implementation.md` - Dashboard state management details
+- New: `Chart-Widget-Implementation.md` - Chart visualization guide
+- New: `Drag-and-Drop-Dashboard.md` - Dashboard customization guide
+
 ### Planned for Future Releases
 - Comprehensive test suite (unit, integration, e2e)
 - Email service integration for verification and password reset
-- NGINX routing automation for installed modules
 - Module start/stop/restart operations
-- Module health check automation
 - API analytics and usage tracking
 - Webhook system for event notifications
+- Admin portal frontend
+- Module frontend dynamic loading
+
+## [1.4.0] - 2025-10-19
+
+### Added
+- **Automatic Port Management System**
+  - Auto-allocation of external ports from configurable range (9000-19999)
+  - MongoDB-based port tracking with conflict prevention
+  - Sequential port allocation supporting 10,000+ modules
+  - Automatic port release on module uninstallation
+  - Port registry with unique constraints and status tracking
+  - Port statistics and usage monitoring
+  - Database schema: `port_registry` collection with indexes
+
+- **NGINX Reverse Proxy Auto-Configuration**
+  - Automatic NGINX location block generation for each module
+  - Clean URL routing (`/module-name/` instead of ports)
+  - WebSocket support in proxy configuration
+  - Security headers auto-added (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection)
+  - Docker DNS resolver integration (127.0.0.11)
+  - Runtime DNS resolution using variables
+  - Dedicated health check proxy routes
+  - Zero-downtime NGINX reload
+  - Automatic config rollback on errors
+
+- **Docker Network Auto-Detection**
+  - Automatic detection of platform Docker network
+  - Cross-container communication via Docker DNS
+  - Module containers automatically join platform network
+  - Support for docker-compose network prefixes
+
+- **Shared Volume Architecture**
+  - Shared volume (`nginx_modules_config`) between API and NGINX containers
+  - Automatic NGINX config synchronization
+  - Module configs stored in `/etc/nginx/conf.d/modules/`
+
+- **Enhanced Module Installation Flow**
+  - Port allocation integrated into installation process
+  - Proxy route generation during installation
+  - Allocated ports stored in module database record
+  - Container created with auto-allocated port mappings
+  - NGINX config auto-generated and tested
+
+### Changed
+- **Module Manager** (`src/services/module_manager.py`)
+  - Added `PortManager` dependency injection
+  - Added `_get_platform_network()` method for network detection
+  - Updated installation flow to include port allocation
+  - Updated container creation to use allocated ports
+  - Added proxy route creation after container start
+  - Updated uninstallation to release ports and remove proxy configs
+
+- **Module Model** (`src/models/module.py`)
+  - Added `allocated_ports: Dict[str, int]` field (internal_port → external_port mapping)
+  - Added `proxy_route: Optional[str]` field for reverse proxy path
+  - Added `PortAllocation` and `PortRange` models
+
+- **Docker Compose Configuration**
+  - Added `nginx_modules_config` volume
+  - Shared volume mounted in both API and NGINX containers
+  - Updated NGINX config to include module configs
+
+- **Main Application** (`src/main.py`)
+  - Added Port Manager initialization on startup
+  - Injected Port Manager into Module Manager
+
+### New Services
+- **Port Manager** (`src/services/port_manager.py`)
+  - `allocate_ports()` - Allocate external ports for module
+  - `release_ports()` - Free all ports for a module
+  - `get_module_ports()` - Get allocated ports
+  - `parse_ports_from_config()` - Parse port configuration
+  - `is_port_available()` - Check port availability
+  - `get_port_statistics()` - Get allocation statistics
+
+- **Proxy Manager** (`src/services/proxy_manager.py`)
+  - `generate_module_config()` - Generate NGINX location block
+  - `create_proxy_route()` - Create and activate proxy config
+  - `remove_proxy_route()` - Remove proxy config
+  - `reload_nginx()` - Reload NGINX without downtime
+  - `_test_nginx_config()` - Validate NGINX config
+  - Docker client integration for NGINX container commands
+
+### Documentation
+- Added `Port-Management-System.md` - Comprehensive guide for port management and reverse proxy
+- Updated `System-Architecture.md` with port management architecture
+- Added installation scripts for multi-module testing
+  - `scripts/install-example-module-2.py`
+
+### Testing
+- Created second test module (`example-app-2`) for multi-module testing
+- Verified sequential port allocation (9000, 9001, ...)
+- Tested reverse proxy routes for multiple modules
+- Verified port registry tracking
+- Tested NGINX config generation and reload
+
+### Fixed
+- Fixed Python import issues with relative imports in proxy_manager
+- Fixed Docker network detection for module containers
+- Fixed NGINX config syntax errors in generated configs
+- Fixed port mapping to use internal ports for proxy routing
+- Fixed f-string escaping in NGINX config generation
 
 ## [1.3.0] - 2025-10-17
 

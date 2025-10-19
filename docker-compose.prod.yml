@@ -1,0 +1,24 @@
+# ================================
+# Production Docker Compose Configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ================================
+version: '3.8'
+
+services:
+  # Override API for production
+  api:
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=False
+    restart: always
+
+  # User Portal - Production Build (Static Nginx)
+  user-portal:
+    build:
+      target: production  # Use production stage (builds and serves with Nginx)
+    ports:
+      - "8081:80"  # Expose on different port (nginx will proxy from port 80)
+    environment:
+      - NODE_ENV=production
+    volumes: []  # Remove all volumes (use built files in container)
+    restart: always

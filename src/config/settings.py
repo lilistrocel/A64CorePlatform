@@ -28,9 +28,13 @@ class Settings(BaseSettings):
     # CORS Settings
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
+        "http://localhost:5173",        # Vite dev server (user-portal)
         "http://localhost:8000",
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:8000"
+        "http://127.0.0.1:5173",        # Vite dev server (127.0.0.1)
+        "http://127.0.0.1:8000",
+        "http://localhost:80",          # Nginx proxy
+        "http://localhost",             # Nginx proxy (shorthand)
     ]
 
     # Database Settings - MongoDB

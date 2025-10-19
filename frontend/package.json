@@ -1,0 +1,35 @@
+{
+  "name": "a64core-frontend",
+  "version": "1.0.0",
+  "description": "A64 Core Platform - Frontend Monorepo",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "user-portal"
+  ],
+  "scripts": {
+    "dev:shared": "npm run dev --workspace=shared",
+    "dev:user": "npm run dev --workspace=user-portal",
+    "dev:all": "concurrently \"npm run dev:shared\" \"npm run dev:user\"",
+    "build:shared": "npm run build --workspace=shared",
+    "build:user": "npm run build --workspace=user-portal",
+    "build:all": "npm run build:shared && npm run build:user",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "type-check": "npm run type-check --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "@a64core/shared": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-grid-layout": "^1.4.4",
+    "styled-components": "^6.1.8"
+  }
+}
