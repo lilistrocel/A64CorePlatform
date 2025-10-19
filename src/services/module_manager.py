@@ -391,15 +391,17 @@ class ModuleManager:
 
             # Step 10: Create reverse proxy route (if proxy_route available)
             if proxy_route and allocated_ports:
-                # Get primary port (first allocated port)
-                primary_port = list(allocated_ports.values())[0] if allocated_ports else None
+                # Get primary internal port (first key in allocated_ports)
+                # Note: allocated_ports is {internal_port: external_port}
+                # For proxy routing within Docker network, use internal port
+                primary_internal_port = int(list(allocated_ports.keys())[0]) if allocated_ports else None
 
-                if primary_port:
-                    logger.info(f"Creating reverse proxy route: {proxy_route} -> :{primary_port}")
+                if primary_internal_port:
+                    logger.info(f"Creating reverse proxy route: {proxy_route} -> :{primary_internal_port}")
                     proxy_created = await self.proxy_manager.create_proxy_route(
                         module_name,
                         proxy_route,
-                        primary_port,
+                        primary_internal_port,
                         enable_websocket=True
                     )
 
@@ -478,6 +480,32 @@ class ModuleManager:
 
             raise RuntimeError(f"Failed to install module '{module_name}': {str(e)}") from e
 
+    def _get_platform_network(self) -> str:
+        """
+        Get the Docker network that the platform is using.
+
+        Inspects the API container to determine which network to use for modules.
+
+        Returns:
+            Network name (e.g., "a64coreplatform_a64core-network")
+        """
+        try:
+            # Get the API container's networks
+            api_container = self.docker_client.containers.get("a64core-api-dev")
+            networks = list(api_container.attrs["NetworkSettings"]["Networks"].keys())
+
+            if networks:
+                network_name = networks[0]  # Use the first network
+                logger.info(f"Detected platform network from API container: {network_name}")
+                return network_name
+            else:
+                logger.warning("No networks found on API container, using default: a64core-network")
+                return "a64core-network"
+
+        except Exception as e:
+            logger.warning(f"Failed to detect platform network: {e}, using default: a64core-network")
+            return "a64core-network"
+
     def _detect_security_profile(self, image, config: ModuleConfig) -> str:
         """
         Detect appropriate security profile for the module.
@@ -526,7 +554,7 @@ class ModuleManager:
         self,
         config: ModuleConfig,
         image,
-        allocated_ports: Optional[Dict[int, int]] = None
+        allocated_ports: Optional[Dict[str, int]] = None
     ) -> docker.models.containers.Container:
         """
         Create and start Docker container with security configuration.
@@ -576,6 +604,10 @@ class ModuleManager:
         cpu_limit = int(float(config.cpu_limit) * 100000)  # CPUs to CPU quota
         memory_limit = config.memory_limit  # Already in format "512m" or "1g"
 
+        # Auto-detect the correct Docker network (use the one the API container is on)
+        network_mode = self._get_platform_network()
+        logger.info(f"Using Docker network: {network_mode}")
+
         # Detect security profile
         security_profile = self._detect_security_profile(image, config)
         logger.info(f"Applying security profile: {security_profile}")
@@ -587,7 +619,7 @@ class ModuleManager:
             "detach": True,
             "environment": config.environment,
             "ports": port_bindings,
-            "network": config.network_mode,
+            "network": network_mode,  # Use detected platform network
             "restart_policy": {"Name": "unless-stopped"},
 
             # Security configuration (CRITICAL - always enforced)

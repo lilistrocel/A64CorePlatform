@@ -17,6 +17,7 @@ import os
 import subprocess
 from typing import Dict, Optional
 from pathlib import Path
+import docker
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +30,25 @@ class ProxyManager:
     Automatically generates, updates, and removes proxy rules.
     """
 
-    def __init__(self, nginx_config_dir: str = "/etc/nginx/conf.d"):
+    def __init__(self, nginx_config_dir: str = "/etc/nginx/conf.d", nginx_container_name: str = "a64core-nginx-dev"):
         """
         Initialize Proxy Manager
 
         Args:
             nginx_config_dir: Directory for NGINX module configurations
+            nginx_container_name: Name of the NGINX container
         """
         self.nginx_config_dir = nginx_config_dir
         self.modules_config_dir = os.path.join(nginx_config_dir, "modules")
+        self.nginx_container_name = nginx_container_name
+
+        # Initialize Docker client
+        try:
+            self.docker_client = docker.from_env()
+            logger.info("Docker client initialized for NGINX management")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Docker client: {e}")
+            self.docker_client = None
 
         # Create modules config directory if it doesn't exist
         os.makedirs(self.modules_config_dir, exist_ok=True)
@@ -63,71 +74,75 @@ class ProxyManager:
             enable_websocket: Enable WebSocket support
 
         Returns:
-            Generated NGINX configuration content
+            Generated NGINX configuration content (location blocks only)
         """
-        config = f"""# Auto-generated reverse proxy configuration for {module_name}
-# Generated at: {os.popen('date').read().strip()}
-# DO NOT EDIT MANUALLY - Managed by A64 Core Platform
+        # Note: Using direct proxy_pass to container instead of upstream block
+        # because this config is included inside server{} block where upstream is not allowed
 
-# Upstream definition
-upstream {module_name}_backend {{
-    server {upstream_host}:{upstream_port};
-    keepalive 32;
-}}
-
-# Location block
-location {route_path} {{
-    # Proxy headers
-    proxy_pass http://{module_name}_backend;
-    proxy_http_version 1.1;
-
-    # Host headers
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Forwarded-Host $host;
-    proxy_set_header X-Forwarded-Port $server_port;
-
-"""
+        # Build config line by line to avoid f-string escaping issues
+        lines = [
+            f"# Auto-generated reverse proxy configuration for {module_name}",
+            "# DO NOT EDIT MANUALLY - Managed by A64 Core Platform",
+            "",
+            "# Main location block",
+            f"location {route_path}/ {{",  # Added trailing slash
+            "    # Use Docker's embedded DNS resolver",
+            "    resolver 127.0.0.11 valid=30s;",
+            "",
+            "    # Set backend variable to enable DNS resolution at runtime",
+            f"    set $backend {upstream_host}:{upstream_port};",
+            "",
+            "    # Proxy to module container (trailing slash strips the location prefix)",
+            "    proxy_pass http://$backend/;",  # Added trailing slash
+            "    proxy_http_version 1.1;",
+            "",
+            "    # Host headers",
+            "    proxy_set_header Host $host;",
+            "    proxy_set_header X-Real-IP $remote_addr;",
+            "    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+            "    proxy_set_header X-Forwarded-Proto $scheme;",
+            "    proxy_set_header X-Forwarded-Host $host;",
+            "    proxy_set_header X-Forwarded-Port $server_port;",
+            "",
+        ]
 
         if enable_websocket:
-            config += """    # WebSocket support
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+            lines.extend([
+                "    # WebSocket support",
+                "    proxy_set_header Upgrade $http_upgrade;",
+                '    proxy_set_header Connection "upgrade";',
+                "",
+            ])
 
-"""
+        lines.extend([
+            "    # Timeouts",
+            "    proxy_connect_timeout 60s;",
+            "    proxy_send_timeout 60s;",
+            "    proxy_read_timeout 60s;",
+            "",
+            "    # Buffering",
+            "    proxy_buffering on;",
+            "    proxy_buffer_size 4k;",
+            "    proxy_buffers 8 4k;",
+            "    proxy_busy_buffers_size 8k;",
+            "",
+            "    # Security headers",
+            '    add_header X-Content-Type-Options "nosniff" always;',
+            '    add_header X-Frame-Options "SAMEORIGIN" always;',
+            '    add_header X-XSS-Protection "1; mode=block" always;',
+            "}",
+            "",
+            "# Health check endpoint",
+            f"location {route_path}/health {{",
+            "    resolver 127.0.0.11 valid=30s;",
+            f"    set $backend_health {upstream_host}:{upstream_port};",
+            "    proxy_pass http://$backend_health/health;",
+            "    proxy_http_version 1.1;",
+            "    access_log off;",
+            "}",
+        ])
 
-        config += """    # Timeouts
-    proxy_connect_timeout 60s;
-    proxy_send_timeout 60s;
-    proxy_read_timeout 60s;
-
-    # Buffering
-    proxy_buffering on;
-    proxy_buffer_size 4k;
-    proxy_buffers 8 4k;
-    proxy_busy_buffers_size 8k;
-
-    # Security headers
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    # Logging
-    access_log /var/log/nginx/{module_name}_access.log;
-    error_log /var/log/nginx/{module_name}_error.log;
-}}
-
-# Health check endpoint (if exists)
-location {route_path}/health {{
-    proxy_pass http://{module_name}_backend/health;
-    proxy_http_version 1.1;
-    access_log off;
-}}
-"""
-
-        return config
+        return "\n".join(lines)
 
     async def create_proxy_route(
         self,
@@ -258,27 +273,25 @@ location {route_path}/health {{
         Returns:
             True if configuration is valid, False otherwise
         """
-        try:
-            result = subprocess.run(
-                ["nginx", "-t"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+        if not self.docker_client:
+            logger.warning("Docker client not available - skipping NGINX config test")
+            return True
 
-            if result.returncode == 0:
+        try:
+            # Execute nginx -t in the NGINX container
+            container = self.docker_client.containers.get(self.nginx_container_name)
+            exit_code, output = container.exec_run("nginx -t")
+
+            if exit_code == 0:
                 logger.info("NGINX configuration test passed")
                 return True
             else:
-                logger.error(f"NGINX configuration test failed: {result.stderr}")
+                logger.error(f"NGINX configuration test failed: {output.decode()}")
                 return False
 
-        except subprocess.TimeoutExpired:
-            logger.error("NGINX configuration test timed out")
+        except docker.errors.NotFound:
+            logger.error(f"NGINX container '{self.nginx_container_name}' not found")
             return False
-        except FileNotFoundError:
-            logger.warning("nginx command not found - skipping config test")
-            return True  # Assume valid if nginx not available
         except Exception as e:
             logger.error(f"Failed to test NGINX configuration: {e}")
             return False
@@ -290,29 +303,27 @@ location {route_path}/health {{
         Returns:
             True if successful, False otherwise
         """
+        if not self.docker_client:
+            logger.warning("Docker client not available - skipping NGINX reload")
+            return True
+
         try:
             logger.info("Reloading NGINX...")
 
-            result = subprocess.run(
-                ["nginx", "-s", "reload"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            # Execute nginx -s reload in the NGINX container
+            container = self.docker_client.containers.get(self.nginx_container_name)
+            exit_code, output = container.exec_run("nginx -s reload")
 
-            if result.returncode == 0:
+            if exit_code == 0:
                 logger.info("NGINX reloaded successfully")
                 return True
             else:
-                logger.error(f"NGINX reload failed: {result.stderr}")
+                logger.error(f"NGINX reload failed: {output.decode()}")
                 return False
 
-        except subprocess.TimeoutExpired:
-            logger.error("NGINX reload timed out")
+        except docker.errors.NotFound:
+            logger.error(f"NGINX container '{self.nginx_container_name}' not found")
             return False
-        except FileNotFoundError:
-            logger.warning("nginx command not found - skipping reload")
-            return True  # Assume success if nginx not available (development)
         except Exception as e:
             logger.error(f"Failed to reload NGINX: {e}")
             return False

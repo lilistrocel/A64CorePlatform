@@ -61,7 +61,7 @@ class PortManager:
         self,
         module_name: str,
         internal_ports: List[int]
-    ) -> Dict[int, int]:
+    ) -> Dict[str, int]:
         """
         Allocate external ports for a module's internal ports.
 
@@ -73,8 +73,8 @@ class PortManager:
             internal_ports: List of module's internal container ports
 
         Returns:
-            Dictionary mapping internal ports to allocated external ports
-            Example: {8080: 9001, 3000: 9002}
+            Dictionary mapping internal ports (as strings) to allocated external ports
+            Example: {"8080": 9001, "3000": 9002}
 
         Raises:
             RuntimeError: If no ports available or allocation fails
@@ -111,7 +111,8 @@ class PortManager:
             try:
                 # Insert allocation record
                 await self.db.port_registry.insert_one(allocation.dict())
-                allocated_ports[internal_port] = external_port
+                # Use string key for internal port to match ModuleInDB schema
+                allocated_ports[str(internal_port)] = external_port
                 logger.info(f"Port {external_port} allocated to {module_name} (internal: {internal_port})")
 
             except Exception as e:
@@ -160,7 +161,7 @@ class PortManager:
     async def _rollback_allocations(
         self,
         module_name: str,
-        allocated_ports: Dict[int, int]
+        allocated_ports: Dict[str, int]
     ):
         """
         Rollback port allocations in case of error.
@@ -215,7 +216,7 @@ class PortManager:
         # Optionally delete released ports after some time (for audit trail)
         # For now, just mark as released
 
-    async def get_module_ports(self, module_name: str) -> Dict[int, int]:
+    async def get_module_ports(self, module_name: str) -> Dict[str, int]:
         """
         Get all allocated ports for a module.
 
@@ -223,14 +224,14 @@ class PortManager:
             module_name: Name of the module
 
         Returns:
-            Dictionary mapping internal_port -> external_port
+            Dictionary mapping internal_port (as string) -> external_port
         """
         allocations = await self.db.port_registry.find(
             {"module_name": module_name, "status": "active"}
         ).to_list(length=None)
 
         return {
-            alloc["internal_port"]: alloc["port"]
+            str(alloc["internal_port"]): alloc["port"]
             for alloc in allocations
         }
 

@@ -27,6 +27,7 @@ services:
       - ./config:/app/config
       - ./logs:/app/logs  # Centralized logging
       - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for module management
+      - nginx_modules_config:/etc/nginx/conf.d/modules  # Shared volume for module proxy configs
     user: "0:0"  # Run as root to access Docker socket (CRITICAL for module management)
     depends_on:
       mongodb:
@@ -137,6 +138,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./logs/nginx:/var/log/nginx
+      - nginx_modules_config:/etc/nginx/conf.d/modules  # Shared volume for module proxy configs
     networks:
       - a64core-network
     depends_on:
@@ -206,4 +208,6 @@ volumes:
   redis_data:
     driver: local
   registry_data:
+    driver: local
+  nginx_modules_config:
     driver: local

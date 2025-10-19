@@ -23,7 +23,10 @@
       "Bash(docker tag:*)",
       "Bash(docker push:*)",
       "Bash(timeout 30 bash -c 'until docker exec a64core-api-dev python -c \"\"import sys; sys.exit(0)\"\" 2>/dev/null; do sleep 1; done')",
-      "Bash(docker inspect:*)"
+      "Bash(docker inspect:*)",
+      "Bash(docker network inspect a64coreplatform_a64core-network --format '{{range .Containers}}{{.Name}} {{end}}')",
+      "Bash(docker network ls)",
+      "Bash(docker network inspect a64coreplatform_a64core-network --format '{{range .Containers}}{{.Name}}{{println}}{{end}}')"
     ],
     "deny": [],
     "ask": []
