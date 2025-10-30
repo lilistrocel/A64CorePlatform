@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned for Future Releases
+- Comprehensive test suite (unit, integration, e2e)
+- Email service integration for verification and password reset
+- Module start/stop/restart operations
+- API analytics and usage tracking
+- Webhook system for event notifications
+- Admin portal frontend
+- Module frontend dynamic loading
+
+## [1.5.0] - 2025-10-30
+
+### Added
+- **Farm Management Module - Planting Service** (Session 7)
+  - POST /api/v1/farm/plantings - Create planting plan with yield prediction
+  - POST /api/v1/farm/plantings/{id}/mark-planted - Mark as planted with harvest date calculation
+  - GET /api/v1/farm/plantings/{id} - Get planting details by ID
+  - GET /api/v1/farm/plantings?farmId=X - List plantings with pagination
+  - Planting repository layer (data access)
+  - Planting service layer (business logic)
+  - Yield prediction calculation (expectedYieldPerPlant × quantity)
+  - Block state integration (planned → planted transition)
+  - Plant data snapshot for historical tracking
+  - Harvest date calculation based on growth cycle days
+  - User tracking (plannedBy, plantedBy, emails recorded)
+  - Comprehensive test suite (8/8 tests passed, 100% success rate)
+
+### Fixed
+- **UUID Conversion Bug** in plant_data_repository.py
+  - Fixed createdBy field not converted to string for MongoDB storage
+  - Added: `plant_dict["createdBy"] = str(plant_dict["createdBy"])` (line 50)
+- **Method Name Mismatch** in planting_service.py
+  - Fixed incorrect method call: `PlantDataService.get_by_id()` → `PlantDataService.get_plant_data()` (line 85)
+
+### Testing
+- Created test_planting_api.py (473 lines) - comprehensive API test suite
+- Test coverage: Authentication → Farm → Block → PlantData → Planting Plan → Mark Planted → Get/List
+- Timestamp-based unique naming prevents test data conflicts
+- Test results saved to JSON files for audit trail
+
+### Progress
+- Farm Management Module: 4/10 services complete
+  - Farm (6 endpoints) - Session 4 ✅
+  - Block (8 endpoints) - Session 5 ✅
+  - PlantData (7 endpoints) - Session 6 ✅
+  - **Planting (4 endpoints) - Session 7 ✅** NEW
+- Total API Endpoints: 25 working endpoints
+
+### Documentation
+- Updated Docs/3-DevLog/2025-10-28-farm-module-implementation-start.md (Session 7 complete)
+- Test results archived: planting_api_test_results_*.json
+
+## [1.4.0] - 2025-10-19
+
 ### Added
 - **Complete Authentication System (User Portal)**
   - JWT-based login/register with token persistence
@@ -118,15 +171,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New: `Enhanced-Dashboard-Implementation.md` - Dashboard state management details
 - New: `Chart-Widget-Implementation.md` - Chart visualization guide
 - New: `Drag-and-Drop-Dashboard.md` - Dashboard customization guide
-
-### Planned for Future Releases
-- Comprehensive test suite (unit, integration, e2e)
-- Email service integration for verification and password reset
-- Module start/stop/restart operations
-- API analytics and usage tracking
-- Webhook system for event notifications
-- Admin portal frontend
-- Module frontend dynamic loading
 
 ## [1.4.0] - 2025-10-19
 

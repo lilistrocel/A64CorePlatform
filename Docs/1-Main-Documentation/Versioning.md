@@ -39,17 +39,18 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ## Current Versions
 
-**Last Updated:** 2025-10-17
+**Last Updated:** 2025-10-30
 
 ### Platform Version
-**A64 Core Platform:** `1.3.0`
+**A64 Core Platform:** `1.5.0`
 
 ### API Versions
 | API Component | Version | Status | Supported Until |
 |---------------|---------|--------|-----------------|
-| API Hub (FastAPI) | 1.3.0 | Active | - |
-| API v1 Endpoints | 1.3.0 | Active | - |
+| API Hub (FastAPI) | 1.5.0 | Active | - |
+| API v1 Endpoints | 1.5.0 | Active | - |
 | Module Management System | 1.3.0 | Active | - |
+| Farm Management Module | 1.5.0 | Active | - |
 
 ### Database Versions
 | Database | Version | Schema Version | Notes |
@@ -70,22 +71,76 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 ### Service Versions
 | Service | Version | Status | Dependencies |
 |---------|---------|--------|--------------|
-| API Hub | 1.3.0 | Active | Python 3.11, FastAPI 0.109.0 |
+| API Hub | 1.5.0 | Active | Python 3.11, FastAPI 0.109.0 |
 | Module Management | 1.3.0 | Active | Docker SDK 7.0.0, Redis 5.0.1 |
+| Farm Management Module | 1.5.0 | Active | Python 3.11, FastAPI 0.109.0, MongoDB 7.0 |
 | Web UI | TBD | Planned | Node.js (TBD) |
 | Embedded Systems Interface | TBD | Planned | Python 3.11 |
 
 ### Docker Images
 | Image | Tag | Build Date | Size |
 |-------|-----|------------|------|
-| a64core/api | 1.3.0 | 2025-10-17 | TBD |
-| a64core/api | latest | 2025-10-17 | TBD |
+| a64core/api | 1.5.0 | 2025-10-30 | TBD |
+| a64core/api | latest | 2025-10-30 | TBD |
+| a64core/farm-management | 1.5.0 | 2025-10-30 | TBD |
+| a64core/farm-management | latest | 2025-10-30 | TBD |
 
 ## Version History
 
 ### Platform Version History
 
-#### v1.3.0 - 2025-10-17 (Current)
+#### v1.5.0 - 2025-10-30 (Current)
+**Type:** Minor Release - Farm Management Module (Planting Service)
+
+**Added:**
+- **Farm Management Module - Planting Service** (Session 7)
+  - 4 new API endpoints for planting management
+  - POST /api/v1/farm/plantings - Create planting plan with yield prediction
+  - POST /api/v1/farm/plantings/{id}/mark-planted - Mark as planted and calculate harvest dates
+  - GET /api/v1/farm/plantings/{id} - Get planting details by ID
+  - GET /api/v1/farm/plantings?farmId=X - List plantings with pagination
+  - Planting repository layer for data access
+  - Planting service layer with business logic (yield calculation, validation)
+  - Block state integration (planned → planted transition)
+  - Plant data snapshot for historical tracking
+  - Harvest date calculation based on growth cycle
+  - User tracking (plannedBy, plantedBy)
+
+**Fixed:**
+- **modules/farm-management/src/services/plant_data/plant_data_repository.py**
+  - Fixed UUID conversion bug: createdBy field not converted to string for MongoDB (line 50)
+  - Added: `plant_dict["createdBy"] = str(plant_dict["createdBy"])`
+- **modules/farm-management/src/services/planting/planting_service.py**
+  - Fixed method name mismatch: `PlantDataService.get_by_id()` changed to `PlantDataService.get_plant_data()` (line 85)
+
+**Testing:**
+- Created comprehensive test script: test_planting_api.py (473 lines)
+- 100% test pass rate (8/8 tests passed)
+- Tests cover: Farm → Block → PlantData → Planting Plan → Mark Planted → Get/List Plantings
+- Timestamp-based unique naming for test data
+
+**Progress:**
+- Farm Management Module: 4/10 services complete
+  - Farm Service (6 endpoints) - Session 4
+  - Block Service (8 endpoints) - Session 5
+  - PlantData Service (7 endpoints) - Session 6
+  - **Planting Service (4 endpoints) - Session 7** ✅ NEW
+- Total API Endpoints: 25 working endpoints
+
+**Documentation:**
+- Updated DevLog: 2025-10-28-farm-module-implementation-start.md (Session 7)
+- Test results saved: planting_api_test_results_*.json
+
+---
+
+#### v1.4.0 - 2025-10-19
+**Type:** Minor Release - Port Management & Reverse Proxy Automation
+
+*(Content preserved from previous version)*
+
+---
+
+#### v1.3.0 - 2025-10-17
 **Type:** Minor Release - Module Management System
 
 **Added:**
