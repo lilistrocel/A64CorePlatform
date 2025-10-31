@@ -58,10 +58,33 @@ modules/farm-management/
 | DELETE | `/api/v1/farm/farms/{id}` | Delete farm | Yes (owner) |
 | GET | `/api/v1/farm/farms/{id}/summary` | Farm summary | Yes |
 
+### Plant Data API (Enhanced Schema)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/farm/plant-data-enhanced` | Create enhanced plant data | Yes (agronomist) |
+| GET | `/api/v1/farm/plant-data-enhanced` | Search plant data (filters, pagination) | Yes |
+| GET | `/api/v1/farm/plant-data-enhanced/{id}` | Get specific plant data | Yes |
+| PATCH | `/api/v1/farm/plant-data-enhanced/{id}` | Update plant data (increments version) | Yes (agronomist) |
+| DELETE | `/api/v1/farm/plant-data-enhanced/{id}` | Soft delete plant data | Yes (agronomist) |
+| POST | `/api/v1/farm/plant-data-enhanced/{id}/clone` | Clone plant data with new name | Yes (agronomist) |
+| GET | `/api/v1/farm/plant-data-enhanced/template/csv` | Download CSV template | Yes |
+| GET | `/api/v1/farm/plant-data-enhanced/by-farm-type/{type}` | Get plants by farm type | Yes |
+| GET | `/api/v1/farm/plant-data-enhanced/by-tags/{tags}` | Get plants by tags | Yes |
+
+**Query Parameters for Search**:
+- `page` (int): Page number (default: 1)
+- `perPage` (int): Items per page (default: 20, max: 100)
+- `search` (string): Text search on name, scientific name, tags
+- `farmType` (enum): Filter by farm type (open_field, greenhouse, hydroponic, vertical_farm, aquaponic)
+- `minGrowthCycle` (int): Minimum growth cycle days
+- `maxGrowthCycle` (int): Maximum growth cycle days
+- `tags` (string): Comma-separated tags
+
 ### Coming Soon
 
 - Blocks (CRUD + state management)
-- Plant Data (CRUD + CSV import)
+- Plant Data Legacy (backward compatibility API)
 - Plantings (planning + execution)
 - Daily Harvests (incremental recording)
 - Alerts (trigger + resolve)
@@ -119,7 +142,8 @@ modules/farm-management/
 |------------|---------|---------|
 | `farms` | Farm locations | farmId (unique), managerId |
 | `blocks` | Planting areas | blockId (unique), farmId, state |
-| `plant_data` | Plant requirements | plantDataId (unique), plantName |
+| `plant_data` | Plant requirements (legacy) | plantDataId (unique), plantName |
+| `plant_data_enhanced` | Comprehensive plant data | plantDataId (unique), plantName, scientificName (unique), farmTypeCompatibility, tags, growthCycle.totalCycleDays, deletedAt (sparse), text search index |
 | `plantings` | Planting records | plantingId (unique), blockId |
 | `daily_harvests` | Daily harvests | dailyHarvestId (unique), cycleId |
 | `harvests` | Harvest summaries | harvestId (unique), plantingId |
@@ -127,6 +151,24 @@ modules/farm-management/
 | `block_cycles` | Historical cycles | cycleId (unique), blockId + cycleNumber |
 | `stock_inventory` | Stock tracking | inventoryId (unique), farmId + plantDataId |
 | `farm_assignments` | User access | assignmentId (unique), userId + farmId |
+
+### Database Initialization
+
+Run the database initialization script to create all required indexes:
+
+```bash
+cd modules/farm-management
+python -m src.utils.db_init
+```
+
+Or import and use programmatically:
+
+```python
+from src.utils.db_init import DatabaseInitializer
+
+# Initialize all indexes
+results = await DatabaseInitializer.initialize_all(db)
+```
 
 ## Authentication
 
@@ -198,11 +240,256 @@ black src/
 - Logistics Module: Shipping and distribution
 - Inventory Management Module: Stock levels, reorder points
 
+## Plant Data Enhanced Schema
+
+### Overview
+
+The enhanced plant data schema provides comprehensive agronomic information for precision agriculture. It includes 13 major field groups covering all aspects of plant cultivation.
+
+### Schema Structure
+
+```typescript
+PlantDataEnhanced {
+  // 1. Basic Information
+  plantDataId: UUID
+  plantName: string (unique)
+  scientificName: string (unique)
+  farmTypeCompatibility: FarmTypeEnum[] // open_field, greenhouse, hydroponic, vertical_farm, aquaponic
+
+  // 2. Growth Cycle (detailed breakdown)
+  growthCycle: {
+    germinationDays: int
+    vegetativeDays: int
+    floweringDays: int
+    fruitingDays: int
+    harvestDurationDays: int
+    totalCycleDays: int // Must equal sum of stages
+  }
+
+  // 3. Yield & Waste
+  yieldInfo: {
+    yieldPerPlant: float
+    yieldUnit: string
+    expectedWastePercentage: float (0-100)
+  }
+
+  // 4. Fertilizer Schedule (by growth stage)
+  fertilizerSchedule: [{
+    stage: GrowthStageEnum
+    fertilizerType: string
+    quantityPerPlant: float
+    quantityUnit: string
+    frequencyDays: int
+    npkRatio: string (optional)
+    notes: string (optional)
+  }]
+
+  // 5. Pesticide Schedule (with safety info)
+  pesticideSchedule: [{
+    stage: GrowthStageEnum
+    pesticideType: string
+    targetPest: string (optional)
+    quantityPerPlant: float
+    quantityUnit: string
+    frequencyDays: int
+    safetyNotes: string (optional)
+    preharvestIntervalDays: int (optional)
+  }]
+
+  // 6. Environmental Requirements
+  environmentalRequirements: {
+    temperature: {
+      minCelsius: float
+      maxCelsius: float
+      optimalCelsius: float (must be within min-max)
+    }
+    humidity: {
+      minPercentage: float (0-100)
+      maxPercentage: float (0-100)
+      optimalPercentage: float (0-100)
+    } (optional)
+    co2RequirementPpm: int (optional)
+    airCirculation: string (optional)
+  }
+
+  // 7. Watering Requirements
+  wateringRequirements: {
+    frequencyDays: int
+    waterType: WaterTypeEnum // tap, filtered, ro, rainwater, distilled
+    amountPerPlantLiters: float (optional)
+    droughtTolerance: ToleranceLevelEnum // low, medium, high
+    notes: string (optional)
+  }
+
+  // 8. Soil & pH Requirements
+  soilRequirements: {
+    phRequirements: {
+      minPH: float (0-14)
+      maxPH: float (0-14)
+      optimalPH: float (0-14, must be within min-max)
+    }
+    soilTypes: SoilTypeEnum[] // loamy, sandy, clay, silty, peaty, chalky
+    nutrientsRecommendations: string (optional)
+    ecRangeMs: string (optional, for hydroponics)
+    tdsRangePpm: string (optional, for hydroponics)
+    notes: string (optional)
+  }
+
+  // 9. Diseases & Pests
+  diseasesAndPests: [{
+    name: string
+    symptoms: string
+    preventionMeasures: string
+    treatmentOptions: string
+    severity: SeverityLevelEnum // low, medium, high, critical
+  }]
+
+  // 10. Light Requirements
+  lightRequirements: {
+    lightType: LightTypeEnum // full_sun, partial_shade, full_shade, filtered_light
+    minHoursDaily: float (0-24)
+    maxHoursDaily: float (0-24)
+    optimalHoursDaily: float (0-24)
+    intensityLux: int (optional, for indoor)
+    intensityPpfd: int (optional, for indoor)
+    photoperiodSensitive: bool
+    notes: string (optional)
+  }
+
+  // 11. Quality Grading Standards
+  gradingStandards: [{
+    gradeName: string
+    sizeRequirements: string (optional)
+    colorRequirements: string (optional)
+    defectTolerance: string (optional)
+    otherCriteria: string (optional)
+    priceMultiplier: float (optional, e.g., 1.5 = 150% of base price)
+  }]
+
+  // 12. Economics & Labor
+  economicsAndLabor: {
+    averageMarketValuePerKg: float (optional)
+    currency: string
+    totalManHoursPerPlant: float
+    plantingHours: float (optional)
+    maintenanceHours: float (optional)
+    harvestingHours: float (optional)
+    notes: string (optional)
+  }
+
+  // 13. Additional Information
+  additionalInfo: {
+    growthHabit: GrowthHabitEnum // determinate, indeterminate, bush, vine, climbing, spreading
+    spacing: {
+      betweenPlantsCm: float
+      betweenRowsCm: float
+      plantsPerSquareMeter: float (optional)
+    }
+    supportRequirements: SupportTypeEnum // none, trellis, stakes, cage, net, pole
+    companionPlants: string[] (optional)
+    incompatiblePlants: string[] (optional)
+    notes: string (optional)
+  }
+
+  // Metadata
+  tags: string[] (optional, for search/categorization)
+  dataVersion: int (auto-incremented on updates)
+  createdBy: UUID
+  createdByEmail: string
+  createdAt: datetime
+  updatedAt: datetime
+  deletedAt: datetime (null = active, set = soft deleted)
+}
+```
+
+### Sample Data
+
+Sample comprehensive plant data for tomato, lettuce, and strawberry is available in:
+- `modules/farm-management/docs/plant_data_samples.json`
+
+### Database Indexes
+
+The enhanced schema uses 10 strategic indexes for optimal query performance:
+
+1. **Primary Key** (unique): `plantDataId`
+2. **Plant Name**: `plantName`
+3. **Scientific Name** (unique, partial): `scientificName`
+4. **Farm Type Compatibility**: `farmTypeCompatibility`
+5. **Tags**: `tags`
+6. **Growth Cycle**: `growthCycle.totalCycleDays`
+7. **Soft Delete** (sparse): `deletedAt`
+8. **Created By** (compound): `createdBy + createdAt`
+9. **Active Records** (compound): `deletedAt + updatedAt`
+10. **Text Search** (weighted): `plantName, scientificName, tags, additionalInfo.notes`
+
+### API Usage Examples
+
+**Create Enhanced Plant Data**:
+```bash
+curl -X POST "http://localhost:8001/api/v1/farm/plant-data-enhanced" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @plant_data.json
+```
+
+**Search with Filters**:
+```bash
+# Search by text
+curl "http://localhost:8001/api/v1/farm/plant-data-enhanced?search=tomato"
+
+# Filter by farm type
+curl "http://localhost:8001/api/v1/farm/plant-data-enhanced?farmType=hydroponic"
+
+# Filter by growth cycle range (30-60 days)
+curl "http://localhost:8001/api/v1/farm/plant-data-enhanced?minGrowthCycle=30&maxGrowthCycle=60"
+
+# Filter by tags
+curl "http://localhost:8001/api/v1/farm/plant-data-enhanced?tags=vegetable,summer"
+
+# Combine filters with pagination
+curl "http://localhost:8001/api/v1/farm/plant-data-enhanced?search=lettuce&farmType=vertical_farm&page=1&perPage=20"
+```
+
+**Update Plant Data** (increments version):
+```bash
+curl -X PATCH "http://localhost:8001/api/v1/farm/plant-data-enhanced/{plantDataId}" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "yieldInfo": {
+      "yieldPerPlant": 6.0,
+      "yieldUnit": "kg",
+      "expectedWastePercentage": 12.0
+    }
+  }'
+```
+
+**Clone Plant Data**:
+```bash
+curl -X POST "http://localhost:8001/api/v1/farm/plant-data-enhanced/{plantDataId}/clone?newName=Tomato%20-%20Cherry" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Migration from Legacy Schema
+
+Use the `PlantDataMigrationMapper` utility to convert between legacy and enhanced schemas:
+
+```python
+from src.utils.plant_data_mapper import PlantDataMigrationMapper
+
+# Convert legacy to enhanced
+enhanced = PlantDataMigrationMapper.legacy_to_enhanced(legacy_plant)
+
+# Convert enhanced to legacy (for backward compatibility)
+legacy = PlantDataMigrationMapper.enhanced_to_legacy(enhanced_plant)
+```
+
 ## Documentation
 
 - **Planning**: `/Docs/2-Working-Progress/farm-management-module.md`
 - **DevLog**: `/Docs/3-DevLog/2025-10-28-farm-module-implementation-start.md`
 - **API Docs**: http://localhost:8001/docs (when running)
+- **Plant Data Samples**: `/modules/farm-management/docs/plant_data_samples.json`
 
 ## Roadmap
 

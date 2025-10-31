@@ -7,6 +7,13 @@ All Pydantic models for the farm management system.
 from .farm import Farm, FarmLocation, FarmCreate, FarmUpdate
 from .block import Block, BlockState, BlockCreate, BlockUpdate
 from .plant_data import PlantData, PlantDataCreate, PlantDataUpdate
+from .plant_data_enhanced import (
+    PlantDataEnhanced,
+    PlantDataEnhancedCreate,
+    PlantDataEnhancedUpdate,
+    FarmTypeEnum,
+    GrowthStageEnum,
+)
 from .planting import Planting, PlantingItem, PlantingCreate
 from .daily_harvest import DailyHarvest, DailyHarvestEntry, DailyHarvestCreate
 from .harvest import Harvest, HarvestEntry
@@ -30,6 +37,12 @@ __all__ = [
     "PlantData",
     "PlantDataCreate",
     "PlantDataUpdate",
+    # Plant Data Enhanced
+    "PlantDataEnhanced",
+    "PlantDataEnhancedCreate",
+    "PlantDataEnhancedUpdate",
+    "FarmTypeEnum",
+    "GrowthStageEnum",
     # Planting
     "Planting",
     "PlantingItem",
