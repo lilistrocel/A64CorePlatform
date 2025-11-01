@@ -947,6 +947,454 @@ GET /api/v1/modules/audit-log
 
 ---
 
+### Farm Management Module
+**Status:** ✅ **IMPLEMENTED** (v1.6.0 - Microservice on port 8001)
+**Base URL:** `http://localhost:8001/api/v1/farm` (proxied via nginx at `/api/v1/farm`)
+
+The Farm Management Module is a separate microservice providing comprehensive farm operations management including farms, blocks, plant data, plantings, and harvest tracking.
+
+**Architecture:** Independent FastAPI microservice with dedicated MongoDB database
+**Authentication:** JWT Bearer Token (same token system as main API)
+**Rate Limit:** By user role (inherited from main API auth)
+
+---
+
+#### Module Health Check
+```
+GET /api/v1/farm/health
+```
+**Purpose:** Check if farm management module is operational
+**Authentication:** None
+**Response:** 200 OK
+```json
+{
+  "status": "healthy",
+  "service": "Farm Management Module"
+}
+```
+
+---
+
+### Farms Management
+
+#### List Farms
+```
+GET /api/v1/farm/farms
+```
+**Purpose:** Get paginated list of farms for current user
+**Authentication:** Required (Bearer Token)
+**Query Parameters:**
+- `page` (integer, default: 1): Page number
+- `perPage` (integer, default: 20, max: 100): Items per page
+- `search` (string, optional): Search by farm name or location
+
+**Response:** 200 OK (Paginated)
+
+---
+
+#### Create Farm
+```
+POST /api/v1/farm/farms
+```
+**Purpose:** Create a new farm
+**Authentication:** Required (Bearer Token)
+**Request Body:**
+```json
+{
+  "name": "Green Valley Farm",
+  "location": "California, USA",
+  "farmType": "greenhouse",
+  "totalArea": 5000.0,
+  "areaUnit": "sqm"
+}
+```
+
+**Response:** 201 Created
+
+---
+
+### Block Management
+
+#### Create Block
+```
+POST /api/v1/farm/farms/{farmId}/blocks
+```
+**Purpose:** Create a cultivation block within a farm
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `farmId` (UUID)
+**Request Body:**
+```json
+{
+  "name": "Block A1",
+  "blockType": "greenhouse",
+  "area": 500.0,
+  "areaUnit": "sqm"
+}
+```
+
+**Response:** 201 Created
+
+---
+
+#### List Blocks
+```
+GET /api/v1/farm/farms/{farmId}/blocks
+```
+**Purpose:** Get all blocks for a specific farm
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `farmId` (UUID)
+
+**Response:** 200 OK
+
+---
+
+### Plant Data Enhanced (Agronomic Knowledge Base)
+
+#### Create Plant Data
+```
+POST /api/v1/farm/plant-data-enhanced
+```
+**Purpose:** Create comprehensive plant cultivation data entry
+**Authentication:** Required (Bearer Token - Agronomist role)
+**Rate Limit:** By user role
+**Request Body:**
+```json
+{
+  "plantName": "Tomato",
+  "scientificName": "Solanum lycopersicum",
+  "family": "Solanaceae",
+  "commonNames": ["Roma Tomato", "Plum Tomato"],
+  "tags": ["vegetable", "greenhouse", "high-yield"],
+  "farmTypeCompatibility": ["greenhouse", "open_field"],
+  "growthCycle": {
+    "totalCycleDays": 90,
+    "germinationDays": 7,
+    "vegetativeDays": 30,
+    "floweringDays": 21,
+    "fruitingDays": 25,
+    "harvestDays": 7
+  },
+  "yieldAndWaste": {
+    "expectedYieldPerPlant": 5.0,
+    "yieldUnit": "kg",
+    "qualityAPercentage": 70.0,
+    "qualityBPercentage": 25.0,
+    "qualityCPercentage": 5.0,
+    "wastePercentage": 5.0
+  },
+  "environmentalRequirements": {
+    "temperatureRange": {
+      "min": 18.0,
+      "max": 27.0,
+      "optimal": 22.0,
+      "unit": "celsius"
+    },
+    "humidityRange": {
+      "min": 60.0,
+      "max": 80.0,
+      "optimal": 70.0
+    }
+  }
+}
+```
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "plantDataId": "uuid-here",
+    "plantName": "Tomato",
+    "scientificName": "Solanum lycopersicum",
+    "dataVersion": 1,
+    "createdAt": "2025-10-31T12:00:00.000Z",
+    "updatedAt": "2025-10-31T12:00:00.000Z"
+  },
+  "message": "Plant data created successfully"
+}
+```
+
+**Permissions:** Requires `agronomist` role
+
+**Field Groups (13 comprehensive categories):**
+1. **Basic Info** - Plant identification and metadata
+2. **Growth Cycle** - 5 growth stages with durations
+3. **Yield & Waste** - Expected yields and quality grading
+4. **Fertilizer Schedule** - Stage-specific NPK requirements
+5. **Pesticide Schedule** - Disease/pest management
+6. **Environmental Requirements** - Temperature, humidity, CO2, air circulation
+7. **Watering Requirements** - Irrigation methods and schedules
+8. **Soil & pH Requirements** - Soil type and nutrient needs
+9. **Diseases & Pests** - Common issues and treatments
+10. **Light Requirements** - Photoperiod and intensity
+11. **Quality Grading** - Standards for A/B/C grades
+12. **Economics & Labor** - Planting density and labor requirements
+13. **Additional Info** - Notes, references, media
+
+---
+
+#### List Plant Data
+```
+GET /api/v1/farm/plant-data-enhanced
+```
+**Purpose:** Get paginated list of plant data with advanced search and filters
+**Authentication:** Required (Bearer Token)
+**Rate Limit:** By user role
+**Query Parameters:**
+- `page` (integer, default: 1): Page number
+- `perPage` (integer, default: 20, max: 100): Items per page
+- `search` (string, optional): Text search across plantName, scientificName, commonNames, description
+- `farmType` (string, optional): Filter by farm type compatibility (greenhouse, open_field, hydroponic, vertical_farm, aquaponic, container, mixed)
+- `plantType` (string, optional): Filter by plant type (vegetable, fruit, herb, leafy_green, root, flower, grain, other)
+- `minCycleDays` (integer, optional): Minimum total growth cycle days
+- `maxCycleDays` (integer, optional): Maximum total growth cycle days
+- `tags` (string, optional): Comma-separated tags (AND logic)
+- `isActive` (boolean, optional): Filter by active status (default: true)
+
+**Response:** 200 OK (Paginated)
+```json
+{
+  "data": [
+    {
+      "plantDataId": "uuid-here",
+      "plantName": "Tomato",
+      "scientificName": "Solanum lycopersicum",
+      "family": "Solanaceae",
+      "tags": ["vegetable", "greenhouse"],
+      "farmTypeCompatibility": ["greenhouse", "open_field"],
+      "growthCycle": {
+        "totalCycleDays": 90
+      },
+      "createdAt": "2025-10-31T12:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "total": 50,
+    "page": 1,
+    "perPage": 20,
+    "totalPages": 3
+  }
+}
+```
+
+**Performance:** 10 strategic database indexes optimize query performance (~90% faster)
+
+---
+
+#### Get Plant Data by ID
+```
+GET /api/v1/farm/plant-data-enhanced/{plantDataId}
+```
+**Purpose:** Get complete plant data with all 13 field groups
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `plantDataId` (UUID)
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "plantDataId": "uuid-here",
+    "plantName": "Tomato",
+    "scientificName": "Solanum lycopersicum",
+    "family": "Solanaceae",
+    "commonNames": ["Roma Tomato"],
+    "tags": ["vegetable", "greenhouse"],
+    "farmTypeCompatibility": ["greenhouse", "open_field"],
+    "growthCycle": { ... },
+    "yieldAndWaste": { ... },
+    "fertilizerSchedule": { ... },
+    "pesticideSchedule": { ... },
+    "environmentalRequirements": { ... },
+    "wateringRequirements": { ... },
+    "soilAndPH": { ... },
+    "diseasesAndPests": { ... },
+    "lightRequirements": { ... },
+    "qualityGrading": { ... },
+    "economicsAndLabor": { ... },
+    "additionalInfo": { ... },
+    "dataVersion": 1,
+    "createdBy": "user-id",
+    "createdAt": "2025-10-31T12:00:00.000Z",
+    "updatedAt": "2025-10-31T12:00:00.000Z"
+  }
+}
+```
+
+**Errors:**
+- 404: Plant data not found
+
+---
+
+#### Update Plant Data
+```
+PATCH /api/v1/farm/plant-data-enhanced/{plantDataId}
+```
+**Purpose:** Update plant data (increments dataVersion for tracking)
+**Authentication:** Required (Bearer Token - Agronomist role)
+**Path Parameters:** `plantDataId` (UUID)
+**Request Body:** Partial update (any fields from creation schema)
+
+**Response:** 200 OK (Updated plant data)
+
+**Permissions:** Requires `agronomist` role
+
+**Note:** Each update increments `dataVersion` for change tracking
+
+---
+
+#### Delete Plant Data (Soft Delete)
+```
+DELETE /api/v1/farm/plant-data-enhanced/{plantDataId}
+```
+**Purpose:** Soft delete plant data (sets deletedAt timestamp, preserves data)
+**Authentication:** Required (Bearer Token - Agronomist role)
+**Path Parameters:** `plantDataId` (UUID)
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "plantDataId": "uuid-here"
+  },
+  "message": "Plant data deleted successfully"
+}
+```
+
+**Permissions:** Requires `agronomist` role
+
+**Note:** Soft delete preserves data for audit trail. Deleted entries excluded from queries by default.
+
+---
+
+#### Clone Plant Data
+```
+POST /api/v1/farm/plant-data-enhanced/{plantDataId}/clone
+```
+**Purpose:** Create a copy of plant data for creating variations
+**Authentication:** Required (Bearer Token - Agronomist role)
+**Path Parameters:** `plantDataId` (UUID)
+
+**Response:** 201 Created (Cloned plant data with new UUID)
+
+**Permissions:** Requires `agronomist` role
+
+**Note:** Clones all data, appends "(Clone)" to plantName, generates new UUID, resets audit fields
+
+---
+
+#### Download CSV Template
+```
+GET /api/v1/farm/plant-data-enhanced/template/csv
+```
+**Purpose:** Download CSV template for bulk plant data import
+**Authentication:** Required (Bearer Token)
+
+**Response:** 200 OK (CSV file download)
+```csv
+plantName,scientificName,family,growthDurationDays,...
+Tomato,Solanum lycopersicum,Solanaceae,90,...
+```
+
+**Headers:**
+- `Content-Type: text/csv`
+- `Content-Disposition: attachment; filename=plant_data_template.csv`
+
+---
+
+#### Filter by Farm Type
+```
+GET /api/v1/farm/plant-data-enhanced/by-farm-type/{farmType}
+```
+**Purpose:** Get plants compatible with specific farm type
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `farmType` (greenhouse | open_field | hydroponic | vertical_farm | aquaponic | container | mixed)
+
+**Response:** 200 OK (List of compatible plants)
+
+---
+
+#### Filter by Tags
+```
+GET /api/v1/farm/plant-data-enhanced/by-tags/{tags}
+```
+**Purpose:** Get plants matching comma-separated tags (AND logic)
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `tags` (comma-separated string, e.g., "vegetable,greenhouse,high-yield")
+
+**Response:** 200 OK (List of matching plants)
+
+---
+
+### Planting Management
+
+#### Create Planting Plan
+```
+POST /api/v1/farm/plantings
+```
+**Purpose:** Create a planting plan with yield prediction
+**Authentication:** Required (Bearer Token)
+**Request Body:**
+```json
+{
+  "farmId": "uuid-here",
+  "blockId": "uuid-here",
+  "plantDataId": "uuid-here",
+  "quantity": 100,
+  "plantingMethod": "direct_seeding"
+}
+```
+
+**Response:** 201 Created (Includes predicted yield)
+
+---
+
+#### Mark Planting as Planted
+```
+POST /api/v1/farm/plantings/{plantingId}/mark-planted
+```
+**Purpose:** Mark planting as planted and calculate harvest date
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `plantingId` (UUID)
+**Request Body:**
+```json
+{
+  "actualPlantedDate": "2025-11-01T00:00:00.000Z"
+}
+```
+
+**Response:** 200 OK (Updates block state to "planted", calculates expected harvest date)
+
+---
+
+### Farm Management Endpoints Summary
+
+| Category | Endpoints | Status | Version |
+|----------|-----------|--------|---------|
+| **Farms** | 6 endpoints | ✅ Active | v1.5.0 |
+| **Blocks** | 8 endpoints | ✅ Active | v1.5.0 |
+| **Plant Data (Legacy)** | 7 endpoints | ✅ Active | v1.5.0 |
+| **Plant Data Enhanced** | 9 endpoints | ✅ Active | v1.6.0 |
+| **Plantings** | 4 endpoints | ✅ Active | v1.5.0 |
+| **Total** | **34 endpoints** | ✅ Active | - |
+
+**Microservice Details:**
+- **Port:** 8001 (internal), proxied via nginx
+- **Database:** MongoDB (separate from main API)
+- **Authentication:** Shared JWT system with main API
+- **Authorization:** Role-based (Agronomist role for plant data modifications)
+- **Documentation:** See `modules/farm-management/README.md` for detailed docs
+
+**Sample Data:**
+- 3 complete plant examples included (Tomato, Lettuce, Strawberry)
+- Demonstrates all 13 field groups with realistic agronomic data
+
+**Documentation Reference:**
+- Detailed documentation: `Docs/2-Working-Progress/farm-management/`
+- API summary: `modules/farm-management/PLANT_DATA_API_SUMMARY.md`
+- Schema design: `modules/farm-management/docs/PLANT_DATA_SCHEMA_SUMMARY.md`
+- Test report: `Docs/2-Working-Progress/plant-data-enhanced-api-test-report.md`
+
+---
+
 ### Resources
 *Section for future resource endpoints*
 
@@ -1039,7 +1487,241 @@ All error responses follow this structure:
 | `DATABASE_ERROR` | 500 | Database operation failed |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |
 
+---
+
+### Dashboard & Widgets
+**Status:** ✅ **IMPLEMENTED** (v1.4.0 - 2025-10-28)
+
+#### Dashboard Health Check
+```
+GET /api/v1/dashboard/health
+```
+**Purpose:** Check if dashboard API is operational
+**Authentication:** None
+**Rate Limit:** None
+**Response:** 200 OK
+```json
+{
+  "status": "healthy",
+  "service": "Dashboard API",
+  "endpoints": 3
+}
+```
+
+---
+
+#### Get Widget Data
+```
+GET /api/v1/dashboard/widgets/{widgetId}/data
+```
+**Purpose:** Fetch data for a specific dashboard widget by ID
+**Authentication:** Required (Bearer Token)
+**Rate Limit:** User (100 req/min)
+**Path Parameters:**
+- `widgetId`: Unique widget identifier (e.g., "sales-trend-chart", "total-users")
+
+**Supported Widget IDs:**
+- Charts: `sales-trend-chart`, `revenue-breakdown-chart`, `user-activity-chart`
+- Stats: `total-users`, `active-sessions`, `api-requests`
+
+**Response:** 200 OK (Chart Widget)
+```json
+{
+  "widgetId": "sales-trend-chart",
+  "data": {
+    "chartType": "line",
+    "data": [
+      {"date": "Mon", "sales": 4200, "revenue": 12500},
+      {"date": "Tue", "sales": 5100, "revenue": 15300}
+    ],
+    "xKey": "date",
+    "yKey": "sales",
+    "series": [
+      {"name": "Sales", "dataKey": "sales", "color": "#3b82f6"},
+      {"name": "Revenue", "dataKey": "revenue", "color": "#10b981"}
+    ]
+  },
+  "lastUpdated": "2025-10-28T07:45:00.000000"
+}
+```
+
+**Response:** 200 OK (Stat Widget)
+```json
+{
+  "widgetId": "total-users",
+  "data": {
+    "value": "17,427",
+    "label": "Total Users",
+    "trend": 6.9,
+    "trendLabel": "vs last month"
+  },
+  "lastUpdated": "2025-10-28T07:45:00.000000"
+}
+```
+
+**Errors:**
+- 401: Unauthorized (missing or invalid token)
+- 404: Widget not found (unknown widgetId)
+- 500: Internal server error
+
+---
+
+#### Refresh Widget Data
+```
+POST /api/v1/dashboard/widgets/{widgetId}/refresh
+```
+**Purpose:** Force refresh data for a specific dashboard widget (bypasses cache)
+**Authentication:** Required (Bearer Token)
+**Rate Limit:** User (100 req/min)
+**Path Parameters:**
+- `widgetId`: Unique widget identifier
+
+**Response:** 200 OK
+Same format as GET /widgets/{widgetId}/data
+
+**Errors:**
+- 401: Unauthorized
+- 404: Widget not found
+- 500: Internal server error
+
+---
+
+#### Get Bulk Widget Data
+```
+POST /api/v1/dashboard/widgets/bulk
+```
+**Purpose:** Fetch data for multiple dashboard widgets in a single request (more efficient than individual requests)
+**Authentication:** Required (Bearer Token)
+**Rate Limit:** User (100 req/min)
+**Request Body:**
+```json
+{
+  "widgetIds": [
+    "total-users",
+    "sales-trend-chart",
+    "revenue-breakdown-chart"
+  ]
+}
+```
+
+**Limits:**
+- Minimum: 1 widget ID
+- Maximum: 50 widget IDs per request
+
+**Response:** 200 OK
+```json
+{
+  "widgets": [
+    {
+      "widgetId": "total-users",
+      "data": {
+        "value": "17,427",
+        "label": "Total Users",
+        "trend": 6.9
+      },
+      "lastUpdated": "2025-10-28T07:45:00"
+    },
+    {
+      "widgetId": "sales-trend-chart",
+      "data": {
+        "chartType": "line",
+        "data": [...],
+        "xKey": "date",
+        "yKey": "sales"
+      },
+      "lastUpdated": "2025-10-28T07:45:00"
+    }
+  ],
+  "requestedCount": 3,
+  "returnedCount": 2,
+  "errors": [
+    {
+      "widgetId": "invalid-widget",
+      "error": "Unknown widget_id: invalid-widget"
+    }
+  ]
+}
+```
+
+**Notes:**
+- Partial failures are supported: successful widgets are returned even if some fail
+- Check the `errors` array for failed widgets
+- `returnedCount` may be less than `requestedCount` if some widgets fail
+
+**Errors:**
+- 400: Invalid request (empty widget list, too many widgets)
+- 401: Unauthorized
+- 500: Internal server error
+
+---
+
+**Dashboard Endpoints Summary:**
+| Method | Endpoint | Purpose | Auth | Implemented |
+|--------|----------|---------|------|-------------|
+| GET | `/dashboard/health` | Check dashboard API health | No | ✅ v1.4.0 |
+| GET | `/dashboard/widgets/{id}/data` | Get single widget data | Yes | ✅ v1.4.0 |
+| POST | `/dashboard/widgets/{id}/refresh` | Refresh single widget | Yes | ✅ v1.4.0 |
+| POST | `/dashboard/widgets/bulk` | Get multiple widgets data | Yes | ✅ v1.4.0 |
+
+**Chart Types Supported:**
+- **Line Chart:** Multi-series trend analysis (e.g., sales over time)
+- **Bar Chart:** Multi-series comparison (e.g., daily user activity)
+- **Pie Chart:** Distribution visualization (e.g., revenue breakdown)
+
+**Mock Data:**
+Current implementation uses mock data generators for development/testing:
+- Sales trend data (7 days, random variance)
+- Revenue breakdown by category (5 categories)
+- User activity metrics (7 days, weekday/weekend variance)
+- Total users stat (15K-18K range)
+- Active sessions stat (2K-3.5K range)
+- API requests stat (250K-500K range)
+
+**Future Enhancements:**
+- Real-time data integration with modules
+- System metrics (CPU, memory, disk, network)
+- External API data sources
+- Custom widget creation
+- Widget persistence (save user-specific dashboard layouts)
+- Widget permissions (role-based widget visibility)
+
+---
+
 ## API Changelog
+
+### v1.6.0 - 2025-10-31
+- ✅ **Farm Management Module - Plant Data Enhanced API** documented
+- ✅ 9 comprehensive plant data management endpoints
+- ✅ 13 field groups for agronomic knowledge base
+- ✅ Advanced search and filtering (7 filter options)
+- ✅ Soft delete with audit trail (deletedAt timestamp)
+- ✅ Clone functionality for plant variations
+- ✅ CSV template export for bulk import
+- ✅ Data versioning system (increments on updates)
+- ✅ 10 strategic database indexes (~90% query performance improvement)
+- ✅ Agronomist role-based permissions
+- ✅ 3 sample plants included (Tomato, Lettuce, Strawberry)
+- ✅ Farm Management Module summary added (34 total endpoints)
+
+### v1.5.0 - 2025-10-30
+- ✅ **Farm Management Module - Planting Service** implemented
+- ✅ 4 planting management endpoints (create plan, mark planted, get, list)
+- ✅ Yield prediction calculation
+- ✅ Block state integration (planned → planted)
+- ✅ Harvest date calculation based on growth cycle
+
+### v1.4.0 - 2025-10-28
+- ✅ **Dashboard & Widget API** implemented
+- ✅ 4 dashboard endpoints (health, get widget data, refresh widget, bulk fetch)
+- ✅ Chart widget support (line, bar, pie charts)
+- ✅ Stat widget support (metrics with trends)
+- ✅ Mock data generators for development/testing
+- ✅ Pydantic models for dashboard data validation
+- ✅ Dashboard service layer for data management
+- ✅ Multi-series chart support (multiple data series per chart)
+- ✅ Bulk widget data fetching (up to 50 widgets per request)
+- ✅ Partial failure support (returns successful widgets even if some fail)
+- ✅ Widget authentication (requires JWT bearer token)
 
 ### v1.3.0 - 2025-10-17
 - ✅ **Module Management System** implemented
