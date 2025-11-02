@@ -9,7 +9,10 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { PlantDataCard } from '../../components/farm/PlantDataCard';
 import { PlantDataDetail } from '../../components/farm/PlantDataDetail';
+import { AddPlantDataModal } from '../../components/farm/AddPlantDataModal';
+import { EditPlantDataModal } from '../../components/farm/EditPlantDataModal';
 import { plantDataEnhancedApi } from '../../services/plantDataEnhancedApi';
+import { useAuthStore } from '../../stores/auth.store';
 import type {
   PlantDataEnhanced,
   PlantDataEnhancedSearchParams,
@@ -297,6 +300,7 @@ const EmptyDescription = styled.p`
 // ============================================================================
 
 export function PlantDataLibrary() {
+  const { user } = useAuthStore();
   const [plants, setPlants] = useState<PlantDataEnhanced[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -308,8 +312,14 @@ export function PlantDataLibrary() {
   const [selectedPlantType, setSelectedPlantType] = useState<PlantTypeEnum | ''>('');
   const [selectedPlant, setSelectedPlant] = useState<PlantDataEnhanced | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [plantToEdit, setPlantToEdit] = useState<PlantDataEnhanced | null>(null);
 
   const perPage = 12;
+
+  // Check if user has agronomist permission
+  const hasAgronomistPermission = user?.permissions?.includes('agronomist') || ['admin', 'super_admin'].includes(user?.role as string) || false;
 
   useEffect(() => {
     loadPlants();
@@ -372,9 +382,9 @@ export function PlantDataLibrary() {
     }
   };
 
-  const handleViewPlant = async (id: string) => {
+  const handleViewPlant = async (plantDataId: string) => {
     try {
-      const plant = await plantDataEnhancedApi.getPlantDataEnhancedById(id);
+      const plant = await plantDataEnhancedApi.getPlantDataEnhancedById(plantDataId);
       setSelectedPlant(plant);
       setShowDetailModal(true);
     } catch (err) {
@@ -383,21 +393,31 @@ export function PlantDataLibrary() {
     }
   };
 
-  const handleEditPlant = (id: string) => {
-    console.log('Edit plant:', id);
-    // TODO: Implement edit form modal
-    alert('Edit functionality coming soon');
+  const handleEditPlant = async (plantDataId: string) => {
+    if (!hasAgronomistPermission) {
+      alert('You do not have permission to edit plant data. Agronomist role required.');
+      return;
+    }
+
+    try {
+      const plant = await plantDataEnhancedApi.getPlantDataEnhancedById(plantDataId);
+      setPlantToEdit(plant);
+      setShowEditModal(true);
+    } catch (err) {
+      console.error('Error loading plant for edit:', err);
+      alert('Failed to load plant data for editing');
+    }
   };
 
-  const handleClonePlant = async (id: string) => {
-    const plant = plants.find((p) => p.id === id);
+  const handleClonePlant = async (plantDataId: string) => {
+    const plant = plants.find((p) => p.plantDataId === plantDataId);
     if (!plant) return;
 
     const newName = prompt(`Clone "${plant.plantName}" as:`, `${plant.plantName} (Copy)`);
     if (!newName) return;
 
     try {
-      await plantDataEnhancedApi.clonePlantDataEnhanced(id, { newPlantName: newName });
+      await plantDataEnhancedApi.clonePlantDataEnhanced(plantDataId, { newPlantName: newName });
       alert('Plant cloned successfully!');
       loadPlants();
     } catch (err) {
@@ -406,9 +426,9 @@ export function PlantDataLibrary() {
     }
   };
 
-  const handleDeletePlant = async (id: string) => {
+  const handleDeletePlant = async (plantDataId: string) => {
     try {
-      await plantDataEnhancedApi.deletePlantDataEnhanced(id);
+      await plantDataEnhancedApi.deletePlantDataEnhanced(plantDataId);
       alert('Plant deleted successfully!');
       loadPlants();
     } catch (err) {
@@ -418,8 +438,22 @@ export function PlantDataLibrary() {
   };
 
   const handleCreateNew = () => {
-    console.log('Create new plant');
-    // TODO: Implement create modal
+    if (!hasAgronomistPermission) {
+      alert('You do not have permission to create plant data. Agronomist role required.');
+      return;
+    }
+    setShowAddModal(true);
+  };
+
+  const handleAddSuccess = () => {
+    setShowAddModal(false);
+    loadPlants();
+  };
+
+  const handleEditSuccess = () => {
+    setShowEditModal(false);
+    setPlantToEdit(null);
+    loadPlants();
   };
 
   if (loading) {
@@ -452,9 +486,11 @@ export function PlantDataLibrary() {
           <Button $variant="secondary" onClick={handleDownloadTemplate}>
             📥 Download CSV Template
           </Button>
-          <Button $variant="primary" onClick={handleCreateNew}>
-            ➕ New Plant
-          </Button>
+          {hasAgronomistPermission && (
+            <Button $variant="primary" onClick={handleCreateNew}>
+              ➕ New Plant
+            </Button>
+          )}
         </HeaderActions>
       </Header>
 
@@ -522,12 +558,12 @@ export function PlantDataLibrary() {
           <CardsGrid>
             {plants.map((plant) => (
               <PlantDataCard
-                key={plant.id}
+                key={plant.plantDataId}
                 plant={plant}
                 onView={handleViewPlant}
-                onEdit={handleEditPlant}
-                onClone={handleClonePlant}
-                onDelete={handleDeletePlant}
+                onEdit={hasAgronomistPermission ? handleEditPlant : undefined}
+                onClone={hasAgronomistPermission ? handleClonePlant : undefined}
+                onDelete={hasAgronomistPermission ? handleDeletePlant : undefined}
               />
             ))}
           </CardsGrid>
@@ -584,18 +620,40 @@ export function PlantDataLibrary() {
             setShowDetailModal(false);
             setSelectedPlant(null);
           }}
-          onEdit={(id) => {
+          onEdit={hasAgronomistPermission ? (id) => {
             setShowDetailModal(false);
             handleEditPlant(id);
-          }}
-          onClone={async (id) => {
+          } : undefined}
+          onClone={hasAgronomistPermission ? async (id) => {
             setShowDetailModal(false);
             await handleClonePlant(id);
-          }}
-          onDelete={async (id) => {
+          } : undefined}
+          onDelete={hasAgronomistPermission ? async (id) => {
             setShowDetailModal(false);
             await handleDeletePlant(id);
+          } : undefined}
+        />
+      )}
+
+      {/* Add Plant Data Modal - Conditional Rendering */}
+      {showAddModal && (
+        <AddPlantDataModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={handleAddSuccess}
+        />
+      )}
+
+      {/* Edit Plant Data Modal - Conditional Rendering */}
+      {showEditModal && plantToEdit && (
+        <EditPlantDataModal
+          isOpen={showEditModal}
+          plantData={plantToEdit}
+          onClose={() => {
+            setShowEditModal(false);
+            setPlantToEdit(null);
           }}
+          onSuccess={handleEditSuccess}
         />
       )}
     </>
