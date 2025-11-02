@@ -17,5 +17,17 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Listen on all network interfaces
     port: 5173,
+    allowedHosts: [
+      'localhost',
+      'host.docker.internal', // Allow Docker host access for Playwright MCP testing
+      '.localhost', // Allow subdomains
+    ],
+    headers: {
+      // Disable caching in development to prevent cache issues
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store',
+    },
   },
 })

@@ -6,6 +6,8 @@ import { Register } from './pages/auth/Register';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { Profile } from './pages/profile/Profile';
 import { Settings } from './pages/settings/Settings';
+import { FarmManager } from './pages/farm/FarmManager';
+import { ClearCache } from './pages/debug/ClearCache';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 
@@ -24,10 +26,14 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
+          {/* Debug routes (development only) */}
+          <Route path="/debug/clear-cache" element={<ClearCache />} />
+
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/farm/*" element={<FarmManager />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

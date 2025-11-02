@@ -53,9 +53,9 @@ export async function getPlantDataEnhancedList(
 /**
  * Get a single plant data entry by ID
  */
-export async function getPlantDataEnhancedById(id: string): Promise<PlantDataEnhanced> {
+export async function getPlantDataEnhancedById(plantDataId: string): Promise<PlantDataEnhanced> {
   const response = await apiClient.get<{ data: PlantDataEnhanced }>(
-    `/v1/farm/plant-data-enhanced/${id}`
+    `/v1/farm/plant-data-enhanced/${plantDataId}`
   );
   return response.data.data;
 }
@@ -77,11 +77,11 @@ export async function createPlantDataEnhanced(
  * Update existing plant data (partial update)
  */
 export async function updatePlantDataEnhanced(
-  id: string,
+  plantDataId: string,
   data: PlantDataEnhancedUpdate
 ): Promise<PlantDataEnhanced> {
   const response = await apiClient.patch<{ data: PlantDataEnhanced }>(
-    `/v1/farm/plant-data-enhanced/${id}`,
+    `/v1/farm/plant-data-enhanced/${plantDataId}`,
     data
   );
   return response.data.data;
@@ -90,9 +90,9 @@ export async function updatePlantDataEnhanced(
 /**
  * Delete plant data (soft delete)
  */
-export async function deletePlantDataEnhanced(id: string): Promise<{ message: string }> {
+export async function deletePlantDataEnhanced(plantDataId: string): Promise<{ message: string }> {
   const response = await apiClient.delete<{ message: string }>(
-    `/v1/farm/plant-data-enhanced/${id}`
+    `/v1/farm/plant-data-enhanced/${plantDataId}`
   );
   return response.data;
 }
@@ -105,11 +105,11 @@ export async function deletePlantDataEnhanced(id: string): Promise<{ message: st
  * Clone an existing plant data entry with a new name
  */
 export async function clonePlantDataEnhanced(
-  id: string,
+  plantDataId: string,
   request: PlantDataCloneRequest
 ): Promise<PlantDataEnhanced> {
   const response = await apiClient.post<{ data: PlantDataEnhanced }>(
-    `/v1/farm/plant-data-enhanced/${id}/clone`,
+    `/v1/farm/plant-data-enhanced/${plantDataId}/clone`,
     request
   );
   return response.data.data;

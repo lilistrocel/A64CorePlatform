@@ -169,7 +169,7 @@ class PlantDataRepository:
             return current
 
         # Increment version
-        update_dict["version"] = current.version + 1
+        update_dict["dataVersion"] = current.dataVersion + 1
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await db.plant_data.update_one(
@@ -180,7 +180,7 @@ class PlantDataRepository:
         if result.matched_count == 0:
             return None
 
-        logger.info(f"[PlantData Repository] Updated plant data: {plant_data_id} (v{update_dict['version']})")
+        logger.info(f"[PlantData Repository] Updated plant data: {plant_data_id} (v{update_dict['dataVersion']})")
         return await PlantDataRepository.get_by_id(plant_data_id)
 
     @staticmethod
@@ -298,7 +298,7 @@ class PlantDataRepository:
                 k: v for k, v in update_data.model_dump(exclude_unset=True).items()
                 if v is not None
             }
-            update_dict["version"] = plant.version + 1
+            update_dict["dataVersion"] = plant.dataVersion + 1
             update_dict["updatedAt"] = datetime.utcnow()
 
             result = await db.plant_data.update_one(

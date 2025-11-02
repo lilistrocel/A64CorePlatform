@@ -231,28 +231,28 @@ export function PlantDataCard({ plant, onView, onEdit, onClone, onDelete }: Plan
     const target = e.target as HTMLElement;
     if (target.closest('button')) return;
 
-    onView?.(plant.id);
+    onView?.(plant.plantDataId);
   };
 
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onView?.(plant.id);
+    onView?.(plant.plantDataId);
   };
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onEdit?.(plant.id);
+    onEdit?.(plant.plantDataId);
   };
 
   const handleClone = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onClone?.(plant.id);
+    onClone?.(plant.plantDataId);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm(`Are you sure you want to delete "${plant.plantName}"?`)) {
-      onDelete?.(plant.id);
+      onDelete?.(plant.plantDataId);
     }
   };
 

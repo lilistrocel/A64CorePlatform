@@ -18,7 +18,23 @@ from .user import (
     VerificationTokenInDB
 )
 
+from .dashboard import (
+    ChartSeries,
+    ChartWidgetData,
+    StatWidgetData,
+    ModuleDataSource,
+    SystemDataSource,
+    ExternalAPIDataSource,
+    CCMWidget,
+    WidgetDataResponse,
+    BulkWidgetDataRequest,
+    BulkWidgetDataResponse,
+    DashboardLayout,
+    DashboardConfig,
+)
+
 __all__ = [
+    # User models
     "UserRole",
     "UserBase",
     "UserCreate",
@@ -34,5 +50,18 @@ __all__ = [
     "VerifyEmailRequest",
     "PasswordResetRequest",
     "PasswordResetConfirm",
-    "VerificationTokenInDB"
+    "VerificationTokenInDB",
+    # Dashboard models
+    "ChartSeries",
+    "ChartWidgetData",
+    "StatWidgetData",
+    "ModuleDataSource",
+    "SystemDataSource",
+    "ExternalAPIDataSource",
+    "CCMWidget",
+    "WidgetDataResponse",
+    "BulkWidgetDataRequest",
+    "BulkWidgetDataResponse",
+    "DashboardLayout",
+    "DashboardConfig",
 ]

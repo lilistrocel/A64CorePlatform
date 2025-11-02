@@ -1,6 +1,16 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Use nginx proxy (port 80) instead of direct API (port 8000)
+// This allows nginx to route /api/v1/farm/* to farm-management:8001
+// Automatically use host.docker.internal if the page is accessed that way (for Playwright MCP testing)
+const getApiUrl = () => {
+  if (typeof window !== 'undefined' && window.location.hostname === 'host.docker.internal') {
+    return 'http://host.docker.internal/api';
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost/api';
+};
+
+const API_URL = getApiUrl();
 
 // Create axios instance
 export const apiClient = axios.create({

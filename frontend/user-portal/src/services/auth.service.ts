@@ -1,7 +1,16 @@
 import axios from 'axios';
 import { apiClient } from './api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Use nginx proxy (port 80) for all API calls including auth
+// Automatically use host.docker.internal if the page is accessed that way (for Playwright MCP testing)
+const getApiUrl = () => {
+  if (typeof window !== 'undefined' && window.location.hostname === 'host.docker.internal') {
+    return 'http://host.docker.internal/api';
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost/api';
+};
+
+const API_URL = getApiUrl();
 
 export interface LoginCredentials {
   email: string;
@@ -52,15 +61,25 @@ class AuthService {
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     // Use regular axios for login (no auth token needed)
-    const response = await axios.post<AuthResponse>(`${API_URL}/v1/auth/login`, credentials);
+    const response = await axios.post<any>(`${API_URL}/v1/auth/login`, credentials);
+
+    // Backend returns snake_case (access_token, refresh_token)
+    // Convert to camelCase for frontend
+    const accessToken = response.data.access_token;
+    const refreshToken = response.data.refresh_token;
 
     // Store tokens
-    this.accessToken = response.data.accessToken;
-    this.refreshToken = response.data.refreshToken;
-    localStorage.setItem('accessToken', this.accessToken);
-    localStorage.setItem('refreshToken', this.refreshToken);
+    this.accessToken = accessToken;
+    this.refreshToken = refreshToken;
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
 
-    return response.data;
+    // Return camelCase response
+    return {
+      accessToken,
+      refreshToken,
+      user: response.data.user
+    };
   }
 
   /**

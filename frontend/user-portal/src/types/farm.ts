@@ -357,7 +357,7 @@ export interface AdditionalInformation {
 
 // Main Plant Data Enhanced Interface
 export interface PlantDataEnhanced {
-  id: string;
+  plantDataId: string;
   dataVersion: number;
 
   // 1. Basic Information

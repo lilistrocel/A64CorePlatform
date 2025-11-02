@@ -22,8 +22,10 @@ services:
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000
+      - PYTHONPATH=/app/modules/farm-management/src:/app/src
     volumes:
       - ./src:/app/src
+      - ./modules:/app/modules  # Farm management and other modules
       - ./config:/app/config
       - ./logs:/app/logs  # Centralized logging
       - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for module management
@@ -138,13 +140,13 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./logs/nginx:/var/log/nginx
-      - nginx_modules_config:/etc/nginx/conf.d/modules  # Shared volume for module proxy configs
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro  # Module proxy configs (bind mount for easy development)
     networks:
       - a64core-network
     depends_on:
       - api
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -219,6 +221,44 @@ services:
     networks:
       - a64core-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Farm Management Module
+  farm-management:
+    container_name: a64core-farm-management-dev
+    build:
+      context: ./modules/farm-management
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=True
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DB_NAME=a64core_db
+      - SECRET_KEY=dev_secret_key_change_in_production
+      - A64CORE_API_URL=http://api:8000
+      - ENABLE_EMAIL_NOTIFICATIONS=false
+    volumes:
+      - ./modules/farm-management/src:/app/src
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - a64core-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:

@@ -43,7 +43,8 @@ class PlantDataService:
     @staticmethod
     async def create_plant_data(
         plant_data: PlantDataCreate,
-        user_id: str
+        user_id: str,
+        user_email: str = "unknown@a64core.com"
     ) -> PlantData:
         """
         Create new plant data with validation
@@ -90,7 +91,7 @@ class PlantDataService:
                 )
 
         # Create plant data
-        plant = await PlantDataRepository.create(plant_data, user_id, "system@a64core.com")  # TODO: Pass actual email
+        plant = await PlantDataRepository.create(plant_data, user_id, user_email)
 
         logger.info(f"[PlantData Service] User {user_id} created plant data: {plant.plantDataId}")
         return plant
@@ -242,6 +243,7 @@ class PlantDataService:
     async def import_from_csv(
         file: UploadFile,
         user_id: str,
+        user_email: str = "unknown@a64core.com",
         update_existing: bool = False
     ) -> dict:
         """
@@ -322,7 +324,7 @@ class PlantDataService:
 
             if new_plants:
                 try:
-                    created_plants = await PlantDataRepository.bulk_create(new_plants, user_id, "system@a64core.com")  # TODO: Pass actual email
+                    created_plants = await PlantDataRepository.bulk_create(new_plants, user_id, user_email)
                     created_count = len(created_plants)
                 except Exception as e:
                     errors.append(f"Bulk create failed: {str(e)}")

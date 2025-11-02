@@ -40,7 +40,8 @@ async def create_plant_data(
     """
     plant = await PlantDataService.create_plant_data(
         plant_data,
-        current_user.userId
+        current_user.userId,
+        current_user.email
     )
 
     return SuccessResponse(
@@ -204,6 +205,7 @@ async def import_plant_data_csv(
     result = await PlantDataService.import_from_csv(
         file,
         current_user.userId,
+        current_user.email,
         update_existing=updateExisting
     )
 
