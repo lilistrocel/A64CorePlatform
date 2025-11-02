@@ -80,3 +80,21 @@ secrets/
 *.key
 *.crt
 nul
+token_response.json
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Test results and temporary test files
+test-results/
+*_test_results_*.json
+test_*.spec.ts
+test_*.py
+
+# Screenshots and images from testing
+*.png
+clear-browser-cache.html
+
+# Playwright MCP
+.playwright-mcp/
