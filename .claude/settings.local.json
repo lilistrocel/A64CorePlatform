@@ -109,7 +109,21 @@
       "Bash(exit 0)",
       "mcp__playwright__browser_type",
       "mcp__playwright__browser_hover",
-      "mcp__playwright__browser_press_key"
+      "mcp__playwright__browser_press_key",
+      "Bash(aws --version:*)",
+      "Bash(aws sts get-caller-identity:*)",
+      "Bash(aws ec2 create-security-group:*)",
+      "Bash(aws ec2 authorize-security-group-ingress:*)",
+      "Bash(aws ec2 create-key-pair:*)",
+      "Bash(a64-platform-key.pem)",
+      "Bash(aws ec2 describe-images:*)",
+      "Bash(aws ec2 run-instances:*)",
+      "Bash(aws ec2 describe-instances:*)",
+      "Bash(aws ec2 allocate-address:*)",
+      "Bash(aws ec2 associate-address:*)",
+      "Bash(aws ec2 describe-addresses:*)",
+      "Bash(ssh:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

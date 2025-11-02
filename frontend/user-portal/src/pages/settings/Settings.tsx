@@ -64,56 +64,56 @@ export function Settings() {
 }
 
 const SettingsContainer = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }: any) => theme.spacing.md};
   max-width: 1000px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }: any) => theme.spacing.md};
   width: 100%;
 
   @media (min-width: 768px) {
-    padding: ${({ theme }) => theme.spacing.lg};
-    gap: ${({ theme }) => theme.spacing.lg};
+    padding: ${({ theme }: any) => theme.spacing.lg};
+    gap: ${({ theme }: any) => theme.spacing.lg};
   }
 
   @media (min-width: 1024px) {
-    padding: ${({ theme }) => theme.spacing.xl};
+    padding: ${({ theme }: any) => theme.spacing.xl};
     max-width: 1200px;
   }
 `;
 
 const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
+  font-size: ${({ theme }: any) => theme.typography.fontSize['2xl']};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.bold};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
+  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-    margin-bottom: ${({ theme }) => theme.spacing.lg};
+    font-size: ${({ theme }: any) => theme.typography.fontSize['3xl']};
+    margin-bottom: ${({ theme }: any) => theme.spacing.lg};
   }
 `;
 
 const SettingsContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }: any) => theme.spacing.lg};
 
   @media (min-width: 768px) {
-    gap: ${({ theme }) => theme.spacing.xl};
+    gap: ${({ theme }: any) => theme.spacing.xl};
   }
 `;
 
 const SettingItem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-  padding-bottom: ${({ theme }) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  gap: ${({ theme }: any) => theme.spacing.xs};
+  padding-bottom: ${({ theme }: any) => theme.spacing.md};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
 
   @media (min-width: 768px) {
-    padding-bottom: ${({ theme }) => theme.spacing.lg};
+    padding-bottom: ${({ theme }: any) => theme.spacing.lg};
   }
 
   &:last-child {
@@ -123,30 +123,30 @@ const SettingItem = styled.div`
 `;
 
 const SettingLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }) => theme.typography.fontSize.base};
+    font-size: ${({ theme }: any) => theme.typography.fontSize.base};
   }
 `;
 
 const SettingValue = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.primary[500]};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
+  color: ${({ theme }: any) => theme.colors.primary[500]};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   }
 `;
 
 const SettingDescription = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
+  color: ${({ theme }: any) => theme.colors.textSecondary};
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   }
 `;

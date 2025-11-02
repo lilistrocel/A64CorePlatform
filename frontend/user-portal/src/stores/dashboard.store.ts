@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CCMWidget, StatWidgetData } from '@a64core/shared';
-import { dashboardService, type WidgetDataResponse } from '../services/dashboard.service';
+import { dashboardService } from '../services/dashboard.service';
 import type { Layout } from 'react-grid-layout';
 
 interface WidgetState {
@@ -36,7 +36,6 @@ const generateDefaultLayout = (widgets: CCMWidget[]): Layout[] => {
   let currentX = 0;
   let currentY = 0;
   const maxCols = 4;
-  let rowHeights: number[] = []; // Track heights at each y position
 
   widgets.forEach((widget) => {
     const cols = widget.size === 'large' ? 2 : widget.size === 'wide' ? 4 : 1;
