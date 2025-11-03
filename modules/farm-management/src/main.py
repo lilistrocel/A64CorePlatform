@@ -65,14 +65,13 @@ app = FastAPI(
 )
 
 # CORS configuration
+# Parse comma-separated CORS origins from environment variable
+cors_origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",")]
+logger.info(f"[Farm Module] CORS allowed origins: {cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
