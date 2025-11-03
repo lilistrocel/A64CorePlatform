@@ -296,3 +296,88 @@ Create a **dated summary journal** in `Docs/3-DevLog/` following this format:
 - ✅ Test everything
 - ✅ Document first, code second
 - ✅ Use specialized agents for complex tasks
+
+## Remote Server & Git Synchronization
+
+**CRITICAL: When working with remote servers (EC2, VPS, etc.), ALWAYS keep Git synchronized:**
+
+### Git Sync Workflow
+
+**MANDATORY steps when making changes:**
+
+1. **Make changes locally** - Edit files on your local development machine
+2. **Test locally** (if applicable) - Verify changes work in local environment
+3. **Commit to Git** - Create descriptive commit with proper message format
+4. **Push to GitHub** - `git push origin main`
+5. **Pull on remote server** - SSH to server and `git pull origin main`
+6. **Apply changes** - Rebuild Docker containers, restart services as needed
+7. **Test on remote** - Verify changes work in production environment
+
+### Why This Is Critical
+
+**Never edit files directly on remote servers:**
+- ❌ Changes get lost when you pull new code
+- ❌ No version control or history of modifications
+- ❌ Cannot roll back if something breaks
+- ❌ Local and remote environments become inconsistent
+- ❌ Other developers won't have your changes
+
+**Always use Git as the single source of truth:**
+- ✅ All changes tracked and versioned
+- ✅ Easy rollback if problems occur
+- ✅ Consistent state between local and remote
+- ✅ Full change history for debugging
+- ✅ Team members stay synchronized
+
+### Example Workflow
+
+```bash
+# 1. Local: Make changes to code
+# Edit files locally in your IDE
+
+# 2. Local: Commit and push
+git add .
+git commit -m "fix: update API URL configuration for production"
+git push origin main
+
+# 3. Remote: Pull changes
+ssh user@server
+cd /path/to/project
+git pull origin main
+
+# 4. Remote: Apply changes (if needed)
+docker compose -f docker-compose.prod.yml build <service>
+docker compose -f docker-compose.prod.yml up -d <service>
+
+# 5. Remote: Verify changes
+# Test the application
+```
+
+### Exception: Environment-Specific Files
+
+**Only edit these files directly on servers:**
+- `.env.production` - Production environment variables
+- `.env.local` - Server-specific configuration
+- SSL certificates and keys
+- Server-specific configuration that should NOT be in Git
+
+**These files should:**
+- Be listed in `.gitignore`
+- Never be committed to Git (security risk)
+- Be documented in deployment guides
+
+### Troubleshooting Git Sync
+
+**If you accidentally edited on remote:**
+```bash
+# Save your changes first
+git diff > my-changes.patch
+
+# Discard local changes and sync with Git
+git reset --hard origin/main
+
+# Apply your changes as a proper commit locally
+# Then follow the Git Sync Workflow above
+```
+
+**Remember:** Git is your safety net. Use it consistently!
