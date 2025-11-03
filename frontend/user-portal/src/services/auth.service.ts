@@ -133,12 +133,16 @@ class AuthService {
    * Refresh access token using refresh token
    */
   async refreshAccessToken(): Promise<string> {
-    const response = await axios.post<{ accessToken: string }>(`${API_URL}/v1/auth/refresh`, {
-      refreshToken: this.refreshToken
+    // Backend expects snake_case (refresh_token) and returns snake_case (access_token, refresh_token)
+    const response = await axios.post<{ access_token: string; refresh_token: string }>(`${API_URL}/v1/auth/refresh`, {
+      refresh_token: this.refreshToken
     });
 
-    this.accessToken = response.data.accessToken;
+    // Store both tokens (backend implements rotating refresh tokens)
+    this.accessToken = response.data.access_token;
+    this.refreshToken = response.data.refresh_token;
     localStorage.setItem('accessToken', this.accessToken);
+    localStorage.setItem('refreshToken', this.refreshToken);
 
     return this.accessToken;
   }
