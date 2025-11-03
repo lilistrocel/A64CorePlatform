@@ -54,17 +54,20 @@ apiClient.interceptors.response.use(
         const refreshToken = localStorage.getItem('refreshToken');
 
         if (refreshToken) {
+          // Backend expects snake_case (refresh_token) and returns snake_case (access_token, refresh_token)
           const response = await axios.post(`${API_URL}/v1/auth/refresh`, {
-            refreshToken,
+            refresh_token: refreshToken,
           });
 
-          const { accessToken } = response.data;
+          const access_token = response.data.access_token;
+          const new_refresh_token = response.data.refresh_token;
 
-          // Update token in localStorage
-          localStorage.setItem('accessToken', accessToken);
+          // Update both tokens in localStorage (backend uses rotating refresh tokens)
+          localStorage.setItem('accessToken', access_token);
+          localStorage.setItem('refreshToken', new_refresh_token);
 
           // Update the failed request with new token
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
 
           // Retry the original request
           return apiClient(originalRequest);
