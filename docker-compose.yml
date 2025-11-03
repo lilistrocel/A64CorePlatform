@@ -203,11 +203,13 @@ services:
       context: .
       dockerfile: frontend/user-portal/Dockerfile
       target: development  # Use development stage
+      args:
+        - VITE_API_URL=http://localhost/api  # Build-time API URL for local development
     ports:
       - "5173:5173"  # Vite dev server
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost/api  # API endpoint through nginx
+      - VITE_API_URL=http://localhost/api  # Runtime API URL (also needed for dev server)
     volumes:
       - ./frontend/shared:/app/shared  # Hot-reload for shared library
       - ./frontend/user-portal/src:/app/user-portal/src  # Hot-reload for user-portal source

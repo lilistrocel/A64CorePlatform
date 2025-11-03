@@ -41,6 +41,12 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 # ================================
 FROM base AS build
 
+# Accept VITE_API_URL as a build argument
+ARG VITE_API_URL=http://localhost/api
+
+# Set it as an environment variable so Vite can use it during build
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Copy source code
 COPY frontend/shared ./shared
 COPY frontend/user-portal ./user-portal
