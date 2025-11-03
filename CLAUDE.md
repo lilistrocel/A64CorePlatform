@@ -301,11 +301,29 @@ Create a **dated summary journal** in `Docs/3-DevLog/` following this format:
 
 **CRITICAL: When working with remote servers (EC2, VPS, etc.), ALWAYS keep Git synchronized:**
 
+### 🚨 LOCAL-FIRST DEVELOPMENT RULE 🚨
+
+**ALWAYS make changes on your LOCAL machine FIRST, then sync to remote servers.**
+
+**This is NON-NEGOTIABLE to avoid file conflicts and maintain consistency:**
+- ❌ **NEVER** edit code files directly on remote servers
+- ❌ **NEVER** make changes on both local and remote simultaneously
+- ❌ **NEVER** skip Git when making code changes
+- ✅ **ALWAYS** edit locally → commit → push → pull on remote
+- ✅ **ALWAYS** use Git as the single source of truth
+
+**Why this prevents conflicts:**
+1. Git tracks who changed what and when
+2. Merge conflicts are detected and can be resolved properly
+3. You can't accidentally overwrite someone else's work
+4. Both environments stay synchronized automatically
+5. Easy to roll back if something breaks
+
 ### Git Sync Workflow
 
 **MANDATORY steps when making changes:**
 
-1. **Make changes locally** - Edit files on your local development machine
+1. **Make changes locally FIRST** - Edit files on your local development machine (NEVER on server)
 2. **Test locally** (if applicable) - Verify changes work in local environment
 3. **Commit to Git** - Create descriptive commit with proper message format
 4. **Push to GitHub** - `git push origin main`
