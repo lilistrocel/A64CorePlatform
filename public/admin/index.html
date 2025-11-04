@@ -536,7 +536,21 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'http://localhost:8000/api/v1';
+        // Dynamically determine API URL based on current hostname
+        const getApiUrl = () => {
+            const hostname = window.location.hostname;
+            const protocol = window.location.protocol;
+
+            // If accessing via production domain, use nginx proxy
+            if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                return `${protocol}//${hostname}/api/v1`;
+            }
+
+            // For local development, use nginx proxy on localhost
+            return 'http://localhost/api/v1';
+        };
+
+        const API_BASE_URL = getApiUrl();
         let accessToken = localStorage.getItem('accessToken');
         let currentUser = null;
         let currentPage = 1;
