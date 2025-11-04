@@ -182,12 +182,13 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 32px;
+  height: 48px;
   width: auto;
   display: block;
+  margin: 0 auto;
 
   @media (min-width: 1024px) {
-    height: 40px;
+    height: 60px;
   }
 `;
 

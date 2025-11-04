@@ -4,10 +4,14 @@ import axios from 'axios';
 // This allows nginx to route /api/v1/farm/* to farm-management:8001
 // Automatically use host.docker.internal if the page is accessed that way (for Playwright MCP testing)
 const getApiUrl = () => {
-  if (typeof window !== 'undefined' && window.location.hostname === 'host.docker.internal') {
-    return 'http://host.docker.internal/api';
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'host.docker.internal') {
+      return 'http://host.docker.internal/api';
+    }
+    // Use relative URL to work on any domain (production, staging, etc.)
+    return '/api';
   }
-  return import.meta.env.VITE_API_URL || 'http://localhost/api';
+  return import.meta.env.VITE_API_URL || '/api';
 };
 
 const API_URL = getApiUrl();
