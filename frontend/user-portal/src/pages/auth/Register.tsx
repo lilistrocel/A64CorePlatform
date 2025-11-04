@@ -55,7 +55,7 @@ export function Register() {
     <PageWrapper>
       <RegisterContainer>
         <RegisterCard>
-          <Logo>A64 Core</Logo>
+          <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
           <Title>Create Account</Title>
           <Subtitle>Join us to get started with your ERP platform</Subtitle>
 
@@ -176,6 +176,17 @@ const Logo = styled.div`
   @media (min-width: 640px) {
     font-size: 2.25rem;
     margin-bottom: 1rem;
+  }
+`;
+
+const LogoImg = styled.img`
+  height: 48px;
+  width: auto;
+  display: block;
+  margin: 0 auto;
+
+  @media (min-width: 640px) {
+    height: 60px;
   }
 `;
 

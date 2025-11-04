@@ -20,7 +20,7 @@ export function MainLayout() {
     <LayoutContainer>
       {/* Mobile Header */}
       <MobileHeader>
-        <Logo>A64 Core</Logo>
+        <Logo><LogoImg src="/a64logo_white.png" alt="A64 Core" /></Logo>
         <MenuButton onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle menu">
           <span></span>
           <span></span>
@@ -31,7 +31,7 @@ export function MainLayout() {
       {/* Sidebar - Hidden on mobile, visible on desktop */}
       <Sidebar $isOpen={isMobileMenuOpen}>
         <SidebarHeader>
-          <Logo>A64 Core</Logo>
+          <Logo><LogoImg src="/a64logo_white.png" alt="A64 Core" /></Logo>
           <UserInfo>
             <UserName>{user?.firstName} {user?.lastName}</UserName>
             <UserRole>{user?.role || 'User'}</UserRole>
@@ -178,6 +178,16 @@ const Logo = styled.div`
 
   @media (min-width: 1024px) {
     font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
+  }
+`;
+
+const LogoImg = styled.img`
+  height: 32px;
+  width: auto;
+  display: block;
+
+  @media (min-width: 1024px) {
+    height: 40px;
   }
 `;
 

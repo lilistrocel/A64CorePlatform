@@ -40,7 +40,7 @@ export function Login() {
     <PageWrapper>
       <LoginContainer>
         <LoginCard>
-          <Logo>A64 Core</Logo>
+          <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
           <Title>Welcome Back</Title>
           <Subtitle>Sign in to your account to continue</Subtitle>
 
@@ -136,6 +136,17 @@ const Logo = styled.div`
   @media (min-width: 640px) {
     font-size: 2.25rem;
     margin-bottom: 1rem;
+  }
+`;
+
+const LogoImg = styled.img`
+  height: 48px;
+  width: auto;
+  display: block;
+  margin: 0 auto;
+
+  @media (min-width: 640px) {
+    height: 60px;
   }
 `;
 
