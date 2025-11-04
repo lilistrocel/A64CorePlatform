@@ -1,0 +1,11 @@
+plantName,scientificName,plantType,growthCycleDays,minTemperatureCelsius,maxTemperatureCelsius,optimalPHMin,optimalPHMax,wateringFrequencyDays,sunlightHoursDaily,fertilizationScheduleDays,pesticideScheduleDays,expectedYieldPerPlant,yieldUnit,notes,tags
+Tomato,Solanum lycopersicum,Vegetable,90,15,30,6.0,6.8,3,6-8,14,21,5.0,kg,"Requires staking and pruning. Remove suckers for better yield.","vegetable,summer,fruit"
+Lettuce,Lactuca sativa,Vegetable,45,10,24,6.0,7.0,2,4-6,7,0,0.5,kg,"Grows best in cool weather. Harvest outer leaves for continuous production.","vegetable,salad,quick-growing"
+Basil,Ocimum basilicum,Herb,60,18,30,6.0,7.5,2,6-8,14,7,0.25,kg,"Pinch flowers to encourage leaf growth. Sensitive to cold.","herb,aromatic,culinary"
+Strawberry,Fragaria × ananassa,Fruit,120,15,26,5.5,6.5,3,6-8,21,14,0.5,kg,"Perennial crop. Remove runners for better fruit production.","fruit,berry,perennial"
+Bell Pepper,Capsicum annuum,Vegetable,75,18,32,6.0,7.0,3,6-8,14,21,1.5,kg,"Requires warm conditions. Harvest when fully colored for best flavor.","vegetable,summer,pepper"
+Cucumber,Cucumis sativus,Vegetable,55,18,30,6.0,7.0,2,6-8,14,14,3.0,kg,"Requires trellis support. Harvest regularly to encourage production.","vegetable,summer,vine"
+Spinach,Spinacia oleracea,Vegetable,40,10,20,6.5,7.5,2,4-6,14,0,0.3,kg,"Cool season crop. Bolt-resistant varieties recommended for warmer climates.","vegetable,leafy-green,quick-growing"
+Carrot,Daucus carota,Vegetable,70,10,24,6.0,6.8,4,6-8,21,7,0.15,kg,"Requires deep, loose soil. Thin seedlings for proper root development.","vegetable,root,storage"
+Corn,Zea mays,Crop,90,16,35,5.8,7.0,5,8-10,21,14,0.2,kg,"Plant in blocks for better pollination. Requires high nitrogen.","crop,grain,summer"
+Rosemary,Rosmarinus officinalis,Herb,365,10,30,6.0,7.5,7,6-8,30,0,0.1,kg,"Perennial herb. Drought-tolerant once established. Prune regularly.","herb,perennial,drought-tolerant"
