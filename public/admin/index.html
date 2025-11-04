@@ -500,6 +500,9 @@
                     <option value="true">Active</option>
                     <option value="false">Inactive</option>
                 </select>
+                <button class="btn-confirm" onclick="openCreateUserModal()" style="margin-left: 8px; width: auto;">
+                    ➕ Create User
+                </button>
             </div>
         </div>
 
@@ -532,6 +535,50 @@
                 <button class="btn-cancel" onclick="closeModal()">Cancel</button>
                 <button class="btn-confirm" onclick="confirmRoleChange()">Update Role</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New User</h2>
+            </div>
+            <form id="createUserForm">
+                <div class="form-group">
+                    <label for="createEmail">Email Address *</label>
+                    <input type="email" id="createEmail" required placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="createPassword">Password *</label>
+                    <input type="password" id="createPassword" required placeholder="Minimum 8 characters">
+                </div>
+                <div class="form-group">
+                    <label for="createFirstName">First Name *</label>
+                    <input type="text" id="createFirstName" required placeholder="John">
+                </div>
+                <div class="form-group">
+                    <label for="createLastName">Last Name *</label>
+                    <input type="text" id="createLastName" required placeholder="Doe">
+                </div>
+                <div class="form-group">
+                    <label for="createRole">Role *</label>
+                    <select id="createRole" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                        <option value="user">User</option>
+                        <option value="moderator">Moderator</option>
+                        <option value="admin">Admin</option>
+                        <option value="super_admin">Super Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="createPhone">Phone (optional)</label>
+                    <input type="tel" id="createPhone" placeholder="+1234567890">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeCreateUserModal()">Cancel</button>
+                    <button type="submit" class="btn-confirm">Create User</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -848,6 +895,82 @@
             el.classList.remove('hidden');
             setTimeout(() => el.classList.add('hidden'), 5000);
         }
+
+        function openCreateUserModal() {
+            document.getElementById('createUserModal').classList.add('active');
+        }
+
+        function closeCreateUserModal() {
+            document.getElementById('createUserModal').classList.remove('active');
+            document.getElementById('createUserForm').reset();
+        }
+
+        // Handle create user form submission
+        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('createEmail').value;
+            const password = document.getElementById('createPassword').value;
+            const firstName = document.getElementById('createFirstName').value;
+            const lastName = document.getElementById('createLastName').value;
+            const role = document.getElementById('createRole').value;
+            const phone = document.getElementById('createPhone').value;
+
+            try {
+                // Step 1: Register the user (creates with "user" role by default)
+                const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        firstName: firstName,
+                        lastName: lastName,
+                        phone: phone || undefined
+                    })
+                });
+
+                const registerData = await registerResponse.json();
+
+                if (!registerResponse.ok) {
+                    showError('adminError', registerData.detail || 'Failed to create user');
+                    closeCreateUserModal();
+                    return;
+                }
+
+                const newUserId = registerData.userId;
+
+                // Step 2: If role is not "user", update the role
+                if (role !== 'user') {
+                    const roleResponse = await fetch(`${API_BASE_URL}/admin/users/${newUserId}/role`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ role: role })
+                    });
+
+                    if (!roleResponse.ok) {
+                        const roleData = await roleResponse.json();
+                        showError('adminError', `User created but failed to assign role: ${roleData.detail}`);
+                        closeCreateUserModal();
+                        loadUsers(currentPage);
+                        return;
+                    }
+                }
+
+                showSuccess(`User "${firstName} ${lastName}" created successfully with ${role} role!`);
+                closeCreateUserModal();
+                loadUsers(currentPage);
+
+            } catch (error) {
+                showError('adminError', 'Network error. Please try again.');
+                closeCreateUserModal();
+            }
+        });
     </script>
 </body>
 </html>
