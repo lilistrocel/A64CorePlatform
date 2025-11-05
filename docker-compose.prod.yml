@@ -30,3 +30,13 @@ services:
       - DEBUG=False
       - CORS_ORIGINS=https://a64core.com,http://localhost:5173
     restart: always
+
+  # NGINX - Production Configuration with SSL
+  nginx:
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro  # Let's Encrypt SSL certificates
+    restart: always

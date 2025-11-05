@@ -72,6 +72,11 @@ htmlcov/
 # Docker
 docker-compose.override.yml
 
+# Nginx
+nginx/*.local.conf
+nginx/*.backup
+nginx/*.bak
+
 # OS
 Thumbs.db
 .DS_Store
