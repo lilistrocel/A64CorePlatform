@@ -39,10 +39,18 @@ env/
 *~
 .DS_Store
 
+# Claude Code AI
+.claude/
+CLAUDE.md
+
 # Environment Variables
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+.env.staging
+.env.test
 
 # Logs
 *.log
@@ -74,13 +82,26 @@ Thumbs.db
 tmp/
 temp/
 
-# Secrets
+# Secrets and Credentials
 secrets/
 *.pem
 *.key
 *.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
 nul
-token_response.json
+token*.txt
+token*.json
+*token.txt
+*token.json
+credentials*.json
+auth*.json
+*secret*.txt
+*password*.txt
+.aws/
+.ssh/
 
 # Node modules
 node_modules/
