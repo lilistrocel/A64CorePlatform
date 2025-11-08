@@ -29,5 +29,18 @@ export default defineConfig({
       'Expires': '0',
       'Surrogate-Control': 'no-store',
     },
+    proxy: {
+      // Proxy API requests to backend services
+      '/api/v1/auth': {
+        target: 'http://api:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/v1/farm': {
+        target: 'http://farm-management:8001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 })

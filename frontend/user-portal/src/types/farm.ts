@@ -583,6 +583,24 @@ export interface PlantingFilters {
 }
 
 // ============================================================================
+// MANAGER TYPES
+// ============================================================================
+
+export interface Manager {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface ManagersResponse {
+  data: {
+    managers: Manager[];
+  };
+  message: string;
+}
+
+// ============================================================================
 // FORM TYPES
 // ============================================================================
 

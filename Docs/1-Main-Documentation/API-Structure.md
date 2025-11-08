@@ -975,6 +975,52 @@ GET /api/v1/farm/health
 
 ---
 
+#### Get Managers List
+```
+GET /api/v1/farm/managers
+```
+**Purpose:** Get list of users with manager roles for farm assignment
+**Authentication:** Required (Bearer Token)
+**Rate Limit:** By user role
+**Response:** 200 OK
+```json
+{
+  "managers": [
+    {
+      "userId": "0224a4f2-916d-4434-8f50-871fa9f65cd6",
+      "name": "Farm Tester",
+      "email": "farmtest@test.com",
+      "role": "admin"
+    },
+    {
+      "userId": "uuid-here",
+      "name": "John Smith",
+      "email": "admin@example.com",
+      "role": "super_admin"
+    }
+  ]
+}
+```
+
+**Response Fields:**
+- `userId` (string): Unique user identifier
+- `name` (string): Full name (firstName + lastName)
+- `email` (string): User email address
+- `role` (string): User role (admin, super_admin, moderator)
+
+**Filters:**
+- Returns only users with manager roles: admin, super_admin, moderator
+- Returns only active users (isActive: true)
+- Sorted alphabetically by firstName
+
+**Errors:**
+- 401: Unauthorized (missing or invalid token)
+- 500: Internal server error
+
+**Use Case:** Populate manager dropdown in farm creation/edit forms
+
+---
+
 ### Farms Management
 
 #### List Farms
@@ -1389,7 +1435,8 @@ POST /api/v1/farm/plantings/{plantingId}/mark-planted
 | **Plant Data (Legacy)** | 7 endpoints | ✅ Active | v1.5.0 |
 | **Plant Data Enhanced** | 9 endpoints | ✅ Active | v1.6.0 |
 | **Plantings** | 4 endpoints | ✅ Active | v1.5.0 |
-| **Total** | **34 endpoints** | ✅ Active | - |
+| **Managers** | 1 endpoint | ✅ Active | v1.7.0 |
+| **Total** | **35 endpoints** | ✅ Active | - |
 
 **Microservice Details:**
 - **Port:** 8001 (internal), proxied via nginx

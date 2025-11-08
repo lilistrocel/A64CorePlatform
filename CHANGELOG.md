@@ -9,6 +9,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Manager Selection Dropdown (Farm Management Module v1.7.0)
+
+**Feature:** Enhanced farm creation UI with manager selection dropdown instead of manual manager ID entry
+
+**Backend Changes:**
+- New API endpoint: GET /api/v1/farm/managers
+  - Fetches users with manager roles (admin, super_admin, moderator)
+  - Returns userId, name (firstName + lastName), email, role
+  - Filters for active users only
+  - Sorted alphabetically by firstName
+  - Requires JWT authentication
+- Added managers router to farm-management module
+- Registered managers router in API v1 initialization
+
+**Frontend Changes:**
+- Enhanced CreateFarmModal component with manager dropdown
+  - Replaced manual "Manager ID" text input with Select dropdown
+  - Fetches managers list when modal opens
+  - Displays managers in format: "Name (email)"
+  - Shows loading state while fetching managers
+  - Error handling for fetch failures
+  - Dropdown uses managerId for value, displays user-friendly name
+- Added Manager and ManagersResponse TypeScript interfaces to farm.ts
+- Added getManagers() function to farmApi service
+- Styled Select component matching existing Input component design
+
+**Vite Proxy Configuration:**
+- Added /api/v1/auth proxy to http://localhost:8000 for authentication
+- Added /api/v1/farm proxy to http://localhost:8001 for farm module
+
+**User Experience Improvements:**
+- No need to know/remember manager IDs
+- Visual confirmation of manager selection with names and emails
+- Prevents typos and invalid manager assignments
+- Easy identification of managers by name and email
+- Loading feedback during data fetch
+
+**API Impact:**
+- New endpoint: GET /api/v1/farm/managers (Farm Management Module)
+- No changes to existing farm creation/update endpoints
+- Backward compatible with existing farm data
+
+**Testing:**
+- Tested with Playwright MCP
+- Verified API returns 3 managers from database
+- Verified dropdown populates correctly on modal open
+- Verified manager selection works correctly
+- Verified loading state displays properly
+- No console errors or warnings
+
+**Files Created:**
+- modules/farm-management/src/api/v1/managers.py (new endpoint)
+
+**Files Modified:**
+- modules/farm-management/src/api/v1/__init__.py (router registration)
+- frontend/user-portal/src/types/farm.ts (Manager interfaces)
+- frontend/user-portal/src/services/farmApi.ts (getManagers function)
+- frontend/user-portal/src/components/farm/CreateFarmModal.tsx (dropdown UI)
+- frontend/user-portal/vite.config.ts (proxy configuration)
+
+### Added (Continued)
+
 #### Farm Management Module - Farm Schema Enhancement (v1.6.0)
 
 **Backend Changes (Farm Management Module):**

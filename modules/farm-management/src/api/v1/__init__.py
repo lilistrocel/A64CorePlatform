@@ -8,6 +8,7 @@ from .blocks import router as blocks_router
 from .plant_data import router as plant_data_router
 from .plant_data_enhanced import router as plant_data_enhanced_router
 from .plantings import router as plantings_router
+from .managers import router as managers_router
 
 api_router = APIRouter()
 
@@ -17,6 +18,7 @@ api_router.include_router(blocks_router, tags=["blocks"])  # Blocks are nested u
 api_router.include_router(plant_data_router, tags=["plant-data"])  # Plant data (legacy)
 api_router.include_router(plant_data_enhanced_router, tags=["plant-data-enhanced"])  # Plant data (enhanced schema)
 api_router.include_router(plantings_router, tags=["plantings"])  # Planting management
+api_router.include_router(managers_router, tags=["managers"])  # Manager users for farm assignment
 
 # Future routes
 # api_router.include_router(harvests_router, prefix="/harvests", tags=["harvests"])

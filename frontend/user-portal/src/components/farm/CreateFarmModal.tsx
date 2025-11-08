@@ -4,13 +4,13 @@
  * Modal dialog for creating a new farm.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
-import type { CreateFarmFormData } from '../../types/farm';
+import type { CreateFarmFormData, Manager } from '../../types/farm';
 
 // ============================================================================
 // VALIDATION SCHEMA
@@ -134,6 +134,27 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 `;
 
+const Select = styled.select<{ $hasError?: boolean }>`
+  padding: 12px 16px;
+  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 150ms ease-in-out;
+  background: white;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
+  }
+
+  &:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+  }
+`;
+
 const ErrorText = styled.span`
   font-size: 12px;
   color: #EF4444;
@@ -223,6 +244,9 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 
 export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const [managers, setManagers] = useState<Manager[]>([]);
+  const [loadingManagers, setLoadingManagers] = useState(false);
+  const [managersError, setManagersError] = useState<string | null>(null);
 
   const {
     register,
@@ -235,6 +259,31 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
       isActive: true,
     },
   });
+
+  // Fetch managers when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchManagers();
+    }
+  }, [isOpen]);
+
+  const fetchManagers = async () => {
+    try {
+      setLoadingManagers(true);
+      setManagersError(null);
+      const response = await farmApi.getManagers();
+      // Response structure: { data: { managers: [...] }, message: "..." }
+      // apiClient.get() returns response.data, so we access it as response.data.managers
+      const managersData = response.data?.managers || [];
+      setManagers(managersData);
+    } catch (error) {
+      console.error('Error fetching managers:', error);
+      setManagersError('Failed to load managers. Please try again.');
+      setManagers([]);
+    } finally {
+      setLoadingManagers(false);
+    }
+  };
 
   const onSubmit = async (data: CreateFarmFormData) => {
     try {
@@ -388,15 +437,23 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
             </GridRow>
 
             <FormGroup>
-              <Label htmlFor="managerId">Manager ID *</Label>
-              <Input
+              <Label htmlFor="managerId">Farm Manager *</Label>
+              {managersError && <ErrorText>{managersError}</ErrorText>}
+              <Select
                 id="managerId"
-                type="text"
-                placeholder="Manager user ID"
                 $hasError={!!errors.managerId}
-                disabled={submitting}
+                disabled={submitting || loadingManagers}
                 {...register('managerId')}
-              />
+              >
+                <option value="">
+                  {loadingManagers ? 'Loading managers...' : 'Select a manager...'}
+                </option>
+                {managers.map((manager) => (
+                  <option key={manager.userId} value={manager.userId}>
+                    {manager.name} ({manager.email})
+                  </option>
+                ))}
+              </Select>
               {errors.managerId && <ErrorText>{errors.managerId.message}</ErrorText>}
             </FormGroup>
 

@@ -24,11 +24,21 @@ import type {
   PlantingCreate,
   MarkPlantedRequest,
   CSVImportResult,
+  Manager,
+  ManagersResponse,
 } from '../types/farm';
 
 // ============================================================================
 // FARM MANAGEMENT ENDPOINTS
 // ============================================================================
+
+/**
+ * Get all managers (users with farm_manager role)
+ */
+export async function getManagers() {
+  const response = await apiClient.get<ManagersResponse>('/v1/farm/managers');
+  return response.data;
+}
 
 /**
  * Get all farms with pagination
@@ -394,6 +404,9 @@ export function getRelativeTime(dateString: string): string {
 
 // Export all functions as a single object for convenience
 export const farmApi = {
+  // Managers
+  getManagers,
+
   // Farms
   getFarms,
   getFarm,
