@@ -9,6 +9,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Farm Management Module - Farm Schema Enhancement (v1.6.0)
+
+**Backend Changes (Farm Management Module):**
+- Added `owner` field to Farm schema (Optional[str], max 200 characters)
+  - Tracks farm owner name for organizational purposes
+  - Validation: String with maximum length of 200 characters
+  - Optional field, can be null
+- Added `numberOfStaff` field to Farm schema (Optional[int], must be >= 0)
+  - Tracks number of staff members working on the farm
+  - Validation: Non-negative integer
+  - Optional field, can be null
+- Updated `FarmBase`, `FarmCreate`, and `FarmUpdate` Pydantic models
+- Updated Farm model example documentation to include new fields
+
+**Frontend Changes (User Portal):**
+- Enhanced CreateFarmModal component with new fields:
+  - Owner text input field (placed after Farm Name field)
+  - Number of Staff number input field (placed alongside Total Area in grid row)
+- Updated Zod validation schema to support optional owner and numberOfStaff fields
+- Updated form submission handler to include new fields in API request
+- Extended Farm TypeScript interfaces in farm.ts:
+  - Added `owner?: string` to Farm, FarmCreate, FarmUpdate, CreateFarmFormData interfaces
+  - Added `numberOfStaff?: number` to Farm, FarmCreate, FarmUpdate, CreateFarmFormData interfaces
+
+**Testing:**
+- Tested with Playwright MCP - Both fields display correctly in the create farm modal
+- Form validation working properly (numberOfStaff rejects negative values)
+- API integration confirmed - Fields properly sent to backend and stored in database
+
+**API Impact:**
+- POST /api/v1/farm/farms - Now accepts owner and numberOfStaff in request body
+- PATCH /api/v1/farm/farms/{farmId} - Now accepts owner and numberOfStaff in update request
+- GET /api/v1/farm/farms - Response includes owner and numberOfStaff fields
+- GET /api/v1/farm/farms/{farmId} - Response includes owner and numberOfStaff fields
+
+**Database Schema (MongoDB):**
+- Collection: `farms`
+- New optional fields:
+  - `owner` (string, max 200 chars)
+  - `numberOfStaff` (integer, >= 0)
+- Backward compatible: Existing farm documents without these fields remain valid
+
+**Migration Notes:**
+- No database migration required (fields are optional)
+- Existing farms will have null values for new fields
+- Frontend gracefully handles missing fields
+
+**Files Modified:**
+- Backend: `modules/farm-management/src/models/farm.py` (3 models updated)
+- Frontend: `frontend/user-portal/src/components/farm/CreateFarmModal.tsx` (2 fields added)
+- Types: `frontend/user-portal/src/types/farm.ts` (4 interfaces extended)
+
+### Added (Continued)
+
 #### Plant Data Management System (Farm Management Module v1.2.0)
 
 A comprehensive agronomic knowledge base for managing plant cultivation data.

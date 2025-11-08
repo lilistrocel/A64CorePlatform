@@ -30,8 +30,10 @@ export interface FarmLocation {
 export interface Farm {
   farmId: string;
   name: string;
+  owner?: string;
   location: FarmLocation;
   totalArea: number;
+  numberOfStaff?: number;
   managerId: string;
   isActive: boolean;
   metadata?: Record<string, unknown>;
@@ -41,8 +43,10 @@ export interface Farm {
 
 export interface FarmCreate {
   name: string;
+  owner?: string;
   location: FarmLocation;
   totalArea: number;
+  numberOfStaff?: number;
   managerId: string;
   isActive?: boolean;
   metadata?: Record<string, unknown>;
@@ -50,8 +54,10 @@ export interface FarmCreate {
 
 export interface FarmUpdate {
   name?: string;
+  owner?: string;
   location?: FarmLocation;
   totalArea?: number;
+  numberOfStaff?: number;
   managerId?: string;
   isActive?: boolean;
   metadata?: Record<string, unknown>;
@@ -582,10 +588,12 @@ export interface PlantingFilters {
 
 export interface CreateFarmFormData {
   name: string;
+  owner?: string;
   city: string;
   state: string;
   country: string;
   totalArea: number;
+  numberOfStaff?: number;
   managerId: string;
   isActive: boolean;
 }

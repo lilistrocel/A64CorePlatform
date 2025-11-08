@@ -620,6 +620,43 @@ Response → User
 - timestamp: TTL index (90 days auto-delete)
 ```
 
+#### farms Collection (Farm Management Module)
+```javascript
+{
+  _id: ObjectId,
+  farmId: String (UUID),            // Unique farm identifier
+  name: String,                     // Farm name (1-200 chars, required)
+  description: String,              // Farm description (optional)
+  owner: String,                    // Farm owner name (max 200 chars, optional)
+  location: Object {                // Geographic location (optional)
+    latitude: Number,               // Latitude (-90 to 90)
+    longitude: Number,              // Longitude (-180 to 180)
+    address: String                 // Physical address
+  },
+  totalArea: Number,                // Total farm area (must be > 0)
+  areaUnit: String,                 // Area unit (hectares, acres, sqm, default: hectares)
+  numberOfStaff: Number,            // Number of staff members (>= 0, optional)
+
+  // Manager information
+  managerId: String (UUID),         // User ID of farm manager
+  managerEmail: String,             // Email of farm manager
+
+  // Status
+  isActive: Boolean,                // Is farm active (default: true)
+
+  // Timestamps
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// Indexes
+- farmId: unique
+- managerId: non-unique
+- managerEmail: non-unique
+- isActive: non-unique
+- createdAt: descending
+```
+
 ### MySQL Tables
 
 #### users Table

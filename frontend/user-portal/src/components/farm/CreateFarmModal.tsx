@@ -18,10 +18,12 @@ import type { CreateFarmFormData } from '../../types/farm';
 
 const farmSchema = z.object({
   name: z.string().min(1, 'Farm name is required').max(100, 'Name too long'),
+  owner: z.string().max(200, 'Owner name too long').optional(),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
   country: z.string().min(1, 'Country is required'),
   totalArea: z.number().min(0.1, 'Area must be greater than 0'),
+  numberOfStaff: z.number().min(0, 'Number of staff must be 0 or greater').optional(),
   managerId: z.string().min(1, 'Manager ID is required'),
   isActive: z.boolean(),
 });
@@ -240,12 +242,14 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
 
       await farmApi.createFarm({
         name: data.name,
+        owner: data.owner,
         location: {
           city: data.city,
           state: data.state,
           country: data.country,
         },
         totalArea: data.totalArea,
+        numberOfStaff: data.numberOfStaff,
         managerId: data.managerId,
         isActive: data.isActive,
       });
@@ -297,6 +301,19 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
                 {...register('name')}
               />
               {errors.name && <ErrorText>{errors.name.message}</ErrorText>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="owner">Owner</Label>
+              <Input
+                id="owner"
+                type="text"
+                placeholder="Farm owner name"
+                $hasError={!!errors.owner}
+                disabled={submitting}
+                {...register('owner')}
+              />
+              {errors.owner && <ErrorText>{errors.owner.message}</ErrorText>}
             </FormGroup>
 
             <GridRow>
@@ -356,18 +373,32 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
               </FormGroup>
 
               <FormGroup>
-                <Label htmlFor="managerId">Manager ID *</Label>
+                <Label htmlFor="numberOfStaff">Number of Staff</Label>
                 <Input
-                  id="managerId"
-                  type="text"
-                  placeholder="Manager user ID"
-                  $hasError={!!errors.managerId}
+                  id="numberOfStaff"
+                  type="number"
+                  step="1"
+                  placeholder="0"
+                  $hasError={!!errors.numberOfStaff}
                   disabled={submitting}
-                  {...register('managerId')}
+                  {...register('numberOfStaff', { valueAsNumber: true })}
                 />
-                {errors.managerId && <ErrorText>{errors.managerId.message}</ErrorText>}
+                {errors.numberOfStaff && <ErrorText>{errors.numberOfStaff.message}</ErrorText>}
               </FormGroup>
             </GridRow>
+
+            <FormGroup>
+              <Label htmlFor="managerId">Manager ID *</Label>
+              <Input
+                id="managerId"
+                type="text"
+                placeholder="Manager user ID"
+                $hasError={!!errors.managerId}
+                disabled={submitting}
+                {...register('managerId')}
+              />
+              {errors.managerId && <ErrorText>{errors.managerId.message}</ErrorText>}
+            </FormGroup>
 
             <FormGroup>
               <CheckboxContainer>

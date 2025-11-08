@@ -21,9 +21,11 @@ class FarmBase(BaseModel):
     """Base farm fields"""
     name: str = Field(..., min_length=1, max_length=200, description="Farm name")
     description: Optional[str] = Field(None, description="Farm description")
+    owner: Optional[str] = Field(None, max_length=200, description="Farm owner name")
     location: Optional[FarmLocation] = Field(None, description="Geographic location")
     totalArea: Optional[float] = Field(None, gt=0, description="Total farm area")
     areaUnit: str = Field("hectares", description="Area unit (hectares, acres)")
+    numberOfStaff: Optional[int] = Field(None, ge=0, description="Number of staff members")
 
 
 class FarmCreate(FarmBase):
@@ -35,9 +37,11 @@ class FarmUpdate(BaseModel):
     """Schema for updating a farm"""
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = None
+    owner: Optional[str] = Field(None, max_length=200)
     location: Optional[FarmLocation] = None
     totalArea: Optional[float] = Field(None, gt=0)
     areaUnit: Optional[str] = None
+    numberOfStaff: Optional[int] = Field(None, ge=0)
     isActive: Optional[bool] = None
 
 
@@ -62,6 +66,7 @@ class Farm(FarmBase):
                 "farmId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
                 "name": "Green Valley Farm",
                 "description": "Organic vegetable farm in central valley",
+                "owner": "John Smith",
                 "location": {
                     "latitude": 40.7128,
                     "longitude": -74.0060,
@@ -69,6 +74,7 @@ class Farm(FarmBase):
                 },
                 "totalArea": 50.5,
                 "areaUnit": "hectares",
+                "numberOfStaff": 12,
                 "managerId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "managerEmail": "manager@example.com",
                 "isActive": True,

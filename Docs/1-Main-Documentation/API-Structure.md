@@ -1002,12 +1002,27 @@ POST /api/v1/farm/farms
 ```json
 {
   "name": "Green Valley Farm",
-  "location": "California, USA",
-  "farmType": "greenhouse",
-  "totalArea": 5000.0,
-  "areaUnit": "sqm"
+  "description": "Organic vegetable farm in central valley",
+  "owner": "John Smith",
+  "location": {
+    "latitude": 40.7128,
+    "longitude": -74.0060,
+    "address": "123 Farm Road, Valley City"
+  },
+  "totalArea": 50.5,
+  "areaUnit": "hectares",
+  "numberOfStaff": 12
 }
 ```
+
+**Field Descriptions:**
+- `name` (string, required): Farm name (1-200 chars)
+- `description` (string, optional): Farm description
+- `owner` (string, optional): Farm owner name (max 200 chars)
+- `location` (object, optional): Geographic location with latitude, longitude, and address
+- `totalArea` (float, optional): Total farm area (must be > 0)
+- `areaUnit` (string, default: "hectares"): Area unit (hectares, acres, sqm)
+- `numberOfStaff` (integer, optional): Number of staff members (must be >= 0)
 
 **Response:** 201 Created
 
