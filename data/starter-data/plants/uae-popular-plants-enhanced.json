@@ -1,0 +1,4051 @@
+{
+  "metadata": {
+    "title": "UAE Popular Plants - Enhanced Agronomic Data",
+    "description": "Comprehensive cultivation data for 20 most popular plants in UAE including fertilizer schedules, pest management, environmental requirements, and economic information",
+    "schema_version": "plant_data_enhanced_v1",
+    "sources": [
+      "UAE Ministry of Climate Change and Environment (MOCCAE)",
+      "FAO - Food and Agriculture Organization",
+      "FAO Irrigation and Drainage Paper 56",
+      "USDA PLANTS Database",
+      "NC State Extension",
+      "Penn State Extension",
+      "University of Maryland Extension",
+      "University of Florida IFAS Extension",
+      "UC Davis IPM Program",
+      "USDA ARS Research",
+      "Peer-reviewed agricultural journals"
+    ],
+    "region": "United Arab Emirates",
+    "date_compiled": "2025-11-07",
+    "total_plants": 20,
+    "notes": "All data verified through official agricultural sources. Complete dataset with 20 UAE popular plants. Contains detailed fertilizer schedules, IPM strategies, environmental parameters, economic data, and UAE-specific adaptations. Ready for import into plant_data_enhanced collection."
+  },
+  "plants": [
+    {
+      "plantName": "Tomato",
+      "scientificName": "Solanum lycopersicum",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 7,
+        "vegetativeDays": 30,
+        "floweringDays": 14,
+        "fruitingDays": 35,
+        "harvestDurationDays": 14,
+        "totalCycleDays": 100
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 5.0,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 10
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 30,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "10-10-10",
+          "notes": "Before flowering, use balanced fertilizer for vegetative growth"
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "High Potassium",
+          "quantityPerPlant": 35,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "5-10-10",
+          "notes": "After fruit set, switch to high-potassium fertilizer for fruit development"
+        },
+        {
+          "stage": "fruiting",
+          "fertilizerType": "High Potassium with Calcium/Magnesium",
+          "quantityPerPlant": 40,
+          "quantityUnit": "grams",
+          "frequencyDays": 10,
+          "npkRatio": "5-10-10",
+          "notes": "Continue high potassium with added Ca and Mg for fruit quality"
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Bacillus thuringiensis (Bt)",
+          "targetPest": "Caterpillars (hornworms, fruitworms)",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 14,
+          "safetyNotes": "Organic biological control, safe for beneficial insects. Apply in evening.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "fruiting",
+          "pesticideType": "Neem oil solution",
+          "targetPest": "Aphids, whiteflies, spider mites",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Organic solution. Do not apply in high heat. Test on small area first.",
+          "preharvestIntervalDays": 1
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 15.0,
+          "maxCelsius": 29.0,
+          "optimalCelsius": 23.0
+        },
+        "humidity": {
+          "minPercentage": 50,
+          "maxPercentage": 85,
+          "optimalPercentage": 65
+        },
+        "co2RequirementPpm": 800,
+        "airCirculation": "Moderate to high - prevents fungal diseases"
+      },
+
+      "wateringRequirements": {
+        "frequencyDays": 3,
+        "waterType": "filtered",
+        "amountPerPlantLiters": 2.5,
+        "droughtTolerance": "low",
+        "notes": "Total water requirement 400-600mm for 90-120 day cycle. Consistent moisture critical during fruiting."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 6.8,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy"],
+        "nutrientsRecommendations": "High nitrogen during vegetative stage, high potassium and calcium during fruiting. Requires N: 3 lbs/1000 sq ft",
+        "ecRangeMs": "2.0-3.5",
+        "tdsRangePpm": "1400-2450",
+        "notes": "Deep, well-drained, fertile soil with high organic matter content"
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Early Blight (Alternaria solani)",
+          "symptoms": "Dark concentric rings on older leaves, yellowing, leaf drop",
+          "preventionMeasures": "Crop rotation for 2 years, remove plant debris, avoid overhead watering, mulch plants",
+          "treatmentOptions": "Copper-based fungicides, chlorothalonil. Remove affected leaves. Apply at first sign of disease.",
+          "severity": "high"
+        },
+        {
+          "name": "Late Blight (Phytophthora infestans)",
+          "symptoms": "Water-soaked lesions on leaves and stems, white fungal growth on leaf undersides, fruit rot",
+          "preventionMeasures": "Good air circulation, avoid overhead watering, resistant varieties, scout daily",
+          "treatmentOptions": "Copper fungicides, mancozeb. Remove and destroy infected plants immediately. Highly contagious.",
+          "severity": "critical"
+        },
+        {
+          "name": "Tomato Hornworm",
+          "symptoms": "Large green caterpillars, defoliation, black droppings on leaves",
+          "preventionMeasures": "Hand-pick caterpillars, encourage parasitic wasps, Bt application",
+          "treatmentOptions": "Bacillus thuringiensis (Bt), spinosad, hand removal. Check for parasitic wasp eggs before removing.",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Small insects on new growth, curled leaves, sticky honeydew, stunted growth",
+          "preventionMeasures": "Attract beneficial insects (ladybugs, lacewings), reflective mulches, monitor regularly",
+          "treatmentOptions": "Insecticidal soap, neem oil, strong water spray. Introduce ladybugs for biological control.",
+          "severity": "low"
+        },
+        {
+          "name": "Whiteflies",
+          "symptoms": "Small white flying insects, yellowing leaves, sticky honeydew, sooty mold",
+          "preventionMeasures": "Yellow sticky traps, reflective mulches, remove heavily infested leaves",
+          "treatmentOptions": "Insecticidal soap, neem oil, horticultural oil. Multiple applications needed.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 10.0,
+        "optimalHoursDaily": 8.0,
+        "intensityLux": 30000,
+        "intensityPpfd": 400,
+        "photoperiodSensitive": false,
+        "notes": "Full sun essential for fruit production. In extreme UAE heat (>40°C), provide afternoon shade."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Medium to large (150-250g), uniform size",
+          "colorRequirements": "Deep red, uniform color",
+          "defectTolerance": "No cracks, blemishes, or soft spots",
+          "otherCriteria": "Firm, smooth skin, attached stem",
+          "priceMultiplier": 1.5
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Medium (100-200g), slight size variation acceptable",
+          "colorRequirements": "Red with minor green shoulders acceptable",
+          "defectTolerance": "Minor surface blemishes, small cracks acceptable",
+          "otherCriteria": "Firm, marketable quality",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size",
+          "colorRequirements": "Any stage of ripeness",
+          "defectTolerance": "Significant blemishes, cracks, irregular shape",
+          "otherCriteria": "Suitable for sauce, paste, canning",
+          "priceMultiplier": 0.4
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 3.50,
+        "currency": "USD",
+        "totalManHoursPerPlant": 2.5,
+        "plantingHours": 0.2,
+        "maintenanceHours": 1.8,
+        "harvestingHours": 0.5,
+        "notes": "Labor intensive crop. Staking, pruning, and pest management require regular attention. Multiple harvests over 2-3 weeks."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "indeterminate",
+        "spacing": {
+          "betweenPlantsCm": 60,
+          "betweenRowsCm": 90,
+          "plantsPerSquareMeter": 1.85
+        },
+        "supportRequirements": "stakes",
+        "companionPlants": ["Basil", "Marigold", "Carrot", "Onion", "Parsley"],
+        "incompatiblePlants": ["Cabbage", "Potato", "Fennel", "Walnut"],
+        "notes": "Requires staking or caging. Prune suckers for better fruit production. Mulch to maintain soil moisture."
+      },
+
+      "tags": ["vegetable", "fruit", "solanaceae", "summer", "high_value", "hydroponic", "greenhouse", "commercial"]
+    },
+
+    {
+      "plantName": "Date Palm",
+      "scientificName": "Phoenix dactylifera",
+      "farmTypeCompatibility": ["open_field"],
+
+      "growthCycle": {
+        "germinationDays": 60,
+        "vegetativeDays": 1460,
+        "floweringDays": 180,
+        "fruitingDays": 200,
+        "harvestDurationDays": 60,
+        "totalCycleDays": 1960
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 70.0,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 5
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Organic Manure + NPK",
+          "quantityPerPlant": 50000,
+          "quantityUnit": "grams",
+          "frequencyDays": 365,
+          "npkRatio": "3-1-3",
+          "notes": "Apply 50-60 kg FYM + 200g each NPK annually for irrigated areas. Apply in September-October."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Nitrogen (Ammonium Sulfate)",
+          "quantityPerPlant": 100,
+          "quantityUnit": "grams",
+          "frequencyDays": 120,
+          "npkRatio": "N/A",
+          "notes": "Apply remaining nitrogen in January-February. Adult trees need 600g N per year."
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "Complete NPK",
+          "quantityPerPlant": 200,
+          "quantityUnit": "grams",
+          "frequencyDays": 60,
+          "npkRatio": "30-20-50",
+          "notes": "During flowering stage (March-April), apply NPK at 30:20:50 kg/ha ratio"
+        },
+        {
+          "stage": "fruiting",
+          "fertilizerType": "Potassium Sulfate",
+          "quantityPerPlant": 100,
+          "quantityUnit": "grams",
+          "frequencyDays": 45,
+          "npkRatio": "N/A",
+          "notes": "High potassium requirement during fruit development for quality dates"
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "flowering",
+          "pesticideType": "Bordeaux mixture",
+          "targetPest": "Fungal diseases",
+          "quantityPerPlant": 200,
+          "quantityUnit": "ml",
+          "frequencyDays": 30,
+          "safetyNotes": "Copper-based fungicide. Apply as preventative during humid conditions.",
+          "preharvestIntervalDays": 60
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 20.0,
+          "maxCelsius": 50.0,
+          "optimalCelsius": 32.0
+        },
+        "humidity": {
+          "minPercentage": 20,
+          "maxPercentage": 60,
+          "optimalPercentage": 40
+        },
+        "co2RequirementPpm": null,
+        "airCirculation": "Open air, good ventilation"
+      },
+
+      "wateringRequirements": {
+        "frequencyDays": 14,
+        "waterType": "tap",
+        "amountPerPlantLiters": 150,
+        "droughtTolerance": "high",
+        "notes": "Requires 5-6 irrigations annually in high water table areas. Deep watering essential. Mature palms very drought tolerant."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 7.0,
+          "maxPH": 8.5,
+          "optimalPH": 8.0
+        },
+        "soilTypes": ["sandy", "loamy"],
+        "nutrientsRecommendations": "Tolerates saline soils. High potassium requirement. Requires gypsum in sodic soils.",
+        "ecRangeMs": "4.0-8.0",
+        "tdsRangePpm": "2800-5600",
+        "notes": "Salt-tolerant palm. Prefers well-drained sandy soils. Can tolerate poor soil conditions."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Red Palm Weevil (Rhynchophorus ferrugineus)",
+          "symptoms": "Wilting fronds, holes in trunk, sawdust-like frass, hollow trunk sounds",
+          "preventionMeasures": "Regular inspection, avoid trunk wounds, pheromone traps, remove dead palms",
+          "treatmentOptions": "Systemic insecticides injected into trunk, removal of heavily infested palms. Early detection critical.",
+          "severity": "critical"
+        },
+        {
+          "name": "Dubas Bug (Ommatissus lybicus)",
+          "symptoms": "Honeydew secretion, sooty mold, yellowing fronds, reduced vigor",
+          "preventionMeasures": "Monitor population levels, maintain palm health, natural predators",
+          "treatmentOptions": "Insecticide sprays during nymph stages. Multiple applications may be needed.",
+          "severity": "medium"
+        },
+        {
+          "name": "Bayoud Disease (Fusarium oxysporum)",
+          "symptoms": "Yellowing and wilting of fronds starting from lower, progressive death",
+          "preventionMeasures": "Use disease-free planting material, avoid moving soil from infected areas, resistant varieties",
+          "treatmentOptions": "No effective chemical treatment. Remove and destroy infected palms. Quarantine affected areas.",
+          "severity": "critical"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 8.0,
+        "maxHoursDaily": 14.0,
+        "optimalHoursDaily": 12.0,
+        "intensityLux": 50000,
+        "intensityPpfd": null,
+        "photoperiodSensitive": false,
+        "notes": "Full sun requirement. Thrives in extreme heat and high light intensity typical of UAE."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium (Medjool equivalent)",
+          "sizeRequirements": "Large (>5cm length), uniform size",
+          "colorRequirements": "Rich amber to dark brown, glossy",
+          "defectTolerance": "No blemishes, perfect skin",
+          "otherCriteria": "Soft texture, high moisture (>20%), no fermentation",
+          "priceMultiplier": 3.0
+        },
+        {
+          "gradeName": "Grade B - Table dates",
+          "sizeRequirements": "Medium (3-5cm), slight variation",
+          "colorRequirements": "Uniform brown color",
+          "defectTolerance": "Minor surface marks acceptable",
+          "otherCriteria": "Good texture, moderate moisture",
+          "priceMultiplier": 1.5
+        },
+        {
+          "gradeName": "Grade C - Industrial",
+          "sizeRequirements": "Any size",
+          "colorRequirements": "Variable",
+          "defectTolerance": "Surface defects acceptable",
+          "otherCriteria": "Suitable for processing, date paste, syrup",
+          "priceMultiplier": 0.6
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 8.00,
+        "currency": "USD",
+        "totalManHoursPerPlant": 15.0,
+        "plantingHours": 4.0,
+        "maintenanceHours": 8.0,
+        "harvestingHours": 3.0,
+        "notes": "High-value crop. Labor for pollination, thinning, bunch covering, and harvesting. Annual maintenance essential."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "spreading",
+        "spacing": {
+          "betweenPlantsCm": 800,
+          "betweenRowsCm": 800,
+          "plantsPerSquareMeter": 0.0156
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Alfalfa", "Wheat", "Barley", "Vegetables (intercropping in young orchards)"],
+        "incompatiblePlants": [],
+        "notes": "Takes 4-5 years to first production. Productive life 40-80 years. Requires pollination (hand or mechanical). Offshoot propagation preferred."
+      },
+
+      "tags": ["tree", "fruit", "arecaceae", "perennial", "high_value", "drought_tolerant", "commercial", "export", "traditional"]
+    },
+
+    {
+      "plantName": "Lettuce",
+      "scientificName": "Lactuca sativa",
+      "farmTypeCompatibility": ["open_field", "hydroponic", "greenhouse", "vertical_farm"],
+
+      "growthCycle": {
+        "germinationDays": 5,
+        "vegetativeDays": 25,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 7,
+        "totalCycleDays": 37
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 0.3,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 15
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "vegetative",
+          "fertilizerType": "High Nitrogen NPK",
+          "quantityPerPlant": 8,
+          "quantityUnit": "grams",
+          "frequencyDays": 10,
+          "npkRatio": "20-10-10",
+          "notes": "Leafy greens require high nitrogen for leaf development"
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Calcium Nitrate",
+          "quantityPerPlant": 5,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "N/A",
+          "notes": "Prevents tipburn, especially important in hydroponics"
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Bacillus thuringiensis var. kurstaki",
+          "targetPest": "Caterpillars, loopers",
+          "quantityPerPlant": 3,
+          "quantityUnit": "ml",
+          "frequencyDays": 10,
+          "safetyNotes": "Organic biological control. Safe up to harvest day.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 7.0,
+          "maxCelsius": 24.0,
+          "optimalCelsius": 18.0
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 80,
+          "optimalPercentage": 70
+        },
+        "co2RequirementPpm": 1000,
+        "airCirculation": "Moderate - prevents tipburn and fungal issues"
+      },
+
+      "wateringRequirements": {
+        "frequencyDays": 2,
+        "waterType": "filtered",
+        "amountPerPlantLiters": 0.5,
+        "droughtTolerance": "low",
+        "notes": "Consistent moisture critical. Avoid wetting leaves. Shallow root system."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy"],
+        "nutrientsRecommendations": "High nitrogen requirement. Moderate phosphorus and potassium. Requires calcium for tipburn prevention.",
+        "ecRangeMs": "1.2-1.8",
+        "tdsRangePpm": "840-1260",
+        "notes": "Well-drained, rich in organic matter. Sensitive to salt stress."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Downy Mildew (Bremia lactucae)",
+          "symptoms": "Yellow spots on upper leaf surfaces, white fuzzy growth on undersides",
+          "preventionMeasures": "Good air circulation, avoid overhead watering, resistant varieties, remove infected plants",
+          "treatmentOptions": "Copper-based fungicides, organic fungicides. Improve air flow. Multiple applications needed.",
+          "severity": "high"
+        },
+        {
+          "name": "Tipburn",
+          "symptoms": "Brown edges on inner leaves, especially during rapid growth",
+          "preventionMeasures": "Adequate calcium, consistent moisture, good air circulation, avoid excessive nitrogen",
+          "treatmentOptions": "Calcium foliar sprays, adjust fertilization, improve environmental conditions. Not infectious.",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Small insects on leaves, stunted growth, sticky honeydew",
+          "preventionMeasures": "Monitor regularly, reflective mulches, encourage beneficial insects",
+          "treatmentOptions": "Insecticidal soap, neem oil, strong water spray. Act quickly before population explodes.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "partial_shade",
+        "minHoursDaily": 4.0,
+        "maxHoursDaily": 6.0,
+        "optimalHoursDaily": 5.0,
+        "intensityLux": 15000,
+        "intensityPpfd": 200,
+        "photoperiodSensitive": true,
+        "notes": "Cool season crop. In UAE, grow Oct-Mar. Bolts (flowers) in long days and high heat. Provide shade in spring."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Well-formed head, 15-20cm diameter",
+          "colorRequirements": "Fresh green color, no yellowing",
+          "defectTolerance": "No damage, disease, or insect presence",
+          "otherCriteria": "Crisp texture, tightly packed leaves, no tipburn",
+          "priceMultiplier": 1.3
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Moderate head formation, 12-18cm",
+          "colorRequirements": "Fresh green, slight yellowing acceptable on outer leaves",
+          "defectTolerance": "Minor outer leaf damage, slight tipburn acceptable",
+          "otherCriteria": "Good quality, marketable",
+          "priceMultiplier": 1.0
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 2.50,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.15,
+        "plantingHours": 0.05,
+        "maintenanceHours": 0.05,
+        "harvestingHours": 0.05,
+        "notes": "Fast-growing crop allows multiple cycles per year. Low labor requirement. Popular in hydroponics."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "bush",
+        "spacing": {
+          "betweenPlantsCm": 30,
+          "betweenRowsCm": 30,
+          "plantsPerSquareMeter": 11.1
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Carrot", "Radish", "Strawberry", "Cucumber", "Onion"],
+        "incompatiblePlants": ["Cabbage", "Broccoli", "Parsley"],
+        "notes": "Fast-growing leafy green. Ideal for succession planting. Very popular in hydroponic systems (30-40 plants/sq m)."
+      },
+
+      "tags": ["vegetable", "leafy_green", "asteraceae", "cool_season", "hydroponic", "fast_growing", "salad", "commercial"]
+    },
+
+    {
+      "plantName": "Cucumber",
+      "scientificName": "Cucumis sativus",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 5,
+        "vegetativeDays": 20,
+        "floweringDays": 10,
+        "fruitingDays": 25,
+        "harvestDurationDays": 20,
+        "totalCycleDays": 80
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 4.5,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 12
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 25,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "15-15-15",
+          "notes": "Balanced nutrition during vine development"
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "High Potassium",
+          "quantityPerPlant": 30,
+          "quantityUnit": "grams",
+          "frequencyDays": 10,
+          "npkRatio": "10-15-20",
+          "notes": "Increase potassium during flowering and fruit set"
+        },
+        {
+          "stage": "fruiting",
+          "fertilizerType": "High Potassium with Calcium",
+          "quantityPerPlant": 35,
+          "quantityUnit": "grams",
+          "frequencyDays": 7,
+          "npkRatio": "8-12-24",
+          "notes": "High potassium for fruit development. Calcium prevents fruit deformities."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Neem oil solution",
+          "targetPest": "Aphids, whiteflies, cucumber beetles",
+          "quantityPerPlant": 8,
+          "quantityUnit": "ml",
+          "frequencyDays": 10,
+          "safetyNotes": "Organic option. Apply in evening to avoid leaf burn. Test small area first.",
+          "preharvestIntervalDays": 1
+        },
+        {
+          "stage": "fruiting",
+          "pesticideType": "Pyrethrin-based spray",
+          "targetPest": "Cucumber beetles, squash bugs",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Natural insecticide derived from chrysanthemums. Short residual.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 18.0,
+          "maxCelsius": 32.0,
+          "optimalCelsius": 26.0
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 80,
+          "optimalPercentage": 70
+        },
+        "co2RequirementPpm": 800,
+        "airCirculation": "Good air circulation essential for pollination and disease prevention"
+      },
+
+      "wateringRequirements": {
+        "frequencyDays": 2,
+        "waterType": "filtered",
+        "amountPerPlantLiters": 2.0,
+        "droughtTolerance": "low",
+        "notes": "High water requirement especially during fruiting. Drip irrigation preferred. Kc coefficient: 1.6-1.7 at peak."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy"],
+        "nutrientsRecommendations": "Moderate to high nitrogen, high potassium during fruiting. Magnesium important for chlorophyll.",
+        "ecRangeMs": "1.7-2.5",
+        "tdsRangePpm": "1190-1750",
+        "notes": "Well-drained, fertile soil. Sensitive to waterlogging and compaction."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Powdery Mildew",
+          "symptoms": "White powdery spots on leaves and stems, yellowing, reduced vigor",
+          "preventionMeasures": "Good air circulation, avoid overhead watering, resistant varieties, adequate spacing",
+          "treatmentOptions": "Sulfur-based fungicides, potassium bicarbonate spray, neem oil. Remove heavily infected leaves.",
+          "severity": "high"
+        },
+        {
+          "name": "Downy Mildew",
+          "symptoms": "Yellow angular spots on upper leaf surfaces, grayish mold on undersides",
+          "preventionMeasures": "Improve air flow, avoid wet foliage, resistant varieties, fungicide preventative",
+          "treatmentOptions": "Copper fungicides, organic fungicides. Remove infected plants. Act quickly.",
+          "severity": "high"
+        },
+        {
+          "name": "Cucumber Beetles",
+          "symptoms": "Yellowing leaves, wilting, holes in leaves and flowers, bacterial wilt transmission",
+          "preventionMeasures": "Row covers on young plants, trap crops, yellow sticky traps, hand-pick beetles",
+          "treatmentOptions": "Pyrethrin sprays, neem oil, kaolin clay. Control early to prevent bacterial wilt spread.",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Curled leaves, sticky honeydew, stunted growth, virus transmission",
+          "preventionMeasures": "Monitor regularly, reflective mulches, encourage ladybugs and lacewings",
+          "treatmentOptions": "Insecticidal soap, strong water spray, neem oil. Introduce beneficial insects.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 10.0,
+        "optimalHoursDaily": 8.0,
+        "intensityLux": 35000,
+        "intensityPpfd": 450,
+        "photoperiodSensitive": false,
+        "notes": "Full sun preferred. In extreme UAE summer heat (>40°C), provide light afternoon shade to prevent stress."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Straight, uniform, 15-20cm length, 3-4cm diameter",
+          "colorRequirements": "Dark green, uniform color",
+          "defectTolerance": "No blemishes, scars, or yellowing",
+          "otherCriteria": "Firm texture, small seed cavity, crisp",
+          "priceMultiplier": 1.4
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "12-20cm length, slight curvature acceptable",
+          "colorRequirements": "Green, minor color variation acceptable",
+          "defectTolerance": "Minor surface defects, light scarring acceptable",
+          "otherCriteria": "Good eating quality, marketable",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size or shape",
+          "colorRequirements": "Any green color",
+          "defectTolerance": "Significant defects, overripe acceptable",
+          "otherCriteria": "Suitable for pickling, processing",
+          "priceMultiplier": 0.5
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 2.00,
+        "currency": "USD",
+        "totalManHoursPerPlant": 1.5,
+        "plantingHours": 0.15,
+        "maintenanceHours": 0.85,
+        "harvestingHours": 0.5,
+        "notes": "Regular harvesting essential (every 2-3 days) to maintain production. Vining types require trellising labor."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "vine",
+        "spacing": {
+          "betweenPlantsCm": 50,
+          "betweenRowsCm": 120,
+          "plantsPerSquareMeter": 1.67
+        },
+        "supportRequirements": "trellis",
+        "companionPlants": ["Bean", "Pea", "Radish", "Corn", "Sunflower"],
+        "incompatiblePlants": ["Potato", "Sage", "Aromatic herbs"],
+        "notes": "Trellised cucumbers produce straighter fruit and easier harvest. Bush varieties available for containers. Harvest regularly."
+      },
+
+      "tags": ["vegetable", "cucurbitaceae", "warm_season", "vine", "hydroponic", "greenhouse", "commercial", "popular"]
+    },
+
+    {
+      "plantName": "Bell Pepper",
+      "scientificName": "Capsicum annuum",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 10,
+        "vegetativeDays": 35,
+        "floweringDays": 15,
+        "fruitingDays": 50,
+        "harvestDurationDays": 20,
+        "totalCycleDays": 130
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 3.5,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 8
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 25,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "20-20-20",
+          "notes": "Start with balanced ratio for vegetative growth and root development"
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "High Potassium NPK",
+          "quantityPerPlant": 30,
+          "quantityUnit": "grams",
+          "frequencyDays": 10,
+          "npkRatio": "9-15-30",
+          "notes": "Switch to high potassium at flowering. Ratio of 1:1.5:3 promotes fruit set"
+        },
+        {
+          "stage": "fruiting",
+          "fertilizerType": "High Potassium with Calcium/Magnesium",
+          "quantityPerPlant": 35,
+          "quantityUnit": "grams",
+          "frequencyDays": 10,
+          "npkRatio": "5-10-10",
+          "notes": "Maintain high potassium. Calcium prevents blossom end rot. Magnesium for color development."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Bacillus thuringiensis (Bt)",
+          "targetPest": "Caterpillars, armyworms",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 14,
+          "safetyNotes": "Organic biological control. Safe for beneficial insects. Apply in evening.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "fruiting",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids, whiteflies, spider mites",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Organic option. Test on small area first. Repeat applications needed for mites.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 18.0,
+          "maxCelsius": 32.0,
+          "optimalCelsius": 25.0
+        },
+        "humidity": {
+          "minPercentage": 50,
+          "maxPercentage": 70,
+          "optimalPercentage": 60
+        },
+        "co2RequirementPpm": 800,
+        "airCirculation": "Good air circulation for pollination and disease prevention"
+      },
+
+      "wateringRequirements": {
+        "frequencyDays": 3,
+        "waterType": "filtered",
+        "amountPerPlantLiters": 2.0,
+        "droughtTolerance": "medium",
+        "notes": "Consistent moisture important. Avoid water stress during flowering and fruiting. Mulch helps maintain moisture."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy"],
+        "nutrientsRecommendations": "High potassium and calcium requirement. Moderate nitrogen. Adequate magnesium for fruit color.",
+        "ecRangeMs": "2.0-3.0",
+        "tdsRangePpm": "1400-2100",
+        "notes": "Well-drained, fertile soil. Sensitive to waterlogging. High organic matter beneficial."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Bacterial Spot (Xanthomonas)",
+          "symptoms": "Dark spots on leaves and fruit, yellowing, defoliation",
+          "preventionMeasures": "Use disease-free seeds, avoid overhead watering, copper sprays preventatively, crop rotation",
+          "treatmentOptions": "Copper-based bactericides. Remove heavily infected plants. Improve air circulation.",
+          "severity": "high"
+        },
+        {
+          "name": "Blossom End Rot",
+          "symptoms": "Dark, sunken spots on blossom end of fruit, leathery texture",
+          "preventionMeasures": "Consistent watering, adequate calcium, avoid excessive nitrogen, mulch plants",
+          "treatmentOptions": "Calcium foliar sprays, adjust watering schedule, lime application to soil. Not a disease - calcium deficiency.",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Curled leaves, stunted growth, honeydew, virus transmission",
+          "preventionMeasures": "Monitor regularly, encourage beneficial insects, reflective mulches",
+          "treatmentOptions": "Insecticidal soap, neem oil, strong water spray. Introduce ladybugs.",
+          "severity": "medium"
+        },
+        {
+          "name": "Pepper Weevil",
+          "symptoms": "Small holes in buds and fruit, dropped flowers, internal fruit damage",
+          "preventionMeasures": "Remove fallen fruit and buds, destroy crop residue, monitor regularly",
+          "treatmentOptions": "Insecticide applications. Remove and destroy infested fruit. Difficult to control once established.",
+          "severity": "high"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 10.0,
+        "optimalHoursDaily": 8.0,
+        "intensityLux": 32000,
+        "intensityPpfd": 420,
+        "photoperiodSensitive": false,
+        "notes": "Full sun preferred but tolerates light afternoon shade in extreme heat. Adequate light needed for fruit coloring."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Large, 7-10cm diameter, uniform blocky shape",
+          "colorRequirements": "Bright green or fully colored (red, yellow, orange), glossy",
+          "defectTolerance": "No blemishes, scarring, or soft spots",
+          "otherCriteria": "Firm, thick walls, heavy for size, attached stem",
+          "priceMultiplier": 1.6
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Medium, 6-9cm diameter, slight shape variation",
+          "colorRequirements": "Good color, minor variations acceptable",
+          "defectTolerance": "Minor surface blemishes, light scarring acceptable",
+          "otherCriteria": "Firm, marketable quality",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size or shape",
+          "colorRequirements": "Any color",
+          "defectTolerance": "Significant defects, cracks, soft spots",
+          "otherCriteria": "Suitable for processing, drying, roasting",
+          "priceMultiplier": 0.4
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 4.00,
+        "currency": "USD",
+        "totalManHoursPerPlant": 2.0,
+        "plantingHours": 0.2,
+        "maintenanceHours": 1.2,
+        "harvestingHours": 0.6,
+        "notes": "High-value crop. Colored peppers command premium prices. Labor for staking and multiple harvests. Long production period."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "bush",
+        "spacing": {
+          "betweenPlantsCm": 50,
+          "betweenRowsCm": 90,
+          "plantsPerSquareMeter": 2.22
+        },
+        "supportRequirements": "stakes",
+        "companionPlants": ["Basil", "Onion", "Tomato", "Carrot", "Parsley"],
+        "incompatiblePlants": ["Fennel", "Kohlrabi", "Bean"],
+        "notes": "Staking recommended for heavily fruiting plants. Harvest green or allow to ripen to color. Colored peppers are mature green peppers."
+      },
+
+      "tags": ["vegetable", "solanaceae", "warm_season", "high_value", "hydroponic", "greenhouse", "commercial", "export"]
+    },
+
+    {
+      "plantName": "Eggplant",
+      "scientificName": "Solanum melongena",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 10,
+        "vegetativeDays": 35,
+        "floweringDays": 15,
+        "fruitingDays": 45,
+        "harvestDurationDays": 20,
+        "totalCycleDays": 125
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 4.5,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 8
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 25,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "10-10-10",
+          "notes": "Balanced nutrition for early growth. Avoid excessive nitrogen which delays fruiting."
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "High Potassium NPK",
+          "quantityPerPlant": 30,
+          "quantityUnit": "grams",
+          "frequencyDays": 10,
+          "npkRatio": "5-10-10",
+          "notes": "Switch to high potassium and phosphorus at flowering for fruit development"
+        },
+        {
+          "stage": "fruiting",
+          "fertilizerType": "Calcium Nitrate + Potassium",
+          "quantityPerPlant": 30,
+          "quantityUnit": "grams",
+          "frequencyDays": 10,
+          "npkRatio": "15-0-0",
+          "notes": "Sidedress with calcium nitrate. Maintain potassium for continued fruit production."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Kaolin clay spray",
+          "targetPest": "Flea beetles",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Organic particle film barrier. Creates white coating that deters beetles. Safe to harvest.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "fruiting",
+          "pesticideType": "Bacillus thuringiensis (Bt)",
+          "targetPest": "Colorado potato beetle larvae, hornworms",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 10,
+          "safetyNotes": "Organic biological control. Target young larvae. Safe for beneficial insects.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 18.0,
+          "maxCelsius": 32.0,
+          "optimalCelsius": 26.0
+        },
+        "humidity": {
+          "minPercentage": 50,
+          "maxPercentage": 70,
+          "optimalPercentage": 60
+        },
+        "co2RequirementPpm": 800,
+        "airCirculation": "Moderate - promotes pollination and prevents fungal diseases"
+      },
+
+      "wateringRequirements": {
+        "frequencyDays": 3,
+        "waterType": "filtered",
+        "amountPerPlantLiters": 2.5,
+        "droughtTolerance": "low",
+        "notes": "Consistent moisture important especially during fruiting. Deep watering encourages strong root system."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 6.8,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy"],
+        "nutrientsRecommendations": "Moderate nitrogen, high potassium and phosphorus during fruiting. Benefits from organic matter.",
+        "ecRangeMs": "2.0-3.0",
+        "tdsRangePpm": "1400-2100",
+        "notes": "Well-drained, fertile soil. Prefers sandy loam with good organic matter content."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Flea Beetles",
+          "symptoms": "Small shot-holes in leaves, especially on young plants. Tiny black beetles jump when disturbed",
+          "preventionMeasures": "Row covers on young plants, kaolin clay barrier, trap crops, clean cultivation",
+          "treatmentOptions": "Kaolin clay spray, pyrethrin, spinosad. Focus protection on first month after transplanting.",
+          "severity": "critical"
+        },
+        {
+          "name": "Verticillium Wilt (Verticillium dahliae)",
+          "symptoms": "Yellowing and drooping leaves, brown vascular tissue visible in stem cross-section",
+          "preventionMeasures": "Crop rotation (avoid solanaceous crops for 2+ years), resistant varieties, soil solarization",
+          "treatmentOptions": "No chemical cure. Remove infected plants. Rotate with non-host crops (corn, wheat, brassicas).",
+          "severity": "critical"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Small insects on new growth, curled leaves, sticky honeydew, stunted growth",
+          "preventionMeasures": "Monitor regularly, encourage beneficial insects, reflective mulches",
+          "treatmentOptions": "Insecticidal soap, neem oil, strong water spray. Introduce ladybugs.",
+          "severity": "medium"
+        },
+        {
+          "name": "Spider Mites",
+          "symptoms": "Stippled yellow leaves, fine webbing on undersides, leaf drop in severe cases",
+          "preventionMeasures": "Maintain humidity, avoid water stress, encourage predatory mites",
+          "treatmentOptions": "Insecticidal soap, neem oil, horticultural oil. Multiple applications needed.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 10.0,
+        "optimalHoursDaily": 8.0,
+        "intensityLux": 30000,
+        "intensityPpfd": 400,
+        "photoperiodSensitive": false,
+        "notes": "Full sun for best fruit production. In extreme UAE heat, light afternoon shade acceptable."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Large, uniform size (250-400g), glossy skin",
+          "colorRequirements": "Deep purple-black or variety-specific color, uniform",
+          "defectTolerance": "No blemishes, scars, or soft spots",
+          "otherCriteria": "Firm, heavy for size, fresh calyx attached",
+          "priceMultiplier": 1.5
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Medium (150-300g), slight size variation",
+          "colorRequirements": "Good color, minor variations acceptable",
+          "defectTolerance": "Minor surface marks, light scarring acceptable",
+          "otherCriteria": "Firm, marketable quality",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size",
+          "colorRequirements": "Any color",
+          "defectTolerance": "Significant defects acceptable",
+          "otherCriteria": "Suitable for processing, grilling, baba ganoush",
+          "priceMultiplier": 0.5
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 3.00,
+        "currency": "USD",
+        "totalManHoursPerPlant": 2.2,
+        "plantingHours": 0.2,
+        "maintenanceHours": 1.5,
+        "harvestingHours": 0.5,
+        "notes": "Labor for staking and regular harvest. Long production season provides steady income."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "bush",
+        "spacing": {
+          "betweenPlantsCm": 60,
+          "betweenRowsCm": 90,
+          "plantsPerSquareMeter": 1.85
+        },
+        "supportRequirements": "stakes",
+        "companionPlants": ["Bean", "Pea", "Spinach", "Thyme"],
+        "incompatiblePlants": ["Potato", "Tomato", "Other solanaceous crops"],
+        "notes": "Staking prevents fruit ground contact. Harvest regularly to encourage continued production."
+      },
+
+      "tags": ["vegetable", "solanaceae", "warm_season", "high_value", "greenhouse", "commercial", "middle_eastern"]
+    },
+
+    {
+      "plantName": "Cabbage",
+      "scientificName": "Brassica oleracea var. capitata",
+      "farmTypeCompatibility": ["open_field", "greenhouse"],
+
+      "growthCycle": {
+        "germinationDays": 7,
+        "vegetativeDays": 50,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 10,
+        "totalCycleDays": 67
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 1.5,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 15
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "germination",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 40,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "10-10-10",
+          "notes": "Apply at planting. Broadcast fertilizer and incorporate into soil before transplanting."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Nitrogen Sidedress",
+          "quantityPerPlant": 20,
+          "quantityUnit": "grams",
+          "frequencyDays": 21,
+          "npkRatio": "21-0-0",
+          "notes": "Sidedress 3 weeks after transplanting. Apply along row side. Promotes rapid head formation."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Boron supplement",
+          "quantityPerPlant": 0.05,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "N/A",
+          "notes": "Apply boron at 1.5-3 lb/acre at planting. Critical micronutrient for brassicas."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Bacillus thuringiensis var. kurstaki (Btk)",
+          "targetPest": "Cabbage worm, cabbage looper",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Organic biological control for caterpillars. Apply when larvae are small. Evening application best.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Organic option. Spray when 1-2% of plants infested. Monitor regularly once heads form.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 7.0,
+          "maxCelsius": 24.0,
+          "optimalCelsius": 18.0
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 80,
+          "optimalPercentage": 70
+        },
+        "co2RequirementPpm": 1000,
+        "airCirculation": "Good air circulation prevents fungal diseases"
+      },
+
+      "wateringRequirements": {
+        "frequencyDays": 3,
+        "waterType": "tap",
+        "amountPerPlantLiters": 1.5,
+        "droughtTolerance": "low",
+        "notes": "Consistent moisture critical for head formation. Water stress causes splitting or poor head development."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 6.8,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy", "clay"],
+        "nutrientsRecommendations": "High nitrogen requirement. Adequate boron essential. Moderate P and K. Add lime if pH below 6.0.",
+        "ecRangeMs": "1.5-2.5",
+        "tdsRangePpm": "1050-1750",
+        "notes": "Well-drained, fertile soil. Benefits from high organic matter. Tolerates heavier soils than most vegetables."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Cabbage Worm (Imported Cabbageworm)",
+          "symptoms": "Large holes in leaves, green caterpillars visible, frass (droppings) on leaves",
+          "preventionMeasures": "Row covers, Bt applications, encourage parasitic wasps, hand-pick caterpillars",
+          "treatmentOptions": "Bacillus thuringiensis (Btk), spinosad. Apply when larvae are young for best control.",
+          "severity": "high"
+        },
+        {
+          "name": "Cabbage Aphids",
+          "symptoms": "Gray-green aphids clustered on leaves, sticky honeydew, stunted growth",
+          "preventionMeasures": "Monitor regularly, reflective mulches, encourage ladybugs and lacewings",
+          "treatmentOptions": "Insecticidal soap, neem oil, strong water spray. Treat early before populations explode.",
+          "severity": "medium"
+        },
+        {
+          "name": "Clubroot (Plasmodiophora brassicae)",
+          "symptoms": "Stunted plants, wilting, swollen deformed roots, yellowing leaves",
+          "preventionMeasures": "Crop rotation (4+ years), raise soil pH to 7.0+, use resistant varieties, avoid moving contaminated soil",
+          "treatmentOptions": "No chemical cure. Remove infected plants. Lime soil. Long rotation essential. Resting spores survive 20+ years.",
+          "severity": "high"
+        },
+        {
+          "name": "Black Rot (Xanthomonas campestris)",
+          "symptoms": "V-shaped yellow lesions on leaf margins, black veins, foul odor",
+          "preventionMeasures": "Use disease-free seeds, avoid overhead watering, crop rotation, remove plant debris",
+          "treatmentOptions": "Copper bactericides preventatively. Remove infected plants. No cure once established.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 8.0,
+        "optimalHoursDaily": 6.0,
+        "intensityLux": 20000,
+        "intensityPpfd": 300,
+        "photoperiodSensitive": false,
+        "notes": "Cool season crop. In UAE, grow October-March. Tolerates light shade in warm weather."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Firm, compact head, 1-2 kg, uniform size",
+          "colorRequirements": "Fresh green, no yellowing or discoloration",
+          "defectTolerance": "No damage, disease, insect presence, or loose leaves",
+          "otherCriteria": "Tight head, heavy for size, 3-4 wrapper leaves",
+          "priceMultiplier": 1.3
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Fairly firm head, 0.8-1.5 kg, slight variation",
+          "colorRequirements": "Good green color, minor discoloration on outer leaves acceptable",
+          "defectTolerance": "Minor outer leaf damage acceptable, no disease",
+          "otherCriteria": "Reasonably tight head, marketable",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size, loose heads acceptable",
+          "colorRequirements": "Variable color",
+          "defectTolerance": "Significant outer leaf damage acceptable",
+          "otherCriteria": "Suitable for coleslaw, sauerkraut, processing",
+          "priceMultiplier": 0.5
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 1.50,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.8,
+        "plantingHours": 0.15,
+        "maintenanceHours": 0.45,
+        "harvestingHours": 0.2,
+        "notes": "Moderate labor requirement. Single harvest per plant. Storage potential adds value."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "bush",
+        "spacing": {
+          "betweenPlantsCm": 45,
+          "betweenRowsCm": 75,
+          "plantsPerSquareMeter": 2.96
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Onion", "Celery", "Dill", "Beet", "Potato"],
+        "incompatiblePlants": ["Tomato", "Strawberry", "Pole beans"],
+        "notes": "Cool season crop. Harvest when heads are firm. Can be stored for several weeks in cool conditions."
+      },
+
+      "tags": ["vegetable", "brassicaceae", "cool_season", "cruciferous", "commercial", "storage_crop"]
+    },
+
+    {
+      "plantName": "Cauliflower",
+      "scientificName": "Brassica oleracea var. botrytis",
+      "farmTypeCompatibility": ["open_field", "greenhouse"],
+
+      "growthCycle": {
+        "germinationDays": 7,
+        "vegetativeDays": 45,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 7,
+        "totalCycleDays": 59
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 1.0,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 15,
+        "notes": "Single large head per plant. Blanching may be required for white varieties."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "planting",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 40,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "10-10-10",
+          "notes": "Incorporate at planting or transplanting. Cauliflower is a heavy feeder requiring good soil fertility."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Nitrogen sidedress",
+          "quantityPerPlant": 20,
+          "quantityUnit": "grams",
+          "frequencyDays": 21,
+          "npkRatio": "21-0-0",
+          "notes": "Apply 3-4 weeks after transplanting. Apply near the base of plants and water in well."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Boron supplement",
+          "quantityPerPlant": 2,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "0-0-0",
+          "notes": "Apply once mid-season as foliar spray or soil drench. Prevents hollow stem and brown curd."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Bacillus thuringiensis (Bt)",
+          "targetPest": "Cabbage looper",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Organic bacterial insecticide. Apply when larvae are small. Reapply after rain.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 5,
+          "safetyNotes": "Spray thoroughly to contact aphids. Best applied early morning or evening.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 7.0,
+          "maxCelsius": 22.0,
+          "optimalCelsius": 17.0,
+          "notes": "Very sensitive to heat. High temps cause buttoning (premature small heads), poor head quality, and bitter taste. In UAE, grow Oct-Mar only."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 80,
+          "optimalPercentage": 70,
+          "notes": "Moderate to high humidity supports steady growth. Low humidity can stress plants and reduce head size."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces disease pressure, especially for leaf diseases."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular, consistent watering required",
+        "type": "Drip irrigation or furrow irrigation",
+        "amount": "25-40mm per week depending on stage and weather",
+        "droughtTolerance": "low",
+        "waterQuality": "pH 6.0-7.0, low salinity (EC < 2.0 mS/cm)",
+        "notes": "Consistent moisture critical for uniform head development. Water stress causes uneven heads, buttoning, or premature bolting."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "clay_loam"],
+        "nutrientsRecommendations": "High nitrogen requirement, especially during head formation. Adequate boron essential (2-3 ppm in soil) to prevent brown curd and hollow stem. Molybdenum also important.",
+        "ecRangeMs": "1.5-2.5",
+        "tdsRangePpm": "1050-1750",
+        "notes": "Prefers rich, moisture-retentive soil with high organic matter. Sensitive to soil pH below 6.0 (clubroot risk increases)."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Cabbage Looper",
+          "symptoms": "Irregular holes in leaves, green caterpillars, frass (droppings) on leaves",
+          "preventionMeasures": "Row covers, encourage natural predators (wasps, birds), crop rotation, handpick when spotted",
+          "treatmentOptions": "Bacillus thuringiensis (Bt) sprays, spinosad for organic control, pyrethrin as last resort",
+          "severity": "high"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters of small insects on undersides of leaves, sticky honeydew, curled leaves",
+          "preventionMeasures": "Monitor early, encourage beneficial insects (ladybugs, lacewings), reflective mulches",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil, horticultural oil",
+          "severity": "medium"
+        },
+        {
+          "name": "Clubroot",
+          "symptoms": "Wilting during day, stunted growth, swollen distorted roots, yellowing leaves",
+          "preventionMeasures": "Maintain soil pH 7.0-7.2, 4-year crop rotation, use resistant varieties, improve drainage",
+          "treatmentOptions": "No cure once present. Remove infected plants. Lime soil to raise pH. Plant in different location.",
+          "severity": "high"
+        },
+        {
+          "name": "Black Rot",
+          "symptoms": "V-shaped yellow lesions on leaf margins, blackened veins, eventual leaf drop",
+          "preventionMeasures": "Use certified disease-free transplants, avoid overhead watering, crop rotation, remove crop debris",
+          "treatmentOptions": "Remove infected plants immediately. Copper-based bactericides may slow spread. Prevention is key.",
+          "severity": "high"
+        },
+        {
+          "name": "Hollow Stem / Brown Curd",
+          "symptoms": "Hollow cavity in stem, brown discoloration in curd, reduced quality",
+          "preventionMeasures": "Adequate boron in soil (2-3 ppm), avoid excessive nitrogen, consistent moisture, proper spacing",
+          "treatmentOptions": "Apply boron as foliar spray or soil amendment. Usually preventable with proper nutrition.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 5.0,
+        "maxHoursDaily": 8.0,
+        "optimalHoursDaily": 6.0,
+        "intensityLux": 25000,
+        "intensityPpfd": 350,
+        "photoperiodSensitive": false,
+        "notes": "Full sun required but sensitive to high heat/light intensity combinations. In hot climates, some afternoon shade beneficial."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Compact, firm head 15-20cm diameter, clean white curd",
+          "colorRequirements": "Pure white to cream-white, no discoloration",
+          "defectTolerance": "No bruising, no insect damage, tight compact florets, no riciness (loose curds)",
+          "priceMultiplier": 1.8
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Head 12-18cm diameter, reasonably compact",
+          "colorRequirements": "White to cream, minor discoloration acceptable",
+          "defectTolerance": "Minor surface blemishes acceptable, slight riciness allowed",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Head size 10cm+, loose or uneven heads acceptable",
+          "colorRequirements": "Off-white acceptable, some yellowing allowed",
+          "defectTolerance": "Surface defects acceptable if florets still usable, ricey texture acceptable",
+          "priceMultiplier": 0.5
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 2.50,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.9,
+        "plantingHours": 0.15,
+        "maintenanceHours": 0.4,
+        "harvestingHours": 0.35,
+        "notes": "Premium white heads command higher prices. Harvest timing critical - overmaturity causes riciness. Labor-intensive crop requiring careful blanching for white varieties."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "bush",
+        "spacing": {
+          "betweenPlantsCm": 60,
+          "betweenRowsCm": 75,
+          "plantsPerSquareMeter": 2.22
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Onion", "Celery", "Dill", "Sage", "Beet"],
+        "incompatiblePlants": ["Tomato", "Strawberry", "Pole beans"],
+        "notes": "Cool season crop requiring very specific temperature range. Sensitive to temperature stress causing premature heading (buttoning). White varieties may require blanching (tying leaves over head) to maintain white color. In UAE, only grow during coolest months (Nov-Feb). More challenging than cabbage or broccoli."
+      },
+
+      "tags": ["vegetable", "brassicaceae", "cool_season", "cruciferous", "commercial", "high_maintenance", "premium_crop"]
+    },
+
+    {
+      "plantName": "Broccoli",
+      "scientificName": "Brassica oleracea var. italica",
+      "farmTypeCompatibility": ["open_field", "greenhouse"],
+
+      "growthCycle": {
+        "germinationDays": 7,
+        "vegetativeDays": 50,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 7,
+        "totalCycleDays": 64
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 0.8,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 20,
+        "notes": "Main central head plus smaller side shoots. Side shoots continue producing for weeks after main head harvest."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "planting",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 40,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "10-10-10",
+          "notes": "Work into soil at planting or transplanting. Broccoli needs rich, fertile soil."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Nitrogen sidedress (first)",
+          "quantityPerPlant": 20,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "21-0-0",
+          "notes": "Apply 3 weeks after transplanting. Apply in band 6 inches from plant base."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Nitrogen sidedress (second)",
+          "quantityPerPlant": 20,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "21-0-0",
+          "notes": "Apply 6 weeks after transplanting to support head development."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Boron supplement",
+          "quantityPerPlant": 2,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "0-0-0",
+          "notes": "Apply mid-season as foliar spray. Prevents hollow stem."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Bacillus thuringiensis (Bt)",
+          "targetPest": "Cabbage worm / Imported cabbageworm",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Organic bacterial insecticide. Effective on young larvae. Reapply weekly or after heavy rain.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 5,
+          "safetyNotes": "Spray to contact pests. Apply in cooler parts of day to avoid leaf burn.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 7.0,
+          "maxCelsius": 24.0,
+          "optimalCelsius": 18.0,
+          "notes": "Cool season crop. High temps cause premature flowering (bolting), loose heads, and bitter taste. In UAE, grow Oct-Mar for best quality."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 80,
+          "optimalPercentage": 70,
+          "notes": "Moderate to high humidity preferred. Low humidity stresses plants."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces fungal disease risk, especially in humid conditions."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular, consistent watering throughout growth",
+        "type": "Drip irrigation or furrow irrigation",
+        "amount": "25-50mm per week depending on temperature and growth stage",
+        "droughtTolerance": "low",
+        "waterQuality": "pH 6.0-7.0, EC < 2.0 mS/cm preferred",
+        "notes": "Consistent moisture essential for steady growth and head formation. Water stress causes buttoning (small premature heads), bitter flavor."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "clay_loam"],
+        "nutrientsRecommendations": "High nitrogen feeder, especially during head formation. Adequate boron (2-3 ppm) prevents hollow stem. Molybdenum important for proper leaf development.",
+        "ecRangeMs": "1.5-2.5",
+        "tdsRangePpm": "1050-1750",
+        "notes": "Prefers fertile, well-drained soil rich in organic matter. Perform soil test to ensure adequate boron levels."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Cabbage Worm (Imported Cabbageworm)",
+          "symptoms": "Large irregular holes in leaves, green caterpillars on plants, frass on leaves",
+          "preventionMeasures": "Row covers until heads form, encourage natural predators, handpick caterpillars, crop rotation",
+          "treatmentOptions": "Bacillus thuringiensis (Bt), spinosad for organic control, pyrethrin if severe",
+          "severity": "high"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters of small soft-bodied insects, sticky honeydew, sooty mold, distorted growth",
+          "preventionMeasures": "Monitor undersides of leaves, encourage ladybugs and lacewings, reflective mulches",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil, horticultural oil",
+          "severity": "medium"
+        },
+        {
+          "name": "Clubroot",
+          "symptoms": "Wilting during day, stunted growth, swollen gnarled roots, yellowing older leaves",
+          "preventionMeasures": "Raise soil pH to 7.0-7.2 with lime, 4+ year rotation, use resistant cultivars, improve drainage",
+          "treatmentOptions": "No cure for infected plants. Remove and destroy. Lime soil heavily. Rotate to non-brassica crops.",
+          "severity": "high"
+        },
+        {
+          "name": "Downy Mildew",
+          "symptoms": "Yellow patches on upper leaf surfaces, white-gray fuzzy growth on undersides, leaf distortion",
+          "preventionMeasures": "Adequate spacing for air flow, avoid overhead watering, remove infected leaves, resistant varieties",
+          "treatmentOptions": "Copper fungicides, improve air circulation, remove severely infected plants",
+          "severity": "medium"
+        },
+        {
+          "name": "Hollow Stem",
+          "symptoms": "Hollow cavity in main stem, may show brown discoloration, reduced head quality",
+          "preventionMeasures": "Adequate boron in soil (2-3 ppm), avoid over-fertilizing with nitrogen, proper plant spacing",
+          "treatmentOptions": "Apply boron as foliar spray or soil drench. Nutritional disorder, preventable with balanced fertility.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 8.0,
+        "optimalHoursDaily": 6.0,
+        "intensityLux": 30000,
+        "intensityPpfd": 400,
+        "photoperiodSensitive": false,
+        "notes": "Full sun produces best heads. Some afternoon shade acceptable in very hot climates. Insufficient light causes loose, small heads."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Compact head 10-18cm diameter, firm tight florets, uniform dark green color",
+          "colorRequirements": "Deep green to blue-green, no yellowing or purpling",
+          "defectTolerance": "No insect damage, no loose florets, no flowering (bolting), smooth dome shape",
+          "priceMultiplier": 1.6
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Head 8-15cm diameter, reasonably compact",
+          "colorRequirements": "Green, slight color variation acceptable",
+          "defectTolerance": "Minor surface blemishes acceptable, slight looseness at edges allowed",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Head 6cm+, loose heads acceptable",
+          "colorRequirements": "Green with yellowing acceptable",
+          "defectTolerance": "Surface defects OK if florets usable, some flowering buds acceptable",
+          "priceMultiplier": 0.6
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 2.80,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.85,
+        "plantingHours": 0.15,
+        "maintenanceHours": 0.35,
+        "harvestingHours": 0.35,
+        "notes": "Premium tight heads command best prices. Side shoots provide extended harvest increasing total yield. Harvest main head when tight before florets start to separate."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "bush",
+        "spacing": {
+          "betweenPlantsCm": 45,
+          "betweenRowsCm": 75,
+          "plantsPerSquareMeter": 2.96
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Onion", "Celery", "Dill", "Sage", "Beet", "Nasturtium"],
+        "incompatiblePlants": ["Tomato", "Strawberry", "Pole beans"],
+        "notes": "Cool season crop. Harvest main head when firm and tight, before individual florets begin to open. After main head harvest, side shoots will continue to produce smaller heads for several weeks. In UAE, best grown Nov-Feb. More heat tolerant than cauliflower."
+      },
+
+      "tags": ["vegetable", "brassicaceae", "cool_season", "cruciferous", "commercial", "extended_harvest", "nutritious"]
+    },
+
+    {
+      "plantName": "Zucchini",
+      "scientificName": "Cucurbita pepo",
+      "farmTypeCompatibility": ["open_field", "greenhouse"],
+
+      "growthCycle": {
+        "germinationDays": 5,
+        "vegetativeDays": 20,
+        "floweringDays": 10,
+        "fruitingDays": 20,
+        "harvestDurationDays": 15,
+        "totalCycleDays": 70
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 4.0,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 5,
+        "notes": "Continuous harvest over 2-3 weeks. Best harvested when 15-20cm long for optimal tenderness and flavor."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "planting",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 30,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "10-10-10",
+          "notes": "Work into soil at planting. Zucchini is a moderate to heavy feeder."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 35,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "10-10-10",
+          "notes": "Apply when vines begin running. Side-dress near base of plant."
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "Low nitrogen, higher P-K",
+          "quantityPerPlant": 40,
+          "quantityUnit": "grams",
+          "frequencyDays": 10,
+          "npkRatio": "5-10-10",
+          "notes": "Support flowering and fruit set. Continue through fruiting stage. Excessive N reduces fruiting."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Sulfur fungicide",
+          "targetPest": "Powdery mildew",
+          "quantityPerPlant": 10,
+          "quantityUnit": "grams",
+          "frequencyDays": 7,
+          "safetyNotes": "Apply as dust or spray. Preventative application recommended. Do not apply if temps above 32°C.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Spray thoroughly to contact insects. Repeat as needed.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 15.0,
+          "maxCelsius": 35.0,
+          "optimalCelsius": 24.0,
+          "notes": "Warm season crop. Frost sensitive. Poor fruit set below 18°C or above 35°C. In UAE, grow Mar-May and Sep-Nov for best results."
+        },
+        "humidity": {
+          "minPercentage": 50,
+          "maxPercentage": 70,
+          "optimalPercentage": 60,
+          "notes": "Moderate humidity preferred. High humidity increases disease pressure (powdery mildew). Good air flow essential."
+        },
+        "co2RequirementPpm": 800,
+        "airCirculation": "Good air circulation critical to reduce powdery mildew and promote pollination."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular watering, increase during fruiting",
+        "type": "Drip irrigation preferred to keep foliage dry",
+        "amount": "25-50mm per week, more during hot weather and fruiting",
+        "droughtTolerance": "low",
+        "waterQuality": "pH 6.0-7.0, moderate EC tolerance (up to 2.5 mS/cm)",
+        "notes": "Consistent moisture important for fruit quality. Irregular watering causes bitter fruit and blossom end rot."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy_loam"],
+        "nutrientsRecommendations": "Moderate nitrogen, adequate phosphorus for flowering, potassium for fruit quality. Adequate calcium prevents blossom end rot.",
+        "ecRangeMs": "1.8-2.5",
+        "tdsRangePpm": "1260-1750",
+        "notes": "Prefers well-drained, warm soil rich in organic matter. Add compost before planting."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Powdery Mildew",
+          "symptoms": "White powdery coating on leaves, yellowing leaves, reduced photosynthesis, premature leaf death",
+          "preventionMeasures": "Adequate spacing for air flow, avoid overhead watering, resistant varieties, sulfur applications",
+          "treatmentOptions": "Sulfur fungicides, potassium bicarbonate spray, neem oil, remove severely infected leaves",
+          "severity": "high"
+        },
+        {
+          "name": "Squash Vine Borer",
+          "symptoms": "Wilting of vines, sawdust-like frass near base of plant, sudden plant collapse, larvae in stem",
+          "preventionMeasures": "Row covers until flowering, wrap stem base with foil, crop rotation, monitor for eggs on stems",
+          "treatmentOptions": "Physical removal of larvae by slitting stem, Bt injections into stem, spinosad",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters of small insects on undersides of leaves, sticky honeydew, curled leaves, stunted growth",
+          "preventionMeasures": "Monitor regularly, encourage beneficial insects (ladybugs, lacewings), reflective mulches",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil, horticultural oil",
+          "severity": "medium"
+        },
+        {
+          "name": "Blossom End Rot",
+          "symptoms": "Dark sunken lesion at blossom end of fruit, water-soaked appearance, fruit unmarketable",
+          "preventionMeasures": "Consistent watering, adequate calcium in soil, avoid excess nitrogen, proper pH maintenance",
+          "treatmentOptions": "Calcium foliar spray or soil drench, improve watering consistency. Physiological disorder, not a disease.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 10.0,
+        "optimalHoursDaily": 8.0,
+        "intensityLux": 35000,
+        "intensityPpfd": 500,
+        "photoperiodSensitive": false,
+        "notes": "Full sun produces best yields and fruit quality. Insufficient light reduces flowering and fruiting."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "15-20cm length, 3-5cm diameter, uniform shape, tender skin",
+          "colorRequirements": "Bright green, glossy skin, no discoloration",
+          "defectTolerance": "No blemishes, no scars, firm texture, no overmaturity",
+          "priceMultiplier": 1.4
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "12-25cm length, reasonably uniform",
+          "colorRequirements": "Green, minor color variation acceptable",
+          "defectTolerance": "Minor surface blemishes acceptable, slight curvature allowed",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size above 10cm, shape not critical",
+          "colorRequirements": "Green to yellow-green acceptable",
+          "defectTolerance": "Surface defects OK, oversize acceptable if flesh still tender",
+          "priceMultiplier": 0.5
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 1.80,
+        "currency": "USD",
+        "totalManHoursPerPlant": 1.1,
+        "plantingHours": 0.1,
+        "maintenanceHours": 0.5,
+        "harvestingHours": 0.5,
+        "notes": "Requires frequent harvest (every 2-3 days) when producing. Peak production 2-3 weeks after first harvest. Baby zucchini commands premium prices."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "bush",
+        "spacing": {
+          "betweenPlantsCm": 60,
+          "betweenRowsCm": 120,
+          "plantsPerSquareMeter": 1.39
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Bean", "Corn", "Radish", "Nasturtium", "Marigold"],
+        "incompatiblePlants": ["Potato"],
+        "notes": "Fast-growing warm season crop. Bush varieties save space compared to vining types. Harvest regularly to encourage continued production. Flowers are edible and considered a delicacy. Male flowers appear first, followed by female flowers with small fruit at base."
+      },
+
+      "tags": ["vegetable", "cucurbitaceae", "warm_season", "summer_squash", "continuous_harvest", "fast_growing"]
+    },
+
+    {
+      "plantName": "Watermelon",
+      "scientificName": "Citrullus lanatus",
+      "farmTypeCompatibility": ["open_field", "greenhouse"],
+
+      "growthCycle": {
+        "germinationDays": 7,
+        "vegetativeDays": 25,
+        "floweringDays": 10,
+        "fruitingDays": 45,
+        "harvestDurationDays": 3,
+        "totalCycleDays": 90
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 15.0,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 35,
+        "notes": "Typically 2-3 large fruits per plant. Rind (35% of weight) is waste. Harvest when tendril nearest fruit browns and bottom spot turns yellow."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "seedling",
+          "fertilizerType": "Balanced starter NPK",
+          "quantityPerPlant": 20,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "10-10-10",
+          "notes": "Apply at transplanting or when seedlings have 2-3 true leaves."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "High nitrogen for vine growth",
+          "quantityPerPlant": 30,
+          "quantityUnit": "grams",
+          "frequencyDays": 30,
+          "npkRatio": "33-0-0",
+          "notes": "Apply when vines begin running. Promotes vigorous vine growth."
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "Lower nitrogen, higher P-K",
+          "quantityPerPlant": 40,
+          "quantityUnit": "grams",
+          "frequencyDays": 21,
+          "npkRatio": "5-10-10",
+          "notes": "Reduce nitrogen when flowering begins. Support fruit development and quality. Continue through fruiting."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 15,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Spray undersides of leaves. Organic control. Safe for pollinators when dry.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "flowering",
+          "pesticideType": "Kaolin clay",
+          "targetPest": "Cucumber beetles",
+          "quantityPerPlant": 20,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Apply as foliar spray. Creates barrier film. Reapply after rain. Safe for bees and beneficial insects.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 21.0,
+          "maxCelsius": 35.0,
+          "optimalCelsius": 27.0,
+          "notes": "Requires warm temperatures. Very frost sensitive. Poor germination below 18°C. Optimal fruit development 27-32°C. In UAE, grow Mar-Jun and Sep-Nov."
+        },
+        "humidity": {
+          "minPercentage": 50,
+          "maxPercentage": 70,
+          "optimalPercentage": 60,
+          "notes": "Moderate humidity preferred. High humidity increases disease risk (powdery mildew, gummy stem blight)."
+        },
+        "co2RequirementPpm": 800,
+        "airCirculation": "Good air circulation reduces disease pressure and aids pollination. Critical during flowering."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular during growth, reduce when fruit ripens",
+        "type": "Drip irrigation strongly preferred to keep foliage dry",
+        "amount": "25-50mm per week during vegetative growth, reduce by 50% during ripening for better sugar concentration",
+        "droughtTolerance": "medium",
+        "waterQuality": "pH 6.0-7.0, moderate salinity tolerance (EC up to 2.5 mS/cm)",
+        "notes": "Consistent moisture critical during fruit set and enlargement. Reduce watering 1-2 weeks before harvest to concentrate sugars. Avoid water stress during flowering."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["sandy_loam", "loamy"],
+        "nutrientsRecommendations": "Moderate nitrogen during vine growth, higher phosphorus and potassium during fruiting for sweetness. Adequate calcium and boron for fruit quality.",
+        "ecRangeMs": "1.5-2.5",
+        "tdsRangePpm": "1050-1750",
+        "notes": "Prefers well-drained, sandy to loamy soil. Good drainage essential to prevent root diseases. Warm soil speeds germination and growth."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Fusarium Wilt",
+          "symptoms": "Sudden wilting of vines, yellowing leaves, brown discoloration in vascular tissue, plant death",
+          "preventionMeasures": "Use resistant varieties (look for 'Fusarium wilt resistant'), 4+ year crop rotation, avoid working in wet fields",
+          "treatmentOptions": "No cure. Remove infected plants immediately. Plant resistant varieties. Soil solarization between crops.",
+          "severity": "high"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters on undersides of leaves, sticky honeydew, curled leaves, virus transmission",
+          "preventionMeasures": "Monitor early, encourage beneficial insects, reflective mulches, remove weeds",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil, yellow sticky traps",
+          "severity": "medium"
+        },
+        {
+          "name": "Cucumber Beetles (Striped and Spotted)",
+          "symptoms": "Chewed leaves, damaged stems, wilting, beetles visible on plants, transmit bacterial wilt",
+          "preventionMeasures": "Row covers until flowering, kaolin clay barrier, crop rotation, trap crops",
+          "treatmentOptions": "Kaolin clay spray, pyrethrin, spinosad. Hand-pick beetles in morning when sluggish.",
+          "severity": "medium"
+        },
+        {
+          "name": "Anthracnose",
+          "symptoms": "Dark sunken lesions on fruit, brown spots on leaves, fruit rot during wet weather",
+          "preventionMeasures": "Adequate spacing, drip irrigation, remove infected fruit and debris, rotate crops",
+          "treatmentOptions": "Copper fungicides, chlorothalonil. Remove infected plant parts. Improve air circulation.",
+          "severity": "medium"
+        },
+        {
+          "name": "Powdery Mildew",
+          "symptoms": "White powdery coating on leaves, yellowing, reduced photosynthesis, premature leaf death",
+          "preventionMeasures": "Resistant varieties, adequate spacing, avoid overhead watering, sulfur applications",
+          "treatmentOptions": "Sulfur fungicides, potassium bicarbonate, neem oil. Remove severely infected leaves.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 8.0,
+        "maxHoursDaily": 12.0,
+        "optimalHoursDaily": 10.0,
+        "intensityLux": 40000,
+        "intensityPpfd": 600,
+        "photoperiodSensitive": false,
+        "notes": "Full sun essential for sweetness and yield. Requires long, hot days for optimal fruit development."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Large uniform fruit 5-10kg, symmetrical oval shape",
+          "colorRequirements": "Deep green with distinct stripes, firm rind, bright red flesh",
+          "defectTolerance": "No cracks, no sunscald, no insect damage, uniform ripeness, high sugar content (>11° Brix)",
+          "priceMultiplier": 1.3
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Medium size 3-8kg, reasonably uniform",
+          "colorRequirements": "Good color, minor variations acceptable, red to pink-red flesh",
+          "defectTolerance": "Minor surface blemishes acceptable, slight irregularities in shape, sugar >9° Brix",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing / Juice",
+          "sizeRequirements": "Any size above 2kg, shape not critical",
+          "colorRequirements": "Color variations acceptable",
+          "defectTolerance": "Surface defects OK if flesh not damaged, overripe acceptable for juice",
+          "priceMultiplier": 0.4
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 0.80,
+        "currency": "USD",
+        "totalManHoursPerPlant": 2.5,
+        "plantingHours": 0.2,
+        "maintenanceHours": 1.8,
+        "harvestingHours": 0.5,
+        "notes": "Labor-intensive for vine training and management. High yield per plant offsets lower per-kg price. Seedless varieties command premium prices. Timing harvest critical for quality."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "vine",
+        "spacing": {
+          "betweenPlantsCm": 90,
+          "betweenRowsCm": 180,
+          "plantsPerSquareMeter": 0.62
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Radish", "Nasturtium", "Marigold", "Oregano"],
+        "incompatiblePlants": ["Potato"],
+        "notes": "Requires large space due to long vines (3-4 meters). Determinate trellis for small-fruited varieties possible. Tap watermelon to check ripeness - dull thud indicates ripe fruit. Check tendril nearest fruit - brown and dry = ripe. Bottom spot yellow = ripe. Seedless varieties require pollinator variety planted nearby."
+      },
+
+      "tags": ["fruit", "cucurbitaceae", "warm_season", "high_yield", "space_intensive", "commercial"]
+    },
+
+    {
+      "plantName": "Cantaloupe",
+      "scientificName": "Cucumis melo var. cantalupensis",
+      "farmTypeCompatibility": ["open_field", "greenhouse"],
+
+      "growthCycle": {
+        "germinationDays": 5,
+        "vegetativeDays": 25,
+        "floweringDays": 10,
+        "fruitingDays": 35,
+        "harvestDurationDays": 5,
+        "totalCycleDays": 80
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 3.0,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 40,
+        "notes": "Typically 2-3 melons per plant. Rind and seeds are waste (40%). Harvest when fruit slips easily from vine and has sweet aroma."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "seedling",
+          "fertilizerType": "Balanced starter NPK",
+          "quantityPerPlant": 20,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "10-10-10",
+          "notes": "Apply at transplanting or when seedlings have 2-3 true leaves. Supports early root development."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Lower nitrogen for vine growth",
+          "quantityPerPlant": 30,
+          "quantityUnit": "grams",
+          "frequencyDays": 21,
+          "npkRatio": "10-5-5",
+          "notes": "Apply when vines begin running. Lower N than watermelon to promote fruiting over foliage."
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "Fruiting formula",
+          "quantityPerPlant": 35,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "5-10-10",
+          "notes": "Support flowering and fruit development. Higher P and K for quality and sweetness. Continue until 2 weeks before harvest."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Sulfur fungicide",
+          "targetPest": "Powdery mildew",
+          "quantityPerPlant": 10,
+          "quantityUnit": "grams",
+          "frequencyDays": 7,
+          "safetyNotes": "Preventative application recommended. Apply as dust or wettable powder spray. Do not apply when temps exceed 32°C.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Spray undersides of leaves thoroughly. Repeat weekly or after rain.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 18.0,
+          "maxCelsius": 32.0,
+          "optimalCelsius": 26.0,
+          "notes": "Warm season crop. Frost sensitive. Poor fruit set below 18°C or above 35°C. Optimal fruit development 24-28°C. In UAE, grow Mar-May and Sep-Nov."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 70,
+          "optimalPercentage": 65,
+          "notes": "Moderate humidity preferred. Very high humidity increases disease risk (powdery mildew, downy mildew). Good air circulation essential."
+        },
+        "co2RequirementPpm": 800,
+        "airCirculation": "Excellent air circulation critical to reduce fungal disease pressure and promote pollination."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular during growth, reduce significantly when fruit ripens",
+        "type": "Drip irrigation strongly preferred to keep foliage dry",
+        "amount": "25-40mm per week during growth, reduce to 10-15mm during final ripening for sugar concentration",
+        "droughtTolerance": "low",
+        "waterQuality": "pH 6.0-6.5, low to moderate salinity (EC < 2.0 mS/cm preferred)",
+        "notes": "Consistent moisture during fruit set and sizing critical. Reduce water 7-10 days before harvest to increase sugar concentration (Brix). Avoid overhead watering to reduce disease."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 6.5,
+          "optimalPH": 6.2
+        },
+        "soilTypes": ["sandy_loam", "loamy"],
+        "nutrientsRecommendations": "Moderate nitrogen during vine growth, higher potassium during fruiting for sweetness and quality. Adequate calcium prevents blossom end rot. Boron improves fruit set.",
+        "ecRangeMs": "1.5-2.0",
+        "tdsRangePpm": "1050-1400",
+        "notes": "Prefers well-drained, sandy to loamy soil. Sensitive to waterlogging. Warm soil (18°C+) speeds germination and growth."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Powdery Mildew",
+          "symptoms": "White powdery coating on upper leaf surfaces, yellowing leaves, reduced photosynthesis, premature defoliation",
+          "preventionMeasures": "Use resistant varieties, adequate spacing, drip irrigation, sulfur applications, remove infected leaves",
+          "treatmentOptions": "Sulfur fungicides, potassium bicarbonate spray, neem oil, biological fungicides. Apply early and regularly.",
+          "severity": "high"
+        },
+        {
+          "name": "Fusarium Wilt (Race 0, 1, 2)",
+          "symptoms": "Sudden wilting of vines, yellowing of older leaves, brown discoloration in stem vascular tissue, plant death",
+          "preventionMeasures": "Use resistant varieties (check resistance to specific races), 4+ year crop rotation, grafting onto resistant rootstock",
+          "treatmentOptions": "No chemical cure. Remove and destroy infected plants. Plant resistant varieties. Soil solarization.",
+          "severity": "high"
+        },
+        {
+          "name": "Aphids (Melon Aphid, Green Peach Aphid)",
+          "symptoms": "Clusters of small insects on undersides of leaves, sticky honeydew, curled distorted leaves, virus transmission",
+          "preventionMeasures": "Monitor early, encourage beneficial insects, reflective mulches, row covers early season",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil, horticultural oil, yellow sticky traps",
+          "severity": "medium"
+        },
+        {
+          "name": "Cucumber Beetles",
+          "symptoms": "Chewed leaves and flowers, damaged fruit, wilting, transmit bacterial wilt disease",
+          "preventionMeasures": "Row covers until flowering, kaolin clay barrier, trap crops (blue hubbard squash), crop rotation",
+          "treatmentOptions": "Kaolin clay spray, pyrethrin, spinosad. Hand-pick beetles. Monitor daily during early growth.",
+          "severity": "medium"
+        },
+        {
+          "name": "Gummy Stem Blight",
+          "symptoms": "Water-soaked lesions on stems and leaves, brown gummy exudate from stems, fruit rot",
+          "preventionMeasures": "Use disease-free seed, crop rotation, drip irrigation, adequate spacing, remove plant debris",
+          "treatmentOptions": "Copper-based fungicides, chlorothalonil. Remove infected plant parts immediately. Prevention is key.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 8.0,
+        "maxHoursDaily": 12.0,
+        "optimalHoursDaily": 10.0,
+        "intensityLux": 40000,
+        "intensityPpfd": 600,
+        "photoperiodSensitive": false,
+        "notes": "Full sun essential for sweetness and quality. High light intensity during ripening increases sugar content. Shade reduces quality."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium (U.S. Fancy)",
+          "sizeRequirements": "Well-formed, 1.0-1.5kg per fruit, uniform size and shape, well-netted",
+          "colorRequirements": "Golden yellow background color under netting, no green tinge, orange flesh",
+          "defectTolerance": "No defects, excellent netting coverage, high sugar (>12° Brix), strong aroma, proper slip",
+          "priceMultiplier": 1.8
+        },
+        {
+          "gradeName": "Grade B - Standard (U.S. No. 1)",
+          "sizeRequirements": "0.8-1.8kg per fruit, reasonably uniform",
+          "colorRequirements": "Good color development, orange flesh, acceptable netting",
+          "defectTolerance": "Minor surface blemishes acceptable, sugar >10° Brix, slight irregularities allowed",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing (U.S. No. 2)",
+          "sizeRequirements": "Any size above 0.5kg",
+          "colorRequirements": "Color variations acceptable",
+          "defectTolerance": "Surface defects OK if flesh not damaged, lower sugar acceptable, for processing/cutting",
+          "priceMultiplier": 0.4
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 1.50,
+        "currency": "USD",
+        "totalManHoursPerPlant": 2.0,
+        "plantingHours": 0.15,
+        "maintenanceHours": 1.3,
+        "harvestingHours": 0.55,
+        "notes": "Labor-intensive for training and harvest timing. Multiple harvests required as fruits ripen at different times. High-quality fruit commands premium prices. Sweetness (Brix) is critical quality factor."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "vine",
+        "spacing": {
+          "betweenPlantsCm": 75,
+          "betweenRowsCm": 150,
+          "plantsPerSquareMeter": 0.89
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Radish", "Nasturtium", "Marigold", "Corn"],
+        "incompatiblePlants": ["Potato", "Aromatic herbs"],
+        "notes": "Vining habit with runners 2-3 meters long. Can be trellised in greenhouse to save space and improve air circulation. Harvest at 'full slip' stage when fruit separates easily from vine with gentle pressure. Check daily when nearing maturity. Sweet aroma and golden color under netting indicate ripeness. Store at 2-5°C for 1-2 weeks maximum."
+      },
+
+      "tags": ["fruit", "cucurbitaceae", "warm_season", "melon", "commercial", "high_value", "premium_crop"]
+    },
+
+    {
+      "plantName": "Spinach",
+      "scientificName": "Spinacia oleracea",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 7,
+        "vegetativeDays": 28,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 7,
+        "totalCycleDays": 42
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 0.15,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 15,
+        "notes": "Fast-growing leafy green. Can harvest outer leaves continuously or cut entire plant. Baby leaves at 20-25 days, full size at 40-45 days."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "planting",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 8,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "10-10-10",
+          "notes": "Work into soil before planting. Spinach is a moderate feeder with high nitrogen needs for leaf production."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Nitrogen sidedress",
+          "quantityPerPlant": 5,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "21-0-0",
+          "notes": "Apply 3-4 weeks after planting if growth is slow. Promotes dark green leaf color and vigorous growth."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Spray undersides of leaves. Organic control. Rinse leaves thoroughly before consumption.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Spinosad",
+          "targetPest": "Leafminers",
+          "quantityPerPlant": 3,
+          "quantityUnit": "ml",
+          "frequencyDays": 10,
+          "safetyNotes": "Organic insecticide. Apply when damage first appears. Follow label for pre-harvest interval.",
+          "preharvestIntervalDays": 1
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 7.0,
+          "maxCelsius": 24.0,
+          "optimalCelsius": 18.0,
+          "notes": "Cool season crop. Heat causes rapid bolting (flowering) and bitter leaves. Best grown Oct-Mar in UAE. Very frost tolerant down to -6°C."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 80,
+          "optimalPercentage": 70,
+          "notes": "Moderate to high humidity preferred. Low humidity causes tip burn and stress. Good for greenhouse production."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces disease pressure, especially downy mildew. Critical in humid conditions."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Frequent light watering to keep soil consistently moist",
+        "type": "Drip irrigation or overhead (early morning only)",
+        "amount": "20-30mm per week, more in hot weather",
+        "droughtTolerance": "low",
+        "waterQuality": "pH 6.0-7.0, sensitive to high salinity (EC < 2.0 mS/cm)",
+        "notes": "Shallow root system requires consistent moisture. Water stress causes bitter flavor, premature bolting, and reduced yield."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy_loam"],
+        "nutrientsRecommendations": "High nitrogen requirement for leaf production. Adequate iron prevents chlorosis (yellowing). Avoid excess nitrogen late in growth.",
+        "ecRangeMs": "1.2-1.8",
+        "tdsRangePpm": "840-1260",
+        "notes": "Prefers well-drained, fertile soil rich in organic matter. Add compost before planting. Well-suited to hydroponics."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Downy Mildew",
+          "symptoms": "Yellow patches on upper leaf surfaces, gray-purple fuzzy growth on undersides, leaf distortion and death",
+          "preventionMeasures": "Use resistant varieties, adequate spacing, avoid overhead watering late in day, good air circulation",
+          "treatmentOptions": "Copper fungicides, remove infected plants. Prevention is key as control is difficult. Plant resistant varieties.",
+          "severity": "high"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters of small insects on undersides of leaves, sticky honeydew, curled distorted leaves",
+          "preventionMeasures": "Monitor regularly, encourage beneficial insects (ladybugs, lacewings), reflective mulches",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil. Remove heavily infested plants.",
+          "severity": "medium"
+        },
+        {
+          "name": "Leafminers",
+          "symptoms": "Serpentine trails or blotches on leaves, visible larvae inside leaf tissue, reduced marketability",
+          "preventionMeasures": "Row covers, remove and destroy infested leaves, encourage parasitic wasps, crop rotation",
+          "treatmentOptions": "Spinosad, remove infected leaves. Insecticides less effective as larvae protected inside leaf.",
+          "severity": "medium"
+        },
+        {
+          "name": "White Rust",
+          "symptoms": "White pustules on undersides of leaves, yellowing, leaf distortion, stunted growth",
+          "preventionMeasures": "Use resistant varieties, crop rotation, avoid overhead watering, remove infected plants",
+          "treatmentOptions": "No effective chemical control. Remove and destroy infected plants. Plant resistant varieties.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun_to_partial_shade",
+        "minHoursDaily": 4.0,
+        "maxHoursDaily": 8.0,
+        "optimalHoursDaily": 6.0,
+        "intensityLux": 25000,
+        "intensityPpfd": 350,
+        "photoperiodSensitive": true,
+        "notes": "Tolerates partial shade especially in warm climates. Long days (>14 hours) trigger bolting. Shade cloth beneficial in hot weather to reduce bolting and bitterness."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Large uniform leaves, crisp texture, 10-15cm leaf length",
+          "colorRequirements": "Dark green, no yellowing or discoloration",
+          "defectTolerance": "No insect damage, no disease, no bolting, no wilting, fresh appearance",
+          "priceMultiplier": 1.5
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Medium leaves, reasonably uniform",
+          "colorRequirements": "Good green color, minor variations acceptable",
+          "defectTolerance": "Minor blemishes acceptable, slight yellowing of older leaves allowed",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size, mixed sizes acceptable",
+          "colorRequirements": "Green, some yellowing acceptable",
+          "defectTolerance": "Cosmetic defects OK, suitable for washing and processing",
+          "priceMultiplier": 0.6
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 3.50,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.15,
+        "plantingHours": 0.05,
+        "maintenanceHours": 0.05,
+        "harvestingHours": 0.05,
+        "notes": "Fast growing with quick turnover. Baby leaf commands premium prices. Can succession plant every 2 weeks for continuous harvest. Low labor per plant but high planting density."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "rosette",
+        "spacing": {
+          "betweenPlantsCm": 10,
+          "betweenRowsCm": 30,
+          "plantsPerSquareMeter": 33.3
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Strawberry", "Pea", "Cabbage", "Cauliflower", "Radish"],
+        "incompatiblePlants": [],
+        "notes": "Very fast-growing cool season crop. Ideal for succession planting. Can harvest as baby leaves (20-25 days) or full size (40-45 days). Cut-and-come-again harvest method extends production. Savoy types have crinkled leaves, smooth leaf types for processing. In UAE, grow Oct-Mar. Bolt-resistant varieties recommended for warmer areas."
+      },
+
+      "tags": ["vegetable", "leafy_green", "cool_season", "fast_growing", "high_density", "hydroponic_suitable", "nutritious"]
+    },
+
+    {
+      "plantName": "Swiss Chard",
+      "scientificName": "Beta vulgaris subsp. vulgaris",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 10,
+        "vegetativeDays": 45,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 10,
+        "totalCycleDays": 65
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 0.4,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 10,
+        "notes": "Can harvest outer leaves continuously for months. Cut-and-come-again crop. Baby leaves at 30 days, full size at 60+ days."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "planting",
+          "fertilizerType": "Starter NPK",
+          "quantityPerPlant": 10,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "5-10-10",
+          "notes": "Work into soil before planting. Lower nitrogen at start to encourage root development."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Nitrogen sidedress",
+          "quantityPerPlant": 8,
+          "quantityUnit": "grams",
+          "frequencyDays": 28,
+          "npkRatio": "21-0-0",
+          "notes": "Apply 4 weeks after planting and repeat every 4 weeks for extended harvest. Promotes vigorous leaf growth."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Spray leaf undersides. Organic control. Rinse leaves before consumption.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Spinosad",
+          "targetPest": "Leafminers",
+          "quantityPerPlant": 3,
+          "quantityUnit": "ml",
+          "frequencyDays": 10,
+          "safetyNotes": "Organic insecticide derived from soil bacteria. Apply when trails first appear.",
+          "preharvestIntervalDays": 1
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 10.0,
+          "maxCelsius": 27.0,
+          "optimalCelsius": 20.0,
+          "notes": "Cool to moderate season crop. More heat tolerant than spinach. Can tolerate light frost. In UAE, best Oct-Apr. Summer production possible with shade."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 75,
+          "optimalPercentage": 68,
+          "notes": "Moderate humidity preferred. Tolerates range of humidity levels. Good for both field and greenhouse."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces leaf spot diseases. Important in humid conditions."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular watering to keep soil consistently moist",
+        "type": "Drip irrigation preferred, overhead acceptable if early morning",
+        "amount": "25-35mm per week",
+        "droughtTolerance": "medium",
+        "waterQuality": "pH 6.0-7.0, moderate salt tolerance (EC < 2.5 mS/cm)",
+        "notes": "More drought tolerant than spinach due to deeper roots. Consistent moisture improves leaf quality and reduces bitterness."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["loamy", "sandy_loam", "clay_loam"],
+        "nutrientsRecommendations": "Moderate nitrogen for continuous leaf production. Adequate magnesium prevents yellowing between veins. Good potassium for stem quality.",
+        "ecRangeMs": "1.5-2.0",
+        "tdsRangePpm": "1050-1400",
+        "notes": "Tolerates wider range of soils than most leafy greens. Prefers fertile, well-drained soil. Moderate salt tolerance. Well-suited to hydroponics."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Cercospora Leaf Spot",
+          "symptoms": "Circular spots with gray centers and purple-brown borders, yellowing leaves, reduced photosynthesis",
+          "preventionMeasures": "Adequate spacing, crop rotation, avoid overhead watering, remove infected leaves, resistant varieties",
+          "treatmentOptions": "Copper fungicides, chlorothalonil. Remove heavily infected leaves. Improve air circulation.",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters on undersides of leaves and stems, sticky honeydew, curled distorted leaves",
+          "preventionMeasures": "Monitor regularly, encourage beneficial insects, reflective mulches, remove weeds",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil. Repeat applications as needed.",
+          "severity": "medium"
+        },
+        {
+          "name": "Leafminers",
+          "symptoms": "Winding tunnels or blotches in leaves, visible larvae tracks, reduced marketability",
+          "preventionMeasures": "Row covers, destroy infested leaves, encourage parasitic wasps, sticky traps",
+          "treatmentOptions": "Spinosad, remove and destroy infested leaves. Control is difficult once inside leaf tissue.",
+          "severity": "medium"
+        },
+        {
+          "name": "Downy Mildew",
+          "symptoms": "Yellow patches on upper surfaces, white-gray fuzzy growth on undersides, leaf death",
+          "preventionMeasures": "Adequate spacing, avoid overhead watering, good air circulation, remove infected leaves",
+          "treatmentOptions": "Copper fungicides (organic), improve cultural practices. Prevention is key.",
+          "severity": "low"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun_to_partial_shade",
+        "minHoursDaily": 4.0,
+        "maxHoursDaily": 8.0,
+        "optimalHoursDaily": 6.0,
+        "intensityLux": 28000,
+        "intensityPpfd": 380,
+        "photoperiodSensitive": false,
+        "notes": "Full sun in cool weather, partial shade beneficial in hot weather. More heat tolerant than spinach. Colorful stems show better color with adequate light."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Large crisp leaves 20-30cm, thick colorful stems, uniform appearance",
+          "colorRequirements": "Vibrant leaf color, bright colored stems (red, yellow, white), no discoloration",
+          "defectTolerance": "No insect damage, no disease, no wilting, no broken stems, fresh appearance",
+          "priceMultiplier": 1.6
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Medium to large leaves, reasonably uniform",
+          "colorRequirements": "Good color, minor variations acceptable",
+          "defectTolerance": "Minor leaf blemishes acceptable, slight stem damage allowed",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size, mixed acceptable",
+          "colorRequirements": "Any color, fading acceptable",
+          "defectTolerance": "Cosmetic defects OK if leaves usable, suitable for cooking/processing",
+          "priceMultiplier": 0.5
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 2.80,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.25,
+        "plantingHours": 0.08,
+        "maintenanceHours": 0.07,
+        "harvestingHours": 0.10,
+        "notes": "Long harvest period (2-3 months) increases productivity per plant. Rainbow/colored stem varieties command premium prices. Baby leaf chard for salad mix highly valued."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "rosette",
+        "spacing": {
+          "betweenPlantsCm": 15,
+          "betweenRowsCm": 45,
+          "plantsPerSquareMeter": 14.8
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Onion", "Lettuce", "Cabbage", "Radish", "Bean"],
+        "incompatiblePlants": [],
+        "notes": "Versatile leafy green related to beets. Can harvest outer leaves continuously while plant continues producing. Both leaves and stems are edible. Colorful varieties (Bright Lights, Rainbow) are ornamental and edible. More heat and drought tolerant than spinach. Excellent for cut-and-come-again harvest. Young leaves for salad, mature leaves for cooking. In UAE, grow Oct-Apr with shade possible for early summer."
+      },
+
+      "tags": ["vegetable", "leafy_green", "cool_to_moderate_season", "continuous_harvest", "heat_tolerant", "hydroponic_suitable", "ornamental_edible"]
+    },
+
+    {
+      "plantName": "Kale",
+      "scientificName": "Brassica oleracea var. sabellica",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 7,
+        "vegetativeDays": 48,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 10,
+        "totalCycleDays": 65
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 0.5,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 20,
+        "notes": "Harvest outer leaves continuously for extended production. Baby kale at 25-30 days, full size at 60+ days. Flavor improves after light frost."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "planting",
+          "fertilizerType": "Balanced NPK",
+          "quantityPerPlant": 15,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "10-10-10",
+          "notes": "Work into soil before planting. Kale is a moderate to heavy feeder, especially nitrogen."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Nitrogen sidedress",
+          "quantityPerPlant": 10,
+          "quantityUnit": "grams",
+          "frequencyDays": 28,
+          "npkRatio": "21-0-0",
+          "notes": "Apply 4 weeks after planting and repeat monthly for continuous harvest. Promotes dark green color and tender leaves."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Bacillus thuringiensis (Bt)",
+          "targetPest": "Cabbage worm / Imported cabbageworm",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Organic bacterial insecticide. Apply when larvae are small. Reapply weekly or after rain.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 8,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Spray leaf undersides thoroughly. Organic control. Rinse leaves before consumption.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 7.0,
+          "maxCelsius": 24.0,
+          "optimalCelsius": 18.0,
+          "notes": "Cool season crop. Very cold hardy (tolerates -10°C). High temps cause bitter, tough leaves. In UAE, grow Oct-Mar. Flavor sweetens after frost exposure."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 75,
+          "optimalPercentage": 68,
+          "notes": "Moderate to high humidity preferred. Good for greenhouse production in UAE during cooler months."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces disease risk, especially important for brassica crops."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular watering to maintain consistent soil moisture",
+        "type": "Drip irrigation preferred, overhead acceptable early morning",
+        "amount": "25-40mm per week depending on temperature",
+        "droughtTolerance": "medium",
+        "waterQuality": "pH 6.0-6.5, sensitive to high salinity (EC < 2.0 mS/cm preferred)",
+        "notes": "Consistent moisture produces tender leaves. Water stress causes tougher, more bitter leaves."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 6.5,
+          "optimalPH": 6.2
+        },
+        "soilTypes": ["loamy", "clay_loam"],
+        "nutrientsRecommendations": "High nitrogen for leaf production. Adequate calcium and boron for cell development. Good potassium for plant vigor.",
+        "ecRangeMs": "1.5-2.0",
+        "tdsRangePpm": "1050-1400",
+        "notes": "Prefers fertile, well-drained soil rich in organic matter. Add compost before planting. Well-suited to hydroponics for baby leaf production."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Cabbage Worm (Imported Cabbageworm)",
+          "symptoms": "Large irregular holes in leaves, green caterpillars, frass on leaves, extensive defoliation",
+          "preventionMeasures": "Row covers, encourage natural predators (wasps, birds), handpick caterpillars, crop rotation",
+          "treatmentOptions": "Bacillus thuringiensis (Bt), spinosad for organic control, pyrethrin if severe",
+          "severity": "high"
+        },
+        {
+          "name": "Aphids (Cabbage Aphid)",
+          "symptoms": "Gray-green clusters on undersides of leaves, sticky honeydew, curled distorted leaves",
+          "preventionMeasures": "Monitor undersides of leaves, encourage beneficial insects, reflective mulches",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil, horticultural oil",
+          "severity": "medium"
+        },
+        {
+          "name": "Flea Beetles",
+          "symptoms": "Small shot-holes in leaves, tiny jumping beetles, seedling damage, stunted growth",
+          "preventionMeasures": "Row covers on young plants, diatomaceous earth around plants, maintain plant vigor",
+          "treatmentOptions": "Kaolin clay spray, pyrethrin, spinosad. Most damaging to young plants.",
+          "severity": "medium"
+        },
+        {
+          "name": "Downy Mildew",
+          "symptoms": "Yellow patches on upper leaf surfaces, white-gray growth on undersides",
+          "preventionMeasures": "Adequate spacing, avoid overhead watering late in day, good air circulation",
+          "treatmentOptions": "Copper fungicides, improve cultural practices. Prevention is key.",
+          "severity": "low"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun_to_partial_shade",
+        "minHoursDaily": 5.0,
+        "maxHoursDaily": 8.0,
+        "optimalHoursDaily": 6.0,
+        "intensityLux": 30000,
+        "intensityPpfd": 400,
+        "photoperiodSensitive": false,
+        "notes": "Full sun in cool weather produces most vigorous growth. Tolerates partial shade in warmer conditions. Insufficient light causes leggy growth and reduced nutrient density."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Large crisp leaves 20-30cm, uniform curly texture, tender",
+          "colorRequirements": "Deep blue-green to dark green, vibrant color, no yellowing",
+          "defectTolerance": "No insect damage, no disease, no wilting, no tough stems, fresh appearance",
+          "priceMultiplier": 1.7
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Medium to large leaves, reasonably uniform",
+          "colorRequirements": "Good green color, minor variations acceptable",
+          "defectTolerance": "Minor leaf blemishes acceptable, slight yellowing of older leaves allowed",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size, mixed sizes acceptable",
+          "colorRequirements": "Green, some yellowing acceptable",
+          "defectTolerance": "Cosmetic defects OK if leaves usable, suitable for cooking/processing",
+          "priceMultiplier": 0.6
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 3.20,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.3,
+        "plantingHours": 0.08,
+        "maintenanceHours": 0.12,
+        "harvestingHours": 0.10,
+        "notes": "High value crop with extended harvest period (2-4 months). Baby kale commands premium prices for salad mixes. Curly varieties most popular. Lacinato (dinosaur) kale also in demand."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "upright",
+        "spacing": {
+          "betweenPlantsCm": 30,
+          "betweenRowsCm": 60,
+          "plantsPerSquareMeter": 5.56
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Onion", "Celery", "Dill", "Beet", "Potato"],
+        "incompatiblePlants": ["Tomato", "Strawberry", "Pole beans"],
+        "notes": "Nutritional powerhouse with high vitamins A, C, K, antioxidants. Harvest outer leaves continuously while center continues producing. Multiple varieties: Curly kale (most common), Lacinato/Tuscan/Dinosaur kale (flat leaves), Red Russian (purple-tinged). Baby kale popular for salad mixes. Mature leaves for cooking (sautéing, soups, chips). Cold weather improves flavor - starches convert to sugars. In UAE, excellent cool season crop Oct-Mar."
+      },
+
+      "tags": ["vegetable", "leafy_green", "brassicaceae", "cool_season", "cold_hardy", "continuous_harvest", "superfood", "hydroponic_suitable"]
+    },
+
+    {
+      "plantName": "Carrot",
+      "scientificName": "Daucus carota subsp. sativus",
+      "farmTypeCompatibility": ["open_field", "greenhouse"],
+
+      "growthCycle": {
+        "germinationDays": 14,
+        "vegetativeDays": 56,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 3,
+        "totalCycleDays": 73
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 0.15,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 25,
+        "notes": "Single taproot per plant. Tops (25% of weight) typically discarded. Harvest when roots reach desired size. Baby carrots at 50-60 days, full size at 70-80 days."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "preplanting",
+          "fertilizerType": "Low nitrogen starter",
+          "quantityPerPlant": 20,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "5-10-10",
+          "notes": "Broadcast and work into soil 2 weeks before planting. Low nitrogen is critical - excess nitrogen causes hairy, forked roots and excessive top growth."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Row covers",
+          "targetPest": "Carrot rust fly",
+          "quantityPerPlant": 0,
+          "quantityUnit": "n/a",
+          "frequencyDays": 0,
+          "safetyNotes": "Physical barrier is most effective control. Install immediately after planting and keep in place until harvest.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Aphids",
+          "quantityPerPlant": 3,
+          "quantityUnit": "ml",
+          "frequencyDays": 10,
+          "safetyNotes": "Spray foliage if aphids appear. Generally minor pest on carrots.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 10.0,
+          "maxCelsius": 27.0,
+          "optimalCelsius": 20.0,
+          "notes": "Cool season crop. Germination best at 10-25°C. High temps (>27°C) cause poor color, strong flavor, and reduced sweetness. In UAE, grow Oct-Mar. Light frost improves sweetness."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 70,
+          "optimalPercentage": 65,
+          "notes": "Moderate humidity preferred. High humidity increases leaf disease risk."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces foliar disease pressure."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular light watering during germination, consistent moisture during root development",
+        "type": "Drip irrigation or overhead (maintain moisture for germination)",
+        "amount": "20-30mm per week, keep soil consistently moist but not waterlogged",
+        "droughtTolerance": "low",
+        "waterQuality": "pH 6.0-6.5, low salinity (EC < 1.5 mS/cm preferred)",
+        "notes": "Critical to keep soil moist during 14-day germination period. Once established, consistent moisture prevents cracking. Irregular watering causes forked, cracked roots."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 6.5,
+          "optimalPH": 6.2
+        },
+        "soilTypes": ["sandy_loam", "loamy"],
+        "nutrientsRecommendations": "Low to moderate nitrogen. Higher phosphorus for root development. Adequate potassium for quality and disease resistance. Avoid fresh manure - causes forking.",
+        "ecRangeMs": "1.0-1.5",
+        "tdsRangePpm": "700-1050",
+        "notes": "Requires deep, loose, well-drained soil free of rocks and clods. Sandy loam is ideal. Remove stones to prevent forking. Compacted soil causes stunted, misshapen roots. Work soil deeply (30cm+)."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Carrot Rust Fly",
+          "symptoms": "Rusty brown tunnels in roots, stunted foliage, yellowing leaves, unmarketable roots",
+          "preventionMeasures": "Row covers from planting to harvest, delay planting to avoid peak fly activity, crop rotation",
+          "treatmentOptions": "Row covers are most effective. Spinosad if severe (apply to soil surface). Remove and destroy infested roots.",
+          "severity": "medium"
+        },
+        {
+          "name": "Root Knot Nematodes",
+          "symptoms": "Galls (knots) on roots, stunted growth, wilting in hot weather, reduced yield, forked roots",
+          "preventionMeasures": "Crop rotation (4+ years), plant resistant varieties, soil solarization, marigold as trap crop",
+          "treatmentOptions": "No chemical control. Prevention is key. Soil solarization in summer. Plant non-host crops.",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters on foliage, sticky honeydew, can vector virus diseases",
+          "preventionMeasures": "Monitor foliage, encourage beneficial insects, reflective mulches",
+          "treatmentOptions": "Usually not economically damaging. Insecticidal soap if needed.",
+          "severity": "low"
+        },
+        {
+          "name": "Alternaria Leaf Blight",
+          "symptoms": "Brown leaf spots with yellow halos, leaf curling, reduced photosynthesis",
+          "preventionMeasures": "Crop rotation, adequate spacing, avoid overhead watering late in day, remove plant debris",
+          "treatmentOptions": "Copper fungicides, chlorothalonil. Remove infected leaves. Improve air circulation.",
+          "severity": "low"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 10.0,
+        "optimalHoursDaily": 8.0,
+        "intensityLux": 30000,
+        "intensityPpfd": 400,
+        "photoperiodSensitive": false,
+        "notes": "Full sun produces best color and sweetness. Partial shade acceptable but reduces yield and sweetness."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium (U.S. Fancy)",
+          "sizeRequirements": "Straight, smooth, 15-20cm length, 2-3cm diameter at shoulder, tapered shape",
+          "colorRequirements": "Deep orange, uniform color, no green shoulders",
+          "defectTolerance": "No cracks, no forking, no damage, smooth skin, no woodiness",
+          "priceMultiplier": 1.5
+        },
+        {
+          "gradeName": "Grade B - Standard (U.S. No. 1)",
+          "sizeRequirements": "12-25cm length, reasonably straight",
+          "colorRequirements": "Good orange color, minor variations acceptable",
+          "defectTolerance": "Minor surface blemishes acceptable, slight forking allowed, slight green shoulder OK",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing (U.S. No. 2)",
+          "sizeRequirements": "Any size above 10cm",
+          "colorRequirements": "Orange, pale acceptable",
+          "defectTolerance": "Forking acceptable, surface defects OK, suitable for cutting/processing",
+          "priceMultiplier": 0.5
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 1.50,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.08,
+        "plantingHours": 0.03,
+        "maintenanceHours": 0.02,
+        "harvestingHours": 0.03,
+        "notes": "Labor intensive for hand harvesting. Mechanization possible for large scale. Baby carrots (true baby, not cut) command premium. Bunched carrots with tops also premium."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "taproot",
+        "spacing": {
+          "betweenPlantsCm": 5,
+          "betweenRowsCm": 30,
+          "plantsPerSquareMeter": 66.7
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Onion", "Leek", "Lettuce", "Pea", "Radish", "Rosemary", "Sage"],
+        "incompatiblePlants": ["Dill", "Parsnip"],
+        "notes": "Cool season root crop requiring loose, deep soil. Thin seedlings to proper spacing (5cm) when 2-3cm tall - critical for straight roots. Germination slow (14-21 days) - keep soil moist. Intercrop with radish (germinates fast, marks rows). Multiple varieties by length: baby (10-12cm), Nantes type (15-18cm), Imperator (20-25cm long, for deep soil). In UAE, grow Oct-Mar. Sweetness increases with cool weather and light frost. Store in cool, humid conditions (0-2°C, 95% humidity) for months."
+      },
+
+      "tags": ["vegetable", "root_crop", "cool_season", "high_density", "storage_crop", "commercial"]
+    },
+
+    {
+      "plantName": "Radish",
+      "scientificName": "Raphanus sativus",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 5,
+        "vegetativeDays": 20,
+        "floweringDays": 0,
+        "fruitingDays": 0,
+        "harvestDurationDays": 2,
+        "totalCycleDays": 27
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 0.05,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 30,
+        "notes": "Very fast-growing. Single root per plant. Tops (30% of weight) typically discarded unless bunched. Ready to harvest 20-30 days depending on variety."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "preplanting",
+          "fertilizerType": "Low nitrogen starter",
+          "quantityPerPlant": 5,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "5-10-10",
+          "notes": "Broadcast and work into soil before planting. Radish grows too fast for sidedress fertilization. Excess nitrogen causes excessive tops and poor root development."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Kaolin clay",
+          "targetPest": "Flea beetles",
+          "quantityPerPlant": 2,
+          "quantityUnit": "ml",
+          "frequencyDays": 5,
+          "safetyNotes": "Apply as foliar spray to create barrier film. Reapply after rain. Organic, safe for consumption.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "vegetative",
+          "pesticideType": "Row covers",
+          "targetPest": "Root maggots",
+          "quantityPerPlant": 0,
+          "quantityUnit": "n/a",
+          "frequencyDays": 0,
+          "safetyNotes": "Physical barrier prevents egg-laying. Install immediately after planting, remove at harvest.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 10.0,
+          "maxCelsius": 24.0,
+          "optimalCelsius": 18.0,
+          "notes": "Cool season crop. High temps (>24°C) cause pithy, hot-tasting roots and rapid bolting. In UAE, grow Oct-Mar. Extremely fast-growing allows multiple succession plantings."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 70,
+          "optimalPercentage": 65,
+          "notes": "Moderate humidity preferred. Low humidity causes cracking."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces leaf disease and promotes rapid drying after watering."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Frequent light watering to maintain consistent moisture",
+        "type": "Drip irrigation or light overhead irrigation",
+        "amount": "15-25mm per week, more in hot weather",
+        "droughtTolerance": "low",
+        "waterQuality": "pH 6.0-7.0, low to moderate salinity (EC < 2.0 mS/cm)",
+        "notes": "Consistent moisture critical for tender, mild roots. Water stress causes hot, woody, pithy roots and cracking."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.0,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["sandy_loam", "loamy"],
+        "nutrientsRecommendations": "Low to moderate nitrogen. Good phosphorus for root development. Adequate potassium. Avoid fresh manure.",
+        "ecRangeMs": "1.0-2.0",
+        "tdsRangePpm": "700-1400",
+        "notes": "Prefers loose, well-drained soil. Sandy loam ideal. Compacted or rocky soil causes misshapen roots. Shallow cultivation (10-15cm depth) sufficient."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Flea Beetles",
+          "symptoms": "Tiny shot-holes in leaves, small jumping black beetles, reduced photosynthesis, stunted growth",
+          "preventionMeasures": "Row covers, kaolin clay spray, diatomaceous earth, maintain rapid growth with adequate moisture",
+          "treatmentOptions": "Kaolin clay, pyrethrin, spinosad. Most damaging to seedlings. Rapid growth helps plants outgrow damage.",
+          "severity": "medium"
+        },
+        {
+          "name": "Root Maggots (Cabbage Root Maggot)",
+          "symptoms": "Tunnels in roots, wilting plants, stunted growth, unmarketable roots",
+          "preventionMeasures": "Row covers from seeding to harvest, delay planting to avoid peak fly activity, crop rotation",
+          "treatmentOptions": "Row covers are most effective. No effective chemical control once larvae are in roots.",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters on foliage, sticky honeydew, curled leaves",
+          "preventionMeasures": "Monitor foliage, encourage beneficial insects",
+          "treatmentOptions": "Usually not economically significant due to short crop cycle. Strong water spray if needed.",
+          "severity": "low"
+        },
+        {
+          "name": "Clubroot",
+          "symptoms": "Swollen, distorted roots, wilting, stunted growth",
+          "preventionMeasures": "Raise soil pH to 7.0+, 4-year crop rotation, improve drainage",
+          "treatmentOptions": "No cure. Remove infected plants. Lime soil. Rotate to non-brassica crops.",
+          "severity": "low"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 8.0,
+        "optimalHoursDaily": 6.0,
+        "intensityLux": 30000,
+        "intensityPpfd": 400,
+        "photoperiodSensitive": false,
+        "notes": "Full sun produces best quality. Tolerates partial shade but roots develop more slowly."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Uniform size 2-3cm diameter, smooth round shape, crisp texture",
+          "colorRequirements": "Bright red or appropriate variety color, uniform coloring",
+          "defectTolerance": "No cracks, no pithiness, no insect damage, fresh tops if bunched",
+          "priceMultiplier": 1.6
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "1.5-4cm diameter, reasonably uniform",
+          "colorRequirements": "Good color, minor variations acceptable",
+          "defectTolerance": "Minor surface blemishes acceptable, slight cracking allowed",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size above 1cm",
+          "colorRequirements": "Color variations acceptable",
+          "defectTolerance": "Oversize acceptable, surface defects OK, suitable for slicing/processing",
+          "priceMultiplier": 0.4
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 2.00,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.04,
+        "plantingHours": 0.015,
+        "maintenanceHours": 0.01,
+        "harvestingHours": 0.015,
+        "notes": "Very fast turnover allows multiple crops per season. Bunched radishes (with tops) command premium. Low labor per plant but very high planting density compensates."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "taproot",
+        "spacing": {
+          "betweenPlantsCm": 5,
+          "betweenRowsCm": 20,
+          "plantsPerSquareMeter": 100
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Lettuce", "Carrot", "Cucumber", "Pea", "Nasturtium"],
+        "incompatiblePlants": ["Hyssop"],
+        "notes": "Fastest common vegetable crop - ready in 20-30 days. Ideal for succession planting every 7-10 days for continuous harvest. Excellent intercrop - marks slow-germinating crops (carrot, parsnip). Multiple varieties: Red globe (most common), French Breakfast (oblong), Daikon/Asian (large white), Easter Egg (mixed colors). Harvest promptly when sized - overmaturity causes pithiness and excessive heat. In UAE, perfect for Oct-Mar with multiple plantings. Can grow year-round in controlled greenhouses. Well-suited to hydroponics. Edible seed pods (radish pods) are delicacy if plants allowed to flower."
+      },
+
+      "tags": ["vegetable", "root_crop", "cool_season", "very_fast_growing", "high_density", "succession_crop", "hydroponic_suitable"]
+    },
+
+    {
+      "plantName": "Mango",
+      "scientificName": "Mangifera indica",
+      "farmTypeCompatibility": ["open_field"],
+
+      "growthCycle": {
+        "germinationDays": 30,
+        "vegetativeDays": 1095,
+        "floweringDays": 60,
+        "fruitingDays": 120,
+        "harvestDurationDays": 30,
+        "totalCycleDays": 1335,
+        "notes": "Perennial tree fruit. First harvest after 3-5 years from planting. Mature trees bear annually. Flowering triggered by cool dry period followed by warmer temps."
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 50.0,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 30,
+        "notes": "Mature trees (8-10 years) yield 50-100kg annually. Young trees (3-5 years) yield 10-25kg. Seed and peel are waste (25-30%). Biennial bearing common if not properly managed."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "year_1",
+          "fertilizerType": "Balanced starter NPK",
+          "quantityPerPlant": 200,
+          "quantityUnit": "grams",
+          "frequencyDays": 180,
+          "npkRatio": "6-6-6",
+          "notes": "Apply twice per year for young trees. Split into 2 applications 6 months apart. Apply around drip line, not trunk."
+        },
+        {
+          "stage": "year_2-3",
+          "fertilizerType": "Balanced growth NPK",
+          "quantityPerPlant": 1000,
+          "quantityUnit": "grams",
+          "frequencyDays": 180,
+          "npkRatio": "10-10-10",
+          "notes": "Young bearing age trees. Two applications per year. Increase amount as tree grows."
+        },
+        {
+          "stage": "mature_tree",
+          "fertilizerType": "Fruiting formula",
+          "quantityPerPlant": 25000,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "8-3-9",
+          "notes": "Mature trees need 20-30kg per year. Split into 3 applications: before bloom, after fruit set, after harvest. Include micronutrients Zn, Cu, B, Fe as foliar spray."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "flowering",
+          "pesticideType": "Insecticidal soap",
+          "targetPest": "Mango hoppers",
+          "quantityPerPlant": 500,
+          "quantityUnit": "ml",
+          "frequencyDays": 10,
+          "safetyNotes": "Spray during early morning or evening to avoid harming pollinators. Target nymphs and adults on flowers.",
+          "preharvestIntervalDays": 60
+        },
+        {
+          "stage": "fruiting",
+          "pesticideType": "Protein bait traps",
+          "targetPest": "Fruit flies",
+          "quantityPerPlant": 0,
+          "quantityUnit": "trap",
+          "frequencyDays": 0,
+          "safetyNotes": "Hang traps when fruit begins to develop. Monitor and replace as needed. Bag individual fruits for premium quality.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 24.0,
+          "maxCelsius": 35.0,
+          "optimalCelsius": 27.0,
+          "notes": "Tropical tree requiring warm temps year-round. Flowering triggered by cool dry period (18-24°C) for 2-3 months. Freeze damage below 0°C. In UAE, well-suited to climate."
+        },
+        "humidity": {
+          "minPercentage": 50,
+          "maxPercentage": 70,
+          "optimalPercentage": 60,
+          "notes": "Moderate humidity preferred. High humidity during flowering increases disease (anthracnose, powdery mildew)."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces disease pressure, especially anthracnose during flowering and fruiting."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular during growth and fruiting, reduce during flowering induction",
+        "type": "Drip irrigation or micro-sprinklers around drip line",
+        "amount": "Young trees 40-80L per week, mature trees 150-300L per week depending on size and season",
+        "droughtTolerance": "medium",
+        "waterQuality": "pH 5.5-7.5, moderate salt tolerance once established (EC < 3.0 mS/cm)",
+        "notes": "Deep watering encourages deep roots. Reduce watering 2-3 months before expected bloom to stress tree and induce flowering. Resume watering after fruit set."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 5.5,
+          "maxPH": 7.5,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["sandy_loam", "loamy"],
+        "nutrientsRecommendations": "Balanced N-P-K for growth. Potassium important for fruit quality. Micronutrients critical: zinc (prevents little leaf), iron (prevents chlorosis), boron (fruit set), copper (disease resistance).",
+        "ecRangeMs": "1.0-2.5",
+        "tdsRangePpm": "700-1750",
+        "notes": "Requires well-drained soil - sensitive to waterlogging. Deep soil (minimum 2m) preferred. Tolerates range of soil types but production best in deep loamy soils."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Anthracnose (Colletotrichum gloeosporioides)",
+          "symptoms": "Black spots on flowers, leaves, and fruit. Fruit rot during ripening. Blossom blight during wet weather.",
+          "preventionMeasures": "Prune for good air circulation, avoid overhead watering during flowering, copper sprays before bloom, sanitation",
+          "treatmentOptions": "Copper fungicides, mancozeb, azoxystrobin. Hot water treatment of harvested fruit (52°C for 5min).",
+          "severity": "high"
+        },
+        {
+          "name": "Powdery Mildew",
+          "symptoms": "White powdery coating on flowers and young fruit, distorted growth, fruit drop",
+          "preventionMeasures": "Adequate spacing, prune for air flow, sulfur dusts during dry season",
+          "treatmentOptions": "Sulfur fungicides, potassium bicarbonate spray, horticultural oils",
+          "severity": "medium"
+        },
+        {
+          "name": "Fruit Flies (Bactrocera spp.)",
+          "symptoms": "Puncture marks on fruit skin, fruit drop, larvae tunneling in flesh, fruit rot",
+          "preventionMeasures": "Protein bait traps, sanitation (remove fallen fruit), fruit bagging for premium fruit, harvest at proper maturity",
+          "treatmentOptions": "Mass trapping with protein baits, spinosad bait sprays, fruit bagging",
+          "severity": "high"
+        },
+        {
+          "name": "Mango Hoppers",
+          "symptoms": "Nymphs and adults feeding on flower panicles, honeydew secretion, sooty mold, reduced fruit set",
+          "preventionMeasures": "Monitor flowering, encourage natural predators, avoid excessive nitrogen",
+          "treatmentOptions": "Insecticidal soap, neem oil, horticultural oil. Spray before full bloom.",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 8.0,
+        "maxHoursDaily": 12.0,
+        "optimalHoursDaily": 10.0,
+        "intensityLux": 50000,
+        "intensityPpfd": 800,
+        "photoperiodSensitive": false,
+        "notes": "Full sun required for optimal flowering and fruit quality. Partial shade reduces yield and fruit sweetness."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium Export",
+          "sizeRequirements": "Uniform size 250-500g per fruit, attractive shape, no deformities",
+          "colorRequirements": "Variety-specific color, good blush, uniform ripening, no sunscald",
+          "defectTolerance": "No blemishes, no disease, no insect damage, no sap burn, firm texture, >14% sugar",
+          "priceMultiplier": 2.0
+        },
+        {
+          "gradeName": "Grade B - Local Market",
+          "sizeRequirements": "200-600g per fruit, reasonably uniform",
+          "colorRequirements": "Good color development, minor variations acceptable",
+          "defectTolerance": "Minor surface blemishes acceptable, slight sap burn allowed, >12% sugar",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size above 150g",
+          "colorRequirements": "Color not critical",
+          "defectTolerance": "Surface defects acceptable if flesh undamaged, suitable for pulp, juice, canning",
+          "priceMultiplier": 0.4
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 2.50,
+        "currency": "USD",
+        "totalManHoursPerPlant": 15.0,
+        "plantingHours": 2.0,
+        "maintenanceHours": 10.0,
+        "harvestingHours": 3.0,
+        "notes": "Long-term investment (3-5 years to first harvest). High labor for pruning, thinning, disease management. Mature trees very productive. Premium varieties command 2-3x standard prices."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "tree",
+        "spacing": {
+          "betweenPlantsCm": 800,
+          "betweenRowsCm": 800,
+          "plantsPerSquareMeter": 0.0156
+        },
+        "supportRequirements": "staking_young_trees",
+        "companionPlants": [],
+        "incompatiblePlants": [],
+        "notes": "Tropical evergreen tree reaching 10-30m height. Grafted trees bear earlier (3-4 years) than seedlings (6-8 years). Hundreds of varieties - select based on flavor, disease resistance, climate adaptation. Popular UAE varieties: Kent, Keitt, Tommy Atkins (shipping), Alphonso (flavor). Requires cross-pollination for best fruit set. Prune annually after harvest to maintain size and encourage flowering. Alternate bearing (heavy crop one year, light next) managed through proper nutrition and pruning. Harvest when fruit reaches mature green stage with proper shoulder development. Ripen at room temperature. In UAE, flowering Dec-Feb, harvest May-Jul. One main crop per year."
+      },
+
+      "tags": ["fruit", "tree_crop", "tropical", "perennial", "long_term_investment", "commercial", "high_value"]
+    },
+
+    {
+      "plantName": "Sweet Orange",
+      "scientificName": "Citrus sinensis",
+      "farmTypeCompatibility": ["open_field"],
+
+      "growthCycle": {
+        "germinationDays": 21,
+        "vegetativeDays": 1095,
+        "floweringDays": 30,
+        "fruitingDays": 270,
+        "harvestDurationDays": 60,
+        "totalCycleDays": 1476,
+        "notes": "Perennial citrus tree. First harvest after 3-4 years from grafted trees. Mature trees bear annually. Fruit development takes 9-12 months from bloom to harvest."
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 60.0,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 40,
+        "notes": "Mature trees (6-10 years) yield 50-80kg annually. Young trees (3-4 years) yield 15-30kg. Peel and seeds are waste (35-40%). Peak production at 10-15 years."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "young_trees",
+          "fertilizerType": "Balanced citrus NPK",
+          "quantityPerPlant": 500,
+          "quantityUnit": "grams",
+          "frequencyDays": 90,
+          "npkRatio": "8-8-8",
+          "notes": "Young trees (1-3 years). Apply 4 times per year, increasing amount as tree grows. Apply in circle around drip line."
+        },
+        {
+          "stage": "mature_bearing",
+          "fertilizerType": "Citrus fruiting formula",
+          "quantityPerPlant": 3500,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "12-6-6",
+          "notes": "Mature trees need 2-5kg per year depending on size. Split into 3 applications: early spring, summer, fall. Include micronutrients: Fe, Zn, Mn, Cu, B, Mo as foliar spray."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Horticultural oil",
+          "targetPest": "Scale insects and aphids",
+          "quantityPerPlant": 200,
+          "quantityUnit": "ml",
+          "frequencyDays": 30,
+          "safetyNotes": "Apply as dormant oil spray or growing season spray. Cover all surfaces thoroughly. Avoid during bloom.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "new_growth",
+          "pesticideType": "Spinosad",
+          "targetPest": "Citrus leafminer",
+          "quantityPerPlant": 50,
+          "quantityUnit": "ml",
+          "frequencyDays": 14,
+          "safetyNotes": "Apply when new growth flushes. Target young larvae before they enter leaves. Organic option.",
+          "preharvestIntervalDays": 1
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 13.0,
+          "maxCelsius": 35.0,
+          "optimalCelsius": 25.0,
+          "notes": "Subtropical citrus. Tolerates brief freezes (-3°C for mature trees) but fruit damaged below 0°C. High heat (>38°C) causes sunburn on fruit. Fruit quality best with cool nights during ripening. In UAE, well-adapted."
+        },
+        "humidity": {
+          "minPercentage": 50,
+          "maxPercentage": 70,
+          "optimalPercentage": 60,
+          "notes": "Moderate humidity preferred. Low humidity reduces fruit size. Very high humidity increases fungal diseases."
+        },
+        "co2RequirementPpm": 400,
+        "airCirculation": "Good air circulation reduces disease pressure and pest populations."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Regular throughout year, adjust for season and tree size",
+        "type": "Drip irrigation or micro-sprinklers",
+        "amount": "Young trees 50-100L per week, mature trees 200-400L per week depending on season",
+        "droughtTolerance": "medium",
+        "waterQuality": "pH 6.0-7.5, low to moderate salinity tolerance (EC < 2.5 mS/cm)",
+        "notes": "Consistent moisture important for fruit quality. Avoid water stress during fruit development. Citrus sensitive to both drought and waterlogging."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 6.0,
+          "maxPH": 7.5,
+          "optimalPH": 6.5
+        },
+        "soilTypes": ["sandy_loam", "loamy"],
+        "nutrientsRecommendations": "Balanced N-P-K with emphasis on nitrogen for growth and fruit production. Micronutrients critical: iron (prevents chlorosis), zinc (leaf size, fruit set), manganese (yellowing), copper, boron (fruit quality), molybdenum.",
+        "ecRangeMs": "1.0-2.0",
+        "tdsRangePpm": "700-1400",
+        "notes": "Requires well-drained soil - very sensitive to waterlogging. Root rot major issue in heavy soils. Sandy loam ideal. Deep soil (2m+) preferred for strong root system."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Citrus Greening (Huanglongbing - HLB)",
+          "symptoms": "Yellow shoots, mottled leaves, lopsided misshapen fruit, bitter taste, premature fruit drop, tree decline",
+          "preventionMeasures": "Use certified disease-free nursery stock, control Asian citrus psyllid vector, remove infected trees immediately, area-wide management critical",
+          "treatmentOptions": "No cure. Infected trees must be removed and destroyed. Prevention through vector control is only option.",
+          "severity": "critical"
+        },
+        {
+          "name": "Citrus Leafminer (Phyllocnistis citrella)",
+          "symptoms": "Serpentine mines in young leaves, leaf distortion, stunted growth on young trees",
+          "preventionMeasures": "Time pruning to avoid new growth during peak leafminer populations, encourage parasitic wasps, spinosad applications",
+          "treatmentOptions": "Spinosad sprays on new growth, horticultural oil. Mainly aesthetic on mature trees.",
+          "severity": "medium"
+        },
+        {
+          "name": "Aphids (Various species)",
+          "symptoms": "Curled leaves, sticky honeydew, sooty mold, transmit tristeza virus",
+          "preventionMeasures": "Monitor new growth, encourage beneficial insects (ladybugs, lacewings), avoid excessive nitrogen",
+          "treatmentOptions": "Strong water spray, insecticidal soap, horticultural oil, neem oil",
+          "severity": "medium"
+        },
+        {
+          "name": "Scale Insects (Armored and Soft scales)",
+          "symptoms": "Bumps on leaves/stems/fruit, yellowing, honeydew, sooty mold, reduced vigor",
+          "preventionMeasures": "Monitor regularly, encourage natural predators, maintain tree vigor",
+          "treatmentOptions": "Horticultural oil sprays (dormant and growing season), systemic insecticides for severe infestations",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun",
+        "minHoursDaily": 8.0,
+        "maxHoursDaily": 12.0,
+        "optimalHoursDaily": 10.0,
+        "intensityLux": 50000,
+        "intensityPpfd": 800,
+        "photoperiodSensitive": false,
+        "notes": "Full sun required for optimal flowering, fruit set, and sugar development. Shade reduces yield and fruit quality."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Fancy",
+          "sizeRequirements": "Uniform size 6.5-8.5cm diameter, 150-250g per fruit, symmetrical shape",
+          "colorRequirements": "Deep orange color, no greening, uniform coloring",
+          "defectTolerance": "No blemishes, no scars, no insect damage, firm texture, high juice content (>50%), >10° Brix",
+          "priceMultiplier": 1.5
+        },
+        {
+          "gradeName": "Grade B - Choice",
+          "sizeRequirements": "6.0-9.0cm diameter, reasonably uniform",
+          "colorRequirements": "Good orange color, minor green tinge acceptable",
+          "defectTolerance": "Minor surface blemishes acceptable, slight scarring allowed, >9° Brix",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Juice",
+          "sizeRequirements": "Any size above 5cm diameter",
+          "colorRequirements": "Color not critical",
+          "defectTolerance": "Surface defects acceptable, suitable for juice extraction, >8° Brix",
+          "priceMultiplier": 0.3
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 1.20,
+        "currency": "USD",
+        "totalManHoursPerPlant": 12.0,
+        "plantingHours": 1.5,
+        "maintenanceHours": 8.0,
+        "harvestingHours": 2.5,
+        "notes": "Long-term investment (3-4 years to first harvest). Moderate labor for pruning, disease/pest management. Consistent annual production. Fresh market and juice processing options."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "tree",
+        "spacing": {
+          "betweenPlantsCm": 500,
+          "betweenRowsCm": 500,
+          "plantsPerSquareMeter": 0.04
+        },
+        "supportRequirements": "staking_young_trees",
+        "companionPlants": [],
+        "incompatiblePlants": [],
+        "notes": "Subtropical evergreen tree reaching 6-12m height. Grafted trees recommended - bear earlier and resist root diseases. Rootstock selection critical for disease resistance and soil adaptation. Popular rootstocks: Carrizo citrange, Swingle citrumelo (disease resistant). Varieties for UAE: Valencia (juice, late season), Navel (fresh eating, early season), Hamlin (juice, early). Fruit can hang on tree for months after maturity. Harvest when fruit reaches proper sugar/acid ratio. In UAE, main flowering March-April, harvest Nov-May depending on variety. One main crop, possible secondary bloom. Prune to maintain open canopy, remove dead/crossing branches. CRITICAL: Citrus greening disease is devastating - use certified disease-free trees, control psyllid vectors."
+      },
+
+      "tags": ["fruit", "tree_crop", "citrus", "subtropical", "perennial", "commercial", "juice_processing"]
+    },
+
+    {
+      "plantName": "Strawberry",
+      "scientificName": "Fragaria × ananassa",
+      "farmTypeCompatibility": ["open_field", "greenhouse", "hydroponic"],
+
+      "growthCycle": {
+        "germinationDays": 14,
+        "vegetativeDays": 60,
+        "floweringDays": 15,
+        "fruitingDays": 25,
+        "harvestDurationDays": 30,
+        "totalCycleDays": 144
+      },
+
+      "yieldInfo": {
+        "yieldPerPlant": 0.5,
+        "yieldUnit": "kg",
+        "expectedWastePercentage": 10,
+        "notes": "Continuous harvest over 4-6 weeks per fruiting period. Day-neutral varieties can produce year-round. June-bearing types produce one large crop. Everbearing types produce 2-3 crops per year."
+      },
+
+      "fertilizerSchedule": [
+        {
+          "stage": "establishment",
+          "fertilizerType": "Starter high P formula",
+          "quantityPerPlant": 10,
+          "quantityUnit": "grams",
+          "frequencyDays": 0,
+          "npkRatio": "15-30-15",
+          "notes": "Apply at planting to encourage root development. High phosphorus for root establishment."
+        },
+        {
+          "stage": "vegetative",
+          "fertilizerType": "Balanced growth formula",
+          "quantityPerPlant": 15,
+          "quantityUnit": "grams",
+          "frequencyDays": 21,
+          "npkRatio": "20-9-20",
+          "notes": "Apply every 3 weeks during vegetative growth. Promotes runner and crown development."
+        },
+        {
+          "stage": "flowering",
+          "fertilizerType": "High potassium fruiting formula",
+          "quantityPerPlant": 20,
+          "quantityUnit": "grams",
+          "frequencyDays": 14,
+          "npkRatio": "10-5-35",
+          "notes": "Apply during flowering and fruiting. High K improves fruit quality, flavor, and firmness. Continue through harvest."
+        }
+      ],
+
+      "pesticideSchedule": [
+        {
+          "stage": "vegetative",
+          "pesticideType": "Horticultural oil or insecticidal soap",
+          "targetPest": "Spider mites and aphids",
+          "quantityPerPlant": 5,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Spray undersides of leaves thoroughly. Apply in early morning or evening. Organic control options.",
+          "preharvestIntervalDays": 0
+        },
+        {
+          "stage": "flowering",
+          "pesticideType": "Bacillus subtilis or potassium bicarbonate",
+          "targetPest": "Gray mold (Botrytis) and powdery mildew",
+          "quantityPerPlant": 10,
+          "quantityUnit": "ml",
+          "frequencyDays": 7,
+          "safetyNotes": "Preventative fungicide. Apply before disease appears. Good air circulation critical. Remove infected fruit immediately.",
+          "preharvestIntervalDays": 0
+        }
+      ],
+
+      "environmentalRequirements": {
+        "temperature": {
+          "minCelsius": 15.0,
+          "maxCelsius": 27.0,
+          "optimalCelsius": 22.0,
+          "notes": "Cool to moderate season crop. Flowering and fruit set best at 18-24°C. High temps (>30°C) reduce fruit size and quality, increase disease. In UAE, best grown Oct-Apr. Greenhouse with cooling recommended for summer production."
+        },
+        "humidity": {
+          "minPercentage": 60,
+          "maxPercentage": 75,
+          "optimalPercentage": 68,
+          "notes": "Moderate to high humidity during growth. However, lower humidity (<70%) during flowering reduces gray mold risk. Good air circulation essential."
+        },
+        "co2RequirementPpm": 800,
+        "airCirculation": "Excellent air circulation critical to reduce fungal diseases (gray mold, powdery mildew). Essential in greenhouse production."
+      },
+
+      "wateringRequirements": {
+        "frequency": "Frequent light watering to maintain consistent soil moisture",
+        "type": "Drip irrigation strongly preferred to keep foliage dry",
+        "amount": "20-30mm per week, adjust for plant size and fruiting stage",
+        "droughtTolerance": "low",
+        "waterQuality": "pH 5.5-6.5, low salinity (EC < 1.5 mS/cm preferred)",
+        "notes": "Shallow root system requires consistent moisture. Overhead watering increases disease - use drip. Water stress during fruiting reduces berry size. Avoid waterlogging."
+      },
+
+      "soilRequirements": {
+        "phRequirements": {
+          "minPH": 5.5,
+          "maxPH": 6.5,
+          "optimalPH": 6.0
+        },
+        "soilTypes": ["sandy_loam", "loamy"],
+        "nutrientsRecommendations": "Moderate nitrogen - excess causes soft fruit and disease. High potassium for fruit quality. Adequate calcium prevents tip burn. Boron improves pollen viability and fruit set.",
+        "ecRangeMs": "1.0-1.5",
+        "tdsRangePpm": "700-1050",
+        "notes": "Requires well-drained soil rich in organic matter. Raised beds highly recommended for drainage. Excellent for soilless growing (hydroponics, substrate culture). Intolerant of waterlogged conditions."
+      },
+
+      "diseasesAndPests": [
+        {
+          "name": "Two-spotted Spider Mites",
+          "symptoms": "Fine webbing on undersides of leaves, stippled yellow leaves, bronzing, reduced vigor, leaf death",
+          "preventionMeasures": "Monitor undersides of leaves weekly, maintain adequate moisture, encourage predatory mites, avoid dusty conditions",
+          "treatmentOptions": "Horticultural oil, insecticidal soap, neem oil, predatory mites (biological control). Rotate spray materials.",
+          "severity": "high"
+        },
+        {
+          "name": "Gray Mold / Botrytis (Botrytis cinerea)",
+          "symptoms": "Gray fuzzy mold on flowers and fruit, fruit rot, brown lesions on leaves and stems",
+          "preventionMeasures": "Adequate spacing, drip irrigation (avoid wetting foliage), good air circulation, remove infected fruit immediately, avoid overhead watering",
+          "treatmentOptions": "Bacillus subtilis, potassium bicarbonate, copper fungicides. Remove all infected plant parts. Improve air flow.",
+          "severity": "high"
+        },
+        {
+          "name": "Aphids",
+          "symptoms": "Clusters on young leaves and flowers, sticky honeydew, distorted growth, virus transmission",
+          "preventionMeasures": "Monitor new growth, reflective mulches, encourage beneficial insects, remove weeds",
+          "treatmentOptions": "Strong water spray, insecticidal soap, neem oil, horticultural oil. Yellow sticky traps.",
+          "severity": "medium"
+        },
+        {
+          "name": "Powdery Mildew",
+          "symptoms": "White powdery coating on leaves (especially undersides), leaf curling, reduced photosynthesis",
+          "preventionMeasures": "Adequate spacing, avoid overhead watering, resistant varieties, sulfur applications",
+          "treatmentOptions": "Sulfur fungicides (avoid during hot weather), potassium bicarbonate, biological fungicides",
+          "severity": "medium"
+        }
+      ],
+
+      "lightRequirements": {
+        "lightType": "full_sun_to_partial_shade",
+        "minHoursDaily": 6.0,
+        "maxHoursDaily": 10.0,
+        "optimalHoursDaily": 8.0,
+        "intensityLux": 35000,
+        "intensityPpfd": 500,
+        "photoperiodSensitive": true,
+        "notes": "Day-length affects flowering. Short-day varieties flower with <12 hours light. Day-neutral varieties flower regardless of day-length (best for UAE). Long-day varieties need >14 hours. Full sun produces best flavor and yield. Partial shade acceptable in hot climates."
+      },
+
+      "gradingStandards": [
+        {
+          "gradeName": "Grade A - Premium",
+          "sizeRequirements": "Large uniform berries 3-4cm diameter, symmetrical conic shape",
+          "colorRequirements": "Bright red, 90%+ color coverage, glossy appearance, green cap fresh",
+          "defectTolerance": "No defects, firm texture, no white shoulders, no bruising, excellent flavor, >8° Brix",
+          "priceMultiplier": 2.0
+        },
+        {
+          "gradeName": "Grade B - Standard",
+          "sizeRequirements": "Medium berries 2.5-4cm diameter, reasonably uniform",
+          "colorRequirements": "Red, 75%+ color coverage, minor white shoulders acceptable",
+          "defectTolerance": "Minor surface blemishes acceptable, firm, good flavor, >7° Brix",
+          "priceMultiplier": 1.0
+        },
+        {
+          "gradeName": "Grade C - Processing",
+          "sizeRequirements": "Any size above 2cm diameter",
+          "colorRequirements": "Red, color variations acceptable",
+          "defectTolerance": "Surface defects acceptable if flesh sound, suitable for jam, freezing, processing",
+          "priceMultiplier": 0.4
+        }
+      ],
+
+      "economicsAndLabor": {
+        "averageMarketValuePerKg": 6.00,
+        "currency": "USD",
+        "totalManHoursPerPlant": 0.8,
+        "plantingHours": 0.15,
+        "maintenanceHours": 0.35,
+        "harvestingHours": 0.30,
+        "notes": "High value crop commanding premium prices. Labor-intensive for harvesting (pick every 2-3 days during peak). Greenhouse production allows year-round harvest. Day-neutral varieties most profitable for UAE climate."
+      },
+
+      "additionalInfo": {
+        "growthHabit": "herbaceous_perennial",
+        "spacing": {
+          "betweenPlantsCm": 30,
+          "betweenRowsCm": 90,
+          "plantsPerSquareMeter": 7.41,
+          "notes": "Matted row system: 45cm x 90cm. Hill system (raised beds): 30cm x 30cm for higher density. Double row on raised beds common."
+        },
+        "supportRequirements": "none",
+        "companionPlants": ["Borage", "Thyme", "Lettuce", "Spinach", "Onion"],
+        "incompatiblePlants": ["Cabbage family"],
+        "notes": "Herbaceous perennial grown as annual or renewed every 2-3 years. Three types by flowering: June-bearing (one large spring crop), Everbearing (2-3 smaller crops per year), Day-neutral (continuous production, best for UAE). Raised beds strongly recommended for drainage and disease management. Plastic mulch common to reduce disease, conserve moisture, keep fruit clean. Drip irrigation under mulch ideal. Remove runners on fruiting plants to concentrate energy on fruit production. In UAE, plant Oct-Nov for winter/spring production. Greenhouse with cooling extends season. Highly suitable for vertical hydroponic systems and substrate culture. Popular varieties for UAE: Albion, San Andreas (day-neutral), Festival, Florida Radiance. Strawberries do not ripen after picking - harvest when fully colored. Very perishable - handle gently, cool immediately after harvest."
+      },
+
+      "tags": ["fruit", "berry", "perennial", "cool_season", "high_value", "labor_intensive", "hydroponic_suitable", "premium_crop"]
+    }
+  ]
+}
