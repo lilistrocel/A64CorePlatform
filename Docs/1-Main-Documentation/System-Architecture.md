@@ -657,70 +657,86 @@ Response → User
 - createdAt: descending
 ```
 
-#### blocks Collection (Farm Management Module - v1.7.0)
+#### blocks Collection (Farm Management Module - v1.8.0)
 ```javascript
 {
   _id: ObjectId,
   blockId: String (UUID),           // Unique block identifier
   farmId: String (UUID),            // Parent farm reference
-  blockCode: String,                // Auto-generated code (e.g., F001-001)
-  name: String,                     // Block name
-  blockType: String,                // Type (greenhouse, open_field, hydroponic, etc.)
+  farmCode: String,                 // Farm code (e.g., F001)
+  blockCode: String,                // Auto-generated code (e.g., F001-005)
+  sequenceNumber: Number,           // Block sequence number within farm
+  name: String,                     // Optional block name
+  blockType: String,                // Type (greenhouse, openfield, hydroponic, nethouse, etc.)
+  maxPlants: Number,                // Maximum plant capacity
   area: Number,                     // Block area
   areaUnit: String,                 // Area unit (sqm, hectares, acres)
+  location: Object {                // Optional GPS coordinates
+    latitude: Number,
+    longitude: Number
+  },
 
-  // Lifecycle Status (7 states)
-  status: String,                   // alert, empty, planted, growing, fruiting, harvesting, cleaning
+  // Lifecycle Status (8 states - added "planned")
+  state: String,                    // empty, planned, planted, growing, fruiting, harvesting, cleaning, alert
+  previousState: String,            // Status before alert (for restoration)
 
   // Current Planting Info
-  currentPlantingId: String (UUID), // Reference to current planting
-  currentPlantDataId: String (UUID),// Reference to plant data
-  currentPlantName: String,         // Plant name snapshot
-  plantedDate: Date,                // When current planting occurred
-  expectedHarvestDate: Date,        // Calculated harvest date
-  actualHarvestDate: Date,          // Actual harvest completion
+  targetCrop: String (UUID),        // Reference to plant data (saved for both planned and planted)
+  targetCropName: String,           // Plant name snapshot (denormalized)
+  actualPlantCount: Number,         // Current number of plants (saved for both planned and planted)
+  plantedDate: Date,                // When actual planting occurred (only set when state=planted)
+  expectedHarvestDate: Date,        // Calculated harvest date (saved during planning/planting)
+  expectedStatusChanges: Object {   // Expected dates for each status transition
+    planted: Date,
+    growing: Date,
+    fruiting: Date,
+    harvesting: Date,
+    cleaning: Date
+  },
 
   // KPI Tracking
-  predictedYield: Object {
-    amount: Number,
-    unit: String
+  kpi: Object {
+    predictedYieldKg: Number,       // Expected total yield from plant data
+    actualYieldKg: Number,          // Cumulative actual harvest
+    yieldEfficiencyPercent: Number, // (actual/predicted) * 100
+    totalHarvests: Number           // Number of harvest events
   },
-  actualYield: Object {
-    amount: Number,
-    unit: String
-  },
-  yieldEfficiency: Number,          // (actual/predicted) * 100
 
-  // Alert Status
-  hasAlert: Boolean,                // Currently has active alert
-  alertSeverity: String,            // low, medium, high, critical
-  statusBeforeAlert: String,        // Original status to restore
-
-  // Status History (Audit Trail)
+  // Status History (Audit Trail with Offset Tracking)
   statusChanges: Array [{
-    fromStatus: String,
-    toStatus: String,
-    changedBy: String (UUID),
-    changedByEmail: String,
-    changedAt: Date,
-    reason: String
+    status: String,                 // New status
+    changedAt: Date,                // When status changed
+    changedBy: String (UUID),       // User who changed status
+    changedByEmail: String,         // Email of user
+    notes: String                   // Optional notes (includes offset tracking for planned→planted)
+                                    // Examples: "Planted 3 days early", "Planted on schedule", "Planted 2 days late"
   }],
 
-  // Timestamps
+  // Timestamps & Metadata
   createdAt: Date,
   updatedAt: Date,
-  createdBy: String (UUID),
-  updatedBy: String (UUID)
+  isActive: Boolean                 // Soft delete flag
 }
 
 // Indexes
 - blockId: unique
 - farmId: non-unique (query blocks by farm)
 - blockCode: unique (automatic code generation)
-- status: non-unique (filter by status)
-- currentPlantingId: non-unique
+- state: non-unique (filter by status)
+- targetCrop: non-unique (query blocks by plant)
+- sequenceNumber: non-unique (ordering within farm)
 - createdAt: descending
 ```
+
+**Recent Updates (v1.8.0 - Nov 2025):**
+- Added "planned" state for future plantings
+- Renamed `status` to `state` for consistency
+- Crop data (targetCrop, targetCropName, actualPlantCount, expectedHarvestDate) now saved for BOTH planned and planted states
+- Added offset tracking in statusChanges notes for planned→planted transitions
+- Tracks whether planting occurred early, late, or on schedule compared to planned date
+- Simplified KPI structure with clear naming (predictedYieldKg, actualYieldKg, yieldEfficiencyPercent)
+- Added expectedStatusChanges object to track expected timeline
+- previousState field for alert status restoration
 
 #### block_harvests Collection (Farm Management Module - v1.7.0)
 ```javascript
