@@ -124,6 +124,9 @@ export interface BlockSummary {
     plantedDate?: string;
     estimatedHarvestDate?: string;
   };
+  predictedYieldKg?: number;
+  actualYieldKg?: number;
+  yieldEfficiencyPercent?: number;
 }
 
 export interface StateTransition {

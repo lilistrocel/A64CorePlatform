@@ -6,8 +6,10 @@
  */
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
+import { getPlantDataEnhancedList } from '../../services/plantDataEnhancedApi';
 import type { Block, PlantDataEnhanced } from '../../types/farm';
 
 // ============================================================================
@@ -50,6 +52,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
   align-items: center;
   z-index: 1000;
   padding: 20px;
+  pointer-events: auto;
 `;
 
 const ModalContainer = styled.div`
@@ -58,8 +61,10 @@ const ModalContainer = styled.div`
   width: 100%;
   max-width: 800px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 `;
 
 const ModalHeader = styled.div`
@@ -68,10 +73,8 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
-  top: 0;
   background: white;
-  z-index: 1;
+  flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
@@ -103,6 +106,8 @@ const CloseButton = styled.button`
 
 const ModalBody = styled.div`
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
 `;
 
 const FormSection = styled.div`
@@ -280,10 +285,8 @@ const ModalFooter = styled.div`
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  position: sticky;
-  bottom: 0;
   background: white;
-  z-index: 1;
+  flex-shrink: 0;
 `;
 
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>`
@@ -367,20 +370,10 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
   }, [isOpen]);
 
-  // Calculate preview when form data changes
-  useEffect(() => {
-    if (selectedPlantId && plantCount && plannedDate) {
-      calculatePreview();
-    } else {
-      setPreview(null);
-      setShowPreview(false);
-    }
-  }, [selectedPlantId, plantCount, plannedDate]);
-
   const loadPlants = async () => {
     try {
       setLoadingPlants(true);
-      const response = await farmApi.getPlantDataEnhanced({ page: 1, perPage: 100, isActive: true });
+      const response = await getPlantDataEnhancedList({ page: 1, perPage: 100, isActive: true });
       setPlants(response.items);
     } catch (error) {
       console.error('Error loading plants:', error);
@@ -457,6 +450,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
 
   const handlePreview = () => {
     if (validateForm()) {
+      calculatePreview();
       setShowPreview(true);
     }
   };
@@ -497,8 +491,14 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
 
   if (!isOpen) return null;
 
-  return (
-    <Overlay $isOpen={isOpen} onClick={handleClose}>
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
+
+  const modalContent = (
+    <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>🌱 Assign Plant to Block</ModalTitle>
@@ -678,4 +678,6 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
       </ModalContainer>
     </Overlay>
   );
+
+  return createPortal(modalContent, document.body);
 }

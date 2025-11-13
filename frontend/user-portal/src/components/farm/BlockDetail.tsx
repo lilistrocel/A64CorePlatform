@@ -296,27 +296,25 @@ export function BlockDetail() {
       const blockData = await farmApi.getBlock(farmId, blockId);
       setBlock(blockData);
 
-      // Load summary data (optional - may not exist for newly created blocks)
-      try {
-        const summaryData = await farmApi.getBlockSummary(farmId, blockId);
-        setSummary(summaryData);
-      } catch (summaryErr) {
-        // Summary endpoint may not exist yet, use default values from block
-        console.warn('Block summary not available, using block data:', summaryErr);
-        setSummary({
-          blockId: blockData.blockId,
-          currentState: blockData.status,
-          currentPlantCount: blockData.actualPlantCount || 0,
-          maxPlants: blockData.maxPlants,
-          utilizationPercent: blockData.actualPlantCount && blockData.maxPlants
-            ? (blockData.actualPlantCount / blockData.maxPlants) * 100
-            : 0,
-          currentPlanting: null,
-          predictedYieldKg: blockData.predictedYieldKg || 0,
-          actualYieldKg: blockData.actualYieldKg || 0,
-          yieldEfficiencyPercent: blockData.yieldEfficiencyPercent || 0,
-        });
-      }
+      // Use block data directly to build summary (most reliable source)
+      setSummary({
+        blockId: blockData.blockId,
+        currentState: blockData.state,
+        currentPlantCount: blockData.actualPlantCount || 0,
+        maxPlants: blockData.maxPlants,
+        utilizationPercent: blockData.actualPlantCount && blockData.maxPlants
+          ? (blockData.actualPlantCount / blockData.maxPlants) * 100
+          : 0,
+        currentPlanting: blockData.targetCrop ? {
+          plantingId: blockData.targetCrop,
+          plantCount: blockData.actualPlantCount || 0,
+          plantedDate: blockData.plantedDate,
+          estimatedHarvestDate: blockData.expectedHarvestDate,
+        } : null,
+        predictedYieldKg: blockData.kpi?.predictedYieldKg || 0,
+        actualYieldKg: blockData.kpi?.actualYieldKg || 0,
+        yieldEfficiencyPercent: blockData.kpi?.yieldEfficiencyPercent || 0,
+      });
     } catch (err) {
       setError('Failed to load block details. Please try again.');
       console.error('Error loading block data:', err);
@@ -366,6 +364,12 @@ export function BlockDetail() {
               <span>Block ID: {block.blockId.substring(0, 8)}...</span>
               <span>•</span>
               <span>{(block.area ?? 0).toFixed(1)} ha</span>
+              {block.targetCropName && (
+                <>
+                  <span>•</span>
+                  <span style={{ fontWeight: 600, color: '#4CAF50' }}>🌱 {block.targetCropName}</span>
+                </>
+              )}
             </BlockMeta>
           </TitleSection>
           <StatusBadge $status={block.state}>{block.state}</StatusBadge>
@@ -464,6 +468,40 @@ export function BlockDetail() {
                       <InfoValue>
                         {farmApi.formatDateForDisplay(summary.currentPlanting.estimatedHarvestDate)}
                       </InfoValue>
+                    </InfoItem>
+                  )}
+                </InfoCard>
+              )}
+
+              {(block.state === 'planted' || block.state === 'growing' || block.state === 'fruiting' || block.state === 'harvesting') && (
+                <InfoCard>
+                  <InfoTitle>KPI Metrics</InfoTitle>
+                  <InfoItem>
+                    <InfoLabel>Predicted Yield</InfoLabel>
+                    <InfoValue>{(summary.predictedYieldKg ?? 0).toFixed(1)} kg</InfoValue>
+                  </InfoItem>
+                  <InfoItem>
+                    <InfoLabel>Actual Yield</InfoLabel>
+                    <InfoValue>{(summary.actualYieldKg ?? 0).toFixed(1)} kg</InfoValue>
+                  </InfoItem>
+                  <InfoItem>
+                    <InfoLabel>Yield Efficiency</InfoLabel>
+                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? '#4CAF50' : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? '#FF9800' : '#F44336' }}>
+                      {(summary.yieldEfficiencyPercent ?? 0).toFixed(1)}%
+                    </InfoValue>
+                  </InfoItem>
+                  {block.plantedDate && (
+                    <InfoItem>
+                      <InfoLabel>Days Since Planting</InfoLabel>
+                      <InfoValue>
+                        {Math.floor((new Date().getTime() - new Date(block.plantedDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                      </InfoValue>
+                    </InfoItem>
+                  )}
+                  {block.expectedHarvestDate && (
+                    <InfoItem>
+                      <InfoLabel>Expected Harvest</InfoLabel>
+                      <InfoValue>{farmApi.formatDateForDisplay(block.expectedHarvestDate)}</InfoValue>
                     </InfoItem>
                   )}
                 </InfoCard>
