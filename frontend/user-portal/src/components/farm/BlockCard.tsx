@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
 import type { Block, BlockSummary, BlockState } from '../../types/farm';
 import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
+import { PlantAssignmentModal } from './PlantAssignmentModal';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -153,7 +154,7 @@ const Actions = styled.div`
   flex-wrap: wrap;
 `;
 
-const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
+const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' | 'success' }>`
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 13px;
@@ -171,6 +172,15 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         color: white;
         &:hover {
           background: #1976d2;
+        }
+      `;
+    }
+    if ($variant === 'success') {
+      return `
+        background: #4CAF50;
+        color: white;
+        &:hover {
+          background: #388E3C;
         }
       `;
     }
@@ -231,6 +241,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
   const [summary, setSummary] = useState<BlockSummary | null>(null);
   const [validTransitions, setValidTransitions] = useState<BlockState[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showPlantModal, setShowPlantModal] = useState(false);
 
   useEffect(() => {
     loadBlockData();
@@ -343,6 +354,12 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       )}
 
       <Actions>
+        {/* Show Plant Crop button only for empty blocks */}
+        {block.state === 'empty' && (
+          <ActionButton $variant="success" onClick={() => setShowPlantModal(true)} disabled={loading}>
+            🌱 Plant Crop
+          </ActionButton>
+        )}
         {validTransitions.length > 0 && (
           <StateSelect
             value={block.state}
@@ -368,6 +385,17 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
           </ActionButton>
         )}
       </Actions>
+
+      {/* Plant Assignment Modal */}
+      <PlantAssignmentModal
+        isOpen={showPlantModal}
+        onClose={() => setShowPlantModal(false)}
+        block={block}
+        onSuccess={() => {
+          loadBlockData();
+          onStateChange?.();
+        }}
+      />
     </Card>
   );
 }

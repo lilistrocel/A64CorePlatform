@@ -129,6 +129,8 @@ export interface BlockSummary {
 export interface StateTransition {
   newStatus: BlockState;
   notes?: string;
+  targetCrop?: string; // Plant data ID (required when status=planted)
+  actualPlantCount?: number; // Number of plants (when planting)
 }
 
 export interface ValidTransitionsResponse {
