@@ -98,10 +98,10 @@ class BlockStatusUpdate(BaseModel):
 class Block(BlockBase):
     """Complete block model with all fields"""
     blockId: UUID = Field(default_factory=uuid4, description="Unique block identifier")
-    blockCode: str = Field(..., description="Human-readable code (e.g., F001-005)")
+    blockCode: Optional[str] = Field(None, description="Human-readable code (e.g., F001-005)")
     farmId: UUID = Field(..., description="Farm this block belongs to")
-    farmCode: str = Field(..., description="Farm numeric code (e.g., F001)")
-    sequenceNumber: int = Field(..., ge=1, description="Block sequence number")
+    farmCode: Optional[str] = Field(None, description="Farm numeric code (e.g., F001)")
+    sequenceNumber: Optional[int] = Field(None, ge=1, description="Block sequence number")
 
     # Current Status
     status: BlockStatus = Field(BlockStatus.EMPTY, description="Current block status")
