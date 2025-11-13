@@ -1,0 +1,454 @@
+"""
+Block Service - Business Logic Layer
+
+Handles all business logic for blocks including status transitions,
+expected dates calculation, and automatic archival.
+"""
+
+from typing import List, Optional, Dict, Tuple
+from uuid import UUID
+from datetime import datetime, timedelta
+from fastapi import HTTPException
+import logging
+
+from ...models.block import (
+    Block, BlockCreate, BlockUpdate, BlockStatus,
+    BlockStatusUpdate
+)
+from .block_repository_new import BlockRepository
+from .harvest_repository import HarvestRepository
+from .alert_repository import AlertRepository
+from .archive_repository import ArchiveRepository
+from ...models.block_archive import BlockArchive, QualityBreakdown, AlertsSummary
+from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+
+logger = logging.getLogger(__name__)
+
+
+class BlockService:
+    """Service for Block business logic"""
+
+    # Valid status transitions
+    VALID_TRANSITIONS = {
+        BlockStatus.EMPTY: [BlockStatus.PLANTED, BlockStatus.ALERT],
+        BlockStatus.PLANTED: [BlockStatus.GROWING, BlockStatus.ALERT],
+        BlockStatus.GROWING: [BlockStatus.FRUITING, BlockStatus.ALERT],
+        BlockStatus.FRUITING: [BlockStatus.HARVESTING, BlockStatus.ALERT],
+        BlockStatus.HARVESTING: [BlockStatus.CLEANING, BlockStatus.ALERT],
+        BlockStatus.CLEANING: [BlockStatus.EMPTY, BlockStatus.ALERT],
+        BlockStatus.ALERT: [
+            BlockStatus.EMPTY, BlockStatus.PLANTED, BlockStatus.GROWING,
+            BlockStatus.FRUITING, BlockStatus.HARVESTING, BlockStatus.CLEANING
+        ]
+    }
+
+    @staticmethod
+    def validate_status_transition(current_status: BlockStatus, new_status: BlockStatus) -> bool:
+        """Validate if status transition is allowed"""
+        if new_status == current_status:
+            return False  # No self-transition
+
+        valid_next = BlockService.VALID_TRANSITIONS.get(current_status, [])
+        return new_status in valid_next
+
+    @staticmethod
+    async def calculate_expected_dates(
+        plant_data_id: UUID,
+        planting_date: datetime
+    ) -> Tuple[datetime, Dict[str, datetime]]:
+        """
+        Calculate expected harvest date and status change dates based on plant growth cycle
+
+        Returns:
+            Tuple of (expected_harvest_date, expected_status_changes dict)
+        """
+        # Get plant data
+        plant_data = await PlantDataEnhancedRepository.get_by_id(plant_data_id)
+
+        if not plant_data or not plant_data.growthCycle:
+            raise HTTPException(400, "Plant data not found or has no growth cycle information")
+
+        cycle = plant_data.growthCycle
+
+        # Calculate expected dates for each status
+        expected_dates = {}
+
+        # Planted date is known
+        expected_dates["planted"] = planting_date
+
+        # Growing phase starts after germination
+        if cycle.germinationDays:
+            expected_dates["growing"] = planting_date + timedelta(days=cycle.germinationDays)
+
+        # Fruiting phase starts after vegetative growth
+        if cycle.germinationDays and cycle.vegetativeDays:
+            expected_dates["fruiting"] = planting_date + timedelta(
+                days=cycle.germinationDays + cycle.vegetativeDays
+            )
+
+        # Harvesting phase starts after flowering
+        if cycle.germinationDays and cycle.vegetativeDays and cycle.floweringDays:
+            expected_dates["harvesting"] = planting_date + timedelta(
+                days=cycle.germinationDays + cycle.vegetativeDays + cycle.floweringDays
+            )
+
+        # Cleaning phase starts after harvest period
+        if cycle.totalCycleDays:
+            expected_dates["cleaning"] = planting_date + timedelta(days=cycle.totalCycleDays)
+
+        # Expected harvest date (when harvesting should start)
+        expected_harvest_date = expected_dates.get("harvesting")
+        if not expected_harvest_date:
+            # Fallback to total cycle if specific phases not available
+            expected_harvest_date = planting_date + timedelta(days=cycle.totalCycleDays or 90)
+
+        return expected_harvest_date, expected_dates
+
+    @staticmethod
+    async def calculate_predicted_yield(plant_data_id: UUID, plant_count: int) -> float:
+        """Calculate predicted yield based on plant data"""
+        plant_data = await PlantDataEnhancedRepository.get_by_id(plant_data_id)
+
+        if not plant_data or not plant_data.yieldInfo:
+            raise HTTPException(400, "Plant data not found or has no yield information")
+
+        # Calculate predicted yield
+        yield_per_plant = plant_data.yieldInfo.yieldPerPlant or 0.0
+        predicted_yield_kg = yield_per_plant * plant_count
+
+        return predicted_yield_kg
+
+    @staticmethod
+    async def create_block(
+        farm_id: UUID,
+        block_data: BlockCreate,
+        user_id: UUID,
+        user_email: str
+    ) -> Block:
+        """Create a new block with auto-generated block code"""
+        # Get farm code
+        try:
+            farm_code = await BlockRepository.get_farm_code(farm_id)
+        except Exception as e:
+            raise HTTPException(
+                400,
+                f"Cannot create block: {str(e)}. Please initialize farm code first."
+            )
+
+        # Create block
+        block = await BlockRepository.create(block_data, farm_id, farm_code, user_id, user_email)
+
+        logger.info(f"[Block Service] Created block {block.blockCode} in farm {farm_id}")
+        return block
+
+    @staticmethod
+    async def get_block(block_id: UUID) -> Block:
+        """Get block by ID"""
+        block = await BlockRepository.get_by_id(block_id)
+
+        if not block:
+            raise HTTPException(404, f"Block not found: {block_id}")
+
+        return block
+
+    @staticmethod
+    async def list_blocks(
+        farm_id: Optional[UUID] = None,
+        page: int = 1,
+        per_page: int = 20,
+        status: Optional[BlockStatus] = None,
+        block_type: Optional[str] = None,
+        target_crop: Optional[UUID] = None
+    ) -> Tuple[List[Block], int, int]:
+        """List blocks with pagination and filters"""
+        skip = (page - 1) * per_page
+
+        if farm_id:
+            blocks, total = await BlockRepository.get_by_farm(
+                farm_id, skip, per_page, status, block_type, target_crop
+            )
+        else:
+            blocks, total = await BlockRepository.get_all(skip, per_page, status)
+
+        total_pages = (total + per_page - 1) // per_page
+
+        return blocks, total, total_pages
+
+    @staticmethod
+    async def update_block(
+        block_id: UUID,
+        update_data: BlockUpdate
+    ) -> Block:
+        """Update block basic information"""
+        block = await BlockRepository.update(block_id, update_data)
+
+        if not block:
+            raise HTTPException(404, f"Block not found: {block_id}")
+
+        logger.info(f"[Block Service] Updated block {block_id}")
+        return block
+
+    @staticmethod
+    async def change_status(
+        block_id: UUID,
+        status_update: BlockStatusUpdate,
+        user_id: UUID,
+        user_email: str
+    ) -> Block:
+        """
+        Change block status with validation and automatic archival
+
+        This is the core method that handles:
+        - Status transition validation
+        - Planting (calculate expected dates, predicted yield)
+        - Alert handling (save/resume previousStatus)
+        - Automatic archival (when cleaning → empty)
+        """
+        # Get current block
+        current_block = await BlockRepository.get_by_id(block_id)
+        if not current_block:
+            raise HTTPException(404, f"Block not found: {block_id}")
+
+        new_status = status_update.newStatus
+
+        # Validate status transition
+        if not BlockService.validate_status_transition(current_block.status, new_status):
+            raise HTTPException(
+                400,
+                f"Invalid status transition: {current_block.status.value} → {new_status.value}"
+            )
+
+        # Handle planting
+        if new_status == BlockStatus.PLANTED:
+            if not status_update.targetCrop:
+                raise HTTPException(400, "targetCrop is required when planting")
+
+            if not status_update.actualPlantCount:
+                raise HTTPException(400, "actualPlantCount is required when planting")
+
+            # Get plant data for name
+            plant_data = await PlantDataEnhancedRepository.get_by_id(status_update.targetCrop)
+            if not plant_data:
+                raise HTTPException(404, f"Plant data not found: {status_update.targetCrop}")
+
+            # Calculate expected dates
+            planting_date = datetime.utcnow()
+            expected_harvest_date, expected_status_changes = await BlockService.calculate_expected_dates(
+                status_update.targetCrop,
+                planting_date
+            )
+
+            # Calculate predicted yield
+            predicted_yield = await BlockService.calculate_predicted_yield(
+                status_update.targetCrop,
+                status_update.actualPlantCount
+            )
+
+            # Update KPI with predicted yield
+            await BlockRepository.update_kpi(
+                block_id,
+                predicted_yield_kg=predicted_yield
+            )
+
+            # Update status with planting details
+            block = await BlockRepository.update_status(
+                block_id,
+                new_status,
+                user_id,
+                user_email,
+                notes=status_update.notes,
+                target_crop=status_update.targetCrop,
+                target_crop_name=plant_data.plantName,
+                actual_plant_count=status_update.actualPlantCount,
+                expected_harvest_date=expected_harvest_date,
+                expected_status_changes=expected_status_changes
+            )
+
+        # Handle cleaning → empty transition (TRIGGER ARCHIVAL)
+        elif current_block.status == BlockStatus.CLEANING and new_status == BlockStatus.EMPTY:
+            logger.info(f"[Block Service] Triggering archival for block {block_id}")
+
+            # Create archive before clearing data
+            await BlockService.archive_block_cycle(block_id, user_id, user_email)
+
+            # Now update status to empty (this clears data in repository)
+            block = await BlockRepository.update_status(
+                block_id,
+                new_status,
+                user_id,
+                user_email,
+                notes=status_update.notes or "Cycle completed and archived"
+            )
+
+        # Handle normal status transition
+        else:
+            block = await BlockRepository.update_status(
+                block_id,
+                new_status,
+                user_id,
+                user_email,
+                notes=status_update.notes
+            )
+
+        if not block:
+            raise HTTPException(500, "Failed to update block status")
+
+        logger.info(f"[Block Service] Changed status for block {block_id}: {current_block.status.value} → {new_status.value}")
+        return block
+
+    @staticmethod
+    async def archive_block_cycle(
+        block_id: UUID,
+        user_id: UUID,
+        user_email: str
+    ) -> BlockArchive:
+        """
+        Archive a completed block cycle
+
+        Collects all data from the cycle:
+        - Block details
+        - Harvest summary
+        - Alert summary
+        - Status history
+        """
+        # Get block
+        block = await BlockRepository.get_by_id(block_id)
+        if not block:
+            raise HTTPException(404, f"Block not found: {block_id}")
+
+        # Get farm details
+        from ..farm.farm_repository import FarmRepository
+        farm_repo = FarmRepository()
+        farm = await farm_repo.get_by_id(block.farmId)
+        farm_name = farm.name if farm else "Unknown Farm"
+
+        # Get harvest summary
+        harvest_summary = await HarvestRepository.get_block_summary(block_id)
+
+        # Get alert summary
+        alert_stats = await AlertRepository.get_alert_summary_for_block(block_id)
+        avg_resolution_time = await AlertRepository.calculate_average_resolution_time(block_id)
+
+        alerts_summary = AlertsSummary(
+            totalAlerts=alert_stats.get("totalAlerts", 0),
+            resolvedAlerts=alert_stats.get("resolvedAlerts", 0),
+            averageResolutionTimeHours=avg_resolution_time
+        )
+
+        # Calculate cycle duration (minimum 1 day even if same-day completion)
+        if block.plantedDate:
+            cycle_duration_days = max(1, (datetime.utcnow() - block.plantedDate).days)
+        else:
+            cycle_duration_days = 1
+
+        # Create quality breakdown
+        quality_breakdown = QualityBreakdown(
+            qualityAKg=harvest_summary.qualityAKg,
+            qualityBKg=harvest_summary.qualityBKg,
+            qualityCKg=harvest_summary.qualityCKg
+        )
+
+        # Create archive
+        archive = BlockArchive(
+            blockId=block.blockId,
+            blockCode=block.blockCode,
+            farmId=block.farmId,
+            farmName=farm_name,
+            blockType=block.blockType,
+            maxPlants=block.maxPlants,
+            actualPlantCount=block.actualPlantCount or 0,
+            location=block.location,
+            area=block.area,
+            areaUnit=block.areaUnit,
+            targetCrop=block.targetCrop or UUID('00000000-0000-0000-0000-000000000000'),
+            targetCropName=block.targetCropName or "Unknown",
+            plantedDate=block.plantedDate or datetime.utcnow(),
+            harvestCompletedDate=datetime.utcnow(),
+            cycleDurationDays=cycle_duration_days,
+            predictedYieldKg=block.kpi.predictedYieldKg,
+            actualYieldKg=block.kpi.actualYieldKg,
+            yieldEfficiencyPercent=block.kpi.yieldEfficiencyPercent,
+            totalHarvests=block.kpi.totalHarvests,
+            qualityBreakdown=quality_breakdown,
+            statusChanges=block.statusChanges,
+            alertsSummary=alerts_summary,
+            archivedBy=user_id,
+            archivedByEmail=user_email
+        )
+
+        # Save archive
+        saved_archive = await ArchiveRepository.create(archive)
+
+        logger.info(f"[Block Service] Archived cycle for block {block_id} (archive ID: {saved_archive.archiveId})")
+        return saved_archive
+
+    @staticmethod
+    async def delete_block(block_id: UUID) -> bool:
+        """Soft delete a block"""
+        success = await BlockRepository.soft_delete(block_id)
+
+        if not success:
+            raise HTTPException(404, f"Block not found: {block_id}")
+
+        logger.info(f"[Block Service] Deleted block {block_id}")
+        return success
+
+    @staticmethod
+    async def get_block_kpi(block_id: UUID) -> Dict:
+        """Get block KPI dashboard data"""
+        block = await BlockService.get_block(block_id)
+
+        # Get harvest summary
+        harvest_summary = await HarvestRepository.get_block_summary(block_id)
+
+        # Get alert summary
+        alert_stats = await AlertRepository.get_alert_summary_for_block(block_id)
+
+        # Calculate days since planting
+        days_since_planting = None
+        days_until_harvest = None
+        if block.plantedDate:
+            days_since_planting = (datetime.utcnow() - block.plantedDate).days
+
+            if block.expectedHarvestDate:
+                days_until_harvest = (block.expectedHarvestDate - datetime.utcnow()).days
+
+        # Calculate expected vs actual status
+        status_on_track = True
+        days_behind = 0
+        if block.expectedStatusChanges and block.status != BlockStatus.ALERT:
+            expected_date = block.expectedStatusChanges.get(block.status.value)
+            if expected_date:
+                expected_dt = datetime.fromisoformat(expected_date) if isinstance(expected_date, str) else expected_date
+                days_behind = (datetime.utcnow() - expected_dt).days
+                status_on_track = days_behind <= 3  # Allow 3 days tolerance
+
+        return {
+            "blockId": str(block.blockId),
+            "blockCode": block.blockCode,
+            "status": block.status.value,
+            "statusOnTrack": status_on_track,
+            "daysBehindSchedule": max(0, days_behind) if days_behind > 0 else 0,
+            "targetCrop": block.targetCropName,
+            "actualPlantCount": block.actualPlantCount,
+            "daysSincePlanting": days_since_planting,
+            "daysUntilHarvest": days_until_harvest,
+            "kpi": {
+                "predictedYieldKg": block.kpi.predictedYieldKg,
+                "actualYieldKg": block.kpi.actualYieldKg,
+                "yieldEfficiencyPercent": block.kpi.yieldEfficiencyPercent,
+                "totalHarvests": block.kpi.totalHarvests
+            },
+            "harvestSummary": {
+                "totalQuantityKg": harvest_summary.totalQuantityKg,
+                "qualityAKg": harvest_summary.qualityAKg,
+                "qualityBKg": harvest_summary.qualityBKg,
+                "qualityCKg": harvest_summary.qualityCKg,
+                "averageQualityGrade": harvest_summary.averageQualityGrade
+            },
+            "alertSummary": {
+                "activeAlerts": alert_stats.get("activeAlerts", 0),
+                "totalAlerts": alert_stats.get("totalAlerts", 0),
+                "criticalAlerts": alert_stats.get("criticalAlerts", 0)
+            }
+        }
