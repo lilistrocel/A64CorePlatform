@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 class BlockStatus(str, Enum):
     """Block status lifecycle"""
     EMPTY = "empty"
+    PLANNED = "planned"
     PLANTED = "planted"
     GROWING = "growing"
     FRUITING = "fruiting"

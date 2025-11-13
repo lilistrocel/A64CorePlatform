@@ -463,11 +463,20 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     try {
       setSubmitting(true);
 
+      // Determine status based on planting date
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const plantingDate = new Date(plannedDate);
+      plantingDate.setHours(0, 0, 0, 0);
+
+      // If planting date is in the future, set to 'planned', otherwise 'planted'
+      const newStatus = plantingDate > today ? 'planned' : 'planted';
+
       await farmApi.transitionBlockState(block.farmId, block.blockId, {
-        newStatus: 'planted',
+        newStatus,
         targetCrop: selectedPlantId,
         actualPlantCount: parseInt(plantCount),
-        notes: notes || `Planted ${preview.selectedPlant?.plantName} on ${plannedDate}`,
+        notes: notes || `${newStatus === 'planned' ? 'Scheduled' : 'Planted'} ${preview.selectedPlant?.plantName} on ${plannedDate}`,
       });
 
       onSuccess();
@@ -662,16 +671,16 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
             Cancel
           </Button>
 
-          {!showPreview ? (
-            <Button
-              type="button"
-              $variant="primary"
-              onClick={handlePreview}
-              disabled={!selectedPlantId || !plantCount || !plannedDate || submitting}
-            >
-              📊 Preview
-            </Button>
-          ) : (
+          <Button
+            type="button"
+            $variant="primary"
+            onClick={handlePreview}
+            disabled={!selectedPlantId || !plantCount || !plannedDate || submitting}
+          >
+            📊 Preview
+          </Button>
+
+          {showPreview && (
             <Button type="button" $variant="success" onClick={handleSubmit} disabled={submitting}>
               {submitting ? 'Assigning...' : '✅ Confirm & Plant'}
             </Button>

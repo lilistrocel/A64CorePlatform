@@ -253,7 +253,8 @@ async def change_block_status(
     Requires **farm.operate** permission.
 
     **Valid Status Transitions**:
-    - `empty` → `planted`, `alert`
+    - `empty` → `planned`, `planted`, `alert`
+    - `planned` → `planted`, `alert` (when planting date arrives)
     - `planted` → `growing`, `alert`
     - `growing` → `fruiting`, `alert`
     - `fruiting` → `harvesting`, `alert`
@@ -262,6 +263,7 @@ async def change_block_status(
     - `alert` → any status (restores from previousStatus)
 
     **Special Requirements**:
+    - Transitioning to 'planned' requires `targetCrop` and `actualPlantCount` (future planting date)
     - Transitioning to 'planted' requires `targetCrop` and `actualPlantCount`
     - Cleaning → empty triggers automatic archival of the cycle
 

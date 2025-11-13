@@ -30,14 +30,15 @@ class BlockService:
 
     # Valid status transitions
     VALID_TRANSITIONS = {
-        BlockStatus.EMPTY: [BlockStatus.PLANTED, BlockStatus.ALERT],
+        BlockStatus.EMPTY: [BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.ALERT],
+        BlockStatus.PLANNED: [BlockStatus.PLANTED, BlockStatus.ALERT],
         BlockStatus.PLANTED: [BlockStatus.GROWING, BlockStatus.ALERT],
         BlockStatus.GROWING: [BlockStatus.FRUITING, BlockStatus.ALERT],
         BlockStatus.FRUITING: [BlockStatus.HARVESTING, BlockStatus.ALERT],
         BlockStatus.HARVESTING: [BlockStatus.CLEANING, BlockStatus.ALERT],
         BlockStatus.CLEANING: [BlockStatus.EMPTY, BlockStatus.ALERT],
         BlockStatus.ALERT: [
-            BlockStatus.EMPTY, BlockStatus.PLANTED, BlockStatus.GROWING,
+            BlockStatus.EMPTY, BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.GROWING,
             BlockStatus.FRUITING, BlockStatus.HARVESTING, BlockStatus.CLEANING
         ]
     }
@@ -218,13 +219,13 @@ class BlockService:
                 f"Invalid status transition: {current_block.state.value} → {new_status.value}"
             )
 
-        # Handle planting
-        if new_status == BlockStatus.PLANTED:
+        # Handle planned or planting
+        if new_status in [BlockStatus.PLANNED, BlockStatus.PLANTED]:
             if not status_update.targetCrop:
-                raise HTTPException(400, "targetCrop is required when planting")
+                raise HTTPException(400, "targetCrop is required when planning/planting")
 
             if not status_update.actualPlantCount:
-                raise HTTPException(400, "actualPlantCount is required when planting")
+                raise HTTPException(400, "actualPlantCount is required when planning/planting")
 
             # Get plant data for name
             plant_data = await PlantDataEnhancedRepository.get_by_id(status_update.targetCrop)
@@ -250,7 +251,7 @@ class BlockService:
                 predicted_yield_kg=predicted_yield
             )
 
-            # Update status with planting details
+            # Update status with planning/planting details
             block = await BlockRepository.update_status(
                 block_id,
                 new_status,
