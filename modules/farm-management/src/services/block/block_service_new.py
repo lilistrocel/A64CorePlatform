@@ -221,49 +221,89 @@ class BlockService:
 
         # Handle planned or planting
         if new_status in [BlockStatus.PLANNED, BlockStatus.PLANTED]:
-            if not status_update.targetCrop:
-                raise HTTPException(400, "targetCrop is required when planning/planting")
+            # Check if we're transitioning from planned to planted (reuse existing data)
+            if current_block.state == BlockStatus.PLANNED and new_status == BlockStatus.PLANTED:
+                # Reuse existing block data for planned → planted transition
+                if not current_block.targetCrop:
+                    raise HTTPException(400, "Cannot transition from planned to planted: missing crop data")
 
-            if not status_update.actualPlantCount:
-                raise HTTPException(400, "actualPlantCount is required when planning/planting")
+                # Calculate offset (early/late planting)
+                planting_offset_days = None
+                if current_block.expectedHarvestDate:
+                    # Calculate difference between expected planting date and actual planting date
+                    # (negative = early, positive = late)
+                    expected_planting = current_block.expectedStatusChanges.get("planted") if current_block.expectedStatusChanges else None
+                    if expected_planting:
+                        expected_dt = datetime.fromisoformat(expected_planting) if isinstance(expected_planting, str) else expected_planting
+                        actual_dt = datetime.utcnow()
+                        planting_offset_days = (actual_dt - expected_dt).days
 
-            # Get plant data for name
-            plant_data = await PlantDataEnhancedRepository.get_by_id(status_update.targetCrop)
-            if not plant_data:
-                raise HTTPException(404, f"Plant data not found: {status_update.targetCrop}")
+                # Add offset info to notes
+                offset_note = ""
+                if planting_offset_days is not None:
+                    if planting_offset_days < 0:
+                        offset_note = f" (Planted {abs(planting_offset_days)} days early)"
+                    elif planting_offset_days > 0:
+                        offset_note = f" (Planted {planting_offset_days} days late)"
+                    else:
+                        offset_note = " (Planted on schedule)"
 
-            # Calculate expected dates
-            planting_date = datetime.utcnow()
-            expected_harvest_date, expected_status_changes = await BlockService.calculate_expected_dates(
-                status_update.targetCrop,
-                planting_date
-            )
+                notes_with_offset = (status_update.notes or "Transitioned to planted") + offset_note
 
-            # Calculate predicted yield
-            predicted_yield = await BlockService.calculate_predicted_yield(
-                status_update.targetCrop,
-                status_update.actualPlantCount
-            )
+                # Update status using existing data
+                block = await BlockRepository.update_status(
+                    block_id,
+                    new_status,
+                    user_id,
+                    user_email,
+                    notes=notes_with_offset
+                )
 
-            # Update KPI with predicted yield
-            await BlockRepository.update_kpi(
-                block_id,
-                predicted_yield_kg=predicted_yield
-            )
+            else:
+                # New planning/planting requires crop data
+                if not status_update.targetCrop:
+                    raise HTTPException(400, "targetCrop is required when planning/planting")
 
-            # Update status with planning/planting details
-            block = await BlockRepository.update_status(
-                block_id,
-                new_status,
-                user_id,
-                user_email,
-                notes=status_update.notes,
-                target_crop=status_update.targetCrop,
-                target_crop_name=plant_data.plantName,
-                actual_plant_count=status_update.actualPlantCount,
-                expected_harvest_date=expected_harvest_date,
-                expected_status_changes=expected_status_changes
-            )
+                if not status_update.actualPlantCount:
+                    raise HTTPException(400, "actualPlantCount is required when planning/planting")
+
+                # Get plant data for name
+                plant_data = await PlantDataEnhancedRepository.get_by_id(status_update.targetCrop)
+                if not plant_data:
+                    raise HTTPException(404, f"Plant data not found: {status_update.targetCrop}")
+
+                # Calculate expected dates
+                planting_date = datetime.utcnow()
+                expected_harvest_date, expected_status_changes = await BlockService.calculate_expected_dates(
+                    status_update.targetCrop,
+                    planting_date
+                )
+
+                # Calculate predicted yield
+                predicted_yield = await BlockService.calculate_predicted_yield(
+                    status_update.targetCrop,
+                    status_update.actualPlantCount
+                )
+
+                # Update KPI with predicted yield
+                await BlockRepository.update_kpi(
+                    block_id,
+                    predicted_yield_kg=predicted_yield
+                )
+
+                # Update status with planning/planting details
+                block = await BlockRepository.update_status(
+                    block_id,
+                    new_status,
+                    user_id,
+                    user_email,
+                    notes=status_update.notes,
+                    target_crop=status_update.targetCrop,
+                    target_crop_name=plant_data.plantName,
+                    actual_plant_count=status_update.actualPlantCount,
+                    expected_harvest_date=expected_harvest_date,
+                    expected_status_changes=expected_status_changes
+                )
 
         # Handle cleaning → empty transition (TRIGGER ARCHIVAL)
         elif current_block.state == BlockStatus.CLEANING and new_status == BlockStatus.EMPTY:
