@@ -64,8 +64,8 @@ export async function getFarms(page: number = 1, perPage: number = 20) {
  * Get a single farm by ID
  */
 export async function getFarm(farmId: string) {
-  const response = await apiClient.get<Farm>(`/v1/farm/farms/${farmId}`);
-  return response.data;
+  const response = await apiClient.get<{ data: Farm }>(`/v1/farm/farms/${farmId}`);
+  return response.data.data;
 }
 
 /**
