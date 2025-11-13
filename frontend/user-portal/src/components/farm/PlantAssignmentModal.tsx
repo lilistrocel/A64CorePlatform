@@ -373,7 +373,9 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
   const loadPlants = async () => {
     try {
       setLoadingPlants(true);
-      const response = await getPlantDataEnhancedList({ page: 1, perPage: 100, isActive: true });
+      // Note: PlantDataEnhanced uses deletedAt for soft deletes, not isActive
+      // Backend automatically filters out deleted records
+      const response = await getPlantDataEnhancedList({ page: 1, perPage: 100 });
       setPlants(response.items);
     } catch (error) {
       console.error('Error loading plants:', error);
