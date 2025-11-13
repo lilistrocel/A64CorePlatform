@@ -60,7 +60,7 @@ class BlockKPI(BaseModel):
 class BlockBase(BaseModel):
     """Base block fields"""
     name: Optional[str] = Field(None, max_length=200, description="Optional block name")
-    blockType: BlockType = Field(..., description="Type of cultivation block")
+    blockType: Optional[BlockType] = Field(None, description="Type of cultivation block")
     maxPlants: int = Field(..., gt=0, description="Maximum number of plants")
     location: Optional[BlockLocation] = Field(None, description="GPS coordinates within farm")
     area: Optional[float] = Field(None, gt=0, description="Block area")
