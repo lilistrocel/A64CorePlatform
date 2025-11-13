@@ -292,13 +292,31 @@ export function BlockDetail() {
       setLoading(true);
       setError(null);
 
-      const [blockData, summaryData] = await Promise.all([
-        farmApi.getBlock(farmId, blockId),
-        farmApi.getBlockSummary(farmId, blockId),
-      ]);
-
+      // Load block data (required)
+      const blockData = await farmApi.getBlock(farmId, blockId);
       setBlock(blockData);
-      setSummary(summaryData);
+
+      // Load summary data (optional - may not exist for newly created blocks)
+      try {
+        const summaryData = await farmApi.getBlockSummary(farmId, blockId);
+        setSummary(summaryData);
+      } catch (summaryErr) {
+        // Summary endpoint may not exist yet, use default values from block
+        console.warn('Block summary not available, using block data:', summaryErr);
+        setSummary({
+          blockId: blockData.blockId,
+          currentState: blockData.status,
+          currentPlantCount: blockData.actualPlantCount || 0,
+          maxPlants: blockData.maxPlants,
+          utilizationPercent: blockData.actualPlantCount && blockData.maxPlants
+            ? (blockData.actualPlantCount / blockData.maxPlants) * 100
+            : 0,
+          currentPlanting: null,
+          predictedYieldKg: blockData.predictedYieldKg || 0,
+          actualYieldKg: blockData.actualYieldKg || 0,
+          yieldEfficiencyPercent: blockData.yieldEfficiencyPercent || 0,
+        });
+      }
     } catch (err) {
       setError('Failed to load block details. Please try again.');
       console.error('Error loading block data:', err);
