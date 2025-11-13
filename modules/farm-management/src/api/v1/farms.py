@@ -208,10 +208,14 @@ async def get_farm_summary(
 
     - **farm_id**: Farm UUID
 
-    Returns farm details plus:
-    - Block statistics (total, by state)
-    - Predicted yield
-    - Recent activity
+    Returns:
+    - farmId: Farm UUID
+    - totalBlocks: Total number of blocks
+    - totalBlockArea: Sum of all block areas
+    - blocksByState: Count of blocks by state (empty, planned, planted, harvesting, alert)
+    - activePlantings: Number of blocks currently planted
+    - totalPlantedPlants: Total plants across all blocks
+    - predictedYield: Total predicted yield in kg
     """
     # Get farm
     farm = await service.get_farm(farm_id)
@@ -224,20 +228,53 @@ async def get_farm_summary(
                 detail="Access denied: Not assigned to this farm"
             )
 
-    # TODO: Implement summary logic (after Block service is ready)
+    # Get all blocks for this farm
+    from ...services.block.block_repository_new import BlockRepository
+    from ...models.block import BlockStatus
+
+    blocks, total_count = await BlockRepository.get_by_farm(farm_id, skip=0, limit=1000)
+
+    # Calculate statistics
+    total_blocks = len(blocks)
+    total_block_area = sum(block.area for block in blocks)
+    total_planted_plants = sum(block.actualPlantCount or 0 for block in blocks)
+    predicted_yield = sum(block.kpi.predictedYieldKg for block in blocks)
+
+    # Count blocks by state (map new status system to old state system)
+    blocks_by_state = {
+        "empty": 0,
+        "planned": 0,
+        "planted": 0,
+        "harvesting": 0,
+        "alert": 0
+    }
+
+    active_plantings = 0
+
+    for block in blocks:
+        # Map new status to old state
+        if block.status == BlockStatus.EMPTY:
+            blocks_by_state["empty"] += 1
+        elif block.status == BlockStatus.ALERT:
+            blocks_by_state["alert"] += 1
+        elif block.status in [BlockStatus.PLANTED, BlockStatus.GROWING, BlockStatus.FRUITING]:
+            blocks_by_state["planted"] += 1
+            active_plantings += 1
+        elif block.status == BlockStatus.HARVESTING:
+            blocks_by_state["harvesting"] += 1
+            active_plantings += 1
+        # CLEANING status is transitional, count as empty for display
+        elif block.status == BlockStatus.CLEANING:
+            blocks_by_state["empty"] += 1
+
     summary = {
-        "farm": farm,
-        "statistics": {
-            "totalBlocks": 0,
-            "emptyBlocks": 0,
-            "plannedBlocks": 0,
-            "plantedBlocks": 0,
-            "harvestingBlocks": 0,
-            "alertBlocks": 0,
-            "totalPredictedYield": 0.0,
-            "yieldUnit": "kg"
-        },
-        "recentActivity": []
+        "farmId": str(farm.farmId),
+        "totalBlocks": total_blocks,
+        "totalBlockArea": total_block_area,
+        "blocksByState": blocks_by_state,
+        "activePlantings": active_plantings,
+        "totalPlantedPlants": total_planted_plants,
+        "predictedYield": predicted_yield
     }
 
     return SuccessResponse(data=summary)

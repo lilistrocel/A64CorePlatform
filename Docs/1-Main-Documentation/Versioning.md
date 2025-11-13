@@ -89,7 +89,172 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ### Platform Version History
 
-#### v1.6.0 - 2025-10-31 (Current - Unreleased)
+#### v1.8.0 - 2025-11-13 (Current - Unreleased)
+**Type:** Minor Release - Farm Management Module (Block Management Frontend UI)
+
+**Added:**
+- **Block Management Frontend UI** (Complete Phase 1-3 Implementation)
+  - BlockDetail component (473 lines) - Tabbed interface for block information
+  - BlockAlertsTab component (663 lines) - Alert creation, resolution, and tracking
+  - BlockHarvestsTab component (538 lines) - Harvest recording with quality grading
+  - BlockArchivesTab component (342 lines) - Historical cycle data and analytics
+  - CreateBlockModal component (314 lines) - Block creation interface
+  - EditBlockModal component (273 lines) - Block editing interface
+  - Comprehensive API integration (farmApi.ts +214 lines)
+  - Enhanced TypeScript types (farm.ts +138 lines)
+  - Responsive design (mobile-first, tablet, desktop breakpoints)
+  - Real-time KPI display and calculations
+  - Color-coded status and severity indicators
+  - Form validation with Zod
+  - Success/error toast notifications
+  - Loading states, error handling, empty states
+
+**Fixed:**
+- Harvest recording 422 error (ISO datetime format conversion)
+- Invalid date display with null checks
+- State transition endpoint (POST /state → PATCH /status)
+- Block API response unwrapping (data.data → data)
+
+**Technical Implementation:**
+- Frontend: ~2,800 lines (TypeScript/React/Styled-Components)
+  - 6 new components
+  - 12 existing components enhanced
+  - Complete API integration layer
+  - Comprehensive type definitions
+- Backend: 5 files adjusted for frontend integration
+  - Minor endpoint fixes
+  - Response format improvements
+  - No breaking changes
+
+**User Experience:**
+- Tabbed interface for organized data viewing
+- Real-time KPI monitoring (predicted yield, actual yield, efficiency)
+- Quality grading for harvest tracking (A/B/C)
+- Alert management with severity levels (low, medium, high, critical)
+- Historical performance analytics
+- Mobile-responsive design
+- Intuitive form workflows with validation
+
+**Testing:**
+- All CRUD operations verified: ✅
+- Harvest recording with quality grades: ✅
+- Alert creation and resolution: ✅
+- Archive display with statistics: ✅
+- Responsive layout tested: ✅
+- API integration verified: ✅
+
+**Files Created:** 6 frontend components (~2,603 lines)
+**Files Modified:** 17 files (12 frontend, 5 backend)
+**Frontend LOC:** ~2,800 lines (new + modifications)
+
+**Compatibility:**
+- Fully compatible with v1.7.0 backend API
+- No breaking changes
+- Backward compatible
+
+**Progress:**
+- Farm Management Module: Frontend UI complete for Block Management
+  - Phase 1: Bug fixes and modals ✅
+  - Phase 2: Block Detail with Alerts & Harvests ✅
+  - Phase 3: Archives & Analytics ✅
+
+---
+
+#### v1.7.0 - 2025-11-12
+**Type:** Minor Release - Farm Management Module (Block Management System Backend)
+
+**Added:**
+- **Farm Management Module - Block Management System** (Module v1.7.0)
+  - Complete cultivation block lifecycle management with 7 states
+  - 32 new API endpoints across 4 routers (blocks, harvests, alerts, archives)
+  - 7-state lifecycle: ALERT ↔ EMPTY → PLANTED → GROWING → FRUITING → HARVESTING → CLEANING → EMPTY
+  - Automatic block code generation (F001-001 format)
+  - Real-time KPI tracking (predicted yield, actual yield, efficiency percentage)
+  - Individual harvest recording with quality grading (A/B/C)
+  - Alert system with status preservation and automatic restoration
+  - Automatic cycle archival on completion (CLEANING → EMPTY transition)
+  - Complete audit trail with status history
+  - Performance analytics and trend analysis
+  - 4 new MongoDB collections (blocks, block_harvests, alerts, block_archives)
+  - 14 strategic database indexes for optimized queries
+  - 49 repository methods for data access
+  - 38 service methods for business logic
+  - Permission-based access control (farm.manage, farm.operate)
+  - User tracking on all modifications (createdBy, updatedBy, email tracking)
+  - Soft delete for data preservation
+
+**Technical Implementation:**
+- Backend: ~4,200 lines (Python/FastAPI)
+  - Models: block.py (updated), block_harvest.py, alert.py, block_archive.py
+  - Repositories: 4 files (block_repository_new.py, harvest_repository.py, alert_repository.py, archive_repository.py)
+  - Services: 4 files (block_service_new.py, harvest_service.py, alert_service.py, archive_service.py)
+  - API Routes: 4 files (blocks.py updated, block_harvests.py, block_alerts.py, block_archives.py)
+- Documentation: Updated System-Architecture.md, API-Structure.md, CHANGELOG.md, Versioning.md
+
+**Database Schema:**
+- Collections: blocks, block_harvests, alerts, block_archives
+- Indexes: 14 total (6 unique, 8 non-unique, optimized for common queries)
+- Lifecycle tracking: Complete status history with timestamps and user context
+- Performance metrics: Yield efficiency, quality breakdown, cycle duration
+
+**API Endpoints Added:**
+- Block Core: 6 endpoints (create, list, get, update status, update, delete)
+- Harvests: 7 endpoints (record, list, get, update, delete, summary, farm-wide list)
+- Alerts: 8 endpoints (create, list, get, resolve, dismiss, farm-wide list, active summary, history)
+- Archives & Analytics: 11 endpoints (list, history, analytics, compare crops, top blocks, efficiency trends)
+
+**Business Logic:**
+- Status transition validation (cannot skip states in forward progression)
+- ALERT bidirectional transition support (emergency handling)
+- Automatic KPI recalculation on harvest record/update/delete
+- Status preservation on alert creation
+- Status restoration on last alert resolution
+- Automatic archival with complete cycle snapshot
+- Quality grade validation (A/B/C)
+- Harvest amount validation (must be > 0)
+
+**Testing:**
+- Block creation with auto-generated codes: ✅
+- Complete lifecycle progression (all 7 states): ✅
+- Harvest recording with KPI updates: ✅
+- Quality grade tracking: ✅
+- Alert creation with status preservation: ✅
+- Alert resolution with status restoration: ✅
+- Automatic archival on cycle completion: ✅
+- Status history audit trail: ✅
+- Multiple harvests per cycle: ✅
+- Yield efficiency calculation: ✅
+- All data verified in MongoDB: ✅
+
+**Bugs Fixed:**
+- yieldInfo field name mismatch in block_service_new.py (line 112)
+- MongoDB update conflict in statusChanges array (block_repository_new.py lines 327-343)
+
+**Files Created:** 14 new files (~4,200 lines)
+**Files Modified:** 5 files
+**Total LOC:** ~4,500 lines
+
+**Progress:**
+- Farm Management Module: 6/10 services complete
+  - Farm Service (6 endpoints) - v1.5.0 ✅
+  - **Block Service (6 endpoints) - v1.7.0 ✅** ENHANCED
+  - **Harvest Service (7 endpoints) - v1.7.0 ✅** NEW
+  - **Alert Service (8 endpoints) - v1.7.0 ✅** NEW
+  - **Archive Service (11 endpoints) - v1.7.0 ✅** NEW
+  - PlantData Service (7 endpoints) - v1.5.0 ✅
+  - Planting Service (4 endpoints) - v1.5.0 ✅
+  - PlantData Enhanced Service (9 endpoints) - v1.6.0 ✅
+- **Total API Endpoints: 59 working endpoints** (was 27, +32 new endpoints)
+
+**Documentation:**
+- Updated: System-Architecture.md with 4 new database collections and schemas
+- Updated: API-Structure.md with comprehensive documentation for 32 new endpoints
+- Updated: CHANGELOG.md with detailed v1.7.0 release notes
+- Updated: Versioning.md (this file) with v1.7.0 entry
+
+---
+
+#### v1.6.0 - 2025-10-31
 **Type:** Minor Release - Farm Management Module (Plant Data Library)
 
 **Added:**

@@ -98,25 +98,23 @@ export async function deleteFarm(farmId: string) {
 export async function getFarmSummary(farmId: string) {
   const response = await apiClient.get<any>(`/v1/farm/farms/${farmId}/summary`);
 
-  // Transform backend response format to match frontend expectations
-  // Backend: { data: { farm, statistics: { totalBlocks, emptyBlocks, ... }, recentActivity }, message }
-  // Frontend: { farmId, totalBlocks, blocksByState: { empty, planned, ... }, activePlantings, upcomingHarvests }
+  // Backend response format: { data: { farmId, totalBlocks, totalBlockArea, blocksByState: {...}, activePlantings, totalPlantedPlants, predictedYield }, message }
   const data = response.data.data;
-  const stats = data.statistics;
 
   return {
-    farmId,
-    totalBlocks: stats.totalBlocks || 0,
-    totalBlockArea: 0, // Not provided by backend, default to 0
+    farmId: data.farmId || farmId,
+    totalBlocks: data.totalBlocks || 0,
+    totalBlockArea: data.totalBlockArea || 0,
     blocksByState: {
-      empty: stats.emptyBlocks || 0,
-      planned: stats.plannedBlocks || 0,
-      planted: stats.plantedBlocks || 0,
-      harvesting: stats.harvestingBlocks || 0,
-      alert: stats.alertBlocks || 0,
+      empty: data.blocksByState?.empty || 0,
+      planned: data.blocksByState?.planned || 0,
+      planted: data.blocksByState?.planted || 0,
+      harvesting: data.blocksByState?.harvesting || 0,
+      alert: data.blocksByState?.alert || 0,
     },
-    activePlantings: 0, // Not provided by backend, default to 0
-    upcomingHarvests: stats.harvestingBlocks || 0,
+    activePlantings: data.activePlantings || 0,
+    totalPlantedPlants: data.totalPlantedPlants || 0,
+    predictedYield: data.predictedYield || 0,
   };
 }
 
@@ -128,16 +126,16 @@ export async function getFarmSummary(farmId: string) {
  * Get all blocks for a farm
  */
 export async function getBlocks(farmId: string) {
-  const response = await apiClient.get<Block[]>(`/v1/farm/farms/${farmId}/blocks`);
-  return response.data;
+  const response = await apiClient.get<{ data: Block[] }>(`/v1/farm/farms/${farmId}/blocks`);
+  return response.data.data;
 }
 
 /**
  * Get a single block by ID
  */
 export async function getBlock(farmId: string, blockId: string) {
-  const response = await apiClient.get<Block>(`/v1/farm/farms/${farmId}/blocks/${blockId}`);
-  return response.data;
+  const response = await apiClient.get<{ data: Block }>(`/v1/farm/farms/${farmId}/blocks/${blockId}`);
+  return response.data.data;
 }
 
 /**
@@ -168,15 +166,15 @@ export async function deleteBlock(farmId: string, blockId: string) {
  * Get block summary statistics
  */
 export async function getBlockSummary(farmId: string, blockId: string) {
-  const response = await apiClient.get<BlockSummary>(`/v1/farm/farms/${farmId}/blocks/${blockId}/summary`);
-  return response.data;
+  const response = await apiClient.get<{ data: BlockSummary }>(`/v1/farm/farms/${farmId}/blocks/${blockId}/kpi`);
+  return response.data.data;
 }
 
 /**
  * Transition block state
  */
 export async function transitionBlockState(farmId: string, blockId: string, data: StateTransition) {
-  const response = await apiClient.post<Block>(`/v1/farm/farms/${farmId}/blocks/${blockId}/state`, data);
+  const response = await apiClient.patch<Block>(`/v1/farm/farms/${farmId}/blocks/${blockId}/status`, data);
   return response.data;
 }
 
@@ -184,10 +182,10 @@ export async function transitionBlockState(farmId: string, blockId: string, data
  * Get valid state transitions for a block
  */
 export async function getValidTransitions(farmId: string, blockId: string) {
-  const response = await apiClient.get<ValidTransitionsResponse>(
-    `/v1/farm/farms/${farmId}/blocks/${blockId}/transitions`
+  const response = await apiClient.get<{ data: ValidTransitionsResponse }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/valid-transitions`
   );
-  return response.data;
+  return response.data.data;
 }
 
 // ============================================================================
@@ -334,6 +332,158 @@ export async function markPlantingAsPlanted(plantingId: string, data: MarkPlante
 }
 
 // ============================================================================
+// BLOCK ALERT ENDPOINTS
+// ============================================================================
+
+/**
+ * Get alerts for a block
+ */
+export async function getBlockAlerts(
+  farmId: string,
+  blockId: string,
+  page: number = 1,
+  perPage: number = 20
+) {
+  const response = await apiClient.get<any>(`/v1/farm/farms/${farmId}/blocks/${blockId}/alerts`, {
+    params: { page, perPage },
+  });
+  return {
+    items: response.data.data || [],
+    total: response.data.meta?.total || 0,
+    page: response.data.meta?.page || 1,
+    perPage: response.data.meta?.perPage || 20,
+    totalPages: response.data.meta?.totalPages || 1,
+  };
+}
+
+/**
+ * Get active alerts for a block
+ */
+export async function getActiveBlockAlerts(farmId: string, blockId: string) {
+  const response = await apiClient.get<{ data: any[] }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/alerts/active`
+  );
+  return response.data.data;
+}
+
+/**
+ * Create an alert for a block
+ */
+export async function createBlockAlert(farmId: string, blockId: string, data: any) {
+  const response = await apiClient.post<any>(`/v1/farm/farms/${farmId}/blocks/${blockId}/alerts`, data);
+  return response.data.data;
+}
+
+/**
+ * Resolve an alert
+ */
+export async function resolveBlockAlert(
+  farmId: string,
+  blockId: string,
+  alertId: string,
+  data: any
+) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/alerts/${alertId}/resolve`,
+    data
+  );
+  return response.data.data;
+}
+
+/**
+ * Dismiss an alert
+ */
+export async function dismissBlockAlert(farmId: string, blockId: string, alertId: string) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/alerts/${alertId}/dismiss`,
+    {}
+  );
+  return response.data.data;
+}
+
+// ============================================================================
+// BLOCK HARVEST ENDPOINTS
+// ============================================================================
+
+/**
+ * Get harvests for a block
+ */
+export async function getBlockHarvests(
+  farmId: string,
+  blockId: string,
+  page: number = 1,
+  perPage: number = 20
+) {
+  const response = await apiClient.get<any>(`/v1/farm/farms/${farmId}/blocks/${blockId}/harvests`, {
+    params: { page, perPage },
+  });
+  return {
+    items: response.data.data || [],
+    total: response.data.meta?.total || 0,
+    page: response.data.meta?.page || 1,
+    perPage: response.data.meta?.perPage || 20,
+    totalPages: response.data.meta?.totalPages || 1,
+  };
+}
+
+/**
+ * Get harvest summary for a block
+ */
+export async function getBlockHarvestSummary(farmId: string, blockId: string) {
+  const response = await apiClient.get<{ data: any }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/harvests/summary`
+  );
+  return response.data.data;
+}
+
+/**
+ * Record a harvest for a block
+ */
+export async function recordBlockHarvest(farmId: string, blockId: string, data: any) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/harvests`,
+    data
+  );
+  return response.data.data;
+}
+
+// ============================================================================
+// BLOCK ARCHIVE ENDPOINTS
+// ============================================================================
+
+/**
+ * Get archived cycles for a block
+ */
+export async function getBlockArchives(
+  farmId: string,
+  blockId: string,
+  page: number = 1,
+  perPage: number = 20
+) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/archives`,
+    { params: { page, perPage } }
+  );
+  return {
+    items: response.data.data || [],
+    total: response.data.meta?.total || 0,
+    page: response.data.meta?.page || 1,
+    perPage: response.data.meta?.perPage || 20,
+    totalPages: response.data.meta?.totalPages || 1,
+  };
+}
+
+/**
+ * Get complete cycle history for a block
+ */
+export async function getBlockCycleHistory(farmId: string, blockId: string) {
+  const response = await apiClient.get<{ data: any }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/archives/history`
+  );
+  return response.data.data;
+}
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
@@ -424,6 +574,22 @@ export const farmApi = {
   getBlockSummary,
   transitionBlockState,
   getValidTransitions,
+
+  // Block Alerts
+  getBlockAlerts,
+  getActiveBlockAlerts,
+  createBlockAlert,
+  resolveBlockAlert,
+  dismissBlockAlert,
+
+  // Block Harvests
+  getBlockHarvests,
+  getBlockHarvestSummary,
+  recordBlockHarvest,
+
+  // Block Archives
+  getBlockArchives,
+  getBlockCycleHistory,
 
   // Plant Data
   getPlantData,

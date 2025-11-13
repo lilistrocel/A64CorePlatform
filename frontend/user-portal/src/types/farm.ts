@@ -99,6 +99,7 @@ export interface Block {
 export interface BlockCreate {
   farmId: string;
   name: string;
+  blockType: string;
   area: number;
   maxPlants: number;
   metadata?: Record<string, unknown>;
@@ -126,13 +127,146 @@ export interface BlockSummary {
 }
 
 export interface StateTransition {
-  fromState: BlockState;
-  toState: BlockState;
+  newStatus: BlockState;
+  notes?: string;
 }
 
 export interface ValidTransitionsResponse {
   currentState: BlockState;
   validTransitions: BlockState[];
+}
+
+// ============================================================================
+// ALERT TYPES
+// ============================================================================
+
+export type AlertStatus = 'active' | 'resolved' | 'dismissed';
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface Alert {
+  alertId: string;
+  blockId: string;
+  title: string;
+  description: string;
+  severity: AlertSeverity;
+  status: AlertStatus;
+  createdBy: string;
+  createdByEmail: string;
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolvedByEmail?: string;
+  resolutionNotes?: string;
+}
+
+export interface AlertCreate {
+  blockId: string;
+  title: string;
+  description: string;
+  severity: AlertSeverity;
+}
+
+export interface AlertResolve {
+  resolutionNotes: string;
+}
+
+// ============================================================================
+// HARVEST TYPES
+// ============================================================================
+
+export type QualityGrade = 'A' | 'B' | 'C';
+
+export interface BlockHarvest {
+  harvestId: string;
+  blockId: string;
+  harvestDate: string;
+  quantityKg: number;
+  qualityGrade: QualityGrade;
+  notes?: string;
+  harvestedBy: string;
+  harvestedByEmail: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlockHarvestCreate {
+  blockId: string;
+  harvestDate: string;
+  quantityKg: number;
+  qualityGrade: QualityGrade;
+  notes?: string;
+}
+
+export interface BlockHarvestSummary {
+  blockId: string;
+  totalHarvests: number;
+  totalQuantityKg: number;
+  qualityBreakdown: {
+    A: number;
+    B: number;
+    C: number;
+  };
+  averageQuality: string;
+  firstHarvestDate?: string;
+  lastHarvestDate?: string;
+}
+
+// ============================================================================
+// BLOCK ARCHIVE TYPES
+// ============================================================================
+
+export interface QualityBreakdown {
+  qualityAKg: number;
+  qualityBKg: number;
+  qualityCKg: number;
+}
+
+export interface AlertsSummary {
+  totalAlerts: number;
+  resolvedAlerts: number;
+  averageResolutionTimeHours?: number;
+}
+
+export interface BlockArchive {
+  archiveId: string;
+  blockId: string;
+  blockCode: string;
+  farmId: string;
+  farmName: string;
+  blockType: string;
+  maxPlants: number;
+  actualPlantCount: number;
+  area?: number;
+  areaUnit: string;
+  targetCrop: string;
+  targetCropName: string;
+  plantedDate: string;
+  harvestCompletedDate: string;
+  cycleDurationDays: number;
+  predictedYieldKg: number;
+  actualYieldKg: number;
+  yieldEfficiencyPercent: number;
+  totalHarvests: number;
+  qualityBreakdown: QualityBreakdown;
+  statusChanges: StatusChange[];
+  alertsSummary: AlertsSummary;
+  archivedAt: string;
+  archivedBy: string;
+  archivedByEmail: string;
+}
+
+export interface BlockCycleHistory {
+  blockId: string;
+  totalCycles: number;
+  averageEfficiencyPercent: number;
+  averageDurationDays: number;
+  totalYieldKg: number;
+  bestCycle?: BlockArchive;
+  worstCycle?: BlockArchive;
+  cropsGrown: {
+    [cropName: string]: number;
+  };
+  recentCycles: BlockArchive[];
 }
 
 // ============================================================================

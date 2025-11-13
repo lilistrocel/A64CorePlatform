@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, Query, status
 from typing import Optional
 from uuid import UUID
 
-from ...models.block import Block, BlockCreate, BlockUpdate, BlockState
-from ...services.block import BlockService
+from ...models.block import Block, BlockCreate, BlockUpdate, BlockStatus, BlockStatusUpdate
+from ...services.block.block_service_new import BlockService
 from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
 
@@ -38,9 +38,10 @@ async def create_block(
     - maxPlants must be greater than 0
     """
     block = await BlockService.create_block(
-        block_data,
         farm_id,
-        current_user.userId
+        block_data,
+        current_user.userId,
+        current_user.email
     )
 
     return SuccessResponse(
@@ -58,7 +59,9 @@ async def list_blocks(
     farm_id: UUID,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
-    state: Optional[BlockState] = Query(None, description="Filter by state"),
+    status_filter: Optional[BlockStatus] = Query(None, alias="status", description="Filter by status"),
+    blockType: Optional[str] = Query(None, description="Filter by block type"),
+    targetCrop: Optional[UUID] = Query(None, description="Filter by target crop"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -67,13 +70,17 @@ async def list_blocks(
     **Query Parameters**:
     - `page`: Page number (default: 1)
     - `perPage`: Items per page (default: 20, max: 100)
-    - `state`: Filter by block state (optional)
+    - `status`: Filter by block status (optional)
+    - `blockType`: Filter by block type (optional)
+    - `targetCrop`: Filter by target crop ID (optional)
     """
-    blocks, total = await BlockService.get_farm_blocks(
-        farm_id,
+    blocks, total, total_pages = await BlockService.list_blocks(
+        farm_id=farm_id,
         page=page,
         per_page=perPage,
-        state=state
+        status=status_filter,
+        block_type=blockType,
+        target_crop=targetCrop
     )
 
     return PaginatedResponse(
@@ -82,7 +89,7 @@ async def list_blocks(
             total=total,
             page=page,
             perPage=perPage,
-            totalPages=(total + perPage - 1) // perPage
+            totalPages=total_pages
         )
     )
 
@@ -148,8 +155,7 @@ async def update_block(
 
     updated_block = await BlockService.update_block(
         block_id,
-        update_data,
-        current_user.userId
+        update_data
     )
 
     return SuccessResponse(
@@ -186,7 +192,7 @@ async def delete_block(
             detail="Block not found in this farm"
         )
 
-    await BlockService.delete_block(block_id, current_user.userId)
+    await BlockService.delete_block(block_id)
 
     return SuccessResponse(
         data={"blockId": str(block_id)},
@@ -195,24 +201,24 @@ async def delete_block(
 
 
 @router.get(
-    "/{block_id}/summary",
+    "/{block_id}/kpi",
     response_model=SuccessResponse[dict],
-    summary="Get block summary"
+    summary="Get block KPI dashboard"
 )
-async def get_block_summary(
+async def get_block_kpi(
     farm_id: UUID,
     block_id: UUID,
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
-    Get detailed summary of a block.
+    Get comprehensive KPI dashboard data for a block.
 
     Returns:
-    - Block details
-    - Farm information
-    - Current utilization statistics
-    - Planting information (if planted)
-    - Historical data (cycles, harvests, yield)
+    - Current status and whether on track with expected timeline
+    - Days since planting and days until harvest
+    - KPI metrics (predicted vs actual yield, efficiency percentage)
+    - Harvest summary (total quantity, quality breakdown)
+    - Alert summary (active alerts count)
     """
     block = await BlockService.get_block(block_id)
 
@@ -224,39 +230,45 @@ async def get_block_summary(
             detail="Block not found in this farm"
         )
 
-    summary = await BlockService.get_block_summary(block_id)
+    kpi_data = await BlockService.get_block_kpi(block_id)
 
-    return SuccessResponse(data=summary)
+    return SuccessResponse(data=kpi_data)
 
 
-# State transition endpoint
-@router.post(
-    "/{block_id}/state",
+# Status change endpoint
+@router.patch(
+    "/{block_id}/status",
     response_model=SuccessResponse[Block],
-    summary="Transition block state"
+    summary="Change block status"
 )
-async def transition_block_state(
+async def change_block_status(
     farm_id: UUID,
     block_id: UUID,
-    new_state: BlockState = Query(..., description="Target state"),
-    planting_id: Optional[UUID] = Query(None, description="Planting ID (required for 'planted' state)"),
+    status_update: BlockStatusUpdate,
     current_user: CurrentUser = Depends(require_permission("farm.operate"))
 ):
     """
-    Transition a block to a new state.
+    Change block status with validation and automatic archival.
 
     Requires **farm.operate** permission.
 
-    **Valid State Transitions**:
-    - `empty` → `planned`
-    - `planned` → `planted`, `empty`
-    - `planted` → `harvesting`, `alert`, `empty`
-    - `harvesting` → `empty`, `alert`
-    - `alert` → `empty`, `harvesting`, `planted`
+    **Valid Status Transitions**:
+    - `empty` → `planted`, `alert`
+    - `planted` → `growing`, `alert`
+    - `growing` → `fruiting`, `alert`
+    - `fruiting` → `harvesting`, `alert`
+    - `harvesting` → `cleaning`, `alert`
+    - `cleaning` → `empty`, `alert` (triggers automatic archival)
+    - `alert` → any status (restores from previousStatus)
 
-    **Notes**:
-    - Transitioning to 'planted' requires a `planting_id`
-    - Invalid transitions will be rejected with an error message
+    **Special Requirements**:
+    - Transitioning to 'planted' requires `targetCrop` and `actualPlantCount`
+    - Cleaning → empty triggers automatic archival of the cycle
+
+    **Automatic Features**:
+    - Calculates expected harvest dates based on plant growth cycle
+    - Calculates predicted yield based on plant count
+    - Archives completed cycles when transitioning from cleaning to empty
     """
     block = await BlockService.get_block(block_id)
 
@@ -268,34 +280,34 @@ async def transition_block_state(
             detail="Block not found in this farm"
         )
 
-    updated_block = await BlockService.transition_state(
+    updated_block = await BlockService.change_status(
         block_id,
-        new_state,
+        status_update,
         current_user.userId,
-        planting_id=planting_id
+        current_user.email
     )
 
     return SuccessResponse(
         data=updated_block,
-        message=f"Block transitioned to '{new_state.value}' state"
+        message=f"Block status changed to '{status_update.newStatus.value}'"
     )
 
 
 # Get valid transitions for a block
 @router.get(
-    "/{block_id}/transitions",
+    "/{block_id}/valid-transitions",
     response_model=SuccessResponse[dict],
-    summary="Get valid state transitions"
+    summary="Get valid status transitions"
 )
-async def get_valid_transitions(
+async def get_valid_status_transitions(
     farm_id: UUID,
     block_id: UUID,
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
-    Get list of valid state transitions for a block's current state.
+    Get list of valid status transitions for a block's current status.
 
-    Useful for UI to show available actions.
+    Useful for UI to show available actions and prevent invalid transitions.
     """
     block = await BlockService.get_block(block_id)
 
@@ -307,11 +319,11 @@ async def get_valid_transitions(
             detail="Block not found in this farm"
         )
 
-    valid_transitions = BlockService.get_valid_transitions(block.state)
+    valid_transitions = BlockService.VALID_TRANSITIONS.get(block.status, [])
 
     return SuccessResponse(
         data={
-            "currentState": block.state.value,
+            "currentStatus": block.status.value,
             "validTransitions": [state.value for state in valid_transitions]
         }
     )

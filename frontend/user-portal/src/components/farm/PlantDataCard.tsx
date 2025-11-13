@@ -306,8 +306,9 @@ export function PlantDataCard({ plant, onView, onEdit, onClone, onDelete }: Plan
         <StatItem>
           <StatLabel>Market Value</StatLabel>
           <StatValue>
-            {plant.economicsAndLabor?.currency || '$'}
-            {plant.economicsAndLabor?.averageMarketValuePerKg.toFixed(2) || 'N/A'}/kg
+            {plant.economicsAndLabor?.averageMarketValuePerKg != null
+              ? `${plant.economicsAndLabor.currency || '$'}${plant.economicsAndLabor.averageMarketValuePerKg.toFixed(2)}/kg`
+              : 'N/A'}
           </StatValue>
         </StatItem>
         <StatItem>

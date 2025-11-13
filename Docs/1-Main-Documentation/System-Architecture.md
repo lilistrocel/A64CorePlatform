@@ -657,6 +657,223 @@ Response → User
 - createdAt: descending
 ```
 
+#### blocks Collection (Farm Management Module - v1.7.0)
+```javascript
+{
+  _id: ObjectId,
+  blockId: String (UUID),           // Unique block identifier
+  farmId: String (UUID),            // Parent farm reference
+  blockCode: String,                // Auto-generated code (e.g., F001-001)
+  name: String,                     // Block name
+  blockType: String,                // Type (greenhouse, open_field, hydroponic, etc.)
+  area: Number,                     // Block area
+  areaUnit: String,                 // Area unit (sqm, hectares, acres)
+
+  // Lifecycle Status (7 states)
+  status: String,                   // alert, empty, planted, growing, fruiting, harvesting, cleaning
+
+  // Current Planting Info
+  currentPlantingId: String (UUID), // Reference to current planting
+  currentPlantDataId: String (UUID),// Reference to plant data
+  currentPlantName: String,         // Plant name snapshot
+  plantedDate: Date,                // When current planting occurred
+  expectedHarvestDate: Date,        // Calculated harvest date
+  actualHarvestDate: Date,          // Actual harvest completion
+
+  // KPI Tracking
+  predictedYield: Object {
+    amount: Number,
+    unit: String
+  },
+  actualYield: Object {
+    amount: Number,
+    unit: String
+  },
+  yieldEfficiency: Number,          // (actual/predicted) * 100
+
+  // Alert Status
+  hasAlert: Boolean,                // Currently has active alert
+  alertSeverity: String,            // low, medium, high, critical
+  statusBeforeAlert: String,        // Original status to restore
+
+  // Status History (Audit Trail)
+  statusChanges: Array [{
+    fromStatus: String,
+    toStatus: String,
+    changedBy: String (UUID),
+    changedByEmail: String,
+    changedAt: Date,
+    reason: String
+  }],
+
+  // Timestamps
+  createdAt: Date,
+  updatedAt: Date,
+  createdBy: String (UUID),
+  updatedBy: String (UUID)
+}
+
+// Indexes
+- blockId: unique
+- farmId: non-unique (query blocks by farm)
+- blockCode: unique (automatic code generation)
+- status: non-unique (filter by status)
+- currentPlantingId: non-unique
+- createdAt: descending
+```
+
+#### block_harvests Collection (Farm Management Module - v1.7.0)
+```javascript
+{
+  _id: ObjectId,
+  harvestId: String (UUID),         // Unique harvest identifier
+  blockId: String (UUID),           // Parent block reference
+  farmId: String (UUID),            // Parent farm reference
+  plantingId: String (UUID),        // Reference to planting
+
+  // Harvest Details
+  harvestDate: Date,                // When harvest occurred
+  amount: Number,                   // Harvested amount
+  unit: String,                     // Unit of measurement
+  qualityGrade: String,             // A, B, or C
+
+  // Worker Info
+  harvestedBy: String (UUID),       // User who recorded harvest
+  harvestedByEmail: String,
+
+  // Notes
+  notes: String,                    // Optional harvest notes
+
+  // Timestamps
+  createdAt: Date
+}
+
+// Indexes
+- harvestId: unique
+- blockId: non-unique (query harvests by block)
+- farmId: non-unique (query harvests by farm)
+- plantingId: non-unique (query harvests by planting)
+- harvestDate: descending
+- qualityGrade: non-unique
+- createdAt: descending
+```
+
+#### alerts Collection (Farm Management Module - v1.7.0)
+```javascript
+{
+  _id: ObjectId,
+  alertId: String (UUID),           // Unique alert identifier
+  blockId: String (UUID),           // Affected block
+  farmId: String (UUID),            // Parent farm
+
+  // Alert Details
+  severity: String,                 // low, medium, high, critical
+  title: String,                    // Alert title
+  description: String,              // Alert description
+  alertType: String,                // manual, sensor, system
+
+  // Sensor Data (if sensor-triggered)
+  sensorData: Object {
+    sensorId: String,
+    reading: Object,
+    threshold: Object
+  },
+
+  // Status
+  isResolved: Boolean,              // Alert resolution status
+  resolvedAt: Date,                 // When alert was resolved
+  resolvedBy: String (UUID),        // User who resolved
+  resolvedByEmail: String,
+  resolutionNotes: String,          // Resolution notes
+
+  // Creator Info
+  createdBy: String (UUID),
+  createdByEmail: String,
+
+  // Timestamps
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// Indexes
+- alertId: unique
+- blockId: non-unique (query alerts by block)
+- farmId: non-unique (query alerts by farm)
+- severity: non-unique
+- isResolved: non-unique (filter active/resolved)
+- createdAt: descending
+```
+
+#### block_archives Collection (Farm Management Module - v1.7.0)
+```javascript
+{
+  _id: ObjectId,
+  archiveId: String (UUID),         // Unique archive identifier
+  blockId: String (UUID),           // Block reference
+  farmId: String (UUID),            // Farm reference
+
+  // Cycle Data Snapshot
+  plantingId: String (UUID),
+  plantDataId: String (UUID),
+  plantName: String,
+  plantedDate: Date,
+  harvestStartDate: Date,
+  harvestEndDate: Date,
+  cycleDuration: Number,            // Days
+
+  // Performance Metrics
+  predictedYield: Object {
+    amount: Number,
+    unit: String
+  },
+  actualYield: Object {
+    amount: Number,
+    unit: String
+  },
+  yieldEfficiency: Number,          // Percentage
+
+  // Quality Distribution
+  qualityBreakdown: Object {
+    gradeA: Number,
+    gradeB: Number,
+    gradeC: Number,
+    total: Number
+  },
+
+  // Harvest Events (array of all harvests)
+  harvests: Array [{
+    harvestId: String (UUID),
+    harvestDate: Date,
+    amount: Number,
+    unit: String,
+    qualityGrade: String,
+    harvestedBy: String,
+    harvestedByEmail: String
+  }],
+
+  // Status History
+  statusChanges: Array [{
+    fromStatus: String,
+    toStatus: String,
+    changedBy: String,
+    changedAt: Date
+  }],
+
+  // Timestamps
+  archivedAt: Date,
+  archivedBy: String (UUID),
+  archivedByEmail: String
+}
+
+// Indexes
+- archiveId: unique
+- blockId: non-unique (query archives by block)
+- farmId: non-unique (query archives by farm)
+- plantDataId: non-unique (query archives by plant)
+- yieldEfficiency: non-unique (performance analysis)
+- archivedAt: descending
+```
+
 ### MySQL Tables
 
 #### users Table

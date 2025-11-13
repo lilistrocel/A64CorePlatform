@@ -235,11 +235,11 @@ export function FarmCard({ farm, summary, onEdit, onDelete }: FarmCardProps) {
       <StatsGrid>
         <StatItem>
           <StatLabel>Total Area</StatLabel>
-          <StatValue>{farm.totalArea.toFixed(1)} ha</StatValue>
+          <StatValue>{(farm.totalArea ?? 0).toFixed(1)} ha</StatValue>
         </StatItem>
         <StatItem>
           <StatLabel>Blocks</StatLabel>
-          <StatValue>{summary?.totalBlocks || 0}</StatValue>
+          <StatValue>{summary?.totalBlocks ?? 0}</StatValue>
         </StatItem>
       </StatsGrid>
 

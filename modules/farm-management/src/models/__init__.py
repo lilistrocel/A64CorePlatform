@@ -5,7 +5,10 @@ All Pydantic models for the farm management system.
 """
 
 from .farm import Farm, FarmLocation, FarmCreate, FarmUpdate
-from .block import Block, BlockState, BlockCreate, BlockUpdate
+from .block import Block, BlockStatus, BlockState, BlockCreate, BlockUpdate, BlockStatusUpdate
+from .block_harvest import BlockHarvest, BlockHarvestCreate, BlockHarvestUpdate, BlockHarvestSummary
+from .alert import Alert, AlertSeverity, AlertStatus, AlertCreate, AlertResolve
+from .block_archive import BlockArchive, BlockArchiveAnalytics, CropPerformanceComparison
 from .plant_data import PlantData, PlantDataCreate, PlantDataUpdate
 from .plant_data_enhanced import (
     PlantDataEnhanced,
@@ -17,7 +20,6 @@ from .plant_data_enhanced import (
 from .planting import Planting, PlantingItem, PlantingCreate
 from .daily_harvest import DailyHarvest, DailyHarvestEntry, DailyHarvestCreate
 from .harvest import Harvest, HarvestEntry
-from .alert import Alert, AlertSeverity, AlertStatus, AlertCreate, AlertResolve
 from .block_cycle import BlockCycle, BlockCycleAlert, BlockCycleDailyHarvest
 from .stock_inventory import StockInventoryItem, StockInventoryCreate
 from .farm_assignment import FarmAssignment, FarmAssignmentCreate
@@ -30,9 +32,20 @@ __all__ = [
     "FarmUpdate",
     # Block
     "Block",
-    "BlockState",
+    "BlockStatus",
+    "BlockState",  # Compatibility alias for old code
     "BlockCreate",
     "BlockUpdate",
+    "BlockStatusUpdate",
+    # Block Harvest
+    "BlockHarvest",
+    "BlockHarvestCreate",
+    "BlockHarvestUpdate",
+    "BlockHarvestSummary",
+    # Block Archive
+    "BlockArchive",
+    "BlockArchiveAnalytics",
+    "CropPerformanceComparison",
     # Plant Data
     "PlantData",
     "PlantDataCreate",

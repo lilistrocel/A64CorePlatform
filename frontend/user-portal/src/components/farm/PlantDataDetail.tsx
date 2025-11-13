@@ -809,8 +809,9 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
                 <Field>
                   <FieldLabel>Market Value</FieldLabel>
                   <FieldValue>
-                    {plant.economicsAndLabor?.currency || '$'}
-                    {plant.economicsAndLabor?.averageMarketValuePerKg?.toFixed(2)}/kg
+                    {plant.economicsAndLabor?.averageMarketValuePerKg != null
+                      ? `${plant.economicsAndLabor.currency || '$'}${plant.economicsAndLabor.averageMarketValuePerKg.toFixed(2)}/kg`
+                      : 'N/A'}
                   </FieldValue>
                 </Field>
                 {plant.economicsAndLabor?.totalLaborHoursPerPlant && (

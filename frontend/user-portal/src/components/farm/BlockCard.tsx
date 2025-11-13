@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
 import type { Block, BlockSummary, BlockState } from '../../types/farm';
@@ -56,8 +57,15 @@ const BlockIcon = styled.div`
 const BlockName = styled.h4`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: #3b82f6;
   margin: 0 0 8px 0;
+  cursor: pointer;
+  transition: color 150ms ease-in-out;
+
+  &:hover {
+    color: #2563eb;
+    text-decoration: underline;
+  }
 `;
 
 const StateBadge = styled.span<{ $color: string }>`
@@ -219,6 +227,7 @@ const StateSelect = styled.select`
 // ============================================================================
 
 export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: BlockCardProps) {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState<BlockSummary | null>(null);
   const [validTransitions, setValidTransitions] = useState<BlockState[]>([]);
   const [loading, setLoading] = useState(false);
@@ -246,8 +255,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
     try {
       setLoading(true);
       await farmApi.transitionBlockState(farmId, block.blockId, {
-        fromState: block.state,
-        toState: newState,
+        newStatus: newState,
       });
       onStateChange?.();
     } catch (error) {
@@ -288,7 +296,9 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       <Header>
         <div>
           <BlockIcon>{getStateIcon(block.state)}</BlockIcon>
-          <BlockName>{block.name}</BlockName>
+          <BlockName onClick={() => navigate(`/farm/farms/${farmId}/blocks/${block.blockId}`)}>
+            {block.name}
+          </BlockName>
         </div>
         <StateBadge $color={stateColor}>{stateLabel}</StateBadge>
       </Header>
@@ -296,11 +306,11 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       <StatsGrid>
         <StatItem>
           <StatLabel>Area</StatLabel>
-          <StatValue>{block.area.toFixed(1)} ha</StatValue>
+          <StatValue>{(block.area ?? 0).toFixed(1)} ha</StatValue>
         </StatItem>
         <StatItem>
           <StatLabel>Capacity</StatLabel>
-          <StatValue>{block.maxPlants}</StatValue>
+          <StatValue>{block.maxPlants ?? 0}</StatValue>
         </StatItem>
       </StatsGrid>
 

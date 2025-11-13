@@ -8,8 +8,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { BlockGrid } from './BlockGrid';
+import { CreateBlockModal } from './CreateBlockModal';
+import { EditBlockModal } from './EditBlockModal';
 import { farmApi } from '../../services/farmApi';
-import type { Farm, FarmSummary, Block } from '../../types/farm';
+import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate } from '../../types/farm';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -260,6 +262,8 @@ export function FarmDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<Block | null>(null);
 
   useEffect(() => {
     if (farmId) {
@@ -293,6 +297,32 @@ export function FarmDetail() {
 
   const handleBack = () => {
     navigate('/farm/farms');
+  };
+
+  const handleCreateBlock = async (data: Omit<BlockCreate, 'farmId'>) => {
+    if (!farmId) return;
+
+    try {
+      await farmApi.createBlock(farmId, data);
+      await loadFarmData(); // Reload to get updated data
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create block';
+      alert(errorMessage);
+      throw err; // Re-throw to let modal handle it
+    }
+  };
+
+  const handleUpdateBlock = async (blockId: string, data: BlockUpdate) => {
+    if (!farmId) return;
+
+    try {
+      await farmApi.updateBlock(farmId, blockId, data);
+      await loadFarmData(); // Reload to get updated data
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update block';
+      alert(errorMessage);
+      throw err; // Re-throw to let modal handle it
+    }
   };
 
   const handleDeleteBlock = async (blockId: string) => {
@@ -329,9 +359,13 @@ export function FarmDetail() {
     );
   }
 
-  const locationText = [farm.location.city, farm.location.state, farm.location.country]
+  const locationText = [
+    farm.location?.city,
+    farm.location?.state,
+    farm.location?.country
+  ]
     .filter(Boolean)
-    .join(', ');
+    .join(', ') || 'No location specified';
 
   return (
     <Container>
@@ -358,25 +392,25 @@ export function FarmDetail() {
         <StatsGrid>
           <StatCard>
             <StatLabel>Total Area</StatLabel>
-            <StatValue>{farm.totalArea.toFixed(1)}</StatValue>
+            <StatValue>{(farm.totalArea ?? 0).toFixed(1)}</StatValue>
             <StatSubtext>hectares</StatSubtext>
           </StatCard>
 
           <StatCard>
             <StatLabel>Total Blocks</StatLabel>
-            <StatValue>{summary.totalBlocks}</StatValue>
-            <StatSubtext>{summary.totalBlockArea.toFixed(1)} ha total</StatSubtext>
+            <StatValue>{summary.totalBlocks ?? 0}</StatValue>
+            <StatSubtext>{(summary.totalBlockArea ?? 0).toFixed(1)} ha total</StatSubtext>
           </StatCard>
 
           <StatCard>
             <StatLabel>Active Plantings</StatLabel>
-            <StatValue>{summary.activePlantings}</StatValue>
-            <StatSubtext>{summary.totalPlantedPlants} plants</StatSubtext>
+            <StatValue>{summary.activePlantings ?? 0}</StatValue>
+            <StatSubtext>{summary.totalPlantedPlants ?? 0} plants</StatSubtext>
           </StatCard>
 
           <StatCard>
             <StatLabel>Predicted Yield</StatLabel>
-            <StatValue>{summary.predictedYield.toFixed(0)}</StatValue>
+            <StatValue>{(summary.predictedYield ?? 0).toFixed(0)}</StatValue>
             <StatSubtext>units expected</StatSubtext>
           </StatCard>
         </StatsGrid>
@@ -405,19 +439,19 @@ export function FarmDetail() {
                 <InfoTitle>Farm Information</InfoTitle>
                 <InfoItem>
                   <InfoLabel>Farm ID</InfoLabel>
-                  <InfoValue>{farm.farmId.substring(0, 8)}...</InfoValue>
+                  <InfoValue>{farm.farmId?.substring(0, 8) ?? 'N/A'}...</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Manager ID</InfoLabel>
-                  <InfoValue>{farm.managerId.substring(0, 8)}...</InfoValue>
+                  <InfoValue>{farm.managerId?.substring(0, 8) ?? 'N/A'}...</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Created</InfoLabel>
-                  <InfoValue>{farmApi.formatDateForDisplay(farm.createdAt)}</InfoValue>
+                  <InfoValue>{farm.createdAt ? farmApi.formatDateForDisplay(farm.createdAt) : 'N/A'}</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Last Updated</InfoLabel>
-                  <InfoValue>{farmApi.formatDateForDisplay(farm.updatedAt)}</InfoValue>
+                  <InfoValue>{farm.updatedAt ? farmApi.formatDateForDisplay(farm.updatedAt) : 'N/A'}</InfoValue>
                 </InfoItem>
               </InfoCard>
 
@@ -453,8 +487,11 @@ export function FarmDetail() {
             <BlockGrid
               blocks={blocks}
               farmId={farmId!}
-              onCreateBlock={() => alert('Create block modal - TODO')}
-              onEditBlock={(blockId) => alert(`Edit block ${blockId} - TODO`)}
+              onCreateBlock={() => setShowCreateModal(true)}
+              onEditBlock={(blockId) => {
+                const block = blocks.find((b) => b.blockId === blockId);
+                if (block) setEditingBlock(block);
+              }}
               onDeleteBlock={handleDeleteBlock}
               onRefresh={loadFarmData}
             />
@@ -469,6 +506,25 @@ export function FarmDetail() {
           )}
         </TabContent>
       </TabsContainer>
+
+      {/* Create Block Modal */}
+      {showCreateModal && farmId && (
+        <CreateBlockModal
+          farmId={farmId}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateBlock}
+        />
+      )}
+
+      {/* Edit Block Modal */}
+      {editingBlock && farmId && (
+        <EditBlockModal
+          block={editingBlock}
+          farmId={farmId}
+          onClose={() => setEditingBlock(null)}
+          onUpdate={handleUpdateBlock}
+        />
+      )}
     </Container>
   );
 }
