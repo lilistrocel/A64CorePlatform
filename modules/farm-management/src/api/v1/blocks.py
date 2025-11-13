@@ -9,7 +9,7 @@ from typing import Optional
 from uuid import UUID
 
 from ...models.block import Block, BlockCreate, BlockUpdate, BlockStatus, BlockStatusUpdate
-from ...services.block.block_service import BlockService
+from ...services.block.block_service_new import BlockService
 from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
 
