@@ -229,7 +229,7 @@ async def get_farm_summary(
             )
 
     # Get all blocks for this farm
-    from ...services.block.block_repository_new import BlockRepository
+    from ...services.block.block_repository import BlockRepository
     from ...models.block import BlockStatus
 
     blocks, total_count = await BlockRepository.get_by_farm(farm_id, skip=0, limit=1000)
