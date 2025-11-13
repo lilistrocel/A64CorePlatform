@@ -319,11 +319,11 @@ async def get_valid_status_transitions(
             detail="Block not found in this farm"
         )
 
-    valid_transitions = BlockService.VALID_TRANSITIONS.get(block.status, [])
+    valid_transitions = BlockService.VALID_TRANSITIONS.get(block.state, [])
 
     return SuccessResponse(
         data={
-            "currentStatus": block.status.value,
+            "currentStatus": block.state.value,
             "validTransitions": [state.value for state in valid_transitions]
         }
     )

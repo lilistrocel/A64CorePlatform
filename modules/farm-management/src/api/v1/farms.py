@@ -253,18 +253,18 @@ async def get_farm_summary(
 
     for block in blocks:
         # Map new status to old state
-        if block.status == BlockStatus.EMPTY:
+        if block.state == BlockStatus.EMPTY:
             blocks_by_state["empty"] += 1
-        elif block.status == BlockStatus.ALERT:
+        elif block.state == BlockStatus.ALERT:
             blocks_by_state["alert"] += 1
-        elif block.status in [BlockStatus.PLANTED, BlockStatus.GROWING, BlockStatus.FRUITING]:
+        elif block.state in [BlockStatus.PLANTED, BlockStatus.GROWING, BlockStatus.FRUITING]:
             blocks_by_state["planted"] += 1
             active_plantings += 1
-        elif block.status == BlockStatus.HARVESTING:
+        elif block.state == BlockStatus.HARVESTING:
             blocks_by_state["harvesting"] += 1
             active_plantings += 1
         # CLEANING status is transitional, count as empty for display
-        elif block.status == BlockStatus.CLEANING:
+        elif block.state == BlockStatus.CLEANING:
             blocks_by_state["empty"] += 1
 
     summary = {

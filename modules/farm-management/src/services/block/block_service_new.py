@@ -212,10 +212,10 @@ class BlockService:
         new_status = status_update.newStatus
 
         # Validate status transition
-        if not BlockService.validate_status_transition(current_block.status, new_status):
+        if not BlockService.validate_status_transition(current_block.state, new_status):
             raise HTTPException(
                 400,
-                f"Invalid status transition: {current_block.status.value} → {new_status.value}"
+                f"Invalid status transition: {current_block.state.value} → {new_status.value}"
             )
 
         # Handle planting
@@ -265,7 +265,7 @@ class BlockService:
             )
 
         # Handle cleaning → empty transition (TRIGGER ARCHIVAL)
-        elif current_block.status == BlockStatus.CLEANING and new_status == BlockStatus.EMPTY:
+        elif current_block.state == BlockStatus.CLEANING and new_status == BlockStatus.EMPTY:
             logger.info(f"[Block Service] Triggering archival for block {block_id}")
 
             # Create archive before clearing data
@@ -293,7 +293,7 @@ class BlockService:
         if not block:
             raise HTTPException(500, "Failed to update block status")
 
-        logger.info(f"[Block Service] Changed status for block {block_id}: {current_block.status.value} → {new_status.value}")
+        logger.info(f"[Block Service] Changed status for block {block_id}: {current_block.state.value} → {new_status.value}")
         return block
 
     @staticmethod
@@ -416,8 +416,8 @@ class BlockService:
         # Calculate expected vs actual status
         status_on_track = True
         days_behind = 0
-        if block.expectedStatusChanges and block.status != BlockStatus.ALERT:
-            expected_date = block.expectedStatusChanges.get(block.status.value)
+        if block.expectedStatusChanges and block.state != BlockStatus.ALERT:
+            expected_date = block.expectedStatusChanges.get(block.state.value)
             if expected_date:
                 expected_dt = datetime.fromisoformat(expected_date) if isinstance(expected_date, str) else expected_date
                 days_behind = (datetime.utcnow() - expected_dt).days
@@ -426,7 +426,7 @@ class BlockService:
         return {
             "blockId": str(block.blockId),
             "blockCode": block.blockCode,
-            "status": block.status.value,
+            "status": block.state.value,
             "statusOnTrack": status_on_track,
             "daysBehindSchedule": max(0, days_behind) if days_behind > 0 else 0,
             "targetCrop": block.targetCropName,

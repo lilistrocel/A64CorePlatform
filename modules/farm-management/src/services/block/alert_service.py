@@ -48,7 +48,7 @@ class AlertService:
         alert = await AlertRepository.create(alert_data, user_id, user_email)
 
         # Change block status to ALERT if requested and not already in alert status
-        if change_block_status and block.status != BlockStatus.ALERT:
+        if change_block_status and block.state != BlockStatus.ALERT:
             await BlockRepository.update_status(
                 alert_data.blockId,
                 BlockStatus.ALERT,
@@ -158,18 +158,18 @@ class AlertService:
         if restore_block_status and len(active_alerts) == 0:
             block = await BlockRepository.get_by_id(alert.blockId)
 
-            if block and block.status == BlockStatus.ALERT and block.previousStatus:
+            if block and block.state == BlockStatus.ALERT and block.previousState:
                 # Restore to previous status
                 await BlockRepository.update_status(
                     alert.blockId,
-                    BlockStatus[block.previousStatus.upper()],
+                    BlockStatus[block.previousState.upper()],
                     user_id,
                     user_email,
                     notes=f"Alert resolved: {alert.title}"
                 )
 
                 logger.info(
-                    f"[Alert Service] Restored block {alert.blockId} status to {block.previousStatus} "
+                    f"[Alert Service] Restored block {alert.blockId} status to {block.previousState} "
                     f"after resolving alert {alert_id}"
                 )
 

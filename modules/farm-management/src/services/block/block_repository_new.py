@@ -160,7 +160,7 @@ class BlockRepository:
         query = {"farmId": str(farm_id), "isActive": True}
 
         if status:
-            query["status"] = status.value
+            query["state"] = status.value
 
         if block_type:
             query["blockType"] = block_type
@@ -192,7 +192,7 @@ class BlockRepository:
         query = {"isActive": True}
 
         if status:
-            query["status"] = status.value
+            query["state"] = status.value
 
         # Get total count
         total = await db.blocks.count_documents(query)
@@ -283,16 +283,16 @@ class BlockRepository:
 
         # Handle alert status
         if new_status == BlockStatus.ALERT:
-            # Save current status to previousStatus
-            update_dict["previousStatus"] = current_block.status.value
-            update_dict["status"] = BlockStatus.ALERT.value
-        elif current_block.status == BlockStatus.ALERT and new_status != BlockStatus.ALERT:
-            # Resuming from alert - clear previousStatus
-            update_dict["status"] = new_status.value
-            update_dict["previousStatus"] = None
+            # Save current status to previousState
+            update_dict["previousState"] = current_block.state.value
+            update_dict["state"] = BlockStatus.ALERT.value
+        elif current_block.state == BlockStatus.ALERT and new_status != BlockStatus.ALERT:
+            # Resuming from alert - clear previousState
+            update_dict["state"] = new_status.value
+            update_dict["previousState"] = None
         else:
             # Normal status transition
-            update_dict["status"] = new_status.value
+            update_dict["state"] = new_status.value
 
         # Handle planting (status = planted)
         if new_status == BlockStatus.PLANTED:

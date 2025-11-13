@@ -104,8 +104,8 @@ class Block(BlockBase):
     sequenceNumber: Optional[int] = Field(None, ge=1, description="Block sequence number")
 
     # Current Status
-    status: BlockStatus = Field(BlockStatus.EMPTY, description="Current block status")
-    previousStatus: Optional[BlockStatus] = Field(None, description="Status before alert")
+    state: BlockStatus = Field(BlockStatus.EMPTY, description="Current block status")
+    previousState: Optional[BlockStatus] = Field(None, description="Status before alert")
     targetCrop: Optional[UUID] = Field(None, description="Current plant data ID")
     targetCropName: Optional[str] = Field(None, description="Current plant name (denormalized)")
     actualPlantCount: Optional[int] = Field(None, ge=0, description="Current number of plants")
@@ -143,7 +143,7 @@ class Block(BlockBase):
                 },
                 "area": 500.0,
                 "areaUnit": "sqm",
-                "status": "growing",
+                "state": "growing",
                 "targetCrop": "plant-uuid-here",
                 "targetCropName": "Tomato",
                 "actualPlantCount": 95,
