@@ -28,7 +28,7 @@ export function FarmSelector({ selectedFarmId, onFarmSelect }: FarmSelectorProps
     const loadFarms = async () => {
       try {
         setLoading(true);
-        const response = await getFarms(1, 1000); // Load all farms
+        const response = await getFarms(1, 100); // Load farms (max 100 per page)
         setFarms(response.items || []);
 
         // Auto-select last farm from localStorage if no farm selected
