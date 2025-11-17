@@ -30,9 +30,9 @@ class BlockService:
 
     # Valid status transitions
     VALID_TRANSITIONS = {
-        BlockStatus.EMPTY: [BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.ALERT],
-        BlockStatus.PLANNED: [BlockStatus.PLANTED, BlockStatus.ALERT],
-        BlockStatus.PLANTED: [BlockStatus.GROWING, BlockStatus.ALERT],
+        BlockStatus.EMPTY: [BlockStatus.PLANNED, BlockStatus.ALERT],
+        BlockStatus.PLANNED: [BlockStatus.GROWING, BlockStatus.EMPTY, BlockStatus.ALERT],  # Plant → Growing
+        BlockStatus.PLANTED: [BlockStatus.GROWING, BlockStatus.ALERT],  # Backward compatibility
         BlockStatus.GROWING: [BlockStatus.FRUITING, BlockStatus.ALERT],
         BlockStatus.FRUITING: [BlockStatus.HARVESTING, BlockStatus.ALERT],
         BlockStatus.HARVESTING: [BlockStatus.CLEANING, BlockStatus.ALERT],
@@ -219,13 +219,13 @@ class BlockService:
                 f"Invalid status transition: {current_block.state.value} → {new_status.value}"
             )
 
-        # Handle planned or planting
-        if new_status in [BlockStatus.PLANNED, BlockStatus.PLANTED]:
-            # Check if we're transitioning from planned to planted (reuse existing data)
-            if current_block.state == BlockStatus.PLANNED and new_status == BlockStatus.PLANTED:
-                # Reuse existing block data for planned → planted transition
+        # Handle planned, planting, or growing transitions
+        if new_status in [BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.GROWING]:
+            # Check if we're transitioning from planned to planted/growing (reuse existing data)
+            if current_block.state == BlockStatus.PLANNED and new_status in [BlockStatus.PLANTED, BlockStatus.GROWING]:
+                # Reuse existing block data for planned → planted/growing transition
                 if not current_block.targetCrop:
-                    raise HTTPException(400, "Cannot transition from planned to planted: missing crop data")
+                    raise HTTPException(400, f"Cannot transition from planned to {new_status.value}: missing crop data")
 
                 # Calculate offset (early/late planting)
                 planting_offset_days = None
@@ -248,7 +248,7 @@ class BlockService:
                     else:
                         offset_note = " (Planted on schedule)"
 
-                notes_with_offset = (status_update.notes or "Transitioned to planted") + offset_note
+                notes_with_offset = (status_update.notes or f"Transitioned to {new_status.value}") + offset_note
 
                 # Update status using existing data
                 block = await BlockRepository.update_status(

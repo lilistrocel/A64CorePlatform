@@ -831,7 +831,10 @@ export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
   empty: '#6B7280',      // Gray
   planned: '#3B82F6',    // Blue
   planted: '#10B981',    // Green
+  growing: '#22C55E',    // Bright Green
+  fruiting: '#A855F7',   // Purple
   harvesting: '#F59E0B', // Yellow/Orange
+  cleaning: '#F97316',   // Orange
   alert: '#EF4444',      // Red
 };
 
@@ -839,7 +842,10 @@ export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
   empty: 'Empty',
   planned: 'Planned',
   planted: 'Planted',
+  growing: 'Growing',
+  fruiting: 'Fruiting',
   harvesting: 'Harvesting',
+  cleaning: 'Cleaning',
   alert: 'Alert',
 };
 

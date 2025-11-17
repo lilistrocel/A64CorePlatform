@@ -124,3 +124,9 @@ clear-browser-cache.html
 
 # Playwright MCP
 .playwright-mcp/
+
+# Old Database Data (Supabase exports)
+OldData/json_exports/
+OldData/sql_dumps/
+OldData/*.json
+OldData/*.sql
