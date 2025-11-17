@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import { useBlockActions } from '../../../hooks/farm/useBlockActions';
+import { QuickPlanModal } from './QuickPlanModal';
 import type { DashboardBlock, DashboardBlockStatus } from '../../../types/farm';
 import type { DashboardConfig } from '../../../hooks/farm/useDashboardConfig';
 
@@ -20,6 +21,8 @@ interface CompactBlockCardProps {
 
 export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlockCardProps) {
   const [showActions, setShowActions] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [planMode, setPlanMode] = useState<'plan' | 'plant'>('plan');
   const { transitionBlock, recordHarvest, transitioning, recordingHarvest } = useBlockActions();
 
   const stateColor = config.colorScheme.stateColors[block.state] || '#6B7280';
@@ -58,6 +61,24 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
       onUpdate?.();
     } catch (error) {
       console.error('Transition failed:', error);
+    }
+  };
+
+  /**
+   * Handle plan/plant confirmation with crop data
+   */
+  const handlePlanConfirm = async (cropId: string, plantCount: number) => {
+    try {
+      const newState = planMode === 'plan' ? 'planned' : 'growing';
+      await transitionBlock(farmId, block.blockId, {
+        newState: newState as DashboardBlockStatus,
+        targetCrop: cropId,
+        actualPlantCount: plantCount,
+      });
+      setShowPlanModal(false);
+      onUpdate?.();
+    } catch (error) {
+      console.error('Plan/Plant failed:', error);
     }
   };
 
@@ -246,7 +267,10 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
         <QuickActions>
           {block.state === 'empty' && (
             <ActionButton
-              onClick={() => handleTransition('planned')}
+              onClick={() => {
+                setPlanMode('plan');
+                setShowPlanModal(true);
+              }}
               disabled={transitioning}
               $variant="plan"
             >
@@ -255,7 +279,10 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           )}
           {block.state === 'planned' && (
             <ActionButton
-              onClick={() => handleTransition('growing')}
+              onClick={() => {
+                setPlanMode('plant');
+                setShowPlanModal(true);
+              }}
               disabled={transitioning}
               $variant="plant"
             >
@@ -297,6 +324,15 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           )}
         </QuickActions>
       )}
+
+      {/* Quick Plan Modal (for Plan and Plant actions) */}
+      <QuickPlanModal
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
+        block={block}
+        mode={planMode}
+        onConfirm={handlePlanConfirm}
+      />
     </Card>
   );
 }

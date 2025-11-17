@@ -156,6 +156,8 @@ class QuickTransitionRequest(BaseModel):
     """Quick state transition request"""
     newState: BlockStatus = Field(..., description="New state to transition to")
     notes: Optional[str] = Field(None, description="Optional notes about transition")
+    targetCrop: Optional[UUID] = Field(None, description="Plant data ID (required for planned/growing)")
+    actualPlantCount: Optional[int] = Field(None, ge=0, description="Number of plants (required for planned/growing)")
 
 
 class QuickHarvestRequest(BaseModel):

@@ -196,13 +196,21 @@ async def quick_transition(
 
         # Transition with offset tracking
         from ...services.block.block_service_new import BlockService
+        from ...models.block import BlockStatusUpdate
 
-        updated_block = await BlockService.transition_state_with_offset(
+        # Create status update with optional crop data
+        status_update = BlockStatusUpdate(
+            newStatus=request.newState,
+            notes=request.notes,
+            targetCrop=request.targetCrop,
+            actualPlantCount=request.actualPlantCount
+        )
+
+        updated_block = await BlockService.transition_block_state(
             block_id=blockId,
-            new_state=request.newState,
+            status_update=status_update,
             user_id=UUID(current_user.userId),
-            user_email=current_user.email,
-            notes=request.notes
+            user_email=current_user.email
         )
 
         logger.info(

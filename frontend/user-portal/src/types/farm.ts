@@ -994,6 +994,8 @@ export interface DashboardData {
 export interface QuickTransitionRequest {
   newState: DashboardBlockStatus;
   notes?: string;
+  targetCrop?: string;
+  actualPlantCount?: number;
 }
 
 export interface QuickHarvestRequest {
