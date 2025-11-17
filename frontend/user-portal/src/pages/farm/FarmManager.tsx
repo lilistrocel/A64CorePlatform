@@ -7,6 +7,7 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { FarmDashboard } from '../../components/farm/FarmDashboard';
+import { FarmDashboardPage } from './FarmDashboardPage';
 import { FarmList } from '../../components/farm/FarmList';
 import { FarmDetail } from '../../components/farm/FarmDetail';
 import { BlockDetail } from '../../components/farm/BlockDetail';
@@ -17,6 +18,7 @@ export function FarmManager() {
     <Routes>
       <Route path="/" element={<Navigate to="dashboard" replace />} />
       <Route path="/dashboard" element={<FarmDashboard />} />
+      <Route path="/farm-dashboard" element={<FarmDashboardPage />} />
       <Route path="/farms" element={<FarmList />} />
       <Route path="/farms/:farmId" element={<FarmDetail />} />
       <Route path="/farms/:farmId/blocks/:blockId" element={<BlockDetail />} />

@@ -6,7 +6,7 @@ Represents a designated planting area within a farm.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Literal
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
@@ -42,20 +42,90 @@ class BlockLocation(BaseModel):
 
 
 class StatusChange(BaseModel):
-    """Status change history record"""
+    """Status change history record with offset tracking"""
     status: BlockStatus = Field(..., description="New status")
     changedAt: datetime = Field(default_factory=datetime.utcnow, description="When status changed")
     changedBy: UUID = Field(..., description="User ID who changed status")
     changedByEmail: str = Field(..., description="Email of user who changed status")
     notes: Optional[str] = Field(None, description="Optional notes about status change")
 
+    # Offset tracking fields
+    expectedDate: Optional[datetime] = Field(
+        None,
+        description="Expected date for this transition from planting timeline"
+    )
+    offsetDays: Optional[int] = Field(
+        None,
+        description="Actual - Expected in days (negative = early, positive = late)"
+    )
+    offsetType: Optional[Literal["early", "on_time", "late"]] = Field(
+        None,
+        description="Categorization of offset"
+    )
+
+    @property
+    def offset_description(self) -> str:
+        """Human-readable offset description"""
+        if self.offsetDays is None:
+            return "No timeline set"
+        elif self.offsetDays == 0:
+            return "On schedule"
+        elif self.offsetDays < 0:
+            return f"{abs(self.offsetDays)} days early"
+        else:
+            return f"{self.offsetDays} days late"
+
+
+class PerformanceCategory(str, Enum):
+    """Yield performance categorization"""
+    EXCEPTIONAL = "exceptional"  # >= 200%
+    EXCEEDING = "exceeding"      # 100-199%
+    EXCELLENT = "excellent"      # 90-99%
+    GOOD = "good"                # 70-89%
+    ACCEPTABLE = "acceptable"    # 50-69%
+    POOR = "poor"                # < 50%
+
 
 class BlockKPI(BaseModel):
-    """Block KPI metrics"""
+    """Block KPI metrics with performance categorization"""
     predictedYieldKg: float = Field(0.0, ge=0, description="Expected total yield from plant data")
     actualYieldKg: float = Field(0.0, ge=0, description="Cumulative actual harvest")
-    yieldEfficiencyPercent: float = Field(0.0, ge=0, le=200, description="(actual/predicted) * 100")
+    yieldEfficiencyPercent: float = Field(0.0, ge=0, le=1000, description="(actual/predicted) * 100 - supports up to 1000%")
     totalHarvests: int = Field(0, ge=0, description="Number of harvest events")
+
+    @property
+    def performance_category(self) -> PerformanceCategory:
+        """Categorize performance based on efficiency"""
+        if self.yieldEfficiencyPercent >= 200:
+            return PerformanceCategory.EXCEPTIONAL
+        elif self.yieldEfficiencyPercent >= 100:
+            return PerformanceCategory.EXCEEDING
+        elif self.yieldEfficiencyPercent >= 90:
+            return PerformanceCategory.EXCELLENT
+        elif self.yieldEfficiencyPercent >= 70:
+            return PerformanceCategory.GOOD
+        elif self.yieldEfficiencyPercent >= 50:
+            return PerformanceCategory.ACCEPTABLE
+        else:
+            return PerformanceCategory.POOR
+
+    @property
+    def performance_icon(self) -> str:
+        """Get icon for performance category"""
+        icons = {
+            PerformanceCategory.EXCEPTIONAL: "🏆",
+            PerformanceCategory.EXCEEDING: "🎯",
+            PerformanceCategory.EXCELLENT: "⭐",
+            PerformanceCategory.GOOD: "✅",
+            PerformanceCategory.ACCEPTABLE: "🟡",
+            PerformanceCategory.POOR: "🔴"
+        }
+        return icons[self.performance_category]
+
+    @property
+    def performance_label(self) -> str:
+        """Get human-readable label"""
+        return self.performance_category.value.upper()
 
 
 class BlockBase(BaseModel):

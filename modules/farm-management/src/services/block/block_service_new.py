@@ -493,3 +493,101 @@ class BlockService:
                 "criticalAlerts": alert_stats.get("criticalAlerts", 0)
             }
         }
+
+    @staticmethod
+    async def transition_state_with_offset(
+        block_id: UUID,
+        new_state: BlockStatus,
+        user_id: UUID,
+        user_email: str,
+        notes: Optional[str] = None
+    ) -> Block:
+        """
+        Transition block state with automatic offset tracking for dashboard
+
+        This method wraps the standard transition_block_state but automatically
+        calculates and records offset information in the StatusChange.
+
+        Args:
+            block_id: Block ID
+            new_state: New state to transition to
+            user_id: User performing transition
+            user_email: User email
+            notes: Optional notes
+
+        Returns:
+            Updated block
+
+        Raises:
+            HTTPException: If transition invalid or block not found
+        """
+        from ...models.block import BlockStatusUpdate, StatusChange
+
+        # Get current block
+        block = await BlockRepository.get_by_id(block_id)
+        if not block:
+            raise HTTPException(404, f"Block not found: {block_id}")
+
+        # Calculate offset if expected dates are available
+        now = datetime.utcnow()
+        expected_date = None
+        offset_days = None
+        offset_type = None
+        auto_notes = []
+
+        if block.expectedStatusChanges:
+            expected_date_value = block.expectedStatusChanges.get(new_state.value)
+
+            if expected_date_value:
+                # Handle both datetime objects and string dates
+                if isinstance(expected_date_value, str):
+                    expected_date = datetime.fromisoformat(expected_date_value)
+                else:
+                    expected_date = expected_date_value
+
+                # Calculate offset in days
+                offset_days = (now.date() - expected_date.date()).days
+
+                if offset_days < 0:
+                    offset_type = "early"
+                    auto_notes.append(f"Transitioned {abs(offset_days)} days early")
+                elif offset_days == 0:
+                    offset_type = "on_time"
+                    auto_notes.append("Transitioned on schedule")
+                else:
+                    offset_type = "late"
+                    auto_notes.append(f"Transitioned {offset_days} days late")
+
+        # Combine user notes with auto-generated notes
+        final_notes = " | ".join(filter(None, [*auto_notes, notes]))
+
+        # Create status update request
+        status_update = BlockStatusUpdate(
+            newStatus=new_state,
+            notes=final_notes
+        )
+
+        # Use existing transition method
+        updated_block = await BlockService.transition_block_state(
+            block_id=block_id,
+            status_update=status_update,
+            user_id=user_id,
+            user_email=user_email
+        )
+
+        # Update the last status change with offset information
+        if updated_block.statusChanges:
+            last_change = updated_block.statusChanges[-1]
+            last_change.expectedDate = expected_date
+            last_change.offsetDays = offset_days
+            last_change.offsetType = offset_type
+
+            # Save updated block with offset info
+            await BlockRepository.update(updated_block)
+
+        logger.info(
+            f"[Block Service] Dashboard transition: Block {block.blockCode} → {new_state.value} "
+            f"(offset: {offset_days} days {offset_type if offset_type else 'unknown'})"
+        )
+
+        return updated_block

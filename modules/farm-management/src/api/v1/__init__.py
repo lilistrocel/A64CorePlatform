@@ -12,12 +12,14 @@ from .managers import router as managers_router
 from .block_harvests import router as block_harvests_router, farm_router as farm_harvests_router
 from .block_alerts import router as block_alerts_router, farm_router as farm_alerts_router
 from .block_archives import router as archives_router
+from .dashboard import router as dashboard_router
 
 api_router = APIRouter()
 
 # Include route modules
 api_router.include_router(farms_router, prefix="/farms", tags=["farms"])
 api_router.include_router(blocks_router, tags=["blocks"])  # Blocks are nested under farms
+api_router.include_router(dashboard_router, tags=["dashboard"])  # Farm dashboard with metrics
 api_router.include_router(block_harvests_router, tags=["block-harvests"])  # Block harvest events
 api_router.include_router(farm_harvests_router, tags=["farm-harvests"])  # Farm-level harvest views
 api_router.include_router(block_alerts_router, tags=["block-alerts"])  # Block alerts
