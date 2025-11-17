@@ -43,9 +43,9 @@ export function MainLayout() {
             <NavIcon>📊</NavIcon>
             <span>Dashboard</span>
           </NavItem>
-          <NavItem to="/farm/dashboard" onClick={closeMobileMenu}>
-            <NavIcon>🏞️</NavIcon>
-            <span>Farm Manager</span>
+          <NavItem to="/farm/farm-dashboard" onClick={closeMobileMenu}>
+            <NavIcon>🌾</NavIcon>
+            <span>Farm Dashboard</span>
           </NavItem>
           <NavItem to="/profile" onClick={closeMobileMenu}>
             <NavIcon>👤</NavIcon>
