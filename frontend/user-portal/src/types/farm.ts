@@ -856,3 +856,142 @@ export const PLANTING_STATUS_LABELS: Record<PlantingStatus, string> = {
   harvesting: 'Harvesting',
   completed: 'Completed',
 };
+
+// ============================================================================
+// DASHBOARD TYPES
+// ============================================================================
+
+export type DashboardBlockStatus =
+  | 'empty'
+  | 'planned'
+  | 'planted'
+  | 'growing'
+  | 'fruiting'
+  | 'harvesting'
+  | 'cleaning';
+
+export type PerformanceCategory =
+  | 'exceptional'  // >= 200%
+  | 'exceeding'    // 100-199%
+  | 'excellent'    // 90-99%
+  | 'good'         // 70-89%
+  | 'acceptable'   // 50-69%
+  | 'poor';        // < 50%
+
+export interface BlockCalculated {
+  // Timeliness tracking
+  daysInCurrentState: number;
+  expectedStateChangeDate: string | null;
+  daysUntilNextTransition: number | null;
+  isDelayed: boolean;
+  delayDays: number;
+
+  // Capacity
+  capacityPercent: number;
+
+  // Yield performance (for harvesting state)
+  yieldProgress: number;
+  yieldStatus: 'on_track' | 'ahead' | 'behind';
+  estimatedFinalYield: number;
+  performanceCategory: PerformanceCategory;
+
+  // Next action
+  nextAction: string;
+  nextActionDate: string | null;
+}
+
+export interface DashboardAlert {
+  alertId: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  createdAt: string;
+}
+
+export interface DashboardBlock {
+  // Core block data
+  blockId: string;
+  blockCode: string;
+  name: string | null;
+  state: DashboardBlockStatus;
+  blockType: string | null;
+
+  // Planting info
+  targetCrop: string | null;
+  targetCropName: string | null;
+  actualPlantCount: number | null;
+  maxPlants: number;
+
+  // Dates
+  plantedDate: string | null;
+  expectedHarvestDate: string | null;
+  expectedStatusChanges: Record<string, string> | null;
+
+  // KPI
+  kpi: {
+    predictedYieldKg: number;
+    actualYieldKg: number;
+    yieldEfficiencyPercent: number;
+    totalHarvests: number;
+  };
+
+  // Calculated metrics
+  calculated: BlockCalculated;
+
+  // Active alerts
+  activeAlerts: DashboardAlert[];
+}
+
+export interface FarmInfo {
+  farmId: string;
+  name: string;
+  code: string;
+  totalArea: number | null;
+  areaUnit: string;
+  managerName: string | null;
+  managerEmail: string | null;
+}
+
+export interface DashboardSummary {
+  totalBlocks: number;
+  blocksByState: Record<string, number>;
+  totalActivePlantings: number;
+  totalPredictedYieldKg: number;
+  totalActualYieldKg: number;
+  avgYieldEfficiency: number;
+  activeAlerts: Record<string, number>;
+}
+
+export interface DashboardActivity {
+  blockId: string;
+  blockCode: string;
+  action: 'state_change' | 'harvest_recorded' | 'alert_created' | 'alert_resolved';
+  details: string;
+  timestamp: string;
+}
+
+export interface UpcomingEvent {
+  blockId: string;
+  blockCode: string;
+  eventType: 'expected_harvest' | 'expected_planting' | 'expected_transition' | 'overdue_transition';
+  eventDate: string;
+  daysUntil: number;
+}
+
+export interface DashboardData {
+  farmInfo: FarmInfo;
+  summary: DashboardSummary;
+  blocks: DashboardBlock[];
+  recentActivity: DashboardActivity[];
+  upcomingEvents: UpcomingEvent[];
+}
+
+export interface QuickTransitionRequest {
+  newState: DashboardBlockStatus;
+  notes?: string;
+}
+
+export interface QuickHarvestRequest {
+  quantityKg: number;
+  qualityGrade: 'A' | 'B' | 'C';
+  notes?: string;
+}
