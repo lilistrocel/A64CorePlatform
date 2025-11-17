@@ -244,6 +244,24 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
       {/* Quick Actions (on hover) */}
       {showActions && (
         <QuickActions>
+          {block.state === 'empty' && (
+            <ActionButton
+              onClick={() => handleTransition('planned')}
+              disabled={transitioning}
+              $variant="plan"
+            >
+              📋 Plan
+            </ActionButton>
+          )}
+          {block.state === 'planned' && (
+            <ActionButton
+              onClick={() => handleTransition('growing')}
+              disabled={transitioning}
+              $variant="plant"
+            >
+              🌱 Plant
+            </ActionButton>
+          )}
           {block.state === 'planted' && (
             <ActionButton
               onClick={() => handleTransition('growing')}
@@ -598,12 +616,23 @@ const QuickActions = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 `;
 
-const ActionButton = styled.button<{ $variant?: 'success' }>`
+const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' }>`
   flex: 1;
   padding: 6px 8px;
   border: none;
   border-radius: 4px;
-  background: ${(props) => (props.$variant === 'success' ? '#10B981' : '#3B82F6')};
+  background: ${(props) => {
+    switch (props.$variant) {
+      case 'success':
+        return '#10B981';
+      case 'plan':
+        return '#3B82F6';
+      case 'plant':
+        return '#10B981';
+      default:
+        return '#3B82F6';
+    }
+  }};
   color: white;
   font-size: 10px;
   font-weight: 600;
@@ -611,7 +640,18 @@ const ActionButton = styled.button<{ $variant?: 'success' }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${(props) => (props.$variant === 'success' ? '#059669' : '#1976D2')};
+    background: ${(props) => {
+      switch (props.$variant) {
+        case 'success':
+          return '#059669';
+        case 'plan':
+          return '#1976D2';
+        case 'plant':
+          return '#059669';
+        default:
+          return '#1976D2';
+      }
+    }};
   }
 
   &:disabled {
