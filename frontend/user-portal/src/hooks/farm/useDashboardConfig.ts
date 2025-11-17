@@ -162,7 +162,7 @@ const DEFAULT_CONFIG: DashboardConfig = {
   }
 };
 
-const STORAGE_KEY = 'farm-dashboard-config';
+const STORAGE_KEY = 'block-monitor-config';
 
 export function useDashboardConfig() {
   const [config, setConfig] = useState<DashboardConfig>(DEFAULT_CONFIG);

@@ -18,7 +18,7 @@ export function FarmManager() {
     <Routes>
       <Route path="/" element={<Navigate to="dashboard" replace />} />
       <Route path="/dashboard" element={<FarmDashboard />} />
-      <Route path="/farm-dashboard" element={<FarmDashboardPage />} />
+      <Route path="/block-monitor" element={<FarmDashboardPage />} />
       <Route path="/farms" element={<FarmList />} />
       <Route path="/farms/:farmId" element={<FarmDetail />} />
       <Route path="/farms/:farmId/blocks/:blockId" element={<BlockDetail />} />
