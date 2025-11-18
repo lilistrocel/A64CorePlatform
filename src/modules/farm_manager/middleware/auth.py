@@ -14,6 +14,9 @@ import logging
 from ..config.settings import settings
 from ..services.database import farm_db
 
+# Import core API settings for JWT verification (SECRET_KEY must match)
+from src.config.settings import settings as core_settings
+
 logger = logging.getLogger(__name__)
 
 # HTTP Bearer token scheme
@@ -65,11 +68,11 @@ async def get_current_user(
     )
 
     try:
-        # Decode JWT token
+        # Decode JWT token using core API's SECRET_KEY
         token = credentials.credentials
         payload = jwt.decode(
             token,
-            settings.SECRET_KEY,
+            core_settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
 
