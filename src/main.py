@@ -20,6 +20,7 @@ from .config.settings import settings
 from .services.database import mongodb, mysql
 from .services.port_manager import init_port_manager, get_port_manager
 from .services.module_manager import module_manager
+from .core.plugin_system import get_plugin_manager
 
 # Configure logging
 logging.basicConfig(
@@ -127,6 +128,15 @@ async def startup_event() -> None:
         logger.info("Port Manager injected into Module Manager")
     except Exception as e:
         logger.error(f"Failed to initialize Port Manager: {e}")
+
+    # Load plugin modules
+    try:
+        plugin_manager = get_plugin_manager()
+        # Load all core modules (farm_manager, etc.)
+        loaded_modules = await plugin_manager.load_all_modules(app)
+        logger.info(f"Loaded {len(loaded_modules)} plugin modules: {list(loaded_modules.keys())}")
+    except Exception as e:
+        logger.error(f"Failed to load plugin modules: {e}")
 
 # Shutdown event
 @app.on_event("shutdown")

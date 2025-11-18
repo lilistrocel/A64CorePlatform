@@ -1,6 +1,0 @@
-Farm ID: 0bef9a0e-172c-4b5d-96a0-5fd98c268967
-Block ID: ea89f238-dfe5-4be2-99e6-113b02a7d486
-Current state: growing
-
-Planning with Lettuce (fruitingDays=0)...
-Plan error 400 - see plan_error.json

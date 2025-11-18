@@ -1,0 +1,31 @@
+{
+  "module_name": "farm_manager",
+  "display_name": "Farm Manager",
+  "version": "1.8.0",
+  "description": "Complete farm and block management system with crop planning, growth tracking, and harvest management",
+  "route_prefix": "/api/v1/farm",
+  "dependencies": {
+    "core": ">=1.3.0",
+    "python": ">=3.11"
+  },
+  "database_collections": [
+    "farms",
+    "blocks",
+    "plant_data",
+    "plant_data_enhanced",
+    "block_harvests",
+    "growth_plans"
+  ],
+  "permissions": [
+    "farm.view",
+    "farm.create",
+    "farm.edit",
+    "farm.delete",
+    "farm.harvest.view",
+    "farm.harvest.create",
+    "farm.harvest.edit"
+  ],
+  "license_required": true,
+  "enabled_by_default": true,
+  "core_module": true
+}

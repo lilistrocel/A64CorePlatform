@@ -17,5 +17,5 @@ api_router.include_router(admin.router, tags=["Admin"])  # Admin routes have /ad
 api_router.include_router(modules.router, tags=["Module Management"])  # Module routes have /modules prefix in router
 api_router.include_router(dashboard.router, tags=["Dashboard"])  # Dashboard routes have /dashboard prefix in router
 
-# Note: Farm management routes are handled by the farm-management microservice (port 8001)
-# and proxied through nginx at /api/v1/farm/*
+# Note: Farm management routes (/api/v1/farm/*) are handled by the farm_manager plugin module
+# which is dynamically loaded at startup via the plugin system (src/core/plugin_system/)

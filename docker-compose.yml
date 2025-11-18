@@ -22,7 +22,7 @@ services:
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000
-      - PYTHONPATH=/app/modules/farm-management/src:/app/src
+      - PYTHONPATH=/app/src
     volumes:
       - ./src:/app/src
       - ./modules:/app/modules  # Farm management and other modules
@@ -223,46 +223,6 @@ services:
     networks:
       - a64core-network
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # Farm Management Module
-  farm-management:
-    container_name: a64core-farm-management-dev
-    build:
-      context: ./modules/farm-management
-      dockerfile: Dockerfile
-    command: python -m uvicorn src.main:app --host 0.0.0.0 --port 8001 --reload
-    ports:
-      - "8001:8001"
-    environment:
-      - ENVIRONMENT=development
-      - DEBUG=True
-      - MONGODB_URL=mongodb://mongodb:27017
-      - MONGODB_DB_NAME=a64core_db
-      - SECRET_KEY=dev_secret_key_change_in_production
-      - A64CORE_API_URL=http://api:8000
-      - ENABLE_EMAIL_NOTIFICATIONS=false
-      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000
-    volumes:
-      - ./modules/farm-management/src:/app/src
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      api:
-        condition: service_started
-    networks:
-      - a64core-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     logging:
       driver: "json-file"
       options:

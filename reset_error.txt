@@ -1,1 +1,0 @@
-{"detail":"Invalid status transition: planned → harvesting"}
