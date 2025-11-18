@@ -194,7 +194,7 @@ async def quick_transition(
         if block.farmId != farmId:
             raise HTTPException(400, "Block does not belong to this farm")
 
-        # Transition with offset tracking
+        # Transition with crop data if provided
         from ...services.block.block_service_new import BlockService
         from ...models.block import BlockStatusUpdate
 
@@ -206,11 +206,11 @@ async def quick_transition(
             actualPlantCount=request.actualPlantCount
         )
 
-        updated_block = await BlockService.transition_block_state(
-            block_id=blockId,
-            status_update=status_update,
-            user_id=UUID(current_user.userId),
-            user_email=current_user.email
+        updated_block = await BlockService.change_status(
+            blockId,
+            status_update,
+            UUID(current_user.userId),
+            current_user.email
         )
 
         logger.info(

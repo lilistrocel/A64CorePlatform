@@ -30,10 +30,10 @@ class BlockService:
 
     # Valid status transitions
     VALID_TRANSITIONS = {
-        BlockStatus.EMPTY: [BlockStatus.PLANNED, BlockStatus.ALERT],
+        BlockStatus.EMPTY: [BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.GROWING, BlockStatus.ALERT],  # Can start planning/planting from empty
         BlockStatus.PLANNED: [BlockStatus.GROWING, BlockStatus.EMPTY, BlockStatus.ALERT],  # Plant → Growing
         BlockStatus.PLANTED: [BlockStatus.GROWING, BlockStatus.ALERT],  # Backward compatibility
-        BlockStatus.GROWING: [BlockStatus.FRUITING, BlockStatus.ALERT],
+        BlockStatus.GROWING: [BlockStatus.FRUITING, BlockStatus.HARVESTING, BlockStatus.ALERT],  # Can skip to harvesting if no fruiting
         BlockStatus.FRUITING: [BlockStatus.HARVESTING, BlockStatus.ALERT],
         BlockStatus.HARVESTING: [BlockStatus.CLEANING, BlockStatus.ALERT],
         BlockStatus.CLEANING: [BlockStatus.EMPTY, BlockStatus.ALERT],
@@ -44,8 +44,47 @@ class BlockService:
     }
 
     @staticmethod
+    async def get_valid_transitions(block: Block) -> list[BlockStatus]:
+        """
+        Get valid transitions for a block based on its plant's growth cycle
+
+        Dynamically determines valid next states based on:
+        - Block's current state
+        - Plant's growth cycle (e.g., skip fruiting if fruitingDays = 0)
+
+        Returns:
+            List of valid BlockStatus values for next transition
+        """
+        from ...services.plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+
+        # Get base valid transitions
+        valid_next = list(BlockService.VALID_TRANSITIONS.get(block.state, []))
+
+        # If block has a plant assigned and is in GROWING state, check if we should skip fruiting
+        if block.targetCrop and block.state == BlockStatus.GROWING:
+            try:
+                plant_data = await PlantDataEnhancedRepository.get_by_id(block.targetCrop)
+
+                if plant_data and plant_data.growthCycle:
+                    # If fruitingDays is 0, remove FRUITING from valid transitions
+                    # This allows GROWING → HARVESTING directly (skipping fruiting)
+                    if plant_data.growthCycle.fruitingDays == 0:
+                        if BlockStatus.FRUITING in valid_next:
+                            valid_next.remove(BlockStatus.FRUITING)
+            except Exception:
+                # If we can't get plant data, use base transitions
+                pass
+
+        return valid_next
+
+    @staticmethod
     def validate_status_transition(current_status: BlockStatus, new_status: BlockStatus) -> bool:
-        """Validate if status transition is allowed"""
+        """
+        Validate if status transition is allowed (base validation)
+
+        Note: This is basic validation. For plant-specific transition logic,
+        the API endpoint should use get_valid_transitions() instead.
+        """
         if new_status == current_status:
             return False  # No self-transition
 
@@ -78,23 +117,34 @@ class BlockService:
         expected_dates["planted"] = planting_date
 
         # Growing phase starts after germination
-        if cycle.germinationDays:
+        if cycle.germinationDays is not None:
             expected_dates["growing"] = planting_date + timedelta(days=cycle.germinationDays)
 
-        # Fruiting phase starts after vegetative growth
-        if cycle.germinationDays and cycle.vegetativeDays:
-            expected_dates["fruiting"] = planting_date + timedelta(
-                days=cycle.germinationDays + cycle.vegetativeDays
-            )
+        # Fruiting phase starts after vegetative growth (only if plant has fruiting phase)
+        # Only add fruiting date if fruitingDays is not None and greater than 0
+        if cycle.germinationDays is not None and cycle.vegetativeDays is not None:
+            print(f"[DEBUG] Checking fruiting: fruitingDays={cycle.fruitingDays}", flush=True)
+            if cycle.fruitingDays is not None and cycle.fruitingDays > 0:
+                expected_dates["fruiting"] = planting_date + timedelta(
+                    days=cycle.germinationDays + cycle.vegetativeDays
+                )
+                print(f"[DEBUG] Added fruiting phase", flush=True)
+            else:
+                print(f"[DEBUG] Skipped fruiting phase (fruitingDays={cycle.fruitingDays})", flush=True)
 
-        # Harvesting phase starts after flowering
-        if cycle.germinationDays and cycle.vegetativeDays and cycle.floweringDays:
-            expected_dates["harvesting"] = planting_date + timedelta(
-                days=cycle.germinationDays + cycle.vegetativeDays + cycle.floweringDays
-            )
+        # Harvesting phase starts after flowering (or directly after fruiting for leafy greens)
+        # Handle crops with or without flowering phase (floweringDays can be 0 for leafy greens)
+        if cycle.germinationDays is not None and cycle.vegetativeDays is not None:
+            days_until_harvest = cycle.germinationDays + cycle.vegetativeDays
+
+            # Add flowering days if present (can be 0 for leafy greens like lettuce)
+            if cycle.floweringDays is not None:
+                days_until_harvest += cycle.floweringDays
+
+            expected_dates["harvesting"] = planting_date + timedelta(days=days_until_harvest)
 
         # Cleaning phase starts after harvest period
-        if cycle.totalCycleDays:
+        if cycle.totalCycleDays is not None:
             expected_dates["cleaning"] = planting_date + timedelta(days=cycle.totalCycleDays)
 
         # Expected harvest date (when harvesting should start)
@@ -104,6 +154,88 @@ class BlockService:
             expected_harvest_date = planting_date + timedelta(days=cycle.totalCycleDays or 90)
 
         return expected_harvest_date, expected_dates
+
+    @staticmethod
+    async def recalculate_future_dates(
+        current_state: BlockStatus,
+        expected_status_changes: Dict[str, datetime],
+        actual_transition_date: datetime,
+        plant_data_id: Optional[UUID] = None
+    ) -> Dict[str, datetime]:
+        """
+        Recalculate future predicted dates based on actual transition timing
+
+        When a user manually transitions to a new state, we adjust all future
+        predicted dates by the same offset (early/late).
+
+        Also removes fruiting phase if the plant doesn't have fruiting days.
+
+        Args:
+            current_state: The state being transitioned TO
+            expected_status_changes: Original predicted dates
+            actual_transition_date: When the transition actually happened
+            plant_data_id: Optional plant data ID to check for fruiting phase
+
+        Returns:
+            Updated expected_status_changes with adjusted future dates
+        """
+        print(f"[DEBUG] recalculate_future_dates called for state={current_state.value}, plant_id={plant_data_id}", flush=True)
+        from ...services.plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+
+        # State progression order
+        state_order = ["planned", "planted", "growing", "fruiting", "harvesting", "cleaning"]
+
+        # Get expected date for current state
+        expected_date = expected_status_changes.get(current_state.value)
+        if not expected_date:
+            # No expected date for this state, can't calculate offset
+            return expected_status_changes
+
+        # Calculate offset (negative = early, positive = late)
+        if isinstance(expected_date, str):
+            expected_date = datetime.fromisoformat(expected_date)
+
+        offset_days = (actual_transition_date - expected_date).days
+
+        # Find current state index
+        try:
+            current_idx = state_order.index(current_state.value)
+        except ValueError:
+            return expected_status_changes
+
+        # Start with a copy of the expected dates
+        updated_dates = expected_status_changes.copy()
+
+        # Check if we should remove fruiting phase (for plants without fruiting days)
+        # Do this BEFORE offset adjustment so it works even when offset is 0
+        if plant_data_id:
+            plant_data = await PlantDataEnhancedRepository.get_by_id(plant_data_id)
+            if plant_data and plant_data.growthCycle:
+                print(f"[DEBUG] Plant has fruitingDays={plant_data.growthCycle.fruitingDays}", flush=True)
+                if plant_data.growthCycle.fruitingDays == 0:
+                    # Remove fruiting from timeline
+                    if "fruiting" in updated_dates:
+                        del updated_dates["fruiting"]
+                        print(f"[DEBUG] Removed fruiting phase from recalculated dates (fruitingDays=0)", flush=True)
+
+        # If offset is 0, no date adjustment needed (but we may have removed fruiting above)
+        if offset_days == 0:
+            print(f"[DEBUG] No offset adjustment needed (offset=0), returning updated_dates", flush=True)
+            return updated_dates
+
+        # Adjust all future dates by the offset
+        for i in range(current_idx, len(state_order)):
+            state = state_order[i]
+            if state in updated_dates:
+                original_date = updated_dates[state]
+                if isinstance(original_date, str):
+                    original_date = datetime.fromisoformat(original_date)
+
+                # Shift by offset
+                adjusted_date = original_date + timedelta(days=offset_days)
+                updated_dates[state] = adjusted_date
+
+        return updated_dates
 
     @staticmethod
     async def calculate_predicted_yield(plant_data_id: UUID, plant_count: int) -> float:
@@ -220,9 +352,12 @@ class BlockService:
             )
 
         # Handle planned, planting, or growing transitions
+        print(f"[DEBUG] Transition: {current_block.state.value} → {new_status.value}", flush=True)
         if new_status in [BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.GROWING]:
+            print(f"[DEBUG] Entered PLANNED/PLANTED/GROWING block", flush=True)
             # Check if we're transitioning from planned to planted/growing (reuse existing data)
             if current_block.state == BlockStatus.PLANNED and new_status in [BlockStatus.PLANTED, BlockStatus.GROWING]:
+                print(f"[DEBUG] Entered PLANNED → PLANTED/GROWING block", flush=True)
                 # Reuse existing block data for planned → planted/growing transition
                 if not current_block.targetCrop:
                     raise HTTPException(400, f"Cannot transition from planned to {new_status.value}: missing crop data")
@@ -250,13 +385,28 @@ class BlockService:
 
                 notes_with_offset = (status_update.notes or f"Transitioned to {new_status.value}") + offset_note
 
+                # Recalculate future dates based on actual planting time
+                updated_expected_dates = None
+                if current_block.expectedStatusChanges:
+                    actual_transition_date = datetime.utcnow()
+                    updated_expected_dates = await BlockService.recalculate_future_dates(
+                        new_status,
+                        current_block.expectedStatusChanges,
+                        actual_transition_date,
+                        current_block.targetCrop  # Pass plant ID to check fruiting days
+                    )
+                    logger.info(
+                        f"[Block Service] Recalculated future dates for planned → {new_status.value} transition"
+                    )
+
                 # Update status using existing data
                 block = await BlockRepository.update_status(
                     block_id,
                     new_status,
                     user_id,
                     user_email,
-                    notes=notes_with_offset
+                    notes=notes_with_offset,
+                    expected_status_changes=updated_expected_dates
                 )
 
             else:
@@ -273,7 +423,8 @@ class BlockService:
                     raise HTTPException(404, f"Plant data not found: {status_update.targetCrop}")
 
                 # Calculate expected dates
-                planting_date = datetime.utcnow()
+                # Use plannedPlantingDate if provided (for PLANNED state), otherwise use current time (for direct PLANTED)
+                planting_date = status_update.plannedPlantingDate if status_update.plannedPlantingDate else datetime.utcnow()
                 expected_harvest_date, expected_status_changes = await BlockService.calculate_expected_dates(
                     status_update.targetCrop,
                     planting_date
@@ -323,12 +474,27 @@ class BlockService:
 
         # Handle normal status transition
         else:
+            # Recalculate future dates if block has expectedStatusChanges
+            updated_expected_dates = None
+            if current_block.expectedStatusChanges:
+                actual_transition_date = datetime.utcnow()
+                updated_expected_dates = BlockService.recalculate_future_dates(
+                    new_status,
+                    current_block.expectedStatusChanges,
+                    actual_transition_date
+                )
+                logger.info(
+                    f"[Block Service] Recalculated future dates for block {block_id} "
+                    f"transitioning to {new_status.value}"
+                )
+
             block = await BlockRepository.update_status(
                 block_id,
                 new_status,
                 user_id,
                 user_email,
-                notes=status_update.notes
+                notes=status_update.notes,
+                expected_status_changes=updated_expected_dates
             )
 
         if not block:

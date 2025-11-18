@@ -1,0 +1,136 @@
+## Plants Extracted from Old Supabase Database
+
+### Source: crop_price table (53 unique crops)
+Apple Melon
+Ash Gourd
+Baby Spinach ( HYDROGANIC )
+Basil (Hydroganic)
+Butternut
+Cabbage Round
+Capsicum - Green
+Capsicum - Red
+Capsicum - Yellow
+Cauliflower
+Celery
+Cucumber
+Drumstick
+Eggplant
+Fennel
+Green Bean
+Green Chilly
+Honeydew Melon
+Hydroponic  Bionda
+Hydroponic  Boston
+Hydroponic  Frisee
+Hydroponic  Gem
+Kangkong Leaf
+Lettuce - Boston
+Lettuce - Frisee
+Lettuce - Iceberg
+Lettuce - Lollo Bionda
+Lettuce - Lollo Red
+Lettuce - Lollo Red (Hydroganic)
+Lettuce - Oakleaf
+Lettuce - Romaine
+Lettuce Frisee Yellow ( HYDROGANIC )
+Lettuce Oakleaf ( HYDROGANIC )
+Long Bean
+Marrow
+Mulukhiyah
+Okra
+Onion Red
+Radicchio
+Red Long Chili
+Rock Melon
+Round Cabbage
+SPINACH BABY ( HYDROGANIC )
+Sweet Corn
+Sweet Melon
+Tomato
+Tomato-Cherry
+Tomato-Round-Table
+Watermelon
+Wild Rocket ( HYDROGANIC )
+Zaater Leave
+Zucchini - Green
+Zucchini - Yellow
+
+### Source: farm_block table (31 unique crops)
+Butternut
+Cabbage - Round White
+Capsicum - Green
+Capsicum - Red
+Capsicum - Yellow
+Cauliflower
+Celery
+Cucumber
+Eggplant
+Fennel
+Honeydew Melon
+Hot Pepper
+Hydroponics Bionda
+Hydroponics Boston
+Hydroponics Frisee
+Hydroponics Gem
+Hydroponics Oak Leafs
+Hydroponics Rosso
+Lettuce - Iceberg
+Lettuce - Lollo Bionda
+Lettuce - Lollo Rosso
+Lettuce - Phase 1 (5cm)
+Lettuce - Radicchio
+Lettuce - Romaine
+Long Beans
+Marrow
+Melon
+Red Long Chili
+Rock Melon
+Zucchini - Green
+Zucchini - Yellow
+
+### Combined Unique List (removing duplicates and cleaning names)
+This list needs to be normalized and researched:
+
+1. Apple Melon
+2. Ash Gourd (Winter Melon)
+3. Basil
+4. Bean (Green Bean / Long Bean)
+5. Butternut Squash
+6. Cabbage (Round)
+7. Capsicum/Bell Pepper - Green
+8. Capsicum/Bell Pepper - Red
+9. Capsicum/Bell Pepper - Yellow
+10. Cauliflower
+11. Celery
+12. Chili Pepper (Green, Red Long, Hot)
+13. Corn (Sweet Corn)
+14. Cucumber
+15. Drumstick (Moringa)
+16. Eggplant
+17. Fennel
+18. Honeydew Melon
+19. Kangkong (Water Spinach)
+20. Lettuce - Boston
+21. Lettuce - Frisee
+22. Lettuce - Iceberg
+23. Lettuce - Lollo Bionda (Green Oak Leaf)
+24. Lettuce - Lollo Rosso (Red Oak Leaf)
+25. Lettuce - Oakleaf
+26. Lettuce - Radicchio
+27. Lettuce - Romaine
+28. Marrow (Squash)
+29. Melon (Rock Melon/Cantaloupe)
+30. Mulukhiyah (Jute Mallow)
+31. Okra
+32. Onion (Red)
+33. Rocket/Arugula (Wild)
+34. Spinach (Baby)
+35. Sweet Melon
+36. Tomato (Regular)
+37. Tomato (Cherry)
+38. Watermelon
+39. Zaatar (Oregano/Thyme)
+40. Zucchini - Green
+41. Zucchini - Yellow
+
+TOTAL: ~41 unique plant varieties (some with color/size variations)

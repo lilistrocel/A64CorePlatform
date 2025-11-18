@@ -476,6 +476,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
         newStatus,
         targetCrop: selectedPlantId,
         actualPlantCount: parseInt(plantCount),
+        plannedPlantingDate: plantingDate.toISOString(), // Convert to ISO datetime string for backend
         notes: notes || `${newStatus === 'planned' ? 'Scheduled' : 'Planted'} ${preview.selectedPlant?.plantName} on ${plannedDate}`,
       });
 

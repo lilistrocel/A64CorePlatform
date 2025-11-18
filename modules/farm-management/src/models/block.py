@@ -164,6 +164,7 @@ class BlockStatusUpdate(BaseModel):
     notes: Optional[str] = Field(None, description="Notes about status change")
     targetCrop: Optional[UUID] = Field(None, description="Plant data ID (required when status=planted)")
     actualPlantCount: Optional[int] = Field(None, ge=0, description="Number of plants (when planting)")
+    plannedPlantingDate: Optional[datetime] = Field(None, description="Planned planting date (for PLANNED state, used to calculate expectedStatusChanges)")
 
 
 class Block(BlockBase):

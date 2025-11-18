@@ -32,7 +32,8 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
    * Get performance color
    */
   const getPerformanceColor = () => {
-    return config.colorScheme.performanceColors[block.calculated.performanceCategory] || '#6B7280';
+    const category = block.calculated?.performanceCategory || 'good';
+    return config.colorScheme?.performanceColors?.[category] || '#6B7280';
   };
 
   /**
@@ -143,11 +144,15 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             <Capacity>
               Planned: {block.actualPlantCount || 0} / {block.maxPlants} plants
             </Capacity>
-            {block.calculated.expectedStateChangeDate && (
+            {block.calculated.daysUntilNextTransition !== null && block.calculated.daysUntilNextTransition !== undefined && (
               <Timeline>
-                <TimelineIcon>📅</TimelineIcon>
+                <TimelineIcon>{block.calculated.isDelayed ? '⚠️' : '📅'}</TimelineIcon>
                 <TimelineText>
-                  Plant in {Math.abs(block.calculated.daysUntilNextTransition || 0)} days
+                  {block.calculated.daysUntilNextTransition > 0
+                    ? `Plant in ${block.calculated.daysUntilNextTransition} days`
+                    : block.calculated.daysUntilNextTransition === 0
+                    ? 'Plant today'
+                    : `${Math.abs(block.calculated.daysUntilNextTransition)} days overdue`}
                 </TimelineText>
               </Timeline>
             )}
@@ -187,6 +192,19 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
                 </InfoText>
               </InfoItem>
 
+              {block.calculated.daysUntilNextTransition !== null && block.calculated.daysUntilNextTransition !== undefined && (
+                <InfoItem>
+                  <InfoIcon>{block.calculated.isDelayed ? '⚠️' : '📅'}</InfoIcon>
+                  <InfoText>
+                    {block.calculated.daysUntilNextTransition > 0
+                      ? `${block.calculated.daysUntilNextTransition}d until next transition`
+                      : block.calculated.daysUntilNextTransition === 0
+                      ? 'Transition due today'
+                      : `${Math.abs(block.calculated.daysUntilNextTransition)}d overdue`}
+                  </InfoText>
+                </InfoItem>
+              )}
+
               {block.calculated.isDelayed && (
                 <DelayBadge $color={getTimelineColor()}>
                   {block.calculated.delayDays}d late
@@ -218,7 +236,9 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               </ProgressBar>
               <PerformanceBadge $color={getPerformanceColor()}>
                 {block.calculated.yieldProgress.toFixed(0)}% •{' '}
-                {config.icons.metrics.performance[block.calculated.performanceCategory]}
+                {block.calculated?.performanceCategory
+                  ? config.icons?.metrics?.performance?.[block.calculated.performanceCategory]
+                  : '📊'}
               </PerformanceBadge>
             </YieldProgress>
 
@@ -298,12 +318,24 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             </ActionButton>
           )}
           {block.state === 'growing' && (
-            <ActionButton
-              onClick={() => handleTransition('fruiting')}
-              disabled={transitioning}
-            >
-              → Fruiting
-            </ActionButton>
+            <>
+              {/* Check if block has fruiting in timeline - skip if not */}
+              {block.expectedStatusChanges?.fruiting ? (
+                <ActionButton
+                  onClick={() => handleTransition('fruiting')}
+                  disabled={transitioning}
+                >
+                  → Fruiting
+                </ActionButton>
+              ) : (
+                <ActionButton
+                  onClick={() => handleTransition('harvesting')}
+                  disabled={transitioning}
+                >
+                  → Harvesting
+                </ActionButton>
+              )}
+            </>
           )}
           {block.state === 'fruiting' && (
             <ActionButton
@@ -314,12 +346,28 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             </ActionButton>
           )}
           {block.state === 'harvesting' && (
+            <>
+              <ActionButton
+                onClick={handleQuickHarvest}
+                disabled={recordingHarvest}
+                $variant="success"
+              >
+                📥 Harvest
+              </ActionButton>
+              <ActionButton
+                onClick={() => handleTransition('cleaning')}
+                disabled={transitioning}
+              >
+                → Cleaning
+              </ActionButton>
+            </>
+          )}
+          {block.state === 'cleaning' && (
             <ActionButton
-              onClick={handleQuickHarvest}
-              disabled={recordingHarvest}
-              $variant="success"
+              onClick={() => handleTransition('empty')}
+              disabled={transitioning}
             >
-              📥 Harvest
+              → Empty
             </ActionButton>
           )}
         </QuickActions>

@@ -26,6 +26,9 @@ async def calculate_block_metrics(
     Returns:
         BlockCalculated with all metrics
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     now = datetime.utcnow()
 
     # ==================================================
@@ -46,7 +49,7 @@ async def calculate_block_metrics(
 
     if block.expectedStatusChanges:
         # State order for progression
-        state_order = ["planted", "growing", "fruiting", "harvesting", "cleaning"]
+        state_order = ["planned", "planted", "growing", "fruiting", "harvesting", "cleaning"]
 
         # Find current state index
         try:

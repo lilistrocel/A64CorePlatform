@@ -309,6 +309,10 @@ async def get_valid_status_transitions(
     """
     Get list of valid status transitions for a block's current status.
 
+    Dynamically determines valid transitions based on:
+    - Block's current state
+    - Plant's growth cycle (e.g., skip fruiting if fruitingDays = 0)
+
     Useful for UI to show available actions and prevent invalid transitions.
     """
     block = await BlockService.get_block(block_id)
@@ -321,7 +325,8 @@ async def get_valid_status_transitions(
             detail="Block not found in this farm"
         )
 
-    valid_transitions = BlockService.VALID_TRANSITIONS.get(block.state, [])
+    # Get valid transitions based on block's plant data
+    valid_transitions = await BlockService.get_valid_transitions(block)
 
     return SuccessResponse(
         data={
