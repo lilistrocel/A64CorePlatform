@@ -23,14 +23,6 @@ services:
     volumes: []  # Remove all volumes (use built files in container)
     restart: always
 
-  # Farm Management Module - Production CORS Configuration
-  farm-management:
-    environment:
-      - ENVIRONMENT=production
-      - DEBUG=False
-      - CORS_ORIGINS=https://a64core.com,http://localhost:5173
-    restart: always
-
   # NGINX - Production Configuration with SSL
   nginx:
     volumes:
