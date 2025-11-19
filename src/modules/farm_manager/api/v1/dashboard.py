@@ -102,7 +102,7 @@ async def get_farm_dashboard(
             active_alerts = [
                 DashboardAlert(
                     alertId=alert.alertId,
-                    severity=alert.severity,
+                    severity=alert.severity.value,  # Convert enum to string value
                     title=alert.title,
                     createdAt=alert.createdAt
                 )
