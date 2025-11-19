@@ -23,6 +23,32 @@ from .harvest import Harvest, HarvestEntry
 from .block_cycle import BlockCycle, BlockCycleAlert, BlockCycleDailyHarvest
 from .stock_inventory import StockInventoryItem, StockInventoryCreate
 from .farm_assignment import FarmAssignment, FarmAssignmentCreate
+from .farm_task import (
+    FarmTask,
+    FarmTaskCreate,
+    FarmTaskUpdate,
+    FarmTaskListResponse,
+    TaskType,
+    TaskStatus,
+    HarvestGrade,
+    HarvestEntry,
+    HarvestEntryCreate,
+    HarvestTotal,
+    TaskData,
+    TaskCompletionData,
+)
+from .block_alert import (
+    BlockAlert,
+    BlockAlertCreate,
+    BlockAlertListResponse,
+    AlertSeverity as BlockAlertSeverity,
+    AlertStatus as BlockAlertStatus,
+    AlertCategory,
+    AlertComment,
+    AlertCommentCreate,
+    AlertUpdate,
+    AlertResolve as BlockAlertResolve,
+)
 
 __all__ = [
     # Farm
@@ -83,4 +109,28 @@ __all__ = [
     # Farm Assignment
     "FarmAssignment",
     "FarmAssignmentCreate",
+    # Farm Task (Operations)
+    "FarmTask",
+    "FarmTaskCreate",
+    "FarmTaskUpdate",
+    "FarmTaskListResponse",
+    "TaskType",
+    "TaskStatus",
+    "HarvestGrade",
+    "HarvestEntry",
+    "HarvestEntryCreate",
+    "HarvestTotal",
+    "TaskData",
+    "TaskCompletionData",
+    # Block Alert (Operations)
+    "BlockAlert",
+    "BlockAlertCreate",
+    "BlockAlertListResponse",
+    "BlockAlertSeverity",
+    "BlockAlertStatus",
+    "AlertCategory",
+    "AlertComment",
+    "AlertCommentCreate",
+    "AlertUpdate",
+    "BlockAlertResolve",
 ]
