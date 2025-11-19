@@ -9,7 +9,7 @@ from typing import Optional, List
 from uuid import UUID
 
 from ...models.farm_task import (
-    FarmTask, FarmTaskCreate, FarmTaskUpdate, FarmTaskListResponse,
+    FarmTask, FarmTaskCreate, FarmTaskUpdate,
     TaskType, TaskStatus, HarvestEntryCreate, TaskCompletionData
 )
 from ...services.task.task_service import TaskService
@@ -80,7 +80,7 @@ async def get_pending_task_count(
 
 @router.get(
     "/farms/{farm_id}",
-    response_model=FarmTaskListResponse,
+    response_model=PaginatedResponse[FarmTask],
     summary="List tasks for a farm"
 )
 async def list_farm_tasks(
@@ -112,7 +112,7 @@ async def list_farm_tasks(
 
 @router.get(
     "/blocks/{block_id}",
-    response_model=FarmTaskListResponse,
+    response_model=PaginatedResponse[FarmTask],
     summary="List tasks for a block"
 )
 async def list_block_tasks(

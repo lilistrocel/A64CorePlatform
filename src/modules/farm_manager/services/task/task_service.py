@@ -12,8 +12,9 @@ import logging
 from ...models.farm_task import (
     FarmTask, FarmTaskCreate, FarmTaskUpdate,
     TaskType, TaskStatus, HarvestEntryCreate,
-    TaskCompletionData, FarmTaskListResponse
+    TaskCompletionData
 )
+from ...utils.responses import PaginatedResponse, PaginationMeta
 from .task_repository import TaskRepository
 from ..database import farm_db
 
@@ -102,7 +103,7 @@ class TaskService:
         status: Optional[TaskStatus] = None,
         page: int = 1,
         per_page: int = 50
-    ) -> FarmTaskListResponse:
+    ) -> PaginatedResponse[FarmTask]:
         """
         Get tasks for a farm
 
@@ -113,15 +114,19 @@ class TaskService:
             per_page: Results per page
 
         Returns:
-            FarmTaskListResponse with paginated tasks
+            PaginatedResponse with paginated tasks
         """
         tasks, total = await TaskRepository.get_by_farm(farm_id, status, page, per_page)
+        total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
-        return FarmTaskListResponse(
-            tasks=tasks,
-            total=total,
-            page=page,
-            perPage=per_page
+        return PaginatedResponse(
+            data=tasks,
+            meta=PaginationMeta(
+                total=total,
+                page=page,
+                perPage=per_page,
+                totalPages=total_pages
+            )
         )
 
     @staticmethod
@@ -130,7 +135,7 @@ class TaskService:
         status: Optional[TaskStatus] = None,
         page: int = 1,
         per_page: int = 50
-    ) -> FarmTaskListResponse:
+    ) -> PaginatedResponse[FarmTask]:
         """
         Get tasks for a block
 
@@ -141,15 +146,19 @@ class TaskService:
             per_page: Results per page
 
         Returns:
-            FarmTaskListResponse with paginated tasks
+            PaginatedResponse with paginated tasks
         """
         tasks, total = await TaskRepository.get_by_block(block_id, status, page, per_page)
+        total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
-        return FarmTaskListResponse(
-            tasks=tasks,
-            total=total,
-            page=page,
-            perPage=per_page
+        return PaginatedResponse(
+            data=tasks,
+            meta=PaginationMeta(
+                total=total,
+                page=page,
+                perPage=per_page,
+                totalPages=total_pages
+            )
         )
 
     @staticmethod
@@ -312,8 +321,15 @@ class TaskService:
         if task.assignedTo and str(task.assignedTo) != str(user_id):
             raise ValueError(f"Task is assigned to another user")
 
+        # Get user role to check permissions
+        user = await db.users.find_one({"userId": str(user_id)})
+        if not user:
+            raise ValueError(f"User not found: {user_id}")
+        user_role = user.get("role", "")
+
         # Verify user is assigned to the farm (if not assigned task)
-        if not task.assignedTo:
+        # Super admins bypass farm assignment checks
+        if not task.assignedTo and user_role != "super_admin":
             assignment = await db.farmer_assignments.find_one({
                 "userId": str(user_id),
                 "farmId": str(task.farmId),
@@ -382,13 +398,22 @@ class TaskService:
 
         # Verify user has access to this farm
         db = farm_db.get_database()
-        assignment = await db.farmer_assignments.find_one({
-            "userId": str(user_id),
-            "farmId": str(task.farmId),
-            "isActive": True
-        })
-        if not assignment:
-            raise ValueError(f"User not assigned to farm {task.farmId}")
+
+        # Get user role to check permissions
+        user = await db.users.find_one({"userId": str(user_id)})
+        if not user:
+            raise ValueError(f"User not found: {user_id}")
+        user_role = user.get("role", "")
+
+        # Super admins bypass farm assignment checks
+        if user_role != "super_admin":
+            assignment = await db.farmer_assignments.find_one({
+                "userId": str(user_id),
+                "farmId": str(task.farmId),
+                "isActive": True
+            })
+            if not assignment:
+                raise ValueError(f"User not assigned to farm {task.farmId}")
 
         # Add harvest entry
         updated_task = await TaskRepository.add_harvest_entry(
