@@ -21,6 +21,7 @@ from .alert_repository import AlertRepository
 from .archive_repository import ArchiveRepository
 from ...models.block_archive import BlockArchive, QualityBreakdown, AlertsSummary
 from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+from ..task.task_generator import TaskGeneratorService
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +31,14 @@ class BlockService:
 
     # Valid status transitions
     VALID_TRANSITIONS = {
-        BlockStatus.EMPTY: [BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.GROWING, BlockStatus.ALERT],  # Can start planning/planting from empty
+        BlockStatus.EMPTY: [BlockStatus.PLANNED, BlockStatus.ALERT],  # Must plan before planting
         BlockStatus.PLANNED: [BlockStatus.GROWING, BlockStatus.EMPTY, BlockStatus.ALERT],  # Plant → Growing
-        BlockStatus.PLANTED: [BlockStatus.GROWING, BlockStatus.ALERT],  # Backward compatibility
         BlockStatus.GROWING: [BlockStatus.FRUITING, BlockStatus.HARVESTING, BlockStatus.ALERT],  # Can skip to harvesting if no fruiting
         BlockStatus.FRUITING: [BlockStatus.HARVESTING, BlockStatus.ALERT],
         BlockStatus.HARVESTING: [BlockStatus.CLEANING, BlockStatus.ALERT],
         BlockStatus.CLEANING: [BlockStatus.EMPTY, BlockStatus.ALERT],
         BlockStatus.ALERT: [
-            BlockStatus.EMPTY, BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.GROWING,
+            BlockStatus.EMPTY, BlockStatus.PLANNED, BlockStatus.GROWING,
             BlockStatus.FRUITING, BlockStatus.HARVESTING, BlockStatus.CLEANING
         ]
     }
@@ -113,12 +113,11 @@ class BlockService:
         # Calculate expected dates for each status
         expected_dates = {}
 
-        # Planted date is known
+        # Planted status - actual planting day (task should be done ON this day)
         expected_dates["planted"] = planting_date
 
-        # Growing phase starts after germination
-        if cycle.germinationDays is not None:
-            expected_dates["growing"] = planting_date + timedelta(days=cycle.germinationDays)
+        # Growing phase starts at planting (germination included in growing phase)
+        expected_dates["growing"] = planting_date
 
         # Fruiting phase starts after vegetative growth (only if plant has fruiting phase)
         # Only add fruiting date if fruitingDays is not None and greater than 0
@@ -183,7 +182,7 @@ class BlockService:
         from ...services.plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
 
         # State progression order
-        state_order = ["planned", "planted", "growing", "fruiting", "harvesting", "cleaning"]
+        state_order = ["planned", "growing", "fruiting", "harvesting", "cleaning"]
 
         # Get expected date for current state
         expected_date = expected_status_changes.get(current_state.value)
@@ -351,25 +350,123 @@ class BlockService:
                 f"Invalid status transition: {current_block.state.value} → {new_status.value}"
             )
 
-        # Handle planned, planting, or growing transitions
-        print(f"[DEBUG] Transition: {current_block.state.value} → {new_status.value}", flush=True)
-        if new_status in [BlockStatus.PLANNED, BlockStatus.PLANTED, BlockStatus.GROWING]:
-            print(f"[DEBUG] Entered PLANNED/PLANTED/GROWING block", flush=True)
-            # Check if we're transitioning from planned to planted/growing (reuse existing data)
-            if current_block.state == BlockStatus.PLANNED and new_status in [BlockStatus.PLANTED, BlockStatus.GROWING]:
-                print(f"[DEBUG] Entered PLANNED → PLANTED/GROWING block", flush=True)
-                # Reuse existing block data for planned → planted/growing transition
+        # PHASE 3: Check for pending tasks that should trigger this state change
+        # Warn user if they're manually changing status when tasks exist that would do it automatically
+        if not status_update.force:
+            from ..database import farm_db
+            db = farm_db.get_database()
+
+            # Query for pending tasks that would trigger this state transition
+            pending_tasks = await db.farm_tasks.find({
+                "blockId": str(block_id),
+                "status": "pending",
+                "triggerStateChange": new_status.value
+            }).to_list(length=100)
+
+            if pending_tasks:
+                # Format task list for error message
+                task_list = []
+                for task in pending_tasks:
+                    task_title = task.get("title", task.get("taskType", "Unknown task"))
+                    task_type = task.get("taskType", "unknown")
+                    scheduled = task.get("scheduledDate", "Not scheduled")
+                    task_list.append({
+                        "taskId": task["taskId"],
+                        "title": task_title,
+                        "taskType": task_type,
+                        "scheduledDate": scheduled.isoformat() if isinstance(scheduled, datetime) else str(scheduled)
+                    })
+
+                raise HTTPException(
+                    409,  # Conflict
+                    detail={
+                        "error": "pending_tasks_exist",
+                        "message": f"There are {len(pending_tasks)} pending task(s) that will automatically transition this block to '{new_status.value}' when completed. Complete these tasks first or use force=true to bypass this warning.",
+                        "pendingTasks": task_list,
+                        "targetStatus": new_status.value
+                    }
+                )
+
+        # PRE-CALCULATION: For new planning/growing, calculate expected dates FIRST
+        # This ensures task generation has access to expected dates
+        calculated_expected_dates = None
+        if new_status in [BlockStatus.PLANNED, BlockStatus.GROWING]:
+            if status_update.targetCrop and current_block.state == BlockStatus.EMPTY:
+                # New plan: calculate expected dates
+                planting_date = status_update.plannedPlantingDate if status_update.plannedPlantingDate else datetime.utcnow()
+                _, calculated_expected_dates = await BlockService.calculate_expected_dates(
+                    status_update.targetCrop,
+                    planting_date
+                )
+                logger.info(f"[Block Service] Pre-calculated expected dates for task generation")
+
+        # PHASE 1: Generate tasks BEFORE state change (atomicity)
+        # Skip task generation for ALERT transitions (alert system handles its own flow)
+        if new_status != BlockStatus.ALERT and current_block.state != BlockStatus.ALERT:
+            try:
+                # Prepare task generation parameters
+                task_crop_name = None
+                task_plant_count = None
+
+                # For new planning/growing, get crop name and count from status update
+                if new_status in [BlockStatus.PLANNED, BlockStatus.GROWING]:
+                    if status_update.targetCrop:
+                        # This is a new plan, get crop data
+                        plant_data = await PlantDataEnhancedRepository.get_by_id(status_update.targetCrop)
+                        if plant_data:
+                            task_crop_name = plant_data.plantName
+                            task_plant_count = status_update.actualPlantCount
+                    elif current_block.targetCropName:
+                        # Reusing existing plan
+                        task_crop_name = current_block.targetCropName
+                        task_plant_count = current_block.actualPlantCount
+
+                # Use calculated expected dates if available, otherwise use existing block dates
+                expected_dates_for_tasks = calculated_expected_dates or current_block.expectedStatusChanges
+
+                # Generate tasks for this transition
+                await TaskGeneratorService.generate_tasks_for_transition(
+                    block_id=block_id,
+                    from_state=current_block.state,
+                    to_state=new_status,
+                    block_name=current_block.name or current_block.blockCode,
+                    expected_status_changes=expected_dates_for_tasks,
+                    user_id=user_id,
+                    user_email=user_email,
+                    target_crop_name=task_crop_name,
+                    plant_count=task_plant_count
+                )
+                logger.info(f"[Block Service] Generated tasks for {current_block.state.value} → {new_status.value} transition")
+            except Exception as e:
+                logger.error(f"[Block Service] Task generation failed for block {block_id}: {str(e)}")
+                # Continue with state change even if task generation fails (Phase 1: tasks are advisory)
+                # In future phases, this could prevent state change
+
+        # Handle planned or growing transitions
+        logger.info(f"[Block Service] Transition: {current_block.state.value} → {new_status.value}")
+        logger.info(f"[Block Service] Status update data: targetCrop={status_update.targetCrop}, actualPlantCount={status_update.actualPlantCount}, plannedPlantingDate={status_update.plannedPlantingDate}")
+
+        if new_status in [BlockStatus.PLANNED, BlockStatus.GROWING]:
+            logger.info(f"[Block Service] Handling PLANNED/GROWING transition")
+
+            # Check if we're transitioning from planned to growing (reuse existing data)
+            if (current_block.state == BlockStatus.PLANNED and new_status == BlockStatus.GROWING):
+                logger.info(f"[Block Service] PLANNED → GROWING transition (reusing existing data)")
+
+                # Reuse existing block data for this transition
                 if not current_block.targetCrop:
-                    raise HTTPException(400, f"Cannot transition from planned to {new_status.value}: missing crop data")
+                    error_msg = f"Cannot transition from {current_block.state.value} to {new_status.value}: missing crop data"
+                    logger.error(f"[Block Service] {error_msg}")
+                    raise HTTPException(400, error_msg)
 
                 # Calculate offset (early/late planting)
                 planting_offset_days = None
                 if current_block.expectedHarvestDate:
-                    # Calculate difference between expected planting date and actual planting date
+                    # Calculate difference between expected growing start and actual growing start
                     # (negative = early, positive = late)
-                    expected_planting = current_block.expectedStatusChanges.get("planted") if current_block.expectedStatusChanges else None
-                    if expected_planting:
-                        expected_dt = datetime.fromisoformat(expected_planting) if isinstance(expected_planting, str) else expected_planting
+                    expected_growing = current_block.expectedStatusChanges.get("growing") if current_block.expectedStatusChanges else None
+                    if expected_growing:
+                        expected_dt = datetime.fromisoformat(expected_growing) if isinstance(expected_growing, str) else expected_growing
                         actual_dt = datetime.utcnow()
                         planting_offset_days = (actual_dt - expected_dt).days
 
@@ -411,24 +508,40 @@ class BlockService:
 
             else:
                 # New planning/planting requires crop data
+                logger.info(f"[Block Service] New PLANNED/GROWING transition from {current_block.state.value}")
+                logger.info(f"[Block Service] Validating required fields: targetCrop={status_update.targetCrop}, actualPlantCount={status_update.actualPlantCount}")
+
                 if not status_update.targetCrop:
-                    raise HTTPException(400, "targetCrop is required when planning/planting")
+                    error_msg = "targetCrop is required when planning/planting"
+                    logger.error(f"[Block Service] Validation failed: {error_msg}")
+                    logger.error(f"[Block Service] Full status_update object: {status_update.model_dump()}")
+                    raise HTTPException(400, error_msg)
 
                 if not status_update.actualPlantCount:
-                    raise HTTPException(400, "actualPlantCount is required when planning/planting")
+                    error_msg = "actualPlantCount is required when planning/planting"
+                    logger.error(f"[Block Service] Validation failed: {error_msg}")
+                    logger.error(f"[Block Service] Full status_update object: {status_update.model_dump()}")
+                    raise HTTPException(400, error_msg)
 
                 # Get plant data for name
                 plant_data = await PlantDataEnhancedRepository.get_by_id(status_update.targetCrop)
                 if not plant_data:
                     raise HTTPException(404, f"Plant data not found: {status_update.targetCrop}")
 
-                # Calculate expected dates
-                # Use plannedPlantingDate if provided (for PLANNED state), otherwise use current time (for direct PLANTED)
-                planting_date = status_update.plannedPlantingDate if status_update.plannedPlantingDate else datetime.utcnow()
-                expected_harvest_date, expected_status_changes = await BlockService.calculate_expected_dates(
-                    status_update.targetCrop,
-                    planting_date
-                )
+                # Use pre-calculated expected dates if available, otherwise calculate now
+                if calculated_expected_dates:
+                    expected_status_changes = calculated_expected_dates
+                    # Extract harvest date from expected_status_changes
+                    expected_harvest_date = expected_status_changes.get("harvesting") if expected_status_changes else None
+                    logger.info(f"[Block Service] Using pre-calculated expected dates for block update")
+                else:
+                    # Calculate expected dates
+                    # Use plannedPlantingDate if provided (for PLANNED state), otherwise use current time (for direct GROWING)
+                    planting_date = status_update.plannedPlantingDate if status_update.plannedPlantingDate else datetime.utcnow()
+                    expected_harvest_date, expected_status_changes = await BlockService.calculate_expected_dates(
+                        status_update.targetCrop,
+                        planting_date
+                    )
 
                 # Calculate predicted yield
                 predicted_yield = await BlockService.calculate_predicted_yield(

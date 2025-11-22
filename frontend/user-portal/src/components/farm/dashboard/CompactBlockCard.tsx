@@ -6,9 +6,13 @@
  */
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { useBlockActions } from '../../../hooks/farm/useBlockActions';
 import { QuickPlanModal } from './QuickPlanModal';
+import { ResolveAlertModal } from './ResolveAlertModal';
+import { BlockDetailsModal } from '../BlockDetailsModal';
+import { BlockHarvestEntryModal } from '../BlockHarvestEntryModal';
 import type { DashboardBlock, DashboardBlockStatus } from '../../../types/farm';
 import type { DashboardConfig } from '../../../hooks/farm/useDashboardConfig';
 
@@ -22,6 +26,9 @@ interface CompactBlockCardProps {
 export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlockCardProps) {
   const [showActions, setShowActions] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showResolveAlertModal, setShowResolveAlertModal] = useState(false);
+  const [showBlockDetailsModal, setShowBlockDetailsModal] = useState(false);
+  const [showHarvestModal, setShowHarvestModal] = useState(false);
   const [planMode, setPlanMode] = useState<'plan' | 'plant'>('plan');
   const { transitionBlock, recordHarvest, transitioning, recordingHarvest } = useBlockActions();
 
@@ -84,26 +91,40 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
   };
 
   /**
-   * Handle quick harvest (for demo - would show modal in real app)
+   * Handle card click - open block details modal
    */
-  const handleQuickHarvest = async () => {
-    try {
-      await recordHarvest(farmId, block.blockId, {
-        quantityKg: 10,
-        qualityGrade: 'A',
-        notes: 'Quick harvest from dashboard',
-      });
-      onUpdate?.();
-    } catch (error) {
-      console.error('Harvest recording failed:', error);
-    }
+  const handleCardClick = () => {
+    setShowBlockDetailsModal(true);
+  };
+
+  /**
+   * Handle harvest button click - open harvest entry modal
+   */
+  const handleHarvestClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click from firing
+    setShowHarvestModal(true);
+  };
+
+  /**
+   * Handle harvest entry completion
+   */
+  const handleHarvestComplete = () => {
+    setShowHarvestModal(false);
+    onUpdate?.();
   };
 
   return (
-    <Card
+    <>
+      <Card
       $stateColor={stateColor}
+      onClick={handleCardClick}
       onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onMouseLeave={() => {
+        // Don't hide actions if any modal is open
+        if (!showPlanModal && !showResolveAlertModal && !showBlockDetailsModal && !showHarvestModal) {
+          setShowActions(false);
+        }
+      }}
     >
       {/* Header */}
       <Header>
@@ -285,9 +306,23 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
       {/* Quick Actions (on hover) */}
       {showActions && (
         <QuickActions>
+          {/* Resolve Alert Button - shows when block has active alerts */}
+          {block.activeAlerts.length > 0 && (
+            <ActionButton
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowResolveAlertModal(true);
+              }}
+              $variant="warning"
+            >
+              ✅ Resolve Alert
+            </ActionButton>
+          )}
+
           {block.state === 'empty' && (
             <ActionButton
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setPlanMode('plan');
                 setShowPlanModal(true);
               }}
@@ -299,7 +334,8 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           )}
           {block.state === 'planned' && (
             <ActionButton
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setPlanMode('plant');
                 setShowPlanModal(true);
               }}
@@ -311,7 +347,10 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           )}
           {block.state === 'planted' && (
             <ActionButton
-              onClick={() => handleTransition('growing')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTransition('growing');
+              }}
               disabled={transitioning}
             >
               → Growing
@@ -322,14 +361,20 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               {/* Check if block has fruiting in timeline - skip if not */}
               {block.expectedStatusChanges?.fruiting ? (
                 <ActionButton
-                  onClick={() => handleTransition('fruiting')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTransition('fruiting');
+                  }}
                   disabled={transitioning}
                 >
                   → Fruiting
                 </ActionButton>
               ) : (
                 <ActionButton
-                  onClick={() => handleTransition('harvesting')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTransition('harvesting');
+                  }}
                   disabled={transitioning}
                 >
                   → Harvesting
@@ -339,7 +384,10 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           )}
           {block.state === 'fruiting' && (
             <ActionButton
-              onClick={() => handleTransition('harvesting')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTransition('harvesting');
+              }}
               disabled={transitioning}
             >
               → Harvesting
@@ -348,14 +396,17 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           {block.state === 'harvesting' && (
             <>
               <ActionButton
-                onClick={handleQuickHarvest}
+                onClick={handleHarvestClick}
                 disabled={recordingHarvest}
                 $variant="success"
               >
                 📥 Harvest
               </ActionButton>
               <ActionButton
-                onClick={() => handleTransition('cleaning')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTransition('cleaning');
+                }}
                 disabled={transitioning}
               >
                 → Cleaning
@@ -364,7 +415,10 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           )}
           {block.state === 'cleaning' && (
             <ActionButton
-              onClick={() => handleTransition('empty')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTransition('empty');
+              }}
               disabled={transitioning}
             >
               → Empty
@@ -373,15 +427,57 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
         </QuickActions>
       )}
 
-      {/* Quick Plan Modal (for Plan and Plant actions) */}
-      <QuickPlanModal
-        isOpen={showPlanModal}
-        onClose={() => setShowPlanModal(false)}
-        block={block}
-        mode={planMode}
-        onConfirm={handlePlanConfirm}
-      />
+      {/* Render modals outside the Card using Portal to prevent mouse event issues */}
+      {createPortal(
+        <>
+          {/* Quick Plan Modal (for Plan and Plant actions) */}
+          <QuickPlanModal
+            isOpen={showPlanModal}
+            onClose={() => setShowPlanModal(false)}
+            block={block}
+            mode={planMode}
+            onConfirm={handlePlanConfirm}
+          />
+
+          {/* Resolve Alert Modal */}
+          <ResolveAlertModal
+            isOpen={showResolveAlertModal}
+            onClose={() => setShowResolveAlertModal(false)}
+            farmId={farmId}
+            blockId={block.blockId}
+            blockName={block.name || block.blockCode}
+            alerts={block.activeAlerts}
+            onSuccess={() => {
+              setShowResolveAlertModal(false);
+              onUpdate?.();
+            }}
+          />
+
+          {/* Block Details Modal */}
+          <BlockDetailsModal
+            isOpen={showBlockDetailsModal}
+            onClose={() => setShowBlockDetailsModal(false)}
+            block={block}
+            farmId={farmId}
+          />
+
+          {/* Block Harvest Entry Modal */}
+          {showHarvestModal && (
+            <BlockHarvestEntryModal
+              isOpen={showHarvestModal}
+              farmId={farmId}
+              blockId={block.blockId}
+              blockCode={block.blockCode}
+              blockName={block.name}
+              onClose={() => setShowHarvestModal(false)}
+              onComplete={handleHarvestComplete}
+            />
+          )}
+        </>,
+        document.body
+      )}
     </Card>
+    </>
   );
 }
 
@@ -400,6 +496,7 @@ const Card = styled.div<{ $stateColor: string }>`
   min-height: 180px;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -700,7 +797,7 @@ const QuickActions = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 `;
 
-const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' }>`
+const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | 'warning' }>`
   flex: 1;
   padding: 6px 8px;
   border: none;
@@ -713,6 +810,8 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' }>`
         return '#3B82F6';
       case 'plant':
         return '#10B981';
+      case 'warning':
+        return '#F59E0B';
       default:
         return '#3B82F6';
     }
@@ -732,6 +831,8 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' }>`
           return '#1976D2';
         case 'plant':
           return '#059669';
+        case 'warning':
+          return '#D97706';
         default:
           return '#1976D2';
       }

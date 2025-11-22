@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { getFarms } from '../../services/farmApi';
-import { getMyTasks } from '../../services/tasksApi';
+import { getFarmTasks } from '../../services/tasksApi';
 import type { Farm } from '../../types/farm';
 import type { TaskWithDetails } from '../../types/tasks';
 
@@ -37,22 +37,33 @@ export function OperationsDashboard() {
       const farmsResponse = await getFarms(1, 100);
       const farmsData = farmsResponse.items;
 
-      // Load all tasks for current user
-      const tasksResponse = await getMyTasks({ page: 1, perPage: 100 });
-      const tasks = tasksResponse.items;
+      // Load tasks for each farm and count by status
+      const farmsWithTasks: FarmWithTasks[] = await Promise.all(
+        farmsData.map(async (farm) => {
+          try {
+            // Get all tasks for this farm (not just user's tasks)
+            const tasksResponse = await getFarmTasks(farm.farmId, { page: 1, perPage: 100 });
+            const farmTasks = tasksResponse.items;
 
-      // Count tasks by farm
-      const farmsWithTasks: FarmWithTasks[] = farmsData.map((farm) => {
-        const farmTasks = tasks.filter((task) => task.farmId === farm.farmId);
-        const pendingCount = farmTasks.filter((task) => task.status === 'pending').length;
-        const inProgressCount = farmTasks.filter((task) => task.status === 'in_progress').length;
+            const pendingCount = farmTasks.filter((task) => task.status === 'pending').length;
+            const inProgressCount = farmTasks.filter((task) => task.status === 'in_progress').length;
 
-        return {
-          ...farm,
-          pendingTaskCount: pendingCount,
-          inProgressTaskCount: inProgressCount,
-        };
-      });
+            return {
+              ...farm,
+              pendingTaskCount: pendingCount,
+              inProgressTaskCount: inProgressCount,
+            };
+          } catch (error) {
+            console.error(`Failed to load tasks for farm ${farm.farmId}:`, error);
+            // Return farm with zero task counts if task loading fails
+            return {
+              ...farm,
+              pendingTaskCount: 0,
+              inProgressTaskCount: 0,
+            };
+          }
+        })
+      );
 
       setFarms(farmsWithTasks);
     } catch (err) {
