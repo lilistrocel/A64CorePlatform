@@ -386,13 +386,12 @@ class TaskRepository:
         entry_dict["entryId"] = str(entry_dict["entryId"])
         entry_dict["userId"] = str(entry_dict["userId"])
 
-        # Add to harvestEntries array and set status to in_progress
+        # Add to harvestEntries array (keep status as pending - will auto-complete at 11 PM)
         result = await db.farm_tasks.update_one(
             {"taskId": str(task_id)},
             {
                 "$push": {"taskData.harvestEntries": entry_dict},
                 "$set": {
-                    "status": TaskStatus.IN_PROGRESS.value,
                     "updatedAt": datetime.utcnow()
                 }
             }
@@ -410,6 +409,7 @@ class TaskRepository:
         Aggregate all harvest entries for a daily harvest task
 
         Called by midnight cron job to finalize daily harvests.
+        Also creates a harvest record and updates block KPI.
 
         Args:
             task_id: Task ID
@@ -465,6 +465,48 @@ class TaskRepository:
 
         if result.matched_count == 0:
             return None
+
+        # Create harvest record and update block KPI
+        if total_quantity > 0:
+            from ...models.block_harvest import BlockHarvestCreate, QualityGrade
+            from ..block.harvest_service import HarvestService
+
+            try:
+                # Determine best quality grade for the harvest record
+                best_grade = QualityGrade.A  # Default
+                if grade_breakdown:
+                    # Use the grade with highest quantity
+                    best_grade_str = max(grade_breakdown.items(), key=lambda x: x[1])[0]
+                    # Convert to QualityGrade enum (only A, B, C supported)
+                    if best_grade_str in ["A", "B", "C"]:
+                        best_grade = QualityGrade(best_grade_str)
+
+                # Use task's scheduled date as harvest date
+                harvest_date = task.scheduledDate
+
+                # Create harvest record
+                harvest_create = BlockHarvestCreate(
+                    blockId=task.blockId,
+                    harvestDate=harvest_date,
+                    quantityKg=total_quantity,
+                    qualityGrade=best_grade,
+                    notes=f"Daily harvest aggregation from {len(task.taskData.harvestEntries) if task.taskData.harvestEntries else 0} entries"
+                )
+
+                # Use first contributor as harvester (or system if none)
+                harvester_id = UUID(contributors[0]) if contributors else task.farmId
+                harvester_email = task.taskData.harvestEntries[0].userEmail if task.taskData.harvestEntries else "system@a64core.com"
+
+                await HarvestService.record_harvest(
+                    harvest_create,
+                    harvester_id,
+                    harvester_email
+                )
+
+                logger.info(f"Created harvest record for task {task_id}: {total_quantity}kg (grade {best_grade.value})")
+            except Exception as e:
+                logger.error(f"Failed to create harvest record for task {task_id}: {e}", exc_info=True)
+                # Don't fail the aggregation if harvest record creation fails
 
         logger.info(f"Aggregated daily harvest task {task_id}: {total_quantity}kg from {len(contributors)} farmers")
         return await TaskRepository.get_by_id(task_id)

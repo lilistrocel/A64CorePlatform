@@ -11,6 +11,7 @@ import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
 import { getPlantDataEnhancedList } from '../../services/plantDataEnhancedApi';
 import type { Block, PlantDataEnhanced } from '../../types/farm';
+import { PendingTasksWarningModal } from './PendingTasksWarningModal';
 
 // ============================================================================
 // TYPES
@@ -361,6 +362,11 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Phase 3: Warning modal state
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState<any[]>([]);
+  const [targetStatus, setTargetStatus] = useState<string>('');
+
   // Load plant data on mount
   useEffect(() => {
     if (isOpen) {
@@ -457,37 +463,53 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (force: boolean = false) => {
     if (!validateForm() || !preview) return;
 
     try {
       setSubmitting(true);
 
-      // Determine status based on planting date
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Always transition to 'planned' state first
+      // Users will later transition from 'planned' to 'growing' when ready to plant
       const plantingDate = new Date(plannedDate);
       plantingDate.setHours(0, 0, 0, 0);
-
-      // If planting date is in the future, set to 'planned', otherwise 'planted'
-      const newStatus = plantingDate > today ? 'planned' : 'planted';
+      const newStatus = 'planned';
 
       await farmApi.transitionBlockState(block.farmId, block.blockId, {
         newStatus,
         targetCrop: selectedPlantId,
         actualPlantCount: parseInt(plantCount),
         plannedPlantingDate: plantingDate.toISOString(), // Convert to ISO datetime string for backend
-        notes: notes || `${newStatus === 'planned' ? 'Scheduled' : 'Planted'} ${preview.selectedPlant?.plantName} on ${plannedDate}`,
+        notes: notes || `Scheduled ${preview.selectedPlant?.plantName} for ${plannedDate}`,
+        force, // Phase 3: Pass force parameter
       });
 
       onSuccess();
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error assigning plant:', error);
-      alert('Failed to assign plant. Please try again.');
+
+      // Phase 3: Check for HTTP 409 Conflict (pending tasks warning)
+      if (error.response?.status === 409 && error.response?.data?.detail?.error === 'pending_tasks_exist') {
+        const detail = error.response.data.detail;
+        setPendingTasks(detail.pendingTasks || []);
+        setTargetStatus(detail.targetStatus || '');
+        setShowWarningModal(true);
+      } else {
+        alert('Failed to assign plant. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleForceSubmit = () => {
+    setShowWarningModal(false);
+    handleSubmit(true);
+  };
+
+  const handleCancelWarning = () => {
+    setShowWarningModal(false);
   };
 
   const handleClose = () => {
@@ -682,12 +704,21 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
           </Button>
 
           {showPreview && (
-            <Button type="button" $variant="success" onClick={handleSubmit} disabled={submitting}>
+            <Button type="button" $variant="success" onClick={() => handleSubmit(false)} disabled={submitting}>
               {submitting ? 'Assigning...' : '✅ Confirm & Plant'}
             </Button>
           )}
         </ModalFooter>
       </ModalContainer>
+
+      {/* Phase 3: Warning Modal */}
+      <PendingTasksWarningModal
+        isOpen={showWarningModal}
+        targetStatus={targetStatus}
+        pendingTasks={pendingTasks}
+        onCancel={handleCancelWarning}
+        onForce={handleForceSubmit}
+      />
     </Overlay>
   );
 

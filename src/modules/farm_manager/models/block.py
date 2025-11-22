@@ -15,8 +15,7 @@ class BlockStatus(str, Enum):
     """Block status lifecycle"""
     EMPTY = "empty"
     PLANNED = "planned"
-    PLANTED = "planted"
-    GROWING = "growing"
+    GROWING = "growing"  # Combined PLANTED + GROWING - plants are in the ground and growing
     FRUITING = "fruiting"
     HARVESTING = "harvesting"
     CLEANING = "cleaning"
@@ -165,6 +164,11 @@ class BlockStatusUpdate(BaseModel):
     targetCrop: Optional[UUID] = Field(None, description="Plant data ID (required when status=planted)")
     actualPlantCount: Optional[int] = Field(None, ge=0, description="Number of plants (when planting)")
     plannedPlantingDate: Optional[datetime] = Field(None, description="Planned planting date (for PLANNED state, used to calculate expectedStatusChanges)")
+    force: Optional[bool] = Field(False, description="Phase 3: Force status change bypassing pending task warnings")
+
+    class Config:
+        # Enable validation debugging
+        validate_assignment = True
 
 
 class Block(BlockBase):

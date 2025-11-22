@@ -172,7 +172,7 @@ class PlantingService:
         """
         Mark a planned planting as planted (farmer executes the plan).
 
-        This transitions the block to PLANTED state and calculates harvest estimation.
+        This transitions the block to GROWING state and calculates harvest estimation.
 
         Args:
             planting_id: Planting ID
@@ -237,10 +237,10 @@ class PlantingService:
 
         updated_planting = await PlantingRepository.update(planting_id, update_data)
 
-        # 6. Update block state to PLANTED
+        # 6. Update block state to GROWING
         updated_block = await BlockService.update_block_state(
             planting.blockId,
-            BlockState.PLANTED,
+            BlockState.GROWING,
             {"lastPlantedAt": planted_at}
         )
 

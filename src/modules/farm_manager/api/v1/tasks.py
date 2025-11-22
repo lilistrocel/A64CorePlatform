@@ -467,6 +467,45 @@ async def admin_aggregate_harvest(
     )
 
 
+@router.post(
+    "/admin/run-daily-aggregation",
+    response_model=SuccessResponse[dict],
+    summary="[Admin] Run daily harvest aggregation for all tasks"
+)
+async def admin_run_daily_aggregation(
+    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+):
+    """
+    Run daily harvest aggregation for all in_progress tasks (cron job endpoint).
+
+    This endpoint is called at 11 PM (23:00) every day by the cron service.
+    It:
+    1. Finds all daily_harvest tasks scheduled for today that are in_progress
+    2. Aggregates their harvest entries
+    3. Creates harvest records and updates block KPIs
+    4. Generates next day's task if block is still in HARVESTING state
+
+    **Permissions**: Requires **farm.manage** permission
+
+    **Use Cases**:
+    - Automated daily harvest aggregation (cron job)
+    - Manual trigger for testing
+    - Recovery from failed cron runs
+
+    **Response**: Aggregation statistics including:
+    - Number of tasks aggregated
+    - Total harvest quantity
+    - Number of new tasks generated
+    - Any errors encountered
+    """
+    stats = await HarvestAggregatorService.run_daily_aggregation()
+
+    return SuccessResponse(
+        data=stats,
+        message=f"Daily aggregation completed: {stats['tasks_aggregated']} tasks processed, {stats['new_tasks_generated']} new tasks generated"
+    )
+
+
 @router.get(
     "/admin/pending-aggregations",
     response_model=SuccessResponse[List[FarmTask]],

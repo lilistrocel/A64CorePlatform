@@ -14,11 +14,6 @@ services:
       - DEBUG=True
       - MONGODB_URL=mongodb://mongodb:27017
       - MONGODB_DB_NAME=a64core_db
-      - MYSQL_HOST=mysql
-      - MYSQL_PORT=3306
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=rootpassword
-      - MYSQL_DB_NAME=a64core_db
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000
@@ -33,8 +28,6 @@ services:
     user: "0:0"  # Run as root to access Docker socket (CRITICAL for module management)
     depends_on:
       mongodb:
-        condition: service_healthy
-      mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -63,35 +56,6 @@ services:
       - a64core-network
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # MySQL Database
-  mysql:
-    container_name: a64core-mysql-dev
-    image: mysql:8.0
-    ports:
-      - "3306:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=a64core_db
-      - MYSQL_USER=a64user
-      - MYSQL_PASSWORD=a64password
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./logs/mysql:/var/log/mysql  # MySQL logs
-    networks:
-      - a64core-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -168,7 +132,6 @@ services:
       - a64core-network
     restart: unless-stopped
     depends_on:
-      - mysql
       - mongodb
 
   # Local Docker Registry - For Module Images
@@ -229,6 +192,30 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Cron Service - Automated Tasks
+  cron:
+    container_name: a64core-cron-dev
+    build:
+      context: ./cron
+      dockerfile: Dockerfile
+    environment:
+      - TZ=UTC  # Timezone for cron (11 PM UTC = 11 PM UTC)
+      - API_HOST=api:8000
+      - ADMIN_EMAIL=admin@a64platform.com
+      - ADMIN_PASSWORD=SuperAdmin123!
+    volumes:
+      - ./logs/cron:/var/log/cron
+    networks:
+      - a64core-network
+    depends_on:
+      - api
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   a64core-network:
     driver: bridge
@@ -237,8 +224,6 @@ volumes:
   mongodb_data:
     driver: local
   mongodb_config:
-    driver: local
-  mysql_data:
     driver: local
   redis_data:
     driver: local

@@ -1,8 +1,9 @@
 """
 Harvest Aggregator Service
 
-Midnight cron job to aggregate daily harvest tasks.
-Runs at 00:00 every day to finalize the previous day's harvest entries.
+Daily cron job to aggregate daily harvest tasks.
+Runs at 23:00 (11 PM) every day to finalize the day's harvest entries
+and generate the next day's task if block is still in HARVESTING state.
 """
 
 from datetime import datetime, timedelta
@@ -19,33 +20,34 @@ class HarvestAggregatorService:
     """Service for aggregating daily harvest tasks"""
 
     @staticmethod
-    async def run_midnight_aggregation() -> dict:
+    async def run_daily_aggregation() -> dict:
         """
-        Run harvest aggregation for all daily harvest tasks from yesterday
+        Run harvest aggregation for all daily harvest tasks from today
 
-        This should be called at midnight (00:00) every day.
-        Finds all daily_harvest tasks scheduled for yesterday that are in_progress,
-        aggregates their harvest entries, and marks them as completed.
+        This should be called at 23:00 (11 PM) every day.
+        Finds all daily_harvest tasks scheduled for today that are in_progress,
+        aggregates their harvest entries, marks them as completed, and generates
+        next day's task if block is still in HARVESTING state.
 
         Returns:
             Dictionary with aggregation statistics
         """
-        # Get yesterday's date (the day that just ended)
+        # Get today's date (the day that is ending)
         now = datetime.utcnow()
-        yesterday = now - timedelta(days=1)
-        yesterday_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        logger.info(f"Running harvest aggregation for {yesterday_start.date()}")
+        logger.info(f"Running harvest aggregation for {today_start.date()}")
 
-        # Get all daily harvest tasks scheduled for yesterday that need aggregation
-        tasks_to_aggregate = await TaskRepository.get_daily_harvest_tasks_to_aggregate(yesterday_start)
+        # Get all daily harvest tasks scheduled for today that need aggregation
+        tasks_to_aggregate = await TaskRepository.get_daily_harvest_tasks_to_aggregate(today_start)
 
         stats = {
-            "date": yesterday_start.date().isoformat(),
+            "date": today_start.date().isoformat(),
             "tasks_found": len(tasks_to_aggregate),
             "tasks_aggregated": 0,
             "tasks_skipped": 0,
             "total_harvest_kg": 0.0,
+            "new_tasks_generated": 0,
             "errors": []
         }
 
@@ -66,6 +68,44 @@ class HarvestAggregatorService:
                         f"{aggregated_task.taskData.totalHarvest.totalQuantity if aggregated_task.taskData.totalHarvest else 0}kg "
                         f"from {len(aggregated_task.taskData.harvestEntries) if aggregated_task.taskData.harvestEntries else 0} entries"
                     )
+
+                    # Generate next day's task if block is still in HARVESTING state
+                    try:
+                        from ..database import farm_db
+                        from ...models.farm_task import FarmTaskCreate
+                        from ...models.block import BlockStatus
+
+                        db = farm_db.get_database()
+                        block = await db.blocks.find_one({"blockId": str(task.blockId)})
+
+                        if block and block.get("state") == BlockStatus.HARVESTING.value:
+                            # Generate task for tomorrow
+                            tomorrow = today_start + timedelta(days=1)
+
+                            next_task_data = FarmTaskCreate(
+                                farmId=task.farmId,
+                                blockId=task.blockId,
+                                taskType=TaskType.DAILY_HARVEST,
+                                scheduledDate=tomorrow,
+                                dueDate=tomorrow.replace(hour=23, minute=59, second=59),
+                                assignedTo=None,
+                                description=f"Daily harvest for {block.get('name', block.get('blockCode'))}"
+                            )
+
+                            # Create next day's task
+                            next_task = await TaskRepository.create(
+                                next_task_data,
+                                is_auto_generated=True,
+                                generated_from_cycle_id=task.generatedFromCycleId
+                            )
+
+                            stats["new_tasks_generated"] += 1
+                            logger.info(f"Generated next day's harvest task {next_task.taskId} for block {task.blockId}")
+
+                    except Exception as e:
+                        logger.error(f"Failed to generate next day's task for block {task.blockId}: {e}", exc_info=True)
+                        # Don't fail the aggregation if task generation fails
+
                 else:
                     stats["tasks_skipped"] += 1
                     logger.warning(f"Failed to aggregate task {task.taskId}")
@@ -79,9 +119,10 @@ class HarvestAggregatorService:
 
         # Log summary
         logger.info(
-            f"Harvest aggregation completed for {yesterday_start.date()}: "
+            f"Harvest aggregation completed for {today_start.date()}: "
             f"{stats['tasks_aggregated']} tasks aggregated, "
             f"{stats['total_harvest_kg']:.2f}kg total harvest, "
+            f"{stats['new_tasks_generated']} new tasks generated, "
             f"{stats['tasks_skipped']} tasks skipped"
         )
 
@@ -138,18 +179,17 @@ class HarvestAggregatorService:
         """
         Get list of daily harvest tasks that need aggregation
 
-        Returns all in_progress daily harvest tasks scheduled for yesterday or earlier.
+        Returns all in_progress daily harvest tasks scheduled for today or earlier.
         Useful for monitoring and troubleshooting.
 
         Returns:
             List of tasks pending aggregation
         """
         now = datetime.utcnow()
-        yesterday = now - timedelta(days=1)
-        yesterday_end = yesterday.replace(hour=23, minute=59, second=59, microsecond=999999)
+        today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-        # Find all daily harvest tasks that are still in_progress but scheduled before today
-        tasks = await TaskRepository.get_daily_harvest_tasks_to_aggregate(yesterday_end)
+        # Find all daily harvest tasks that are still in_progress but scheduled for today or earlier
+        tasks = await TaskRepository.get_daily_harvest_tasks_to_aggregate(today_end)
 
         logger.info(f"Found {len(tasks)} daily harvest tasks pending aggregation")
         return tasks

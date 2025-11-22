@@ -30,16 +30,12 @@ export default defineConfig({
       'Surrogate-Control': 'no-store',
     },
     proxy: {
-      // Proxy API requests to backend services
-      '/api/v1/auth': {
+      // Proxy all API requests to the main API (farm endpoints are now integrated)
+      '/api': {
         target: 'http://api:8000',
         changeOrigin: true,
         secure: false,
-      },
-      '/api/v1/farm': {
-        target: 'http://farm-management:8001',
-        changeOrigin: true,
-        secure: false,
+        rewrite: (path) => path,  // Keep path as-is
       },
     },
   },

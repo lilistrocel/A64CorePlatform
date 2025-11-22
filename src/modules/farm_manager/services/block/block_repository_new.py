@@ -295,8 +295,8 @@ class BlockRepository:
             update_dict["state"] = new_status.value
 
         # Handle planning or planting
-        if new_status in [BlockStatus.PLANNED, BlockStatus.PLANTED]:
-            # Save crop information for both planned and planted
+        if new_status in [BlockStatus.PLANNED, BlockStatus.GROWING]:
+            # Save crop information for both planned and growing
             if target_crop:
                 update_dict["targetCrop"] = str(target_crop)
             if target_crop_name:
@@ -309,7 +309,7 @@ class BlockRepository:
                 update_dict["expectedStatusChanges"] = expected_status_changes
 
             # Only set plantedDate when actually planting (not for planned)
-            if new_status == BlockStatus.PLANTED:
+            if new_status == BlockStatus.GROWING:
                 update_dict["plantedDate"] = datetime.utcnow()
 
         # Handle emptying (status = empty)

@@ -1,0 +1,4 @@
+# Run harvest aggregation at 11 PM (23:00) UTC every day
+0 23 * * * /usr/local/bin/run-harvest-aggregation.sh >> /var/log/cron/harvest-aggregation.log 2>&1
+
+# Empty line at end of file (required by cron)

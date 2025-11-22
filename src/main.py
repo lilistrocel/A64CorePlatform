@@ -17,7 +17,7 @@ from pathlib import Path
 from .api import health
 from .api.routes import api_router
 from .config.settings import settings
-from .services.database import mongodb, mysql
+from .services.database import mongodb
 from .services.port_manager import init_port_manager, get_port_manager
 from .services.module_manager import module_manager
 from .core.plugin_system import get_plugin_manager
@@ -105,18 +105,12 @@ async def startup_event() -> None:
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Debug mode: {settings.DEBUG}")
 
-    # Connect to databases
+    # Connect to MongoDB
     try:
         await mongodb.connect()
         logger.info("MongoDB connected successfully")
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
-
-    try:
-        await mysql.connect()
-        logger.info("MySQL connected successfully")
-    except Exception as e:
-        logger.error(f"Failed to connect to MySQL: {e}")
 
     # Initialize Port Manager
     try:
@@ -144,10 +138,9 @@ async def shutdown_event() -> None:
     """Cleanup on application shutdown"""
     logger.info("Shutting down A64 Core Platform API Hub...")
 
-    # Disconnect from databases
+    # Disconnect from MongoDB
     await mongodb.disconnect()
-    await mysql.disconnect()
-    logger.info("Database connections closed")
+    logger.info("Database connection closed")
 
 # Run the application
 if __name__ == "__main__":

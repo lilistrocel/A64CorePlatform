@@ -166,8 +166,6 @@ def determine_next_action(block: Block) -> str:
         return "plant_crop"
     elif block.state == BlockStatus.PLANNED:
         return "start_planting"
-    elif block.state == BlockStatus.PLANTED:
-        return "transition_to_growing"
     elif block.state == BlockStatus.GROWING:
         return "transition_to_fruiting"
     elif block.state == BlockStatus.FRUITING:
@@ -221,7 +219,6 @@ def calculate_farm_summary(blocks: list[Block]) -> Dict:
 
         # Count active plantings
         if block.state in [
-            BlockStatus.PLANTED,
             BlockStatus.GROWING,
             BlockStatus.FRUITING,
             BlockStatus.HARVESTING

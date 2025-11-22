@@ -257,7 +257,7 @@ async def get_farm_summary(
             blocks_by_state["empty"] += 1
         elif block.state == BlockStatus.ALERT:
             blocks_by_state["alert"] += 1
-        elif block.state in [BlockStatus.PLANTED, BlockStatus.GROWING, BlockStatus.FRUITING]:
+        elif block.state in [BlockStatus.GROWING, BlockStatus.FRUITING]:
             blocks_by_state["planted"] += 1
             active_plantings += 1
         elif block.state == BlockStatus.HARVESTING:

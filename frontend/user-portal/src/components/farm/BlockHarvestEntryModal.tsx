@@ -1,28 +1,52 @@
 /**
- * Harvest Entry Modal
+ * Block Harvest Entry Modal
  *
- * Modal for adding harvest entries to daily_harvest tasks.
- * Allows farmers to record quantity, grade, and notes for each harvest entry.
+ * Simplified modal for recording block-level quick harvest entries.
+ * Used for quick harvest actions from CompactBlockCard.
+ * Only supports quality grades A, B, C (no D or Waste).
  */
 
 import { useState } from 'react';
 import styled from 'styled-components';
-import { addHarvestEntry } from '../../services/tasksApi';
-import type { TaskWithDetails, HarvestGrade } from '../../types/tasks';
-import { HARVEST_GRADE_COLORS, HARVEST_GRADE_LABELS } from '../../types/tasks';
+import { recordBlockHarvest } from '../../services/farmApi';
 
-interface HarvestEntryModalProps {
+interface BlockHarvestEntryModalProps {
   isOpen: boolean;
-  task: TaskWithDetails;
+  farmId: string;
+  blockId: string;
+  blockCode: string;
+  blockName?: string;
   onClose: () => void;
   onComplete: () => void;
 }
 
-const GRADE_OPTIONS: HarvestGrade[] = ['A', 'B', 'C', 'D', 'Waste'];
+type QualityGrade = 'A' | 'B' | 'C';
 
-export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: HarvestEntryModalProps) {
+const GRADE_OPTIONS: QualityGrade[] = ['A', 'B', 'C'];
+
+const GRADE_COLORS: Record<QualityGrade, string> = {
+  A: '#10B981',
+  B: '#3B82F6',
+  C: '#F59E0B',
+};
+
+const GRADE_LABELS: Record<QualityGrade, string> = {
+  A: 'Premium',
+  B: 'Good',
+  C: 'Standard',
+};
+
+export function BlockHarvestEntryModal({
+  isOpen,
+  farmId,
+  blockId,
+  blockCode,
+  blockName,
+  onClose,
+  onComplete,
+}: BlockHarvestEntryModalProps) {
   const [quantityKg, setQuantityKg] = useState('');
-  const [grade, setGrade] = useState<HarvestGrade>('A');
+  const [qualityGrade, setQualityGrade] = useState<QualityGrade>('A');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,41 +67,56 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
       setSubmitting(true);
       setError(null);
 
-      await addHarvestEntry(task.taskId, {
-        quantity: quantity,
-        grade,
+      await recordBlockHarvest(farmId, blockId, {
+        blockId: blockId,
+        harvestDate: new Date().toISOString(),
+        quantityKg: quantity,
+        qualityGrade: qualityGrade,
         notes: notes.trim() || undefined,
       });
 
       // Reset form
       setQuantityKg('');
-      setGrade('A');
+      setQualityGrade('A');
       setNotes('');
 
       onComplete();
-    } catch (err) {
-      console.error('Failed to add harvest entry:', err);
-      setError('Failed to add harvest entry. Please try again.');
+    } catch (err: any) {
+      console.error('Failed to record harvest:', err);
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        'Failed to record harvest. Please try again.';
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Overlay onClick={onClose}>
-      <Modal onClick={(e) => e.stopPropagation()}>
+    <Overlay
+      onClick={onClose}
+      onMouseEnter={(e) => e.stopPropagation()}
+      onMouseLeave={(e) => e.stopPropagation()}
+    >
+      <Modal
+        onClick={(e) => e.stopPropagation()}
+        onMouseEnter={(e) => e.stopPropagation()}
+        onMouseLeave={(e) => e.stopPropagation()}
+      >
         <Header>
-          <Title>Record Harvest</Title>
+          <Title>Quick Harvest Entry</Title>
           <CloseButton onClick={onClose}>×</CloseButton>
         </Header>
 
         <Content>
-          <TaskInfo>
-            <TaskTitle>{task.title}</TaskTitle>
-            {task.blockCode && (
-              <TaskSubtitle>Block: {task.blockCode}</TaskSubtitle>
-            )}
-          </TaskInfo>
+          <BlockInfo>
+            <BlockTitle>
+              {blockCode}
+              {blockName && ` - ${blockName}`}
+            </BlockTitle>
+            <BlockSubtitle>Recording harvest for this block</BlockSubtitle>
+          </BlockInfo>
 
           <Form onSubmit={handleSubmit}>
             <FormGroup>
@@ -90,25 +129,27 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
                 onChange={(e) => setQuantityKg(e.target.value)}
                 placeholder="Enter quantity in kg"
                 required
+                autoFocus
               />
             </FormGroup>
 
             <FormGroup>
-              <Label>Grade *</Label>
+              <Label>Quality Grade *</Label>
               <GradeGrid>
-                {GRADE_OPTIONS.map((gradeOption) => (
+                {GRADE_OPTIONS.map((grade) => (
                   <GradeButton
-                    key={gradeOption}
+                    key={grade}
                     type="button"
-                    $selected={grade === gradeOption}
-                    $color={HARVEST_GRADE_COLORS[gradeOption]}
-                    onClick={() => setGrade(gradeOption)}
+                    $selected={qualityGrade === grade}
+                    $color={GRADE_COLORS[grade]}
+                    onClick={() => setQualityGrade(grade)}
                   >
-                    <GradeIcon>{gradeOption}</GradeIcon>
-                    <GradeLabel>{HARVEST_GRADE_LABELS[gradeOption]}</GradeLabel>
+                    <GradeIcon>{grade}</GradeIcon>
+                    <GradeLabel>{GRADE_LABELS[grade]}</GradeLabel>
                   </GradeButton>
                 ))}
               </GradeGrid>
+              <GradeNote>Only A, B, C grades for quick harvest</GradeNote>
             </FormGroup>
 
             <FormGroup>
@@ -128,7 +169,7 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
                 Cancel
               </CancelButton>
               <SubmitButton type="submit" disabled={submitting}>
-                {submitting ? 'Adding...' : 'Add Harvest Entry'}
+                {submitting ? 'Recording...' : 'Record Harvest'}
               </SubmitButton>
             </ButtonGroup>
           </Form>
@@ -206,21 +247,23 @@ const Content = styled.div`
   overflow-y: auto;
 `;
 
-const TaskInfo = styled.div`
+const BlockInfo = styled.div`
   margin-bottom: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.md};
   background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-left: 4px solid ${({ theme }) => theme.colors.warning};
 `;
 
-const TaskTitle = styled.h3`
+const BlockTitle = styled.h3`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
+  font-family: 'Courier New', monospace;
 `;
 
-const TaskSubtitle = styled.p`
+const BlockSubtitle = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
@@ -265,7 +308,7 @@ const Input = styled.input`
 
 const GradeGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: ${({ theme }) => theme.spacing.sm};
 `;
 
@@ -298,6 +341,13 @@ const GradeLabel = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const GradeNote = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-style: italic;
+  text-align: center;
 `;
 
 const Textarea = styled.textarea`

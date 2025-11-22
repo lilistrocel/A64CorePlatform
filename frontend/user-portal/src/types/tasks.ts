@@ -55,6 +55,7 @@ export interface Task {
     expectedYieldKg?: number;
     [key: string]: unknown;
   };
+  triggerStateChange?: string; // Phase 2: Block status to transition to when task is completed
   createdAt: string;
   updatedAt: string;
 }
@@ -128,10 +129,11 @@ export interface UpdateTaskRequest {
 export interface CompleteTaskRequest {
   notes?: string;
   photoUrls?: string[];
+  triggerTransition?: boolean; // Phase 2: Whether to trigger block state transition on completion
 }
 
 export interface AddHarvestEntryRequest {
-  quantityKg: number;
+  quantity: number;
   grade: HarvestGrade;
   notes?: string;
 }

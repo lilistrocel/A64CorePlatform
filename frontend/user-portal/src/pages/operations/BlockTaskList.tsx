@@ -23,6 +23,19 @@ import {
   TASK_STATUS_LABELS,
 } from '../../types/tasks';
 
+/**
+ * Check if a task is overdue based on scheduledDate
+ */
+function isTaskOverdue(task: TaskWithDetails): boolean {
+  if (!task.scheduledDate || task.status === 'completed' || task.status === 'cancelled') {
+    return false;
+  }
+  const scheduledDate = new Date(task.scheduledDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Start of today
+  return scheduledDate < today;
+}
+
 export function BlockTaskList() {
   const navigate = useNavigate();
   const { farmId, blockId } = useParams<{ farmId: string; blockId: string }>();
@@ -30,7 +43,7 @@ export function BlockTaskList() {
   const [tasks, setTasks] = useState<TaskWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<TaskStatus>('pending');
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showHarvestModal, setShowHarvestModal] = useState(false);
@@ -89,15 +102,11 @@ export function BlockTaskList() {
     loadBlockAndTasks(); // Reload to update block status if it changed to ALERT
   };
 
-  const filteredTasks =
-    statusFilter === 'all' ? tasks : tasks.filter((task) => task.status === statusFilter);
+  const filteredTasks = tasks.filter((task) => task.status === statusFilter);
 
   const statusCounts = {
-    all: tasks.length,
     pending: tasks.filter((t) => t.status === 'pending').length,
-    in_progress: tasks.filter((t) => t.status === 'in_progress').length,
     completed: tasks.filter((t) => t.status === 'completed').length,
-    cancelled: tasks.filter((t) => t.status === 'cancelled').length,
   };
 
   if (loading) {
@@ -145,22 +154,10 @@ export function BlockTaskList() {
       {/* Status Filter */}
       <FilterBar>
         <FilterButton
-          $active={statusFilter === 'all'}
-          onClick={() => setStatusFilter('all')}
-        >
-          All ({statusCounts.all})
-        </FilterButton>
-        <FilterButton
           $active={statusFilter === 'pending'}
           onClick={() => setStatusFilter('pending')}
         >
           Pending ({statusCounts.pending})
-        </FilterButton>
-        <FilterButton
-          $active={statusFilter === 'in_progress'}
-          onClick={() => setStatusFilter('in_progress')}
-        >
-          In Progress ({statusCounts.in_progress})
         </FilterButton>
         <FilterButton
           $active={statusFilter === 'completed'}
@@ -174,55 +171,72 @@ export function BlockTaskList() {
       {filteredTasks.length === 0 ? (
         <EmptyContainer>
           <EmptyIcon>✅</EmptyIcon>
-          <EmptyText>No {statusFilter !== 'all' ? statusFilter : ''} tasks</EmptyText>
+          <EmptyText>No {statusFilter} tasks</EmptyText>
         </EmptyContainer>
       ) : (
         <TaskList>
-          {filteredTasks.map((task) => (
-            <TaskCard
-              key={task.taskId}
-              onClick={() => handleTaskClick(task)}
-              $status={task.status}
-            >
-              <TaskHeader>
-                <TaskTypeIcon>{TASK_TYPE_ICONS[task.taskType]}</TaskTypeIcon>
-                <TaskInfo>
-                  <TaskTitle>{task.title}</TaskTitle>
-                  <TaskType $color={TASK_TYPE_COLORS[task.taskType]}>
-                    {TASK_TYPE_LABELS[task.taskType]}
-                  </TaskType>
-                </TaskInfo>
-                <TaskStatusBadge $color={TASK_STATUS_COLORS[task.status]}>
-                  {TASK_STATUS_LABELS[task.status]}
-                </TaskStatusBadge>
-              </TaskHeader>
+          {filteredTasks.map((task) => {
+            const overdue = isTaskOverdue(task);
+            return (
+              <TaskCard
+                key={task.taskId}
+                onClick={() => handleTaskClick(task)}
+                $status={task.status}
+                $overdue={overdue}
+              >
+                <TaskHeader>
+                  <TaskTypeIcon>{TASK_TYPE_ICONS[task.taskType]}</TaskTypeIcon>
+                  <TaskInfo>
+                    <TaskTitle>{task.title}</TaskTitle>
+                    <TaskType $color={TASK_TYPE_COLORS[task.taskType]}>
+                      {TASK_TYPE_LABELS[task.taskType]}
+                    </TaskType>
+                  </TaskInfo>
+                  {overdue ? (
+                    <OverdueBadge>⚠️ OVERDUE</OverdueBadge>
+                  ) : (
+                    <TaskStatusBadge $color={TASK_STATUS_COLORS[task.status]}>
+                      {TASK_STATUS_LABELS[task.status]}
+                    </TaskStatusBadge>
+                  )}
+                </TaskHeader>
 
-              {task.description && <TaskDescription>{task.description}</TaskDescription>}
+                {task.description && <TaskDescription>{task.description}</TaskDescription>}
 
-              <TaskMeta>
-                {task.assignedToName && (
-                  <MetaItem>
-                    <MetaIcon>👤</MetaIcon>
-                    <MetaText>{task.assignedToName}</MetaText>
-                  </MetaItem>
+                <TaskMeta>
+                  {task.scheduledDate && (
+                    <MetaItem>
+                      <MetaIcon>📅</MetaIcon>
+                      <MetaText $overdue={overdue}>
+                        Scheduled: {new Date(task.scheduledDate).toLocaleDateString()}
+                        {overdue && ' (overdue)'}
+                      </MetaText>
+                    </MetaItem>
+                  )}
+                  {task.assignedToName && (
+                    <MetaItem>
+                      <MetaIcon>👤</MetaIcon>
+                      <MetaText>{task.assignedToName}</MetaText>
+                    </MetaItem>
+                  )}
+                  {task.dueDate && (
+                    <MetaItem>
+                      <MetaIcon>⏰</MetaIcon>
+                      <MetaText>{new Date(task.dueDate).toLocaleDateString()}</MetaText>
+                    </MetaItem>
+                  )}
+                </TaskMeta>
+
+                {(task.status === 'pending' || task.status === 'in_progress') && (
+                  <ActionPrompt>
+                    {task.taskType === 'daily_harvest'
+                      ? 'Tap to record harvest'
+                      : 'Tap to complete task'}
+                  </ActionPrompt>
                 )}
-                {task.dueDate && (
-                  <MetaItem>
-                    <MetaIcon>📅</MetaIcon>
-                    <MetaText>{new Date(task.dueDate).toLocaleDateString()}</MetaText>
-                  </MetaItem>
-                )}
-              </TaskMeta>
-
-              {(task.status === 'pending' || task.status === 'in_progress') && (
-                <ActionPrompt>
-                  {task.taskType === 'daily_harvest'
-                    ? 'Tap to record harvest'
-                    : 'Tap to complete task'}
-                </ActionPrompt>
-              )}
-            </TaskCard>
-          ))}
+              </TaskCard>
+            );
+          })}
         </TaskList>
       )}
 
@@ -430,11 +444,14 @@ const TaskList = styled.div`
   gap: ${({ theme }) => theme.spacing.md};
 `;
 
-const TaskCard = styled.div<{ $status: string }>`
-  background: ${({ theme }) => theme.colors.surface};
+const TaskCard = styled.div<{ $status: string; $overdue?: boolean }>`
+  background: ${({ theme, $overdue }) =>
+    $overdue ? `${theme.colors.error}08` : theme.colors.surface};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   padding: ${({ theme }) => theme.spacing.lg};
   box-shadow: ${({ theme }) => theme.shadows.md};
+  border: ${({ theme, $overdue }) =>
+    $overdue ? `2px solid ${theme.colors.error}` : 'none'};
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: ${({ $status }) => ($status === 'completed' || $status === 'cancelled' ? 0.7 : 1)};
@@ -491,6 +508,27 @@ const TaskStatusBadge = styled.span<{ $color: string }>`
   color: ${({ $color }) => $color};
 `;
 
+const OverdueBadge = styled.span`
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  text-transform: uppercase;
+  background: ${({ theme }) => theme.colors.error};
+  color: white;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+`;
+
 const TaskDescription = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textSecondary};
@@ -515,9 +553,11 @@ const MetaIcon = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
 `;
 
-const MetaText = styled.span`
+const MetaText = styled.span<{ $overdue?: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme, $overdue }) => ($overdue ? theme.colors.error : theme.colors.textSecondary)};
+  font-weight: ${({ theme, $overdue }) =>
+    $overdue ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.normal};
 `;
 
 const ActionPrompt = styled.div`

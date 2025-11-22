@@ -272,6 +272,12 @@ async def change_block_status(
     - Calculates predicted yield based on plant count
     - Archives completed cycles when transitioning from cleaning to empty
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"[Block API] Received status change request for block {block_id}")
+    logger.info(f"[Block API] Request data: {status_update.model_dump()}")
+
     block = await BlockService.get_block(block_id)
 
     # Verify block belongs to the specified farm

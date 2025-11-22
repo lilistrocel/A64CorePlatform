@@ -1,13 +1,12 @@
 """
-Database Connection Managers
+Database Connection Manager
 
-Manages connections to MongoDB and MySQL databases with connection pooling,
+Manages connections to MongoDB database with connection pooling,
 health checks, and graceful shutdown.
 """
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import ConnectionFailure
-import aiomysql
 from typing import Optional
 import logging
 
@@ -144,145 +143,5 @@ class MongoDBManager:
         return cls.db
 
 
-class MySQLManager:
-    """
-    MySQL connection manager using aiomysql (async driver)
-
-    Provides async connection pooling and database access
-    """
-
-    pool: Optional[aiomysql.Pool] = None
-
-    @classmethod
-    async def connect(cls) -> None:
-        """
-        Establish connection pool to MySQL
-
-        Raises:
-            Exception: If unable to connect to MySQL
-        """
-        try:
-            logger.info(f"Connecting to MySQL at {settings.MYSQL_HOST}")
-            cls.pool = await aiomysql.create_pool(
-                host=settings.MYSQL_HOST,
-                port=settings.MYSQL_PORT,
-                user=settings.MYSQL_USER,
-                password=settings.MYSQL_PASSWORD,
-                db=settings.MYSQL_DB_NAME,
-                minsize=5,
-                maxsize=20,
-                autocommit=False,
-                charset='utf8mb4'
-            )
-            logger.info(f"Connected to MySQL database: {settings.MYSQL_DB_NAME}")
-
-            # Create tables if they don't exist
-            await cls._create_tables()
-
-        except Exception as e:
-            logger.error(f"Failed to connect to MySQL: {e}")
-            raise
-
-    @classmethod
-    async def _create_tables(cls) -> None:
-        """Create database tables if they don't exist"""
-        try:
-            async with cls.pool.acquire() as conn:
-                async with conn.cursor() as cursor:
-                    # Create users table
-                    await cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS users (
-                            id INT PRIMARY KEY AUTO_INCREMENT,
-                            user_id VARCHAR(36) UNIQUE NOT NULL,
-                            email VARCHAR(255) UNIQUE NOT NULL,
-                            password_hash VARCHAR(255) NOT NULL,
-                            first_name VARCHAR(100) NOT NULL,
-                            last_name VARCHAR(100) NOT NULL,
-                            role ENUM('super_admin', 'admin', 'moderator', 'user', 'guest')
-                                NOT NULL DEFAULT 'user',
-                            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                            is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-                            phone VARCHAR(20),
-                            avatar VARCHAR(500),
-                            timezone VARCHAR(50),
-                            locale VARCHAR(10),
-                            last_login_at TIMESTAMP NULL,
-                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                                ON UPDATE CURRENT_TIMESTAMP,
-                            deleted_at TIMESTAMP NULL,
-                            metadata JSON,
-
-                            INDEX idx_email (email),
-                            INDEX idx_user_id (user_id),
-                            INDEX idx_role (role),
-                            INDEX idx_created_at (created_at)
-                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-                    """)
-
-                    # Create refresh_tokens table
-                    await cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS refresh_tokens (
-                            id INT PRIMARY KEY AUTO_INCREMENT,
-                            token_id VARCHAR(36) UNIQUE NOT NULL,
-                            user_id VARCHAR(36) NOT NULL,
-                            token TEXT NOT NULL,
-                            expires_at TIMESTAMP NOT NULL,
-                            is_revoked BOOLEAN NOT NULL DEFAULT FALSE,
-                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                            last_used_at TIMESTAMP NULL,
-
-                            INDEX idx_token_id (token_id),
-                            INDEX idx_user_id (user_id),
-                            INDEX idx_expires_at (expires_at),
-                            FOREIGN KEY (user_id) REFERENCES users(user_id)
-                                ON DELETE CASCADE
-                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-                    """)
-
-                    await conn.commit()
-                    logger.info("MySQL tables created successfully")
-
-        except Exception as e:
-            logger.error(f"Error creating MySQL tables: {e}")
-            # Don't raise - we'll log and continue
-
-    @classmethod
-    async def disconnect(cls) -> None:
-        """Close MySQL connection pool"""
-        if cls.pool:
-            cls.pool.close()
-            await cls.pool.wait_closed()
-            logger.info("Disconnected from MySQL")
-
-    @classmethod
-    async def health_check(cls) -> bool:
-        """
-        Check MySQL connection health
-
-        Returns:
-            bool: True if connection is healthy, False otherwise
-        """
-        try:
-            if cls.pool:
-                async with cls.pool.acquire() as conn:
-                    async with conn.cursor() as cursor:
-                        await cursor.execute("SELECT 1")
-                        result = await cursor.fetchone()
-                        return result == (1,)
-            return False
-        except Exception as e:
-            logger.error(f"MySQL health check failed: {e}")
-            return False
-
-    @classmethod
-    async def get_connection(cls):
-        """Get a connection from the pool"""
-        if cls.pool is None:
-            raise ConnectionError("MySQL not connected. Call connect() first.")
-        return cls.pool.acquire()
-
-
-# Database manager instances
+# Database manager instance
 mongodb = MongoDBManager()
-mysql = MySQLManager()

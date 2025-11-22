@@ -41,13 +41,6 @@ class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "a64core_db"
 
-    # Database Settings - MySQL
-    MYSQL_HOST: str = "localhost"
-    MYSQL_PORT: int = 3306
-    MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = ""
-    MYSQL_DB_NAME: str = "a64core_db"
-
     # Security Settings
     SECRET_KEY: str = "dev_secret_key_change_in_production"
     API_KEY_PREFIX: str = "dev_key"

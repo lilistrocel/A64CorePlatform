@@ -1,13 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
+import { getPendingTaskCount } from '../../services/tasksApi';
 import { Button } from '@a64core/shared';
 
 export function MainLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pendingTaskCount, setPendingTaskCount] = useState(0);
+
+  // Load pending task count on mount and refresh every 30 seconds
+  useEffect(() => {
+    loadPendingTaskCount();
+    const interval = setInterval(loadPendingTaskCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadPendingTaskCount = async () => {
+    try {
+      const count = await getPendingTaskCount();
+      setPendingTaskCount(count);
+    } catch (error) {
+      console.error('Failed to load pending task count:', error);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -50,6 +68,13 @@ export function MainLayout() {
           <NavItem to="/farm/block-monitor" onClick={closeMobileMenu}>
             <NavIcon>🌾</NavIcon>
             <span>Block Monitor</span>
+          </NavItem>
+          <NavItem to="/operations" onClick={closeMobileMenu}>
+            <NavIcon>📋</NavIcon>
+            <NavContent>
+              <span>Operations</span>
+              {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
+            </NavContent>
           </NavItem>
           <NavItem to="/profile" onClick={closeMobileMenu}>
             <NavIcon>👤</NavIcon>
@@ -248,6 +273,27 @@ const NavItem = styled(NavLink)`
 
 const NavIcon = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
+`;
+
+const NavContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  flex: 1;
+`;
+
+const Badge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 ${({ theme }) => theme.spacing.xs};
+  background: ${({ theme }) => theme.colors.error};
+  color: white;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
 `;
 
 const SidebarFooter = styled.div`

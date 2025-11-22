@@ -7,7 +7,7 @@ Task management for farmer operations - auto-generated and custom tasks.
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID, uuid4
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -99,8 +99,8 @@ class HarvestTotal(BaseModel):
 class TaskData(BaseModel):
     """Task-specific data (varies by task type)"""
     # For harvest tasks
-    harvestEntries: Optional[List[HarvestEntry]] = Field(
-        None,
+    harvestEntries: List[HarvestEntry] = Field(
+        default_factory=list,
         description="Individual harvest entries (for daily_harvest)"
     )
     totalHarvest: Optional[HarvestTotal] = Field(
@@ -110,7 +110,20 @@ class TaskData(BaseModel):
 
     # For all tasks
     notes: Optional[str] = Field(None, description="Task completion notes")
-    photoUrls: Optional[List[str]] = Field(None, description="Optional task photos")
+    photoUrls: List[str] = Field(default_factory=list, description="Optional task photos")
+
+    # Validators to handle None values from existing database records
+    @field_validator('harvestEntries', mode='before')
+    @classmethod
+    def validate_harvest_entries(cls, v):
+        """Convert None to empty list for backward compatibility"""
+        return v if v is not None else []
+
+    @field_validator('photoUrls', mode='before')
+    @classmethod
+    def validate_photo_urls(cls, v):
+        """Convert None to empty list for backward compatibility"""
+        return v if v is not None else []
 
     class Config:
         json_schema_extra = {
@@ -142,6 +155,7 @@ class FarmTaskCreate(BaseModel):
     farmId: UUID = Field(..., description="Farm ID")
     blockId: UUID = Field(..., description="Block ID")
     taskType: TaskType = Field(..., description="Type of task")
+    title: Optional[str] = Field(None, description="Task title (auto-generated or custom)")
     scheduledDate: datetime = Field(..., description="When task should be done")
     dueDate: Optional[datetime] = Field(None, description="Task deadline (optional)")
     assignedTo: Optional[UUID] = Field(
@@ -149,6 +163,10 @@ class FarmTaskCreate(BaseModel):
         description="User ID for custom tasks (null for auto-tasks)"
     )
     description: Optional[str] = Field(None, description="Task description")
+    triggerStateChange: Optional[str] = Field(
+        None,
+        description="Block status to transition to when task is completed (Phase 2)"
+    )
 
 
 class FarmTask(FarmTaskCreate):
@@ -220,6 +238,7 @@ class TaskCompletionData(BaseModel):
     """Schema for completing a non-harvest task"""
     notes: Optional[str] = Field(None, description="Completion notes")
     photoUrls: Optional[List[str]] = Field(None, description="Optional task photos")
+    triggerTransition: Optional[bool] = Field(False, description="Phase 2: Trigger block state transition on completion")
 
 
 class FarmTaskUpdate(BaseModel):

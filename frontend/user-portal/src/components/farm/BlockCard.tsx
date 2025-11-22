@@ -11,6 +11,7 @@ import { farmApi } from '../../services/farmApi';
 import type { Block, BlockSummary, BlockState } from '../../types/farm';
 import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
 import { PlantAssignmentModal } from './PlantAssignmentModal';
+import { PendingTasksWarningModal } from './PendingTasksWarningModal';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -243,6 +244,12 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
   const [loading, setLoading] = useState(false);
   const [showPlantModal, setShowPlantModal] = useState(false);
 
+  // Phase 3: Warning modal state
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState<any[]>([]);
+  const [targetStatus, setTargetStatus] = useState<string>('');
+  const [pendingStateChange, setPendingStateChange] = useState<BlockState | null>(null);
+
   useEffect(() => {
     loadBlockData();
   }, [block.blockId]);
@@ -260,21 +267,44 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
     }
   };
 
-  const handleStateChange = async (newState: BlockState) => {
+  const handleStateChange = async (newState: BlockState, force: boolean = false) => {
     if (newState === block.state) return;
 
     try {
       setLoading(true);
       await farmApi.transitionBlockState(farmId, block.blockId, {
         newStatus: newState,
+        force, // Phase 3: Pass force parameter
       });
       onStateChange?.();
-    } catch (error) {
-      alert('Failed to transition block state. Please try again.');
+    } catch (error: any) {
       console.error('Error transitioning state:', error);
+
+      // Phase 3: Check for HTTP 409 Conflict (pending tasks warning)
+      if (error.response?.status === 409 && error.response?.data?.detail?.error === 'pending_tasks_exist') {
+        const detail = error.response.data.detail;
+        setPendingTasks(detail.pendingTasks || []);
+        setTargetStatus(detail.targetStatus || '');
+        setPendingStateChange(newState);
+        setShowWarningModal(true);
+      } else {
+        alert('Failed to transition block state. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForceStateChange = () => {
+    setShowWarningModal(false);
+    if (pendingStateChange) {
+      handleStateChange(pendingStateChange, true);
+    }
+  };
+
+  const handleCancelWarning = () => {
+    setShowWarningModal(false);
+    setPendingStateChange(null);
   };
 
   const handleEdit = () => {
@@ -395,6 +425,15 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
           loadBlockData();
           onStateChange?.();
         }}
+      />
+
+      {/* Phase 3: Warning Modal */}
+      <PendingTasksWarningModal
+        isOpen={showWarningModal}
+        targetStatus={targetStatus}
+        pendingTasks={pendingTasks}
+        onCancel={handleCancelWarning}
+        onForce={handleForceStateChange}
       />
     </Card>
   );

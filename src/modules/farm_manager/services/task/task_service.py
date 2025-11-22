@@ -14,6 +14,7 @@ from ...models.farm_task import (
     TaskType, TaskStatus, HarvestEntryCreate,
     TaskCompletionData
 )
+from ...models.block import BlockStatus, BlockStatusUpdate
 from ...utils.responses import PaginatedResponse, PaginationMeta
 from .task_repository import TaskRepository
 from ..database import farm_db
@@ -357,6 +358,36 @@ class TaskService:
             raise ValueError(f"Failed to complete task: {task_id}")
 
         logger.info(f"Task {task_id} ({task.taskType}) completed by {user_email}")
+
+        # Phase 2: Handle task-driven state transition
+        if completion_data.triggerTransition and task.triggerStateChange:
+            try:
+                # Import BlockService here to avoid circular import
+                from ..block.block_service_new import BlockService
+
+                # Convert string status to BlockStatus enum
+                new_status = BlockStatus(task.triggerStateChange)
+
+                # Create status update request
+                status_update = BlockStatusUpdate(
+                    newStatus=new_status,
+                    notes=f"Automatic transition triggered by completing task: {task.title}"
+                )
+
+                # Call block service to change status
+                await BlockService.change_status(
+                    block_id=task.blockId,
+                    status_update=status_update,
+                    user_id=user_id,
+                    user_email=user_email
+                )
+
+                logger.info(f"Task {task_id} triggered block {task.blockId} transition to {new_status.value}")
+            except Exception as e:
+                logger.error(f"Failed to trigger state transition for block {task.blockId}: {e}")
+                # Don't raise error - task is already completed successfully
+                # State transition failure should not rollback task completion
+
         return completed_task
 
     @staticmethod

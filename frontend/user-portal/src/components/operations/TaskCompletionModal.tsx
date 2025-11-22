@@ -24,7 +24,7 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, triggerTransition: boolean = false) => {
     e.preventDefault();
 
     try {
@@ -34,6 +34,7 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
       await completeTask(task.taskId, {
         notes: notes.trim() || undefined,
         photoUrls: [], // Photo upload would be implemented here
+        triggerTransition, // Phase 2: Trigger state transition if requested
       });
 
       onComplete();
@@ -44,6 +45,9 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
       setSubmitting(false);
     }
   };
+
+  // Format state name for display (e.g., "growing" -> "GROWING")
+  const formatStateName = (state: string) => state.toUpperCase();
 
   return (
     <Overlay onClick={onClose}>
@@ -81,14 +85,44 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
 
             {error && <ErrorMessage>{error}</ErrorMessage>}
 
-            <ButtonGroup>
-              <CancelButton type="button" onClick={onClose} disabled={submitting}>
-                Cancel
-              </CancelButton>
-              <SubmitButton type="submit" disabled={submitting}>
-                {submitting ? 'Completing...' : 'Complete Task'}
-              </SubmitButton>
-            </ButtonGroup>
+            {task.triggerStateChange ? (
+              // Phase 2: Show two buttons when task can trigger state transition
+              <>
+                <InfoBox>
+                  This task can transition the block to <strong>{formatStateName(task.triggerStateChange)}</strong> state
+                  when completed.
+                </InfoBox>
+                <ButtonGroup>
+                  <CancelButton type="button" onClick={onClose} disabled={submitting}>
+                    Cancel
+                  </CancelButton>
+                  <SubmitButton
+                    type="button"
+                    onClick={(e) => handleSubmit(e, false)}
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Completing...' : 'Complete Task'}
+                  </SubmitButton>
+                  <TransitionButton
+                    type="button"
+                    onClick={(e) => handleSubmit(e, true)}
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Completing...' : `Complete & Transition`}
+                  </TransitionButton>
+                </ButtonGroup>
+              </>
+            ) : (
+              // Standard single button for tasks without state transition
+              <ButtonGroup>
+                <CancelButton type="button" onClick={onClose} disabled={submitting}>
+                  Cancel
+                </CancelButton>
+                <SubmitButton type="submit" disabled={submitting}>
+                  {submitting ? 'Completing...' : 'Complete Task'}
+                </SubmitButton>
+              </ButtonGroup>
+            )}
           </Form>
         </Content>
       </Modal>
@@ -254,9 +288,26 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
+const InfoBox = styled.div`
+  padding: ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  text-align: center;
+  line-height: ${({ theme }) => theme.typography.lineHeight.normal};
+
+  strong {
+    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+    color: ${({ theme }) => theme.colors.primary[600]};
+  }
+`;
+
 const ButtonGroup = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.md};
+  flex-wrap: wrap;
 `;
 
 const CancelButton = styled.button`
@@ -301,5 +352,33 @@ const SubmitButton = styled.button`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+`;
+
+const TransitionButton = styled.button`
+  flex: 1;
+  padding: ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: white;
+  border: none;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.primary[600]};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &::before {
+    content: '→';
+    margin-right: ${({ theme }) => theme.spacing.xs};
   }
 `;

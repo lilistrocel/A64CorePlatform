@@ -8,7 +8,7 @@ from fastapi import APIRouter, status
 from typing import Dict, Any
 from datetime import datetime
 
-from ..services.database import mongodb, mysql
+from ..services.database import mongodb
 
 router = APIRouter()
 
@@ -37,18 +37,16 @@ async def readiness_check() -> Dict[str, Any]:
     Returns:
         Readiness status - indicates if service is ready to accept requests
     """
-    # Check database connections
+    # Check database connection
     mongodb_status = "healthy" if await mongodb.health_check() else "unhealthy"
-    mysql_status = "healthy" if await mysql.health_check() else "unhealthy"
 
-    # Service is ready if both databases are healthy
-    is_ready = mongodb_status == "healthy" and mysql_status == "healthy"
+    # Service is ready if MongoDB is healthy
+    is_ready = mongodb_status == "healthy"
 
     return {
         "ready": is_ready,
         "timestamp": datetime.utcnow().isoformat(),
         "checks": {
-            "mongodb": mongodb_status,
-            "mysql": mysql_status
+            "mongodb": mongodb_status
         }
     }

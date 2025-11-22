@@ -67,7 +67,7 @@ async def create_planting_plan(
     "/{planting_id}/mark-planted",
     response_model=SuccessResponse[dict],
     summary="Mark planting as planted",
-    description="Mark a planned planting as planted (farmer executes the plan). Transitions block to PLANTED state."
+    description="Mark a planned planting as planted (farmer executes the plan). Transitions block to GROWING state."
 )
 async def mark_as_planted(
     planting_id: UUID,
@@ -85,8 +85,8 @@ async def mark_as_planted(
     1. Validates planting and block states
     2. Records planting timestamp and farmer
     3. Calculates estimated harvest dates
-    4. Updates planting status to PLANTED
-    5. Transitions block to PLANTED state
+    4. Updates planting status to GROWING
+    5. Transitions block to GROWING state
 
     **Response:**
     - Updated planting with harvest estimation

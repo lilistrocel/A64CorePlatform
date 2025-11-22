@@ -9,7 +9,7 @@
 // ENUMS & CONSTANTS
 // ============================================================================
 
-export type BlockState = 'empty' | 'planned' | 'planted' | 'harvesting' | 'alert';
+export type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvesting' | 'cleaning' | 'alert';
 
 export type PlantingStatus = 'planned' | 'planted' | 'harvesting' | 'completed';
 
@@ -70,8 +70,10 @@ export interface FarmSummary {
   blocksByState: {
     empty: number;
     planned: number;
-    planted: number;
+    growing: number;
+    fruiting: number;
     harvesting: number;
+    cleaning: number;
     alert: number;
   };
   activePlantings: number;
@@ -792,8 +794,10 @@ export interface DashboardMetrics {
   blocksByState: {
     empty: number;
     planned: number;
-    planted: number;
+    growing: number;
+    fruiting: number;
     harvesting: number;
+    cleaning: number;
     alert: number;
   };
   activePlantings: number;
@@ -830,8 +834,7 @@ export interface CSVImportResult {
 export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
   empty: '#6B7280',      // Gray
   planned: '#3B82F6',    // Blue
-  planted: '#10B981',    // Green
-  growing: '#22C55E',    // Bright Green
+  growing: '#10B981',    // Green
   fruiting: '#A855F7',   // Purple
   harvesting: '#F59E0B', // Yellow/Orange
   cleaning: '#F97316',   // Orange
@@ -841,7 +844,6 @@ export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
 export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
   empty: 'Empty',
   planned: 'Planned',
-  planted: 'Planted',
   growing: 'Growing',
   fruiting: 'Fruiting',
   harvesting: 'Harvesting',
@@ -870,7 +872,6 @@ export const PLANTING_STATUS_LABELS: Record<PlantingStatus, string> = {
 export type DashboardBlockStatus =
   | 'empty'
   | 'planned'
-  | 'planted'
   | 'growing'
   | 'fruiting'
   | 'harvesting'

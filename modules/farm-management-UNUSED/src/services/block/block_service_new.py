@@ -21,6 +21,7 @@ from .alert_repository import AlertRepository
 from .archive_repository import ArchiveRepository
 from ...models.block_archive import BlockArchive, QualityBreakdown, AlertsSummary
 from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+from ..task.task_generator_service import TaskGeneratorService
 
 logger = logging.getLogger(__name__)
 
@@ -399,6 +400,34 @@ class BlockService:
                         f"[Block Service] Recalculated future dates for planned → {new_status.value} transition"
                     )
 
+                # Generate tasks BEFORE state change (atomicity)
+                try:
+                    plant_data = await PlantDataEnhancedRepository.get_by_id(current_block.targetCrop)
+                    if plant_data:
+                        tasks = await TaskGeneratorService.generate_tasks_for_transition(
+                            block_id=block_id,
+                            from_state=current_block.state,
+                            to_state=new_status,
+                            plant_data=plant_data,
+                            expected_dates=updated_expected_dates or current_block.expectedStatusChanges or {},
+                            plant_count=current_block.actualPlantCount or 0,
+                            block_name=current_block.name,
+                            block_code=current_block.blockCode,
+                            farm_id=current_block.farmId,
+                            user_id=user_id,
+                            user_email=user_email
+                        )
+                        logger.info(
+                            f"[Block Service] Generated {len(tasks)} tasks for block {current_block.blockCode} "
+                            f"transition {current_block.state.value} → {new_status.value}"
+                        )
+                    else:
+                        logger.warning(f"[Block Service] Plant data not found, skipping task generation")
+                except Exception as e:
+                    logger.error(f"[Block Service] Failed to generate tasks: {e}", exc_info=True)
+                    # Don't fail the transition
+                    logger.warning(f"[Block Service] Continuing with state transition despite task generation failure")
+
                 # Update status using existing data
                 block = await BlockRepository.update_status(
                     block_id,
@@ -442,6 +471,32 @@ class BlockService:
                     predicted_yield_kg=predicted_yield
                 )
 
+                # Generate tasks BEFORE state change (atomicity)
+                try:
+                    tasks = await TaskGeneratorService.generate_tasks_for_transition(
+                        block_id=block_id,
+                        from_state=current_block.state,
+                        to_state=new_status,
+                        plant_data=plant_data,
+                        expected_dates=expected_status_changes,
+                        plant_count=status_update.actualPlantCount,
+                        block_name=current_block.name,
+                        block_code=current_block.blockCode,
+                        farm_id=current_block.farmId,
+                        user_id=user_id,
+                        user_email=user_email
+                    )
+                    logger.info(
+                        f"[Block Service] Generated {len(tasks)} tasks for block {current_block.blockCode} "
+                        f"transition {current_block.state.value} → {new_status.value}"
+                    )
+                except Exception as e:
+                    logger.error(f"[Block Service] Failed to generate tasks: {e}", exc_info=True)
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to generate tasks for state transition: {str(e)}"
+                    )
+
                 # Update status with planning/planting details
                 block = await BlockRepository.update_status(
                     block_id,
@@ -484,9 +539,40 @@ class BlockService:
                     actual_transition_date
                 )
                 logger.info(
-                    f"[Block Service] Recalculated future dates for block {block_id} "
+                    f"[Block Service] Recalculate future dates for block {block_id} "
                     f"transitioning to {new_status.value}"
                 )
+
+            # Generate tasks BEFORE state change (atomicity)
+            # For normal transitions, we need plant data
+            if current_block.targetCrop:
+                try:
+                    plant_data = await PlantDataEnhancedRepository.get_by_id(current_block.targetCrop)
+                    if plant_data:
+                        tasks = await TaskGeneratorService.generate_tasks_for_transition(
+                            block_id=block_id,
+                            from_state=current_block.state,
+                            to_state=new_status,
+                            plant_data=plant_data,
+                            expected_dates=updated_expected_dates or current_block.expectedStatusChanges or {},
+                            plant_count=current_block.actualPlantCount or 0,
+                            block_name=current_block.name,
+                            block_code=current_block.blockCode,
+                            farm_id=current_block.farmId,
+                            user_id=user_id,
+                            user_email=user_email
+                        )
+                        logger.info(
+                            f"[Block Service] Generated {len(tasks)} tasks for block {current_block.blockCode} "
+                            f"transition {current_block.state.value} → {new_status.value}"
+                        )
+                    else:
+                        logger.warning(f"[Block Service] Plant data not found for {current_block.targetCrop}, skipping task generation")
+                except Exception as e:
+                    logger.error(f"[Block Service] Failed to generate tasks: {e}", exc_info=True)
+                    # Don't fail the transition if task generation fails for normal transitions
+                    # Only critical transitions (like EMPTY→PLANNED) should fail
+                    logger.warning(f"[Block Service] Continuing with state transition despite task generation failure")
 
             block = await BlockRepository.update_status(
                 block_id,
