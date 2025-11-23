@@ -483,6 +483,37 @@ export async function getBlockCycleHistory(farmId: string, blockId: string) {
   return response.data.data;
 }
 
+/**
+ * Get all archived cycles for a farm (across all blocks)
+ */
+export async function getFarmArchives(
+  farmId: string,
+  page: number = 1,
+  perPage: number = 20
+) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/archives`,
+    { params: { page, perPage } }
+  );
+  return {
+    items: response.data.data || [],
+    total: response.data.meta?.total || 0,
+    page: response.data.meta?.page || 1,
+    perPage: response.data.meta?.perPage || 20,
+    totalPages: response.data.meta?.totalPages || 1,
+  };
+}
+
+/**
+ * Delete an archived cycle
+ */
+export async function deleteArchive(archiveId: string) {
+  const response = await apiClient.delete<{ message: string }>(
+    `/v1/farm/archives/${archiveId}`
+  );
+  return response.data;
+}
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -590,6 +621,8 @@ export const farmApi = {
   // Block Archives
   getBlockArchives,
   getBlockCycleHistory,
+  getFarmArchives,
+  deleteArchive,
 
   // Plant Data
   getPlantData,

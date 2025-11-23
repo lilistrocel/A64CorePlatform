@@ -234,6 +234,17 @@ export interface AlertsSummary {
   averageResolutionTimeHours?: number;
 }
 
+export interface StatusChange {
+  status: BlockState;
+  changedAt: string;
+  changedBy?: string;
+  changedByEmail?: string;
+  notes?: string;
+  expectedDate?: string | null;
+  offsetDays?: number | null;
+  offsetType?: string | null;
+}
+
 export interface BlockArchive {
   archiveId: string;
   blockId: string;

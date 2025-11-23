@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { BlockGrid } from './BlockGrid';
 import { CreateBlockModal } from './CreateBlockModal';
 import { EditBlockModal } from './EditBlockModal';
+import { FarmHistoryTab } from './FarmHistoryTab';
 import { farmApi } from '../../services/farmApi';
 import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate } from '../../types/farm';
 
@@ -250,7 +251,7 @@ const InfoValue = styled.span`
 // COMPONENT
 // ============================================================================
 
-type TabType = 'overview' | 'blocks' | 'plantings' | 'statistics';
+type TabType = 'overview' | 'blocks' | 'plantings' | 'statistics' | 'history';
 
 export function FarmDetail() {
   const { farmId } = useParams<{ farmId: string }>();
@@ -430,6 +431,9 @@ export function FarmDetail() {
           <Tab $active={activeTab === 'statistics'} onClick={() => setActiveTab('statistics')}>
             Statistics
           </Tab>
+          <Tab $active={activeTab === 'history'} onClick={() => setActiveTab('history')}>
+            History
+          </Tab>
         </TabBar>
 
         <TabContent>
@@ -503,6 +507,10 @@ export function FarmDetail() {
 
           {activeTab === 'statistics' && (
             <div>Statistics view - Coming soon</div>
+          )}
+
+          {activeTab === 'history' && farmId && (
+            <FarmHistoryTab farmId={farmId} />
           )}
         </TabContent>
       </TabsContainer>
