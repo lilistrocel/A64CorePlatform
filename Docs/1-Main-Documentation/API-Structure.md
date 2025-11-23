@@ -1074,6 +1074,184 @@ POST /api/v1/farm/farms
 
 ---
 
+#### Get Farm Analytics
+```
+GET /api/v1/farm/farms/{farm_id}/analytics
+```
+**Purpose:** Get comprehensive farm-level analytics aggregated from all blocks
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `farm_id` (UUID)
+**Query Parameters:**
+- `period` (string, default: "30d"): Time period ('30d', '90d', '6m', '1y', 'all')
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "farmId": "uuid",
+    "farmName": "My Farm",
+    "period": "30d",
+    "startDate": "2025-10-24T00:00:00Z",
+    "endDate": "2025-11-23T00:00:00Z",
+    "generatedAt": "2025-11-23T10:30:00Z",
+
+    "aggregatedMetrics": {
+      "totalBlocks": 8,
+      "activePlantings": 1,
+      "totalYieldKg": 150.5,
+      "avgYieldEfficiency": 85.2,
+      "overallPerformanceScore": 78.0,
+      "totalCapacity": 800,
+      "currentUtilization": 37.5,
+      "predictedYieldKg": 3003.0
+    },
+
+    "stateBreakdown": {
+      "empty": {
+        "count": 7,
+        "blockIds": ["uuid1", "uuid2"],
+        "avgDaysInState": 45.0
+      },
+      "planned": {
+        "count": 0,
+        "blockIds": [],
+        "avgDaysInState": null
+      },
+      "growing": {
+        "count": 0,
+        "blockIds": [],
+        "avgDaysInState": null
+      },
+      "fruiting": {
+        "count": 0,
+        "blockIds": [],
+        "avgDaysInState": null
+      },
+      "harvesting": {
+        "count": 1,
+        "blockIds": ["uuid"],
+        "avgDaysInState": 12.0
+      },
+      "cleaning": {
+        "count": 0,
+        "blockIds": [],
+        "avgDaysInState": null
+      },
+      "alert": {
+        "count": 0,
+        "blockIds": [],
+        "avgDaysInState": null
+      }
+    },
+
+    "blockComparison": [
+      {
+        "blockId": "uuid",
+        "blockCode": "F001-024",
+        "name": "A01",
+        "state": "harvesting",
+        "currentCrop": "Lettuce",
+        "yieldKg": 0.0,
+        "yieldEfficiency": 0.0,
+        "performanceScore": 80.0,
+        "daysInCycle": 30,
+        "taskCompletionRate": 85.0,
+        "activeAlerts": 0
+      }
+    ],
+
+    "historicalTrends": {
+      "yieldTimeline": [
+        {
+          "date": "2025-11-01",
+          "yieldKg": 50.0,
+          "harvestCount": 2
+        }
+      ],
+      "stateTransitions": [
+        {
+          "date": "2025-11-01T10:00:00Z",
+          "blockId": "uuid",
+          "blockCode": "F001-001",
+          "fromState": "growing",
+          "toState": "fruiting"
+        }
+      ],
+      "performanceTrend": "improving"
+    }
+  }
+}
+```
+
+**Response Fields:**
+- **farmId**: Farm UUID
+- **farmName**: Farm name
+- **period**: Time period used for analysis
+- **startDate/endDate**: Date range of analysis
+- **generatedAt**: Timestamp of analytics generation
+
+**aggregatedMetrics:**
+- `totalBlocks`: Total number of blocks in farm
+- `activePlantings`: Number of blocks with active crops
+- `totalYieldKg`: Total yield across all blocks (in kg)
+- `avgYieldEfficiency`: Average yield efficiency percentage
+- `overallPerformanceScore`: Farm performance score (0-100)
+- `totalCapacity`: Total farm capacity (sum of block areas)
+- `currentUtilization`: Percentage of capacity currently in use
+- `predictedYieldKg`: Total predicted yield from all active plantings
+
+**stateBreakdown:**
+- Count of blocks in each state (empty, planned, growing, fruiting, harvesting, cleaning, alert)
+- List of block IDs per state
+- Average days spent in each state
+- Used for state distribution pie chart in UI
+
+**blockComparison:**
+- Individual block performance metrics
+- Sortable by yield, efficiency, performance score, task completion, alerts
+- Used for block comparison table in UI
+
+**historicalTrends:**
+- `yieldTimeline`: Daily/weekly yield aggregation for charting
+- `stateTransitions`: State change events across farm
+- `performanceTrend`: Overall trend indicator (improving/stable/declining)
+
+**Data Sources:**
+- Blocks collection (lifecycle states, KPIs)
+- Harvests collection (yield data, quality grades)
+- Tasks collection (completion rates)
+- Alerts collection (active alerts, resolution rates)
+- State history (transition patterns)
+
+**Time Periods:**
+- `30d`: Last 30 days
+- `90d`: Last 90 days
+- `6m`: Last 6 months
+- `1y`: Last 1 year
+- `all`: All-time data
+
+**Use Cases:**
+- Farm-level performance dashboard
+- Identify top performing blocks
+- Identify blocks needing attention
+- Track yield trends over time
+- Monitor state distribution across farm
+- Compare block performance
+- Capacity utilization analysis
+
+**Errors:**
+- 401: Unauthorized (missing or invalid token)
+- 403: Access denied (not farm manager or admin)
+- 404: Farm not found
+- 500: Internal server error
+
+**Performance:**
+- Uses MongoDB aggregation pipelines for efficient queries
+- Time period filtering reduces data load
+- Cached calculations where applicable
+
+---
+
 ### Block Management
 
 #### Create Block
@@ -1799,6 +1977,235 @@ GET /api/v1/farm/farms/{farmId}/harvests
 - `qualityGrade` (string, optional): Filter by quality grade
 
 **Response:** 200 OK (Paginated list of harvests across farm)
+
+---
+
+### Block Analytics
+
+#### Get Block Analytics
+```
+GET /api/v1/farm/farms/{farmId}/blocks/{blockId}/analytics
+```
+**Purpose:** Get comprehensive analytics and statistics for a block
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `farmId` (UUID), `blockId` (UUID)
+**Query Parameters:**
+- `period` (string, optional): Time period to analyze (30d, 90d, 6m, 1y, all). Default: all
+- `startDate` (string, optional): Custom start date in ISO 8601 format
+- `endDate` (string, optional): Custom end date in ISO 8601 format
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "blockInfo": {
+      "blockId": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+      "blockCode": "F001-003",
+      "name": "Greenhouse A3",
+      "farmId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "currentState": "harvesting",
+      "currentCrop": "Tomato - Roma",
+      "currentCropId": "plant-uuid",
+      "plantedDate": "2025-09-01T00:00:00Z",
+      "expectedHarvestDate": "2025-12-01T00:00:00Z",
+      "daysInCurrentCycle": 83
+    },
+    "yieldAnalytics": {
+      "totalYieldKg": 425.5,
+      "predictedYieldKg": 500.0,
+      "yieldEfficiencyPercent": 85.1,
+      "yieldByQuality": {
+        "A": 298.0,
+        "B": 102.5,
+        "C": 25.0
+      },
+      "qualityDistribution": {
+        "A": 70.0,
+        "B": 24.1,
+        "C": 5.9
+      },
+      "totalHarvests": 12,
+      "avgYieldPerHarvest": 35.46,
+      "firstHarvestDate": "2025-11-01T00:00:00Z",
+      "lastHarvestDate": "2025-11-12T00:00:00Z",
+      "harvestingDuration": 11,
+      "yieldTrend": [
+        {
+          "date": "2025-11-01T00:00:00Z",
+          "quantityKg": 45.5,
+          "cumulativeKg": 45.5,
+          "qualityGrade": "A"
+        }
+      ],
+      "performanceCategory": "good"
+    },
+    "timelineAnalytics": {
+      "daysInEachState": {
+        "empty": 5,
+        "planted": 7,
+        "growing": 35,
+        "fruiting": 21,
+        "harvesting": 11
+      },
+      "stateTransitions": [
+        {
+          "fromState": "empty",
+          "toState": "planted",
+          "transitionDate": "2025-09-01T00:00:00Z",
+          "daysInPreviousState": 5,
+          "expectedDate": "2025-09-01T00:00:00Z",
+          "offsetDays": 0,
+          "onTime": true
+        }
+      ],
+      "currentState": "harvesting",
+      "currentStateDuration": 11,
+      "currentStateStartDate": "2025-11-01T00:00:00Z",
+      "cycleDuration": 83,
+      "expectedCycleDuration": 90,
+      "onTimeTransitions": 3,
+      "earlyTransitions": 0,
+      "lateTransitions": 1,
+      "avgOffsetDays": 2.5
+    },
+    "taskAnalytics": {
+      "totalTasks": 25,
+      "completedTasks": 22,
+      "pendingTasks": 3,
+      "overdueTasks": 1,
+      "completionRate": 88.0,
+      "avgCompletionDelay": 1.2,
+      "tasksByType": {
+        "planting": {
+          "total": 5,
+          "completed": 5,
+          "pending": 0,
+          "overdue": 0,
+          "completionRate": 100.0,
+          "avgCompletionDelay": 0.5
+        },
+        "harvest": {
+          "total": 12,
+          "completed": 11,
+          "pending": 1,
+          "overdue": 0,
+          "completionRate": 91.7,
+          "avgCompletionDelay": 1.0
+        }
+      },
+      "recentCompletedTasks": 5,
+      "upcomingTasks": 2
+    },
+    "performanceMetrics": {
+      "yieldEfficiencyPercent": 85.1,
+      "performanceCategory": "good",
+      "performanceIcon": "✅",
+      "avgDelayDays": 2.5,
+      "onTimeRate": 75.0,
+      "taskCompletionRate": 88.0,
+      "taskOnTimeRate": 88.0,
+      "overallScore": 82.4,
+      "trend": "stable",
+      "strengths": [
+        "Strong task completion rate",
+        "High-quality yield (Grade A)"
+      ],
+      "improvements": [
+        "Improve timeline adherence - some late transitions"
+      ]
+    },
+    "alertAnalytics": {
+      "totalAlerts": 8,
+      "activeAlerts": 1,
+      "resolvedAlerts": 6,
+      "dismissedAlerts": 1,
+      "criticalCount": 0,
+      "highCount": 1,
+      "mediumCount": 3,
+      "lowCount": 4,
+      "avgResolutionTimeHours": 12.5,
+      "fastestResolutionHours": 2.0,
+      "slowestResolutionHours": 48.0
+    },
+    "generatedAt": "2025-11-23T10:30:00.000Z",
+    "period": "all",
+    "startDate": "2025-09-01T00:00:00Z",
+    "endDate": "2025-11-23T10:30:00.000Z"
+  },
+  "message": "Block analytics generated successfully"
+}
+```
+
+**Analytics Sections:**
+
+1. **Block Info**: Basic block information and current cycle status
+2. **Yield Analytics**:
+   - Total yield vs predicted yield
+   - Yield efficiency percentage
+   - Quality breakdown (A/B/C grades) in kg and percentages
+   - Harvest statistics (count, average, dates)
+   - Yield trend over time
+   - Performance category
+
+3. **Timeline Analytics**:
+   - Days spent in each state
+   - State transition history with timing
+   - Current state duration
+   - Cycle duration vs expected
+   - On-time/early/late transition counts
+   - Average offset from expected dates
+
+4. **Task Analytics**:
+   - Overall task completion statistics
+   - Average completion delay
+   - Task breakdown by type (planting, harvest, etc.)
+   - Recent and upcoming task counts
+
+5. **Performance Metrics**:
+   - Overall performance score (0-100)
+   - Trend direction (improving/stable/declining)
+   - Performance strengths (what's going well)
+   - Recommended improvements
+   - Comprehensive ratings
+
+6. **Alert Analytics**:
+   - Alert counts by status and severity
+   - Resolution time statistics
+   - Alert response performance
+
+**Time Period Options:**
+- `30d` - Last 30 days
+- `90d` - Last 90 days
+- `6m` - Last 6 months (180 days)
+- `1y` - Last year (365 days)
+- `all` - Complete cycle history (default)
+
+**Custom Date Range:**
+Provide both `startDate` and `endDate` in ISO 8601 format:
+```
+GET /api/v1/farm/farms/{farmId}/blocks/{blockId}/analytics?startDate=2025-09-01T00:00:00Z&endDate=2025-11-01T00:00:00Z
+```
+
+**Data Sources:**
+- `blocks` collection - Block status, KPIs, timeline
+- `block_harvests` collection - Harvest events and quality
+- `farm_tasks` collection - Task completion tracking
+- `alerts` collection - Alert history and resolution
+
+**Use Cases:**
+- Performance dashboards
+- Yield forecasting and planning
+- Efficiency analysis and optimization
+- Trend identification
+- Decision support for farm management
+- Identifying improvement opportunities
+
+**Errors:**
+- 400: Invalid date format
+- 404: Block not found or doesn't belong to farm
+- 500: Analytics generation failed
+
+**Note:** This is a READ-ONLY endpoint that aggregates data. It does not modify any records.
 
 ---
 

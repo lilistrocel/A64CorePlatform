@@ -10,7 +10,9 @@ from uuid import UUID
 import logging
 
 from ...models.farm import Farm, FarmCreate, FarmUpdate
+from ...models.farm_analytics import FarmAnalyticsResponse
 from ...services.farm import FarmService
+from ...services.farm.farm_analytics_service import FarmAnalyticsService
 from ...middleware.auth import get_current_active_user, require_permission, CurrentUser
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
 
@@ -278,3 +280,61 @@ async def get_farm_summary(
     }
 
     return SuccessResponse(data=summary)
+
+
+@router.get(
+    "/{farm_id}/analytics",
+    response_model=SuccessResponse[FarmAnalyticsResponse],
+    summary="Get farm analytics",
+    description="Get comprehensive farm-level analytics aggregated from all blocks"
+)
+async def get_farm_analytics(
+    farm_id: UUID,
+    period: str = Query(
+        "30d",
+        description="Time period: '30d', '90d', '6m', '1y', 'all'",
+        regex="^(30d|90d|6m|1y|all)$"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user),
+    service: FarmService = Depends()
+):
+    """
+    Get comprehensive farm analytics aggregated from all blocks
+
+    - **farm_id**: Farm UUID
+    - **period**: Time period ('30d', '90d', '6m', '1y', 'all')
+
+    Returns:
+    - **aggregatedMetrics**: Total yield, average efficiency, performance score, utilization
+    - **stateBreakdown**: Count of blocks in each state (empty, planned, growing, etc.)
+    - **blockComparison**: Individual block performance comparison
+    - **historicalTrends**: Yield timeline, state transitions, performance trend
+
+    This endpoint aggregates data from:
+    - All blocks in the farm
+    - Harvest records within the time period
+    - Task completion rates
+    - Alert statistics
+    - State transition history
+    """
+    # Get farm to check access
+    farm = await service.get_farm(farm_id)
+
+    # Check access (admins can access all farms)
+    if current_user.role not in ["super_admin", "admin"]:
+        if str(farm.managerId) != current_user.userId:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Not assigned to this farm"
+            )
+
+    # Generate analytics
+    analytics = await FarmAnalyticsService.get_farm_analytics(
+        farm_id=farm_id,
+        period=period
+    )
+
+    return SuccessResponse(
+        data=analytics,
+        message="Farm analytics retrieved successfully"
+    )

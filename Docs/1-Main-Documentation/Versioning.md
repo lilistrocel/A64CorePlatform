@@ -89,7 +89,102 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ### Platform Version History
 
-#### v1.8.0 - 2025-11-13 (Current - Unreleased)
+#### v1.9.0 - 2025-11-23 (Current - Unreleased)
+**Type:** Minor Release - Farm Management Module (Farm Analytics System)
+
+**Added:**
+- **Farm Analytics System** - Comprehensive farm-level analytics and insights
+  - New API endpoint: `GET /api/v1/farm/farms/{farm_id}/analytics?period=30d`
+  - Backend analytics engine with MongoDB aggregation pipelines
+  - 7 analytics data models (FarmAnalyticsResponse, AggregatedMetrics, StateBreakdown, BlockComparisonItem, etc.)
+  - FarmAnalyticsService with 6 calculation methods (aggregated metrics, state breakdown, block comparison, historical trends)
+  - Time period filtering support (30d, 90d, 6m, 1y, all)
+  - Frontend modal with 4 tabs (Overview, Block Comparison, Historical Trends, Current State Details)
+  - Farm Stats button integration in Block Monitor page
+  - Recharts visualizations (pie chart for state distribution, area chart for yield timeline)
+  - Custom React hook (useFarmAnalytics) for data fetching
+  - Complete TypeScript type definitions (farmAnalytics.ts)
+
+**Analytics Capabilities:**
+- Aggregated metrics (total yield, efficiency, performance score, capacity utilization)
+- State breakdown (blocks per state, average days in state)
+- Block comparison (sortable table with performance metrics)
+- Historical trends (yield timeline, state transitions, performance trend)
+- Top performers identification
+- Blocks needing attention alerts
+- Time period filtering (30d, 90d, 6m, 1y, all)
+
+**Frontend Features:**
+- Four-tab analytics modal interface
+- State distribution pie chart
+- Yield timeline area chart
+- Sortable block comparison table
+- Performance score indicators (0-100)
+- Responsive design (mobile/tablet/desktop)
+- Loading states and error handling
+- Real-time data updates
+
+**UI Improvements:**
+- Fixed CompactBlockCard button overflow issue
+- Improved status badge layout (vertical positioning)
+- Enhanced mobile experience
+- Better spacing and alignment
+
+**Technical Implementation:**
+- Backend: 575 lines (Python/FastAPI)
+  - Models: farm_analytics.py (165 lines)
+  - Service: farm_analytics_service.py (410 lines)
+  - API endpoint: farms.py (+60 lines)
+- Frontend: 1,533 lines (TypeScript/React)
+  - Component: FarmAnalyticsModal.tsx (1,358 lines)
+  - Hook: useFarmAnalytics.ts (70 lines)
+  - Types: farmAnalytics.ts (105 lines)
+  - UI integration: FarmDashboardPage.tsx (+45 lines), CompactBlockCard.tsx (+10 lines)
+
+**Data Sources:**
+- Blocks collection (lifecycle states, KPIs)
+- Harvests collection (yield data, quality grades)
+- Tasks collection (completion rates)
+- Alerts collection (active alerts, resolution rates)
+- State history (transition patterns)
+
+**Testing:**
+- API endpoint retrieval: ✅
+- Time period filtering: ✅
+- Aggregated metrics calculation: ✅
+- State breakdown with averages: ✅
+- Block comparison sorting: ✅
+- Yield timeline chart rendering: ✅
+- Top performers identification: ✅
+- Responsive design: ✅
+- Error handling and loading states: ✅
+
+**Files Created:** 4 new files (~2,108 lines)
+**Files Modified:** 4 files (+115 lines)
+**Total LOC:** ~2,223 lines
+
+**Compatibility:**
+- Fully compatible with v1.8.0 backend
+- No breaking changes
+- Backward compatible
+
+**Documentation:**
+- Created: FARM_ANALYTICS_IMPLEMENTATION.md
+- Updated: API-Structure.md (analytics endpoint)
+- Updated: CHANGELOG.md (detailed feature list)
+- Updated: Versioning.md (this file)
+
+**Progress:**
+- Farm Management Module: Analytics system complete ✅
+  - Backend aggregation service ✅
+  - API endpoint with time filtering ✅
+  - Frontend modal with 4 tabs ✅
+  - Recharts visualization integration ✅
+  - UI integration with Farm Dashboard ✅
+
+---
+
+#### v1.8.0 - 2025-11-13
 **Type:** Minor Release - Farm Management Module (Block Management Frontend UI)
 
 **Added:**

@@ -13,6 +13,7 @@ import { QuickPlanModal } from './QuickPlanModal';
 import { ResolveAlertModal } from './ResolveAlertModal';
 import { BlockDetailsModal } from '../BlockDetailsModal';
 import { BlockHarvestEntryModal } from '../BlockHarvestEntryModal';
+import { BlockAnalyticsModal } from '../BlockAnalyticsModal';
 import type { DashboardBlock, DashboardBlockStatus } from '../../../types/farm';
 import type { DashboardConfig } from '../../../hooks/farm/useDashboardConfig';
 
@@ -29,6 +30,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
   const [showResolveAlertModal, setShowResolveAlertModal] = useState(false);
   const [showBlockDetailsModal, setShowBlockDetailsModal] = useState(false);
   const [showHarvestModal, setShowHarvestModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [planMode, setPlanMode] = useState<'plan' | 'plant'>('plan');
   const { transitionBlock, recordHarvest, transitioning, recordingHarvest } = useBlockActions();
 
@@ -122,7 +124,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         // Don't hide actions if any modal is open
-        if (!showPlanModal && !showResolveAlertModal && !showBlockDetailsModal && !showHarvestModal) {
+        if (!showPlanModal && !showResolveAlertModal && !showBlockDetailsModal && !showHarvestModal && !showAnalyticsModal) {
           setShowActions(false);
         }
       }}
@@ -130,11 +132,13 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
       {/* Header */}
       <Header>
         <BlockCode>{config.layout.showBlockCode && block.blockCode}</BlockCode>
-        <StateBadge $color={stateColor}>
-          <span>{stateIcon}</span>
-          <span>{block.state.charAt(0).toUpperCase() + block.state.slice(1)}</span>
-        </StateBadge>
       </Header>
+
+      {/* Status Badge */}
+      <StateBadge $color={stateColor}>
+        <span>{stateIcon}</span>
+        <span>{block.state.charAt(0).toUpperCase() + block.state.slice(1)}</span>
+      </StateBadge>
 
       {/* Block Name */}
       {block.name && config.layout.showBlockName && (
@@ -307,6 +311,17 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
       {/* Quick Actions (on hover) */}
       {showActions && (
         <QuickActions>
+          {/* Statistics Button - always available */}
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowAnalyticsModal(true);
+            }}
+            $variant="analytics"
+          >
+            📊 Stats
+          </ActionButton>
+
           {/* Resolve Alert Button - shows when block has active alerts */}
           {block.activeAlerts.length > 0 && (
             <ActionButton
@@ -474,6 +489,14 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               onComplete={handleHarvestComplete}
             />
           )}
+
+          {/* Block Analytics Modal */}
+          <BlockAnalyticsModal
+            isOpen={showAnalyticsModal}
+            onClose={() => setShowAnalyticsModal(false)}
+            blockId={block.blockId}
+            farmId={farmId}
+          />
         </>,
         document.body
       )}
@@ -507,9 +530,8 @@ const Card = styled.div<{ $stateColor: string }>`
 
 const Header = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 `;
 
 const BlockCode = styled.div`
@@ -520,7 +542,7 @@ const BlockCode = styled.div`
 `;
 
 const StateBadge = styled.div<{ $color: string }>`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
@@ -530,6 +552,8 @@ const StateBadge = styled.div<{ $color: string }>`
   font-weight: 600;
   color: ${(props) => props.$color};
   text-transform: uppercase;
+  margin-bottom: 4px;
+  width: fit-content;
 `;
 
 const BlockName = styled.div`
@@ -791,15 +815,19 @@ const QuickActions = styled.div`
   left: 8px;
   right: 8px;
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background: rgba(255, 255, 255, 0.95);
   padding: 4px;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: calc(100% - 16px);
 `;
 
-const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | 'warning' }>`
-  flex: 1;
+const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | 'warning' | 'analytics' }>`
+  flex: 1 1 auto;
+  min-width: 65px;
+  max-width: 100%;
   padding: 6px 8px;
   border: none;
   border-radius: 4px;
@@ -813,6 +841,8 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
         return '#10B981';
       case 'warning':
         return '#F59E0B';
+      case 'analytics':
+        return '#6366F1';
       default:
         return '#3B82F6';
     }
@@ -822,6 +852,9 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &:hover {
     background: ${(props) => {
@@ -834,6 +867,8 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
           return '#059669';
         case 'warning':
           return '#D97706';
+        case 'analytics':
+          return '#4F46E5';
         default:
           return '#1976D2';
       }

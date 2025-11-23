@@ -12,6 +12,7 @@ import { DashboardHeader } from '../../components/farm/dashboard/DashboardHeader
 import { DashboardFilters } from '../../components/farm/dashboard/DashboardFilters';
 import { BlockGrid } from '../../components/farm/dashboard/BlockGrid';
 import { DashboardSettings } from '../../components/farm/dashboard/DashboardSettings';
+import { FarmAnalyticsModal } from '../../components/farm/FarmAnalyticsModal';
 import { useDashboardData } from '../../hooks/farm/useDashboardData';
 import { useDashboardConfig } from '../../hooks/farm/useDashboardConfig';
 import { useDashboardFilters } from '../../hooks/farm/useDashboardFilters';
@@ -20,6 +21,7 @@ import type { DashboardBlockStatus, PerformanceCategory } from '../../types/farm
 export function FarmDashboardPage() {
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Configuration
   const { config, updateConfig } = useDashboardConfig();
@@ -91,6 +93,10 @@ export function FarmDashboardPage() {
 
         <Controls>
           <FarmSelector selectedFarmId={selectedFarmId} onFarmSelect={setSelectedFarmId} />
+
+          <StatsButton onClick={() => setShowAnalytics(true)} disabled={!selectedFarmId}>
+            📊 Farm Stats
+          </StatsButton>
 
           <RefreshButton onClick={refetch} disabled={loading}>
             <RefreshIcon $spinning={loading}>🔄</RefreshIcon>
@@ -169,6 +175,14 @@ export function FarmDashboardPage() {
         config={config}
         onConfigChange={updateConfig}
       />
+
+      {/* Farm Analytics Modal */}
+      <FarmAnalyticsModal
+        isOpen={showAnalytics}
+        onClose={() => setShowAnalytics(false)}
+        farmId={selectedFarmId}
+        farmName={dashboardData?.farmInfo.name}
+      />
     </Container>
   );
 }
@@ -223,6 +237,37 @@ const Controls = styled.div`
   @media (max-width: 768px) {
     flex-direction: column;
     width: 100%;
+  }
+`;
+
+const StatsButton = styled.button`
+  padding: 10px 16px;
+  border: 2px solid #10B981;
+  border-radius: 8px;
+  background: white;
+  color: #10B981;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 150ms ease-in-out;
+  white-space: nowrap;
+
+  &:hover {
+    background: #d1fae5;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #e0e0e0;
+    color: #9e9e9e;
+
+    &:hover {
+      background: white;
+    }
   }
 `;
 

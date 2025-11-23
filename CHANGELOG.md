@@ -9,6 +9,220 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Farm Analytics System (Farm Management Module v1.9.0) - 2025-11-23
+
+**Feature:** Comprehensive farm-level analytics system that aggregates data from all blocks in a farm, providing insights into yield performance, state distribution, block comparisons, and historical trends.
+
+**Backend Implementation (~575 lines):**
+
+**Models Created (farm_analytics.py - 165 lines):**
+- **FarmAnalyticsResponse**: Main response model with complete farm analytics
+- **AggregatedMetrics**: Farm-level totals (yield, efficiency, capacity, utilization, performance score)
+- **StateBreakdown**: Count and statistics for blocks in each state (empty, planted, growing, fruiting, harvesting, cleaning, alert)
+- **StateBreakdownItem**: Individual state statistics (count, block IDs, average days in state)
+- **BlockComparisonItem**: Individual block performance data (yield, efficiency, task completion, alerts)
+- **HistoricalTrends**: Timeline data and performance trends
+- **YieldTimelinePoint**: Daily/weekly yield aggregation for charting
+- **StateTransitionEvent**: State change events across all farm blocks
+
+**Service Created (farm_analytics_service.py - 410 lines):**
+- **FarmAnalyticsService**: Main analytics engine
+  - `get_farm_analytics()` - Entry point for analytics generation with time period filtering
+  - `_calculate_aggregated_metrics()` - Total yield, average efficiency, capacity utilization
+  - `_calculate_state_breakdown()` - Blocks by state with average days per state
+  - `_calculate_block_comparison()` - Individual block performance comparison
+  - `_calculate_historical_trends()` - Yield timeline, state transitions, performance trends
+  - `_calculate_date_range()` - Period to date range conversion (30d, 90d, 6m, 1y, all)
+
+**API Endpoint Added (farms.py):**
+- **GET /api/v1/farm/farms/{farm_id}/analytics** - Get comprehensive farm analytics
+  - Query parameter: `period` ('30d', '90d', '6m', '1y', 'all')
+  - Authentication required (JWT token)
+  - Permission checks (farm manager or admin)
+  - Aggregates data from blocks, harvests, tasks, alerts, and state transitions
+  - Returns 7 main data sections with complete farm performance metrics
+
+**Analytics Capabilities:**
+- **Aggregated Metrics**:
+  - Total blocks count
+  - Active plantings count
+  - Total yield (kg) across all blocks
+  - Average yield efficiency percentage
+  - Overall farm performance score (0-100)
+  - Total capacity and current utilization percentage
+  - Predicted yield vs actual yield tracking
+
+- **State Breakdown**:
+  - Count of blocks in each of 7 states (empty, planned, growing, fruiting, harvesting, cleaning, alert)
+  - List of block IDs per state
+  - Average days spent in each state
+  - State distribution percentages
+
+- **Block Comparison**:
+  - Individual block performance metrics
+  - Current crop and state
+  - Yield and efficiency per block
+  - Performance score (0-100) per block
+  - Days in current cycle
+  - Task completion rate percentage
+  - Active alerts count per block
+  - Sortable and filterable data
+
+- **Historical Trends**:
+  - Yield timeline (daily/weekly aggregation)
+  - State transition history
+  - Performance trend over time
+  - Harvest patterns and seasonality
+  - Top performers and blocks needing attention
+
+**Frontend Implementation (~1,533 lines):**
+
+**Component Created (FarmAnalyticsModal.tsx - 1,358 lines):**
+- **Four-Tab Interface**:
+  - **Overview Tab**:
+    - Farm-wide KPI cards (blocks, yield, efficiency, performance score)
+    - State distribution pie chart (Recharts)
+    - Top 5 performing blocks table
+    - Blocks needing attention list
+    - Quick insights and recommendations
+
+  - **Block Comparison Tab**:
+    - Comprehensive block comparison table
+    - Sortable columns (yield, efficiency, performance, task completion, alerts)
+    - Current crop and state display
+    - Performance score with color-coded indicators
+    - Days in cycle tracking
+    - Task completion percentage
+    - Active alerts count
+
+  - **Historical Trends Tab**:
+    - Yield timeline chart (Recharts area chart)
+    - Performance trend indicator
+    - State transition timeline
+    - Historical performance comparison
+    - Trend analysis and insights
+
+  - **Current State Details Tab**:
+    - Blocks organized by state (7 states)
+    - Empty, planned, growing, fruiting, harvesting, cleaning, alert sections
+    - Block count per state
+    - Block list with quick view
+    - State-specific metrics
+
+**Hook Created (useFarmAnalytics.ts - 70 lines):**
+- Custom React hook for farm analytics data fetching
+- Time period management (30d, 90d, 6m, 1y, all)
+- Loading state management
+- Error handling with user feedback
+- Automatic refresh on period change
+- TypeScript type safety
+
+**Types Created (farmAnalytics.ts - 105 lines):**
+- Complete TypeScript type definitions
+- Type-safe analytics data structures
+- Period type union ('30d' | '90d' | '6m' | '1y' | 'all')
+- Aggregated metrics interface
+- State breakdown interface
+- Block comparison interface
+- Historical trends interface
+- Full type inference support
+
+**UI Integration (FarmDashboardPage.tsx):**
+- Added "Farm Stats" button to Block Monitor page
+- Button placement above block grid
+- Opens FarmAnalyticsModal on click
+- Responsive button design
+- Icon integration (BarChart2 from lucide-react)
+
+**UI Improvements (CompactBlockCard.tsx):**
+- Fixed button overflow issue in block cards
+- Moved status badge to vertical layout
+- Improved responsive design
+- Better spacing and alignment
+- Enhanced mobile experience
+
+**Features:**
+- **Time Period Filtering**: Select 30 days, 90 days, 6 months, 1 year, or all-time data
+- **Visual Data Representation**: Pie charts, area charts, tables with Recharts library
+- **Performance Scoring**: 0-100 score based on yield efficiency, task completion, and alert frequency
+- **Top Performers**: Quick identification of best and worst performing blocks
+- **Attention Alerts**: Highlight blocks with low performance or high alert counts
+- **Responsive Design**: Mobile-first design with tablet and desktop breakpoints
+- **Real-Time Data**: Always up-to-date with latest farm statistics
+- **Error Handling**: Comprehensive error states and user feedback
+- **Loading States**: Skeleton loaders and spinners for better UX
+
+**Technical Implementation:**
+- **Backend**: MongoDB aggregation pipelines for efficient data querying
+- **Frontend**: React functional components with TypeScript strict mode
+- **State Management**: React hooks (useState, useEffect)
+- **API Integration**: Axios with proper error handling
+- **Styling**: Styled-components with consistent design system
+- **Charting**: Recharts for responsive and accessible visualizations
+- **Type Safety**: Full TypeScript coverage with strict typing
+
+**Testing Completed:**
+- Farm analytics API endpoint retrieval: ✅
+- Time period filtering (30d, 90d, 6m, 1y, all): ✅
+- Aggregated metrics calculation: ✅
+- State breakdown with averages: ✅
+- Block comparison sorting: ✅
+- Yield timeline chart rendering: ✅
+- Top performers identification: ✅
+- Blocks needing attention detection: ✅
+- Modal open/close functionality: ✅
+- Responsive design (mobile/tablet/desktop): ✅
+- Error handling and loading states: ✅
+- UI integration with Farm Dashboard: ✅
+
+**Files Created:** 4 new files (~2,108 lines)
+- Backend: 2 files (farm_analytics.py, farm_analytics_service.py) - 575 lines
+- Frontend: 3 files (FarmAnalyticsModal.tsx, useFarmAnalytics.ts, farmAnalytics.ts) - 1,533 lines
+
+**Files Modified:** 2 files
+- Backend: farms.py (+60 lines) - Added analytics endpoint
+- Frontend: FarmDashboardPage.tsx (+45 lines) - Added Farm Stats button
+- Frontend: CompactBlockCard.tsx (+10 lines) - Layout improvements
+
+**API Endpoint Added:**
+- `GET /api/v1/farm/farms/{farm_id}/analytics?period=30d` - Comprehensive farm analytics
+
+**Data Sources Aggregated:**
+- Blocks collection (states, KPIs, lifecycle data)
+- Harvests collection (yield data, quality grades)
+- Tasks collection (completion rates)
+- Alerts collection (active alerts, resolution rates)
+- State history (transition patterns)
+
+**Performance Optimizations:**
+- MongoDB aggregation pipelines for efficient queries
+- Time period filtering to reduce data load
+- Cached calculations where applicable
+- Lazy loading of chart components
+- Optimized re-renders with React.memo
+
+**Compatibility:**
+- Fully compatible with existing v1.8.0 API
+- No breaking changes
+- Backward compatible
+- Uses existing authentication and permissions
+
+**Documentation:**
+- Created: FARM_ANALYTICS_IMPLEMENTATION.md - Complete implementation guide
+- Updated: API-Structure.md - Added analytics endpoint documentation
+- Updated: CHANGELOG.md (this file) - Detailed feature description
+- Updated: Versioning.md - Version history entry
+
+**Progress:**
+- Farm Management Module: Analytics system complete
+  - Backend aggregation service ✅
+  - API endpoint with time filtering ✅
+  - Frontend modal with 4 tabs ✅
+  - Recharts visualization integration ✅
+  - UI integration with Farm Dashboard ✅
+
+---
+
 #### Block Management Frontend UI (Farm Management Module v1.8.0) - 2025-11-13
 
 **Feature:** Complete frontend UI implementation for block lifecycle management with comprehensive tabbed interface for alerts, harvests, and archives.
