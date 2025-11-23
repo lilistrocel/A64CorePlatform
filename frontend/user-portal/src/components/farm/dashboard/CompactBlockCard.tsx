@@ -63,9 +63,9 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
   /**
    * Handle quick transition
    */
-  const handleTransition = async (newState: DashboardBlockStatus) => {
+  const handleTransition = async (newState: DashboardBlockStatus, force: boolean = false) => {
     try {
-      await transitionBlock(farmId, block.blockId, { newState });
+      await transitionBlock(farmId, block.blockId, { newState, force });
       onUpdate?.();
     } catch (error) {
       console.error('Transition failed:', error);
@@ -417,7 +417,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             <ActionButton
               onClick={(e) => {
                 e.stopPropagation();
-                handleTransition('empty');
+                handleTransition('empty', true);
               }}
               disabled={transitioning}
             >

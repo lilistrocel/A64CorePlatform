@@ -1008,6 +1008,7 @@ export interface QuickTransitionRequest {
   notes?: string;
   targetCrop?: string;
   actualPlantCount?: number;
+  force?: boolean;
 }
 
 export interface QuickHarvestRequest {
