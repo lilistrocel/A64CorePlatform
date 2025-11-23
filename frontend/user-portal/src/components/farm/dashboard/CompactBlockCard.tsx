@@ -82,6 +82,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
         newState: newState as DashboardBlockStatus,
         targetCrop: cropId,
         actualPlantCount: plantCount,
+        force: true,
       });
       setShowPlanModal(false);
       onUpdate?.();
@@ -363,7 +364,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
                 <ActionButton
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleTransition('fruiting');
+                    handleTransition('fruiting', true);
                   }}
                   disabled={transitioning}
                 >
@@ -373,7 +374,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
                 <ActionButton
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleTransition('harvesting');
+                    handleTransition('harvesting', true);
                   }}
                   disabled={transitioning}
                 >
@@ -386,7 +387,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             <ActionButton
               onClick={(e) => {
                 e.stopPropagation();
-                handleTransition('harvesting');
+                handleTransition('harvesting', true);
               }}
               disabled={transitioning}
             >
@@ -405,7 +406,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               <ActionButton
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleTransition('cleaning');
+                  handleTransition('cleaning', true);
                 }}
                 disabled={transitioning}
               >
