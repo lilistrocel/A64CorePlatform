@@ -386,6 +386,53 @@ class BlockService:
                         "targetStatus": new_status.value
                     }
                 )
+        else:
+            # PHASE 3: When force=true, auto-complete all pending tasks for this block
+            # since we're manually overriding the workflow
+            from ..database import farm_db
+            from ...models.farm_task import TaskStatus, TaskData
+            db = farm_db.get_database()
+
+            # Find ALL pending tasks for this block (not just ones that trigger new state)
+            all_pending_tasks = await db.farm_tasks.find({
+                "blockId": str(block_id),
+                "status": "pending"
+            }).to_list(length=100)
+
+            if all_pending_tasks:
+                logger.info(
+                    f"[Block Service] Auto-completing {len(all_pending_tasks)} pending task(s) "
+                    f"for block {block_id} due to forced state transition to {new_status.value}"
+                )
+
+                # Auto-complete each task
+                for task in all_pending_tasks:
+                    task_id = task["taskId"]
+                    task_title = task.get("title", "Unknown task")
+
+                    # Update task to completed status
+                    await db.farm_tasks.update_one(
+                        {"taskId": task_id},
+                        {
+                            "$set": {
+                                "status": TaskStatus.COMPLETED.value,
+                                "completedBy": str(user_id),
+                                "completedByEmail": user_email,
+                                "completedAt": datetime.utcnow(),
+                                "taskData": {
+                                    "notes": f"Auto-completed due to manual state transition from {current_block.state.value} to {new_status.value}",
+                                    "photoUrls": [],
+                                    "triggerTransition": False
+                                },
+                                "updatedAt": datetime.utcnow()
+                            }
+                        }
+                    )
+
+                    logger.info(
+                        f"[Block Service] Auto-completed task {task_id} ({task_title}) "
+                        f"for forced transition"
+                    )
 
         # PRE-CALCULATION: For new planning/growing, calculate expected dates FIRST
         # This ensures task generation has access to expected dates
