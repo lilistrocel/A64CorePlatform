@@ -158,6 +158,7 @@ class QuickTransitionRequest(BaseModel):
     notes: Optional[str] = Field(None, description="Optional notes about transition")
     targetCrop: Optional[UUID] = Field(None, description="Plant data ID (required for planned/growing)")
     actualPlantCount: Optional[int] = Field(None, ge=0, description="Number of plants (required for planned/growing)")
+    force: Optional[bool] = Field(False, description="Force transition bypassing pending task warnings")
 
 
 class QuickHarvestRequest(BaseModel):

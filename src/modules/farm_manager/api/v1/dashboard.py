@@ -203,7 +203,8 @@ async def quick_transition(
             newStatus=request.newState,
             notes=request.notes,
             targetCrop=request.targetCrop,
-            actualPlantCount=request.actualPlantCount
+            actualPlantCount=request.actualPlantCount,
+            force=request.force
         )
 
         updated_block = await BlockService.change_status(
