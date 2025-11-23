@@ -569,6 +569,22 @@ class BlockService:
                     expected_status_changes=expected_status_changes
                 )
 
+        # Handle harvesting → cleaning transition (AUTO-COMPLETE HARVEST TASKS)
+        elif current_block.state == BlockStatus.HARVESTING and new_status == BlockStatus.CLEANING:
+            logger.info(f"[Block Service] Auto-completing pending daily harvest tasks for block {block_id}")
+
+            # Auto-complete all pending daily harvest tasks for this block
+            await BlockService.auto_complete_harvest_tasks(block_id, user_id, user_email)
+
+            # Now update status to cleaning
+            block = await BlockRepository.update_status(
+                block_id,
+                new_status,
+                user_id,
+                user_email,
+                notes=status_update.notes or "Harvesting completed, block ready for cleaning"
+            )
+
         # Handle cleaning → empty transition (TRIGGER ARCHIVAL)
         elif current_block.state == BlockStatus.CLEANING and new_status == BlockStatus.EMPTY:
             logger.info(f"[Block Service] Triggering archival for block {block_id}")
@@ -701,6 +717,84 @@ class BlockService:
 
         logger.info(f"[Block Service] Archived cycle for block {block_id} (archive ID: {saved_archive.archiveId})")
         return saved_archive
+
+    @staticmethod
+    async def auto_complete_harvest_tasks(
+        block_id: UUID,
+        user_id: UUID,
+        user_email: str
+    ) -> int:
+        """
+        Auto-complete all pending daily harvest tasks for a block when transitioning to CLEANING
+
+        This ensures orphaned harvest tasks don't remain when harvesting is complete.
+        Adds a note explaining the task was auto-completed due to state transition.
+
+        Args:
+            block_id: Block UUID
+            user_id: User performing the transition
+            user_email: Email of user
+
+        Returns:
+            Number of tasks auto-completed
+        """
+        from ..database import farm_db
+        from ...models.farm_task import TaskType, TaskStatus
+
+        db = farm_db.get_database()
+
+        # Find all pending daily harvest tasks for this block
+        pending_tasks = await db.farm_tasks.find({
+            "blockId": str(block_id),
+            "taskType": TaskType.DAILY_HARVEST.value,
+            "status": TaskStatus.PENDING.value
+        }).to_list(length=1000)
+
+        auto_completed_count = 0
+
+        for task in pending_tasks:
+            task_id = task["taskId"]
+
+            # Auto-complete the task with a note explaining why
+            update_data = {
+                "status": TaskStatus.COMPLETED.value,
+                "completedAt": datetime.utcnow(),
+                "completedBy": str(user_id),
+                "updatedAt": datetime.utcnow()
+            }
+
+            # Add completion note explaining auto-completion
+            auto_complete_note = (
+                f"Auto-completed by system when block transitioned to CLEANING state. "
+                f"Harvesting period ended. Completed by {user_email}."
+            )
+
+            # Preserve existing notes and add auto-completion note
+            if "taskData" not in task or task["taskData"] is None:
+                task["taskData"] = {}
+
+            existing_notes = task["taskData"].get("notes", "")
+            if existing_notes:
+                update_data["taskData.notes"] = f"{existing_notes}\n\n{auto_complete_note}"
+            else:
+                update_data["taskData.notes"] = auto_complete_note
+
+            # Update the task
+            result = await db.farm_tasks.update_one(
+                {"taskId": task_id},
+                {"$set": update_data}
+            )
+
+            if result.modified_count > 0:
+                auto_completed_count += 1
+                logger.info(f"[Block Service] Auto-completed task {task_id} for block {block_id}")
+
+        if auto_completed_count > 0:
+            logger.info(f"[Block Service] Auto-completed {auto_completed_count} harvest tasks for block {block_id}")
+        else:
+            logger.info(f"[Block Service] No pending harvest tasks to auto-complete for block {block_id}")
+
+        return auto_completed_count
 
     @staticmethod
     async def delete_block(block_id: UUID) -> bool:
