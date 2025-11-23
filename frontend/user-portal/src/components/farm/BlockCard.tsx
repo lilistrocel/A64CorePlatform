@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
@@ -417,24 +418,30 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       </Actions>
 
       {/* Plant Assignment Modal */}
-      <PlantAssignmentModal
-        isOpen={showPlantModal}
-        onClose={() => setShowPlantModal(false)}
-        block={block}
-        onSuccess={() => {
-          loadBlockData();
-          onStateChange?.();
-        }}
-      />
+      {/* Render modals outside the Card using Portal to prevent mouse event issues */}
+      {createPortal(
+        <>
+          <PlantAssignmentModal
+            isOpen={showPlantModal}
+            onClose={() => setShowPlantModal(false)}
+            block={block}
+            onSuccess={() => {
+              loadBlockData();
+              onStateChange?.();
+            }}
+          />
 
-      {/* Phase 3: Warning Modal */}
-      <PendingTasksWarningModal
-        isOpen={showWarningModal}
-        targetStatus={targetStatus}
-        pendingTasks={pendingTasks}
-        onCancel={handleCancelWarning}
-        onForce={handleForceStateChange}
-      />
+          {/* Phase 3: Warning Modal */}
+          <PendingTasksWarningModal
+            isOpen={showWarningModal}
+            targetStatus={targetStatus}
+            pendingTasks={pendingTasks}
+            onCancel={handleCancelWarning}
+            onForce={handleForceStateChange}
+          />
+        </>,
+        document.body
+      )}
     </Card>
   );
 }
