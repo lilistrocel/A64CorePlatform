@@ -168,8 +168,10 @@ class FarmAnalyticsService:
             if block.actualPlantCount:
                 current_plant_count += block.actualPlantCount
 
-            # Sum KPI metrics
+            # Sum KPI metrics from current cycle
             if block.kpi:
+                # Note: actualYieldKg from KPI represents current cycle only
+                # Historical yields will be added separately below
                 total_yield_kg += block.kpi.actualYieldKg
                 total_predicted_yield += block.kpi.predictedYieldKg
 
@@ -181,6 +183,22 @@ class FarmAnalyticsService:
                 # Based on yield efficiency capped at 100%
                 performance = min(100, block.kpi.yieldEfficiencyPercent)
                 total_performance_score += performance
+
+        # Add historical harvest yields within the date range
+        logger.info(f"[Farm Analytics] Fetching historical harvests within date range")
+        for block in blocks:
+            harvests, _ = await HarvestRepository.get_by_block(
+                block.blockId,
+                skip=0,
+                limit=1000,
+                start_date=start_date,
+                end_date=end_date
+            )
+            # Sum all harvest quantities
+            for harvest in harvests:
+                total_yield_kg += harvest.quantityKg
+
+        logger.info(f"[Farm Analytics] Total yield including historical harvests: {total_yield_kg} kg")
 
         # Calculate averages
         avg_yield_efficiency = 0.0

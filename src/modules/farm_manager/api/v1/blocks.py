@@ -9,7 +9,9 @@ from typing import Optional
 from uuid import UUID
 
 from ...models.block import Block, BlockCreate, BlockUpdate, BlockStatus, BlockStatusUpdate
+from ...models.block_analytics import BlockAnalyticsResponse, TimePeriod
 from ...services.block.block_service_new import BlockService
+from ...services.block.analytics_service import BlockAnalyticsService
 from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
 
@@ -339,4 +341,102 @@ async def get_valid_status_transitions(
             "currentStatus": block.state.value,
             "validTransitions": [state.value for state in valid_transitions]
         }
+    )
+
+
+# Block Analytics Endpoint
+@router.get(
+    "/{block_id}/analytics",
+    response_model=SuccessResponse[BlockAnalyticsResponse],
+    summary="Get block analytics and statistics"
+)
+async def get_block_analytics(
+    farm_id: UUID,
+    block_id: UUID,
+    period: TimePeriod = Query(TimePeriod.ALL, description="Time period to analyze"),
+    startDate: Optional[str] = Query(None, description="Custom start date (ISO 8601)"),
+    endDate: Optional[str] = Query(None, description="Custom end date (ISO 8601)"),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Get comprehensive analytics for a block.
+
+    **READ-ONLY endpoint** - Aggregates data from multiple sources to provide insights.
+
+    **Analytics Included**:
+    - **Yield Analytics**: Total yield, quality breakdown, efficiency, harvest trends
+    - **Timeline Analytics**: Time in each state, transition patterns, delays
+    - **Task Analytics**: Completion rates, delays by task type
+    - **Performance Metrics**: Overall score, strengths, areas for improvement
+    - **Alert Analytics**: Alert history, resolution times
+
+    **Time Period Options**:
+    - `30d` - Last 30 days
+    - `90d` - Last 90 days
+    - `6m` - Last 6 months
+    - `1y` - Last year
+    - `all` - Complete history (default)
+
+    **Custom Date Range**:
+    Provide both `startDate` and `endDate` in ISO 8601 format for custom range.
+
+    **Data Sources**:
+    - Block information from `blocks` collection
+    - Harvest data from `block_harvests` collection
+    - Task data from `farm_tasks` collection
+    - Alert data from `alerts` collection
+
+    **Use Cases**:
+    - Performance dashboards
+    - Yield forecasting
+    - Efficiency analysis
+    - Trend identification
+    - Decision support
+    """
+    from datetime import datetime
+
+    # Verify block belongs to farm
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    # Parse custom dates if provided
+    parsed_start_date = None
+    parsed_end_date = None
+
+    if startDate:
+        try:
+            parsed_start_date = datetime.fromisoformat(startDate.replace('Z', '+00:00'))
+        except ValueError:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid startDate format. Use ISO 8601 format (e.g., 2025-01-01T00:00:00Z)"
+            )
+
+    if endDate:
+        try:
+            parsed_end_date = datetime.fromisoformat(endDate.replace('Z', '+00:00'))
+        except ValueError:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid endDate format. Use ISO 8601 format (e.g., 2025-12-31T23:59:59Z)"
+            )
+
+    # Generate analytics
+    analytics = await BlockAnalyticsService.get_block_analytics(
+        block_id=block_id,
+        period=period,
+        start_date=parsed_start_date,
+        end_date=parsed_end_date
+    )
+
+    return SuccessResponse(
+        data=analytics,
+        message="Block analytics generated successfully"
     )

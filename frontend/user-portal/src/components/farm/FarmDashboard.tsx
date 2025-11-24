@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
 import type { DashboardMetrics } from '../../types/farm';
+import { GlobalFarmAnalyticsModal } from './GlobalFarmAnalyticsModal';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -266,6 +267,7 @@ export function FarmDashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [globalAnalyticsOpen, setGlobalAnalyticsOpen] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -392,6 +394,11 @@ export function FarmDashboard() {
           <span>Plant Data Library</span>
         </ActionButton>
 
+        <ActionButton $variant="outline" onClick={() => setGlobalAnalyticsOpen(true)}>
+          <ActionIcon>📊</ActionIcon>
+          <span>View All Farms Statistics</span>
+        </ActionButton>
+
         <ActionButton $variant="outline" onClick={() => navigate('/farm/plantings')}>
           <ActionIcon>📋</ActionIcon>
           <span>View Plantings</span>
@@ -404,6 +411,11 @@ export function FarmDashboard() {
           <p>Activity tracking coming soon</p>
         </EmptyState>
       </RecentActivitySection>
+
+      <GlobalFarmAnalyticsModal
+        isOpen={globalAnalyticsOpen}
+        onClose={() => setGlobalAnalyticsOpen(false)}
+      />
     </Container>
   );
 }

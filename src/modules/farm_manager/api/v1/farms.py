@@ -11,8 +11,10 @@ import logging
 
 from ...models.farm import Farm, FarmCreate, FarmUpdate
 from ...models.farm_analytics import FarmAnalyticsResponse
+from ...models.global_analytics import GlobalAnalyticsResponse
 from ...services.farm import FarmService
 from ...services.farm.farm_analytics_service import FarmAnalyticsService
+from ...services.global_analytics_service import GlobalAnalyticsService
 from ...middleware.auth import get_current_active_user, require_permission, CurrentUser
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
 
@@ -337,4 +339,67 @@ async def get_farm_analytics(
     return SuccessResponse(
         data=analytics,
         message="Farm analytics retrieved successfully"
+    )
+
+
+@router.get(
+    "/analytics/global",
+    response_model=SuccessResponse[GlobalAnalyticsResponse],
+    summary="Get global analytics across all farms",
+    description="Get comprehensive analytics aggregated across ALL farms in the system. Admin access required."
+)
+async def get_global_analytics(
+    period: str = Query(
+        "30d",
+        description="Time period: '30d', '90d', '6m', '1y', 'all'",
+        regex="^(30d|90d|6m|1y|all)$"
+    ),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Get comprehensive analytics aggregated across ALL farms in the system.
+
+    **Admin access required** - Only super_admin and admin users can access global analytics.
+
+    Args:
+        period: Time period for analytics ('30d', '90d', '6m', '1y', 'all')
+
+    Returns:
+        GlobalAnalyticsResponse containing:
+        - **aggregatedMetrics**: Total farms, blocks, yield, efficiency across all farms
+        - **stateBreakdown**: Count of blocks in each state across all farms
+        - **farmSummaries**: Performance summary for each farm
+        - **yieldTimeline**: Daily/weekly yield aggregation across all farms
+        - **performanceInsights**: Top/bottom performing farms, farms needing attention
+
+    This endpoint aggregates data from:
+    - All farms in the system
+    - All blocks across all farms
+    - All harvest records within the time period
+    - Task completion rates
+    - Alert statistics
+    - Performance metrics and rankings
+
+    Raises:
+        HTTPException 403: If user is not admin or super_admin
+    """
+    # CRITICAL: Check admin access - only admins can view global analytics
+    if current_user.role not in ["super_admin", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Admin privileges required for global analytics"
+        )
+
+    logger.info(f"[Global Analytics API] User {current_user.email} requesting global analytics for period: {period}")
+
+    # Generate global analytics
+    analytics = await GlobalAnalyticsService.get_global_analytics(period)
+
+    logger.info(f"[Global Analytics API] Generated analytics: {analytics.aggregatedMetrics.totalFarms} farms, "
+                f"{analytics.aggregatedMetrics.totalBlocks} blocks, "
+                f"{analytics.aggregatedMetrics.totalYieldKg} kg total yield")
+
+    return SuccessResponse(
+        data=analytics,
+        message="Global analytics retrieved successfully"
     )

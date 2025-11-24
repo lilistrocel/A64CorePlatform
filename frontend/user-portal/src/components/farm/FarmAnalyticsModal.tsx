@@ -26,9 +26,10 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useFarmAnalytics } from '../../hooks/farm/useFarmAnalytics';
-import type { TimePeriod } from '../../types/analytics';
-import { TIME_PERIOD_OPTIONS } from '../../types/analytics';
-import type { BlockComparisonItem, BlockState } from '../../types/farmAnalytics';
+import type { TimePeriod, BlockComparisonItem } from '../../types/farm-analytics';
+import { TIME_PERIOD_OPTIONS } from '../../types/farm-analytics';
+
+type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvesting' | 'cleaning' | 'alert';
 
 // ============================================================================
 // COMPONENT PROPS

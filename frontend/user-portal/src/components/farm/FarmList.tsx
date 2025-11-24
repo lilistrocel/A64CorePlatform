@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FarmCard } from './FarmCard';
 import { CreateFarmModal } from './CreateFarmModal';
+import { FarmAnalyticsModal } from './FarmAnalyticsModal';
 import { farmApi } from '../../services/farmApi';
 import type { Farm, FarmSummary } from '../../types/farm';
 
@@ -245,6 +246,9 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+  const [selectedFarmName, setSelectedFarmName] = useState<string>('');
   const perPage = 12;
 
   // Load farms
@@ -336,12 +340,29 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
     loadFarms(); // Reload farms list
   };
 
+  const handleViewStatistics = (farmId: string, farmName: string) => {
+    setSelectedFarmId(farmId);
+    setSelectedFarmName(farmName);
+    setIsAnalyticsModalOpen(true);
+  };
+
   return (
     <Container>
       <CreateFarmModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={handleCreateSuccess}
+      />
+
+      <FarmAnalyticsModal
+        isOpen={isAnalyticsModalOpen}
+        onClose={() => {
+          setIsAnalyticsModalOpen(false);
+          setSelectedFarmId(null);
+          setSelectedFarmName('');
+        }}
+        farmId={selectedFarmId}
+        farmName={selectedFarmName}
       />
 
       <Header>
@@ -404,6 +425,7 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
                 summary={summaries[farm.farmId]}
                 onEdit={onEditFarm}
                 onDelete={handleDelete}
+                onViewStatistics={handleViewStatistics}
               />
             ))}
           </GridContainer>

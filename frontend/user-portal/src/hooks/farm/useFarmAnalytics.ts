@@ -7,11 +7,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../services/api';
-import type { FarmAnalytics } from '../../types/farmAnalytics';
-import type { TimePeriod } from '../../types/analytics';
+import type { FarmAnalyticsData, TimePeriod } from '../../types/farm-analytics';
 
 interface UseFarmAnalyticsReturn {
-  analytics: FarmAnalytics | null;
+  analytics: FarmAnalyticsData | null;
   loading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -24,8 +23,8 @@ export function useFarmAnalytics(
   farmId: string | null,
   period: TimePeriod = '30d'
 ): UseFarmAnalyticsReturn {
-  const [analytics, setAnalytics] = useState<FarmAnalytics | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [analytics, setAnalytics] = useState<FarmAnalyticsData | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
@@ -44,7 +43,7 @@ export function useFarmAnalytics(
 
       const response = await apiClient.get<any>(url, { params });
 
-      // Handle envelope response format: { data: FarmAnalytics, message: string }
+      // Handle envelope response format: { data: FarmAnalyticsData, message: string }
       const analyticsData = response.data.data || response.data;
       setAnalytics(analyticsData);
       setError(null);
@@ -58,8 +57,14 @@ export function useFarmAnalytics(
   }, [farmId, period]);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+    if (farmId) {
+      fetchAnalytics();
+    } else {
+      setAnalytics(null);
+      setError(null);
+      setLoading(false);
+    }
+  }, [fetchAnalytics, farmId]);
 
   return {
     analytics,

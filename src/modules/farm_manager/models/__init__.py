@@ -49,6 +49,15 @@ from .block_alert import (
     AlertUpdate,
     AlertResolve as BlockAlertResolve,
 )
+from .farm_analytics import FarmAnalyticsResponse, AggregatedMetrics, StateBreakdown
+from .global_analytics import (
+    GlobalAnalyticsResponse,
+    GlobalAggregatedMetrics,
+    GlobalStateBreakdown,
+    FarmSummaryItem,
+    GlobalYieldTimeline,
+    GlobalPerformanceInsights,
+)
 
 __all__ = [
     # Farm
@@ -133,4 +142,15 @@ __all__ = [
     "AlertCommentCreate",
     "AlertUpdate",
     "BlockAlertResolve",
+    # Farm Analytics
+    "FarmAnalyticsResponse",
+    "AggregatedMetrics",
+    "StateBreakdown",
+    # Global Analytics
+    "GlobalAnalyticsResponse",
+    "GlobalAggregatedMetrics",
+    "GlobalStateBreakdown",
+    "FarmSummaryItem",
+    "GlobalYieldTimeline",
+    "GlobalPerformanceInsights",
 ]

@@ -13,6 +13,7 @@ import type { Block, BlockSummary, BlockState } from '../../types/farm';
 import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
 import { PlantAssignmentModal } from './PlantAssignmentModal';
 import { PendingTasksWarningModal } from './PendingTasksWarningModal';
+import { BlockAnalyticsModal } from './BlockAnalyticsModal';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -156,7 +157,7 @@ const Actions = styled.div`
   flex-wrap: wrap;
 `;
 
-const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' | 'success' }>`
+const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'analytics' }>`
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 13px;
@@ -183,6 +184,15 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         color: white;
         &:hover {
           background: #388E3C;
+        }
+      `;
+    }
+    if ($variant === 'analytics') {
+      return `
+        background: #6366F1;
+        color: white;
+        &:hover {
+          background: #4F46E5;
         }
       `;
     }
@@ -244,6 +254,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
   const [validTransitions, setValidTransitions] = useState<BlockState[]>([]);
   const [loading, setLoading] = useState(false);
   const [showPlantModal, setShowPlantModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
 
   // Phase 3: Warning modal state
   const [showWarningModal, setShowWarningModal] = useState(false);
@@ -385,6 +396,11 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       )}
 
       <Actions>
+        {/* Statistics button - always available */}
+        <ActionButton $variant="analytics" onClick={() => setShowAnalyticsModal(true)} disabled={loading}>
+          📊 Statistics
+        </ActionButton>
+
         {/* Show Plant Crop button only for empty blocks */}
         {block.state === 'empty' && (
           <ActionButton $variant="success" onClick={() => setShowPlantModal(true)} disabled={loading}>
@@ -438,6 +454,14 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
             pendingTasks={pendingTasks}
             onCancel={handleCancelWarning}
             onForce={handleForceStateChange}
+          />
+
+          {/* Block Analytics Modal */}
+          <BlockAnalyticsModal
+            isOpen={showAnalyticsModal}
+            onClose={() => setShowAnalyticsModal(false)}
+            blockId={block.blockId}
+            farmId={farmId}
           />
         </>,
         document.body

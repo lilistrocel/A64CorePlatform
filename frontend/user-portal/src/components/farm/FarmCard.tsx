@@ -17,6 +17,7 @@ export interface FarmCardProps {
   summary?: FarmSummary;
   onEdit?: (farmId: string) => void;
   onDelete?: (farmId: string) => void;
+  onViewStatistics?: (farmId: string, farmName: string) => void;
 }
 
 // ============================================================================
@@ -183,7 +184,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 // COMPONENT
 // ============================================================================
 
-export function FarmCard({ farm, summary, onEdit, onDelete }: FarmCardProps) {
+export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: FarmCardProps) {
   const navigate = useNavigate();
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -209,6 +210,11 @@ export function FarmCard({ farm, summary, onEdit, onDelete }: FarmCardProps) {
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/farm/farms/${farm.farmId}`);
+  };
+
+  const handleStatistics = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewStatistics?.(farm.farmId, farm.name);
   };
 
   const locationText = [farm.location.city, farm.location.state, farm.location.country]
@@ -277,6 +283,11 @@ export function FarmCard({ farm, summary, onEdit, onDelete }: FarmCardProps) {
         <ActionButton $variant="primary" onClick={handleView}>
           View
         </ActionButton>
+        {onViewStatistics && (
+          <ActionButton $variant="secondary" onClick={handleStatistics}>
+            📊 Statistics
+          </ActionButton>
+        )}
         {onEdit && (
           <ActionButton $variant="secondary" onClick={handleEdit}>
             Edit
