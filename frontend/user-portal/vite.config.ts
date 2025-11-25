@@ -30,9 +30,9 @@ export default defineConfig({
       'Surrogate-Control': 'no-store',
     },
     proxy: {
-      // Proxy all API requests to the main API (farm endpoints are now integrated)
+      // Proxy all API requests through nginx (works both in Docker and local dev)
       '/api': {
-        target: 'http://api:8000',
+        target: 'http://localhost',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path,  // Keep path as-is

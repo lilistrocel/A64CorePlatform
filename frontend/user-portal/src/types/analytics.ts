@@ -154,3 +154,72 @@ export const TIME_PERIOD_OPTIONS: TimePeriodOption[] = [
   { value: '1y', label: 'Last Year', days: 365 },
   { value: 'all', label: 'All Time' },
 ];
+
+// ============================================================================
+// AI ANALYTICS CHAT TYPES
+// ============================================================================
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface QueryInfo {
+  collection: string;
+  pipeline: Array<Record<string, any>>;
+  explanation: string;
+}
+
+export interface VisualizationSuggestion {
+  type: string;
+  title: string;
+  x_axis?: string;
+  y_axis?: string;
+}
+
+export interface ReportInfo {
+  summary: string;
+  insights: string[];
+  statistics: Record<string, any>;
+  visualization_suggestions: VisualizationSuggestion[];
+  markdown: string;
+}
+
+export interface CostInfo {
+  query_generation: {
+    total_cost_usd: number;
+  };
+  report_generation: {
+    total_cost_usd: number;
+  };
+  total_cost_usd: number;
+}
+
+export interface MetadataInfo {
+  execution_time_seconds: number;
+  result_count: number;
+  cache_hit: boolean;
+  cost: CostInfo;
+  timestamp: string;
+}
+
+export interface AIAnalyticsResponse {
+  query: QueryInfo;
+  results: Array<any>;
+  report: ReportInfo;
+  metadata: MetadataInfo;
+}
+
+export interface AIAnalyticsChatRequest {
+  prompt: string;
+  conversation_history?: ConversationMessage[];
+  force_refresh?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  response?: AIAnalyticsResponse;
+}

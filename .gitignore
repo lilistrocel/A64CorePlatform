@@ -130,3 +130,4 @@ OldData/json_exports/
 OldData/sql_dumps/
 OldData/*.json
 OldData/*.sql
+.credentials/

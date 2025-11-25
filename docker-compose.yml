@@ -18,11 +18,19 @@ services:
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000
       - PYTHONPATH=/app/src
+      # Google Vertex AI Settings (AI Analytics)
+      - GOOGLE_CLOUD_PROJECT=a64core
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/.credentials/vertex-ai-service-account.json
+      - VERTEX_AI_LOCATION=us-central1
+      - VERTEX_AI_MODEL=gemini-2.5-flash
+      - VERTEX_AI_MAX_OUTPUT_TOKENS=2048
+      - VERTEX_AI_TEMPERATURE=0.1
     volumes:
       - ./src:/app/src
       - ./modules:/app/modules  # Farm management and other modules
       - ./config:/app/config
       - ./logs:/app/logs  # Centralized logging
+      - ./.credentials:/app/.credentials  # Google Cloud credentials for Vertex AI
       - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for module management
       - nginx_modules_config:/etc/nginx/conf.d/modules  # Shared volume for module proxy configs
     user: "0:0"  # Run as root to access Docker socket (CRITICAL for module management)
