@@ -159,7 +159,9 @@ export function OperationsDashboard() {
               <FarmInfo>
                 <FarmName>{farm.name}</FarmName>
                 <FarmLocation>
-                  {farm.location.city}, {farm.location.state}
+                  {farm.location?.city && farm.location?.state
+                    ? `${farm.location.city}, ${farm.location.state}`
+                    : farm.location?.city || farm.location?.state || 'No location specified'}
                 </FarmLocation>
               </FarmInfo>
             </FarmHeader>
