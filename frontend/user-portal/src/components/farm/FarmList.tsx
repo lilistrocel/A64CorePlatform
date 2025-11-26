@@ -298,11 +298,11 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
 
   // Filter farms
   const filteredFarms = farms.filter((farm) => {
-    // Search filter
+    // Search filter - safely handle null location
     const matchesSearch =
       farm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      farm.location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      farm.location.state.toLowerCase().includes(searchTerm.toLowerCase());
+      (farm.location?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (farm.location?.state?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
 
     // Status filter
     const matchesFilter =

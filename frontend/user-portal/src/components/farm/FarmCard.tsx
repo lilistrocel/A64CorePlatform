@@ -217,7 +217,7 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
     onViewStatistics?.(farm.farmId, farm.name);
   };
 
-  const locationText = [farm.location.city, farm.location.state, farm.location.country]
+  const locationText = [farm.location?.city, farm.location?.state, farm.location?.country]
     .filter(Boolean)
     .join(', ');
 
