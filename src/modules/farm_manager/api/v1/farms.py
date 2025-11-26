@@ -178,22 +178,45 @@ async def update_farm(
 )
 async def delete_farm(
     farm_id: UUID,
+    reason: Optional[str] = Query(None, description="Deletion reason"),
     current_user: CurrentUser = Depends(require_permission("farm.manage")),
     service: FarmService = Depends()
 ):
     """
-    Delete a farm (soft delete)
+    Delete a farm with CASCADE deletion.
 
-    - **farm_id**: Farm UUID
-
-    Farm must not have active blocks.
+    All blocks, archives, and harvests are moved to deleted_* collections.
     """
-    result = await service.delete_farm(
-        farm_id,
-        UUID(current_user.userId)
+    from ...services.cascade_deletion_service import CascadeDeletionService
+
+    farm = await service.get_farm(farm_id)
+
+    if str(farm.managerId) != str(current_user.userId):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the farm manager can delete this farm"
+        )
+
+    result = await CascadeDeletionService.delete_farm_with_cascade(
+        farm_id=farm_id,
+        user_id=UUID(current_user.userId),
+        user_email=current_user.email,
+        reason=reason
     )
 
-    return SuccessResponse(data=result)
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result.get("error", "Failed to delete farm")
+        )
+
+    return SuccessResponse(
+        data={
+            "message": "Farm and all related data deleted successfully",
+            "farmId": str(farm_id),
+            "statistics": result.get("statistics")
+        }
+    )
 
 
 @router.get(

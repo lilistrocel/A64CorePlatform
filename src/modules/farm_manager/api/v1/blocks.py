@@ -169,36 +169,50 @@ async def update_block(
 @router.delete(
     "/{block_id}",
     response_model=SuccessResponse[dict],
-    summary="Delete a block"
+    summary="Delete a block with cascade"
 )
 async def delete_block(
     farm_id: UUID,
     block_id: UUID,
+    reason: Optional[str] = Query(None, description="Deletion reason"),
     current_user: CurrentUser = Depends(require_permission("farm.manage"))
 ):
     """
-    Delete a block.
+    Delete a block with CASCADE deletion.
 
-    Requires **farm.manage** permission.
-
-    **Important**: Block must be in 'empty' state to be deleted.
-    Cannot delete blocks that are planted or in use.
+    All archives and harvests are moved to deleted_* collections.
     """
+    from fastapi import HTTPException
+    from ...services.cascade_deletion_service import CascadeDeletionService
+
     block = await BlockService.get_block(block_id)
 
-    # Verify block belongs to the specified farm
     if str(block.farmId) != str(farm_id):
-        from fastapi import HTTPException
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Block not found in this farm"
         )
 
-    await BlockService.delete_block(block_id)
+    result = await CascadeDeletionService.delete_block_with_cascade(
+        block_id=block_id,
+        user_id=UUID(current_user.userId),
+        user_email=current_user.email,
+        reason=reason,
+        deleted_with_farm=False
+    )
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result.get("error", "Failed to delete block")
+        )
 
     return SuccessResponse(
-        data={"blockId": str(block_id)},
-        message="Block deleted successfully"
+        data={
+            "blockId": str(block_id),
+            "statistics": result.get("statistics")
+        },
+        message="Block deleted with cascade"
     )
 
 
