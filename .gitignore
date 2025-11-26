@@ -39,9 +39,13 @@ env/
 *~
 .DS_Store
 
-# Claude Code AI
-.claude/
-CLAUDE.md
+# Claude Code AI - keeping CLAUDE.md and .claude/ tracked for team sharing
+# But excluding local settings which contain machine-specific permissions
+.claude/settings.local.json
+
+# SSH connection scripts (contain server details)
+ssh-server*.sh
+ssh-server*.bat
 
 # Environment Variables
 .env
@@ -90,6 +94,7 @@ temp/
 # Secrets and Credentials
 secrets/
 *.pem
+*.pem.pub
 *.key
 *.crt
 *.p12
