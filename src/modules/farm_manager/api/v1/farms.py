@@ -263,7 +263,7 @@ async def get_farm_summary(
 
     # Calculate statistics
     total_blocks = len(blocks)
-    total_block_area = sum(block.area for block in blocks)
+    total_block_area = sum(block.area or 0 for block in blocks)
     total_planted_plants = sum(block.actualPlantCount or 0 for block in blocks)
     predicted_yield = sum(block.kpi.predictedYieldKg for block in blocks)
 
