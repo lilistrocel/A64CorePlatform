@@ -126,7 +126,7 @@ export async function getFarmSummary(farmId: string) {
  * Get all blocks for a farm
  */
 export async function getBlocks(farmId: string) {
-  const response = await apiClient.get<{ data: Block[] }>(`/v1/farm/farms/${farmId}/blocks`);
+  const response = await apiClient.get<{ data: Block[] }>(`/v1/farm/farms/${farmId}/blocks?perPage=1000`);
   return response.data.data;
 }
 
@@ -142,7 +142,7 @@ export async function getBlock(farmId: string, blockId: string) {
  * Create a new block in a farm
  */
 export async function createBlock(farmId: string, data: Omit<BlockCreate, 'farmId'>) {
-  const response = await apiClient.post<Block>(`/v1/farm/farms/${farmId}/blocks`, data);
+  const response = await apiClient.post<Block>(`/v1/farm/farms/${farmId}/blocks?perPage=1000`, data);
   return response.data;
 }
 
