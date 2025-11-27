@@ -11,6 +11,9 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
+# Import spacing category from spacing_standards module
+from .spacing_standards import SpacingCategory
+
 
 # ==================== Enums and Type Definitions ====================
 
@@ -279,7 +282,7 @@ class PlantDataEnhancedBase(BaseModel):
 
     # ===== 1. Basic Information =====
     plantName: str = Field(..., min_length=1, max_length=200, description="Common plant name")
-    scientificName: str = Field(..., description="Scientific species name")
+    scientificName: Optional[str] = Field(None, description="Scientific species name")
     farmTypeCompatibility: List[FarmTypeEnum] = Field(..., description="Compatible farm types")
 
     # ===== 2. Growth Cycle Durations =====
@@ -330,6 +333,24 @@ class PlantDataEnhancedBase(BaseModel):
     # ===== 13. Additional Information =====
     additionalInfo: AdditionalInformation = Field(..., description="Additional agronomic details")
 
+    # ===== 14. Spacing Category =====
+    spacingCategory: Optional[SpacingCategory] = Field(
+        None,
+        description="Spacing category for quick density calculations (xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree). Overrides additionalInfo.spacing.plantsPerSquareMeter if set."
+    )
+
+    # ===== 15. Data Attribution =====
+    contributor: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Name of the agronomist or contributor who provided this data"
+    )
+    targetRegion: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Geographic region where this data was tested and is most applicable (e.g., 'UAE', 'Mediterranean')"
+    )
+
     # ===== Search & Organization =====
     tags: Optional[List[str]] = Field(None, description="Search tags (vegetable, fruit, summer, etc.)")
 
@@ -356,6 +377,9 @@ class PlantDataEnhancedUpdate(BaseModel):
     gradingStandards: Optional[List[QualityGrade]] = None
     economicsAndLabor: Optional[EconomicsAndLabor] = None
     additionalInfo: Optional[AdditionalInformation] = None
+    spacingCategory: Optional[SpacingCategory] = None
+    contributor: Optional[str] = Field(None, max_length=100)
+    targetRegion: Optional[str] = Field(None, max_length=100)
     tags: Optional[List[str]] = None
 
 

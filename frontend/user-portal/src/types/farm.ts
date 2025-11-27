@@ -9,7 +9,7 @@
 // ENUMS & CONSTANTS
 // ============================================================================
 
-export type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvesting' | 'cleaning' | 'alert';
+export type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvesting' | 'cleaning' | 'alert' | 'partial';
 
 export type PlantingStatus = 'planned' | 'planted' | 'harvesting' | 'completed';
 
@@ -96,6 +96,27 @@ export interface Block {
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+
+  // Multi-crop fields
+  blockCategory?: 'physical' | 'virtual';
+  parentBlockId?: string | null;
+  availableArea?: number | null;
+  virtualBlockCounter?: number;
+  childBlockIds?: string[];
+  allocatedArea?: number | null;
+
+  // Additional fields from backend
+  blockCode?: string;
+  targetCrop?: string;
+  targetCropName?: string;
+  actualPlantCount?: number | null;
+  plantedDate?: string | null;
+  expectedHarvestDate?: string | null;
+  kpi?: {
+    predictedYieldKg: number;
+    actualYieldKg: number;
+    yieldEfficiencyPercent: number;
+  };
 }
 
 export interface BlockCreate {
@@ -141,6 +162,40 @@ export interface StateTransition {
 export interface ValidTransitionsResponse {
   currentState: BlockState;
   validTransitions: BlockState[];
+}
+
+// ============================================================================
+// MULTI-CROP / VIRTUAL BLOCK TYPES
+// ============================================================================
+
+export interface AddVirtualCropRequest {
+  cropId: string;
+  allocatedArea: number;
+  plantCount: number;
+  plantingDate?: string;
+}
+
+export interface EmptyVirtualBlockPreview {
+  virtualBlockId: string;
+  virtualBlockCode: string;
+  parentBlockId: string;
+  parentBlockCode: string;
+  tasksToTransfer: number;
+  tasksToDelete: number;
+  harvestsToTransfer: number;
+  areaToReturn: number;
+}
+
+export interface EmptyVirtualBlockResult {
+  virtualBlockId: string;
+  virtualBlockCode: string;
+  parentBlockId: string;
+  parentBlockCode: string;
+  tasksTransferred: number;
+  tasksDeleted: number;
+  harvestsTransferred: number;
+  areaReturned: number;
+  deleted: boolean;
 }
 
 // ============================================================================
@@ -409,7 +464,7 @@ export interface GrowthCycleInfo {
 export interface YieldWasteInfo {
   yieldPerPlant: number;
   yieldUnit: string;
-  expectedWastePercent?: number;
+  expectedWastePercentage?: number;
 }
 
 // 4. Fertilizer Schedule
@@ -525,6 +580,9 @@ export interface PlantDataEnhanced {
   farmTypeCompatibility: FarmTypeCompatibility[];
   tags: string[];
 
+  // Spacing category for auto plant count calculation
+  spacingCategory?: SpacingCategory;
+
   // 2. Growth Cycle
   growthCycle: GrowthCycleInfo;
 
@@ -561,6 +619,10 @@ export interface PlantDataEnhanced {
   // 13. Additional Information
   additionalInfo: AdditionalInformation;
 
+  // 14. Data Attribution
+  contributor?: string;   // Name of agronomist/contributor who provided this data
+  targetRegion?: string;  // Geographic region where data was tested (e.g., 'UAE')
+
   // Audit fields
   createdByUserId: string;
   createdByEmail: string;
@@ -577,6 +639,7 @@ export interface PlantDataEnhancedCreate {
   plantType: PlantTypeEnum;
   farmTypeCompatibility: FarmTypeCompatibility[];
   tags?: string[];
+  spacingCategory?: SpacingCategory;
 
   // 2. Growth Cycle
   growthCycle: GrowthCycleInfo;
@@ -595,14 +658,19 @@ export interface PlantDataEnhancedCreate {
   qualityGrades?: QualityGrade[];
   economicsAndLabor?: EconomicsAndLabor;
   additionalInfo?: AdditionalInformation;
+
+  // 14. Data Attribution
+  contributor?: string;
+  targetRegion?: string;
 }
 
 export interface PlantDataEnhancedUpdate {
   plantName?: string;
   scientificName?: string;
-  plantType?: PlantTypeEnum;
+  // Note: plantType is NOT updatable - only set at creation
   farmTypeCompatibility?: FarmTypeCompatibility[];
   tags?: string[];
+  spacingCategory?: SpacingCategory;
   growthCycle?: GrowthCycleInfo;
   yieldInfo?: YieldWasteInfo;
   fertilizerSchedule?: FertilizerApplication[];
@@ -615,7 +683,10 @@ export interface PlantDataEnhancedUpdate {
   qualityGrades?: QualityGrade[];
   economicsAndLabor?: EconomicsAndLabor;
   additionalInfo?: AdditionalInformation;
-  isActive?: boolean;
+  // 14. Data Attribution
+  contributor?: string;
+  targetRegion?: string;
+  // Note: isActive is NOT updatable - only set at creation
 }
 
 // Search Parameters
@@ -850,6 +921,7 @@ export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
   harvesting: '#F59E0B', // Yellow/Orange
   cleaning: '#F97316',   // Orange
   alert: '#EF4444',      // Red
+  partial: '#06B6D4',    // Cyan
 };
 
 export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
@@ -860,6 +932,7 @@ export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
   harvesting: 'Harvesting',
   cleaning: 'Cleaning',
   alert: 'Alert',
+  partial: 'Partial',
 };
 
 export const PLANTING_STATUS_COLORS: Record<PlantingStatus, string> = {
@@ -1016,3 +1089,90 @@ export interface QuickHarvestRequest {
   qualityGrade: 'A' | 'B' | 'C';
   notes?: string;
 }
+
+// ============================================================================
+// SPACING STANDARDS TYPES
+// ============================================================================
+
+export type SpacingCategory =
+  | 'xs'           // Extra Small - microgreens, herbs
+  | 's'            // Small - lettuce, spinach
+  | 'm'            // Medium - peppers, beans
+  | 'l'            // Large - tomatoes, eggplant
+  | 'xl'           // Extra Large - squash, melons
+  | 'bush'         // Bush - blueberries
+  | 'large_bush'   // Large Bush
+  | 'small_tree'   // Small Tree - citrus
+  | 'medium_tree'  // Medium Tree - apple, mango
+  | 'large_tree';  // Large Tree - date palm, coconut
+
+export interface SpacingCategoryInfo {
+  value: SpacingCategory;
+  name: string;
+  description: string;
+  currentDensity: number;  // plants per 100 m²
+  defaultDensity: number;
+  isModified: boolean;
+}
+
+export interface SpacingStandardsConfig {
+  configId: string;
+  configType: string;
+  densities: Record<SpacingCategory, number>;
+  updatedAt: string;
+  updatedBy?: string;
+  updatedByEmail?: string;
+}
+
+export interface SpacingStandardsUpdate {
+  densities: Record<SpacingCategory, number>;
+}
+
+export interface SpacingStandardsResponse {
+  data: SpacingStandardsConfig;
+  message?: string;
+}
+
+export interface SpacingCategoriesResponse {
+  categories: SpacingCategoryInfo[];
+  lastUpdated: string | null;
+  updatedBy: string | null;
+}
+
+export interface CalculatePlantsResponse {
+  plantCount: number;
+  area: number;
+  areaUnit: string;
+  areaSqm: number;
+  spacingCategory: SpacingCategory;
+  plantsPerHundredSqm: number;
+  calculation: string;
+}
+
+// Spacing category labels for display
+export const SPACING_CATEGORY_LABELS: Record<SpacingCategory, string> = {
+  xs: 'Extra Small',
+  s: 'Small',
+  m: 'Medium',
+  l: 'Large',
+  xl: 'Extra Large',
+  bush: 'Bush',
+  large_bush: 'Large Bush',
+  small_tree: 'Small Tree',
+  medium_tree: 'Medium Tree',
+  large_tree: 'Large Tree',
+};
+
+// Example plants for each category
+export const SPACING_CATEGORY_EXAMPLES: Record<SpacingCategory, string> = {
+  xs: 'Microgreens, herbs',
+  s: 'Lettuce, spinach',
+  m: 'Peppers, beans',
+  l: 'Tomatoes, eggplant',
+  xl: 'Squash, melons',
+  bush: 'Blueberries',
+  large_bush: 'Large fruiting bushes',
+  small_tree: 'Citrus, dwarf fruit trees',
+  medium_tree: 'Apple, mango',
+  large_tree: 'Date palm, coconut',
+};
