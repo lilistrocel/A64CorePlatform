@@ -159,7 +159,8 @@ class PlantDataEnhancedService:
         max_growth_cycle: Optional[int] = None,
         tags: Optional[List[str]] = None,
         contributor: Optional[str] = None,
-        target_region: Optional[str] = None
+        target_region: Optional[str] = None,
+        is_active: Optional[bool] = None
     ) -> Tuple[List[PlantDataEnhanced], int, int]:
         """
         Search plant data with comprehensive filters and pagination.
@@ -174,6 +175,7 @@ class PlantDataEnhancedService:
             tags: Filter by tags (any match)
             contributor: Filter by data contributor name
             target_region: Filter by target region
+            is_active: Filter by active status (True/False/None for all)
 
         Returns:
             Tuple of (list of plant data, total count, total pages)
@@ -196,13 +198,24 @@ class PlantDataEnhancedService:
             tags=tags,
             include_deleted=False,
             contributor=contributor,
-            target_region=target_region
+            target_region=target_region,
+            is_active=is_active
         )
 
         # Calculate total pages
         total_pages = (total + per_page - 1) // per_page
 
         return plants, total, total_pages
+
+    @staticmethod
+    async def get_active_plants() -> List[PlantDataEnhanced]:
+        """
+        Get all active plant data for dropdown use.
+
+        Returns:
+            List of active PlantDataEnhanced objects
+        """
+        return await PlantDataEnhancedRepository.get_active_plants()
 
     @staticmethod
     async def get_filter_options() -> dict:

@@ -381,6 +381,7 @@ class PlantDataEnhancedUpdate(BaseModel):
     contributor: Optional[str] = Field(None, max_length=100)
     targetRegion: Optional[str] = Field(None, max_length=100)
     tags: Optional[List[str]] = None
+    isActive: Optional[bool] = Field(None, description="Whether this plant data is active and available for use")
 
 
 class PlantDataEnhanced(PlantDataEnhancedBase):
@@ -391,6 +392,9 @@ class PlantDataEnhanced(PlantDataEnhancedBase):
 
     # Versioning (for freezing data when used in planting plans)
     dataVersion: int = Field(1, description="Data version number (increment on updates)")
+
+    # Active status (only active plants shown in dropdowns for planting)
+    isActive: bool = Field(True, description="Whether this plant data is active and available for use in planting")
 
     # Audit fields
     createdBy: UUID = Field(..., description="User ID who created this data")

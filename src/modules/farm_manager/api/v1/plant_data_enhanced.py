@@ -86,6 +86,7 @@ async def search_plant_data(
     tags: Optional[str] = Query(None, description="Comma-separated tags to filter"),
     contributor: Optional[str] = Query(None, description="Filter by data contributor (e.g., 'Tayeb')"),
     targetRegion: Optional[str] = Query(None, description="Filter by target region (e.g., 'UAE')"),
+    isActive: Optional[bool] = Query(None, description="Filter by active status (true/false)"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -101,6 +102,7 @@ async def search_plant_data(
     - `tags`: Comma-separated tags (e.g., "vegetable,summer,high-value")
     - `contributor`: Filter by data contributor (e.g., "Tayeb", "System")
     - `targetRegion`: Filter by target region (e.g., "UAE", "Mediterranean")
+    - `isActive`: Filter by active status (true = only active, false = only inactive)
 
     **Response**:
     - Returns paginated results with comprehensive plant data
@@ -120,7 +122,8 @@ async def search_plant_data(
         max_growth_cycle=maxGrowthCycle,
         tags=tag_list,
         contributor=contributor,
-        target_region=targetRegion
+        target_region=targetRegion,
+        is_active=isActive
     )
 
     return PaginatedResponse(
@@ -156,6 +159,29 @@ async def get_filter_options(
     """
     options = await PlantDataEnhancedService.get_filter_options()
     return SuccessResponse(data=options)
+
+
+@router.get(
+    "/active",
+    response_model=SuccessResponse[List[PlantDataEnhanced]],
+    summary="Get all active plant data for dropdowns"
+)
+async def get_active_plants(
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Get all active plant data for use in dropdowns (e.g., block planting).
+
+    **Use Case**:
+    - Populate plant selection dropdowns in block creation/planting
+    - Only returns plants marked as active (isActive=true)
+    - Returns all matching plants without pagination (for dropdowns)
+
+    **Response**:
+    - List of active PlantDataEnhanced objects
+    """
+    plants = await PlantDataEnhancedService.get_active_plants()
+    return SuccessResponse(data=plants)
 
 
 @router.get(

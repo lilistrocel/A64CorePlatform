@@ -176,6 +176,16 @@ export async function getPlantsByTags(tags: string[]): Promise<PlantDataEnhanced
   return response.data.data;
 }
 
+/**
+ * Get all active plants for dropdown use (e.g., block planting)
+ */
+export async function getActivePlants(): Promise<PlantDataEnhanced[]> {
+  const response = await apiClient.get<{ data: PlantDataEnhanced[] }>(
+    '/v1/farm/plant-data-enhanced/active'
+  );
+  return response.data.data;
+}
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -288,6 +298,7 @@ export const plantDataEnhancedApi = {
   getPlantsByFarmType,
   getPlantsByTags,
   getPlantDataFilterOptions,
+  getActivePlants,
 
   // Utilities
   calculateTotalCycleDays,

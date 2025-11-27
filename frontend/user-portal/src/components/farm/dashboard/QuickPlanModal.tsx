@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
-import { getPlantDataEnhancedList } from '../../../services/plantDataEnhancedApi';
+import { getActivePlants } from '../../../services/plantDataEnhancedApi';
 import type { DashboardBlock, PlantDataEnhanced } from '../../../types/farm';
 
 interface QuickPlanModalProps {
@@ -42,8 +42,9 @@ export function QuickPlanModal({ isOpen, onClose, block, mode, onConfirm }: Quic
 
   const loadPlants = async () => {
     try {
-      const data = await getPlantDataEnhancedList({ page: 1, perPage: 100 });
-      setPlants(data.items);
+      // Only load active plants for the dropdown
+      const activePlants = await getActivePlants();
+      setPlants(activePlants);
     } catch (error) {
       console.error('Failed to load plants:', error);
     }

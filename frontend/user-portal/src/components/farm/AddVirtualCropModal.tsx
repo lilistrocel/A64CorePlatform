@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { farmApi, calculatePlantCount } from '../../services/farmApi';
-import { getPlantDataEnhancedList } from '../../services/plantDataEnhancedApi';
+import { getActivePlants } from '../../services/plantDataEnhancedApi';
 import type { Block, PlantDataEnhanced, AddVirtualCropRequest } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS } from '../../types/farm';
 
@@ -464,8 +464,9 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
   const loadPlants = async () => {
     try {
       setLoadingPlants(true);
-      const response = await getPlantDataEnhancedList({ page: 1, perPage: 100 });
-      setPlants(response.items);
+      // Only load active plants for the dropdown
+      const activePlants = await getActivePlants();
+      setPlants(activePlants);
     } catch (error) {
       console.error('Error loading plants:', error);
       alert('Failed to load plant data. Please try again.');

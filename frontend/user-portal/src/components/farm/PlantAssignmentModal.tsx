@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { farmApi, calculatePlantCount } from '../../services/farmApi';
-import { getPlantDataEnhancedList } from '../../services/plantDataEnhancedApi';
+import { getActivePlants } from '../../services/plantDataEnhancedApi';
 import type { Block, PlantDataEnhanced, SpacingCategory } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS } from '../../types/farm';
 import { PendingTasksWarningModal } from './PendingTasksWarningModal';
@@ -431,10 +431,9 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
   const loadPlants = async () => {
     try {
       setLoadingPlants(true);
-      // Note: PlantDataEnhanced uses deletedAt for soft deletes, not isActive
-      // Backend automatically filters out deleted records
-      const response = await getPlantDataEnhancedList({ page: 1, perPage: 100 });
-      setPlants(response.items);
+      // Only load active plants for the dropdown
+      const activePlants = await getActivePlants();
+      setPlants(activePlants);
     } catch (error) {
       console.error('Error loading plants:', error);
       alert('Failed to load plant data. Please try again.');

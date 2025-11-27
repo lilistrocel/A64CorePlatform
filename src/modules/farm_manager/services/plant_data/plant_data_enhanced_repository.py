@@ -151,7 +151,8 @@ class PlantDataEnhancedRepository:
         include_deleted: bool = False,
         created_by: Optional[UUID] = None,
         contributor: Optional[str] = None,
-        target_region: Optional[str] = None
+        target_region: Optional[str] = None,
+        is_active: Optional[bool] = None
     ) -> tuple[List[PlantDataEnhanced], int]:
         """
         Search plant data with comprehensive filters and pagination.
@@ -169,6 +170,7 @@ class PlantDataEnhancedRepository:
             created_by: Filter by creator user ID
             contributor: Filter by data contributor name
             target_region: Filter by target region
+            is_active: Filter by active status (True/False/None for all)
 
         Returns:
             Tuple of (list of plant data, total count)
@@ -225,6 +227,10 @@ class PlantDataEnhancedRepository:
         # Target region filter (case-insensitive)
         if target_region:
             query["targetRegion"] = {"$regex": f"^{re.escape(target_region)}$", "$options": "i"}
+
+        # Active status filter
+        if is_active is not None:
+            query["isActive"] = is_active
 
         # Get total count
         total = await db[PlantDataEnhancedRepository.COLLECTION].count_documents(query)
@@ -334,6 +340,32 @@ class PlantDataEnhancedRepository:
 
         logger.info(f"[PlantData Enhanced Repository] Soft deleted plant data: {plant_data_id}")
         return True
+
+    @staticmethod
+    async def get_active_plants() -> List[PlantDataEnhanced]:
+        """
+        Get all active plant data for dropdown use.
+
+        Returns:
+            List of active PlantDataEnhanced objects sorted by name
+        """
+        db = farm_db.get_database()
+
+        # Query for active, non-deleted plants
+        query = {
+            "deletedAt": None,
+            "isActive": True
+        }
+
+        # Get all active plants sorted by name
+        cursor = (
+            db[PlantDataEnhancedRepository.COLLECTION]
+            .find(query)
+            .sort("plantName", 1)
+        )
+
+        plant_docs = await cursor.to_list(length=1000)  # Max 1000 for dropdown
+        return [PlantDataEnhanced(**doc) for doc in plant_docs]
 
     @staticmethod
     async def hard_delete(plant_data_id: UUID) -> bool:
