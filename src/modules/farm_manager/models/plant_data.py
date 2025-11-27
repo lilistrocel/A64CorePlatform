@@ -5,9 +5,12 @@ Defines plant cultivation requirements and characteristics.
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
+
+# Import spacing category from spacing_standards module
+from .spacing_standards import SpacingCategory
 
 
 class PlantDataBase(BaseModel):
@@ -36,6 +39,12 @@ class PlantDataBase(BaseModel):
     expectedYieldPerPlant: float = Field(..., gt=0, description="Expected yield per plant")
     yieldUnit: str = Field(..., description="Unit of yield (kg, lbs, units)")
 
+    # Spacing category for density calculations
+    spacingCategory: Optional[SpacingCategory] = Field(
+        None,
+        description="Spacing category for plant density calculations (xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree)"
+    )
+
     # Additional information
     notes: Optional[str] = Field(None, description="Additional cultivation notes")
     tags: Optional[List[str]] = Field(None, description="Search tags")
@@ -62,6 +71,7 @@ class PlantDataUpdate(BaseModel):
     pesticideScheduleDays: Optional[int] = Field(None, ge=0)
     expectedYieldPerPlant: Optional[float] = Field(None, gt=0)
     yieldUnit: Optional[str] = None
+    spacingCategory: Optional[SpacingCategory] = None
     notes: Optional[str] = None
     tags: Optional[List[str]] = None
 
@@ -97,6 +107,7 @@ class PlantData(PlantDataBase):
                 "pesticideScheduleDays": 21,
                 "expectedYieldPerPlant": 5.0,
                 "yieldUnit": "kg",
+                "spacingCategory": "l",
                 "notes": "Requires staking, prune suckers",
                 "tags": ["vegetable", "fruit", "summer"],
                 "dataVersion": 1,

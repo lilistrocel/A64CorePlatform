@@ -1,8 +1,8 @@
 /**
- * PlantAssignmentModal Component
+ * AddVirtualCropModal Component
  *
- * Modal for assigning plants to a block with preview of predicted outcomes.
- * Shows predicted yield, revenue, harvest timeline, and cycle duration before confirming.
+ * Modal for adding virtual crops to a physical block with available area.
+ * Shows area budget, plant selection, and preview of predicted outcomes.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,32 +10,31 @@ import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { farmApi, calculatePlantCount } from '../../services/farmApi';
 import { getPlantDataEnhancedList } from '../../services/plantDataEnhancedApi';
-import type { Block, PlantDataEnhanced, SpacingCategory } from '../../types/farm';
+import type { Block, PlantDataEnhanced, AddVirtualCropRequest } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS } from '../../types/farm';
-import { PendingTasksWarningModal } from './PendingTasksWarningModal';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface PlantAssignmentModalProps {
+interface AddVirtualCropModalProps {
   isOpen: boolean;
   onClose: () => void;
   block: Block;
   onSuccess: () => void;
 }
 
-interface PlantingPreview {
+interface VirtualCropPreview {
   selectedPlant: PlantDataEnhanced | null;
+  allocatedArea: number;
   plantCount: number;
-  plannedDate: string;
+  plantingDate: string;
   // Calculated fields
   predictedYieldKg: number;
   predictedRevenue: number;
   harvestDate: string;
-  cleaningDate: string;
   totalCycleDays: number;
-  utilizationPercent: number;
+  areaPercentage: number;
 }
 
 // ============================================================================
@@ -123,6 +122,59 @@ const SectionTitle = styled.h3`
   margin: 0 0 16px 0;
 `;
 
+const AreaBudgetSection = styled.div`
+  background: #f5f9ff;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+`;
+
+const AreaBudgetTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
+  width: 100%;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
+    background: linear-gradient(90deg, #3b82f6, #1976d2);
+    transition: width 300ms ease-in-out;
+  }
+`;
+
+const AreaBudgetText = styled.div`
+  font-size: 14px;
+  color: #616161;
+  text-align: center;
+  margin-bottom: 8px;
+`;
+
+const AreaBudgetWarning = styled.div`
+  font-size: 12px;
+  color: #f59e0b;
+  text-align: center;
+  font-weight: 500;
+`;
+
 const FormGroup = styled.div`
   margin-bottom: 20px;
 `;
@@ -195,8 +247,8 @@ const ErrorText = styled.div`
 
 const PreviewSection = styled.div<{ $visible: boolean }>`
   display: ${({ $visible }) => ($visible ? 'block' : 'none')};
-  background: #f5f9ff;
-  border: 1px solid #3b82f6;
+  background: #f0fdf4;
+  border: 1px solid #4caf50;
   border-radius: 8px;
   padding: 20px;
   margin-top: 24px;
@@ -205,7 +257,7 @@ const PreviewSection = styled.div<{ $visible: boolean }>`
 const PreviewTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #1976d2;
+  color: #2e7d32;
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
@@ -214,7 +266,7 @@ const PreviewTitle = styled.h3`
 
 const PreviewGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
 `;
 
@@ -243,42 +295,6 @@ const PreviewSubtext = styled.div`
   font-size: 12px;
   color: #757575;
   margin-top: 4px;
-`;
-
-const TimelineSection = styled.div`
-  background: white;
-  border-radius: 6px;
-  padding: 16px;
-  margin-top: 16px;
-`;
-
-const TimelineTitle = styled.div`
-  font-size: 14px;
-  font-weight: 600;
-  color: #424242;
-  margin-bottom: 12px;
-`;
-
-const TimelineItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const TimelineLabel = styled.div`
-  font-size: 13px;
-  color: #616161;
-`;
-
-const TimelineDate = styled.div`
-  font-size: 13px;
-  font-weight: 500;
-  color: #212121;
 `;
 
 const ModalFooter = styled.div`
@@ -341,6 +357,28 @@ const LoadingText = styled.div`
   color: #757575;
 `;
 
+const VirtualBlockCodePreview = styled.div`
+  background: white;
+  border-radius: 6px;
+  padding: 16px;
+  margin-top: 16px;
+  border: 2px dashed #3b82f6;
+`;
+
+const CodeLabel = styled.div`
+  font-size: 12px;
+  font-weight: 500;
+  color: #757575;
+  margin-bottom: 4px;
+`;
+
+const CodeValue = styled.div`
+  font-size: 20px;
+  font-weight: 600;
+  color: #3b82f6;
+  font-family: 'JetBrains Mono', monospace;
+`;
+
 const AutoCalculationInfo = styled.div`
   display: flex;
   align-items: center;
@@ -390,7 +428,7 @@ const NoSpacingWarning = styled.div`
 // COMPONENT
 // ============================================================================
 
-export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: PlantAssignmentModalProps) {
+export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVirtualCropModalProps) {
   const [plants, setPlants] = useState<PlantDataEnhanced[]>([]);
   const [loadingPlants, setLoadingPlants] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -398,9 +436,9 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
 
   // Form state
   const [selectedPlantId, setSelectedPlantId] = useState<string>('');
+  const [allocatedArea, setAllocatedArea] = useState<string>('');
   const [plantCount, setPlantCount] = useState<string>('');
-  const [plannedDate, setPlannedDate] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
+  const [plantingDate, setPlantingDate] = useState<string>('');
 
   // Auto-calculation state
   const [isAutoCalculated, setIsAutoCalculated] = useState(false);
@@ -409,30 +447,23 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
   const [calculationInfo, setCalculationInfo] = useState<string>('');
 
   // Preview state
-  const [preview, setPreview] = useState<PlantingPreview | null>(null);
+  const [preview, setPreview] = useState<VirtualCropPreview | null>(null);
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Phase 3: Warning modal state
-  const [showWarningModal, setShowWarningModal] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState<any[]>([]);
-  const [targetStatus, setTargetStatus] = useState<string>('');
 
   // Load plant data on mount
   useEffect(() => {
     if (isOpen) {
       loadPlants();
-      // Set default planned date to today
-      setPlannedDate(new Date().toISOString().split('T')[0]);
+      // Set default planting date to today
+      setPlantingDate(new Date().toISOString().split('T')[0]);
     }
   }, [isOpen]);
 
   const loadPlants = async () => {
     try {
       setLoadingPlants(true);
-      // Note: PlantDataEnhanced uses deletedAt for soft deletes, not isActive
-      // Backend automatically filters out deleted records
       const response = await getPlantDataEnhancedList({ page: 1, perPage: 100 });
       setPlants(response.items);
     } catch (error) {
@@ -443,9 +474,9 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
   };
 
-  // Auto-calculate plant count when plant is selected
-  const autoCalculatePlantCount = useCallback(async (plant: PlantDataEnhanced) => {
-    if (!plant.spacingCategory || !block.area) {
+  // Auto-calculate plant count when plant or area changes
+  const autoCalculatePlantCount = useCallback(async (plant: PlantDataEnhanced, areaSqm: number) => {
+    if (!plant.spacingCategory || areaSqm <= 0) {
       setIsAutoCalculated(false);
       setCalculatedPlantCount(null);
       setCalculationInfo('');
@@ -453,24 +484,19 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
 
     try {
-      // Block area is in hectares
-      const result = await calculatePlantCount(block.area, 'hectares', plant.spacingCategory);
+      // Virtual blocks use square meters directly
+      const result = await calculatePlantCount(areaSqm, 'sqm', plant.spacingCategory);
 
-      // Cap at block maxPlants
-      const cappedCount = Math.min(result.plantCount, block.maxPlants);
-
-      setCalculatedPlantCount(cappedCount);
+      setCalculatedPlantCount(result.plantCount);
       setIsAutoCalculated(true);
 
-      const categoryLabel = SPACING_CATEGORY_LABELS[plant.spacingCategory] || plant.spacingCategory;
       setCalculationInfo(
-        `${result.plantsPerHundredSqm} plants/100m² × ${result.areaSqm.toFixed(0)}m² = ${result.plantCount} plants` +
-        (cappedCount < result.plantCount ? ` (capped at ${cappedCount} max capacity)` : '')
+        `${result.plantsPerHundredSqm} plants/100m² × ${areaSqm.toFixed(0)}m² = ${result.plantCount} plants`
       );
 
       // Only set if not manually overridden
       if (!isManualOverride) {
-        setPlantCount(String(cappedCount));
+        setPlantCount(String(result.plantCount));
       }
     } catch (error) {
       console.error('Error calculating plant count:', error);
@@ -478,28 +504,35 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
       setCalculatedPlantCount(null);
       setCalculationInfo('');
     }
-  }, [block.area, block.maxPlants, isManualOverride]);
+  }, [isManualOverride]);
 
-  // Effect to trigger auto-calculation when plant selection changes
+  // Effect to trigger auto-calculation when plant or area changes
   useEffect(() => {
-    if (selectedPlantId) {
+    const area = parseFloat(allocatedArea);
+    if (selectedPlantId && !isNaN(area) && area > 0) {
       const plant = plants.find((p) => p.plantDataId === selectedPlantId);
       if (plant) {
-        autoCalculatePlantCount(plant);
+        autoCalculatePlantCount(plant, area);
       }
-    } else {
+    } else if (!selectedPlantId) {
+      // Reset when no plant selected
       setIsAutoCalculated(false);
       setCalculatedPlantCount(null);
       setCalculationInfo('');
       setIsManualOverride(false);
     }
-  }, [selectedPlantId, plants, autoCalculatePlantCount]);
+  }, [selectedPlantId, allocatedArea, plants, autoCalculatePlantCount]);
 
   // Handle plant selection
   const handlePlantChange = (plantId: string) => {
     setSelectedPlantId(plantId);
-    setIsManualOverride(false); // Reset manual override when plant changes
-    setPlantCount(''); // Clear plant count to trigger auto-calculation
+    setIsManualOverride(false);
+  };
+
+  // Handle area change
+  const handleAreaChange = (value: string) => {
+    setAllocatedArea(value);
+    setIsManualOverride(false); // Reset override when area changes
   };
 
   // Handle manual plant count change
@@ -525,42 +558,38 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     const plant = plants.find((p) => p.plantDataId === selectedPlantId);
     if (!plant) return;
 
+    const area = parseFloat(allocatedArea);
     const count = parseInt(plantCount);
-    if (isNaN(count) || count <= 0) return;
+    if (isNaN(area) || area <= 0 || isNaN(count) || count <= 0) return;
 
-    const plannedDateObj = new Date(plannedDate);
+    const plantingDateObj = new Date(plantingDate);
 
-    // Calculate predicted yield (yieldPerPlant * plantCount * (1 - wastePercent))
+    // Calculate predicted yield
     const wastePercent = plant.yieldInfo.expectedWastePercent || 0;
     const predictedYieldKg = plant.yieldInfo.yieldPerPlant * count * (1 - wastePercent / 100);
 
     // Calculate revenue if economic data exists
-    const revenuePerKg = plant.economicsAndLabor?.revenuePerKg || 0;
+    const revenuePerKg = plant.economicsAndLabor?.averageMarketValuePerKg || 0;
     const predictedRevenue = predictedYieldKg * revenuePerKg;
 
     // Calculate timeline
     const totalCycleDays = plant.growthCycle.totalCycleDays;
-    const harvestDurationDays = plant.growthCycle.harvestDurationDays || 7; // Default 7 days if not specified
-
-    const harvestDate = new Date(plannedDateObj);
+    const harvestDate = new Date(plantingDateObj);
     harvestDate.setDate(harvestDate.getDate() + totalCycleDays);
 
-    const cleaningDate = new Date(harvestDate);
-    cleaningDate.setDate(cleaningDate.getDate() + harvestDurationDays);
-
-    // Calculate utilization
-    const utilizationPercent = (count / block.maxPlants) * 100;
+    // Calculate area percentage
+    const areaPercentage = (area / (block.area || 1)) * 100;
 
     setPreview({
       selectedPlant: plant,
+      allocatedArea: area,
       plantCount: count,
-      plannedDate,
+      plantingDate,
       predictedYieldKg,
       predictedRevenue,
       harvestDate: harvestDate.toISOString().split('T')[0],
-      cleaningDate: cleaningDate.toISOString().split('T')[0],
       totalCycleDays,
-      utilizationPercent,
+      areaPercentage,
     });
   };
 
@@ -571,15 +600,20 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
       newErrors.plant = 'Please select a plant';
     }
 
+    const area = parseFloat(allocatedArea);
+    if (!allocatedArea || isNaN(area) || area <= 0) {
+      newErrors.allocatedArea = 'Please enter a valid area';
+    } else if (area > (block.availableArea || 0)) {
+      newErrors.allocatedArea = `Cannot exceed available area of ${block.availableArea?.toFixed(0)} m²`;
+    }
+
     const count = parseInt(plantCount);
     if (!plantCount || isNaN(count) || count <= 0) {
       newErrors.plantCount = 'Please enter a valid plant count';
-    } else if (count > block.maxPlants) {
-      newErrors.plantCount = `Cannot exceed block capacity of ${block.maxPlants} plants`;
     }
 
-    if (!plannedDate) {
-      newErrors.plannedDate = 'Please select a planting date';
+    if (!plantingDate) {
+      newErrors.plantingDate = 'Please select a planting date';
     }
 
     setErrors(newErrors);
@@ -593,60 +627,58 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
   };
 
-  const handleSubmit = async (force: boolean = false) => {
+  const handleSubmit = async () => {
     if (!validateForm() || !preview) return;
 
     try {
       setSubmitting(true);
 
-      // Always transition to 'planned' state first
-      // Users will later transition from 'planned' to 'growing' when ready to plant
-      const plantingDate = new Date(plannedDate);
-      plantingDate.setHours(0, 0, 0, 0);
-      const newStatus = 'planned';
+      // Convert date from YYYY-MM-DD to ISO format for backend
+      const isoPlantingDate = plantingDate ? `${plantingDate}T00:00:00Z` : undefined;
 
-      await farmApi.transitionBlockState(block.farmId, block.blockId, {
-        newStatus,
-        targetCrop: selectedPlantId,
-        actualPlantCount: parseInt(plantCount),
-        plannedPlantingDate: plantingDate.toISOString(), // Convert to ISO datetime string for backend
-        notes: notes || `Scheduled ${preview.selectedPlant?.plantName} for ${plannedDate}`,
-        force, // Phase 3: Pass force parameter
-      });
+      const requestData: AddVirtualCropRequest = {
+        cropId: selectedPlantId,
+        allocatedArea: parseFloat(allocatedArea),
+        plantCount: parseInt(plantCount),
+        plantingDate: isoPlantingDate,
+      };
+
+      const result = await farmApi.addVirtualCrop(block.farmId, block.blockId, requestData);
+
+      // Show success message with virtual block code
+      const blockCode = result?.blockCode || 'N/A';
+      alert(`Virtual crop added successfully! Virtual block code: ${blockCode}`);
 
       onSuccess();
       handleClose();
     } catch (error: any) {
-      console.error('Error assigning plant:', error);
-
-      // Phase 3: Check for HTTP 409 Conflict (pending tasks warning)
-      if (error.response?.status === 409 && error.response?.data?.detail?.error === 'pending_tasks_exist') {
+      console.error('Error adding virtual crop:', error);
+      // Handle different error formats properly
+      let errorMsg = 'Failed to add virtual crop. Please try again.';
+      if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
-        setPendingTasks(detail.pendingTasks || []);
-        setTargetStatus(detail.targetStatus || '');
-        setShowWarningModal(true);
-      } else {
-        alert('Failed to assign plant. Please try again.');
+        // detail might be a string or an array of validation errors
+        if (typeof detail === 'string') {
+          errorMsg = detail;
+        } else if (Array.isArray(detail)) {
+          errorMsg = detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(', ');
+        } else if (typeof detail === 'object') {
+          errorMsg = JSON.stringify(detail);
+        }
+      } else if (error.message) {
+        errorMsg = error.message;
       }
+      alert(errorMsg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleForceSubmit = () => {
-    setShowWarningModal(false);
-    handleSubmit(true);
-  };
-
-  const handleCancelWarning = () => {
-    setShowWarningModal(false);
-  };
-
   const handleClose = () => {
     setSelectedPlantId('');
+    setAllocatedArea('');
     setPlantCount('');
-    setPlannedDate('');
-    setNotes('');
+    setPlantingDate('');
     setErrors({});
     setPreview(null);
     setShowPreview(false);
@@ -666,11 +698,17 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
   };
 
+  const usedArea = (block.area || 0) - (block.availableArea || 0);
+  const totalArea = block.area || 0;
+  const nextVirtualCode = block.blockCode
+    ? `${block.blockCode}/${String((block.virtualBlockCounter || 0) + 1).padStart(3, '0')}`
+    : 'N/A';
+
   const modalContent = (
     <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <ModalTitle>🌱 Assign Plant to Block</ModalTitle>
+          <ModalTitle>Add Additional Crop to Block</ModalTitle>
           <CloseButton onClick={handleClose}>×</CloseButton>
         </ModalHeader>
 
@@ -679,43 +717,83 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
             <LoadingText>Loading plants...</LoadingText>
           ) : (
             <>
+              <AreaBudgetSection>
+                <AreaBudgetTitle>
+                  <span>📊</span>
+                  <span>Area Budget</span>
+                </AreaBudgetTitle>
+                <AreaBudgetBar $used={usedArea} $total={totalArea} />
+                <AreaBudgetText>
+                  {block.availableArea?.toFixed(0)} m² available of {totalArea.toFixed(0)} m² total
+                </AreaBudgetText>
+                {(block.availableArea || 0) < totalArea * 0.2 && (
+                  <AreaBudgetWarning>
+                    ⚠️ Limited area remaining - consider block utilization
+                  </AreaBudgetWarning>
+                )}
+              </AreaBudgetSection>
+
               <FormSection>
-                <SectionTitle>Block Information</SectionTitle>
+                <SectionTitle>Parent Block Information</SectionTitle>
                 <div style={{ fontSize: '14px', color: '#616161', marginBottom: '16px' }}>
                   <div>
-                    <strong>Block:</strong> {block.name}
+                    <strong>Block:</strong> {block.blockCode || block.name}
                   </div>
                   <div>
-                    <strong>Capacity:</strong> {block.maxPlants} plants
+                    <strong>Total Area:</strong> {totalArea.toFixed(0)} m²
                   </div>
                   <div>
-                    <strong>Area:</strong> {(block.area ?? 0).toFixed(1)} ha
+                    <strong>Current Crop:</strong> {block.targetCropName || 'None'}
                   </div>
                 </div>
+
+                <VirtualBlockCodePreview>
+                  <CodeLabel>New Virtual Block Code (Preview)</CodeLabel>
+                  <CodeValue>{nextVirtualCode}</CodeValue>
+                </VirtualBlockCodePreview>
               </FormSection>
 
               <FormSection>
-                <SectionTitle>Planting Details</SectionTitle>
+                <SectionTitle>Virtual Crop Details</SectionTitle>
 
                 <FormGroup>
                   <Label>
-                    Select Plant<RequiredMark>*</RequiredMark>
+                    Select Crop<RequiredMark>*</RequiredMark>
                   </Label>
                   <Select
                     value={selectedPlantId}
                     onChange={(e) => handlePlantChange(e.target.value)}
                     disabled={submitting}
                   >
-                    <option value="">-- Choose a plant --</option>
+                    <option value="">-- Choose a crop --</option>
                     {plants.map((plant) => (
                       <option key={plant.plantDataId} value={plant.plantDataId}>
-                        {plant.plantName} ({plant.growthCycle.totalCycleDays} days cycle, {plant.yieldInfo.yieldPerPlant}
+                        {plant.plantName} ({plant.growthCycle.totalCycleDays} days cycle,{' '}
+                        {plant.yieldInfo.yieldPerPlant}
                         {plant.yieldInfo.yieldUnit}/plant)
                         {plant.spacingCategory && ` - ${SPACING_CATEGORY_LABELS[plant.spacingCategory]}`}
                       </option>
                     ))}
                   </Select>
                   {errors.plant && <ErrorText>{errors.plant}</ErrorText>}
+                </FormGroup>
+
+                <FormGroup>
+                  <Label>
+                    Allocated Area (m²)<RequiredMark>*</RequiredMark>
+                  </Label>
+                  <Input
+                    type="number"
+                    value={allocatedArea}
+                    onChange={(e) => handleAreaChange(e.target.value)}
+                    placeholder="Enter area in m²"
+                    min="1"
+                    max={block.availableArea || 0}
+                    step="0.1"
+                    disabled={submitting}
+                  />
+                  <HelpText>Maximum available: {block.availableArea?.toFixed(0)} m²</HelpText>
+                  {errors.allocatedArea && <ErrorText>{errors.allocatedArea}</ErrorText>}
                 </FormGroup>
 
                 <FormGroup>
@@ -738,10 +816,8 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                     onChange={(e) => handlePlantCountChange(e.target.value)}
                     placeholder={isAutoCalculated ? 'Auto-calculated from area' : 'Enter plant count'}
                     min="1"
-                    max={block.maxPlants}
                     disabled={submitting}
                   />
-                  <HelpText>Maximum capacity: {block.maxPlants} plants</HelpText>
                   {errors.plantCount && <ErrorText>{errors.plantCount}</ErrorText>}
 
                   {/* Auto-calculation feedback */}
@@ -761,7 +837,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                   )}
 
                   {/* Warning if no spacing category */}
-                  {selectedPlantId && !isAutoCalculated && (
+                  {selectedPlantId && allocatedArea && !isAutoCalculated && (
                     <NoSpacingWarning>
                       <span>⚠️</span>
                       <span>
@@ -774,26 +850,15 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
 
                 <FormGroup>
                   <Label>
-                    Planned Planting Date<RequiredMark>*</RequiredMark>
+                    Planting Date<RequiredMark>*</RequiredMark>
                   </Label>
                   <Input
                     type="date"
-                    value={plannedDate}
-                    onChange={(e) => setPlannedDate(e.target.value)}
+                    value={plantingDate}
+                    onChange={(e) => setPlantingDate(e.target.value)}
                     disabled={submitting}
                   />
-                  {errors.plannedDate && <ErrorText>{errors.plannedDate}</ErrorText>}
-                </FormGroup>
-
-                <FormGroup>
-                  <Label>Notes (Optional)</Label>
-                  <Input
-                    type="text"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Any additional notes..."
-                    disabled={submitting}
-                  />
+                  {errors.plantingDate && <ErrorText>{errors.plantingDate}</ErrorText>}
                 </FormGroup>
               </FormSection>
 
@@ -801,8 +866,8 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                 {preview && (
                   <>
                     <PreviewTitle>
-                      <span>📊</span>
-                      <span>Planting Preview</span>
+                      <span>📈</span>
+                      <span>Virtual Crop Preview</span>
                     </PreviewTitle>
 
                     <PreviewGrid>
@@ -810,8 +875,8 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                         <PreviewLabel>Predicted Yield</PreviewLabel>
                         <PreviewValue>{preview.predictedYieldKg.toFixed(1)} kg</PreviewValue>
                         <PreviewSubtext>
-                          {preview.selectedPlant?.yieldInfo.yieldPerPlant} {preview.selectedPlant?.yieldInfo.yieldUnit}
-                          /plant
+                          {preview.selectedPlant?.yieldInfo.yieldPerPlant}{' '}
+                          {preview.selectedPlant?.yieldInfo.yieldUnit}/plant
                         </PreviewSubtext>
                       </PreviewItem>
 
@@ -820,7 +885,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                           <PreviewLabel>Predicted Revenue</PreviewLabel>
                           <PreviewValue>AED {preview.predictedRevenue.toFixed(0)}</PreviewValue>
                           <PreviewSubtext>
-                            @ AED {preview.selectedPlant?.economicsAndLabor?.revenuePerKg}/kg
+                            @ AED {preview.selectedPlant?.economicsAndLabor?.averageMarketValuePerKg}/kg
                           </PreviewSubtext>
                         </PreviewItem>
                       )}
@@ -832,29 +897,21 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                       </PreviewItem>
 
                       <PreviewItem>
-                        <PreviewLabel>Block Utilization</PreviewLabel>
-                        <PreviewValue>{preview.utilizationPercent.toFixed(0)}%</PreviewValue>
+                        <PreviewLabel>Area Allocation</PreviewLabel>
+                        <PreviewValue>{preview.areaPercentage.toFixed(0)}%</PreviewValue>
                         <PreviewSubtext>
-                          {preview.plantCount} of {block.maxPlants} plants
+                          {preview.allocatedArea} m² of {block.area?.toFixed(0)} m²
                         </PreviewSubtext>
                       </PreviewItem>
-                    </PreviewGrid>
 
-                    <TimelineSection>
-                      <TimelineTitle>📅 Expected Timeline</TimelineTitle>
-                      <TimelineItem>
-                        <TimelineLabel>Planting Date</TimelineLabel>
-                        <TimelineDate>{farmApi.formatDateForDisplay(preview.plannedDate)}</TimelineDate>
-                      </TimelineItem>
-                      <TimelineItem>
-                        <TimelineLabel>Harvest Start</TimelineLabel>
-                        <TimelineDate>{farmApi.formatDateForDisplay(preview.harvestDate)}</TimelineDate>
-                      </TimelineItem>
-                      <TimelineItem>
-                        <TimelineLabel>Cleaning Complete</TimelineLabel>
-                        <TimelineDate>{farmApi.formatDateForDisplay(preview.cleaningDate)}</TimelineDate>
-                      </TimelineItem>
-                    </TimelineSection>
+                      <PreviewItem>
+                        <PreviewLabel>Expected Harvest</PreviewLabel>
+                        <PreviewValue style={{ fontSize: '16px' }}>
+                          {farmApi.formatDateForDisplay(preview.harvestDate)}
+                        </PreviewValue>
+                        <PreviewSubtext>Based on growth cycle</PreviewSubtext>
+                      </PreviewItem>
+                    </PreviewGrid>
                   </>
                 )}
               </PreviewSection>
@@ -871,27 +928,18 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
             type="button"
             $variant="primary"
             onClick={handlePreview}
-            disabled={!selectedPlantId || !plantCount || !plannedDate || submitting}
+            disabled={!selectedPlantId || !allocatedArea || !plantCount || !plantingDate || submitting}
           >
             📊 Preview
           </Button>
 
           {showPreview && (
-            <Button type="button" $variant="success" onClick={() => handleSubmit(false)} disabled={submitting}>
-              {submitting ? 'Assigning...' : '✅ Confirm & Plant'}
+            <Button type="button" $variant="success" onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'Adding...' : '✅ Confirm & Add Crop'}
             </Button>
           )}
         </ModalFooter>
       </ModalContainer>
-
-      {/* Phase 3: Warning Modal */}
-      <PendingTasksWarningModal
-        isOpen={showWarningModal}
-        targetStatus={targetStatus}
-        pendingTasks={pendingTasks}
-        onCancel={handleCancelWarning}
-        onForce={handleForceSubmit}
-      />
     </Overlay>
   );
 

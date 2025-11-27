@@ -151,7 +151,8 @@ class BlockRepository:
         limit: int = 100,
         status: Optional[BlockStatus] = None,
         block_type: Optional[str] = None,
-        target_crop: Optional[UUID] = None
+        target_crop: Optional[UUID] = None,
+        block_category: Optional[str] = 'all'
     ) -> tuple[List[Block], int]:
         """Get blocks by farm with filters and pagination"""
         db = farm_db.get_database()
@@ -168,6 +169,10 @@ class BlockRepository:
         if target_crop:
             query["targetCrop"] = str(target_crop)
 
+        # Filter by block category
+        if block_category and block_category != 'all':
+            query["blockCategory"] = block_category
+
         # Get total count
         total = await db.blocks.count_documents(query)
 
@@ -183,7 +188,8 @@ class BlockRepository:
     async def get_all(
         skip: int = 0,
         limit: int = 100,
-        status: Optional[BlockStatus] = None
+        status: Optional[BlockStatus] = None,
+        block_category: Optional[str] = 'all'
     ) -> tuple[List[Block], int]:
         """Get all blocks with pagination"""
         db = farm_db.get_database()
@@ -193,6 +199,10 @@ class BlockRepository:
 
         if status:
             query["state"] = status.value
+
+        # Filter by block category
+        if block_category and block_category != 'all':
+            query["blockCategory"] = block_category
 
         # Get total count
         total = await db.blocks.count_documents(query)
@@ -450,3 +460,249 @@ class BlockRepository:
                 status_counts[status] = count
 
         return status_counts
+
+    # ==================== VIRTUAL BLOCK METHODS ====================
+
+    @staticmethod
+    async def create_virtual_block(
+        parent: Block,
+        block_code: str,
+        allocated_area: float,
+        plant_count: int,
+        user_id: UUID,
+        user_email: str
+    ) -> Block:
+        """
+        Create a virtual block in the database.
+
+        Args:
+            parent: Parent physical block
+            block_code: Generated code for virtual block (e.g., "F001-021/001")
+            allocated_area: Area allocated from parent's budget
+            plant_count: Number of plants for this virtual block
+            user_id: User creating the block
+            user_email: Email of user
+
+        Returns:
+            Created virtual block (in EMPTY state initially)
+        """
+        from ...models.block import StatusChange
+
+        db = farm_db.get_database()
+
+        # Create initial status change
+        initial_status_change = StatusChange(
+            status=BlockStatus.EMPTY,
+            changedBy=user_id,
+            changedByEmail=user_email,
+            notes="Virtual block created"
+        )
+
+        # Create virtual block document
+        virtual_block = Block(
+            blockCode=block_code,
+            farmId=parent.farmId,
+            farmCode=parent.farmCode,
+            sequenceNumber=None,  # Virtual blocks don't have sequence numbers
+            blockCategory='virtual',
+            parentBlockId=parent.blockId,
+            allocatedArea=allocated_area,
+            area=allocated_area,  # For display consistency
+            areaUnit=parent.areaUnit,
+            maxPlants=plant_count,  # Set to plant count for virtual blocks
+            blockType=parent.blockType,  # Inherit from parent
+            location=parent.location,  # Inherit from parent
+            state=BlockStatus.EMPTY,
+            statusChanges=[initial_status_change]
+        )
+
+        virtual_block_dict = virtual_block.model_dump()
+        virtual_block_dict["blockId"] = str(virtual_block_dict["blockId"])
+        virtual_block_dict["farmId"] = str(virtual_block_dict["farmId"])
+        virtual_block_dict["parentBlockId"] = str(virtual_block_dict["parentBlockId"])
+
+        # Convert nested objects for MongoDB
+        if virtual_block_dict.get("location"):
+            virtual_block_dict["location"] = dict(virtual_block_dict["location"])
+
+        virtual_block_dict["statusChanges"] = [
+            {
+                "status": change["status"],
+                "changedAt": change["changedAt"],
+                "changedBy": str(change["changedBy"]),
+                "changedByEmail": change["changedByEmail"],
+                "notes": change.get("notes")
+            } for change in virtual_block_dict["statusChanges"]
+        ]
+
+        virtual_block_dict["kpi"] = dict(virtual_block_dict["kpi"])
+
+        result = await db.blocks.insert_one(virtual_block_dict)
+
+        if not result.inserted_id:
+            raise Exception("Failed to create virtual block")
+
+        logger.info(
+            f"[Block Repository] Created virtual block: {virtual_block.blockId} ({block_code})"
+        )
+        return virtual_block
+
+    @staticmethod
+    async def update_parent_for_virtual_child(
+        parent_id: UUID,
+        child_id: str,
+        allocated_area: float,
+        new_counter: int
+    ) -> None:
+        """
+        Update parent block after creating virtual child.
+
+        Updates:
+        - Decrement availableArea by allocated_area
+        - Increment virtualBlockCounter to new_counter
+        - Add child_id to childBlockIds array
+
+        Args:
+            parent_id: Parent block UUID
+            child_id: Child block ID (as string)
+            allocated_area: Area allocated to child
+            new_counter: New virtualBlockCounter value
+        """
+        db = farm_db.get_database()
+
+        result = await db.blocks.update_one(
+            {"blockId": str(parent_id), "isActive": True},
+            {
+                "$inc": {"availableArea": -allocated_area},
+                "$set": {
+                    "virtualBlockCounter": new_counter,
+                    "updatedAt": datetime.utcnow()
+                },
+                "$push": {"childBlockIds": child_id}
+            }
+        )
+
+        if result.matched_count == 0:
+            raise Exception(f"Failed to update parent block: {parent_id}")
+
+        logger.info(
+            f"[Block Repository] Updated parent {parent_id}: "
+            f"allocated {allocated_area} to child {child_id}, counter={new_counter}"
+        )
+
+    @staticmethod
+    async def get_children_by_parent(parent_id: UUID) -> List[Block]:
+        """
+        Get all active virtual children of a physical block.
+
+        Args:
+            parent_id: Parent block UUID
+
+        Returns:
+            List of active virtual child blocks
+        """
+        db = farm_db.get_database()
+
+        # Query for virtual blocks with this parent
+        cursor = db.blocks.find({
+            "parentBlockId": str(parent_id),
+            "isActive": True
+        }).sort("blockCode", 1)
+
+        block_docs = await cursor.to_list(length=1000)
+
+        blocks = [Block(**doc) for doc in block_docs]
+
+        return blocks
+
+    @staticmethod
+    async def initialize_available_area(block_id: UUID, area: float) -> None:
+        """
+        Set availableArea to the block's total area (one-time initialization).
+
+        This is called when the first virtual child is created for a physical block.
+
+        Args:
+            block_id: Physical block UUID
+            area: Total area to initialize as budget
+        """
+        db = farm_db.get_database()
+
+        result = await db.blocks.update_one(
+            {"blockId": str(block_id), "isActive": True},
+            {
+                "$set": {
+                    "availableArea": area,
+                    "updatedAt": datetime.utcnow()
+                }
+            }
+        )
+
+        if result.matched_count == 0:
+            raise Exception(f"Failed to initialize area budget for block: {block_id}")
+
+        logger.info(f"[Block Repository] Initialized availableArea={area} for block {block_id}")
+
+    @staticmethod
+    async def return_area_to_parent(
+        parent_id: UUID,
+        area: float,
+        child_id: str
+    ) -> None:
+        """
+        Return area to parent budget and remove child from childBlockIds.
+
+        This is the inverse of update_parent_for_virtual_child.
+        Used when a virtual block is deleted/emptied.
+
+        Args:
+            parent_id: Parent block UUID
+            area: Area to return to parent's budget
+            child_id: Child block ID to remove from childBlockIds array
+
+        Raises:
+            Exception: If parent block not found
+        """
+        db = farm_db.get_database()
+
+        result = await db.blocks.update_one(
+            {"blockId": str(parent_id), "isActive": True},
+            {
+                "$inc": {"availableArea": area},
+                "$pull": {"childBlockIds": child_id},
+                "$set": {"updatedAt": datetime.utcnow()}
+            }
+        )
+
+        if result.matched_count == 0:
+            raise Exception(f"Failed to return area to parent block: {parent_id}")
+
+        logger.info(
+            f"[Block Repository] Returned {area} area to parent {parent_id}, "
+            f"removed child {child_id} from childBlockIds"
+        )
+
+    @staticmethod
+    async def hard_delete(block_id: UUID) -> bool:
+        """
+        Hard delete a block from the database (permanent deletion).
+
+        IMPORTANT: This should ONLY be used for virtual blocks during cleanup.
+        For regular blocks, use soft_delete() instead.
+
+        Args:
+            block_id: Block UUID to delete
+
+        Returns:
+            True if deleted, False if not found
+        """
+        db = farm_db.get_database()
+
+        result = await db.blocks.delete_one({"blockId": str(block_id)})
+
+        if result.deleted_count > 0:
+            logger.info(f"[Block Repository] Hard deleted block: {block_id}")
+            return True
+        else:
+            logger.warning(f"[Block Repository] Block not found for hard deletion: {block_id}")
+            return False

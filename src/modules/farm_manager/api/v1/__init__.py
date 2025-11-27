@@ -14,6 +14,7 @@ from .block_alerts import router as block_alerts_router, farm_router as farm_ale
 from .block_archives import router as archives_router
 from .dashboard import router as dashboard_router
 from .tasks import router as tasks_router
+from .config import router as config_router
 
 api_router = APIRouter()
 
@@ -31,3 +32,4 @@ api_router.include_router(plant_data_enhanced_router, tags=["plant-data-enhanced
 api_router.include_router(plantings_router, tags=["plantings"])  # Planting management
 api_router.include_router(managers_router, tags=["managers"])  # Manager users for farm assignment
 api_router.include_router(tasks_router, tags=["tasks"])  # Operations Task Manager - farmer task management
+api_router.include_router(config_router, tags=["config"])  # System configuration (spacing standards, etc.)

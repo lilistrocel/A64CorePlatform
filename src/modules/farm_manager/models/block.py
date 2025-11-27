@@ -20,6 +20,7 @@ class BlockStatus(str, Enum):
     HARVESTING = "harvesting"
     CLEANING = "cleaning"
     ALERT = "alert"
+    PARTIAL = "partial"  # Physical block has virtual children but no direct crop
 
 
 class BlockType(str, Enum):
@@ -89,7 +90,7 @@ class BlockKPI(BaseModel):
     """Block KPI metrics with performance categorization"""
     predictedYieldKg: float = Field(0.0, ge=0, description="Expected total yield from plant data")
     actualYieldKg: float = Field(0.0, ge=0, description="Cumulative actual harvest")
-    yieldEfficiencyPercent: float = Field(0.0, ge=0, le=1000, description="(actual/predicted) * 100 - supports up to 1000%")
+    yieldEfficiencyPercent: float = Field(0.0, ge=0, description="(actual/predicted) * 100")
     totalHarvests: int = Field(0, ge=0, description="Number of harvest events")
 
     @property
@@ -143,7 +144,8 @@ class BlockCreate(BlockBase):
 
     Note: farmId is provided via the URL path parameter, not in the request body
     """
-    pass
+    allocatedArea: Optional[float] = Field(None, description="Area to allocate (for virtual block creation)")
+    parentBlockId: Optional[UUID] = Field(None, description="For virtual blocks: parent physical block ID")
 
 
 class BlockUpdate(BaseModel):
@@ -178,6 +180,18 @@ class Block(BlockBase):
     farmId: UUID = Field(..., description="Farm this block belongs to")
     farmCode: Optional[str] = Field(None, description="Farm numeric code (e.g., F001)")
     sequenceNumber: Optional[int] = Field(None, ge=1, description="Block sequence number")
+
+    # Multi-crop support fields
+    blockCategory: Literal['physical', 'virtual'] = Field('physical', description="Block category - physical (permanent) or virtual (temporary for multi-crop)")
+    parentBlockId: Optional[UUID] = Field(None, description="For virtual blocks: parent physical block ID")
+
+    # Physical block only fields
+    availableArea: Optional[float] = Field(None, description="Physical blocks: remaining area budget for additional crops")
+    virtualBlockCounter: int = Field(0, description="Physical blocks: counter for generating virtual block codes (001, 002...)")
+    childBlockIds: List[str] = Field(default_factory=list, description="Physical blocks: list of active virtual block IDs")
+
+    # Virtual block only fields
+    allocatedArea: Optional[float] = Field(None, description="Virtual blocks: area allocated from parent's budget")
 
     # Current Status
     state: BlockStatus = Field(BlockStatus.EMPTY, description="Current block status")
@@ -236,6 +250,28 @@ class Block(BlockBase):
                 "isActive": True
             }
         }
+
+
+class VirtualCropCreate(BaseModel):
+    """Schema for creating a virtual block with a crop"""
+    cropId: UUID = Field(..., description="Plant data ID for the crop")
+    allocatedArea: float = Field(..., gt=0, description="Area to allocate from parent's budget")
+    plantCount: int = Field(..., gt=0, description="Number of plants")
+    plantingDate: Optional[datetime] = Field(None, description="Planned planting date (defaults to now)")
+
+
+class MultiCropPlantRequest(BaseModel):
+    """Schema for planting multiple crops at once"""
+    primaryCrop: BlockStatusUpdate = Field(..., description="Primary crop for the physical block")
+    additionalCrops: List[VirtualCropCreate] = Field(default_factory=list, description="Additional crops for virtual blocks")
+
+
+class AddVirtualCropRequest(BaseModel):
+    """Schema for adding a virtual crop to an existing physical block"""
+    cropId: UUID = Field(..., description="Plant data ID")
+    allocatedArea: float = Field(..., gt=0, description="Area to allocate")
+    plantCount: int = Field(..., gt=0, description="Number of plants")
+    plantingDate: Optional[datetime] = Field(None, description="Planned planting date")
 
 
 class BlockListResponse(BaseModel):

@@ -53,7 +53,7 @@ class BlockArchive(BaseModel):
     # Yield KPIs
     predictedYieldKg: float = Field(0.0, ge=0, description="Expected total yield")
     actualYieldKg: float = Field(0.0, ge=0, description="Actual total yield")
-    yieldEfficiencyPercent: float = Field(0.0, ge=0, le=200, description="(actual/predicted) * 100")
+    yieldEfficiencyPercent: float = Field(0.0, ge=0, description="(actual/predicted) * 100")
     totalHarvests: int = Field(0, ge=0, description="Number of harvest events")
 
     # Quality Breakdown

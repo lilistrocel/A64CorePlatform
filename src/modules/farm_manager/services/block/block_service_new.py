@@ -290,17 +290,18 @@ class BlockService:
         per_page: int = 20,
         status: Optional[BlockStatus] = None,
         block_type: Optional[str] = None,
-        target_crop: Optional[UUID] = None
+        target_crop: Optional[UUID] = None,
+        block_category: Optional[str] = 'all'
     ) -> Tuple[List[Block], int, int]:
         """List blocks with pagination and filters"""
         skip = (page - 1) * per_page
 
         if farm_id:
             blocks, total = await BlockRepository.get_by_farm(
-                farm_id, skip, per_page, status, block_type, target_crop
+                farm_id, skip, per_page, status, block_type, target_crop, block_category
             )
         else:
-            blocks, total = await BlockRepository.get_all(skip, per_page, status)
+            blocks, total = await BlockRepository.get_all(skip, per_page, status, block_category)
 
         total_pages = (total + per_page - 1) // per_page
 
@@ -647,6 +648,43 @@ class BlockService:
                 user_email,
                 notes=status_update.notes or "Cycle completed and archived"
             )
+
+            # NEW: Handle virtual block emptying
+            # If this is a virtual block transitioning to EMPTY, trigger cleanup
+            if current_block.blockCategory == 'virtual':
+                logger.info(f"[Block Service] Virtual block {current_block.blockCode} is empty, triggering cleanup")
+
+                # Import here to avoid circular dependency
+                from .virtual_block_service import VirtualBlockService
+
+                try:
+                    cleanup_result = await VirtualBlockService.empty_virtual_block(
+                        block_id,
+                        user_id,
+                        user_email
+                    )
+
+                    logger.info(
+                        f"[Block Service] Virtual block {current_block.blockCode} emptied and deleted. "
+                        f"Transferred {cleanup_result['tasksTransferred']} tasks, "
+                        f"{cleanup_result['harvestsTransferred']} harvests. "
+                        f"Deleted {cleanup_result['tasksDeleted']} pending tasks."
+                    )
+
+                    # Return the parent block since virtual block is deleted
+                    parent_block = await BlockRepository.get_by_id(UUID(cleanup_result['parentBlockId']))
+                    if not parent_block:
+                        raise HTTPException(500, f"Parent block not found: {cleanup_result['parentBlockId']}")
+
+                    return parent_block
+
+                except Exception as e:
+                    logger.error(f"[Block Service] Failed to empty virtual block {block_id}: {e}")
+                    # Re-raise to prevent data inconsistency
+                    raise HTTPException(
+                        500,
+                        f"Failed to complete virtual block cleanup: {str(e)}"
+                    )
 
         # Handle normal status transition
         else:

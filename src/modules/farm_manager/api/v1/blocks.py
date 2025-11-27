@@ -5,12 +5,16 @@ Endpoints for managing farm blocks.
 """
 
 from fastapi import APIRouter, Depends, Query, status
-from typing import Optional
+from typing import Optional, List, Literal
 from uuid import UUID
 
-from ...models.block import Block, BlockCreate, BlockUpdate, BlockStatus, BlockStatusUpdate
+from ...models.block import (
+    Block, BlockCreate, BlockUpdate, BlockStatus,
+    BlockStatusUpdate, AddVirtualCropRequest
+)
 from ...models.block_analytics import BlockAnalyticsResponse, TimePeriod
 from ...services.block.block_service_new import BlockService
+from ...services.block.virtual_block_service import VirtualBlockService
 from ...services.block.analytics_service import BlockAnalyticsService
 from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
@@ -64,6 +68,7 @@ async def list_blocks(
     status_filter: Optional[BlockStatus] = Query(None, alias="status", description="Filter by status"),
     blockType: Optional[str] = Query(None, description="Filter by block type"),
     targetCrop: Optional[UUID] = Query(None, description="Filter by target crop"),
+    blockCategory: Optional[Literal['physical', 'virtual', 'all']] = Query('all', description="Filter by block category"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -75,6 +80,7 @@ async def list_blocks(
     - `status`: Filter by block status (optional)
     - `blockType`: Filter by block type (optional)
     - `targetCrop`: Filter by target crop ID (optional)
+    - `blockCategory`: Filter by category - 'physical', 'virtual', or 'all' (default: 'all')
     """
     blocks, total, total_pages = await BlockService.list_blocks(
         farm_id=farm_id,
@@ -82,7 +88,8 @@ async def list_blocks(
         per_page=perPage,
         status=status_filter,
         block_type=blockType,
-        target_crop=targetCrop
+        target_crop=targetCrop,
+        block_category=blockCategory
     )
 
     return PaginatedResponse(
@@ -453,4 +460,283 @@ async def get_block_analytics(
     return SuccessResponse(
         data=analytics,
         message="Block analytics generated successfully"
+    )
+
+
+# ==================== VIRTUAL BLOCK ENDPOINTS ====================
+
+@router.post(
+    "/{block_id}/add-virtual-crop",
+    response_model=SuccessResponse[Block],
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a virtual crop to a physical block"
+)
+async def add_virtual_crop(
+    farm_id: UUID,
+    block_id: UUID,
+    request: AddVirtualCropRequest,
+    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+):
+    """
+    Create a virtual block with a new crop as a child of this physical block.
+
+    **Requirements:**
+    - Block must be physical (not virtual)
+    - Block must have sufficient availableArea
+    - If first virtual child, initializes area budget from block.area
+
+    **Creates:**
+    - New virtual block with code "{parentCode}/001" (or next available)
+    - Deducts allocated area from parent's budget
+    - Plants the crop on the virtual block (status → PLANNED or GROWING)
+
+    **Request Body:**
+    ```json
+    {
+      "cropId": "uuid-of-plant-data",
+      "allocatedArea": 200.0,
+      "plantCount": 300,
+      "plantingDate": "2025-01-15T00:00:00Z"  // Optional: null = plant now
+    }
+    ```
+
+    **Returns:**
+    The created virtual block with planting details.
+    """
+    # Verify block belongs to farm
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    # Create virtual block
+    virtual_block = await VirtualBlockService.add_crop_to_physical_block(
+        block_id=block_id,
+        request=request,
+        user_id=current_user.userId,
+        user_email=current_user.email
+    )
+
+    return SuccessResponse(
+        data=virtual_block,
+        message=f"Virtual crop added successfully as {virtual_block.blockCode}"
+    )
+
+
+@router.get(
+    "/{block_id}/children",
+    response_model=SuccessResponse[List[Block]],
+    summary="Get virtual children of a physical block"
+)
+async def get_block_children(
+    farm_id: UUID,
+    block_id: UUID,
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Get all active virtual blocks that are children of this physical block.
+
+    **Returns:**
+    - List of virtual child blocks (empty list if block has no children or is virtual)
+
+    **Use Cases:**
+    - Display all crops planted in a multi-crop physical block
+    - Show area allocation breakdown
+    - Monitor individual crop progress within a shared physical space
+    """
+    # Verify block belongs to farm
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    # Get children
+    children = await VirtualBlockService.get_virtual_children(block_id)
+
+    return SuccessResponse(
+        data=children,
+        message=f"Retrieved {len(children)} virtual child block(s)"
+    )
+
+
+@router.post(
+    "/{block_id}/empty-virtual",
+    response_model=SuccessResponse[dict],
+    summary="Empty a virtual block and transfer history to parent"
+)
+async def empty_virtual_block(
+    farm_id: UUID,
+    block_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+):
+    """
+    Empty a virtual block, transfer all history to parent, and delete it.
+
+    **This endpoint performs the following operations:**
+    1. Archives the virtual block's current cycle
+    2. Transfers completed tasks to parent block (with sourceBlockCode field)
+    3. Auto-completes in-progress tasks and transfers them
+    4. Deletes pending tasks
+    5. Transfers harvest records to parent block (with sourceBlockCode field)
+    6. Returns allocated area to parent's budget
+    7. Updates parent status if needed (to EMPTY if no children and no crop)
+    8. Hard deletes the virtual block
+
+    **Requirements:**
+    - Block must be a virtual block (blockCategory = 'virtual')
+    - Block must be active (not already deleted)
+
+    **Returns:**
+    Statistics about transferred/deleted items:
+    ```json
+    {
+      "virtualBlockId": "uuid",
+      "virtualBlockCode": "A01/001",
+      "parentBlockId": "uuid",
+      "parentBlockCode": "A01",
+      "tasksTransferred": 5,
+      "tasksDeleted": 2,
+      "harvestsTransferred": 3,
+      "areaReturned": 200.0,
+      "deleted": true
+    }
+    ```
+
+    **Use Cases:**
+    - Complete a virtual crop session and clean up
+    - Archive crop history while maintaining parent records
+    - Return area budget to parent for reuse
+    """
+    # Verify block belongs to farm
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    # Empty the virtual block
+    result = await VirtualBlockService.empty_virtual_block(
+        virtual_block_id=block_id,
+        user_id=current_user.userId,
+        user_email=current_user.email
+    )
+
+    return SuccessResponse(
+        data=result,
+        message=f"Virtual block {result['virtualBlockCode']} emptied successfully"
+    )
+
+
+@router.get(
+    "/{block_id}/empty-virtual/preview",
+    response_model=SuccessResponse[dict],
+    summary="Preview what will happen when emptying virtual block"
+)
+async def preview_empty_virtual_block(
+    farm_id: UUID,
+    block_id: UUID,
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Preview the effects of emptying a virtual block without actually doing it.
+
+    **Shows counts of:**
+    - Tasks to be transferred (completed + in-progress)
+    - Tasks to be deleted (pending)
+    - Harvests to be transferred
+    - Area to be returned to parent
+
+    **Use Cases:**
+    - Confirm what will happen before emptying
+    - Verify data won't be lost
+    - Check if there are pending tasks that will be deleted
+
+    **Returns:**
+    ```json
+    {
+      "virtualBlockCode": "A01/001",
+      "parentBlockCode": "A01",
+      "tasksToTransfer": 5,
+      "tasksToDelete": 2,
+      "harvestsToTransfer": 3,
+      "areaToReturn": 200.0,
+      "warningPendingTasks": true
+    }
+    ```
+    """
+    from ...services.database import farm_db
+
+    # Verify block belongs to farm and is virtual
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    if block.blockCategory != 'virtual':
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Block {block.blockCode} is not a virtual block"
+        )
+
+    # Get parent block
+    from ...services.block.block_repository_new import BlockRepository
+    parent_block_id = block.parentBlockId if isinstance(block.parentBlockId, UUID) else UUID(str(block.parentBlockId))
+    parent_block = await BlockRepository.get_by_id(parent_block_id)
+    if not parent_block:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parent block not found"
+        )
+
+    # Count tasks
+    db = farm_db.get_database()
+
+    completed_count = await db.farm_tasks.count_documents({
+        "blockId": str(block_id),
+        "status": "completed"
+    })
+
+    in_progress_count = await db.farm_tasks.count_documents({
+        "blockId": str(block_id),
+        "status": "in_progress"
+    })
+
+    pending_count = await db.farm_tasks.count_documents({
+        "blockId": str(block_id),
+        "status": "pending"
+    })
+
+    # Count harvests
+    harvest_count = await db.block_harvests.count_documents({
+        "blockId": str(block_id)
+    })
+
+    tasks_to_transfer = completed_count + in_progress_count
+
+    preview = {
+        "virtualBlockCode": block.blockCode,
+        "parentBlockCode": parent_block.blockCode,
+        "tasksToTransfer": tasks_to_transfer,
+        "tasksToDelete": pending_count,
+        "harvestsToTransfer": harvest_count,
+        "areaToReturn": block.area,
+        "warningPendingTasks": pending_count > 0
+    }
+
+    return SuccessResponse(
+        data=preview,
+        message="Preview of virtual block cleanup"
     )

@@ -15,7 +15,9 @@ import type {
   PlantDataEnhancedCreate,
   PlantTypeEnum,
   FarmTypeCompatibility,
+  SpacingCategory,
 } from '../../types/farm';
+import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
 
 // ============================================================================
 // VALIDATION SCHEMA
@@ -28,6 +30,7 @@ const plantDataSchema = z.object({
   plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']),
   farmTypeCompatibility: z.array(z.string()).min(1, 'Select at least one farm type'),
   tags: z.string().optional(),
+  spacingCategory: z.enum(['xs', 's', 'm', 'l', 'xl', 'bush', 'large_bush', 'small_tree', 'medium_tree', 'large_tree']).optional(),
 
   // Growth Cycle (Required)
   germinationDays: z.number().nonnegative('Cannot be negative').optional(),
@@ -459,6 +462,7 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
         plantType: data.plantType as PlantTypeEnum,
         farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
         tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        spacingCategory: data.spacingCategory as SpacingCategory | undefined,
 
         growthCycle: {
           germinationDays: data.germinationDays,
@@ -587,7 +591,7 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
                 {errors.plantName && <ErrorText>{errors.plantName.message}</ErrorText>}
               </FormGroup>
 
-              <GridRow>
+              <GridRow $columns={3}>
                 <FormGroup>
                   <Label htmlFor="scientificName">Scientific Name (Optional)</Label>
                   <Input
@@ -617,6 +621,25 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
                     <option value="medicinal">Medicinal</option>
                   </Select>
                   {errors.plantType && <ErrorText>{errors.plantType.message}</ErrorText>}
+                </FormGroup>
+
+                <FormGroup>
+                  <Label htmlFor="spacingCategory">Spacing Category</Label>
+                  <Select
+                    id="spacingCategory"
+                    $hasError={!!errors.spacingCategory}
+                    disabled={submitting}
+                    {...register('spacingCategory')}
+                  >
+                    <option value="">-- Select --</option>
+                    {(Object.keys(SPACING_CATEGORY_LABELS) as SpacingCategory[]).map((key) => (
+                      <option key={key} value={key}>
+                        {SPACING_CATEGORY_LABELS[key]} ({SPACING_CATEGORY_EXAMPLES[key]})
+                      </option>
+                    ))}
+                  </Select>
+                  <HelpText>Determines plant density for auto-calculations</HelpText>
+                  {errors.spacingCategory && <ErrorText>{errors.spacingCategory.message}</ErrorText>}
                 </FormGroup>
               </GridRow>
 

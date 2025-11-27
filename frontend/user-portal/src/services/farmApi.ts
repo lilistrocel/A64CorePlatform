@@ -26,6 +26,12 @@ import type {
   CSVImportResult,
   Manager,
   ManagersResponse,
+  AddVirtualCropRequest,
+  EmptyVirtualBlockPreview,
+  EmptyVirtualBlockResult,
+  SpacingCategory,
+  SpacingCategoriesResponse,
+  CalculatePlantsResponse,
 } from '../types/farm';
 
 // ============================================================================
@@ -515,6 +521,103 @@ export async function deleteArchive(archiveId: string) {
 }
 
 // ============================================================================
+// MULTI-CROP / VIRTUAL BLOCK ENDPOINTS
+// ============================================================================
+
+/**
+ * Add a virtual crop to a physical block
+ */
+export async function addVirtualCrop(
+  farmId: string,
+  blockId: string,
+  data: AddVirtualCropRequest
+) {
+  const response = await apiClient.post<{ data: Block }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/add-virtual-crop`,
+    data
+  );
+  return response.data.data;
+}
+
+/**
+ * Get virtual children of a physical block
+ */
+export async function getBlockChildren(farmId: string, blockId: string) {
+  const response = await apiClient.get<{ data: Block[] }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/children`
+  );
+  return response.data.data;
+}
+
+/**
+ * Preview emptying a virtual block
+ */
+export async function previewEmptyVirtualBlock(farmId: string, blockId: string) {
+  const response = await apiClient.get<{ data: EmptyVirtualBlockPreview }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/empty-virtual/preview`
+  );
+  return response.data.data;
+}
+
+/**
+ * Empty a virtual block and transfer history to parent
+ */
+export async function emptyVirtualBlock(farmId: string, blockId: string) {
+  const response = await apiClient.post<{ data: EmptyVirtualBlockResult }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/empty-virtual`
+  );
+  return response.data.data;
+}
+
+// ============================================================================
+// SPACING STANDARDS / CONFIG ENDPOINTS
+// ============================================================================
+
+/**
+ * Get all spacing categories with their densities
+ */
+export async function getSpacingCategories() {
+  const response = await apiClient.get<SpacingCategoriesResponse>('/v1/farm/config/spacing-categories');
+  return response.data;
+}
+
+/**
+ * Calculate plant count based on area and spacing category
+ */
+export async function calculatePlantCount(
+  area: number,
+  areaUnit: string = 'hectares',
+  spacingCategory: SpacingCategory
+): Promise<CalculatePlantsResponse> {
+  const response = await apiClient.get<CalculatePlantsResponse>('/v1/farm/config/calculate-plants', {
+    params: {
+      area,
+      area_unit: areaUnit,
+      spacing_category: spacingCategory,
+    },
+  });
+  return response.data;
+}
+
+/**
+ * Update spacing standards (admin only)
+ */
+export async function updateSpacingStandards(densities: Record<SpacingCategory, number>) {
+  const response = await apiClient.put<{ data: any; message?: string }>('/v1/farm/config/spacing-standards', {
+    densities,
+  });
+  return response.data;
+}
+
+/**
+ * Reset spacing standards to defaults (admin only)
+ */
+export async function resetSpacingStandards() {
+  const response = await apiClient.post<{ data: any; message?: string }>('/v1/farm/config/spacing-standards/reset');
+  return response.data;
+}
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
@@ -638,6 +741,18 @@ export const farmApi = {
   getPlanting,
   createPlanting,
   markPlantingAsPlanted,
+
+  // Multi-Crop / Virtual Blocks
+  addVirtualCrop,
+  getBlockChildren,
+  previewEmptyVirtualBlock,
+  emptyVirtualBlock,
+
+  // Spacing Standards / Config
+  getSpacingCategories,
+  calculatePlantCount,
+  updateSpacingStandards,
+  resetSpacingStandards,
 
   // Utilities
   calculateTotalPlants,

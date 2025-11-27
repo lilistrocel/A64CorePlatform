@@ -31,12 +31,19 @@ export interface BlockCardProps {
 // STYLED COMPONENTS
 // ============================================================================
 
-const Card = styled.div<{ $stateColor: string }>`
+const Card = styled.div<{ $stateColor: string; $isVirtual?: boolean }>`
   background: white;
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border-left: 4px solid ${({ $stateColor }) => $stateColor};
+  ${({ $isVirtual }) =>
+    $isVirtual &&
+    `
+    border: 2px dashed #1976d2;
+    border-left-width: 4px;
+    border-left-style: solid;
+  `}
   transition: all 150ms ease-in-out;
   position: relative;
 
@@ -51,6 +58,22 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 16px;
+  position: relative;
+`;
+
+const VirtualBadge = styled.span`
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #e3f2fd;
+  color: #1976d2;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid #1976d2;
 `;
 
 const BlockIcon = styled.div`
@@ -332,25 +355,31 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
   const stateColor = BLOCK_STATE_COLORS[block.state];
   const stateLabel = BLOCK_STATE_LABELS[block.state];
   const utilizationPercent = summary ? summary.utilizationPercent : 0;
+  const isVirtual = block.blockCategory === 'virtual';
 
   const getStateIcon = (state: BlockState) => {
     const icons = {
       empty: '⬜',
       planned: '📋',
       planted: '🌱',
+      growing: '🌱',
+      fruiting: '🍇',
       harvesting: '🌾',
+      cleaning: '🧹',
       alert: '⚠️',
+      partial: '📊',
     };
-    return icons[state];
+    return icons[state] || '📦';
   };
 
   return (
-    <Card $stateColor={stateColor}>
+    <Card $stateColor={stateColor} $isVirtual={isVirtual}>
       <Header>
+        {isVirtual && <VirtualBadge>Virtual</VirtualBadge>}
         <div>
           <BlockIcon>{getStateIcon(block.state)}</BlockIcon>
           <BlockName onClick={() => navigate(`/farm/farms/${farmId}/blocks/${block.blockId}`)}>
-            {block.name}
+            {block.blockCode || block.name}
           </BlockName>
         </div>
         <StateBadge $color={stateColor}>{stateLabel}</StateBadge>

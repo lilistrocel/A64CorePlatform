@@ -16,7 +16,9 @@ import type {
   PlantDataEnhancedUpdate,
   PlantTypeEnum,
   FarmTypeCompatibility,
+  SpacingCategory,
 } from '../../types/farm';
+import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
 
 // ============================================================================
 // VALIDATION SCHEMA (Same as Add but all fields optional for PATCH)
@@ -28,6 +30,7 @@ const plantDataSchema = z.object({
   plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']).optional(),
   farmTypeCompatibility: z.array(z.string()).min(1, 'Select at least one farm type').optional(),
   tags: z.string().optional(),
+  spacingCategory: z.enum(['xs', 's', 'm', 'l', 'xl', 'bush', 'large_bush', 'small_tree', 'medium_tree', 'large_tree']).optional(),
 
   // Growth Cycle - Using valueAsNumber in register() instead of preprocess
   germinationDays: z.number().nonnegative('Cannot be negative').optional(),
@@ -522,6 +525,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
         plantType: plantData.plantType,
         farmTypeCompatibility: plantData.farmTypeCompatibility,
         tags: plantData.tags?.join(', ') || '',
+        spacingCategory: plantData.spacingCategory,
 
         germinationDays: plantData.growthCycle?.germinationDays,
         vegetativeDays: plantData.growthCycle?.vegetativeDays,
@@ -532,7 +536,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
 
         yieldPerPlant: plantData.yieldInfo?.yieldPerPlant,
         yieldUnit: plantData.yieldInfo?.yieldUnit,
-        expectedWastePercent: plantData.yieldInfo?.expectedWastePercent,
+        expectedWastePercent: plantData.yieldInfo?.expectedWastePercentage,
 
         temperatureMin: plantData.environmentalRequirements?.temperatureMin,
         temperatureOptimal: plantData.environmentalRequirements?.temperatureOptimal,
@@ -576,70 +580,36 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
       setErrorMessage(null);
 
       // Transform form data to API format (only send changed fields)
+      // Note: plantType and isActive are not supported by backend update model
       const updateData: PlantDataEnhancedUpdate = {
         plantName: data.plantName,
         scientificName: data.scientificName,
-        plantType: data.plantType as PlantTypeEnum,
         farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
         tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        spacingCategory: data.spacingCategory as SpacingCategory,
 
         growthCycle: {
-          germinationDays: data.germinationDays,
-          vegetativeDays: data.vegetativeDays,
-          floweringDays: data.floweringDays,
-          fruitingDays: data.fruitingDays,
-          harvestDurationDays: data.harvestDurationDays,
+          germinationDays: data.germinationDays ?? 0,
+          vegetativeDays: data.vegetativeDays ?? 0,
+          floweringDays: data.floweringDays ?? 0,
+          fruitingDays: data.fruitingDays ?? 0,
+          harvestDurationDays: data.harvestDurationDays ?? 0,
           totalCycleDays: data.totalCycleDays!,
         },
 
         yieldInfo: {
           yieldPerPlant: data.yieldPerPlant!,
           yieldUnit: data.yieldUnit!,
-          expectedWastePercent: data.expectedWastePercent,
+          expectedWastePercentage: data.expectedWastePercent ?? 0,
         },
 
-        environmentalRequirements: (data.temperatureMin !== undefined || data.temperatureOptimal !== undefined || data.temperatureMax !== undefined ||
-          data.humidityMin !== undefined || data.humidityOptimal !== undefined || data.humidityMax !== undefined) ? {
-          temperatureMin: data.temperatureMin,
-          temperatureOptimal: data.temperatureOptimal,
-          temperatureMax: data.temperatureMax,
-          humidityMin: data.humidityMin,
-          humidityOptimal: data.humidityOptimal,
-          humidityMax: data.humidityMax,
-        } : undefined,
-
-        wateringRequirements: data.wateringFrequencyDays ? {
-          wateringFrequencyDays: data.wateringFrequencyDays,
-          waterAmountPerPlant: data.waterAmountPerPlant,
-          waterAmountUnit: data.waterAmountUnit,
-        } : undefined,
-
-        soilRequirements: (data.phMin !== undefined || data.phOptimal !== undefined || data.phMax !== undefined) ? {
-          phMin: data.phMin,
-          phOptimal: data.phOptimal,
-          phMax: data.phMax,
-        } : undefined,
-
-        lightRequirements: (data.dailyLightHoursMin !== undefined || data.dailyLightHoursOptimal !== undefined || data.dailyLightHoursMax !== undefined) ? {
-          dailyLightHoursMin: data.dailyLightHoursMin,
-          dailyLightHoursOptimal: data.dailyLightHoursOptimal,
-          dailyLightHoursMax: data.dailyLightHoursMax,
-        } : undefined,
-
-        economicsAndLabor: data.averageMarketValuePerKg ? {
-          averageMarketValuePerKg: data.averageMarketValuePerKg,
-          currency: data.currency,
-        } : undefined,
-
-        additionalInfo: (data.spacingBetweenPlantsCm !== undefined || data.spacingBetweenRowsCm !== undefined || data.notes) ? {
-          spacingBetweenPlantsCm: data.spacingBetweenPlantsCm,
-          spacingBetweenRowsCm: data.spacingBetweenRowsCm,
-          notes: data.notes,
-        } : undefined,
-
-        isActive: data.isActive,
+        // NOTE: Advanced fields (environmentalRequirements, wateringRequirements, soilRequirements,
+        // lightRequirements, economicsAndLabor, additionalInfo) require complex nested structures
+        // that don't match the simple form fields. These are preserved from original data during updates.
+        // Only the basic fields above are updated via this form.
       };
 
+      console.log('Sending update data:', JSON.stringify(updateData, null, 2));
       const updated = await plantDataEnhancedApi.updatePlantDataEnhanced(plantData.plantDataId, updateData);
 
       setSuccessMessage(`Plant "${updated.plantName}" updated to version ${updated.dataVersion}!`);
@@ -649,7 +619,14 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
       }, 1500);
     } catch (error: any) {
       console.error('Error updating plant data:', error);
-      setErrorMessage(error.response?.data?.message || 'Failed to update plant data. Please try again.');
+      console.error('Error response data:', error.response?.data);
+      const errorDetail = error.response?.data?.detail;
+      const errorMsg = typeof errorDetail === 'string'
+        ? errorDetail
+        : Array.isArray(errorDetail)
+          ? errorDetail.map((e: any) => `${e.loc?.join('.')}: ${e.msg}`).join('; ')
+          : error.response?.data?.message || 'Failed to update plant data. Please try again.';
+      setErrorMessage(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -716,7 +693,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                 {errors.plantName && <ErrorText>{errors.plantName.message}</ErrorText>}
               </FormGroup>
 
-              <GridRow>
+              <GridRow $columns={3}>
                 <FormGroup>
                   <Label htmlFor="scientificName">Scientific Name</Label>
                   <Input
@@ -746,6 +723,25 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                     <option value="medicinal">Medicinal</option>
                   </Select>
                   {errors.plantType && <ErrorText>{errors.plantType.message}</ErrorText>}
+                </FormGroup>
+
+                <FormGroup>
+                  <Label htmlFor="spacingCategory">Spacing Category</Label>
+                  <Select
+                    id="spacingCategory"
+                    $hasError={!!errors.spacingCategory}
+                    disabled={submitting}
+                    {...register('spacingCategory')}
+                  >
+                    <option value="">-- Select --</option>
+                    {(Object.keys(SPACING_CATEGORY_LABELS) as SpacingCategory[]).map((key) => (
+                      <option key={key} value={key}>
+                        {SPACING_CATEGORY_LABELS[key]} ({SPACING_CATEGORY_EXAMPLES[key]})
+                      </option>
+                    ))}
+                  </Select>
+                  <HelpText>Determines plant density for auto-calculations</HelpText>
+                  {errors.spacingCategory && <ErrorText>{errors.spacingCategory.message}</ErrorText>}
                 </FormGroup>
               </GridRow>
 

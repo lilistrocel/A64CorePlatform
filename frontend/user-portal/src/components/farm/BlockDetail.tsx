@@ -14,6 +14,8 @@ import type { Block, BlockSummary } from '../../types/farm';
 import { BlockAlertsTab } from './BlockAlertsTab';
 import { BlockHarvestsTab } from './BlockHarvestsTab';
 import { BlockArchivesTab } from './BlockArchivesTab';
+import { AddVirtualCropModal } from './AddVirtualCropModal';
+import { EmptyVirtualBlockModal } from './EmptyVirtualBlockModal';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -263,6 +265,153 @@ const InfoValue = styled.span`
   color: #212121;
 `;
 
+// Multi-crop styled components
+const AreaBudgetSection = styled.div`
+  background: #f5f9ff;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+`;
+
+const AreaBudgetTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+  margin: 0 0 12px 0;
+`;
+
+const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
+  width: 100%;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
+    background: linear-gradient(90deg, #3b82f6, #1976d2);
+    transition: width 300ms ease-in-out;
+  }
+`;
+
+const AreaBudgetText = styled.div`
+  font-size: 14px;
+  color: #616161;
+  text-align: center;
+  margin-bottom: 12px;
+`;
+
+const AddCropButton = styled.button`
+  width: 100%;
+  padding: 12px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #388e3c;
+  }
+`;
+
+const VirtualChildrenSection = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 1px solid #e0e0e0;
+`;
+
+const SectionTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: #424242;
+  margin: 0 0 16px 0;
+`;
+
+const VirtualChildCard = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &:hover {
+    background: #e0e0e0;
+  }
+
+  span {
+    font-size: 14px;
+    color: #212121;
+
+    &:first-child {
+      font-weight: 600;
+      color: #1976d2;
+    }
+  }
+`;
+
+const VirtualBlockInfo = styled.div`
+  background: #e3f2fd;
+  border: 1px solid #1976d2;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+`;
+
+const VirtualBadge = styled.span`
+  display: inline-block;
+  background: #e3f2fd;
+  color: #1976d2;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid #1976d2;
+  margin-left: 12px;
+`;
+
+const EmptyVirtualButton = styled.button`
+  margin-top: 16px;
+  padding: 10px 16px;
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  width: 100%;
+
+  &:hover {
+    background: #ffcdd2;
+    border-color: #c62828;
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -278,6 +427,11 @@ export function BlockDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+
+  // Multi-crop state
+  const [childBlocks, setChildBlocks] = useState<Block[]>([]);
+  const [showAddVirtualCropModal, setShowAddVirtualCropModal] = useState(false);
+  const [showEmptyVirtualModal, setShowEmptyVirtualModal] = useState(false);
 
   useEffect(() => {
     if (farmId && blockId) {
@@ -295,6 +449,18 @@ export function BlockDetail() {
       // Load block data (required)
       const blockData = await farmApi.getBlock(farmId, blockId);
       setBlock(blockData);
+
+      // If physical block, load child blocks
+      if (blockData.blockCategory === 'physical' || !blockData.blockCategory) {
+        try {
+          const children = await farmApi.getBlockChildren(farmId, blockId);
+          setChildBlocks(children);
+        } catch (err) {
+          console.error('Error loading child blocks:', err);
+          // Not critical, just log it
+          setChildBlocks([]);
+        }
+      }
 
       // Use block data directly to build summary (most reliable source)
       setSummary({
@@ -359,11 +525,14 @@ export function BlockDetail() {
       <Header>
         <TitleRow>
           <TitleSection>
-            <BlockTitle>{block.name}</BlockTitle>
+            <BlockTitle>
+              {block.blockCode || block.name}
+              {block.blockCategory === 'virtual' && <VirtualBadge>Virtual</VirtualBadge>}
+            </BlockTitle>
             <BlockMeta>
               <span>Block ID: {block.blockId.substring(0, 8)}...</span>
               <span>•</span>
-              <span>{(block.area ?? 0).toFixed(1)} ha</span>
+              <span>{(block.area ?? 0).toFixed(1)} m²</span>
               {block.targetCropName && (
                 <>
                   <span>•</span>
@@ -424,7 +593,66 @@ export function BlockDetail() {
 
         <TabContent>
           {activeTab === 'overview' && (
-            <OverviewGrid>
+            <>
+              {/* Multi-crop area budget section for physical blocks - only show when block is NOT empty */}
+              {block.blockCategory !== 'virtual' && block.state !== 'empty' && (block.availableArea ?? 0) > 0 && (
+                <AreaBudgetSection>
+                  <AreaBudgetTitle>Multi-Crop Area Budget</AreaBudgetTitle>
+                  <AreaBudgetBar
+                    $used={(block.area ?? 0) - (block.availableArea ?? 0)}
+                    $total={block.area ?? 0}
+                  />
+                  <AreaBudgetText>
+                    {block.availableArea?.toFixed(2)} m² available of {block.area?.toFixed(2)} m² total
+                  </AreaBudgetText>
+                  <AddCropButton onClick={() => setShowAddVirtualCropModal(true)}>
+                    + Add Additional Crop
+                  </AddCropButton>
+                </AreaBudgetSection>
+              )}
+
+              {/* Virtual children section for physical blocks */}
+              {block.blockCategory !== 'virtual' && childBlocks.length > 0 && (
+                <VirtualChildrenSection>
+                  <SectionTitle>Active Virtual Crops ({childBlocks.length})</SectionTitle>
+                  {childBlocks.map((child) => (
+                    <VirtualChildCard
+                      key={child.blockId}
+                      onClick={() => navigate(`/farm/farms/${farmId}/blocks/${child.blockId}`)}
+                    >
+                      <span>{child.blockCode || child.name}</span>
+                      <span>{child.targetCropName || 'No crop'}</span>
+                      <span>{child.allocatedArea ? `${child.allocatedArea} m²` : 'N/A'}</span>
+                      <span>{child.state}</span>
+                    </VirtualChildCard>
+                  ))}
+                </VirtualChildrenSection>
+              )}
+
+              {/* Virtual block info section */}
+              {block.blockCategory === 'virtual' && (
+                <VirtualBlockInfo>
+                  <InfoTitle>Virtual Block Information</InfoTitle>
+                  <InfoItem>
+                    <InfoLabel>Parent Block</InfoLabel>
+                    <InfoValue
+                      style={{ color: '#1976d2', cursor: 'pointer' }}
+                      onClick={() => block.parentBlockId && navigate(`/farm/farms/${farmId}/blocks/${block.parentBlockId}`)}
+                    >
+                      {block.parentBlockId ? 'View Parent Block →' : 'Unknown'}
+                    </InfoValue>
+                  </InfoItem>
+                  <InfoItem>
+                    <InfoLabel>Allocated Area</InfoLabel>
+                    <InfoValue>{block.allocatedArea ? `${block.allocatedArea} m²` : 'N/A'}</InfoValue>
+                  </InfoItem>
+                  <EmptyVirtualButton onClick={() => setShowEmptyVirtualModal(true)}>
+                    🗑️ Empty & Delete Virtual Block
+                  </EmptyVirtualButton>
+                </VirtualBlockInfo>
+              )}
+
+              <OverviewGrid>
               <InfoCard>
                 <InfoTitle>Block Information</InfoTitle>
                 <InfoItem>
@@ -507,6 +735,7 @@ export function BlockDetail() {
                 </InfoCard>
               )}
             </OverviewGrid>
+            </>
           )}
 
           {activeTab === 'alerts' && farmId && blockId && (
@@ -522,6 +751,31 @@ export function BlockDetail() {
           )}
         </TabContent>
       </TabsContainer>
+
+      {/* Multi-crop modals */}
+      {block && (
+        <>
+          <AddVirtualCropModal
+            isOpen={showAddVirtualCropModal}
+            onClose={() => setShowAddVirtualCropModal(false)}
+            block={block}
+            onSuccess={() => {
+              loadBlockData();
+              setShowAddVirtualCropModal(false);
+            }}
+          />
+
+          <EmptyVirtualBlockModal
+            isOpen={showEmptyVirtualModal}
+            onClose={() => setShowEmptyVirtualModal(false)}
+            block={block}
+            onSuccess={() => {
+              // Navigate back to farm since block will be deleted
+              navigate(`/farm/farms/${farmId}`);
+            }}
+          />
+        </>
+      )}
     </Container>
   );
 }

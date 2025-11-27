@@ -10,6 +10,103 @@ import { farmApi } from '../../services/farmApi';
 import type { BlockArchive, BlockCycleHistory } from '../../types/farm';
 
 // ============================================================================
+// DELETE CONFIRMATION MODAL
+// ============================================================================
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: #c62828;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const ModalText = styled.p`
+  font-size: 14px;
+  color: #616161;
+  margin: 0 0 8px 0;
+  line-height: 1.6;
+`;
+
+const ModalWarning = styled.div`
+  background: #fff3e0;
+  border: 1px solid #ff9800;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 16px 0;
+  font-size: 13px;
+  color: #e65100;
+`;
+
+const ModalButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+`;
+
+const CancelButton = styled.button`
+  padding: 10px 20px;
+  background: #f5f5f5;
+  color: #616161;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #e0e0e0;
+  }
+`;
+
+const DeleteConfirmButton = styled.button`
+  padding: 10px 20px;
+  background: #c62828;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #b71c1c;
+  }
+
+  &:disabled {
+    background: #ef9a9a;
+    cursor: not-allowed;
+  }
+`;
+
+// ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
 
@@ -163,6 +260,34 @@ const QualityRow = styled.div`
   gap: 24px;
 `;
 
+const ArchiveActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+`;
+
+const DeleteButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #ffcdd2;
+    border-color: #c62828;
+  }
+`;
+
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
@@ -193,6 +318,11 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
   const [history, setHistory] = useState<BlockCycleHistory | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [archiveToDelete, setArchiveToDelete] = useState<BlockArchive | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     loadArchives();
   }, [farmId, blockId]);
@@ -210,6 +340,36 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
       console.error('Error loading archives:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (archive: BlockArchive) => {
+    setArchiveToDelete(archive);
+    setShowDeleteModal(true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setArchiveToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!archiveToDelete) return;
+
+    try {
+      setDeleting(true);
+      await farmApi.deleteArchive(archiveToDelete.archiveId);
+
+      // Reload archives after deletion
+      await loadArchives();
+
+      setShowDeleteModal(false);
+      setArchiveToDelete(null);
+    } catch (err) {
+      console.error('Error deleting archive:', err);
+      alert('Failed to delete archive. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -332,9 +492,49 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
                   )}
                 </QualitySection>
               )}
+
+              <ArchiveActions>
+                <DeleteButton onClick={() => handleDeleteClick(archive)}>
+                  <span>🗑️</span>
+                  Delete History
+                </DeleteButton>
+              </ArchiveActions>
             </ArchiveCard>
           ))}
         </ArchivesList>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && archiveToDelete && (
+        <ModalOverlay onClick={handleCancelDelete}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              <span>⚠️</span>
+              Delete Archived Cycle
+            </ModalTitle>
+            <ModalText>
+              Are you sure you want to delete this archived cycle?
+            </ModalText>
+            <ModalText>
+              <strong>Crop:</strong> {archiveToDelete.targetCropName}
+              <br />
+              <strong>Period:</strong> {farmApi.formatDateForDisplay(archiveToDelete.plantedDate)} →{' '}
+              {farmApi.formatDateForDisplay(archiveToDelete.harvestCompletedDate)}
+              <br />
+              <strong>Yield:</strong> {archiveToDelete.actualYieldKg.toFixed(1)} kg
+            </ModalText>
+            <ModalWarning>
+              <strong>Warning:</strong> This action cannot be undone. All historical data for this
+              cycle will be permanently removed.
+            </ModalWarning>
+            <ModalButtons>
+              <CancelButton onClick={handleCancelDelete}>Cancel</CancelButton>
+              <DeleteConfirmButton onClick={handleConfirmDelete} disabled={deleting}>
+                {deleting ? 'Deleting...' : 'Delete Permanently'}
+              </DeleteConfirmButton>
+            </ModalButtons>
+          </ModalContent>
+        </ModalOverlay>
       )}
     </Container>
   );
