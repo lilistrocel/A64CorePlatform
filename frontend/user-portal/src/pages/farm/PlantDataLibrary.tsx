@@ -175,13 +175,20 @@ const Select = styled.select`
   border-radius: 8px;
   font-size: 14px;
   background: white;
+  color: #212121;
   cursor: pointer;
   transition: all 150ms ease-in-out;
+  min-width: 140px;
 
   &:focus {
     outline: none;
     border-color: #3B82F6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  option {
+    color: #212121;
+    background: white;
   }
 `;
 
