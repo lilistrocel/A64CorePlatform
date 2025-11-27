@@ -135,6 +135,30 @@ async def search_plant_data(
 
 
 @router.get(
+    "/filter-options",
+    summary="Get filter options for plant data",
+    response_model=SuccessResponse[dict]
+)
+async def get_filter_options(
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Get distinct values for filter dropdowns.
+
+    **Response**:
+    - `contributors`: List of unique contributor names (e.g., ["Tayeb", "System"])
+    - `targetRegions`: List of unique target regions (e.g., ["UAE", "Mediterranean"])
+    - `tags`: List of unique tags (e.g., ["vegetable", "fruit", "summer"])
+
+    **Use Case**:
+    - Populate filter dropdown options in UI
+    - Show only values that exist in the database
+    """
+    options = await PlantDataEnhancedService.get_filter_options()
+    return SuccessResponse(data=options)
+
+
+@router.get(
     "/{plant_data_id}",
     response_model=SuccessResponse[PlantDataEnhanced],
     summary="Get enhanced plant data by ID"
@@ -269,30 +293,6 @@ async def clone_plant_data(
         data=cloned,
         message=f"Plant data cloned successfully as '{newName}'"
     )
-
-
-@router.get(
-    "/filter-options",
-    summary="Get filter options for plant data",
-    response_model=SuccessResponse[dict]
-)
-async def get_filter_options(
-    current_user: CurrentUser = Depends(get_current_active_user)
-):
-    """
-    Get distinct values for filter dropdowns.
-
-    **Response**:
-    - `contributors`: List of unique contributor names (e.g., ["Tayeb", "System"])
-    - `targetRegions`: List of unique target regions (e.g., ["UAE", "Mediterranean"])
-    - `tags`: List of unique tags (e.g., ["vegetable", "fruit", "summer"])
-
-    **Use Case**:
-    - Populate filter dropdown options in UI
-    - Show only values that exist in the database
-    """
-    options = await PlantDataEnhancedService.get_filter_options()
-    return SuccessResponse(data=options)
 
 
 @router.get(
