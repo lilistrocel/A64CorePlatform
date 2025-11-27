@@ -53,6 +53,11 @@ logs/
 *.db
 *.sqlite
 *.sqlite3
+*.pub
+ssh-server-vietanh.bat
+ssh-server-vietanh.sh
+nginx/nginx.conf
+.claude/settings.local.json
 
 # Testing
 .pytest_cache/

@@ -123,7 +123,9 @@
       "Bash(aws ec2 associate-address:*)",
       "Bash(aws ec2 describe-addresses:*)",
       "Bash(ssh:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(cp:*)",
+      "Bash(docker compose:*)"
     ],
     "deny": [],
     "ask": []
