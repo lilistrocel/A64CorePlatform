@@ -58,6 +58,16 @@ from .global_analytics import (
     GlobalYieldTimeline,
     GlobalPerformanceInsights,
 )
+from .spacing_standards import (
+    SpacingCategory,
+    SpacingStandardsConfig,
+    SpacingStandardsUpdate,
+    SpacingStandardsResponse,
+    DEFAULT_SPACING_DENSITIES,
+    calculate_plant_count,
+    convert_area_to_sqm,
+    suggest_spacing_category,
+)
 
 __all__ = [
     # Farm
@@ -153,4 +163,13 @@ __all__ = [
     "FarmSummaryItem",
     "GlobalYieldTimeline",
     "GlobalPerformanceInsights",
+    # Spacing Standards
+    "SpacingCategory",
+    "SpacingStandardsConfig",
+    "SpacingStandardsUpdate",
+    "SpacingStandardsResponse",
+    "DEFAULT_SPACING_DENSITIES",
+    "calculate_plant_count",
+    "convert_area_to_sqm",
+    "suggest_spacing_category",
 ]
