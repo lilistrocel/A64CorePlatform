@@ -17,8 +17,8 @@ import type {
   PlantDataEnhanced,
   PlantDataEnhancedSearchParams,
   FarmTypeCompatibility,
-  PlantTypeEnum,
 } from '../../types/farm';
+import type { PlantDataFilterOptions } from '../../services/plantDataEnhancedApi';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -309,7 +309,9 @@ export function PlantDataLibrary() {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFarmType, setSelectedFarmType] = useState<FarmTypeCompatibility | ''>('');
-  const [selectedPlantType, setSelectedPlantType] = useState<PlantTypeEnum | ''>('');
+  const [selectedContributor, setSelectedContributor] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('');
+  const [filterOptions, setFilterOptions] = useState<PlantDataFilterOptions | null>(null);
   const [selectedPlant, setSelectedPlant] = useState<PlantDataEnhanced | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -321,9 +323,23 @@ export function PlantDataLibrary() {
   // Check if user has agronomist permission
   const hasAgronomistPermission = user?.permissions?.includes('agronomist') || ['admin', 'super_admin'].includes(user?.role as string) || false;
 
+  // Load filter options on mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
   useEffect(() => {
     loadPlants();
-  }, [currentPage, searchTerm, selectedFarmType, selectedPlantType]);
+  }, [currentPage, searchTerm, selectedFarmType, selectedContributor, selectedRegion]);
+
+  const loadFilterOptions = async () => {
+    try {
+      const options = await plantDataEnhancedApi.getPlantDataFilterOptions();
+      setFilterOptions(options);
+    } catch (err) {
+      console.error('Error loading filter options:', err);
+    }
+  };
 
   const loadPlants = async () => {
     try {
@@ -335,8 +351,8 @@ export function PlantDataLibrary() {
         perPage,
         search: searchTerm || undefined,
         farmType: selectedFarmType || undefined,
-        plantType: selectedPlantType || undefined,
-        isActive: true,
+        contributor: selectedContributor || undefined,
+        targetRegion: selectedRegion || undefined,
       };
 
       const response = await plantDataEnhancedApi.getPlantDataEnhancedList(params);
@@ -361,15 +377,21 @@ export function PlantDataLibrary() {
     setCurrentPage(1);
   };
 
-  const handlePlantTypeChange = (value: string) => {
-    setSelectedPlantType(value as PlantTypeEnum | '');
+  const handleContributorChange = (value: string) => {
+    setSelectedContributor(value);
+    setCurrentPage(1);
+  };
+
+  const handleRegionChange = (value: string) => {
+    setSelectedRegion(value);
     setCurrentPage(1);
   };
 
   const handleClearFilters = () => {
     setSearchTerm('');
     setSelectedFarmType('');
-    setSelectedPlantType('');
+    setSelectedContributor('');
+    setSelectedRegion('');
     setCurrentPage(1);
   };
 
@@ -529,15 +551,21 @@ export function PlantDataLibrary() {
             <option value="indoor_farm">Indoor Farm</option>
             <option value="polytunnel">Polytunnel</option>
           </Select>
-          <Select value={selectedPlantType} onChange={(e) => handlePlantTypeChange(e.target.value)}>
-            <option value="">All Plant Types</option>
-            <option value="crop">Crop</option>
-            <option value="tree">Tree</option>
-            <option value="herb">Herb</option>
-            <option value="fruit">Fruit</option>
-            <option value="vegetable">Vegetable</option>
-            <option value="ornamental">Ornamental</option>
-            <option value="medicinal">Medicinal</option>
+          <Select value={selectedContributor} onChange={(e) => handleContributorChange(e.target.value)}>
+            <option value="">All Contributors</option>
+            {filterOptions?.contributors?.map((contributor) => (
+              <option key={contributor} value={contributor}>
+                {contributor}
+              </option>
+            ))}
+          </Select>
+          <Select value={selectedRegion} onChange={(e) => handleRegionChange(e.target.value)}>
+            <option value="">All Regions</option>
+            {filterOptions?.targetRegions?.map((region) => (
+              <option key={region} value={region}>
+                {region}
+              </option>
+            ))}
           </Select>
           <ClearButton onClick={handleClearFilters}>Clear Filters</ClearButton>
         </FilterRow>
@@ -548,7 +576,7 @@ export function PlantDataLibrary() {
           <EmptyIcon>🌱</EmptyIcon>
           <EmptyTitle>No plants found</EmptyTitle>
           <EmptyDescription>
-            {searchTerm || selectedFarmType || selectedPlantType
+            {searchTerm || selectedFarmType || selectedContributor || selectedRegion
               ? 'Try adjusting your filters or search term'
               : 'Get started by creating your first plant data entry'}
           </EmptyDescription>

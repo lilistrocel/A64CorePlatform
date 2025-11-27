@@ -157,7 +157,9 @@ class PlantDataEnhancedService:
         farm_type: Optional[str] = None,
         min_growth_cycle: Optional[int] = None,
         max_growth_cycle: Optional[int] = None,
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
+        contributor: Optional[str] = None,
+        target_region: Optional[str] = None
     ) -> Tuple[List[PlantDataEnhanced], int, int]:
         """
         Search plant data with comprehensive filters and pagination.
@@ -170,6 +172,8 @@ class PlantDataEnhancedService:
             min_growth_cycle: Minimum growth cycle days
             max_growth_cycle: Maximum growth cycle days
             tags: Filter by tags (any match)
+            contributor: Filter by data contributor name
+            target_region: Filter by target region
 
         Returns:
             Tuple of (list of plant data, total count, total pages)
@@ -190,13 +194,25 @@ class PlantDataEnhancedService:
             min_growth_cycle=min_growth_cycle,
             max_growth_cycle=max_growth_cycle,
             tags=tags,
-            include_deleted=False
+            include_deleted=False,
+            contributor=contributor,
+            target_region=target_region
         )
 
         # Calculate total pages
         total_pages = (total + per_page - 1) // per_page
 
         return plants, total, total_pages
+
+    @staticmethod
+    async def get_filter_options() -> dict:
+        """
+        Get distinct values for filter dropdowns.
+
+        Returns:
+            Dictionary with contributors, targetRegions, and tags
+        """
+        return await PlantDataEnhancedRepository.get_filter_options()
 
     @staticmethod
     async def update_plant_data(

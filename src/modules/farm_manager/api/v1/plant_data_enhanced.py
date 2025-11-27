@@ -84,6 +84,8 @@ async def search_plant_data(
     minGrowthCycle: Optional[int] = Query(None, ge=0, description="Minimum growth cycle days"),
     maxGrowthCycle: Optional[int] = Query(None, ge=0, description="Maximum growth cycle days"),
     tags: Optional[str] = Query(None, description="Comma-separated tags to filter"),
+    contributor: Optional[str] = Query(None, description="Filter by data contributor (e.g., 'Tayeb')"),
+    targetRegion: Optional[str] = Query(None, description="Filter by target region (e.g., 'UAE')"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -92,11 +94,13 @@ async def search_plant_data(
     **Query Parameters**:
     - `page`: Page number (default: 1)
     - `perPage`: Items per page (default: 20, max: 100)
-    - `search`: Text search using MongoDB full-text index (plantName, scientificName, tags)
+    - `search`: Text search on plantName, scientificName, tags
     - `farmType`: Filter by farm type compatibility (open_field, greenhouse, hydroponic, vertical_farm, aquaponic)
     - `minGrowthCycle`: Filter plants with growth cycle >= this value
     - `maxGrowthCycle`: Filter plants with growth cycle <= this value
     - `tags`: Comma-separated tags (e.g., "vegetable,summer,high-value")
+    - `contributor`: Filter by data contributor (e.g., "Tayeb", "System")
+    - `targetRegion`: Filter by target region (e.g., "UAE", "Mediterranean")
 
     **Response**:
     - Returns paginated results with comprehensive plant data
@@ -114,7 +118,9 @@ async def search_plant_data(
         farm_type=farmType,
         min_growth_cycle=minGrowthCycle,
         max_growth_cycle=maxGrowthCycle,
-        tags=tag_list
+        tags=tag_list,
+        contributor=contributor,
+        target_region=targetRegion
     )
 
     return PaginatedResponse(
@@ -263,6 +269,30 @@ async def clone_plant_data(
         data=cloned,
         message=f"Plant data cloned successfully as '{newName}'"
     )
+
+
+@router.get(
+    "/filter-options",
+    summary="Get filter options for plant data",
+    response_model=SuccessResponse[dict]
+)
+async def get_filter_options(
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Get distinct values for filter dropdowns.
+
+    **Response**:
+    - `contributors`: List of unique contributor names (e.g., ["Tayeb", "System"])
+    - `targetRegions`: List of unique target regions (e.g., ["UAE", "Mediterranean"])
+    - `tags`: List of unique tags (e.g., ["vegetable", "fruit", "summer"])
+
+    **Use Case**:
+    - Populate filter dropdown options in UI
+    - Show only values that exist in the database
+    """
+    options = await PlantDataEnhancedService.get_filter_options()
+    return SuccessResponse(data=options)
 
 
 @router.get(

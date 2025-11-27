@@ -31,12 +31,12 @@ export async function getPlantDataEnhancedList(
       page: params?.page || 1,
       perPage: params?.perPage || 20,
       search: params?.search,
-      plantType: params?.plantType,
       farmType: params?.farmType,
       minGrowthCycle: params?.minGrowthCycle,
       maxGrowthCycle: params?.maxGrowthCycle,
       tags: params?.tags?.join(','),
-      isActive: params?.isActive,
+      contributor: params?.contributor,
+      targetRegion: params?.targetRegion,
     },
   });
 
@@ -48,6 +48,25 @@ export async function getPlantDataEnhancedList(
     perPage: response.data.meta?.perPage || 20,
     totalPages: response.data.meta?.totalPages || 1,
   };
+}
+
+/**
+ * Filter options for plant data dropdowns
+ */
+export interface PlantDataFilterOptions {
+  contributors: string[];
+  targetRegions: string[];
+  tags: string[];
+}
+
+/**
+ * Get filter options (distinct contributors, regions, tags)
+ */
+export async function getPlantDataFilterOptions(): Promise<PlantDataFilterOptions> {
+  const response = await apiClient.get<{ data: PlantDataFilterOptions }>(
+    '/v1/farm/plant-data-enhanced/filter-options'
+  );
+  return response.data.data;
 }
 
 /**
@@ -268,6 +287,7 @@ export const plantDataEnhancedApi = {
   downloadPlantDataEnhancedTemplate,
   getPlantsByFarmType,
   getPlantsByTags,
+  getPlantDataFilterOptions,
 
   // Utilities
   calculateTotalCycleDays,

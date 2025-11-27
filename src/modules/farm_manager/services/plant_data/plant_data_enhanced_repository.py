@@ -149,7 +149,9 @@ class PlantDataEnhancedRepository:
         max_growth_cycle: Optional[int] = None,
         tags: Optional[List[str]] = None,
         include_deleted: bool = False,
-        created_by: Optional[UUID] = None
+        created_by: Optional[UUID] = None,
+        contributor: Optional[str] = None,
+        target_region: Optional[str] = None
     ) -> tuple[List[PlantDataEnhanced], int]:
         """
         Search plant data with comprehensive filters and pagination.
@@ -165,11 +167,14 @@ class PlantDataEnhancedRepository:
             tags: Filter by tags (any match)
             include_deleted: Include soft-deleted records
             created_by: Filter by creator user ID
+            contributor: Filter by data contributor name
+            target_region: Filter by target region
 
         Returns:
             Tuple of (list of plant data, total count)
         """
         db = farm_db.get_database()
+        import re
 
         # Build query
         query: Dict[str, Any] = {}
@@ -178,10 +183,16 @@ class PlantDataEnhancedRepository:
         if not include_deleted:
             query["deletedAt"] = None
 
-        # Text search using MongoDB text index
+        # Text search - use regex fallback if text index not available
         if search:
-            # Reason: MongoDB $text operator is safe for text search
-            query["$text"] = {"$search": search}
+            # Use case-insensitive regex search on multiple fields
+            # This works without requiring a text index
+            search_pattern = re.escape(search)
+            query["$or"] = [
+                {"plantName": {"$regex": search_pattern, "$options": "i"}},
+                {"scientificName": {"$regex": search_pattern, "$options": "i"}},
+                {"tags": {"$regex": search_pattern, "$options": "i"}}
+            ]
 
         # Farm type compatibility filter
         if farm_type:
@@ -206,6 +217,14 @@ class PlantDataEnhancedRepository:
         # Created by filter
         if created_by:
             query["createdBy"] = str(created_by)
+
+        # Contributor filter (case-insensitive)
+        if contributor:
+            query["contributor"] = {"$regex": f"^{re.escape(contributor)}$", "$options": "i"}
+
+        # Target region filter (case-insensitive)
+        if target_region:
+            query["targetRegion"] = {"$regex": f"^{re.escape(target_region)}$", "$options": "i"}
 
         # Get total count
         total = await db[PlantDataEnhancedRepository.COLLECTION].count_documents(query)
@@ -545,3 +564,42 @@ class PlantDataEnhancedRepository:
             max_growth_cycle=max_days,
             include_deleted=False
         )
+
+    @staticmethod
+    async def get_filter_options() -> Dict[str, List[str]]:
+        """
+        Get distinct values for filter dropdowns.
+
+        Returns:
+            Dictionary with distinct contributors, targetRegions, and tags
+        """
+        db = farm_db.get_database()
+
+        # Get distinct contributors (non-null, non-deleted)
+        contributors = await db[PlantDataEnhancedRepository.COLLECTION].distinct(
+            "contributor",
+            {"deletedAt": None, "contributor": {"$ne": None}}
+        )
+
+        # Get distinct target regions (non-null, non-deleted)
+        target_regions = await db[PlantDataEnhancedRepository.COLLECTION].distinct(
+            "targetRegion",
+            {"deletedAt": None, "targetRegion": {"$ne": None}}
+        )
+
+        # Get distinct tags (flatten arrays, non-deleted)
+        tags_pipeline = [
+            {"$match": {"deletedAt": None}},
+            {"$unwind": "$tags"},
+            {"$group": {"_id": "$tags"}},
+            {"$sort": {"_id": 1}}
+        ]
+        tags_cursor = db[PlantDataEnhancedRepository.COLLECTION].aggregate(tags_pipeline)
+        tags_docs = await tags_cursor.to_list(length=100)
+        tags = [doc["_id"] for doc in tags_docs if doc["_id"]]
+
+        return {
+            "contributors": sorted([c for c in contributors if c]),
+            "targetRegions": sorted([r for r in target_regions if r]),
+            "tags": tags
+        }

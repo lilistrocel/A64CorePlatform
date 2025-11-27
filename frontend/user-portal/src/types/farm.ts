@@ -694,12 +694,12 @@ export interface PlantDataEnhancedSearchParams {
   page?: number;
   perPage?: number;
   search?: string;
-  plantType?: PlantTypeEnum;
   farmType?: FarmTypeCompatibility;
   minGrowthCycle?: number;
   maxGrowthCycle?: number;
   tags?: string[];
-  isActive?: boolean;
+  contributor?: string;      // Filter by data contributor (e.g., 'Tayeb')
+  targetRegion?: string;     // Filter by target region (e.g., 'UAE')
 }
 
 // Clone Request
