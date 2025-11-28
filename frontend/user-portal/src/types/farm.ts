@@ -124,6 +124,7 @@ export interface BlockCreate {
   name: string;
   blockType: string;
   area: number;
+  areaUnit?: string;
   maxPlants: number;
   metadata?: Record<string, unknown>;
 }
@@ -131,6 +132,7 @@ export interface BlockCreate {
 export interface BlockUpdate {
   name?: string;
   area?: number;
+  areaUnit?: string;
   maxPlants?: number;
   metadata?: Record<string, unknown>;
 }

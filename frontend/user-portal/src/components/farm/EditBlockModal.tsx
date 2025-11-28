@@ -167,9 +167,23 @@ interface EditBlockModalProps {
 }
 
 export function EditBlockModal({ block, farmId, onClose, onUpdate }: EditBlockModalProps) {
+  // Convert area from sqm to hectares for display (if stored in sqm)
+  const convertToHectares = (area: number | null | undefined, unit: string | null | undefined): number | undefined => {
+    if (area === null || area === undefined) return undefined;
+    if (unit === 'sqm') return area / 10000;
+    if (unit === 'sqft') return area / 107639;
+    return area; // Already in hectares or unknown
+  };
+
+  // Convert area from hectares to sqm for storage
+  const convertToSqm = (areaInHectares: number | undefined): number | undefined => {
+    if (areaInHectares === undefined) return undefined;
+    return areaInHectares * 10000;
+  };
+
   const [formData, setFormData] = useState<BlockUpdate>({
     name: block.name,
-    area: block.area,
+    area: convertToHectares(block.area, block.areaUnit), // Display in hectares
     maxPlants: block.maxPlants,
   });
   const [loading, setLoading] = useState(false);
@@ -197,7 +211,13 @@ export function EditBlockModal({ block, farmId, onClose, onUpdate }: EditBlockMo
 
     try {
       setLoading(true);
-      await onUpdate(block.blockId, formData);
+      // Convert hectares back to sqm for storage
+      const dataToSubmit: BlockUpdate = {
+        ...formData,
+        area: convertToSqm(formData.area),
+        areaUnit: 'sqm', // Always store in sqm
+      };
+      await onUpdate(block.blockId, dataToSubmit);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update block');

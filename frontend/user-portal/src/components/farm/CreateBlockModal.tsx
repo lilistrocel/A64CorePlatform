@@ -205,10 +205,13 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
 
     try {
       setLoading(true);
+      // User enters area in hectares, convert to sqm for storage
+      const areaInSqm = area * 10000;
       await onCreate({
         name: formData.name.trim(),
         blockType: formData.blockType,
-        area,
+        area: areaInSqm,
+        areaUnit: 'sqm',
         maxPlants,
       });
       onClose();
