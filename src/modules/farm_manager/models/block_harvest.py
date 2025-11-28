@@ -38,6 +38,21 @@ class BlockHarvestUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class HarvestMetadata(BaseModel):
+    """Optional metadata for harvest records (e.g., from migrations)"""
+    migratedFrom: Optional[str] = None
+    migratedAt: Optional[str] = None
+    oldRef: Optional[str] = None
+    oldFarmBlockRef: Optional[str] = None
+    harvestSeason: Optional[int] = None
+    viewingYear: Optional[int] = None
+    crop: Optional[str] = None
+    mainBlock: Optional[str] = None
+
+    class Config:
+        extra = "allow"  # Allow additional fields
+
+
 class BlockHarvest(BlockHarvestBase):
     """Complete block harvest model"""
     harvestId: UUID = Field(default_factory=uuid4, description="Unique harvest identifier")
@@ -50,6 +65,9 @@ class BlockHarvest(BlockHarvestBase):
 
     # Timestamps
     createdAt: datetime = Field(default_factory=datetime.utcnow)
+
+    # Optional metadata (for migrated data)
+    metadata: Optional[HarvestMetadata] = Field(None, description="Additional metadata from migrations")
 
     class Config:
         json_schema_extra = {
