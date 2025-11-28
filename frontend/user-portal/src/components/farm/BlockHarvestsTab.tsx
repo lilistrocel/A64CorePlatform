@@ -280,6 +280,69 @@ const HelpText = styled.p`
   margin: 0;
 `;
 
+const DeleteButton = styled.button`
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+
+  &:hover:not(:disabled) {
+    background: #fee2e2;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ConfirmModalContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const ConfirmText = styled.p`
+  font-size: 14px;
+  color: #616161;
+  margin: 0;
+  line-height: 1.5;
+`;
+
+const ConfirmHighlight = styled.div`
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #212121;
+`;
+
+const DangerButton = styled.button`
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  border: none;
+  background: #ef4444;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: #dc2626;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -295,6 +358,8 @@ export function BlockHarvestsTab({ farmId, blockId, onRefresh }: BlockHarvestsTa
   const [summary, setSummary] = useState<BlockHarvestSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [showRecordModal, setShowRecordModal] = useState(false);
+  const [harvestToDelete, setHarvestToDelete] = useState<BlockHarvest | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadHarvests();
@@ -324,6 +389,22 @@ export function BlockHarvestsTab({ farmId, blockId, onRefresh }: BlockHarvestsTa
       setShowRecordModal(false);
     } catch (err) {
       throw err;
+    }
+  };
+
+  const handleDeleteHarvest = async () => {
+    if (!harvestToDelete) return;
+
+    try {
+      setDeleting(true);
+      await farmApi.deleteBlockHarvest(farmId, blockId, harvestToDelete.harvestId);
+      await loadHarvests();
+      onRefresh?.();
+      setHarvestToDelete(null);
+    } catch (err) {
+      console.error('Error deleting harvest:', err);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -405,6 +486,9 @@ export function BlockHarvestsTab({ farmId, blockId, onRefresh }: BlockHarvestsTa
                 </HarvestMeta>
                 {harvest.notes && <HarvestMeta>{harvest.notes}</HarvestMeta>}
               </HarvestInfo>
+              <DeleteButton onClick={() => setHarvestToDelete(harvest)}>
+                Delete
+              </DeleteButton>
             </HarvestCard>
           ))}
         </HarvestsList>
@@ -413,6 +497,34 @@ export function BlockHarvestsTab({ farmId, blockId, onRefresh }: BlockHarvestsTa
       {/* Record Harvest Modal */}
       {showRecordModal && (
         <RecordHarvestModal blockId={blockId} onClose={() => setShowRecordModal(false)} onRecord={handleRecordHarvest} />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {harvestToDelete && (
+        <Overlay onClick={(e) => e.target === e.currentTarget && !deleting && setHarvestToDelete(null)}>
+          <Modal>
+            <ModalTitle>Delete Harvest Record</ModalTitle>
+            <ConfirmModalContent>
+              <ConfirmText>
+                Are you sure you want to delete this harvest record? This action cannot be undone.
+              </ConfirmText>
+              <ConfirmHighlight>
+                <strong>{farmApi.formatDateForDisplay(harvestToDelete.harvestDate)}</strong>
+                {harvestToDelete.metadata?.crop && ` (${harvestToDelete.metadata.crop})`}
+                <br />
+                {harvestToDelete.quantityKg} kg - Grade {harvestToDelete.qualityGrade}
+              </ConfirmHighlight>
+              <ButtonGroup>
+                <Button type="button" onClick={() => setHarvestToDelete(null)} disabled={deleting}>
+                  Cancel
+                </Button>
+                <DangerButton onClick={handleDeleteHarvest} disabled={deleting}>
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </DangerButton>
+              </ButtonGroup>
+            </ConfirmModalContent>
+          </Modal>
+        </Overlay>
       )}
     </Container>
   );

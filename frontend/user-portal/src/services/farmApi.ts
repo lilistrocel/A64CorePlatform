@@ -453,6 +453,16 @@ export async function recordBlockHarvest(farmId: string, blockId: string, data: 
   return response.data.data;
 }
 
+/**
+ * Delete a harvest record
+ */
+export async function deleteBlockHarvest(farmId: string, blockId: string, harvestId: string) {
+  const response = await apiClient.delete<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/harvests/${harvestId}`
+  );
+  return response.data;
+}
+
 // ============================================================================
 // BLOCK ARCHIVE ENDPOINTS
 // ============================================================================
@@ -720,6 +730,7 @@ export const farmApi = {
   getBlockHarvests,
   getBlockHarvestSummary,
   recordBlockHarvest,
+  deleteBlockHarvest,
 
   // Block Archives
   getBlockArchives,
