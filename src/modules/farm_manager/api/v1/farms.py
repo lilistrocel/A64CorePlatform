@@ -263,7 +263,28 @@ async def get_farm_summary(
 
     # Calculate statistics
     total_blocks = len(blocks)
-    total_block_area = sum(block.area or 0 for block in blocks)
+
+    # Convert all block areas to hectares for consistent summing
+    def convert_to_hectares(area: float, unit: str) -> float:
+        """Convert area to hectares based on unit."""
+        if not area:
+            return 0.0
+        if unit == "sqm":
+            return area / 10000  # 1 ha = 10,000 sqm
+        elif unit == "sqft":
+            return area / 107639  # 1 ha = 107,639 sqft
+        elif unit == "acres":
+            return area * 0.404686  # 1 acre = 0.404686 ha
+        elif unit == "hectares" or unit == "ha":
+            return area
+        else:
+            # Default: assume sqm if unknown
+            return area / 10000
+
+    total_block_area = sum(
+        convert_to_hectares(block.area or 0, block.areaUnit or "sqm")
+        for block in blocks
+    )
     total_planted_plants = sum(block.actualPlantCount or 0 for block in blocks)
     predicted_yield = sum(block.kpi.predictedYieldKg for block in blocks)
 

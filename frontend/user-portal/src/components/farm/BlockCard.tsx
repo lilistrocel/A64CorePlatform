@@ -379,7 +379,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
         <div>
           <BlockIcon>{getStateIcon(block.state)}</BlockIcon>
           <BlockName onClick={() => navigate(`/farm/farms/${farmId}/blocks/${block.blockId}`)}>
-            {block.blockCode || block.name}
+            {block.name}
           </BlockName>
         </div>
         <StateBadge $color={stateColor}>{stateLabel}</StateBadge>
@@ -388,7 +388,12 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       <StatsGrid>
         <StatItem>
           <StatLabel>Area</StatLabel>
-          <StatValue>{(block.area ?? 0).toFixed(1)} ha</StatValue>
+          <StatValue>
+            {block.areaUnit === 'sqm' || block.areaUnit === 'sqft'
+              ? `${((block.area ?? 0) / 10000).toFixed(2)} ha`
+              : `${(block.area ?? 0).toFixed(2)} ${block.areaUnit || 'ha'}`
+            }
+          </StatValue>
         </StatItem>
         <StatItem>
           <StatLabel>Capacity</StatLabel>
