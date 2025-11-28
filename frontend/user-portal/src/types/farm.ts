@@ -247,10 +247,15 @@ export interface BlockHarvest {
   quantityKg: number;
   qualityGrade: QualityGrade;
   notes?: string;
-  harvestedBy: string;
-  harvestedByEmail: string;
+  recordedBy: string;
+  recordedByEmail: string;
   createdAt: string;
   updatedAt: string;
+  // Metadata from migration (optional)
+  metadata?: {
+    crop?: string;
+    season?: number;
+  };
 }
 
 export interface BlockHarvestCreate {

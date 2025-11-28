@@ -386,15 +386,22 @@ export function BlockHarvestsTab({ farmId, blockId, onRefresh }: BlockHarvestsTa
           {harvests.map((harvest) => (
             <HarvestCard key={harvest.harvestId}>
               <HarvestInfo>
-                <HarvestDate>{farmApi.formatDateForDisplay(harvest.harvestDate)}</HarvestDate>
+                <HarvestDate>
+                  {farmApi.formatDateForDisplay(harvest.harvestDate)}
+                  {harvest.metadata?.crop && <span style={{ fontWeight: 400, marginLeft: 8, color: '#4caf50' }}>({harvest.metadata.crop})</span>}
+                </HarvestDate>
                 <HarvestMeta>
                   <span>{harvest.quantityKg} kg</span>
                   <span>•</span>
                   <span>
                     <QualityBadge $grade={harvest.qualityGrade}>Grade {harvest.qualityGrade}</QualityBadge>
                   </span>
-                  <span>•</span>
-                  <span>by {harvest.harvestedByEmail}</span>
+                  {harvest.recordedByEmail && (
+                    <>
+                      <span>•</span>
+                      <span>by {harvest.recordedByEmail}</span>
+                    </>
+                  )}
                 </HarvestMeta>
                 {harvest.notes && <HarvestMeta>{harvest.notes}</HarvestMeta>}
               </HarvestInfo>
