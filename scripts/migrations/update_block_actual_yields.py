@@ -89,9 +89,18 @@ class BlockYieldUpdater:
         if not planted_date:
             return {"total_kg": 0, "harvest_count": 0, "quality_breakdown": {}}
 
+        # Ensure planted_date is timezone-aware
+        if planted_date.tzinfo is None:
+            planted_date = planted_date.replace(tzinfo=timezone.utc)
+
         # End date is the later of expectedHarvestDate or now
         now = datetime.now(timezone.utc)
         end_date = expected_harvest_date if expected_harvest_date else now
+
+        # Ensure end_date is timezone-aware
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
         if end_date < now:
             end_date = now  # Include recent harvests even if past expected date
 
