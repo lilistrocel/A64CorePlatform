@@ -211,7 +211,7 @@ def calculate_farm_summary(blocks: list[Block]) -> Dict:
 
     # Count blocks and aggregate metrics
     total_efficiency = 0.0
-    blocks_with_kpi = 0
+    blocks_with_efficiency = 0
 
     for block in blocks:
         # Count by state
@@ -225,15 +225,19 @@ def calculate_farm_summary(blocks: list[Block]) -> Dict:
         ]:
             summary["totalActivePlantings"] += 1
 
-        # Aggregate yield
+        # Aggregate yield predictions for all blocks with predictions
         if block.kpi.predictedYieldKg > 0:
             summary["totalPredictedYieldKg"] += block.kpi.predictedYieldKg
             summary["totalActualYieldKg"] += block.kpi.actualYieldKg
-            total_efficiency += block.kpi.yieldEfficiencyPercent
-            blocks_with_kpi += 1
 
-    # Calculate average efficiency
-    if blocks_with_kpi > 0:
-        summary["avgYieldEfficiency"] = round(total_efficiency / blocks_with_kpi, 1)
+        # Only include blocks with actual harvests in efficiency calculation
+        # (blocks in HARVESTING state or with actual yield > 0)
+        if block.kpi.actualYieldKg > 0 and block.kpi.predictedYieldKg > 0:
+            total_efficiency += block.kpi.yieldEfficiencyPercent
+            blocks_with_efficiency += 1
+
+    # Calculate average efficiency (only from blocks that have harvested)
+    if blocks_with_efficiency > 0:
+        summary["avgYieldEfficiency"] = round(total_efficiency / blocks_with_efficiency, 1)
 
     return summary

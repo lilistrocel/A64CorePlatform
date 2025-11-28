@@ -148,7 +148,9 @@ class FarmAnalyticsService:
         total_yield_kg = 0.0
         total_predicted_yield = 0.0
         total_weighted_efficiency = 0.0
+        total_predicted_with_harvest = 0.0  # Track predicted yield only for blocks with harvests
         total_performance_score = 0.0
+        blocks_with_harvests = 0  # Count blocks that have actual yield for performance calculation
         total_capacity = 0
         current_plant_count = 0
         active_plantings = 0
@@ -176,13 +178,16 @@ class FarmAnalyticsService:
                 total_predicted_yield += block.kpi.predictedYieldKg
 
                 # Weighted average efficiency (weight by predicted yield)
-                if block.kpi.predictedYieldKg > 0:
+                # Only include blocks with actual harvests in efficiency calculation
+                if block.kpi.predictedYieldKg > 0 and block.kpi.actualYieldKg > 0:
                     total_weighted_efficiency += block.kpi.yieldEfficiencyPercent * block.kpi.predictedYieldKg
+                    total_predicted_with_harvest += block.kpi.predictedYieldKg
+                    blocks_with_harvests += 1
 
-                # Calculate simple performance score (0-100)
-                # Based on yield efficiency capped at 100%
-                performance = min(100, block.kpi.yieldEfficiencyPercent)
-                total_performance_score += performance
+                    # Calculate simple performance score (0-100)
+                    # Based on yield efficiency capped at 100%
+                    performance = min(100, block.kpi.yieldEfficiencyPercent)
+                    total_performance_score += performance
 
         # Add historical harvest yields within the date range
         logger.info(f"[Farm Analytics] Fetching historical harvests within date range")
@@ -200,12 +205,12 @@ class FarmAnalyticsService:
 
         logger.info(f"[Farm Analytics] Total yield including historical harvests: {total_yield_kg} kg")
 
-        # Calculate averages
+        # Calculate averages (only from blocks with actual harvests)
         avg_yield_efficiency = 0.0
-        if total_predicted_yield > 0:
-            avg_yield_efficiency = total_weighted_efficiency / total_predicted_yield
+        if total_predicted_with_harvest > 0:
+            avg_yield_efficiency = total_weighted_efficiency / total_predicted_with_harvest
 
-        overall_performance_score = total_performance_score / total_blocks if total_blocks > 0 else 0.0
+        overall_performance_score = total_performance_score / blocks_with_harvests if blocks_with_harvests > 0 else 0.0
 
         # Calculate utilization
         current_utilization = (current_plant_count / total_capacity * 100) if total_capacity > 0 else 0.0

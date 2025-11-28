@@ -175,7 +175,9 @@ class GlobalAnalyticsService:
 
         # For weighted averages
         total_weighted_efficiency = 0.0
+        total_yield_for_efficiency = 0.0  # Only count yield from farms with efficiency > 0
         total_performance_score = 0.0
+        farms_with_performance = 0  # Count farms that have performance scores
         total_utilization = 0.0
 
         for farm_analytics in farm_analytics_list:
@@ -188,19 +190,23 @@ class GlobalAnalyticsService:
             total_predicted_yield += metrics.predictedYieldKg
 
             # Weighted by predicted yield for efficiency
-            if metrics.predictedYieldKg > 0:
-                total_weighted_efficiency += metrics.avgYieldEfficiency * metrics.predictedYieldKg
+            # Only include farms that have actual yield (efficiency > 0)
+            if metrics.avgYieldEfficiency > 0 and metrics.totalYieldKg > 0:
+                total_weighted_efficiency += metrics.avgYieldEfficiency * metrics.totalYieldKg
+                total_yield_for_efficiency += metrics.totalYieldKg
 
-            # Simple average for performance and utilization
-            total_performance_score += metrics.overallPerformanceScore
+            # Simple average for performance and utilization (only farms with scores)
+            if metrics.overallPerformanceScore > 0:
+                total_performance_score += metrics.overallPerformanceScore
+                farms_with_performance += 1
             total_utilization += metrics.currentUtilization
 
-        # Calculate averages
+        # Calculate averages (only from farms with actual harvests)
         avg_yield_efficiency = 0.0
-        if total_predicted_yield > 0:
-            avg_yield_efficiency = total_weighted_efficiency / total_predicted_yield
+        if total_yield_for_efficiency > 0:
+            avg_yield_efficiency = total_weighted_efficiency / total_yield_for_efficiency
 
-        avg_performance_score = total_performance_score / total_farms if total_farms > 0 else 0.0
+        avg_performance_score = total_performance_score / farms_with_performance if farms_with_performance > 0 else 0.0
         avg_utilization = total_utilization / total_farms if total_farms > 0 else 0.0
 
         return GlobalAggregatedMetrics(
