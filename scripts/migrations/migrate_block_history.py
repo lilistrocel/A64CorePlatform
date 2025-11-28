@@ -68,16 +68,28 @@ def normalize_block_code(old_code: str) -> str:
         AG-06-001 → AG06
         KHZ-34-1 → KHZ34
         WG-04-1 → WG04
-        S.NH 720 - 16457-004 → SNH720 (special case)
+        S.NH 720 - 16457-004 → S.NH 720 - 16457 (Silal special case - keep full ID)
+        S.GH 708 - 16458-003 → S.GH 708 - 16458 (Silal special case)
+        SNH.685 - 17478-1 → SNH.685 - 17478 (Silal special case)
+        S.NHY 428-2 →  S.NHY 428 (Silal special case, note leading space)
     """
     code = old_code.strip()
 
-    # Special case: S.NH format
-    if code.startswith("S.NH"):
-        # S.NH 720 - 16457-004 → SNH720
-        match = re.match(r"S\.NH\s*(\d+)", code)
+    # Special case: Silal Upgrade Farm codes with long IDs
+    # These have format like "S.NH 720 - 16457-004" or "S.GH 708 - 16458-003"
+    # The database stores them as "S.NH 720 - 16457" (without the season suffix)
+    silal_patterns = [
+        r"^(S\.NH\s+\d+\s+-\s+\d+)(-\d+)?$",     # S.NH 720 - 16457 or S.NH 720 - 16457-004
+        r"^(S\.GH\s+\d+\s+-\s+\d+)(-\d+)?$",     # S.GH 708 - 16458 or S.GH 708 - 16458-003
+        r"^(SNH\.\d+\s+-\s+\d+)(-\d+)?$",        # SNH.685 - 17478 or SNH.685 - 17478-1
+        r"^(\s*S\.NHY\s+\d+)(-\d+)?$",           # S.NHY 428 or S.NHY 428-2 (note possible leading space)
+    ]
+
+    for pattern in silal_patterns:
+        match = re.match(pattern, code)
         if match:
-            return f"SNH{match.group(1)}"
+            # Return the base name (group 1), preserving format
+            return match.group(1)
 
     # Split by hyphen to analyze segments
     parts = code.split("-")
