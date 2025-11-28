@@ -397,9 +397,19 @@ class BlockHistoryMigration:
         """Count harvest records per block/season from harvest_reports."""
         print("Counting harvests per block...")
 
-        # Load harvest reports
-        with open("/app/OldData/json_exports/harvest_reports.json", "r") as f:
-            harvests = json.load(f)
+        # Load harvest reports from flexible paths
+        harvest_paths = ["/app/harvest_reports.json", "/app/OldData/json_exports/harvest_reports.json", "OldData/json_exports/harvest_reports.json"]
+        harvests = None
+        for path in harvest_paths:
+            try:
+                with open(path, "r") as f:
+                    harvests = json.load(f)
+                break
+            except FileNotFoundError:
+                continue
+        if harvests is None:
+            print("Warning: Could not load harvest_reports.json, skipping harvest counts")
+            return {}
 
         counts = {}
         for h in harvests:
@@ -526,7 +536,7 @@ class BlockHistoryMigration:
                 "unique_unmapped_blocks": len(unique_unmapped_blocks),
             },
         }
-        with open("/app/OldData/unmapped_blocks.json", "w") as f:
+        with open("/app/unmapped_blocks.json", "w") as f:
             json.dump(report, f, indent=2, default=str)
         print(f"\nSaved unmapped_blocks.json ({len(unique_unmapped_blocks)} unique blocks)")
 
@@ -545,7 +555,7 @@ class BlockHistoryMigration:
                 "unique_unmapped_crops": len(unique_unmapped_crops),
             },
         }
-        with open("/app/OldData/unmapped_crops.json", "w") as f:
+        with open("/app/unmapped_crops.json", "w") as f:
             json.dump(crops_report, f, indent=2, default=str)
         print(f"Saved unmapped_crops.json ({len(unique_unmapped_crops)} unique crops)")
 
@@ -565,7 +575,7 @@ class BlockHistoryMigration:
                 "crops": len(unique_unmapped_crops),
             },
         }
-        with open("/app/OldData/migration_summary.json", "w") as f:
+        with open("/app/migration_summary.json", "w") as f:
             json.dump(summary, f, indent=2)
         print(f"Saved migration_summary.json")
 
@@ -586,13 +596,33 @@ async def main():
 
         # Load source data
         print("\nLoading source data...")
-        with open("/app/OldData/json_exports/block_history_comp.json", "r") as f:
-            history_data = json.load(f)
-        print(f"  block_history_comp.json: {len(history_data)} records")
+        # Try multiple paths for flexibility
+        history_paths = ["/app/block_history_comp.json", "/app/OldData/json_exports/block_history_comp.json", "OldData/json_exports/block_history_comp.json"]
+        harvest_paths = ["/app/harvest_reports.json", "/app/OldData/json_exports/harvest_reports.json", "OldData/json_exports/harvest_reports.json"]
 
-        with open("/app/OldData/json_exports/harvest_reports.json", "r") as f:
-            harvest_data = json.load(f)
-        print(f"  harvest_reports.json: {len(harvest_data)} records")
+        history_data = None
+        for path in history_paths:
+            try:
+                with open(path, "r") as f:
+                    history_data = json.load(f)
+                print(f"  Loaded block_history_comp.json from {path}: {len(history_data)} records")
+                break
+            except FileNotFoundError:
+                continue
+        if history_data is None:
+            raise FileNotFoundError(f"Could not find block_history_comp.json in any of: {history_paths}")
+
+        harvest_data = None
+        for path in harvest_paths:
+            try:
+                with open(path, "r") as f:
+                    harvest_data = json.load(f)
+                print(f"  Loaded harvest_reports.json from {path}: {len(harvest_data)} records")
+                break
+            except FileNotFoundError:
+                continue
+        if harvest_data is None:
+            raise FileNotFoundError(f"Could not find harvest_reports.json in any of: {harvest_paths}")
 
         # Migrate archives
         archives_created = await migration.migrate_block_archives(history_data)
@@ -610,7 +640,7 @@ async def main():
         print("=" * 60)
         print(f"Block Archives: {migration.stats['archives_created']} created, {migration.stats['archives_skipped']} skipped")
         print(f"Block Harvests: {migration.stats['harvests_created']} created, {migration.stats['harvests_skipped']} skipped")
-        print(f"\nReview OldData/unmapped_blocks.json for manual decisions.")
+        print(f"\nReview /app/unmapped_blocks.json for manual decisions.")
 
     finally:
         await migration.close()
