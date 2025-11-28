@@ -63,6 +63,7 @@ def normalize_block_code(old_code: str) -> str:
     Examples:
         A-01-001 → A01
         A-43-1 → A43
+        A-01 → A01 (no season suffix)
         LW-54 → LW54
         AG-06-001 → AG06
         KHZ-34-1 → KHZ34
@@ -78,18 +79,20 @@ def normalize_block_code(old_code: str) -> str:
         if match:
             return f"SNH{match.group(1)}"
 
-    # Remove season suffix (-001, -002, -1, etc.)
-    # Pattern: Remove trailing -\d+ at the end
-    code = re.sub(r"-\d{1,3}$", "", code)
+    # Split by hyphen to analyze segments
+    parts = code.split("-")
 
-    # Remove hyphens between letters and numbers
-    # A-01 → A01, LW-54 → LW54, KHZ-34 → KHZ34
-    code = re.sub(r"([A-Za-z]+)-(\d+)", r"\1\2", code)
+    # If we have 3+ segments like "A-01-001", remove the last (season) segment
+    # If we have 2 segments like "A-01", keep both (it's the block code)
+    # If we have 1 segment, keep it as is
+    if len(parts) >= 3:
+        # Remove last segment (season suffix like -001, -1, etc.)
+        parts = parts[:-1]
 
-    # Remove any remaining hyphens
-    code = code.replace("-", "")
+    # Join and remove hyphens
+    code = "".join(parts)
 
-    # Remove leading zeros from numbers
+    # Remove leading zeros from numbers and format consistently
     # A01 stays A01, but ensure consistent formatting
     match = re.match(r"([A-Za-z]+)(\d+)", code)
     if match:
