@@ -394,8 +394,8 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
           <SummaryCard>
             <SummaryLabel>Avg Efficiency</SummaryLabel>
             <SummaryValue>
-              {history.averageEfficiencyPercent != null
-                ? history.averageEfficiencyPercent.toFixed(1)
+              {history.statistics?.averageYieldEfficiency != null
+                ? history.statistics.averageYieldEfficiency.toFixed(1)
                 : '0.0'}
               %
             </SummaryValue>
@@ -405,7 +405,9 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
           <SummaryCard>
             <SummaryLabel>Avg Duration</SummaryLabel>
             <SummaryValue>
-              {history.averageDurationDays != null ? Math.round(history.averageDurationDays) : 0}
+              {history.statistics?.averageCycleDuration != null
+                ? Math.round(history.statistics.averageCycleDuration)
+                : 0}
             </SummaryValue>
             <SummarySubtext>days per cycle</SummarySubtext>
           </SummaryCard>
@@ -413,7 +415,9 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
           <SummaryCard>
             <SummaryLabel>Total Yield</SummaryLabel>
             <SummaryValue>
-              {history.totalYieldKg != null ? history.totalYieldKg.toFixed(1) : '0.0'}
+              {history.statistics?.totalYieldKg != null
+                ? history.statistics.totalYieldKg.toFixed(1)
+                : '0.0'}
             </SummaryValue>
             <SummarySubtext>kg harvested</SummarySubtext>
           </SummaryCard>

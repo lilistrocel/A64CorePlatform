@@ -338,15 +338,38 @@ export interface BlockArchive {
 export interface BlockCycleHistory {
   blockId: string;
   totalCycles: number;
-  averageEfficiencyPercent: number;
-  averageDurationDays: number;
-  totalYieldKg: number;
-  bestCycle?: BlockArchive;
-  worstCycle?: BlockArchive;
-  cropsGrown: {
-    [cropName: string]: number;
+  statistics?: {
+    averageYieldEfficiency: number;
+    averageCycleDuration: number;
+    totalYieldKg: number;
+    bestCycle?: {
+      archiveId: string;
+      cropName: string;
+      yieldEfficiency: number;
+      plantedDate: string;
+    };
+    worstCycle?: {
+      archiveId: string;
+      cropName: string;
+      yieldEfficiency: number;
+      plantedDate: string;
+    };
   };
-  recentCycles: BlockArchive[];
+  cropsGrown?: {
+    [cropName: string]: {
+      count: number;
+      totalYield: number;
+      avgEfficiency: number;
+    };
+  };
+  recentCycles?: Array<{
+    archiveId: string;
+    cropName: string;
+    plantedDate: string;
+    cycleDuration: number;
+    yieldEfficiency: number;
+    actualYieldKg: number;
+  }>;
 }
 
 // ============================================================================
