@@ -73,6 +73,18 @@ def normalize_block_code(old_code: str) -> str:
         SNH.685 - 17478-1 → SNH.685 - 17478 (Silal special case)
         S.NHY 428-2 →  S.NHY 428 (Silal special case, note leading space)
     """
+    # Check for Silal patterns BEFORE stripping (to preserve leading spaces)
+    # S.NHY has a leading space in the database!
+    silal_patterns_preserve_space = [
+        r"^(\s*S\.NHY\s+\d+)(-\d+)?$",           # S.NHY 428 or S.NHY 428-2 (note leading space!)
+    ]
+
+    for pattern in silal_patterns_preserve_space:
+        match = re.match(pattern, old_code)
+        if match:
+            # Return the base name (group 1), preserving format including leading space
+            return match.group(1)
+
     code = old_code.strip()
 
     # Special case: Silal Upgrade Farm codes with long IDs
@@ -82,7 +94,6 @@ def normalize_block_code(old_code: str) -> str:
         r"^(S\.NH\s+\d+\s+-\s+\d+)(-\d+)?$",     # S.NH 720 - 16457 or S.NH 720 - 16457-004
         r"^(S\.GH\s+\d+\s+-\s+\d+)(-\d+)?$",     # S.GH 708 - 16458 or S.GH 708 - 16458-003
         r"^(SNH\.\d+\s+-\s+\d+)(-\d+)?$",        # SNH.685 - 17478 or SNH.685 - 17478-1
-        r"^(\s*S\.NHY\s+\d+)(-\d+)?$",           # S.NHY 428 or S.NHY 428-2 (note possible leading space)
     ]
 
     for pattern in silal_patterns:
