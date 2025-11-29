@@ -1,16 +1,22 @@
 /**
  * CreateFarmModal Component
  *
- * Modal dialog for creating a new farm.
+ * Modal dialog for creating a new farm with optional geo-fencing boundary.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
+import maplibregl from 'maplibre-gl';
 import { farmApi } from '../../services/farmApi';
-import type { CreateFarmFormData, Manager } from '../../types/farm';
+import type { CreateFarmFormData, Manager, GeoJSONPolygon, FarmBoundary } from '../../types/farm';
+import { useMapDrawing } from '../../hooks/map/useMapDrawing';
+
+// Lazy load map components for better performance
+const MapContainer = lazy(() => import('../map/MapContainer').then(m => ({ default: m.MapContainer })));
+const DrawingControls = lazy(() => import('../map/DrawingControls').then(m => ({ default: m.DrawingControls })));
 
 // ============================================================================
 // VALIDATION SCHEMA
@@ -58,7 +64,7 @@ const Modal = styled.div`
   background: white;
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  max-width: 600px;
+  max-width: 800px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
@@ -195,6 +201,61 @@ const CheckboxLabel = styled.div`
   color: #212121;
 `;
 
+// Map Section Styles
+const MapSection = styled.div`
+  margin-top: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+const MapToggleButton = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  width: 100%;
+  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  border-radius: 8px;
+  background: ${({ $active }) => ($active ? '#EFF6FF' : 'white')};
+  color: ${({ $active }) => ($active ? '#3B82F6' : '#374151')};
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? '#DBEAFE' : '#f5f5f5')};
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+`;
+
+const MapLoadingFallback = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 14px;
+`;
+
+const MapHint = styled.p`
+  font-size: 12px;
+  color: #6B7280;
+  margin: 8px 0 0 0;
+`;
+
+const MapIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+    <line x1="8" y1="2" x2="8" y2="18" />
+    <line x1="16" y1="6" x2="16" y2="22" />
+  </svg>
+);
+
 const ModalFooter = styled.div`
   padding: 24px;
   border-top: 1px solid #e0e0e0;
@@ -248,17 +309,37 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
   const [loadingManagers, setLoadingManagers] = useState(false);
   const [managersError, setManagersError] = useState<string | null>(null);
 
+  // Map-related state
+  const [showMap, setShowMap] = useState(false);
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
+  const { polygon, areaHectares, setPolygon, clearPolygon, getBoundary } = useMapDrawing();
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    watch,
   } = useForm<CreateFarmFormData>({
     resolver: zodResolver(farmSchema),
     defaultValues: {
       isActive: true,
     },
   });
+
+  // Watch totalArea to sync with polygon
+  const watchedTotalArea = watch('totalArea');
+
+  // Handle polygon change from drawing controls
+  const handlePolygonChange = useCallback((newPolygon: GeoJSONPolygon | null, areaSquareMeters: number) => {
+    setPolygon(newPolygon, areaSquareMeters);
+    // Auto-update totalArea if polygon is drawn
+    if (newPolygon && areaSquareMeters > 0) {
+      const hectares = areaSquareMeters / 10000;
+      setValue('totalArea', Number(hectares.toFixed(2)));
+    }
+  }, [setPolygon, setValue]);
 
   // Fetch managers when modal opens
   useEffect(() => {
@@ -289,6 +370,9 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
     try {
       setSubmitting(true);
 
+      // Get boundary if polygon was drawn
+      const boundary = getBoundary();
+
       await farmApi.createFarm({
         name: data.name,
         owner: data.owner,
@@ -301,9 +385,13 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
         numberOfStaff: data.numberOfStaff,
         managerId: data.managerId,
         isActive: data.isActive,
+        boundary: boundary || undefined,
       });
 
+      // Reset form and map state
       reset();
+      clearPolygon();
+      setShowMap(false);
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -317,6 +405,8 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
   const handleClose = () => {
     if (!submitting) {
       reset();
+      clearPolygon();
+      setShowMap(false);
       onClose();
     }
   };
@@ -404,6 +494,43 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
                 {...register('country')}
               />
               {errors.country && <ErrorText>{errors.country.message}</ErrorText>}
+            </FormGroup>
+
+            {/* Map Boundary Section */}
+            <FormGroup>
+              <Label>Farm Boundary (Optional)</Label>
+              <MapToggleButton
+                type="button"
+                $active={showMap}
+                onClick={() => setShowMap(!showMap)}
+                disabled={submitting}
+              >
+                <MapIcon />
+                {showMap ? 'Hide Map' : 'Draw Farm Boundary on Map'}
+              </MapToggleButton>
+
+              {showMap && (
+                <MapSection>
+                  <Suspense fallback={<MapLoadingFallback>Loading map...</MapLoadingFallback>}>
+                    <MapContainer
+                      height="400px"
+                      onMapRef={setMapInstance}
+                      showFullscreen={true}
+                    >
+                      <DrawingControls
+                        map={mapInstance}
+                        onPolygonChange={handlePolygonChange}
+                        disabled={submitting}
+                      />
+                    </MapContainer>
+                  </Suspense>
+                </MapSection>
+              )}
+              <MapHint>
+                {polygon
+                  ? `Boundary drawn: ${areaHectares.toFixed(2)} hectares`
+                  : 'You can optionally draw the farm boundary on a satellite map'}
+              </MapHint>
             </FormGroup>
 
             <GridRow>

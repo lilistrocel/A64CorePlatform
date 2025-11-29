@@ -5,7 +5,7 @@ Represents a physical farm location.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Literal
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
@@ -17,6 +17,22 @@ class FarmLocation(BaseModel):
     address: Optional[str] = Field(None, description="Physical address")
 
 
+class GeoJSONPolygon(BaseModel):
+    """GeoJSON Polygon format for geo-fencing boundaries"""
+    type: Literal["Polygon"] = Field("Polygon", description="GeoJSON type")
+    coordinates: List[List[List[float]]] = Field(
+        ...,
+        description="Array of linear rings. First ring is exterior, rest are holes. Each ring is array of [lng, lat] positions"
+    )
+
+
+class FarmBoundary(BaseModel):
+    """Farm boundary with metadata for geo-fencing"""
+    geometry: GeoJSONPolygon = Field(..., description="GeoJSON polygon geometry")
+    area: Optional[float] = Field(None, ge=0, description="Calculated area in square meters")
+    center: Optional[FarmLocation] = Field(None, description="Centroid of the polygon")
+
+
 class FarmBase(BaseModel):
     """Base farm fields"""
     name: str = Field(..., min_length=1, max_length=200, description="Farm name")
@@ -26,6 +42,7 @@ class FarmBase(BaseModel):
     totalArea: Optional[float] = Field(None, gt=0, description="Total farm area")
     areaUnit: str = Field("hectares", description="Area unit (hectares, acres)")
     numberOfStaff: Optional[int] = Field(None, ge=0, description="Number of staff members")
+    boundary: Optional[FarmBoundary] = Field(None, description="Geo-fence polygon boundary for map visualization")
 
 
 class FarmCreate(FarmBase):
@@ -43,6 +60,7 @@ class FarmUpdate(BaseModel):
     areaUnit: Optional[str] = None
     numberOfStaff: Optional[int] = Field(None, ge=0)
     isActive: Optional[bool] = None
+    boundary: Optional[FarmBoundary] = Field(None, description="Geo-fence polygon boundary")
 
 
 class Farm(FarmBase):
@@ -78,6 +96,20 @@ class Farm(FarmBase):
                 "managerId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "managerEmail": "manager@example.com",
                 "isActive": True,
+                "boundary": {
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [-74.0065, 40.7125],
+                            [-74.0055, 40.7125],
+                            [-74.0055, 40.7135],
+                            [-74.0065, 40.7135],
+                            [-74.0065, 40.7125]
+                        ]]
+                    },
+                    "area": 50500,
+                    "center": {"latitude": 40.713, "longitude": -74.006}
+                },
                 "createdAt": "2025-01-15T10:00:00Z",
                 "updatedAt": "2025-01-15T10:00:00Z"
             }

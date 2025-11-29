@@ -10,9 +10,11 @@ import styled from 'styled-components';
 import { BlockGrid } from './BlockGrid';
 import { CreateBlockModal } from './CreateBlockModal';
 import { EditBlockModal } from './EditBlockModal';
+import { EditFarmBoundaryModal } from './EditFarmBoundaryModal';
 import { FarmHistoryTab } from './FarmHistoryTab';
+import { FarmMapView } from './FarmMapView';
 import { farmApi } from '../../services/farmApi';
-import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate } from '../../types/farm';
+import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate, FarmUpdate } from '../../types/farm';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -251,7 +253,7 @@ const InfoValue = styled.span`
 // COMPONENT
 // ============================================================================
 
-type TabType = 'overview' | 'blocks' | 'plantings' | 'statistics' | 'history';
+type TabType = 'overview' | 'blocks' | 'map' | 'plantings' | 'statistics' | 'history';
 
 export function FarmDetail() {
   const { farmId } = useParams<{ farmId: string }>();
@@ -265,6 +267,7 @@ export function FarmDetail() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
+  const [showBoundaryModal, setShowBoundaryModal] = useState(false);
 
   useEffect(() => {
     if (farmId) {
@@ -335,6 +338,17 @@ export function FarmDetail() {
     } catch (err) {
       alert('Failed to delete block. Please try again.');
       console.error('Error deleting block:', err);
+    }
+  };
+
+  const handleUpdateFarmBoundary = async (farmIdToUpdate: string, data: FarmUpdate) => {
+    try {
+      await farmApi.updateFarm(farmIdToUpdate, data);
+      await loadFarmData(); // Reload to get updated data
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update farm boundary';
+      alert(errorMessage);
+      throw err; // Re-throw to let modal handle it
     }
   };
 
@@ -425,6 +439,9 @@ export function FarmDetail() {
           <Tab $active={activeTab === 'blocks'} onClick={() => setActiveTab('blocks')}>
             Blocks ({summary.totalBlocks})
           </Tab>
+          <Tab $active={activeTab === 'map'} onClick={() => setActiveTab('map')}>
+            Map
+          </Tab>
           <Tab $active={activeTab === 'plantings'} onClick={() => setActiveTab('plantings')}>
             Plantings ({summary.activePlantings})
           </Tab>
@@ -501,6 +518,20 @@ export function FarmDetail() {
             />
           )}
 
+          {activeTab === 'map' && (
+            <FarmMapView
+              farm={farm}
+              blocks={blocks}
+              onBlockClick={(block) => {
+                // Navigate to blocks tab and highlight the block
+                setActiveTab('blocks');
+                setEditingBlock(block);
+              }}
+              onEditFarmBoundary={() => setShowBoundaryModal(true)}
+              height="600px"
+            />
+          )}
+
           {activeTab === 'plantings' && (
             <div>Plantings view - Coming soon</div>
           )}
@@ -519,6 +550,8 @@ export function FarmDetail() {
       {showCreateModal && farmId && (
         <CreateBlockModal
           farmId={farmId}
+          farmBoundary={farm?.boundary}
+          farmLocation={farm?.location}
           onClose={() => setShowCreateModal(false)}
           onCreate={handleCreateBlock}
         />
@@ -529,8 +562,19 @@ export function FarmDetail() {
         <EditBlockModal
           block={editingBlock}
           farmId={farmId}
+          farmBoundary={farm?.boundary}
+          farmLocation={farm?.location}
           onClose={() => setEditingBlock(null)}
           onUpdate={handleUpdateBlock}
+        />
+      )}
+
+      {/* Edit Farm Boundary Modal */}
+      {showBoundaryModal && farm && (
+        <EditFarmBoundaryModal
+          farm={farm}
+          onClose={() => setShowBoundaryModal(false)}
+          onUpdate={handleUpdateFarmBoundary}
         />
       )}
     </Container>

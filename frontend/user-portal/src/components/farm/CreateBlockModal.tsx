@@ -1,12 +1,18 @@
 /**
  * CreateBlockModal Component
  *
- * Modal for creating a new block in a farm.
+ * Modal for creating a new block in a farm with optional geo-fencing boundary.
  */
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import styled from 'styled-components';
-import type { BlockCreate } from '../../types/farm';
+import maplibregl from 'maplibre-gl';
+import type { BlockCreate, GeoJSONPolygon, FarmBoundary, FarmLocation } from '../../types/farm';
+import { useMapDrawing } from '../../hooks/map/useMapDrawing';
+
+// Lazy load map components for better performance
+const MapContainer = lazy(() => import('../map/MapContainer').then(m => ({ default: m.MapContainer })));
+const DrawingControls = lazy(() => import('../map/DrawingControls').then(m => ({ default: m.DrawingControls })));
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -29,7 +35,7 @@ const Modal = styled.div`
   background: white;
   border-radius: 12px;
   padding: 32px;
-  max-width: 500px;
+  max-width: 700px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
@@ -88,14 +94,13 @@ const Input = styled.input`
   }
 `;
 
-const Textarea = styled.textarea`
+const Select = styled.select`
   padding: 12px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   font-size: 14px;
-  min-height: 80px;
-  resize: vertical;
-  font-family: inherit;
+  background: white;
+  cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
   &:focus {
@@ -161,17 +166,76 @@ const HelpText = styled.p`
   margin: 0;
 `;
 
+// Map Section Styles
+const MapSection = styled.div`
+  margin-top: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+const MapToggleButton = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  width: 100%;
+  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  border-radius: 8px;
+  background: ${({ $active }) => ($active ? '#EFF6FF' : 'white')};
+  color: ${({ $active }) => ($active ? '#3B82F6' : '#374151')};
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? '#DBEAFE' : '#f5f5f5')};
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+`;
+
+const MapLoadingFallback = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 350px;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 14px;
+`;
+
+const MapHint = styled.p`
+  font-size: 12px;
+  color: #6B7280;
+  margin: 8px 0 0 0;
+`;
+
+const MapIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+    <line x1="8" y1="2" x2="8" y2="18" />
+    <line x1="16" y1="6" x2="16" y2="22" />
+  </svg>
+);
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
 interface CreateBlockModalProps {
   farmId: string;
+  /** Farm boundary to center map on */
+  farmBoundary?: FarmBoundary | null;
+  /** Farm location as fallback if no boundary */
+  farmLocation?: FarmLocation | null;
   onClose: () => void;
   onCreate: (data: Omit<BlockCreate, 'farmId'>) => Promise<void>;
 }
 
-export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModalProps) {
+export function CreateBlockModal({ farmId, farmBoundary, farmLocation, onClose, onCreate }: CreateBlockModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     blockType: 'greenhouse' as const,
@@ -180,6 +244,41 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Map-related state
+  const [showMap, setShowMap] = useState(false);
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
+  const { polygon, areaHectares, setPolygon, clearPolygon, getBoundary } = useMapDrawing();
+
+  // Calculate initial map center from farm boundary or location
+  const initialMapCenter = useMemo(() => {
+    // Priority 1: Farm boundary center
+    if (farmBoundary?.center) {
+      return {
+        latitude: farmBoundary.center.latitude,
+        longitude: farmBoundary.center.longitude,
+      };
+    }
+    // Priority 2: Farm location coordinates
+    if (farmLocation?.coordinates) {
+      return {
+        latitude: farmLocation.coordinates.latitude,
+        longitude: farmLocation.coordinates.longitude,
+      };
+    }
+    // Default: undefined (MapContainer will use its default)
+    return undefined;
+  }, [farmBoundary, farmLocation]);
+
+  // Handle polygon change from drawing controls
+  const handlePolygonChange = useCallback((newPolygon: GeoJSONPolygon | null, areaSquareMeters: number) => {
+    setPolygon(newPolygon, areaSquareMeters);
+    // Auto-update area if polygon is drawn
+    if (newPolygon && areaSquareMeters > 0) {
+      const hectares = areaSquareMeters / 10000;
+      setFormData(prev => ({ ...prev, area: hectares.toFixed(2) }));
+    }
+  }, [setPolygon]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,13 +306,22 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
       setLoading(true);
       // User enters area in hectares, convert to sqm for storage
       const areaInSqm = area * 10000;
+
+      // Get boundary if polygon was drawn
+      const boundary = getBoundary();
+
       await onCreate({
         name: formData.name.trim(),
         blockType: formData.blockType,
         area: areaInSqm,
         areaUnit: 'sqm',
         maxPlants,
+        boundary: boundary || undefined,
       });
+
+      // Reset state
+      clearPolygon();
+      setShowMap(false);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create block');
@@ -223,7 +331,17 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !loading) {
+      clearPolygon();
+      setShowMap(false);
+      onClose();
+    }
+  };
+
+  const handleClose = () => {
+    if (!loading) {
+      clearPolygon();
+      setShowMap(false);
       onClose();
     }
   };
@@ -247,6 +365,7 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., Greenhouse Block A"
+              disabled={loading}
               required
             />
             <HelpText>Choose a unique name for easy identification</HelpText>
@@ -254,11 +373,11 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
 
           <FormGroup>
             <Label htmlFor="blockType">Block Type *</Label>
-            <Input
-              as="select"
+            <Select
               id="blockType"
               value={formData.blockType}
               onChange={(e) => setFormData({ ...formData, blockType: e.target.value as any })}
+              disabled={loading}
               required
             >
               <option value="greenhouse">Greenhouse</option>
@@ -269,8 +388,51 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
               <option value="containerfarm">Container Farm</option>
               <option value="hybrid">Hybrid</option>
               <option value="special">Special</option>
-            </Input>
+            </Select>
             <HelpText>Type of cultivation system</HelpText>
+          </FormGroup>
+
+          {/* Map Boundary Section */}
+          <FormGroup>
+            <Label>Block Boundary (Optional)</Label>
+            <MapToggleButton
+              type="button"
+              $active={showMap}
+              onClick={() => setShowMap(!showMap)}
+              disabled={loading}
+            >
+              <MapIcon />
+              {showMap ? 'Hide Map' : 'Draw Block Boundary on Map'}
+            </MapToggleButton>
+
+            {showMap && (
+              <MapSection>
+                <Suspense fallback={<MapLoadingFallback>Loading map...</MapLoadingFallback>}>
+                  <MapContainer
+                    height="350px"
+                    onMapRef={setMapInstance}
+                    showFullscreen={true}
+                    showSearch={true}
+                    showStyleToggle={true}
+                    initialCenter={initialMapCenter}
+                    initialZoom={initialMapCenter ? 16 : undefined}
+                  >
+                    <DrawingControls
+                      map={mapInstance}
+                      onPolygonChange={handlePolygonChange}
+                      disabled={loading}
+                      boundaryType="block"
+                      referenceBoundary={farmBoundary}
+                    />
+                  </MapContainer>
+                </Suspense>
+              </MapSection>
+            )}
+            <MapHint>
+              {polygon
+                ? `Boundary drawn: ${areaHectares.toFixed(2)} hectares`
+                : 'You can optionally draw the block boundary on a map'}
+            </MapHint>
           </FormGroup>
 
           <FormGroup>
@@ -278,11 +440,12 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
             <Input
               id="area"
               type="number"
-              step="0.1"
-              min="0.1"
+              step="0.01"
+              min="0.01"
               value={formData.area}
               onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-              placeholder="e.g., 2.5"
+              placeholder="e.g., 0.5"
+              disabled={loading}
               required
             />
             <HelpText>Total area of the block in hectares</HelpText>
@@ -297,13 +460,14 @@ export function CreateBlockModal({ farmId, onClose, onCreate }: CreateBlockModal
               value={formData.maxPlants}
               onChange={(e) => setFormData({ ...formData, maxPlants: e.target.value })}
               placeholder="e.g., 100"
+              disabled={loading}
               required
             />
             <HelpText>Maximum number of plants this block can accommodate</HelpText>
           </FormGroup>
 
           <ButtonGroup>
-            <Button type="button" $variant="secondary" onClick={onClose} disabled={loading}>
+            <Button type="button" $variant="secondary" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" $variant="primary" disabled={loading}>

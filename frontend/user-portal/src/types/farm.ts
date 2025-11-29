@@ -14,6 +14,43 @@ export type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvest
 export type PlantingStatus = 'planned' | 'planted' | 'harvesting' | 'completed';
 
 // ============================================================================
+// GEO-FENCING TYPES
+// ============================================================================
+
+/**
+ * GeoJSON Polygon format for geo-fencing boundaries
+ * Coordinates are in [longitude, latitude] order per GeoJSON spec
+ */
+export interface GeoJSONPolygon {
+  type: 'Polygon';
+  coordinates: number[][][]; // [[[lng, lat], [lng, lat], ...]]
+}
+
+/**
+ * Farm boundary with metadata for geo-fencing
+ */
+export interface FarmBoundary {
+  geometry: GeoJSONPolygon;
+  area?: number; // Square meters (auto-calculated)
+  center?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
+/**
+ * Block boundary with metadata for geo-fencing
+ */
+export interface BlockBoundary {
+  geometry: GeoJSONPolygon;
+  area?: number; // Square meters (auto-calculated)
+  center?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
+// ============================================================================
 // FARM TYPES
 // ============================================================================
 
@@ -37,6 +74,7 @@ export interface Farm {
   managerId: string;
   isActive: boolean;
   metadata?: Record<string, unknown>;
+  boundary?: FarmBoundary; // Geo-fence polygon boundary
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +88,7 @@ export interface FarmCreate {
   managerId: string;
   isActive?: boolean;
   metadata?: Record<string, unknown>;
+  boundary?: FarmBoundary; // Optional geo-fence polygon
 }
 
 export interface FarmUpdate {
@@ -61,6 +100,7 @@ export interface FarmUpdate {
   managerId?: string;
   isActive?: boolean;
   metadata?: Record<string, unknown>;
+  boundary?: FarmBoundary; // Optional geo-fence polygon
 }
 
 export interface FarmSummary {
@@ -94,6 +134,7 @@ export interface Block {
   maxPlants: number;
   currentPlantingId?: string;
   metadata?: Record<string, unknown>;
+  boundary?: BlockBoundary; // Geo-fence polygon boundary
   createdAt: string;
   updatedAt: string;
 
@@ -127,6 +168,7 @@ export interface BlockCreate {
   areaUnit?: string;
   maxPlants: number;
   metadata?: Record<string, unknown>;
+  boundary?: BlockBoundary; // Optional geo-fence polygon
 }
 
 export interface BlockUpdate {
@@ -135,6 +177,7 @@ export interface BlockUpdate {
   areaUnit?: string;
   maxPlants?: number;
   metadata?: Record<string, unknown>;
+  boundary?: BlockBoundary; // Optional geo-fence polygon
 }
 
 export interface BlockSummary {

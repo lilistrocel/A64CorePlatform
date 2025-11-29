@@ -10,6 +10,9 @@ from typing import Optional, List, Literal
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
+# Import shared GeoJSON types from farm module
+from .farm import GeoJSONPolygon
+
 
 class BlockStatus(str, Enum):
     """Block status lifecycle"""
@@ -39,6 +42,13 @@ class BlockLocation(BaseModel):
     """GPS coordinates within farm"""
     latitude: float = Field(..., ge=-90, le=90, description="Latitude")
     longitude: float = Field(..., ge=-180, le=180, description="Longitude")
+
+
+class BlockBoundary(BaseModel):
+    """Block boundary with metadata for geo-fencing"""
+    geometry: GeoJSONPolygon = Field(..., description="GeoJSON polygon geometry")
+    area: Optional[float] = Field(None, ge=0, description="Calculated area in square meters")
+    center: Optional[BlockLocation] = Field(None, description="Centroid of the polygon")
 
 
 class StatusChange(BaseModel):
@@ -136,6 +146,7 @@ class BlockBase(BaseModel):
     location: Optional[BlockLocation] = Field(None, description="GPS coordinates within farm")
     area: Optional[float] = Field(None, gt=0, description="Block area")
     areaUnit: str = Field("sqm", description="Area unit (sqm, hectares, acres)")
+    boundary: Optional[BlockBoundary] = Field(None, description="Geo-fence polygon boundary for map visualization")
 
 
 class BlockCreate(BlockBase):
@@ -157,6 +168,7 @@ class BlockUpdate(BaseModel):
     area: Optional[float] = Field(None, gt=0)
     areaUnit: Optional[str] = None
     actualPlantCount: Optional[int] = Field(None, ge=0)
+    boundary: Optional[BlockBoundary] = Field(None, description="Geo-fence polygon boundary")
 
 
 class BlockStatusUpdate(BaseModel):
@@ -233,6 +245,20 @@ class Block(BlockBase):
                 },
                 "area": 500.0,
                 "areaUnit": "sqm",
+                "boundary": {
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [-74.0062, 40.7126],
+                            [-74.0058, 40.7126],
+                            [-74.0058, 40.7130],
+                            [-74.0062, 40.7130],
+                            [-74.0062, 40.7126]
+                        ]]
+                    },
+                    "area": 500,
+                    "center": {"latitude": 40.7128, "longitude": -74.006}
+                },
                 "state": "growing",
                 "targetCrop": "plant-uuid-here",
                 "targetCropName": "Tomato",
