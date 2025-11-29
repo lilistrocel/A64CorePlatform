@@ -353,6 +353,34 @@ Response
 - ✅ DO: Pure functions, no side effects, reusable
 - ❌ DON'T: Business logic, state management
 
+#### Farm Module Utilities
+**Location:** `src/modules/farm_manager/utils/`
+
+**Components:**
+- **geospatial.py** - Geographic and boundary operations
+  - `calculate_polygon_area()` - Calculate area from GeoJSON coordinates (sq meters)
+  - `validate_boundary()` - Validate GeoJSON Polygon format
+  - `point_in_polygon()` - Ray-casting point-in-polygon test
+  - `polygon_contains_polygon()` - Check if one polygon contains another
+  - `get_polygon_center()` - Calculate polygon centroid
+  - `get_polygon_bounds()` - Get bounding box (min/max lat/lng)
+
+**Usage:**
+```python
+from src.modules.farm_manager.utils import (
+    calculate_polygon_area,
+    validate_boundary,
+    polygon_contains_polygon
+)
+
+# Validate block boundary fits within farm
+if farm.boundary and block_boundary:
+    is_valid = polygon_contains_polygon(
+        farm.boundary["coordinates"][0],
+        block_boundary["coordinates"][0]
+    )
+```
+
 ---
 
 ## Data Flow

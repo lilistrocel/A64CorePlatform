@@ -1069,6 +1069,7 @@ POST /api/v1/farm/farms
 - `totalArea` (float, optional): Total farm area (must be > 0)
 - `areaUnit` (string, default: "hectares"): Area unit (hectares, acres, sqm)
 - `numberOfStaff` (integer, optional): Number of staff members (must be >= 0)
+- `boundary` (object, optional): GeoJSON Polygon defining farm boundaries (see Geofencing section)
 
 **Response:** 201 Created
 
@@ -1641,9 +1642,21 @@ POST /api/v1/farm/farms/{farmId}/blocks
   "name": "Greenhouse Block A1",
   "blockType": "greenhouse",
   "area": 500.0,
-  "areaUnit": "sqm"
+  "areaUnit": "sqm",
+  "boundary": {
+    "type": "Polygon",
+    "coordinates": [[[lng1, lat1], [lng2, lat2], [lng3, lat3], [lng1, lat1]]]
+  }
 }
 ```
+
+**Field Descriptions:**
+- `name` (string, required): Block name
+- `blockType` (string, required): Type of block (greenhouse, open_field, etc.)
+- `area` (float, optional): Block area
+- `areaUnit` (string, default: "sqm"): Area unit
+- `boundary` (object, optional): GeoJSON Polygon defining block boundaries (see Geofencing section)
+
 **Response:** 201 Created
 ```json
 {
@@ -2692,6 +2705,121 @@ GET /api/v1/farm/farms/{farmId}/archives/efficiency-trends
   }
 }
 ```
+
+---
+
+### Geofencing (Boundary Management)
+
+The Farm Management Module supports geographic boundary management using GeoJSON Polygon format. Boundaries can be defined for both farms and blocks, enabling precise location tracking and area management.
+
+#### GeoJSON Polygon Format
+
+All boundary fields use the [GeoJSON Polygon](https://geojson.org/) specification:
+
+```json
+{
+  "type": "Polygon",
+  "coordinates": [
+    [
+      [longitude1, latitude1],
+      [longitude2, latitude2],
+      [longitude3, latitude3],
+      [longitude4, latitude4],
+      [longitude1, latitude1]
+    ]
+  ]
+}
+```
+
+**Important Notes:**
+- Coordinates are in `[longitude, latitude]` order (GeoJSON standard)
+- The first and last coordinates must be identical (closed polygon)
+- Minimum 4 coordinate pairs required (3 unique points + closing point)
+- Coordinates are decimal degrees (WGS84)
+
+#### Farm Boundary
+
+When creating or updating a farm, you can include a `boundary` field:
+
+```json
+{
+  "name": "Green Valley Farm",
+  "location": {
+    "latitude": 24.4539,
+    "longitude": 54.3773,
+    "address": "Al Ain, UAE"
+  },
+  "boundary": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [54.3770, 24.4535],
+        [54.3780, 24.4535],
+        [54.3780, 24.4545],
+        [54.3770, 24.4545],
+        [54.3770, 24.4535]
+      ]
+    ]
+  }
+}
+```
+
+#### Block Boundary
+
+Block boundaries are validated against the parent farm boundary:
+
+```json
+{
+  "name": "Greenhouse Block A1",
+  "blockType": "greenhouse",
+  "boundary": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [54.3772, 24.4537],
+        [54.3775, 24.4537],
+        [54.3775, 24.4540],
+        [54.3772, 24.4540],
+        [54.3772, 24.4537]
+      ]
+    ]
+  }
+}
+```
+
+**Block Boundary Validation:**
+- Block boundary must be completely within the farm boundary
+- Area is automatically calculated from the polygon
+- If farm has no boundary defined, block boundary is accepted without containment check
+
+#### Geospatial Utilities
+
+The backend provides several geospatial utility functions:
+
+| Function | Description |
+|----------|-------------|
+| `calculate_polygon_area()` | Calculate area in square meters from GeoJSON coordinates |
+| `validate_boundary()` | Validate boundary format and structure |
+| `point_in_polygon()` | Check if a point is inside a polygon |
+| `polygon_contains_polygon()` | Verify block boundaries fit within farm boundaries |
+| `get_polygon_center()` | Calculate the centroid of a polygon |
+| `get_polygon_bounds()` | Get the bounding box of a polygon |
+
+#### Frontend Integration
+
+The frontend provides Google Maps integration for drawing boundaries:
+
+- **MapContainer**: Google Maps wrapper component
+- **DrawingControls**: Polygon drawing and editing tools
+- **MapSearchBar**: Location search with Google Places autocomplete
+- **useMapDrawing**: React hook for drawing state management
+
+**Required Google APIs:**
+- Maps JavaScript API
+- Places API
+- Drawing Library
+
+**Environment Variable:** `VITE_GOOGLE_MAPS_API_KEY`
 
 ---
 

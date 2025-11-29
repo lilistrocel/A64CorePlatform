@@ -11,6 +11,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Geofencing Support for Farms and Blocks - 2025-11-29
 
+### Fixed
+
+#### Task Population & Yield Efficiency Fixes - 2025-11-28
+
+**Bug Fixes:**
+
+1. **Task Population for Non-Empty Blocks**
+   - **Problem:** Blocks migrated from OldData had states but no tasks (tasks are created on state transitions, but states were synced directly)
+   - **Solution:** Created migration script `scripts/migrations/populate_block_tasks.py`
+   - **Result:** 206 pending tasks created across 6 farms
+     - 6 planting tasks (PLANNED blocks)
+     - 133 harvest_readiness tasks (GROWING blocks)
+     - 67 daily_harvest tasks (HARVESTING blocks)
+
+2. **Yield Efficiency Calculation**
+   - **Problem:** Efficiency calculation included blocks without harvests, skewing results
+   - **Fix Location:** `src/modules/farm_manager/api/v1/dashboard.py:185-195`
+   - **Solution:** Filter to only include blocks with `actualYield > 0` before calculating average efficiency
+   - **Result:** Efficiency now accurately reflects only blocks with harvest data
+
+---
+
+#### Planting Task Generation & Operations Overview Fixes - 2025-11-21
+
+**Bug Fixes:**
+
+1. **Planting Task Not Generated**
+   - **Problem:** When blocks transitioned to "planned" state, no planting task was generated
+   - **Root Cause:** `calculate_expected_dates()` in `block_service_new.py` was not including "planted" in `expectedStatusChanges`
+   - **Fix Location:** `src/modules/farm_manager/services/block/block_service_new.py:113-120`
+   - **Solution:** Added `expected_dates["planted"] = planting_date` to include planted date in expected changes
+   - **Result:** Planting tasks now generate correctly when blocks enter PLANNED state
+
+2. **Operations Overview Showing 0 Tasks**
+   - **Problem:** Operations overview dashboard showed 0 tasks despite blocks having pending tasks
+   - **Root Cause:** Task query was filtering by `farmId` but tasks store `farm_id` (different field naming)
+   - **Fix Location:** `src/modules/farm_manager/api/v1/dashboard.py`
+   - **Solution:** Updated query to use correct field name
+   - **Result:** Operations overview now shows accurate task counts
+
+---
+
+### Added
+
+#### Geofencing Support for Farms and Blocks - 2025-11-29
+
 **Feature:** Google Maps integration for drawing and managing geographic boundaries for farms and blocks, enabling precise location tracking and area management.
 
 **Frontend Implementation (~2,500 lines):**
