@@ -9,6 +9,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Geofencing Support for Farms and Blocks - 2025-11-29
+
+**Feature:** Google Maps integration for drawing and managing geographic boundaries for farms and blocks, enabling precise location tracking and area management.
+
+**Frontend Implementation (~2,500 lines):**
+
+**New Components:**
+- **MapContainer.tsx** - Main Google Maps wrapper with initialization and configuration
+- **DrawingControls.tsx** - Polygon drawing tools with edit/delete capabilities
+- **MapSearchBar.tsx** - Location search with Google Places autocomplete
+- **EditFarmBoundaryModal.tsx** - Modal for editing existing farm boundaries
+- **FarmMapView.tsx** - Visualization component showing farm and block boundaries
+
+**New Configuration:**
+- **mapConfig.ts** - Google Maps configuration, styles, and default settings
+
+**New Hooks:**
+- **useMapDrawing.ts** - Reusable hook for map drawing logic and state management
+
+**Modified Components:**
+- **CreateFarmModal.tsx** - Added boundary drawing during farm creation
+- **CreateBlockModal.tsx** - Added boundary drawing with farm boundary validation
+- **EditBlockModal.tsx** - Added boundary editing capability
+- **FarmDetail.tsx** - Integrated map view for farm visualization
+
+**Backend Implementation (~300 lines):**
+
+**New Utilities (geospatial.py):**
+- `calculate_polygon_area()` - Calculate area from GeoJSON coordinates
+- `validate_boundary()` - Validate boundary format and structure
+- `point_in_polygon()` - Check if a point is inside a polygon
+- `polygon_contains_polygon()` - Verify block boundaries within farm boundaries
+- `get_polygon_center()` - Calculate centroid of a polygon
+- `get_polygon_bounds()` - Get bounding box of a polygon
+
+**Model Updates:**
+- **Farm model** - Added `boundary` field (GeoJSON Polygon type)
+- **Block model** - Added `boundary` field (GeoJSON Polygon type)
+
+**Dependencies Added:**
+- `@react-google-maps/api` - React wrapper for Google Maps
+- `@types/google.maps` - TypeScript definitions
+
+**Capabilities:**
+- Draw polygon boundaries on interactive Google Maps
+- Edit existing boundaries with vertex manipulation
+- Automatic area calculation from drawn polygons
+- Location search to center map on specific locations
+- Validation ensuring blocks fit within farm boundaries
+- Satellite and terrain view toggle
+- Custom map styling for visibility
+- Responsive design for all screen sizes
+
+**API Requirements:**
+- Google Maps JavaScript API
+- Google Places API
+- Environment variable: `VITE_GOOGLE_MAPS_API_KEY`
+
+---
+
 #### Farm Analytics System (Farm Management Module v1.9.0) - 2025-11-23
 
 **Feature:** Comprehensive farm-level analytics system that aggregates data from all blocks in a farm, providing insights into yield performance, state distribution, block comparisons, and historical trends.
