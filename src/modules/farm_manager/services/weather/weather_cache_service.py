@@ -75,8 +75,11 @@ class WeatherCacheService:
             # Index on farmId for fast lookups
             await collection.create_index("farmId", unique=True)
 
-            # Index on updatedAt for cleanup queries
-            await collection.create_index("updatedAt")
+            # Drop existing updatedAt index if it exists (to allow TTL index)
+            try:
+                await collection.drop_index("updatedAt_1")
+            except Exception:
+                pass  # Index doesn't exist, which is fine
 
             # TTL index to auto-expire old entries (2 hours - gives buffer beyond refresh)
             await collection.create_index(
@@ -209,7 +212,8 @@ class WeatherCacheService:
             List of farms with farmId, name, and coordinates
         """
         try:
-            farms, _ = await FarmRepository.get_all(skip=0, limit=1000, is_active=True)
+            farm_repo = FarmRepository()
+            farms, _ = await farm_repo.get_all(skip=0, limit=1000, is_active=True)
 
             farms_with_locations = []
             for farm in farms:
