@@ -14,8 +14,29 @@ import type { Farm, Block, BlockState } from '../../types/farm';
 import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../../config/mapConfig';
 
-// CARTO Voyager style - works well with MapLibre
-const MAPLIBRE_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+// Satellite imagery style using Esri World Imagery (free for non-commercial/limited use)
+const SATELLITE_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'esri-satellite': {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+      ],
+      tileSize: 256,
+      attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics'
+    }
+  },
+  layers: [
+    {
+      id: 'esri-satellite-layer',
+      type: 'raster',
+      source: 'esri-satellite',
+      minzoom: 0,
+      maxzoom: 22
+    }
+  ]
+};
 
 // ============================================================================
 // TYPES
@@ -359,7 +380,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: MAPLIBRE_STYLE_URL,
+      style: SATELLITE_STYLE,
       center: center,
       zoom: hasAnyBoundary ? 15 : DEFAULT_ZOOM,
       attributionControl: true,
@@ -455,7 +476,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           },
         });
 
-        // Block labels
+        // Block labels (white text with dark halo for satellite visibility)
         map.addLayer({
           id: 'block-labels',
           type: 'symbol',
@@ -467,8 +488,8 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
             'text-allow-overlap': false,
           },
           paint: {
-            'text-color': '#1f2937',
-            'text-halo-color': '#ffffff',
+            'text-color': '#ffffff',
+            'text-halo-color': '#000000',
             'text-halo-width': 2,
           },
         });
