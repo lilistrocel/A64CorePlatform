@@ -1,11 +1,28 @@
 /**
  * SolarLightCard Component
  *
- * Displays solar radiation, UV index, irradiance, and sun position data.
+ * Displays solar radiation, UV index, irradiance, sun position data,
+ * and calculated PAR/PPFD values for agricultural use.
  */
 
 import styled from 'styled-components';
 import type { SolarData } from '../../../types/farm';
+
+/**
+ * PAR Conversion Constants
+ *
+ * PAR (Photosynthetically Active Radiation) = 400-700nm wavelength
+ * PPFD (Photosynthetic Photon Flux Density) = photons in PAR range
+ *
+ * Conversion: PPFD (µmol/m²/s) = Solar Radiation (W/m²) × PAR_FRACTION × PHOTON_CONVERSION
+ *
+ * PAR_FRACTION: ~0.45 of total solar radiation is in PAR range (varies 0.41-0.48)
+ * PHOTON_CONVERSION: 4.57 µmol/J (energy to photon conversion for PAR wavelengths)
+ *
+ * Accuracy: ±10-15% under varying atmospheric conditions
+ */
+const PAR_FRACTION = 0.45; // Fraction of solar radiation in PAR range
+const PHOTON_CONVERSION = 4.57; // µmol photons per Joule
 
 const Card = styled.div`
   background: white;
@@ -144,6 +161,117 @@ const NoDataMessage = styled.div`
   font-size: 14px;
 `;
 
+const DualValueItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-bottom: 8px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .label {
+    font-size: 13px;
+    color: #616161;
+    margin-bottom: 6px;
+  }
+
+  .values {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .value-group {
+    display: flex;
+    flex-direction: column;
+
+    .value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #212121;
+    }
+
+    .unit-label {
+      font-size: 10px;
+      color: #9e9e9e;
+      text-transform: uppercase;
+    }
+  }
+
+  .par-value {
+    .value {
+      color: #16A34A;
+    }
+  }
+`;
+
+const EstimatedBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #9e9e9e;
+  margin-left: 4px;
+
+  &::before {
+    content: '~';
+  }
+`;
+
+const DLIHighlight = styled.div`
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border: 1px solid #A7F3D0;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+
+    .icon {
+      font-size: 18px;
+    }
+
+    .title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #065F46;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+
+    .value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #047857;
+    }
+
+    .unit {
+      font-size: 12px;
+      color: #059669;
+    }
+  }
+
+  .note {
+    font-size: 11px;
+    color: #6B7280;
+    margin-top: 6px;
+  }
+`;
+
 interface SolarLightCardProps {
   solar: SolarData;
 }
@@ -178,6 +306,37 @@ function formatAngle(value: number | undefined): string {
   return `${value.toFixed(1)}°`;
 }
 
+/**
+ * Convert solar radiation (W/m²) to PPFD (µmol/m²/s)
+ * Formula: PPFD = Solar Radiation × PAR_FRACTION × PHOTON_CONVERSION
+ */
+function solarToPPFD(solarRadiation: number | undefined): number | undefined {
+  if (solarRadiation === undefined || solarRadiation === null) return undefined;
+  return solarRadiation * PAR_FRACTION * PHOTON_CONVERSION;
+}
+
+function formatPPFD(value: number | undefined): string {
+  if (value === undefined || value === null) return 'N/A';
+  if (value < 1) return '0 µmol/m²/s';
+  return `${value.toFixed(0)} µmol/m²/s`;
+}
+
+/**
+ * Calculate Daily Light Integral (DLI) from average radiation and daylight hours
+ * DLI (mol/m²/day) = PPFD (µmol/m²/s) × daylight_hours × 3600 / 1,000,000
+ */
+function calculateDLI(avgRadiation: number | undefined, daylightHours: number = 12): number | undefined {
+  if (avgRadiation === undefined || avgRadiation === null) return undefined;
+  const ppfd = solarToPPFD(avgRadiation);
+  if (ppfd === undefined) return undefined;
+  return (ppfd * daylightHours * 3600) / 1000000;
+}
+
+function formatDLI(value: number | undefined): string {
+  if (value === undefined || value === null) return 'N/A';
+  return `${value.toFixed(1)} mol/m²/day`;
+}
+
 export function SolarLightCard({ solar }: SolarLightCardProps) {
   // Check if we have any meaningful data
   const hasRadiationData = solar.solarRadiation !== undefined || solar.ghi !== undefined;
@@ -188,6 +347,14 @@ export function SolarLightCard({ solar }: SolarLightCardProps) {
   const hasDownwardRadiation = solar.dswrfAvg !== undefined || solar.dlwrfAvg !== undefined;
 
   const hasAnyData = hasRadiationData || hasUVData || hasSunTimes || hasSunPosition || hasIrradianceData || hasDownwardRadiation;
+
+  // Calculate PAR/PPFD values
+  const currentPPFD = solarToPPFD(solar.solarRadiation);
+  const avgPPFD = solarToPPFD(solar.dswrfAvg);
+  const maxPPFD = solarToPPFD(solar.dswrfMax);
+
+  // Calculate DLI (assuming ~11 hours daylight for UAE region)
+  const dli = calculateDLI(solar.dswrfAvg, 11);
 
   if (!hasAnyData) {
     return (
@@ -228,16 +395,40 @@ export function SolarLightCard({ solar }: SolarLightCardProps) {
         </SunTimesRow>
       )}
 
+      {/* DLI Highlight - Important metric for agriculture */}
+      {dli !== undefined && dli > 0 && (
+        <DLIHighlight>
+          <div className="header">
+            <span className="icon">🌱</span>
+            <span className="title">Daily Light Integral (DLI)</span>
+          </div>
+          <div className="value-row">
+            <span className="value">{dli.toFixed(1)}</span>
+            <span className="unit">mol/m²/day</span>
+          </div>
+          <div className="note">Estimated from solar radiation (±10-15%)</div>
+        </DLIHighlight>
+      )}
+
       <SectionsGrid>
-        {/* Solar Radiation & UV */}
+        {/* Solar Radiation & PAR/PPFD */}
         {(hasRadiationData || hasUVData) && (
           <Section>
-            <h4>Solar Radiation</h4>
+            <h4>Current Light Levels</h4>
             {solar.solarRadiation !== undefined && (
-              <MetricItem>
-                <span className="label">Solar Radiation</span>
-                <span className="value">{formatRadiation(solar.solarRadiation)}</span>
-              </MetricItem>
+              <DualValueItem>
+                <span className="label">Solar Radiation / PPFD</span>
+                <div className="values">
+                  <div className="value-group">
+                    <span className="value">{formatRadiation(solar.solarRadiation)}</span>
+                    <span className="unit-label">Irradiance</span>
+                  </div>
+                  <div className="value-group par-value">
+                    <span className="value">{formatPPFD(currentPPFD)}<EstimatedBadge>est</EstimatedBadge></span>
+                    <span className="unit-label">PAR (PPFD)</span>
+                  </div>
+                </div>
+              </DualValueItem>
             )}
             {solar.uvIndex !== undefined && (
               <MetricItem>
@@ -294,33 +485,39 @@ export function SolarLightCard({ solar }: SolarLightCardProps) {
           </Section>
         )}
 
-        {/* Downward Radiation (from AgWeather) */}
+        {/* Daily PAR/PPFD (from AgWeather shortwave radiation) */}
         {hasDownwardRadiation && (
           <Section>
-            <h4>Downward Radiation</h4>
+            <h4>Daily PAR Estimates</h4>
             {solar.dswrfAvg !== undefined && (
-              <MetricItem>
-                <span className="label">Shortwave Avg</span>
-                <span className="value">{formatRadiation(solar.dswrfAvg)}</span>
-              </MetricItem>
+              <DualValueItem>
+                <span className="label">Average (Daily)</span>
+                <div className="values">
+                  <div className="value-group">
+                    <span className="value">{formatRadiation(solar.dswrfAvg)}</span>
+                    <span className="unit-label">Irradiance</span>
+                  </div>
+                  <div className="value-group par-value">
+                    <span className="value">{formatPPFD(avgPPFD)}<EstimatedBadge>est</EstimatedBadge></span>
+                    <span className="unit-label">PAR (PPFD)</span>
+                  </div>
+                </div>
+              </DualValueItem>
             )}
             {solar.dswrfMax !== undefined && (
-              <MetricItem>
-                <span className="label">Shortwave Max</span>
-                <span className="value">{formatRadiation(solar.dswrfMax)}</span>
-              </MetricItem>
-            )}
-            {solar.dlwrfAvg !== undefined && (
-              <MetricItem>
-                <span className="label">Longwave Avg</span>
-                <span className="value">{formatRadiation(solar.dlwrfAvg)}</span>
-              </MetricItem>
-            )}
-            {solar.dlwrfMax !== undefined && (
-              <MetricItem>
-                <span className="label">Longwave Max</span>
-                <span className="value">{formatRadiation(solar.dlwrfMax)}</span>
-              </MetricItem>
+              <DualValueItem>
+                <span className="label">Peak (Maximum)</span>
+                <div className="values">
+                  <div className="value-group">
+                    <span className="value">{formatRadiation(solar.dswrfMax)}</span>
+                    <span className="unit-label">Irradiance</span>
+                  </div>
+                  <div className="value-group par-value">
+                    <span className="value">{formatPPFD(maxPPFD)}<EstimatedBadge>est</EstimatedBadge></span>
+                    <span className="unit-label">PAR (PPFD)</span>
+                  </div>
+                </div>
+              </DualValueItem>
             )}
           </Section>
         )}
