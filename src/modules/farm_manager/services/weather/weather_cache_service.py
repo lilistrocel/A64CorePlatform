@@ -66,7 +66,7 @@ class WeatherCacheService:
 
     async def _create_indexes(self) -> None:
         """Create MongoDB indexes for weather cache"""
-        if not self._db:
+        if self._db is None:
             return
 
         try:
@@ -99,7 +99,7 @@ class WeatherCacheService:
         Returns:
             AgriWeatherData if cache hit and not expired, None otherwise
         """
-        if not self._db:
+        if self._db is None:
             logger.warning("Weather cache not initialized - database not connected")
             return None
 
@@ -148,7 +148,7 @@ class WeatherCacheService:
         Returns:
             True if cached successfully, False otherwise
         """
-        if not self._db:
+        if self._db is None:
             logger.warning("Weather cache not initialized - database not connected")
             return False
 
@@ -189,7 +189,7 @@ class WeatherCacheService:
         Returns:
             True if invalidated, False otherwise
         """
-        if not self._db:
+        if self._db is None:
             return False
 
         try:
@@ -379,7 +379,7 @@ class WeatherCacheService:
         Returns:
             Cache statistics
         """
-        if not self._db:
+        if self._db is None:
             return {"error": "Database not connected"}
 
         try:
