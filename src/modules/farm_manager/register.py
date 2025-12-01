@@ -20,7 +20,8 @@ async def startup_hook():
     """
     Module startup hook - Called when module is loaded
 
-    This connects to the database and performs any necessary initialization.
+    This connects to the database and performs any necessary initialization,
+    including starting the weather cache background refresh.
     """
     logger.info(f"[Farm Module] Starting {settings.MODULE_NAME} v{settings.MODULE_VERSION}")
 
@@ -31,6 +32,20 @@ async def startup_hook():
         logger.error(f"[Farm Module] Failed to connect to database: {e}")
         raise
 
+    # Initialize weather cache service with background refresh
+    try:
+        from .services.weather.weather_cache_service import WeatherCacheService
+
+        db = farm_db.get_database()
+        weather_cache = await WeatherCacheService.initialize(db)
+
+        # Start background refresh (every hour = 3600 seconds)
+        await weather_cache.start_background_refresh(interval_seconds=3600)
+        logger.info("[Farm Module] Weather cache service initialized with hourly refresh")
+    except Exception as e:
+        logger.error(f"[Farm Module] Failed to initialize weather cache: {e}")
+        # Don't raise - weather cache is not critical for startup
+
 
 async def shutdown_hook():
     """
@@ -39,6 +54,16 @@ async def shutdown_hook():
     This disconnects from the database and cleans up resources.
     """
     logger.info("[Farm Module] Shutting down")
+
+    # Stop weather cache background refresh
+    try:
+        from .services.weather.weather_cache_service import get_weather_cache_service
+        weather_cache = get_weather_cache_service()
+        await weather_cache.stop_background_refresh()
+        logger.info("[Farm Module] Weather cache background refresh stopped")
+    except Exception as e:
+        logger.error(f"[Farm Module] Error stopping weather cache: {e}")
+
     await farm_db.disconnect()
     logger.info("[Farm Module] Database disconnected")
 
