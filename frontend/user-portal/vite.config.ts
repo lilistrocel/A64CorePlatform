@@ -21,6 +21,9 @@ export default defineConfig({
       'localhost',
       'host.docker.internal', // Allow Docker host access for Playwright MCP testing
       '.localhost', // Allow subdomains
+      'user-portal', // Allow nginx to proxy requests in Docker network
+      'a64core.com', // Production domain
+      '.a64core.com', // Production subdomains
     ],
     headers: {
       // Disable caching in development to prevent cache issues
