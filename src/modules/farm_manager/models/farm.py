@@ -15,6 +15,9 @@ class FarmLocation(BaseModel):
     latitude: Optional[float] = Field(None, ge=-90, le=90, description="Latitude")
     longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude")
     address: Optional[str] = Field(None, description="Physical address")
+    city: Optional[str] = Field(None, description="City name")
+    state: Optional[str] = Field(None, description="State/Province name")
+    country: Optional[str] = Field(None, description="Country name")
 
 
 class GeoJSONPolygon(BaseModel):

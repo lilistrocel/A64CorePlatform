@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { BlockGrid } from './BlockGrid';
 import { CreateBlockModal } from './CreateBlockModal';
 import { EditBlockModal } from './EditBlockModal';
+import { EditFarmModal } from './EditFarmModal';
 import { EditFarmBoundaryModal } from './EditFarmBoundaryModal';
 import { FarmHistoryTab } from './FarmHistoryTab';
 import { FarmMapView } from './FarmMapView';
@@ -97,6 +98,31 @@ const StatusBadge = styled.span<{ $isActive: boolean }>`
   font-weight: 500;
   background: ${({ $isActive }) => ($isActive ? '#10B981' : '#6B7280')};
   color: white;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const EditButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #2563EB;
+  }
 `;
 
 const StatsGrid = styled.div`
@@ -269,6 +295,7 @@ export function FarmDetail() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
   const [showBoundaryModal, setShowBoundaryModal] = useState(false);
+  const [showEditFarmModal, setShowEditFarmModal] = useState(false);
 
   useEffect(() => {
     if (farmId) {
@@ -400,9 +427,15 @@ export function FarmDetail() {
               <span>{locationText}</span>
             </Location>
           </TitleSection>
-          <StatusBadge $isActive={farm.isActive}>
-            {farm.isActive ? 'Active' : 'Inactive'}
-          </StatusBadge>
+          <HeaderActions>
+            <EditButton onClick={() => setShowEditFarmModal(true)}>
+              <span>✏️</span>
+              <span>Edit Farm</span>
+            </EditButton>
+            <StatusBadge $isActive={farm.isActive}>
+              {farm.isActive ? 'Active' : 'Inactive'}
+            </StatusBadge>
+          </HeaderActions>
         </TitleRow>
 
         <StatsGrid>
@@ -590,6 +623,16 @@ export function FarmDetail() {
           farm={farm}
           onClose={() => setShowBoundaryModal(false)}
           onUpdate={handleUpdateFarmBoundary}
+        />
+      )}
+
+      {/* Edit Farm Modal */}
+      {farm && (
+        <EditFarmModal
+          farm={farm}
+          isOpen={showEditFarmModal}
+          onClose={() => setShowEditFarmModal(false)}
+          onSuccess={loadFarmData}
         />
       )}
     </Container>

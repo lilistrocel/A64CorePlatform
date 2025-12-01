@@ -135,7 +135,8 @@ class FarmService:
         self,
         farm_id: UUID,
         update_data: FarmUpdate,
-        user_id: UUID
+        user_id: UUID,
+        is_admin: bool = False
     ) -> Farm:
         """
         Update a farm
@@ -144,6 +145,7 @@ class FarmService:
             farm_id: Farm ID
             update_data: Fields to update
             user_id: ID of user making the update
+            is_admin: If True, bypass manager check (for super_admin users)
 
         Returns:
             Updated farm
@@ -154,8 +156,8 @@ class FarmService:
         # Check farm exists
         farm = await self.get_farm(farm_id)
 
-        # Check permissions (user must be the manager)
-        if str(farm.managerId) != str(user_id):
+        # Check permissions (user must be the manager, unless admin)
+        if not is_admin and str(farm.managerId) != str(user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only the farm manager can update this farm"

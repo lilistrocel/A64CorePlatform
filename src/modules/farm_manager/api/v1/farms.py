@@ -144,7 +144,7 @@ async def get_farm(
     "/{farm_id}",
     response_model=SuccessResponse[Farm],
     summary="Update farm",
-    description="Update a farm. Only the farm manager can update their farm."
+    description="Update a farm. Only the farm manager or super_admin can update a farm."
 )
 async def update_farm(
     farm_id: UUID,
@@ -157,11 +157,16 @@ async def update_farm(
 
     - **farm_id**: Farm UUID
     - All fields are optional (partial update)
+    - Super admins can update any farm
     """
+    # For super_admin, bypass manager check by passing is_admin=True
+    is_admin = current_user.role == "super_admin"
+
     farm = await service.update_farm(
         farm_id,
         update_data,
-        UUID(current_user.userId)
+        UUID(current_user.userId),
+        is_admin=is_admin
     )
 
     return SuccessResponse(
