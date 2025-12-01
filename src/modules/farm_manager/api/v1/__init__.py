@@ -15,6 +15,7 @@ from .block_archives import router as archives_router
 from .dashboard import router as dashboard_router
 from .tasks import router as tasks_router
 from .config import router as config_router
+from .weather import router as weather_router
 
 api_router = APIRouter()
 
@@ -33,3 +34,4 @@ api_router.include_router(plantings_router, tags=["plantings"])  # Planting mana
 api_router.include_router(managers_router, tags=["managers"])  # Manager users for farm assignment
 api_router.include_router(tasks_router, tags=["tasks"])  # Operations Task Manager - farmer task management
 api_router.include_router(config_router, tags=["config"])  # System configuration (spacing standards, etc.)
+api_router.include_router(weather_router, tags=["weather"])  # Agricultural weather data from WeatherBit

@@ -47,6 +47,13 @@ class Settings(BaseSettings):
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
 
+    # WeatherBit API settings
+    WEATHERBIT_API_KEY: str = os.getenv("WEATHERBIT_API_KEY", "")
+    WEATHERBIT_API_URL: str = "https://api.weatherbit.io/v2.0"
+    WEATHERBIT_ENABLED: bool = os.getenv("WEATHERBIT_ENABLED", "true").lower() == "true"
+    WEATHERBIT_CACHE_TTL_CURRENT: int = 300  # 5 minutes for current weather
+    WEATHERBIT_CACHE_TTL_FORECAST: int = 3600  # 1 hour for forecast
+
     class Config:
         env_file = ".env"
         case_sensitive = True

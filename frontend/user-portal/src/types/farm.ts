@@ -55,9 +55,14 @@ export interface BlockBoundary {
 // ============================================================================
 
 export interface FarmLocation {
-  city: string;
-  state: string;
-  country: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  address?: string;
+  // Direct coordinates (backend model)
+  latitude?: number;
+  longitude?: number;
+  // Nested coordinates (legacy)
   coordinates?: {
     latitude: number;
     longitude: number;
@@ -1248,4 +1253,242 @@ export const SPACING_CATEGORY_EXAMPLES: Record<SpacingCategory, string> = {
   small_tree: 'Citrus, dwarf fruit trees',
   medium_tree: 'Apple, mango',
   large_tree: 'Date palm, coconut',
+};
+
+// ============================================================================
+// WEATHER & AGRICULTURAL DATA TYPES
+// ============================================================================
+
+/**
+ * Soil conditions at various depths
+ */
+export interface SoilConditions {
+  temp_0_10cm?: number;
+  temp_10_40cm?: number;
+  temp_40_100cm?: number;
+  temp_100_200cm?: number;
+  moisture_0_10cm?: number;
+  moisture_10_40cm?: number;
+  moisture_40_100cm?: number;
+  moisture_100_200cm?: number;
+}
+
+/**
+ * Solar and light conditions
+ */
+export interface SolarData {
+  // Current solar radiation
+  solarRadiation?: number;   // W/m²
+  uvIndex?: number;          // 0-11+
+
+  // Irradiance components
+  ghi?: number;              // Global Horizontal Irradiance (W/m²)
+  dni?: number;              // Direct Normal Irradiance (W/m²)
+  dhi?: number;              // Diffuse Horizontal Irradiance (W/m²)
+
+  // Sun position
+  sunElevation?: number;     // degrees
+  sunAzimuth?: number;       // degrees (hour angle)
+
+  // Sunrise/Sunset
+  sunrise?: string;          // local time
+  sunset?: string;           // local time
+
+  // Downward radiation (from ag-weather)
+  dswrfAvg?: number;         // Downward shortwave radiation avg (W/m²)
+  dswrfMax?: number;         // Downward shortwave radiation max (W/m²)
+  dlwrfAvg?: number;         // Downward longwave radiation avg (W/m²)
+  dlwrfMax?: number;         // Downward longwave radiation max (W/m²)
+}
+
+/**
+ * Air quality data
+ */
+export interface AirQuality {
+  // Air Quality Index (EPA standard 0-500)
+  aqi?: number;
+  aqiCategory?: string;      // Good, Moderate, Unhealthy, etc.
+
+  // Pollutants (µg/m³)
+  pm25?: number;             // PM2.5
+  pm10?: number;             // PM10
+  o3?: number;               // Ozone
+  no2?: number;              // Nitrogen dioxide
+  so2?: number;              // Sulfur dioxide
+  co?: number;               // Carbon monoxide
+
+  // Pollen levels (0=None, 1=Low, 2=Moderate, 3=High, 4=Very High)
+  pollenTree?: number;
+  pollenGrass?: number;
+  pollenWeed?: number;
+  moldLevel?: number;
+  predominantPollen?: string;
+}
+
+/**
+ * AQI category type
+ */
+export type AQICategory = 'Good' | 'Moderate' | 'Unhealthy for Sensitive Groups' | 'Unhealthy' | 'Very Unhealthy' | 'Hazardous';
+
+/**
+ * AQI category colors for UI
+ */
+export const AQI_CATEGORY_COLORS: Record<string, string> = {
+  'Good': '#10B981',                           // Green
+  'Moderate': '#F59E0B',                       // Amber
+  'Unhealthy for Sensitive Groups': '#F97316', // Orange
+  'Unhealthy': '#EF4444',                      // Red
+  'Very Unhealthy': '#7C3AED',                 // Purple
+  'Hazardous': '#7F1D1D',                      // Dark Red
+};
+
+/**
+ * Pollen level labels
+ */
+export const POLLEN_LEVEL_LABELS: Record<number, string> = {
+  0: 'None',
+  1: 'Low',
+  2: 'Moderate',
+  3: 'High',
+  4: 'Very High',
+};
+
+/**
+ * Current weather conditions
+ */
+export interface CurrentWeather {
+  latitude: number;
+  longitude: number;
+  city?: string;
+  country?: string;
+  timezone?: string;
+  observedAt: string;
+  temperature: number;
+  feelsLike?: number;
+  description: string;
+  icon?: string;
+  cloudCover?: number;
+  precipitation?: number;
+  precipitationProbability?: number;
+  humidity?: number;
+  pressure?: number;
+  dewPoint?: number;
+  visibility?: number;
+  windSpeed?: number;
+  windDirection?: number;
+  windDirectionText?: string;
+  gustSpeed?: number;
+  uvIndex?: number;
+  solarRadiation?: number;
+  airQualityIndex?: number;
+}
+
+/**
+ * Single day agricultural weather forecast
+ */
+export interface AgriWeatherForecastDay {
+  date: string;
+  tempHigh?: number;
+  tempLow?: number;
+  tempAvg?: number;
+  precipitation?: number;
+  precipitationProbability?: number;
+  humidity?: number;
+  windSpeed?: number;
+  evapotranspiration?: number;
+  soil?: SoilConditions;
+  solarRadiationAvg?: number;
+  solarRadiationMax?: number;
+  description?: string;
+  icon?: string;
+}
+
+/**
+ * Multi-day agricultural weather forecast
+ */
+export interface AgriWeatherForecast {
+  latitude: number;
+  longitude: number;
+  generatedAt: string;
+  days: AgriWeatherForecastDay[];
+}
+
+/**
+ * Risk level type for agricultural insights
+ */
+export type RiskLevel = 'none' | 'low' | 'medium' | 'high';
+
+/**
+ * Growing conditions assessment
+ */
+export type GrowingConditions = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown';
+
+/**
+ * Agricultural insights and recommendations
+ */
+export interface AgriculturalInsights {
+  growingConditions: GrowingConditions;
+  frostRisk: RiskLevel;
+  droughtRisk: RiskLevel;
+  floodRisk: RiskLevel;
+  heatStressRisk: RiskLevel;
+  soilWorkability: string;
+  irrigationNeed: string;
+  recommendations: string[];
+  alerts: string[];
+}
+
+/**
+ * Complete agricultural weather data for a farm
+ */
+export interface AgriWeatherData {
+  farmId: string;
+  farmName: string;
+  latitude: number;
+  longitude: number;
+  current?: CurrentWeather;
+  soil?: SoilConditions;
+  solar?: SolarData;
+  airQuality?: AirQuality;
+  forecast?: AgriWeatherForecast;
+  insights?: AgriculturalInsights;
+  dataSource: string;
+  lastUpdated: string;
+  hasCurrentWeather: boolean;
+  hasSoilData: boolean;
+  hasSolarData: boolean;
+  hasAirQuality: boolean;
+  hasForecast: boolean;
+}
+
+// Risk level colors for UI
+export const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
+  none: '#10B981',    // Green
+  low: '#84CC16',     // Lime
+  medium: '#F59E0B',  // Amber
+  high: '#EF4444',    // Red
+};
+
+export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
+  none: 'None',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
+
+// Growing conditions colors
+export const GROWING_CONDITIONS_COLORS: Record<GrowingConditions, string> = {
+  excellent: '#10B981',  // Green
+  good: '#84CC16',       // Lime
+  fair: '#F59E0B',       // Amber
+  poor: '#EF4444',       // Red
+  unknown: '#6B7280',    // Gray
+};
+
+export const GROWING_CONDITIONS_LABELS: Record<GrowingConditions, string> = {
+  excellent: 'Excellent',
+  good: 'Good',
+  fair: 'Fair',
+  poor: 'Poor',
+  unknown: 'Unknown',
 };

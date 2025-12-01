@@ -13,6 +13,7 @@ import { EditBlockModal } from './EditBlockModal';
 import { EditFarmBoundaryModal } from './EditFarmBoundaryModal';
 import { FarmHistoryTab } from './FarmHistoryTab';
 import { FarmMapView } from './FarmMapView';
+import { AgriDataTab, SensorFusionTab } from './weather';
 import { farmApi } from '../../services/farmApi';
 import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate, FarmUpdate } from '../../types/farm';
 
@@ -253,7 +254,7 @@ const InfoValue = styled.span`
 // COMPONENT
 // ============================================================================
 
-type TabType = 'overview' | 'blocks' | 'map' | 'plantings' | 'statistics' | 'history';
+type TabType = 'overview' | 'blocks' | 'map' | 'plantings' | 'statistics' | 'history' | 'agridata' | 'sensors';
 
 export function FarmDetail() {
   const { farmId } = useParams<{ farmId: string }>();
@@ -451,6 +452,12 @@ export function FarmDetail() {
           <Tab $active={activeTab === 'history'} onClick={() => setActiveTab('history')}>
             History
           </Tab>
+          <Tab $active={activeTab === 'agridata'} onClick={() => setActiveTab('agridata')}>
+            AgriData
+          </Tab>
+          <Tab $active={activeTab === 'sensors'} onClick={() => setActiveTab('sensors')}>
+            SensorFusion
+          </Tab>
         </TabBar>
 
         <TabContent>
@@ -542,6 +549,14 @@ export function FarmDetail() {
 
           {activeTab === 'history' && farmId && (
             <FarmHistoryTab farmId={farmId} />
+          )}
+
+          {activeTab === 'agridata' && farm && (
+            <AgriDataTab farm={farm} />
+          )}
+
+          {activeTab === 'sensors' && farm && (
+            <SensorFusionTab farm={farm} />
           )}
         </TabContent>
       </TabsContainer>
