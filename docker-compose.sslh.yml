@@ -1,0 +1,19 @@
+# ================================
+# SSLH Configuration Override
+# Purpose: Configure nginx to work with SSLH multiplexer for SSH over port 443
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.sslh.yml up -d
+# ================================
+version: '3.8'
+
+services:
+  # NGINX - Modified for SSLH (listen on 8443 instead of 443)
+  nginx:
+    ports:
+      - "80:80"
+      - "127.0.0.1:8443:8443"  # Only bind to localhost since SSLH forwards traffic here
+    volumes:
+      - ./nginx/nginx.prod.sslh.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
