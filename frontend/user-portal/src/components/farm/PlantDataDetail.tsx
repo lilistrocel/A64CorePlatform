@@ -438,107 +438,10 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
             </SectionContent>
           </Section>
 
-          {/* Section 4: Fertilizer Schedule */}
-          <Section>
-            <SectionHeader $isOpen={!!openSections.fertilizer} onClick={() => toggleSection('fertilizer')}>
-              <SectionTitle>4. Fertilizer Schedule</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.fertilizer}>›</SectionIcon>
-            </SectionHeader>
-            <SectionContent $isOpen={!!openSections.fertilizer}>
-              {plant.fertilizerSchedule && plant.fertilizerSchedule.length > 0 ? (
-                plant.fertilizerSchedule.map((fert, idx) => (
-                  <ArrayItem key={idx}>
-                    <FieldGrid>
-                      <Field>
-                        <FieldLabel>Stage</FieldLabel>
-                        <FieldValue>{fert.stage}</FieldValue>
-                      </Field>
-                      <Field>
-                        <FieldLabel>Type</FieldLabel>
-                        <FieldValue>{fert.fertilizerType}</FieldValue>
-                      </Field>
-                      <Field>
-                        <FieldLabel>Quantity</FieldLabel>
-                        <FieldValue>
-                          {fert.quantity} {fert.quantityUnit}
-                        </FieldValue>
-                      </Field>
-                      <Field>
-                        <FieldLabel>Frequency</FieldLabel>
-                        <FieldValue>Every {fert.frequencyDays} days</FieldValue>
-                      </Field>
-                      {fert.npkRatio && (
-                        <Field>
-                          <FieldLabel>NPK Ratio</FieldLabel>
-                          <FieldValue>{fert.npkRatio}</FieldValue>
-                        </Field>
-                      )}
-                    </FieldGrid>
-                  </ArrayItem>
-                ))
-              ) : (
-                <EmptyText>No fertilizer schedule defined</EmptyText>
-              )}
-            </SectionContent>
-          </Section>
-
-          {/* Section 5: Pesticide Schedule */}
-          <Section>
-            <SectionHeader $isOpen={!!openSections.pesticide} onClick={() => toggleSection('pesticide')}>
-              <SectionTitle>5. Pesticide Schedule</SectionTitle>
-              <SectionIcon $isOpen={!!openSections.pesticide}>›</SectionIcon>
-            </SectionHeader>
-            <SectionContent $isOpen={!!openSections.pesticide}>
-              {plant.pesticideSchedule && plant.pesticideSchedule.length > 0 ? (
-                plant.pesticideSchedule.map((pest, idx) => (
-                  <ArrayItem key={idx}>
-                    <FieldGrid>
-                      <Field>
-                        <FieldLabel>Stage</FieldLabel>
-                        <FieldValue>{pest.stage}</FieldValue>
-                      </Field>
-                      <Field>
-                        <FieldLabel>Type</FieldLabel>
-                        <FieldValue>{pest.pesticideType}</FieldValue>
-                      </Field>
-                      <Field>
-                        <FieldLabel>Quantity</FieldLabel>
-                        <FieldValue>
-                          {pest.quantity} {pest.quantityUnit}
-                        </FieldValue>
-                      </Field>
-                      <Field>
-                        <FieldLabel>Frequency</FieldLabel>
-                        <FieldValue>Every {pest.frequencyDays} days</FieldValue>
-                      </Field>
-                      {pest.preharvestIntervalDays && (
-                        <Field>
-                          <FieldLabel>Preharvest Interval</FieldLabel>
-                          <FieldValue>{pest.preharvestIntervalDays} days</FieldValue>
-                        </Field>
-                      )}
-                    </FieldGrid>
-                    {pest.safetyNotes && (
-                      <>
-                        <Divider />
-                        <Field>
-                          <FieldLabel>Safety Notes</FieldLabel>
-                          <FieldValue>{pest.safetyNotes}</FieldValue>
-                        </Field>
-                      </>
-                    )}
-                  </ArrayItem>
-                ))
-              ) : (
-                <EmptyText>No pesticide schedule defined</EmptyText>
-              )}
-            </SectionContent>
-          </Section>
-
-          {/* Section 6: Environmental Requirements */}
+          {/* Section 4: Environmental Requirements */}
           <Section>
             <SectionHeader $isOpen={!!openSections.environment} onClick={() => toggleSection('environment')}>
-              <SectionTitle>6. Environmental Requirements</SectionTitle>
+              <SectionTitle>4. Environmental Requirements</SectionTitle>
               <SectionIcon $isOpen={!!openSections.environment}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.environment}>
@@ -578,7 +481,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           {/* Section 7: Watering Requirements */}
           <Section>
             <SectionHeader $isOpen={!!openSections.watering} onClick={() => toggleSection('watering')}>
-              <SectionTitle>7. Watering Requirements</SectionTitle>
+              <SectionTitle>5. Watering Requirements</SectionTitle>
               <SectionIcon $isOpen={!!openSections.watering}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.watering}>
@@ -615,7 +518,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           {/* Section 8: Soil & pH Requirements */}
           <Section>
             <SectionHeader $isOpen={!!openSections.soil} onClick={() => toggleSection('soil')}>
-              <SectionTitle>8. Soil & pH Requirements</SectionTitle>
+              <SectionTitle>6. Soil & pH Requirements</SectionTitle>
               <SectionIcon $isOpen={!!openSections.soil}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.soil}>
@@ -666,7 +569,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           {/* Section 9: Diseases & Pests */}
           <Section>
             <SectionHeader $isOpen={!!openSections.diseases} onClick={() => toggleSection('diseases')}>
-              <SectionTitle>9. Diseases & Pests</SectionTitle>
+              <SectionTitle>7. Diseases & Pests</SectionTitle>
               <SectionIcon $isOpen={!!openSections.diseases}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.diseases}>
@@ -718,7 +621,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           {/* Section 10: Light Requirements */}
           <Section>
             <SectionHeader $isOpen={!!openSections.light} onClick={() => toggleSection('light')}>
-              <SectionTitle>10. Light Requirements</SectionTitle>
+              <SectionTitle>8. Light Requirements</SectionTitle>
               <SectionIcon $isOpen={!!openSections.light}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.light}>
@@ -756,7 +659,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           {/* Section 11: Quality Grading */}
           <Section>
             <SectionHeader $isOpen={!!openSections.quality} onClick={() => toggleSection('quality')}>
-              <SectionTitle>11. Quality Grading</SectionTitle>
+              <SectionTitle>9. Quality Grading</SectionTitle>
               <SectionIcon $isOpen={!!openSections.quality}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.quality}>
@@ -801,7 +704,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           {/* Section 12: Economics & Labor */}
           <Section>
             <SectionHeader $isOpen={!!openSections.economics} onClick={() => toggleSection('economics')}>
-              <SectionTitle>12. Economics & Labor</SectionTitle>
+              <SectionTitle>10. Economics & Labor</SectionTitle>
               <SectionIcon $isOpen={!!openSections.economics}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.economics}>
@@ -854,7 +757,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           {/* Section 13: Additional Information */}
           <Section>
             <SectionHeader $isOpen={!!openSections.additional} onClick={() => toggleSection('additional')}>
-              <SectionTitle>13. Additional Information</SectionTitle>
+              <SectionTitle>11. Additional Information</SectionTitle>
               <SectionIcon $isOpen={!!openSections.additional}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.additional}>

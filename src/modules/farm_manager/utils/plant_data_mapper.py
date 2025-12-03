@@ -119,12 +119,6 @@ class PlantDataMigrationMapper:
                 expectedWastePercentage=10.0  # Default 10% waste
             ),
 
-            # Fertilizer schedule (basic single entry)
-            fertilizerSchedule=[],  # Empty - needs manual population
-
-            # Pesticide schedule
-            pesticideSchedule=[],  # Empty - needs manual population
-
             # Environmental requirements
             environmentalRequirements=EnvironmentalRequirements(
                 temperature=TemperatureRange(
@@ -247,16 +241,6 @@ class PlantDataMigrationMapper:
         # Get first farm type as plant type (simplified)
         plant_type = enhanced.farmTypeCompatibility[0].value if enhanced.farmTypeCompatibility else "crop"
 
-        # Get first fertilizer schedule frequency if available
-        fertilization_days = None
-        if enhanced.fertilizerSchedule:
-            fertilization_days = enhanced.fertilizerSchedule[0].frequencyDays
-
-        # Get first pesticide schedule frequency if available
-        pesticide_days = None
-        if enhanced.pesticideSchedule:
-            pesticide_days = enhanced.pesticideSchedule[0].frequencyDays
-
         return PlantData(
             plantDataId=enhanced.plantDataId,
             plantName=enhanced.plantName,
@@ -269,8 +253,6 @@ class PlantDataMigrationMapper:
             optimalPHMax=enhanced.soilRequirements.phRequirements.maxPH,
             wateringFrequencyDays=enhanced.wateringRequirements.frequencyDays,
             sunlightHoursDaily=sunlight_hours_str,
-            fertilizationScheduleDays=fertilization_days,
-            pesticideScheduleDays=pesticide_days,
             expectedYieldPerPlant=enhanced.yieldInfo.yieldPerPlant,
             yieldUnit=enhanced.yieldInfo.yieldUnit,
             notes=enhanced.additionalInfo.notes,

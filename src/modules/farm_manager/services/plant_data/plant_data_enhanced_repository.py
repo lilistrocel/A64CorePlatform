@@ -426,8 +426,6 @@ class PlantDataEnhancedRepository:
             farmTypeCompatibility=source.farmTypeCompatibility,
             growthCycle=source.growthCycle,
             yieldInfo=source.yieldInfo,
-            fertilizerSchedule=source.fertilizerSchedule,
-            pesticideSchedule=source.pesticideSchedule,
             environmentalRequirements=source.environmentalRequirements,
             wateringRequirements=source.wateringRequirements,
             soilRequirements=source.soilRequirements,

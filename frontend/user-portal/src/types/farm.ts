@@ -545,28 +545,7 @@ export interface YieldWasteInfo {
   expectedWastePercentage?: number;
 }
 
-// 4. Fertilizer Schedule
-export interface FertilizerApplication {
-  stage: GrowthStage;
-  fertilizerType: string;
-  quantity: number;
-  quantityUnit: string;
-  frequencyDays: number;
-  npkRatio?: string;
-}
-
-// 5. Pesticide Schedule
-export interface PesticideApplication {
-  stage: GrowthStage;
-  pesticideType: string;
-  quantity: number;
-  quantityUnit: string;
-  frequencyDays: number;
-  preharvestIntervalDays?: number;
-  safetyNotes?: string;
-}
-
-// 6. Environmental Requirements
+// 4. Environmental Requirements
 export interface EnvironmentalRequirements {
   temperatureMin?: number;
   temperatureOptimal?: number;
@@ -578,7 +557,7 @@ export interface EnvironmentalRequirements {
   airCirculation?: ToleranceLevel;
 }
 
-// 7. Watering Requirements
+// 5. Watering Requirements
 export interface WateringRequirements {
   wateringFrequencyDays: number;
   waterType?: WaterType;
@@ -667,37 +646,31 @@ export interface PlantDataEnhanced {
   // 3. Yield & Waste
   yieldInfo: YieldWasteInfo;
 
-  // 4. Fertilizer Schedule
-  fertilizerSchedule: FertilizerApplication[];
-
-  // 5. Pesticide Schedule
-  pesticideSchedule: PesticideApplication[];
-
-  // 6. Environmental Requirements
+  // 4. Environmental Requirements
   environmentalRequirements: EnvironmentalRequirements;
 
-  // 7. Watering Requirements
+  // 5. Watering Requirements
   wateringRequirements: WateringRequirements;
 
-  // 8. Soil & pH Requirements
+  // 6. Soil & pH Requirements
   soilRequirements: SoilRequirements;
 
-  // 9. Diseases & Pests
+  // 7. Diseases & Pests
   diseasesAndPests: DiseaseOrPest[];
 
-  // 10. Light Requirements
+  // 8. Light Requirements
   lightRequirements: LightRequirements;
 
-  // 11. Quality Grading
+  // 9. Quality Grading
   qualityGrades: QualityGrade[];
 
-  // 12. Economics & Labor
+  // 10. Economics & Labor
   economicsAndLabor: EconomicsAndLabor;
 
-  // 13. Additional Information
+  // 11. Additional Information
   additionalInfo: AdditionalInformation;
 
-  // 14. Data Attribution
+  // 12. Data Attribution
   contributor?: string;   // Name of agronomist/contributor who provided this data
   targetRegion?: string;  // Geographic region where data was tested (e.g., 'UAE')
 
@@ -725,9 +698,7 @@ export interface PlantDataEnhancedCreate {
   // 3. Yield & Waste
   yieldInfo: YieldWasteInfo;
 
-  // 4-13: Optional field groups
-  fertilizerSchedule?: FertilizerApplication[];
-  pesticideSchedule?: PesticideApplication[];
+  // 4-11: Optional field groups
   environmentalRequirements?: EnvironmentalRequirements;
   wateringRequirements?: WateringRequirements;
   soilRequirements?: SoilRequirements;
@@ -737,7 +708,7 @@ export interface PlantDataEnhancedCreate {
   economicsAndLabor?: EconomicsAndLabor;
   additionalInfo?: AdditionalInformation;
 
-  // 14. Data Attribution
+  // 12. Data Attribution
   contributor?: string;
   targetRegion?: string;
 }
@@ -751,8 +722,6 @@ export interface PlantDataEnhancedUpdate {
   spacingCategory?: SpacingCategory;
   growthCycle?: GrowthCycleInfo;
   yieldInfo?: YieldWasteInfo;
-  fertilizerSchedule?: FertilizerApplication[];
-  pesticideSchedule?: PesticideApplication[];
   environmentalRequirements?: EnvironmentalRequirements;
   wateringRequirements?: WateringRequirements;
   soilRequirements?: SoilRequirements;
@@ -761,7 +730,7 @@ export interface PlantDataEnhancedUpdate {
   qualityGrades?: QualityGrade[];
   economicsAndLabor?: EconomicsAndLabor;
   additionalInfo?: AdditionalInformation;
-  // 14. Data Attribution
+  // 12. Data Attribution
   contributor?: string;
   targetRegion?: string;
   // Note: isActive is NOT updatable - only set at creation

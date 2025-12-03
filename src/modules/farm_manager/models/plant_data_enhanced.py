@@ -133,29 +133,6 @@ class YieldInfo(BaseModel):
     expectedWastePercentage: float = Field(0, ge=0, le=100, description="Expected waste/loss percentage")
 
 
-class FertilizerApplication(BaseModel):
-    """Single fertilizer application schedule"""
-    stage: GrowthStageEnum = Field(..., description="Growth stage for application")
-    fertilizerType: str = Field(..., description="Fertilizer type/name")
-    quantityPerPlant: float = Field(..., gt=0, description="Quantity per plant per application")
-    quantityUnit: str = Field(..., description="Unit (grams, ml, oz, etc.)")
-    frequencyDays: int = Field(..., gt=0, description="Days between applications")
-    npkRatio: Optional[str] = Field(None, description="NPK ratio (e.g., '10-10-10')")
-    notes: Optional[str] = Field(None, description="Application notes")
-
-
-class PesticideApplication(BaseModel):
-    """Single pesticide application schedule"""
-    stage: GrowthStageEnum = Field(..., description="Growth stage for application")
-    pesticideType: str = Field(..., description="Pesticide type/name")
-    targetPest: Optional[str] = Field(None, description="Target pest or disease")
-    quantityPerPlant: float = Field(..., gt=0, description="Quantity per plant per application")
-    quantityUnit: str = Field(..., description="Unit (grams, ml, oz, etc.)")
-    frequencyDays: int = Field(..., gt=0, description="Days between applications")
-    safetyNotes: Optional[str] = Field(None, description="Safety and precautions")
-    preharvestIntervalDays: Optional[int] = Field(None, ge=0, description="Days before harvest to stop application")
-
-
 class TemperatureRange(BaseModel):
     """Temperature requirements"""
     minCelsius: float = Field(..., description="Minimum temperature in Celsius")
@@ -291,49 +268,37 @@ class PlantDataEnhancedBase(BaseModel):
     # ===== 3. Yield & Waste =====
     yieldInfo: YieldInfo = Field(..., description="Yield and waste information")
 
-    # ===== 4. Fertilizer Schedule =====
-    fertilizerSchedule: List[FertilizerApplication] = Field(
-        default_factory=list,
-        description="Detailed fertilizer application schedule"
-    )
-
-    # ===== 5. Pesticide Schedule =====
-    pesticideSchedule: List[PesticideApplication] = Field(
-        default_factory=list,
-        description="Detailed pesticide application schedule"
-    )
-
-    # ===== 6. Environmental Requirements =====
+    # ===== 4. Environmental Requirements =====
     environmentalRequirements: EnvironmentalRequirements = Field(..., description="Environmental conditions")
 
-    # ===== 7. Watering Requirements =====
+    # ===== 5. Watering Requirements =====
     wateringRequirements: WateringRequirements = Field(..., description="Watering specifications")
 
-    # ===== 8. pH & Soil Requirements =====
+    # ===== 6. pH & Soil Requirements =====
     soilRequirements: SoilRequirements = Field(..., description="Soil and pH requirements")
 
-    # ===== 9. Disease & Pest Management =====
+    # ===== 7. Disease & Pest Management =====
     diseasesAndPests: List[DiseaseOrPest] = Field(
         default_factory=list,
         description="Known diseases and pests"
     )
 
-    # ===== 10. Light Requirements =====
+    # ===== 8. Light Requirements =====
     lightRequirements: LightRequirements = Field(..., description="Light and photoperiod requirements")
 
-    # ===== 11. Grading Standards =====
+    # ===== 9. Grading Standards =====
     gradingStandards: List[QualityGrade] = Field(
         default_factory=list,
         description="Quality grading standards"
     )
 
-    # ===== 12. Economics & Labor =====
+    # ===== 10. Economics & Labor =====
     economicsAndLabor: EconomicsAndLabor = Field(..., description="Economic and labor information")
 
-    # ===== 13. Additional Information =====
+    # ===== 11. Additional Information =====
     additionalInfo: AdditionalInformation = Field(..., description="Additional agronomic details")
 
-    # ===== 14. Spacing Category =====
+    # ===== 12. Spacing Category =====
     spacingCategory: Optional[SpacingCategory] = Field(
         None,
         description="Spacing category for quick density calculations (xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree). Overrides additionalInfo.spacing.plantsPerSquareMeter if set."
@@ -367,8 +332,6 @@ class PlantDataEnhancedUpdate(BaseModel):
     farmTypeCompatibility: Optional[List[FarmTypeEnum]] = None
     growthCycle: Optional[GrowthCycleDuration] = None
     yieldInfo: Optional[YieldInfo] = None
-    fertilizerSchedule: Optional[List[FertilizerApplication]] = None
-    pesticideSchedule: Optional[List[PesticideApplication]] = None
     environmentalRequirements: Optional[EnvironmentalRequirements] = None
     wateringRequirements: Optional[WateringRequirements] = None
     soilRequirements: Optional[SoilRequirements] = None
@@ -453,8 +416,6 @@ class PlantDataLegacy(BaseModel):
     optimalPHMax: Optional[float] = None
     wateringFrequencyDays: Optional[int] = None
     sunlightHoursDaily: Optional[str] = None
-    fertilizationScheduleDays: Optional[int] = None
-    pesticideScheduleDays: Optional[int] = None
     expectedYieldPerPlant: float
     yieldUnit: str
     notes: Optional[str] = None
@@ -480,8 +441,6 @@ class PlantDataLegacy(BaseModel):
             optimalPHMax=enhanced.soilRequirements.phRequirements.maxPH,
             wateringFrequencyDays=enhanced.wateringRequirements.frequencyDays,
             sunlightHoursDaily=f"{enhanced.lightRequirements.minHoursDaily}-{enhanced.lightRequirements.maxHoursDaily}",
-            fertilizationScheduleDays=enhanced.fertilizerSchedule[0].frequencyDays if enhanced.fertilizerSchedule else None,
-            pesticideScheduleDays=enhanced.pesticideSchedule[0].frequencyDays if enhanced.pesticideSchedule else 0,
             expectedYieldPerPlant=enhanced.yieldInfo.yieldPerPlant,
             yieldUnit=enhanced.yieldInfo.yieldUnit,
             notes=enhanced.additionalInfo.notes,

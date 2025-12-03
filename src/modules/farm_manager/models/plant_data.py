@@ -32,8 +32,6 @@ class PlantDataBase(BaseModel):
     # Care requirements
     wateringFrequencyDays: Optional[int] = Field(None, gt=0, description="Days between watering")
     sunlightHoursDaily: Optional[str] = Field(None, description="Daily sunlight hours (e.g. '6-8')")
-    fertilizationScheduleDays: Optional[int] = Field(None, gt=0, description="Days between fertilization")
-    pesticideScheduleDays: Optional[int] = Field(None, ge=0, description="Days between pesticide application (0 = not needed)")
 
     # Yield information
     expectedYieldPerPlant: float = Field(..., gt=0, description="Expected yield per plant")
@@ -67,8 +65,6 @@ class PlantDataUpdate(BaseModel):
     optimalPHMax: Optional[float] = Field(None, ge=0, le=14)
     wateringFrequencyDays: Optional[int] = Field(None, gt=0)
     sunlightHoursDaily: Optional[str] = None
-    fertilizationScheduleDays: Optional[int] = Field(None, gt=0)
-    pesticideScheduleDays: Optional[int] = Field(None, ge=0)
     expectedYieldPerPlant: Optional[float] = Field(None, gt=0)
     yieldUnit: Optional[str] = None
     spacingCategory: Optional[SpacingCategory] = None
@@ -103,8 +99,6 @@ class PlantData(PlantDataBase):
                 "optimalPHMax": 6.8,
                 "wateringFrequencyDays": 3,
                 "sunlightHoursDaily": "6-8",
-                "fertilizationScheduleDays": 14,
-                "pesticideScheduleDays": 21,
                 "expectedYieldPerPlant": 5.0,
                 "yieldUnit": "kg",
                 "spacingCategory": "l",
