@@ -7,6 +7,7 @@
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import type { Farm, FarmSummary } from '../../types/farm';
+import { formatNumber } from '../../utils';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -241,11 +242,11 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
       <StatsGrid>
         <StatItem>
           <StatLabel>Total Area</StatLabel>
-          <StatValue>{(farm.totalArea ?? 0).toFixed(1)} ha</StatValue>
+          <StatValue>{formatNumber(farm.totalArea, { decimals: 1 })} ha</StatValue>
         </StatItem>
         <StatItem>
           <StatLabel>Blocks</StatLabel>
-          <StatValue>{summary?.totalBlocks ?? 0}</StatValue>
+          <StatValue>{formatNumber(summary?.totalBlocks)}</StatValue>
         </StatItem>
       </StatsGrid>
 
@@ -253,27 +254,27 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
         <BlockStats>
           {summary.blocksByState.empty > 0 && (
             <BlockStatBadge $color="#6B7280">
-              {summary.blocksByState.empty} Empty
+              {formatNumber(summary.blocksByState.empty)} Empty
             </BlockStatBadge>
           )}
           {summary.blocksByState.planned > 0 && (
             <BlockStatBadge $color="#3B82F6">
-              {summary.blocksByState.planned} Planned
+              {formatNumber(summary.blocksByState.planned)} Planned
             </BlockStatBadge>
           )}
           {summary.blocksByState.planted > 0 && (
             <BlockStatBadge $color="#10B981">
-              {summary.blocksByState.planted} Planted
+              {formatNumber(summary.blocksByState.planted)} Planted
             </BlockStatBadge>
           )}
           {summary.blocksByState.harvesting > 0 && (
             <BlockStatBadge $color="#F59E0B">
-              {summary.blocksByState.harvesting} Harvesting
+              {formatNumber(summary.blocksByState.harvesting)} Harvesting
             </BlockStatBadge>
           )}
           {summary.blocksByState.alert > 0 && (
             <BlockStatBadge $color="#EF4444">
-              {summary.blocksByState.alert} Alert
+              {formatNumber(summary.blocksByState.alert)} Alert
             </BlockStatBadge>
           )}
         </BlockStats>

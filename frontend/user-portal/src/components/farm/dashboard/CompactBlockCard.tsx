@@ -16,6 +16,7 @@ import { BlockHarvestEntryModal } from '../BlockHarvestEntryModal';
 import { BlockAnalyticsModal } from '../BlockAnalyticsModal';
 import type { DashboardBlock, DashboardBlockStatus } from '../../../types/farm';
 import type { DashboardConfig } from '../../../hooks/farm/useDashboardConfig';
+import { formatNumber } from '../../../utils';
 
 interface CompactBlockCardProps {
   block: DashboardBlock;
@@ -153,7 +154,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             <EmptyIcon>⚪</EmptyIcon>
             <EmptyText>Block is empty</EmptyText>
             <Capacity>
-              Capacity: {block.maxPlants} plants
+              Capacity: {formatNumber(block.maxPlants)} plants
             </Capacity>
           </EmptyContent>
         )}
@@ -168,17 +169,17 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               </CropInfo>
             )}
             <Capacity>
-              Planned: {block.actualPlantCount || 0} / {block.maxPlants} plants
+              Planned: {formatNumber(block.actualPlantCount || 0)} / {formatNumber(block.maxPlants)} plants
             </Capacity>
             {block.calculated.daysUntilNextTransition !== null && block.calculated.daysUntilNextTransition !== undefined && (
               <Timeline>
                 <TimelineIcon>{block.calculated.isDelayed ? '⚠️' : '📅'}</TimelineIcon>
                 <TimelineText>
                   {block.calculated.daysUntilNextTransition > 0
-                    ? `Plant in ${block.calculated.daysUntilNextTransition} days`
+                    ? `Plant in ${formatNumber(block.calculated.daysUntilNextTransition)} days`
                     : block.calculated.daysUntilNextTransition === 0
                     ? 'Plant today'
-                    : `${Math.abs(block.calculated.daysUntilNextTransition)} days overdue`}
+                    : `${formatNumber(Math.abs(block.calculated.daysUntilNextTransition))} days overdue`}
                 </TimelineText>
               </Timeline>
             )}
@@ -197,7 +198,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
 
             <CapacityBar>
               <CapacityLabel>
-                Capacity: {block.actualPlantCount || 0} / {block.maxPlants}
+                Capacity: {formatNumber(block.actualPlantCount || 0)} / {formatNumber(block.maxPlants)}
               </CapacityLabel>
               <ProgressBar>
                 <ProgressFill
@@ -206,7 +207,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
                 />
               </ProgressBar>
               <CapacityPercent>
-                {block.calculated.capacityPercent.toFixed(0)}%
+                {formatNumber(block.calculated.capacityPercent, { decimals: 0 })}%
               </CapacityPercent>
             </CapacityBar>
 
@@ -214,7 +215,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               <InfoItem>
                 <InfoIcon>⏱️</InfoIcon>
                 <InfoText>
-                  {block.calculated.daysInCurrentState} days in {block.state}
+                  {formatNumber(block.calculated.daysInCurrentState)} days in {block.state}
                 </InfoText>
               </InfoItem>
 
@@ -223,17 +224,17 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
                   <InfoIcon>{block.calculated.isDelayed ? '⚠️' : '📅'}</InfoIcon>
                   <InfoText>
                     {block.calculated.daysUntilNextTransition > 0
-                      ? `${block.calculated.daysUntilNextTransition}d until next transition`
+                      ? `${formatNumber(block.calculated.daysUntilNextTransition)}d until next transition`
                       : block.calculated.daysUntilNextTransition === 0
                       ? 'Transition due today'
-                      : `${Math.abs(block.calculated.daysUntilNextTransition)}d overdue`}
+                      : `${formatNumber(Math.abs(block.calculated.daysUntilNextTransition))}d overdue`}
                   </InfoText>
                 </InfoItem>
               )}
 
               {block.calculated.isDelayed && (
                 <DelayBadge $color={getTimelineColor()}>
-                  {block.calculated.delayDays}d late
+                  {formatNumber(block.calculated.delayDays)}d late
                 </DelayBadge>
               )}
             </StateInfo>
@@ -252,7 +253,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
 
             <YieldProgress>
               <YieldLabel>
-                {block.kpi.actualYieldKg.toFixed(1)} / {block.kpi.predictedYieldKg.toFixed(1)} kg
+                {formatNumber(block.kpi.actualYieldKg, { decimals: 1 })} / {formatNumber(block.kpi.predictedYieldKg, { decimals: 1 })} kg
               </YieldLabel>
               <ProgressBar>
                 <ProgressFill
@@ -261,7 +262,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
                 />
               </ProgressBar>
               <PerformanceBadge $color={getPerformanceColor()}>
-                {block.calculated.yieldProgress.toFixed(0)}% •{' '}
+                {formatNumber(block.calculated.yieldProgress, { decimals: 0 })}% •{' '}
                 {block.calculated?.performanceCategory
                   ? config.icons?.metrics?.performance?.[block.calculated.performanceCategory]
                   : '📊'}
@@ -272,7 +273,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               <InfoItem>
                 <InfoIcon>📊</InfoIcon>
                 <InfoText>
-                  {block.kpi.totalHarvests} harvest{block.kpi.totalHarvests !== 1 ? 's' : ''}
+                  {formatNumber(block.kpi.totalHarvests)} harvest{block.kpi.totalHarvests !== 1 ? 's' : ''}
                 </InfoText>
               </InfoItem>
             </HarvestInfo>
@@ -286,8 +287,8 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             <CleaningText>Preparing for next cycle</CleaningText>
             {block.kpi.actualYieldKg > 0 && (
               <LastYield>
-                Last yield: {block.kpi.actualYieldKg.toFixed(1)} kg (
-                {block.kpi.yieldEfficiencyPercent.toFixed(0)}%)
+                Last yield: {formatNumber(block.kpi.actualYieldKg, { decimals: 1 })} kg (
+                {formatNumber(block.kpi.yieldEfficiencyPercent, { decimals: 0 })}%)
               </LastYield>
             )}
           </CleaningContent>
@@ -303,7 +304,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             </AlertBadge>
           ))}
           {block.activeAlerts.length > 2 && (
-            <MoreAlerts>+{block.activeAlerts.length - 2} more</MoreAlerts>
+            <MoreAlerts>+{formatNumber(block.activeAlerts.length - 2)} more</MoreAlerts>
           )}
         </AlertsSection>
       )}

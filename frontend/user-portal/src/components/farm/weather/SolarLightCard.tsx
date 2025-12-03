@@ -7,6 +7,7 @@
 
 import styled from 'styled-components';
 import type { SolarData } from '../../../types/farm';
+import { formatNumber } from '../../../utils';
 
 /**
  * PAR Conversion Constants
@@ -298,12 +299,12 @@ function getUVLabel(uv: number): string {
 
 function formatRadiation(value: number | undefined): string {
   if (value === undefined || value === null) return 'N/A';
-  return `${value.toFixed(0)} W/m²`;
+  return `${formatNumber(value, { decimals: 0 })} W/m²`;
 }
 
 function formatAngle(value: number | undefined): string {
   if (value === undefined || value === null) return 'N/A';
-  return `${value.toFixed(1)}°`;
+  return `${formatNumber(value, { decimals: 1 })}°`;
 }
 
 /**
@@ -318,7 +319,7 @@ function solarToPPFD(solarRadiation: number | undefined): number | undefined {
 function formatPPFD(value: number | undefined): string {
   if (value === undefined || value === null) return 'N/A';
   if (value < 1) return '0 µmol/m²/s';
-  return `${value.toFixed(0)} µmol/m²/s`;
+  return `${formatNumber(value, { decimals: 0 })} µmol/m²/s`;
 }
 
 /**
@@ -334,7 +335,7 @@ function calculateDLI(avgRadiation: number | undefined, daylightHours: number = 
 
 function formatDLI(value: number | undefined): string {
   if (value === undefined || value === null) return 'N/A';
-  return `${value.toFixed(1)} mol/m²/day`;
+  return `${formatNumber(value, { decimals: 1 })} mol/m²/day`;
 }
 
 export function SolarLightCard({ solar }: SolarLightCardProps) {

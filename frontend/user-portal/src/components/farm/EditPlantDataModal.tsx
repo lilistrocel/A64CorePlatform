@@ -17,6 +17,9 @@ import type {
   PlantTypeEnum,
   FarmTypeCompatibility,
   SpacingCategory,
+  FertilizerApplication,
+  PesticideApplication,
+  GrowthStage,
 } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
 
@@ -78,6 +81,25 @@ const plantDataSchema = z.object({
   notes: z.string().optional(),
 
   isActive: z.boolean().optional(),
+
+  // Fertilizer Schedule (array of objects - managed separately from form fields)
+  fertilizerSchedule: z.array(z.object({
+    name: z.string().min(1, 'Fertilizer name is required'),
+    applicationInterval: z.number().min(1, 'Interval must be at least 1 day'),
+    amountPerPlant: z.number().nonnegative('Amount cannot be negative'),
+    unit: z.string().min(1, 'Unit is required'),
+    notes: z.string().optional(),
+  })).optional(),
+
+  // Pesticide Schedule (array of objects - managed separately from form fields)
+  pesticideSchedule: z.array(z.object({
+    name: z.string().min(1, 'Pesticide name is required'),
+    applicationInterval: z.number().min(1, 'Interval must be at least 1 day'),
+    amountPerPlant: z.number().nonnegative('Amount cannot be negative'),
+    unit: z.string().min(1, 'Unit is required'),
+    targetPest: z.string().optional(),
+    notes: z.string().optional(),
+  })).optional(),
 });
 
 type PlantDataFormData = z.infer<typeof plantDataSchema>;
@@ -493,6 +515,78 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   }
 `;
 
+// Schedule Editor Components
+const ScheduleList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ScheduleItem = styled.div`
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ScheduleItemHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const ScheduleItemTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #212121;
+`;
+
+const RemoveButton = styled.button`
+  padding: 6px 12px;
+  background: #FEE2E2;
+  color: #EF4444;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #FECACA;
+  }
+`;
+
+const AddButton = styled.button`
+  padding: 10px 16px;
+  background: #E0F2FE;
+  color: #0284C7;
+  border: 1px dashed #0284C7;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  width: 100%;
+
+  &:hover {
+    background: #BAE6FD;
+  }
+`;
+
+const ScheduleItemFields = styled.div`
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -503,6 +597,24 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // State for managing schedules
+  const [fertilizerSchedule, setFertilizerSchedule] = useState<Array<{
+    name: string;
+    applicationInterval: number;
+    amountPerPlant: number;
+    unit: string;
+    notes?: string;
+  }>>([]);
+
+  const [pesticideSchedule, setPesticideSchedule] = useState<Array<{
+    name: string;
+    applicationInterval: number;
+    amountPerPlant: number;
+    unit: string;
+    targetPest?: string;
+    notes?: string;
+  }>>([]);
+
   const {
     register,
     handleSubmit,
@@ -510,6 +622,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
     reset,
     control,
     watch,
+    setValue,
   } = useForm<PlantDataFormData>({
     resolver: zodResolver(plantDataSchema),
   });
@@ -519,52 +632,76 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
   // Pre-populate form when plantData changes
   useEffect(() => {
     if (plantData) {
+      // Initialize schedules from plant data
+      const initialFertilizerSchedule = (plantData.fertilizerSchedule || []).map(item => ({
+        name: item.fertilizerType || '',
+        applicationInterval: item.frequencyDays || 0,
+        amountPerPlant: item.quantity || 0,
+        unit: item.quantityUnit || '',
+        notes: item.npkRatio ? `NPK Ratio: ${item.npkRatio}` : '',
+      }));
+      setFertilizerSchedule(initialFertilizerSchedule);
+
+      const initialPesticideSchedule = (plantData.pesticideSchedule || []).map(item => ({
+        name: item.pesticideType || '',
+        applicationInterval: item.frequencyDays || 0,
+        amountPerPlant: item.quantity || 0,
+        unit: item.quantityUnit || '',
+        targetPest: '',
+        notes: item.safetyNotes || '',
+      }));
+      setPesticideSchedule(initialPesticideSchedule);
+
+      // Reset form with default values for ALL fields to prevent controlled/uncontrolled errors
       reset({
-        plantName: plantData.plantName,
-        scientificName: plantData.scientificName,
-        plantType: plantData.plantType,
-        farmTypeCompatibility: plantData.farmTypeCompatibility,
+        plantName: plantData.plantName || '',
+        scientificName: plantData.scientificName || '',
+        plantType: plantData.plantType || 'vegetable',
+        farmTypeCompatibility: plantData.farmTypeCompatibility || [],
         tags: plantData.tags?.join(', ') || '',
-        spacingCategory: plantData.spacingCategory,
+        spacingCategory: plantData.spacingCategory || undefined,
 
-        germinationDays: plantData.growthCycle?.germinationDays,
-        vegetativeDays: plantData.growthCycle?.vegetativeDays,
-        floweringDays: plantData.growthCycle?.floweringDays,
-        fruitingDays: plantData.growthCycle?.fruitingDays,
-        harvestDurationDays: plantData.growthCycle?.harvestDurationDays,
-        totalCycleDays: plantData.growthCycle?.totalCycleDays,
+        germinationDays: plantData.growthCycle?.germinationDays ?? undefined,
+        vegetativeDays: plantData.growthCycle?.vegetativeDays ?? undefined,
+        floweringDays: plantData.growthCycle?.floweringDays ?? undefined,
+        fruitingDays: plantData.growthCycle?.fruitingDays ?? undefined,
+        harvestDurationDays: plantData.growthCycle?.harvestDurationDays ?? undefined,
+        totalCycleDays: plantData.growthCycle?.totalCycleDays ?? undefined,
 
-        yieldPerPlant: plantData.yieldInfo?.yieldPerPlant,
-        yieldUnit: plantData.yieldInfo?.yieldUnit,
-        expectedWastePercent: plantData.yieldInfo?.expectedWastePercentage,
+        yieldPerPlant: plantData.yieldInfo?.yieldPerPlant ?? undefined,
+        yieldUnit: plantData.yieldInfo?.yieldUnit || '',
+        expectedWastePercent: plantData.yieldInfo?.expectedWastePercentage ?? undefined,
 
-        temperatureMin: plantData.environmentalRequirements?.temperatureMin,
-        temperatureOptimal: plantData.environmentalRequirements?.temperatureOptimal,
-        temperatureMax: plantData.environmentalRequirements?.temperatureMax,
-        humidityMin: plantData.environmentalRequirements?.humidityMin,
-        humidityOptimal: plantData.environmentalRequirements?.humidityOptimal,
-        humidityMax: plantData.environmentalRequirements?.humidityMax,
+        temperatureMin: plantData.environmentalRequirements?.temperatureMin ?? undefined,
+        temperatureOptimal: plantData.environmentalRequirements?.temperatureOptimal ?? undefined,
+        temperatureMax: plantData.environmentalRequirements?.temperatureMax ?? undefined,
+        humidityMin: plantData.environmentalRequirements?.humidityMin ?? undefined,
+        humidityOptimal: plantData.environmentalRequirements?.humidityOptimal ?? undefined,
+        humidityMax: plantData.environmentalRequirements?.humidityMax ?? undefined,
 
-        wateringFrequencyDays: plantData.wateringRequirements?.wateringFrequencyDays,
-        waterAmountPerPlant: plantData.wateringRequirements?.waterAmountPerPlant,
-        waterAmountUnit: plantData.wateringRequirements?.waterAmountUnit,
+        wateringFrequencyDays: plantData.wateringRequirements?.wateringFrequencyDays ?? undefined,
+        waterAmountPerPlant: plantData.wateringRequirements?.waterAmountPerPlant ?? undefined,
+        waterAmountUnit: plantData.wateringRequirements?.waterAmountUnit || '',
 
-        phMin: plantData.soilRequirements?.phMin,
-        phOptimal: plantData.soilRequirements?.phOptimal,
-        phMax: plantData.soilRequirements?.phMax,
+        phMin: plantData.soilRequirements?.phMin ?? undefined,
+        phOptimal: plantData.soilRequirements?.phOptimal ?? undefined,
+        phMax: plantData.soilRequirements?.phMax ?? undefined,
 
-        dailyLightHoursMin: plantData.lightRequirements?.dailyLightHoursMin,
-        dailyLightHoursOptimal: plantData.lightRequirements?.dailyLightHoursOptimal,
-        dailyLightHoursMax: plantData.lightRequirements?.dailyLightHoursMax,
+        dailyLightHoursMin: plantData.lightRequirements?.dailyLightHoursMin ?? undefined,
+        dailyLightHoursOptimal: plantData.lightRequirements?.dailyLightHoursOptimal ?? undefined,
+        dailyLightHoursMax: plantData.lightRequirements?.dailyLightHoursMax ?? undefined,
 
-        averageMarketValuePerKg: plantData.economicsAndLabor?.averageMarketValuePerKg,
-        currency: plantData.economicsAndLabor?.currency,
+        averageMarketValuePerKg: plantData.economicsAndLabor?.averageMarketValuePerKg ?? undefined,
+        currency: plantData.economicsAndLabor?.currency || '',
 
-        spacingBetweenPlantsCm: plantData.additionalInfo?.spacingBetweenPlantsCm,
-        spacingBetweenRowsCm: plantData.additionalInfo?.spacingBetweenRowsCm,
-        notes: plantData.additionalInfo?.notes,
+        spacingBetweenPlantsCm: plantData.additionalInfo?.spacingBetweenPlantsCm ?? undefined,
+        spacingBetweenRowsCm: plantData.additionalInfo?.spacingBetweenRowsCm ?? undefined,
+        notes: plantData.additionalInfo?.notes || '',
 
-        isActive: plantData.isActive,
+        isActive: plantData.isActive ?? true,
+
+        fertilizerSchedule: initialFertilizerSchedule,
+        pesticideSchedule: initialPesticideSchedule,
       });
     }
   }, [plantData, reset]);
@@ -578,6 +715,27 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
       setSubmitting(true);
       setSuccessMessage(null);
       setErrorMessage(null);
+
+      // Convert simplified fertilizer schedule to backend format
+      const fertilizerScheduleForBackend: FertilizerApplication[] = fertilizerSchedule.map(item => ({
+        stage: 'vegetative' as GrowthStage, // Default stage
+        fertilizerType: item.name,
+        quantity: item.amountPerPlant,
+        quantityUnit: item.unit,
+        frequencyDays: item.applicationInterval,
+        npkRatio: item.notes || undefined,
+      }));
+
+      // Convert simplified pesticide schedule to backend format
+      const pesticideScheduleForBackend: PesticideApplication[] = pesticideSchedule.map(item => ({
+        stage: 'vegetative' as GrowthStage, // Default stage
+        pesticideType: item.name,
+        quantity: item.amountPerPlant,
+        quantityUnit: item.unit,
+        frequencyDays: item.applicationInterval,
+        preharvestIntervalDays: undefined,
+        safetyNotes: item.notes || undefined,
+      }));
 
       // Transform form data to API format (only send changed fields)
       // Note: plantType and isActive are not supported by backend update model
@@ -602,6 +760,10 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
           yieldUnit: data.yieldUnit!,
           expectedWastePercentage: data.expectedWastePercent ?? 0,
         },
+
+        // Include fertilizer and pesticide schedules
+        fertilizerSchedule: fertilizerScheduleForBackend.length > 0 ? fertilizerScheduleForBackend : undefined,
+        pesticideSchedule: pesticideScheduleForBackend.length > 0 ? pesticideScheduleForBackend : undefined,
 
         // NOTE: Advanced fields (environmentalRequirements, wateringRequirements, soilRequirements,
         // lightRequirements, economicsAndLabor, additionalInfo) require complex nested structures
@@ -653,6 +815,51 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
       ? current.filter(ft => ft !== farmType)
       : [...current, farmType];
     return updated;
+  };
+
+  // Fertilizer schedule handlers
+  const addFertilizerItem = () => {
+    setFertilizerSchedule([...fertilizerSchedule, {
+      name: '',
+      applicationInterval: 7,
+      amountPerPlant: 0,
+      unit: 'g',
+      notes: '',
+    }]);
+  };
+
+  const removeFertilizerItem = (index: number) => {
+    setFertilizerSchedule(fertilizerSchedule.filter((_, i) => i !== index));
+  };
+
+  const updateFertilizerItem = (index: number, field: string, value: any) => {
+    const updated = [...fertilizerSchedule];
+    updated[index] = { ...updated[index], [field]: value };
+    setFertilizerSchedule(updated);
+    setValue('fertilizerSchedule', updated);
+  };
+
+  // Pesticide schedule handlers
+  const addPesticideItem = () => {
+    setPesticideSchedule([...pesticideSchedule, {
+      name: '',
+      applicationInterval: 7,
+      amountPerPlant: 0,
+      unit: 'ml',
+      targetPest: '',
+      notes: '',
+    }]);
+  };
+
+  const removePesticideItem = (index: number) => {
+    setPesticideSchedule(pesticideSchedule.filter((_, i) => i !== index));
+  };
+
+  const updatePesticideItem = (index: number, field: string, value: any) => {
+    const updated = [...pesticideSchedule];
+    updated[index] = { ...updated[index], [field]: value };
+    setPesticideSchedule(updated);
+    setValue('pesticideSchedule', updated);
   };
 
   if (!plantData) return null;
@@ -1089,6 +1296,193 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                       <Input id="currency" type="text" placeholder="USD, EUR, etc." disabled={submitting} {...register('currency')} />
                     </FormGroup>
                   </GridRow>
+                </Section>
+
+                <Section>
+                  <SectionHeader>
+                    <SectionTitle>Fertilizer Schedule</SectionTitle>
+                    <OptionalBadge>Optional</OptionalBadge>
+                  </SectionHeader>
+
+                  <ScheduleList>
+                    {fertilizerSchedule.map((item, index) => (
+                      <ScheduleItem key={index}>
+                        <ScheduleItemHeader>
+                          <ScheduleItemTitle>Fertilizer Application #{index + 1}</ScheduleItemTitle>
+                          <RemoveButton
+                            type="button"
+                            onClick={() => removeFertilizerItem(index)}
+                            disabled={submitting}
+                          >
+                            Remove
+                          </RemoveButton>
+                        </ScheduleItemHeader>
+
+                        <ScheduleItemFields>
+                          <FormGroup>
+                            <Label>Fertilizer Name</Label>
+                            <Input
+                              type="text"
+                              placeholder="e.g., NPK 20-20-20"
+                              value={item.name}
+                              onChange={(e) => updateFertilizerItem(index, 'name', e.target.value)}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+
+                          <FormGroup>
+                            <Label>Interval (days)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={item.applicationInterval}
+                              onChange={(e) => updateFertilizerItem(index, 'applicationInterval', Number(e.target.value))}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+
+                          <FormGroup>
+                            <Label>Amount/Plant</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={item.amountPerPlant}
+                              onChange={(e) => updateFertilizerItem(index, 'amountPerPlant', Number(e.target.value))}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+
+                          <FormGroup>
+                            <Label>Unit</Label>
+                            <Input
+                              type="text"
+                              placeholder="g, ml, kg"
+                              value={item.unit}
+                              onChange={(e) => updateFertilizerItem(index, 'unit', e.target.value)}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+                        </ScheduleItemFields>
+
+                        <FormGroup>
+                          <Label>Notes (optional)</Label>
+                          <Input
+                            type="text"
+                            placeholder="e.g., Apply in morning, dilute with water"
+                            value={item.notes || ''}
+                            onChange={(e) => updateFertilizerItem(index, 'notes', e.target.value)}
+                            disabled={submitting}
+                          />
+                        </FormGroup>
+                      </ScheduleItem>
+                    ))}
+                  </ScheduleList>
+
+                  <AddButton type="button" onClick={addFertilizerItem} disabled={submitting}>
+                    + Add Fertilizer Application
+                  </AddButton>
+                </Section>
+
+                <Section>
+                  <SectionHeader>
+                    <SectionTitle>Pesticide Schedule</SectionTitle>
+                    <OptionalBadge>Optional</OptionalBadge>
+                  </SectionHeader>
+
+                  <ScheduleList>
+                    {pesticideSchedule.map((item, index) => (
+                      <ScheduleItem key={index}>
+                        <ScheduleItemHeader>
+                          <ScheduleItemTitle>Pesticide Application #{index + 1}</ScheduleItemTitle>
+                          <RemoveButton
+                            type="button"
+                            onClick={() => removePesticideItem(index)}
+                            disabled={submitting}
+                          >
+                            Remove
+                          </RemoveButton>
+                        </ScheduleItemHeader>
+
+                        <ScheduleItemFields>
+                          <FormGroup>
+                            <Label>Pesticide Name</Label>
+                            <Input
+                              type="text"
+                              placeholder="e.g., Neem Oil"
+                              value={item.name}
+                              onChange={(e) => updatePesticideItem(index, 'name', e.target.value)}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+
+                          <FormGroup>
+                            <Label>Interval (days)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={item.applicationInterval}
+                              onChange={(e) => updatePesticideItem(index, 'applicationInterval', Number(e.target.value))}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+
+                          <FormGroup>
+                            <Label>Amount/Plant</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={item.amountPerPlant}
+                              onChange={(e) => updatePesticideItem(index, 'amountPerPlant', Number(e.target.value))}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+
+                          <FormGroup>
+                            <Label>Unit</Label>
+                            <Input
+                              type="text"
+                              placeholder="ml, g"
+                              value={item.unit}
+                              onChange={(e) => updatePesticideItem(index, 'unit', e.target.value)}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+                        </ScheduleItemFields>
+
+                        <GridRow>
+                          <FormGroup>
+                            <Label>Target Pest (optional)</Label>
+                            <Input
+                              type="text"
+                              placeholder="e.g., Aphids, Whiteflies"
+                              value={item.targetPest || ''}
+                              onChange={(e) => updatePesticideItem(index, 'targetPest', e.target.value)}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+
+                          <FormGroup>
+                            <Label>Notes (optional)</Label>
+                            <Input
+                              type="text"
+                              placeholder="e.g., Safety precautions, application method"
+                              value={item.notes || ''}
+                              onChange={(e) => updatePesticideItem(index, 'notes', e.target.value)}
+                              disabled={submitting}
+                            />
+                          </FormGroup>
+                        </GridRow>
+                      </ScheduleItem>
+                    ))}
+                  </ScheduleList>
+
+                  <AddButton type="button" onClick={addPesticideItem} disabled={submitting}>
+                    + Add Pesticide Application
+                  </AddButton>
                 </Section>
 
                 <Section>

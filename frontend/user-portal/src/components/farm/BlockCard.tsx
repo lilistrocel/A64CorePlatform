@@ -14,6 +14,7 @@ import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
 import { PlantAssignmentModal } from './PlantAssignmentModal';
 import { PendingTasksWarningModal } from './PendingTasksWarningModal';
 import { BlockAnalyticsModal } from './BlockAnalyticsModal';
+import { formatNumber } from '../../utils';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -390,14 +391,14 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
           <StatLabel>Area</StatLabel>
           <StatValue>
             {block.areaUnit === 'sqm' || block.areaUnit === 'sqft'
-              ? `${((block.area ?? 0) / 10000).toFixed(2)} ha`
-              : `${(block.area ?? 0).toFixed(2)} ${block.areaUnit || 'ha'}`
+              ? `${formatNumber((block.area ?? 0) / 10000, { decimals: 2 })} ha`
+              : `${formatNumber(block.area, { decimals: 2 })} ${block.areaUnit || 'ha'}`
             }
           </StatValue>
         </StatItem>
         <StatItem>
           <StatLabel>Capacity</StatLabel>
-          <StatValue>{block.maxPlants ?? 0}</StatValue>
+          <StatValue>{formatNumber(block.maxPlants)}</StatValue>
         </StatItem>
       </StatsGrid>
 
@@ -407,7 +408,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
             <CapacityFill $percent={utilizationPercent} $color={stateColor} />
           </CapacityBar>
           <CapacityText>
-            {summary.currentPlantCount} / {block.maxPlants} plants ({utilizationPercent.toFixed(0)}%)
+            {formatNumber(summary.currentPlantCount)} / {formatNumber(block.maxPlants)} plants ({formatNumber(utilizationPercent, { decimals: 0 })}%)
           </CapacityText>
         </>
       )}
@@ -415,7 +416,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       {summary?.currentPlanting && (
         <PlantingInfo>
           <PlantingLabel>Current Planting</PlantingLabel>
-          <PlantingDetail>{summary.currentPlanting.plantCount} plants</PlantingDetail>
+          <PlantingDetail>{formatNumber(summary.currentPlanting.plantCount)} plants</PlantingDetail>
           {summary.currentPlanting.plantedDate && (
             <PlantingDetail>
               Planted: {farmApi.formatDateForDisplay(summary.currentPlanting.plantedDate)}

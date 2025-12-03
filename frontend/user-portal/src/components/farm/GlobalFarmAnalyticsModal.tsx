@@ -28,6 +28,7 @@ import {
 import { useGlobalAnalytics } from '../../hooks/farm/useGlobalAnalytics';
 import type { TimePeriod, FarmSummary } from '../../types/global-analytics';
 import { TIME_PERIOD_OPTIONS } from '../../types/global-analytics';
+import { formatNumber } from '../../utils';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -242,42 +243,42 @@ function OverviewTab({ analytics }: { analytics: any }) {
         <MetricsGrid>
           <MetricCard>
             <MetricIcon>🏞️</MetricIcon>
-            <MetricValue>{metrics.totalFarms}</MetricValue>
+            <MetricValue>{formatNumber(metrics.totalFarms)}</MetricValue>
             <MetricLabel>Total Farms</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>🏗️</MetricIcon>
-            <MetricValue>{metrics.totalBlocks}</MetricValue>
+            <MetricValue>{formatNumber(metrics.totalBlocks)}</MetricValue>
             <MetricLabel>Total Blocks</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>🌱</MetricIcon>
-            <MetricValue>{metrics.totalActivePlantings}</MetricValue>
+            <MetricValue>{formatNumber(metrics.totalActivePlantings)}</MetricValue>
             <MetricLabel>Active Plantings</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>🌾</MetricIcon>
-            <MetricValue>{metrics.totalYieldKg.toFixed(1)} kg</MetricValue>
+            <MetricValue>{formatNumber(metrics.totalYieldKg, { decimals: 1 })} kg</MetricValue>
             <MetricLabel>Total Yield</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>📊</MetricIcon>
-            <MetricValue>{metrics.avgYieldEfficiencyAcrossFarms.toFixed(1)}%</MetricValue>
+            <MetricValue>{formatNumber(metrics.avgYieldEfficiencyAcrossFarms, { decimals: 1 })}%</MetricValue>
             <MetricLabel>Avg Yield Efficiency</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>⭐</MetricIcon>
-            <MetricValue $color={performanceColor}>{performanceScore.toFixed(0)}</MetricValue>
+            <MetricValue $color={performanceColor}>{formatNumber(performanceScore, { decimals: 0 })}</MetricValue>
             <MetricLabel>Avg Performance Score</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>📦</MetricIcon>
-            <MetricValue>{metrics.avgUtilization.toFixed(0)}%</MetricValue>
+            <MetricValue>{formatNumber(metrics.avgUtilization, { decimals: 0 })}%</MetricValue>
             <MetricLabel>System Utilization</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>🔮</MetricIcon>
-            <MetricValue>{metrics.totalPredictedYieldKg.toFixed(1)} kg</MetricValue>
+            <MetricValue>{formatNumber(metrics.totalPredictedYieldKg, { decimals: 1 })} kg</MetricValue>
             <MetricLabel>Predicted Yield</MetricLabel>
           </MetricCard>
         </MetricsGrid>
@@ -314,7 +315,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={(entry) => `${entry.name}: ${entry.value} (${((entry.value / analytics.stateBreakdown.totalBlocks) * 100).toFixed(0)}%)`}
+                  label={(entry) => `${entry.name}: ${formatNumber(entry.value)} (${formatNumber(((entry.value / analytics.stateBreakdown.totalBlocks) * 100), { decimals: 0 })}%)`}
                 >
                   {stateData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />

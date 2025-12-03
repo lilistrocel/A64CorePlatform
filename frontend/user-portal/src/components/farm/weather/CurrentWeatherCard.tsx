@@ -15,6 +15,7 @@ import {
   formatWeatherDateTime,
   getWindDirectionArrow,
 } from '../../../services/weatherApi';
+import { formatNumber } from '../../../utils';
 
 const Card = styled.div`
   background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
@@ -133,14 +134,14 @@ export function CurrentWeatherCard({ weather }: CurrentWeatherCardProps) {
           <p>
             {weather.city && weather.country
               ? `${weather.city}, ${weather.country}`
-              : `${weather.latitude.toFixed(2)}°, ${weather.longitude.toFixed(2)}°`}
+              : `${formatNumber(weather.latitude, { decimals: 2 })}°, ${formatNumber(weather.longitude, { decimals: 2 })}°`}
           </p>
         </Location>
         {iconUrl && <WeatherIcon src={iconUrl} alt={weather.description} />}
       </Header>
 
       <MainTemp>
-        <Temperature>{Math.round(weather.temperature)}°</Temperature>
+        <Temperature>{formatNumber(Math.round(weather.temperature))}°</Temperature>
         <TempDetails>
           <div className="description">{weather.description}</div>
           {weather.feelsLike !== undefined && (

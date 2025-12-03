@@ -35,7 +35,7 @@ export default defineConfig({
     proxy: {
       // Proxy all API requests through nginx (works both in Docker and local dev)
       '/api': {
-        target: 'http://localhost',
+        target: 'http://nginx',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path,  // Keep path as-is
