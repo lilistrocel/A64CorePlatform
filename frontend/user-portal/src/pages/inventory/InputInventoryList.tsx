@@ -21,7 +21,11 @@ import type {
   PaginatedResponse,
 } from '../../types/inventory';
 import type { Farm } from '../../types/farm';
-import { INPUT_CATEGORY_LABELS } from '../../types/inventory';
+import {
+  INPUT_CATEGORY_LABELS,
+  getUnitsForCategory,
+  getDefaultUnitForCategory,
+} from '../../types/inventory';
 
 interface Props {
   onUpdate?: () => void;
@@ -268,11 +272,26 @@ function AddInputModal({
   onSave: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
+  const defaultCategory: InputCategory = 'fertilizer';
   const [formData, setFormData] = useState<Partial<InputInventoryCreate>>({
-    category: 'fertilizer',
+    category: defaultCategory,
+    unit: getDefaultUnitForCategory(defaultCategory),
     currency: 'AED',
     minimumStock: 0,
   });
+
+  // Get available units for the selected category
+  const availableUnits = getUnitsForCategory(formData.category || 'fertilizer');
+
+  // Handle category change - update unit to default for new category
+  const handleCategoryChange = (newCategory: InputCategory) => {
+    const defaultUnit = getDefaultUnitForCategory(newCategory);
+    setFormData({
+      ...formData,
+      category: newCategory,
+      unit: defaultUnit,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -322,7 +341,7 @@ function AddInputModal({
                 <Label>Category *</Label>
                 <Select
                   value={formData.category || 'fertilizer'}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value as InputCategory })}
+                  onChange={(e) => handleCategoryChange(e.target.value as InputCategory)}
                 >
                   {Object.entries(INPUT_CATEGORY_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -367,13 +386,17 @@ function AddInputModal({
               </FormGroup>
               <FormGroup>
                 <Label>Unit *</Label>
-                <Input
-                  type="text"
-                  placeholder="kg, L, units"
+                <Select
                   value={formData.unit || ''}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   required
-                />
+                >
+                  {availableUnits.map((unit) => (
+                    <option key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </option>
+                  ))}
+                </Select>
               </FormGroup>
             </FormRow>
 

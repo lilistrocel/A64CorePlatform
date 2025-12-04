@@ -50,6 +50,169 @@ class InputCategory(str, Enum):
     OTHER = "other"
 
 
+class BaseUnit(str, Enum):
+    """
+    Base units for inventory calculations.
+    All quantities are stored internally in these base units for precise calculations.
+    - mg (milligrams) for solid materials (fertilizers, powders)
+    - ml (milliliters) for liquid materials (pesticides, nutrient solutions)
+    - units for countable items (seeds, seedlings)
+    """
+    MILLIGRAM = "mg"      # Base for solids
+    MILLILITER = "ml"     # Base for liquids
+    UNIT = "unit"         # Base for countable items (seeds, seedlings)
+
+
+class DisplayUnit(str, Enum):
+    """
+    User-friendly display units.
+    These are converted to/from base units for storage and calculations.
+    """
+    # Mass units (convert to mg)
+    KILOGRAM = "kg"
+    GRAM = "g"
+    MILLIGRAM = "mg"
+    POUND = "lb"
+    OUNCE = "oz"
+
+    # Volume units (convert to ml)
+    LITER = "L"
+    MILLILITER = "ml"
+    GALLON = "gal"
+
+    # Countable units (convert to unit)
+    UNIT = "unit"
+    PIECE = "piece"
+    PACKET = "packet"
+    BAG = "bag"
+    BOX = "box"
+
+
+# Conversion factors to base units
+# Mass -> mg
+MASS_TO_MG = {
+    "kg": 1_000_000,      # 1 kg = 1,000,000 mg
+    "g": 1_000,           # 1 g = 1,000 mg
+    "mg": 1,              # 1 mg = 1 mg
+    "lb": 453_592,        # 1 lb = 453,592 mg
+    "oz": 28_350,         # 1 oz = 28,350 mg
+}
+
+# Volume -> ml
+VOLUME_TO_ML = {
+    "L": 1_000,           # 1 L = 1,000 ml
+    "ml": 1,              # 1 ml = 1 ml
+    "gal": 3_785,         # 1 gal = 3,785 ml (US gallon)
+}
+
+# Countable -> unit
+COUNT_TO_UNIT = {
+    "unit": 1,
+    "piece": 1,
+    "packet": 1,          # Treat as 1 unit (can be adjusted per item)
+    "bag": 1,             # Treat as 1 unit (can be adjusted per item)
+    "box": 1,             # Treat as 1 unit (can be adjusted per item)
+}
+
+# Category to base unit mapping
+CATEGORY_BASE_UNIT = {
+    InputCategory.FERTILIZER: BaseUnit.MILLIGRAM,
+    InputCategory.PESTICIDE: BaseUnit.MILLILITER,
+    InputCategory.HERBICIDE: BaseUnit.MILLILITER,
+    InputCategory.FUNGICIDE: BaseUnit.MILLILITER,
+    InputCategory.SEED: BaseUnit.UNIT,
+    InputCategory.SEEDLING: BaseUnit.UNIT,
+    InputCategory.SOIL: BaseUnit.MILLIGRAM,
+    InputCategory.SUBSTRATE: BaseUnit.MILLIGRAM,
+    InputCategory.NUTRIENT_SOLUTION: BaseUnit.MILLILITER,
+    InputCategory.GROWTH_REGULATOR: BaseUnit.MILLILITER,
+    InputCategory.PACKAGING: BaseUnit.UNIT,
+    InputCategory.OTHER: BaseUnit.UNIT,
+}
+
+
+def get_base_unit_for_category(category: InputCategory) -> BaseUnit:
+    """Get the appropriate base unit for an input category"""
+    return CATEGORY_BASE_UNIT.get(category, BaseUnit.UNIT)
+
+
+def convert_to_base_unit(quantity: float, display_unit: str, category: InputCategory) -> float:
+    """
+    Convert a quantity from display unit to base unit.
+
+    Args:
+        quantity: The quantity in display units
+        display_unit: The display unit (kg, g, L, ml, etc.)
+        category: The input category (determines if solid/liquid/countable)
+
+    Returns:
+        The quantity in base units (mg, ml, or unit)
+    """
+    base_unit = get_base_unit_for_category(category)
+
+    if base_unit == BaseUnit.MILLIGRAM:
+        factor = MASS_TO_MG.get(display_unit, 1)
+    elif base_unit == BaseUnit.MILLILITER:
+        factor = VOLUME_TO_ML.get(display_unit, 1)
+    else:  # BaseUnit.UNIT
+        factor = COUNT_TO_UNIT.get(display_unit, 1)
+
+    return quantity * factor
+
+
+def convert_from_base_unit(base_quantity: float, display_unit: str, category: InputCategory) -> float:
+    """
+    Convert a quantity from base unit to display unit.
+
+    Args:
+        base_quantity: The quantity in base units (mg, ml, or unit)
+        display_unit: The target display unit (kg, g, L, ml, etc.)
+        category: The input category (determines if solid/liquid/countable)
+
+    Returns:
+        The quantity in display units
+    """
+    base_unit = get_base_unit_for_category(category)
+
+    if base_unit == BaseUnit.MILLIGRAM:
+        factor = MASS_TO_MG.get(display_unit, 1)
+    elif base_unit == BaseUnit.MILLILITER:
+        factor = VOLUME_TO_ML.get(display_unit, 1)
+    else:  # BaseUnit.UNIT
+        factor = COUNT_TO_UNIT.get(display_unit, 1)
+
+    return base_quantity / factor if factor > 0 else base_quantity
+
+
+def format_base_quantity_for_display(base_quantity: float, base_unit: BaseUnit) -> str:
+    """
+    Format a base quantity with automatic unit selection for best readability.
+
+    Args:
+        base_quantity: The quantity in base units
+        base_unit: The base unit type
+
+    Returns:
+        Formatted string with appropriate unit
+    """
+    if base_unit == BaseUnit.MILLIGRAM:
+        if base_quantity >= 1_000_000:
+            return f"{base_quantity / 1_000_000:.2f} kg"
+        elif base_quantity >= 1_000:
+            return f"{base_quantity / 1_000:.2f} g"
+        else:
+            return f"{base_quantity:.2f} mg"
+
+    elif base_unit == BaseUnit.MILLILITER:
+        if base_quantity >= 1_000:
+            return f"{base_quantity / 1_000:.2f} L"
+        else:
+            return f"{base_quantity:.2f} ml"
+
+    else:  # BaseUnit.UNIT
+        return f"{int(base_quantity)} units"
+
+
 class AssetCategory(str, Enum):
     """Categories of farm assets"""
     TRACTOR = "tractor"
@@ -205,10 +368,10 @@ class InputInventoryBase(BaseModel):
     brand: Optional[str] = Field(None, max_length=100, description="Brand/manufacturer")
     sku: Optional[str] = Field(None, max_length=50, description="Stock keeping unit/product code")
 
-    # Quantity tracking
-    quantity: float = Field(..., ge=0, description="Current quantity")
-    unit: str = Field(..., min_length=1, max_length=20, description="Unit of measurement")
-    minimumStock: float = Field(0.0, ge=0, description="Minimum stock level for alerts")
+    # Quantity tracking (display units - what user sees)
+    quantity: float = Field(..., ge=0, description="Current quantity in display units")
+    unit: str = Field(..., min_length=1, max_length=20, description="Display unit (kg, g, L, ml, etc.)")
+    minimumStock: float = Field(0.0, ge=0, description="Minimum stock level in display units")
 
     # Dates
     purchaseDate: Optional[datetime] = Field(None, description="When the item was purchased")
@@ -255,6 +418,12 @@ class InputInventory(InputInventoryBase):
     """Complete input inventory item"""
     inventoryId: UUID = Field(default_factory=uuid4, description="Unique identifier")
 
+    # Base unit tracking (for automated calculations and deductions)
+    # These are calculated from quantity + unit when item is created/updated
+    baseUnit: BaseUnit = Field(..., description="Base unit for calculations (mg, ml, or unit)")
+    baseQuantity: float = Field(..., ge=0, description="Quantity in base units for precise calculations")
+    baseMinimumStock: float = Field(0.0, ge=0, description="Minimum stock in base units")
+
     # Low stock alert
     isLowStock: bool = Field(False, description="True if quantity below minimum")
 
@@ -275,6 +444,9 @@ class InputInventory(InputInventoryBase):
                 "sku": "GG-NPK-2020-50",
                 "quantity": 250.0,
                 "unit": "kg",
+                "baseUnit": "mg",
+                "baseQuantity": 250000000000.0,
+                "baseMinimumStock": 50000000000.0,
                 "minimumStock": 50.0,
                 "isLowStock": False,
                 "purchaseDate": "2025-01-01T00:00:00Z",

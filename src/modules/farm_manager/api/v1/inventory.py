@@ -24,6 +24,8 @@ from src.modules.farm_manager.models.inventory import (
     AssetStatus,
     QualityGrade,
     MovementType,
+    BaseUnit,
+    DisplayUnit,
     # Harvest
     HarvestInventory,
     HarvestInventoryCreate,
@@ -40,6 +42,14 @@ from src.modules.farm_manager.models.inventory import (
     InventoryMovement,
     # Summary
     InventorySummary,
+    # Unit conversion functions
+    get_base_unit_for_category,
+    convert_to_base_unit,
+    convert_from_base_unit,
+    format_base_quantity_for_display,
+    MASS_TO_MG,
+    VOLUME_TO_ML,
+    COUNT_TO_UNIT,
 )
 
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
@@ -369,8 +379,16 @@ async def create_input_inventory(
     """Create a new input inventory item"""
     is_low_stock = data.quantity <= data.minimumStock if data.minimumStock > 0 else False
 
+    # Calculate base unit and quantities for automated calculations
+    base_unit = get_base_unit_for_category(data.category)
+    base_quantity = convert_to_base_unit(data.quantity, data.unit, data.category)
+    base_minimum_stock = convert_to_base_unit(data.minimumStock, data.unit, data.category)
+
     inventory = InputInventory(
         **data.model_dump(),
+        baseUnit=base_unit,
+        baseQuantity=base_quantity,
+        baseMinimumStock=base_minimum_stock,
         isLowStock=is_low_stock,
         createdBy=UUID(current_user.userId)
     )
@@ -426,6 +444,16 @@ async def update_input_inventory(
     min_stock = update_data.get("minimumStock", item.get("minimumStock", 0))
     update_data["isLowStock"] = new_quantity <= min_stock if min_stock > 0 else False
 
+    # Recalculate base quantities if quantity or minimumStock changed
+    category = InputCategory(item.get("category"))
+    unit = item.get("unit", "kg")
+
+    if "quantity" in update_data:
+        update_data["baseQuantity"] = convert_to_base_unit(new_quantity, unit, category)
+
+    if "minimumStock" in update_data:
+        update_data["baseMinimumStock"] = convert_to_base_unit(min_stock, unit, category)
+
     # Record quantity change
     if "quantity" in update_data:
         old_quantity = item.get("quantity", 0)
@@ -466,7 +494,7 @@ async def delete_input_inventory(
 @router.post("/input/{inventory_id}/use", response_model=dict)
 async def use_input_inventory(
     inventory_id: UUID,
-    quantity: float = Query(..., gt=0, description="Quantity to use"),
+    quantity: float = Query(..., gt=0, description="Quantity to use in display units"),
     reason: Optional[str] = Query(None, max_length=500),
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user: CurrentUser = Depends(get_current_active_user)
@@ -483,10 +511,16 @@ async def use_input_inventory(
     new_quantity = current_quantity - quantity
     min_stock = item.get("minimumStock", 0)
 
+    # Calculate new base quantity
+    category = InputCategory(item.get("category"))
+    unit = item.get("unit", "kg")
+    new_base_quantity = convert_to_base_unit(new_quantity, unit, category)
+
     await db.inventory_input.update_one(
         {"inventoryId": str(inventory_id)},
         {"$set": {
             "quantity": new_quantity,
+            "baseQuantity": new_base_quantity,
             "isLowStock": new_quantity <= min_stock if min_stock > 0 else False,
             "lastUsedAt": datetime.utcnow().isoformat(),
             "updatedAt": datetime.utcnow().isoformat()
@@ -506,6 +540,120 @@ async def use_input_inventory(
 
     updated = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
     return serialize_doc(updated)
+
+
+# Automated deduction using base units (for irrigation/fertilization systems)
+@router.post("/input/{inventory_id}/deduct-base", response_model=dict)
+async def deduct_input_base_units(
+    inventory_id: UUID,
+    base_quantity: float = Query(..., gt=0, description="Quantity to deduct in base units (mg or ml)"),
+    reason: Optional[str] = Query(None, max_length=500),
+    reference_id: Optional[str] = Query(None, max_length=100, description="Reference to task/block/plant"),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Deduct inventory using base units (mg/ml).
+    Used by automated irrigation/fertilization systems.
+
+    Args:
+        inventory_id: The inventory item to deduct from
+        base_quantity: Amount to deduct in base units (mg for solids, ml for liquids)
+        reason: Optional reason for deduction
+        reference_id: Optional reference to related record (task, block, plant)
+
+    Returns:
+        Updated inventory item with new quantities
+    """
+    item = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
+    if not item:
+        raise HTTPException(status_code=404, detail="Input inventory item not found")
+
+    current_base_quantity = item.get("baseQuantity", 0)
+    if base_quantity > current_base_quantity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient quantity. Available: {current_base_quantity} {item.get('baseUnit', 'units')}"
+        )
+
+    # Calculate new quantities
+    new_base_quantity = current_base_quantity - base_quantity
+    category = InputCategory(item.get("category"))
+    unit = item.get("unit", "kg")
+
+    # Convert back to display units
+    new_display_quantity = convert_from_base_unit(new_base_quantity, unit, category)
+    min_stock = item.get("minimumStock", 0)
+
+    # Calculate display quantity change for movement record
+    display_quantity_change = convert_from_base_unit(base_quantity, unit, category)
+
+    await db.inventory_input.update_one(
+        {"inventoryId": str(inventory_id)},
+        {"$set": {
+            "quantity": new_display_quantity,
+            "baseQuantity": new_base_quantity,
+            "isLowStock": new_display_quantity <= min_stock if min_stock > 0 else False,
+            "lastUsedAt": datetime.utcnow().isoformat(),
+            "updatedAt": datetime.utcnow().isoformat()
+        }}
+    )
+
+    await record_movement(
+        db=db,
+        inventory_id=inventory_id,
+        inventory_type=InventoryType.INPUT,
+        movement_type=MovementType.USAGE,
+        quantity_before=item.get("quantity", 0),
+        quantity_change=-display_quantity_change,
+        user_id=UUID(current_user.userId),
+        reason=reason or f"Automated deduction ({base_quantity} {item.get('baseUnit', 'units')})",
+        reference_id=reference_id
+    )
+
+    updated = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
+    return serialize_doc(updated)
+
+
+# Get available units for a category
+@router.get("/units/{category}", response_model=dict)
+async def get_units_for_category(
+    category: InputCategory
+):
+    """
+    Get available display units and base unit for a category.
+    Useful for frontend dropdowns.
+    """
+    base_unit = get_base_unit_for_category(category)
+
+    if base_unit == BaseUnit.MILLIGRAM:
+        display_units = [
+            {"value": "kg", "label": "Kilograms (kg)", "conversionFactor": MASS_TO_MG["kg"]},
+            {"value": "g", "label": "Grams (g)", "conversionFactor": MASS_TO_MG["g"]},
+            {"value": "mg", "label": "Milligrams (mg)", "conversionFactor": MASS_TO_MG["mg"]},
+            {"value": "lb", "label": "Pounds (lb)", "conversionFactor": MASS_TO_MG["lb"]},
+            {"value": "oz", "label": "Ounces (oz)", "conversionFactor": MASS_TO_MG["oz"]},
+        ]
+    elif base_unit == BaseUnit.MILLILITER:
+        display_units = [
+            {"value": "L", "label": "Liters (L)", "conversionFactor": VOLUME_TO_ML["L"]},
+            {"value": "ml", "label": "Milliliters (ml)", "conversionFactor": VOLUME_TO_ML["ml"]},
+            {"value": "gal", "label": "Gallons (gal)", "conversionFactor": VOLUME_TO_ML["gal"]},
+        ]
+    else:  # BaseUnit.UNIT
+        display_units = [
+            {"value": "unit", "label": "Units", "conversionFactor": 1},
+            {"value": "piece", "label": "Pieces", "conversionFactor": 1},
+            {"value": "packet", "label": "Packets", "conversionFactor": 1},
+            {"value": "bag", "label": "Bags", "conversionFactor": 1},
+            {"value": "box", "label": "Boxes", "conversionFactor": 1},
+        ]
+
+    return {
+        "category": category.value,
+        "baseUnit": base_unit.value,
+        "displayUnits": display_units
+    }
 
 
 # ============================================================================

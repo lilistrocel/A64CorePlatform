@@ -67,6 +67,18 @@ export type MovementType =
   | 'usage'
   | 'return';
 
+// Base units for automated calculations
+export type BaseUnit = 'mg' | 'ml' | 'unit';
+
+// Display units for user-friendly input
+export type DisplayUnit =
+  // Mass units (convert to mg)
+  | 'kg' | 'g' | 'mg' | 'lb' | 'oz'
+  // Volume units (convert to ml)
+  | 'L' | 'ml' | 'gal'
+  // Countable units
+  | 'unit' | 'piece' | 'packet' | 'bag' | 'box';
+
 // ============================================================================
 // HARVEST INVENTORY
 // ============================================================================
@@ -159,11 +171,16 @@ export interface InputInventory {
   brand?: string;
   sku?: string;
 
-  // Quantity
+  // Quantity (display units - what user sees)
   quantity: number;
   unit: string;
   minimumStock: number;
   isLowStock: boolean;
+
+  // Base unit tracking (for automated calculations)
+  baseUnit: BaseUnit;
+  baseQuantity: number;
+  baseMinimumStock: number;
 
   // Dates
   purchaseDate?: string;
@@ -439,3 +456,81 @@ export const PRODUCT_TYPE_LABELS: Record<HarvestProductType, string> = {
   frozen: 'Frozen',
   packaged: 'Packaged',
 };
+
+// ============================================================================
+// UNIT CONFIGURATION
+// ============================================================================
+
+// Map category to base unit
+export const CATEGORY_BASE_UNIT: Record<InputCategory, BaseUnit> = {
+  fertilizer: 'mg',
+  pesticide: 'ml',
+  herbicide: 'ml',
+  fungicide: 'ml',
+  seed: 'unit',
+  seedling: 'unit',
+  soil: 'mg',
+  substrate: 'mg',
+  nutrient_solution: 'ml',
+  growth_regulator: 'ml',
+  packaging: 'unit',
+  other: 'unit',
+};
+
+// Display unit options per base unit type
+export interface UnitOption {
+  value: DisplayUnit;
+  label: string;
+}
+
+export const MASS_UNITS: UnitOption[] = [
+  { value: 'kg', label: 'Kilograms (kg)' },
+  { value: 'g', label: 'Grams (g)' },
+  { value: 'mg', label: 'Milligrams (mg)' },
+  { value: 'lb', label: 'Pounds (lb)' },
+  { value: 'oz', label: 'Ounces (oz)' },
+];
+
+export const VOLUME_UNITS: UnitOption[] = [
+  { value: 'L', label: 'Liters (L)' },
+  { value: 'ml', label: 'Milliliters (ml)' },
+  { value: 'gal', label: 'Gallons (gal)' },
+];
+
+export const COUNT_UNITS: UnitOption[] = [
+  { value: 'unit', label: 'Units' },
+  { value: 'piece', label: 'Pieces' },
+  { value: 'packet', label: 'Packets' },
+  { value: 'bag', label: 'Bags' },
+  { value: 'box', label: 'Boxes' },
+];
+
+// Get available units for a category
+export function getUnitsForCategory(category: InputCategory): UnitOption[] {
+  const baseUnit = CATEGORY_BASE_UNIT[category];
+  switch (baseUnit) {
+    case 'mg':
+      return MASS_UNITS;
+    case 'ml':
+      return VOLUME_UNITS;
+    case 'unit':
+      return COUNT_UNITS;
+    default:
+      return COUNT_UNITS;
+  }
+}
+
+// Get default unit for a category
+export function getDefaultUnitForCategory(category: InputCategory): DisplayUnit {
+  const baseUnit = CATEGORY_BASE_UNIT[category];
+  switch (baseUnit) {
+    case 'mg':
+      return 'kg';  // Default to kg for mass
+    case 'ml':
+      return 'L';   // Default to liters for volume
+    case 'unit':
+      return 'unit';
+    default:
+      return 'unit';
+  }
+}
