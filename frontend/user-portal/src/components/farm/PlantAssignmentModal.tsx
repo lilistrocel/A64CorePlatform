@@ -452,8 +452,8 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
 
     try {
-      // Block area is in hectares
-      const result = await calculatePlantCount(block.area, 'hectares', plant.spacingCategory);
+      // Block area is stored in square meters
+      const result = await calculatePlantCount(block.area, 'sqm', plant.spacingCategory);
 
       // Cap at block maxPlants
       const cappedCount = Math.min(result.plantCount, block.maxPlants);
@@ -688,7 +688,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                     <strong>Capacity:</strong> {block.maxPlants} plants
                   </div>
                   <div>
-                    <strong>Area:</strong> {(block.area ?? 0).toFixed(1)} ha
+                    <strong>Area:</strong> {((block.area ?? 0) / 10000).toFixed(2)} ha
                   </div>
                 </div>
               </FormSection>
