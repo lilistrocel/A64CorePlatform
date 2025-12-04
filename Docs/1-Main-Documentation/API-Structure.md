@@ -2857,6 +2857,500 @@ The frontend provides Google Maps integration for drawing boundaries:
 
 ---
 
+### Inventory Management
+**Status:** ✅ **IMPLEMENTED** (v1.9.0 - 2025-12-04)
+**Base URL:** `/api/v1/farm/inventory`
+
+The Inventory Management system provides comprehensive tracking for three inventory types:
+- **Harvest Inventory:** Harvested produce ready for sale
+- **Input Inventory:** Fertilizers, pesticides, seeds, and other consumables
+- **Asset Inventory:** Farm equipment, machinery, and infrastructure
+
+**Key Features:**
+- Dual-unit system (display units for users, base units for automation)
+- Automatic unit conversion (kg → mg, L → ml)
+- Low stock alerts and tracking
+- Movement history and audit trail
+- Quality grading for harvests
+- Maintenance scheduling for assets
+
+---
+
+#### Inventory Summary
+```
+GET /api/v1/farm/inventory/summary
+```
+**Purpose:** Get comprehensive inventory summary across all types
+**Authentication:** Required (Bearer Token)
+**Query Parameters:**
+- `farmId` (UUID, required): Farm to get summary for
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "harvestInventory": {
+      "totalItems": 15,
+      "totalQuantity": 2500.5
+    },
+    "inputInventory": {
+      "totalItems": 42,
+      "lowStockItems": 5
+    },
+    "assetInventory": {
+      "totalItems": 18,
+      "operationalCount": 15
+    },
+    "totalHarvestValue": 125000.00,
+    "totalInputValue": 45000.00,
+    "totalAssetValue": 850000.00,
+    "lowStockAlerts": 5,
+    "expiringItems": 3,
+    "maintenanceOverdue": 2
+  }
+}
+```
+
+---
+
+#### Input Inventory Management
+
+##### List Input Inventory
+```
+GET /api/v1/farm/inventory/input
+```
+**Purpose:** Get paginated list of input inventory items
+**Authentication:** Required (Bearer Token)
+**Query Parameters:**
+- `farmId` (UUID, required): Filter by farm
+- `page` (integer, default: 1): Page number
+- `perPage` (integer, default: 20, max: 100): Items per page
+- `category` (string, optional): Filter by category
+- `lowStockOnly` (boolean, optional): Show only low stock items
+
+**Response:** 200 OK (Paginated)
+
+---
+
+##### Create Input Inventory
+```
+POST /api/v1/farm/inventory/input
+```
+**Purpose:** Add a new input inventory item with automatic base unit conversion
+**Authentication:** Required (Bearer Token)
+**Request Body:**
+```json
+{
+  "farmId": "farm-uuid",
+  "itemName": "NPK 20-20-20 Fertilizer",
+  "category": "fertilizer",
+  "brand": "AgriGrow",
+  "quantity": 5.0,
+  "unit": "kg",
+  "minimumStock": 1.0,
+  "purchaseDate": "2025-12-01",
+  "expiryDate": "2026-12-01",
+  "storageLocation": "Warehouse A",
+  "unitCost": 45.00,
+  "currency": "AED",
+  "supplier": "Farm Supplies LLC",
+  "activeIngredients": "N-P-K 20-20-20",
+  "concentration": "20%",
+  "applicationRate": "2g per liter",
+  "safetyNotes": "Wear gloves during handling"
+}
+```
+
+**Automatic Calculations:**
+- `baseUnit`: Determined from category (fertilizer → mg)
+- `baseQuantity`: Converted from display quantity (5 kg → 5,000,000 mg)
+- `baseMinimumStock`: Converted from minimum stock
+- `isLowStock`: Calculated based on quantity vs minimum
+
+**Response:** 201 Created
+```json
+{
+  "data": {
+    "inventoryId": "uuid-here",
+    "farmId": "farm-uuid",
+    "itemName": "NPK 20-20-20 Fertilizer",
+    "category": "fertilizer",
+    "quantity": 5.0,
+    "unit": "kg",
+    "baseUnit": "mg",
+    "baseQuantity": 5000000.0,
+    "baseMinimumStock": 1000000.0,
+    "isLowStock": false,
+    "createdAt": "2025-12-04T10:00:00.000Z"
+  },
+  "message": "Input inventory created successfully"
+}
+```
+
+**Input Categories:**
+| Category | Base Unit | Display Units |
+|----------|-----------|---------------|
+| fertilizer | mg | kg, g, mg, lb, oz |
+| pesticide | ml | L, ml, gal |
+| herbicide | ml | L, ml, gal |
+| fungicide | ml | L, ml, gal |
+| seed | unit | units, pieces, packets, bags, boxes |
+| seedling | unit | units, pieces |
+| soil | mg | kg, g, lb |
+| substrate | mg | kg, g, lb |
+| nutrient_solution | ml | L, ml, gal |
+| growth_regulator | ml | L, ml |
+| packaging | unit | units, pieces, boxes |
+| other | unit | units |
+
+---
+
+##### Get Input Inventory Item
+```
+GET /api/v1/farm/inventory/input/{inventoryId}
+```
+**Purpose:** Get detailed input inventory item
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `inventoryId` (UUID)
+
+**Response:** 200 OK
+
+---
+
+##### Update Input Inventory
+```
+PATCH /api/v1/farm/inventory/input/{inventoryId}
+```
+**Purpose:** Update input inventory item (recalculates base quantities)
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `inventoryId` (UUID)
+**Request Body:** Partial update (any fields)
+
+**Response:** 200 OK (Updated item)
+
+---
+
+##### Delete Input Inventory
+```
+DELETE /api/v1/farm/inventory/input/{inventoryId}
+```
+**Purpose:** Delete input inventory item
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `inventoryId` (UUID)
+
+**Response:** 200 OK
+
+---
+
+##### Use Input Inventory (Display Units)
+```
+POST /api/v1/farm/inventory/input/{inventoryId}/use
+```
+**Purpose:** Record usage of input inventory in display units
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `inventoryId` (UUID)
+**Query Parameters:**
+- `quantity` (float, required): Amount to use in display units
+- `reason` (string, optional): Reason for usage
+- `referenceId` (string, optional): Link to task/block
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "inventoryId": "uuid",
+    "previousQuantity": 5.0,
+    "usedQuantity": 0.5,
+    "newQuantity": 4.5,
+    "unit": "kg",
+    "isLowStock": false
+  },
+  "message": "Inventory used successfully"
+}
+```
+
+---
+
+##### Deduct Input Inventory (Base Units)
+```
+POST /api/v1/farm/inventory/input/{inventoryId}/deduct-base
+```
+**Purpose:** Deduct inventory using base units (for automated systems)
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `inventoryId` (UUID)
+**Query Parameters:**
+- `base_quantity` (float, required): Amount to deduct in base units (mg or ml)
+- `reason` (string, optional): Reason for deduction
+- `reference_id` (string, optional): Link to automated task/block
+
+**Use Case:** Automated irrigation/fertilization systems deducting precise amounts per plant
+
+**Example:** Deduct 50,000 mg (50g) of fertilizer for automated irrigation
+```
+POST /api/v1/farm/inventory/input/{id}/deduct-base?base_quantity=50000&reason=automated_irrigation
+```
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "inventoryId": "uuid",
+    "previousBaseQuantity": 5000000,
+    "deductedBaseQuantity": 50000,
+    "newBaseQuantity": 4950000,
+    "baseUnit": "mg",
+    "displayQuantity": 4.95,
+    "displayUnit": "kg",
+    "isLowStock": false
+  },
+  "message": "Base quantity deducted successfully"
+}
+```
+
+---
+
+##### Get Units for Category
+```
+GET /api/v1/farm/inventory/units/{category}
+```
+**Purpose:** Get available display units and base unit for a category
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `category` (InputCategory)
+
+**Response:** 200 OK
+```json
+{
+  "category": "fertilizer",
+  "baseUnit": "mg",
+  "displayUnits": [
+    {"value": "kg", "label": "Kilograms (kg)"},
+    {"value": "g", "label": "Grams (g)"},
+    {"value": "mg", "label": "Milligrams (mg)"},
+    {"value": "lb", "label": "Pounds (lb)"},
+    {"value": "oz", "label": "Ounces (oz)"}
+  ],
+  "defaultUnit": "kg"
+}
+```
+
+---
+
+#### Unit Conversion Reference
+
+**Mass Conversions (to mg):**
+| Unit | Conversion Factor |
+|------|-------------------|
+| kg | × 1,000,000 |
+| g | × 1,000 |
+| mg | × 1 |
+| lb | × 453,592 |
+| oz | × 28,350 |
+
+**Volume Conversions (to ml):**
+| Unit | Conversion Factor |
+|------|-------------------|
+| L | × 1,000 |
+| ml | × 1 |
+| gal | × 3,785 |
+
+**Count Units (to unit):**
+| Unit | Conversion Factor |
+|------|-------------------|
+| unit, piece, packet, bag, box | × 1 |
+
+---
+
+#### Harvest Inventory Management
+
+##### List Harvest Inventory
+```
+GET /api/v1/farm/inventory/harvest
+```
+**Purpose:** Get paginated list of harvest inventory
+**Authentication:** Required (Bearer Token)
+**Query Parameters:**
+- `farmId` (UUID, required): Filter by farm
+- `page`, `perPage`: Pagination
+- `blockId` (UUID, optional): Filter by block
+- `plantDataId` (UUID, optional): Filter by plant type
+- `qualityGrade` (string, optional): Filter by grade
+
+**Response:** 200 OK (Paginated)
+
+---
+
+##### Create Harvest Inventory
+```
+POST /api/v1/farm/inventory/harvest
+```
+**Purpose:** Add harvested produce to inventory
+**Authentication:** Required (Bearer Token)
+**Request Body:**
+```json
+{
+  "farmId": "farm-uuid",
+  "blockId": "block-uuid",
+  "plantDataId": "plant-uuid",
+  "plantName": "Tomato - Roma",
+  "productType": "fresh",
+  "variety": "Roma VF",
+  "quantity": 150.0,
+  "unit": "kg",
+  "qualityGrade": "grade_a",
+  "harvestDate": "2025-12-04",
+  "expiryDate": "2025-12-14",
+  "storageLocation": "Cold Storage A",
+  "storageConditions": "4°C, 90% humidity",
+  "unitPrice": 8.50,
+  "currency": "AED"
+}
+```
+
+**Product Types:** fresh, processed, dried, frozen, packaged
+
+**Quality Grades:** premium, grade_a, grade_b, grade_c, processing, rejected
+
+**Response:** 201 Created
+
+---
+
+##### Aggregate Harvests to Inventory
+```
+POST /api/v1/farm/inventory/harvest/aggregate
+```
+**Purpose:** Automatically create/update harvest inventory from block harvests
+**Authentication:** Required (Bearer Token)
+**Query Parameters:**
+- `farmId` (UUID, required): Farm to aggregate from
+- `blockId` (UUID, optional): Specific block
+- `startDate`, `endDate` (datetime, optional): Date range
+
+**Response:** 200 OK
+```json
+{
+  "data": {
+    "created": 3,
+    "updated": 5,
+    "totalQuantity": 450.5,
+    "byQualityGrade": {
+      "grade_a": 315.0,
+      "grade_b": 112.5,
+      "grade_c": 23.0
+    }
+  },
+  "message": "Harvests aggregated successfully"
+}
+```
+
+---
+
+#### Asset Inventory Management
+
+##### List Asset Inventory
+```
+GET /api/v1/farm/inventory/asset
+```
+**Purpose:** Get paginated list of farm assets
+**Authentication:** Required (Bearer Token)
+**Query Parameters:**
+- `farmId` (UUID, required): Filter by farm
+- `page`, `perPage`: Pagination
+- `category` (string, optional): Filter by category
+- `status` (string, optional): Filter by status
+
+**Asset Categories:** tractor, harvester, irrigation_system, greenhouse, storage_facility, vehicle, tool, equipment, infrastructure, sensor, other
+
+**Asset Statuses:** operational, maintenance, repair, decommissioned, stored
+
+**Response:** 200 OK (Paginated)
+
+---
+
+##### Create Asset Inventory
+```
+POST /api/v1/farm/inventory/asset
+```
+**Purpose:** Add a new farm asset
+**Authentication:** Required (Bearer Token)
+**Request Body:**
+```json
+{
+  "farmId": "farm-uuid",
+  "assetName": "John Deere 5075E Tractor",
+  "category": "tractor",
+  "assetTag": "ASSET-001",
+  "serialNumber": "JD5075E-2024-12345",
+  "brand": "John Deere",
+  "model": "5075E",
+  "year": 2024,
+  "status": "operational",
+  "condition": "Excellent",
+  "location": "Main Barn",
+  "purchaseDate": "2024-01-15",
+  "purchasePrice": 85000.00,
+  "currentValue": 78000.00,
+  "currency": "AED",
+  "nextMaintenanceDate": "2025-01-15",
+  "warrantyExpiry": "2027-01-15",
+  "specifications": "75 HP, 4WD, Loader compatible"
+}
+```
+
+**Response:** 201 Created
+
+---
+
+##### Update Asset Status
+```
+PATCH /api/v1/farm/inventory/asset/{inventoryId}/status
+```
+**Purpose:** Update asset operational status
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `inventoryId` (UUID)
+**Request Body:**
+```json
+{
+  "status": "maintenance",
+  "maintenanceNotes": "Scheduled oil change and filter replacement"
+}
+```
+
+**Response:** 200 OK
+
+---
+
+#### Movement History
+
+##### Get Movement History
+```
+GET /api/v1/farm/inventory/movements
+```
+**Purpose:** Get inventory movement history across all types
+**Authentication:** Required (Bearer Token)
+**Query Parameters:**
+- `farmId` (UUID, required): Filter by farm
+- `inventoryType` (string, optional): harvest, input, asset
+- `movementType` (string, optional): addition, removal, adjustment, transfer, sale, waste, usage, return
+- `startDate`, `endDate`: Date range
+- `page`, `perPage`: Pagination
+
+**Response:** 200 OK (Paginated movements)
+
+---
+
+### Inventory Management Endpoints Summary
+
+| Category | Endpoints | Status | Version |
+|----------|-----------|--------|---------|
+| **Summary** | 1 endpoint | ✅ Active | v1.9.0 |
+| **Input Inventory** | 8 endpoints | ✅ Active | v1.9.0 |
+| **Harvest Inventory** | 5 endpoints | ✅ Active | v1.9.0 |
+| **Asset Inventory** | 5 endpoints | ✅ Active | v1.9.0 |
+| **Movements** | 1 endpoint | ✅ Active | v1.9.0 |
+| **Total** | **20 endpoints** | ✅ Active | - |
+
+---
+
 ### Resources
 *Section for future resource endpoints*
 
@@ -3150,6 +3644,24 @@ Current implementation uses mock data generators for development/testing:
 ---
 
 ## API Changelog
+
+### v1.9.0 - 2025-12-04
+- ✅ **Inventory Management System** implemented
+- ✅ 20 inventory management endpoints (summary, input, harvest, asset, movements)
+- ✅ Three inventory types: Harvest, Input, and Asset
+- ✅ **Dual-unit system** for input inventory:
+  - Display units for users (kg, g, L, ml, units, etc.)
+  - Base units for automation (mg, ml, unit)
+  - Automatic conversion on create/update
+- ✅ Category-to-base-unit mapping (fertilizer→mg, pesticide→ml, seed→unit)
+- ✅ `/deduct-base` endpoint for automated irrigation/fertilization systems
+- ✅ `/units/{category}` endpoint to get available units per category
+- ✅ Low stock alerts and tracking
+- ✅ Quality grading for harvest inventory (premium, grade_a/b/c, processing, rejected)
+- ✅ Asset maintenance scheduling and status tracking
+- ✅ Movement history and audit trail
+- ✅ Harvest aggregation from block harvests
+- ✅ TypeScript types and helper functions for frontend unit handling
 
 ### v1.6.0 - 2025-10-31
 - ✅ **Farm Management Module - Plant Data Enhanced API** documented

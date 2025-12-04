@@ -918,6 +918,233 @@ Response → User
 - archivedAt: descending
 ```
 
+#### input_inventory Collection (Inventory Management - v1.9.0)
+```javascript
+{
+  _id: ObjectId,
+  inventoryId: String (UUID),         // Unique inventory identifier
+  farmId: String (UUID),              // Parent farm reference
+
+  // Item identification
+  itemName: String,                   // Item name (required)
+  category: String,                   // fertilizer, pesticide, herbicide, fungicide, seed, seedling, soil, substrate, nutrient_solution, growth_regulator, packaging, other
+  brand: String,                      // Brand name (optional)
+  sku: String,                        // Stock keeping unit (optional)
+
+  // Display quantity (user-facing)
+  quantity: Number,                   // Amount in display units
+  unit: String,                       // Display unit (kg, g, L, ml, units, etc.)
+  minimumStock: Number,               // Minimum stock threshold
+  isLowStock: Boolean,                // Calculated: quantity <= minimumStock
+
+  // Base unit tracking (for automated calculations)
+  baseUnit: String,                   // Base unit: mg, ml, or unit
+  baseQuantity: Number,               // Quantity converted to base unit
+  baseMinimumStock: Number,           // Minimum stock in base units
+
+  // Dates
+  purchaseDate: Date,                 // When item was purchased
+  expiryDate: Date,                   // Expiration date
+
+  // Storage
+  storageLocation: String,            // Where item is stored
+
+  // Cost
+  unitCost: Number,                   // Cost per display unit
+  currency: String,                   // Currency code (default: AED)
+  supplier: String,                   // Supplier name
+
+  // Specifications (for fertilizers/pesticides)
+  activeIngredients: String,          // Active ingredients
+  concentration: String,              // Concentration info
+  applicationRate: String,            // Recommended application rate
+  safetyNotes: String,                // Safety handling notes
+
+  // Notes
+  notes: String,                      // Additional notes
+
+  // Audit
+  createdBy: String (UUID),           // User who created
+  createdAt: Date,
+  updatedAt: Date,
+  lastUsedAt: Date                    // When last used/deducted
+}
+
+// Indexes
+- inventoryId: unique
+- farmId: non-unique (query inventory by farm)
+- category: non-unique (filter by category)
+- isLowStock: non-unique (low stock alerts)
+- expiryDate: non-unique (expiring items alerts)
+- createdAt: descending
+```
+
+**Unit Conversion System:**
+- **Base Units:** mg (mass), ml (volume), unit (countable)
+- **Category Mapping:**
+  | Category | Base Unit |
+  |----------|-----------|
+  | fertilizer, soil, substrate | mg |
+  | pesticide, herbicide, fungicide, nutrient_solution, growth_regulator | ml |
+  | seed, seedling, packaging, other | unit |
+
+- **Conversion Factors:**
+  - kg → mg: × 1,000,000
+  - g → mg: × 1,000
+  - lb → mg: × 453,592
+  - oz → mg: × 28,350
+  - L → ml: × 1,000
+  - gal → ml: × 3,785
+
+#### harvest_inventory Collection (Inventory Management - v1.9.0)
+```javascript
+{
+  _id: ObjectId,
+  inventoryId: String (UUID),         // Unique inventory identifier
+  farmId: String (UUID),              // Parent farm reference
+  blockId: String (UUID),             // Source block (optional)
+
+  // Product identification
+  plantDataId: String (UUID),         // Reference to plant data
+  plantName: String,                  // Plant name snapshot
+  productType: String,                // fresh, processed, dried, frozen, packaged
+  variety: String,                    // Plant variety
+
+  // Quantity
+  quantity: Number,                   // Available quantity
+  unit: String,                       // Unit of measurement (kg, etc.)
+  reservedQuantity: Number,           // Reserved for orders
+  availableQuantity: Number,          // Calculated: quantity - reserved
+
+  // Quality
+  qualityGrade: String,               // premium, grade_a, grade_b, grade_c, processing, rejected
+
+  // Dates
+  harvestDate: Date,                  // When harvested
+  expiryDate: Date,                   // Best before date
+
+  // Storage
+  storageLocation: String,            // Storage location
+  storageConditions: String,          // Temperature, humidity, etc.
+
+  // Pricing
+  unitPrice: Number,                  // Price per unit
+  currency: String,                   // Currency code
+
+  // Notes
+  notes: String,
+
+  // Source tracking
+  sourceHarvestId: String (UUID),     // Link to block_harvests if auto-created
+
+  // Audit
+  createdBy: String (UUID),
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// Indexes
+- inventoryId: unique
+- farmId: non-unique (query by farm)
+- blockId: non-unique (query by block)
+- plantDataId: non-unique (query by plant type)
+- qualityGrade: non-unique (filter by quality)
+- harvestDate: descending
+- expiryDate: non-unique (expiring items)
+```
+
+#### asset_inventory Collection (Inventory Management - v1.9.0)
+```javascript
+{
+  _id: ObjectId,
+  inventoryId: String (UUID),         // Unique inventory identifier
+  farmId: String (UUID),              // Parent farm reference
+
+  // Asset identification
+  assetName: String,                  // Asset name (required)
+  category: String,                   // tractor, harvester, irrigation_system, greenhouse, storage_facility, vehicle, tool, equipment, infrastructure, sensor, other
+  assetTag: String,                   // Internal asset tag
+  serialNumber: String,               // Manufacturer serial number
+
+  // Details
+  brand: String,                      // Brand/Manufacturer
+  model: String,                      // Model number
+  year: Number,                       // Year of manufacture
+
+  // Status
+  status: String,                     // operational, maintenance, repair, decommissioned, stored
+  condition: String,                  // Current condition description
+
+  // Location
+  location: String,                   // Where asset is located
+  assignedTo: String,                 // Assigned user/department
+
+  // Financial
+  purchaseDate: Date,
+  purchasePrice: Number,
+  currentValue: Number,               // Depreciated value
+  currency: String,
+
+  // Maintenance
+  lastMaintenanceDate: Date,
+  nextMaintenanceDate: Date,
+  maintenanceNotes: String,
+  maintenanceOverdue: Boolean,        // Calculated: nextMaintenanceDate < now
+
+  // Specifications
+  specifications: String,             // Technical specs
+
+  // Documentation
+  warrantyExpiry: Date,
+  documentationUrl: String,
+
+  // Notes
+  notes: String,
+
+  // Audit
+  createdBy: String (UUID),
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// Indexes
+- inventoryId: unique
+- farmId: non-unique (query by farm)
+- category: non-unique (filter by category)
+- status: non-unique (filter by status)
+- maintenanceOverdue: non-unique (maintenance alerts)
+- nextMaintenanceDate: non-unique (scheduling)
+```
+
+#### inventory_movements Collection (Inventory Management - v1.9.0)
+```javascript
+{
+  _id: ObjectId,
+  movementId: String (UUID),          // Unique movement identifier
+  inventoryId: String (UUID),         // Related inventory item
+  inventoryType: String,              // harvest, input, asset
+
+  // Movement details
+  movementType: String,               // addition, removal, adjustment, transfer, sale, waste, usage, return
+  quantityBefore: Number,             // Quantity before movement
+  quantityChange: Number,             // Amount changed (+/-)
+  quantityAfter: Number,              // Quantity after movement
+  reason: String,                     // Reason for movement
+  referenceId: String,                // Link to task/order/etc.
+
+  // Audit
+  performedBy: String (UUID),         // User who performed
+  performedAt: Date
+}
+
+// Indexes
+- movementId: unique
+- inventoryId: non-unique (query movements for item)
+- inventoryType: non-unique (filter by type)
+- movementType: non-unique (filter by action)
+- performedAt: descending
+```
+
 ### MySQL Tables
 
 #### users Table
@@ -1443,6 +1670,24 @@ logs/
 ---
 
 ## Version History
+
+### v1.9.0 - 2025-12-04
+- ✅ **Inventory Management System** implemented
+- ✅ 4 new MongoDB collections (input_inventory, harvest_inventory, asset_inventory, inventory_movements)
+- ✅ **Dual-unit system** for input inventory:
+  - Display units (kg, g, L, ml, etc.) for user-friendly input
+  - Base units (mg, ml, unit) for precise automated calculations
+  - Automatic conversion on create/update operations
+- ✅ Category-to-base-unit mapping (12 input categories)
+- ✅ Conversion factors: kg→mg (×1M), L→ml (×1K), lb→mg (×453,592), gal→ml (×3,785)
+- ✅ Three inventory types: Harvest, Input, Asset
+- ✅ Input inventory: fertilizers, pesticides, seeds with stock tracking
+- ✅ Harvest inventory: produce with quality grading (premium, grade_a/b/c)
+- ✅ Asset inventory: equipment with maintenance scheduling
+- ✅ Movement history for audit trail
+- ✅ Low stock alerts and expiry tracking
+- ✅ API endpoint for base unit deduction (future automation)
+- ✅ Frontend TypeScript types and unit helper functions
 
 ### v1.3.0 - 2025-10-17
 - ✅ **Module Management System** implemented
