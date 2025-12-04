@@ -320,17 +320,17 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           </HeaderLeft>
           <HeaderActions>
             {onEdit && (
-              <ActionButton $variant="edit" onClick={() => onEdit(plant.id)}>
+              <ActionButton $variant="edit" onClick={() => onEdit(plant.plantDataId)}>
                 ✏️ Edit
               </ActionButton>
             )}
             {onClone && (
-              <ActionButton $variant="clone" onClick={() => onClone(plant.id)}>
+              <ActionButton $variant="clone" onClick={() => onClone(plant.plantDataId)}>
                 📋 Clone
               </ActionButton>
             )}
             {onDelete && (
-              <ActionButton $variant="delete" onClick={() => onDelete(plant.id)}>
+              <ActionButton $variant="delete" onClick={() => onDelete(plant.plantDataId)}>
                 🗑️ Delete
               </ActionButton>
             )}
