@@ -12,14 +12,15 @@ import {
   updateHarvestInventory,
   deleteHarvestInventory,
 } from '../../services/inventoryApi';
-import { getFarms, getPlantData } from '../../services/farmApi';
+import { getFarms } from '../../services/farmApi';
+import { getPlantDataEnhancedList } from '../../services/plantDataEnhancedApi';
 import type {
   HarvestInventory,
   HarvestInventoryCreate,
   QualityGrade,
   PaginatedResponse,
 } from '../../types/inventory';
-import type { Farm, PlantData } from '../../types/farm';
+import type { Farm, PlantDataEnhanced } from '../../types/farm';
 import { QUALITY_GRADE_LABELS, PRODUCT_TYPE_LABELS } from '../../types/inventory';
 
 interface Props {
@@ -29,7 +30,7 @@ interface Props {
 export function HarvestInventoryList({ onUpdate }: Props) {
   const [inventory, setInventory] = useState<HarvestInventory[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
-  const [plantDataList, setPlantDataList] = useState<PlantData[]>([]);
+  const [plantDataList, setPlantDataList] = useState<PlantDataEnhanced[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -47,7 +48,7 @@ export function HarvestInventoryList({ onUpdate }: Props) {
       const [inventoryData, farmsData, plantData] = await Promise.all([
         listHarvestInventory({ search, page, perPage: 20 }),
         getFarms(),
-        getPlantData({ perPage: 100 }), // Load all plant data for dropdown
+        getPlantDataEnhancedList({ perPage: 100 }), // Load all plant data for dropdown
       ]);
       setInventory(inventoryData.items);
       setTotalPages(inventoryData.totalPages);
@@ -237,7 +238,7 @@ function AddHarvestModal({
   onSave,
 }: {
   farms: Farm[];
-  plantDataList: PlantData[];
+  plantDataList: PlantDataEnhanced[];
   onClose: () => void;
   onSave: () => void;
 }) {
@@ -250,16 +251,13 @@ function AddHarvestModal({
   });
 
   // Handle plant selection - sets both ID and name
-  // Note: API returns plantName, not name (type mismatch)
   const handlePlantChange = (plantDataId: string) => {
     const selectedPlant = plantDataList.find(p => p.plantDataId === plantDataId);
     if (selectedPlant) {
-      // Access plantName from API response (may differ from type definition)
-      const plantName = (selectedPlant as any).plantName || selectedPlant.name || '';
       setFormData({
         ...formData,
         plantDataId: selectedPlant.plantDataId,
-        plantName: plantName,
+        plantName: selectedPlant.plantName,
       });
     } else {
       setFormData({
@@ -326,15 +324,11 @@ function AddHarvestModal({
                   required
                 >
                   <option value="">Select plant/crop...</option>
-                  {plantDataList.map((plant) => {
-                    // API returns plantName, not name (type mismatch)
-                    const displayName = (plant as any).plantName || plant.name || 'Unknown';
-                    return (
-                      <option key={plant.plantDataId} value={plant.plantDataId}>
-                        {displayName} ({plant.plantType})
-                      </option>
-                    );
-                  })}
+                  {plantDataList.map((plant) => (
+                    <option key={plant.plantDataId} value={plant.plantDataId}>
+                      {plant.plantName} ({plant.plantType})
+                    </option>
+                  ))}
                 </Select>
               </FormGroup>
             </FormRow>
