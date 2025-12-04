@@ -76,6 +76,10 @@ export function MainLayout() {
               {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
             </NavContent>
           </NavItem>
+          <NavItem to="/inventory" onClick={closeMobileMenu}>
+            <NavIcon>📦</NavIcon>
+            <span>Inventory</span>
+          </NavItem>
           <NavItem to="/ai-analytics" onClick={closeMobileMenu}>
             <NavIcon>🤖</NavIcon>
             <span>AI Analytics</span>

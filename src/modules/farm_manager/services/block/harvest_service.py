@@ -2,6 +2,7 @@
 Harvest Service - Business Logic Layer
 
 Handles business logic for harvest recording and management.
+Automatically adds harvests to the inventory system.
 """
 
 from typing import List, Optional, Tuple
@@ -12,16 +13,30 @@ import logging
 
 from ...models.block_harvest import (
     BlockHarvest, BlockHarvestCreate, BlockHarvestUpdate,
-    BlockHarvestSummary
+    BlockHarvestSummary, QualityGrade as HarvestQualityGrade
+)
+from ...models.inventory import (
+    HarvestInventory, InventoryType, QualityGrade, MovementType, InventoryMovement
 )
 from .harvest_repository import HarvestRepository
 from .block_repository_new import BlockRepository
+from ..database import farm_db
 
 logger = logging.getLogger(__name__)
 
 
 class HarvestService:
     """Service for Harvest business logic"""
+
+    @staticmethod
+    def _map_quality_grade(harvest_grade: HarvestQualityGrade) -> QualityGrade:
+        """Map BlockHarvest quality grade to Inventory quality grade"""
+        grade_mapping = {
+            HarvestQualityGrade.A: QualityGrade.GRADE_A,
+            HarvestQualityGrade.B: QualityGrade.GRADE_B,
+            HarvestQualityGrade.C: QualityGrade.GRADE_C,
+        }
+        return grade_mapping.get(harvest_grade, QualityGrade.GRADE_B)
 
     @staticmethod
     async def record_harvest(
@@ -36,6 +51,7 @@ class HarvestService:
         - Block actualYieldKg (cumulative)
         - Block totalHarvests count
         - Block yieldEfficiencyPercent
+        - Harvest Inventory (adds new inventory item)
         """
         # Verify block exists and is in harvesting status
         block = await BlockRepository.get_by_id(harvest_data.blockId)
@@ -55,12 +71,134 @@ class HarvestService:
             total_harvests=new_harvest_count
         )
 
+        # Add to Harvest Inventory automatically
+        await HarvestService._add_to_inventory(
+            harvest=harvest,
+            block=block,
+            user_id=user_id
+        )
+
         logger.info(
             f"[Harvest Service] Recorded harvest {harvest.harvestId} "
-            f"for block {harvest_data.blockId} ({harvest_data.quantityKg}kg)"
+            f"for block {harvest_data.blockId} ({harvest_data.quantityKg}kg) "
+            f"and added to inventory"
         )
 
         return harvest
+
+    @staticmethod
+    async def _add_to_inventory(
+        harvest: BlockHarvest,
+        block,
+        user_id: UUID
+    ) -> None:
+        """
+        Add a harvest record to the inventory system.
+
+        Aggregates harvests by farm + plant + quality grade + product type.
+        If an existing inventory item matches, updates the quantity.
+        Otherwise, creates a new inventory entry.
+        """
+        db = farm_db.get_database()
+
+        # Map quality grade from BlockHarvest to Inventory
+        inventory_grade = HarvestService._map_quality_grade(harvest.qualityGrade)
+
+        # Get plant name from block (targetCropName)
+        plant_name = getattr(block, 'targetCropName', None) or "Unknown Crop"
+        plant_data_id = getattr(block, 'targetCrop', None)
+        product_type = "fresh"  # Default to fresh
+
+        # Check if an existing inventory item matches (same farm + plant + grade + productType)
+        existing_item = await db.inventory_harvest.find_one({
+            "farmId": str(harvest.farmId),
+            "plantDataId": str(plant_data_id) if plant_data_id else str(harvest.blockId),
+            "qualityGrade": inventory_grade.value,
+            "productType": product_type
+        })
+
+        if existing_item:
+            # Aggregate: Update existing inventory item
+            old_quantity = existing_item.get("quantity", 0)
+            old_available = existing_item.get("availableQuantity", 0)
+            new_quantity = old_quantity + harvest.quantityKg
+            new_available = old_available + harvest.quantityKg
+
+            await db.inventory_harvest.update_one(
+                {"inventoryId": existing_item["inventoryId"]},
+                {
+                    "$set": {
+                        "quantity": new_quantity,
+                        "availableQuantity": new_available,
+                        "updatedAt": datetime.utcnow().isoformat()
+                    }
+                }
+            )
+
+            inventory_id = existing_item["inventoryId"]
+
+            # Record movement for the addition
+            movement = InventoryMovement(
+                inventoryId=inventory_id,
+                inventoryType=InventoryType.HARVEST,
+                movementType=MovementType.ADDITION,
+                quantityBefore=old_quantity,
+                quantityChange=harvest.quantityKg,
+                quantityAfter=new_quantity,
+                reason=f"Harvest from block {block.blockCode}",
+                referenceId=str(harvest.harvestId),
+                performedBy=user_id,
+                performedAt=datetime.utcnow()
+            )
+            await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
+
+            logger.info(
+                f"[Harvest Service] Aggregated harvest to existing inventory: {inventory_id} "
+                f"(+{harvest.quantityKg}kg, total now {new_quantity}kg of {plant_name})"
+            )
+        else:
+            # Create new inventory entry
+            inventory_item = HarvestInventory(
+                farmId=harvest.farmId,
+                blockId=harvest.blockId,
+                plantDataId=plant_data_id if plant_data_id else harvest.blockId,  # Use blockId as fallback
+                plantName=plant_name,
+                productType=product_type,
+                quantity=harvest.quantityKg,
+                unit="kg",
+                reservedQuantity=0,
+                availableQuantity=harvest.quantityKg,
+                qualityGrade=inventory_grade,
+                harvestDate=harvest.harvestDate.isoformat() if isinstance(harvest.harvestDate, datetime) else harvest.harvestDate,
+                currency="AED",
+                notes=f"Auto-added from block harvest {harvest.harvestId}. {harvest.notes or ''}".strip(),
+                createdBy=user_id,
+                sourceHarvestId=harvest.harvestId  # Link back to original harvest
+            )
+
+            # Insert into inventory
+            doc = inventory_item.model_dump(mode="json")
+            await db.inventory_harvest.insert_one(doc)
+
+            # Record movement
+            movement = InventoryMovement(
+                inventoryId=inventory_item.inventoryId,
+                inventoryType=InventoryType.HARVEST,
+                movementType=MovementType.ADDITION,
+                quantityBefore=0,
+                quantityChange=harvest.quantityKg,
+                quantityAfter=harvest.quantityKg,
+                reason=f"Harvest from block {block.blockCode}",
+                referenceId=str(harvest.harvestId),
+                performedBy=user_id,
+                performedAt=datetime.utcnow()
+            )
+            await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
+
+            logger.info(
+                f"[Harvest Service] Created new harvest inventory: {inventory_item.inventoryId} "
+                f"({harvest.quantityKg}kg of {plant_name})"
+            )
 
     @staticmethod
     async def get_harvest(harvest_id: UUID) -> BlockHarvest:

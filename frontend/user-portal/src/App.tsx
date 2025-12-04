@@ -12,6 +12,7 @@ import { FarmBlocksView } from './pages/operations/FarmBlocksView';
 import { BlockTaskList } from './pages/operations/BlockTaskList';
 import { AIAnalytics } from './pages/ai/AIAnalytics';
 import { ClearCache } from './pages/debug/ClearCache';
+import { InventoryDashboard } from './pages/inventory/InventoryDashboard';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 
@@ -41,6 +42,7 @@ function App() {
               <Route path="/operations" element={<OperationsDashboard />} />
               <Route path="/operations/:farmId" element={<FarmBlocksView />} />
               <Route path="/operations/:farmId/:blockId" element={<BlockTaskList />} />
+              <Route path="/inventory/*" element={<InventoryDashboard />} />
               <Route path="/ai-analytics" element={<AIAnalytics />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />

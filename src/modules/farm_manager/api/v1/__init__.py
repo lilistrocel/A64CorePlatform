@@ -16,6 +16,7 @@ from .dashboard import router as dashboard_router
 from .tasks import router as tasks_router
 from .config import router as config_router
 from .weather import router as weather_router
+from .inventory import router as inventory_router
 
 api_router = APIRouter()
 
@@ -35,3 +36,4 @@ api_router.include_router(managers_router, tags=["managers"])  # Manager users f
 api_router.include_router(tasks_router, tags=["tasks"])  # Operations Task Manager - farmer task management
 api_router.include_router(config_router, tags=["config"])  # System configuration (spacing standards, etc.)
 api_router.include_router(weather_router, tags=["weather"])  # Agricultural weather data from WeatherBit
+api_router.include_router(inventory_router, tags=["inventory"])  # Inventory management (harvest, input, assets)

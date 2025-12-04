@@ -352,9 +352,11 @@ class PlantDataEnhancedRepository:
         db = farm_db.get_database()
 
         # Query for active, non-deleted plants
+        # Use $ne: false to include documents where isActive is true, null, or missing
+        # This handles legacy data that doesn't have isActive field
         query = {
             "deletedAt": None,
-            "isActive": True
+            "isActive": {"$ne": False}
         }
 
         # Get all active plants sorted by name
