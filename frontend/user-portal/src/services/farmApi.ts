@@ -733,7 +733,7 @@ export async function iotProxyGet(url: string) {
   const response = await apiClient.get<any>('/v1/farm/iot-proxy', {
     params: { url },
   });
-  return response.data;
+  return response.data.data;
 }
 
 /**
@@ -743,7 +743,7 @@ export async function iotProxyPut(url: string, data: any) {
   const response = await apiClient.put<any>('/v1/farm/iot-proxy', data, {
     params: { url },
   });
-  return response.data;
+  return response.data.data;
 }
 
 // Export all functions as a single object for convenience
