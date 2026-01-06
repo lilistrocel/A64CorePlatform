@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { getBlockHarvestSummary } from '../../services/farmApi';
 import type { DashboardBlock } from '../../types/farm';
+import { BlockAutomationTab } from './BlockAutomationTab';
 
 type QualityGrade = 'A' | 'B' | 'C';
 
@@ -46,9 +47,12 @@ interface BlockDetailsModalProps {
   onClose: () => void;
 }
 
+type TabType = 'overview' | 'timeline' | 'harvests' | 'automation';
+
 export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetailsModalProps) {
   const [loading, setLoading] = useState(true);
   const [harvestSummary, setHarvestSummary] = useState<BlockHarvestSummary | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
 
   useEffect(() => {
     if (isOpen) {
@@ -253,51 +257,94 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
           <CloseButton onClick={onClose}>×</CloseButton>
         </Header>
 
+        <TabBar>
+          <Tab $active={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>
+            Overview
+          </Tab>
+          <Tab $active={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')}>
+            Timeline
+          </Tab>
+          <Tab $active={activeTab === 'harvests'} onClick={() => setActiveTab('harvests')}>
+            Harvests
+          </Tab>
+          <Tab $active={activeTab === 'automation'} onClick={() => setActiveTab('automation')}>
+            Automation
+          </Tab>
+        </TabBar>
+
         <Content>
-          {/* Block Overview */}
-          <Section>
-            <SectionTitle>Block Overview</SectionTitle>
-            <InfoGrid>
-              <InfoItem>
-                <InfoLabel>Name:</InfoLabel>
-                <InfoValue>{block.name || 'Unnamed Block'}</InfoValue>
-              </InfoItem>
-              {block.targetCropName && (
-                <InfoItem>
-                  <InfoLabel>Current Crop:</InfoLabel>
-                  <InfoValue>🌿 {block.targetCropName}</InfoValue>
-                </InfoItem>
-              )}
-              <InfoItem>
-                <InfoLabel>Capacity:</InfoLabel>
-                <InfoValue>
-                  {block.actualPlantCount || 0} / {block.maxPlants} plants
-                  {' '}({block.calculated.capacityPercent.toFixed(0)}%)
-                </InfoValue>
-              </InfoItem>
-              {block.plantedDate && (
-                <InfoItem>
-                  <InfoLabel>Planted:</InfoLabel>
-                  <InfoValue>{formatDate(block.plantedDate)}</InfoValue>
-                </InfoItem>
-              )}
-              {block.expectedHarvestDate && (
-                <InfoItem>
-                  <InfoLabel>Expected Harvest:</InfoLabel>
-                  <InfoValue>{formatDate(block.expectedHarvestDate)}</InfoValue>
-                </InfoItem>
-              )}
-            </InfoGrid>
-          </Section>
+          {activeTab === 'overview' && (
+            <>
+              {/* Block Overview */}
+              <Section>
+                <SectionTitle>Block Overview</SectionTitle>
+                <InfoGrid>
+                  <InfoItem>
+                    <InfoLabel>Name:</InfoLabel>
+                    <InfoValue>{block.name || 'Unnamed Block'}</InfoValue>
+                  </InfoItem>
+                  {block.targetCropName && (
+                    <InfoItem>
+                      <InfoLabel>Current Crop:</InfoLabel>
+                      <InfoValue>🌿 {block.targetCropName}</InfoValue>
+                    </InfoItem>
+                  )}
+                  <InfoItem>
+                    <InfoLabel>Capacity:</InfoLabel>
+                    <InfoValue>
+                      {block.actualPlantCount || 0} / {block.maxPlants} plants
+                      {' '}({block.calculated.capacityPercent.toFixed(0)}%)
+                    </InfoValue>
+                  </InfoItem>
+                  {block.plantedDate && (
+                    <InfoItem>
+                      <InfoLabel>Planted:</InfoLabel>
+                      <InfoValue>{formatDate(block.plantedDate)}</InfoValue>
+                    </InfoItem>
+                  )}
+                  {block.expectedHarvestDate && (
+                    <InfoItem>
+                      <InfoLabel>Expected Harvest:</InfoLabel>
+                      <InfoValue>{formatDate(block.expectedHarvestDate)}</InfoValue>
+                    </InfoItem>
+                  )}
+                </InfoGrid>
+              </Section>
 
-          {/* Growth Timeline */}
-          <Section>
-            <SectionTitle>Growth Timeline</SectionTitle>
-            {renderGrowthTimeline()}
-          </Section>
+              {/* Performance Metrics */}
+              {block.state === 'harvesting' && (
+                <Section>
+                  <SectionTitle>Performance</SectionTitle>
+                  <PerformanceGrid>
+                    <PerformanceCard>
+                      <PerformanceLabel>Yield Efficiency</PerformanceLabel>
+                      <PerformanceValue>
+                        {block.kpi.yieldEfficiencyPercent.toFixed(1)}%
+                      </PerformanceValue>
+                    </PerformanceCard>
+                    <PerformanceCard>
+                      <PerformanceLabel>Performance</PerformanceLabel>
+                      <PerformanceValue>
+                        {block.calculated.performanceCategory
+                          .charAt(0)
+                          .toUpperCase() +
+                          block.calculated.performanceCategory.slice(1)}
+                      </PerformanceValue>
+                    </PerformanceCard>
+                  </PerformanceGrid>
+                </Section>
+              )}
+            </>
+          )}
 
-          {/* Harvest History */}
-          {(block.state === 'harvesting' || block.kpi.totalHarvests > 0) && (
+          {activeTab === 'timeline' && (
+            <Section>
+              <SectionTitle>Growth Timeline</SectionTitle>
+              {renderGrowthTimeline()}
+            </Section>
+          )}
+
+          {activeTab === 'harvests' && (
             <Section>
               <SectionTitle>Harvest History</SectionTitle>
               {loading ? (
@@ -308,28 +355,8 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
             </Section>
           )}
 
-          {/* Performance Metrics */}
-          {block.state === 'harvesting' && (
-            <Section>
-              <SectionTitle>Performance</SectionTitle>
-              <PerformanceGrid>
-                <PerformanceCard>
-                  <PerformanceLabel>Yield Efficiency</PerformanceLabel>
-                  <PerformanceValue>
-                    {block.kpi.yieldEfficiencyPercent.toFixed(1)}%
-                  </PerformanceValue>
-                </PerformanceCard>
-                <PerformanceCard>
-                  <PerformanceLabel>Performance</PerformanceLabel>
-                  <PerformanceValue>
-                    {block.calculated.performanceCategory
-                      .charAt(0)
-                      .toUpperCase() +
-                      block.calculated.performanceCategory.slice(1)}
-                  </PerformanceValue>
-                </PerformanceCard>
-              </PerformanceGrid>
-            </Section>
+          {activeTab === 'automation' && (
+            <BlockAutomationTab blockId={block.blockId} farmId={farmId} />
           )}
         </Content>
       </Modal>
@@ -370,6 +397,40 @@ const Header = styled.div`
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.lg};
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+`;
+
+const TabBar = styled.div`
+  display: flex;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  overflow-x: auto;
+  background: ${({ theme }) => theme.colors.surface};
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.neutral[300]};
+    border-radius: 2px;
+  }
+`;
+
+const Tab = styled.button<{ $active: boolean }>`
+  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
+  background: ${({ $active, theme }) => ($active ? theme.colors.surface : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  border: none;
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[50]};
+    color: ${({ theme }) => theme.colors.primary[500]};
+  }
 `;
 
 const HeaderLeft = styled.div`
