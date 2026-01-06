@@ -856,19 +856,23 @@ async def get_iot_controller(
             detail="Block not found in this farm"
         )
 
-    # Return IoT controller configuration or null
-    controller_data = None
-    if block.iotController:
-        controller_data = {
-            "address": block.iotController.address,
-            "port": block.iotController.port,
-            "enabled": block.iotController.enabled,
-            "lastConnected": block.iotController.lastConnected.isoformat() if block.iotController.lastConnected else None
-        }
+    # Return IoT controller configuration or 404 if not configured
+    if not block.iotController:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No IoT controller configured for this block"
+        )
+
+    controller_data = {
+        "address": block.iotController.address,
+        "port": block.iotController.port,
+        "enabled": block.iotController.enabled,
+        "lastConnected": block.iotController.lastConnected.isoformat() if block.iotController.lastConnected else None
+    }
 
     return SuccessResponse(
         data=controller_data,
-        message="IoT controller configuration retrieved successfully" if controller_data else "No IoT controller configured"
+        message="IoT controller configuration retrieved successfully"
     )
 
 

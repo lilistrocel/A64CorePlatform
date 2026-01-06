@@ -484,6 +484,8 @@ const Content = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.xl};
+  position: relative;
+  z-index: 1;
 `;
 
 const Section = styled.div`

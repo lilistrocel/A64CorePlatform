@@ -976,7 +976,7 @@ const ToggleRelayButton = styled.button<{ $isOn: boolean }>`
   }
 `;
 
-// Modal Styles
+// Modal Styles - Uses higher z-index for nested modal inside BlockDetailsModal
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
@@ -984,7 +984,7 @@ const ModalOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: ${({ theme }) => theme.zIndex.modal};
+  z-index: ${({ theme }) => theme.zIndex.modal + 10};
   padding: ${({ theme }) => theme.spacing.lg};
 `;
 
