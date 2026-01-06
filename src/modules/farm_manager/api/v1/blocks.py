@@ -10,7 +10,7 @@ from uuid import UUID
 
 from ...models.block import (
     Block, BlockCreate, BlockUpdate, BlockStatus,
-    BlockStatusUpdate, AddVirtualCropRequest
+    BlockStatusUpdate, AddVirtualCropRequest, IoTControllerUpdate
 )
 from ...models.block_analytics import BlockAnalyticsResponse, TimePeriod
 from ...services.block.block_service_new import BlockService
@@ -739,4 +739,182 @@ async def preview_empty_virtual_block(
     return SuccessResponse(
         data=preview,
         message="Preview of virtual block cleanup"
+    )
+
+
+# ==================== IOT CONTROLLER ENDPOINTS ====================
+
+@router.patch(
+    "/{block_id}/iot-controller",
+    response_model=SuccessResponse[Block],
+    summary="Update IoT controller configuration for a block"
+)
+async def update_iot_controller(
+    farm_id: UUID,
+    block_id: UUID,
+    controller_config: IoTControllerUpdate,
+    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+):
+    """
+    Update or set the IoT controller configuration for a block.
+
+    **Requirements:**
+    - Requires **farm.manage** permission
+    - Block must exist and belong to the specified farm
+
+    **Request Body:**
+    ```json
+    {
+      "address": "192.168.1.100",
+      "port": 8090,
+      "enabled": true
+    }
+    ```
+
+    **Updates:**
+    - Sets the IoT controller address and port
+    - Enables/disables fetching from the controller
+    - lastConnected is set when the frontend successfully connects
+
+    **Use Cases:**
+    - Register a Raspberry Pi or ESP32 controller for the block
+    - Update controller address when IP changes
+    - Enable/disable IoT integration without removing configuration
+    """
+    from datetime import datetime
+    from fastapi import HTTPException
+
+    # Verify block belongs to farm
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    # Create IoTController object with current timestamp
+    from ...models.block import IoTController
+    iot_controller = IoTController(
+        address=controller_config.address,
+        port=controller_config.port,
+        enabled=controller_config.enabled,
+        lastConnected=None  # Will be updated when frontend successfully connects
+    )
+
+    # Update block with new IoT controller configuration
+    from ...models.block import BlockUpdate
+    update_data = BlockUpdate(iotController=iot_controller)
+    updated_block = await BlockService.update_block(block_id, update_data)
+
+    return SuccessResponse(
+        data=updated_block,
+        message="IoT controller configuration updated successfully"
+    )
+
+
+@router.get(
+    "/{block_id}/iot-controller",
+    response_model=SuccessResponse[dict],
+    summary="Get IoT controller configuration for a block"
+)
+async def get_iot_controller(
+    farm_id: UUID,
+    block_id: UUID,
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Get the current IoT controller configuration for a block.
+
+    **Returns:**
+    - IoT controller configuration if set
+    - null if no controller is configured
+
+    **Response:**
+    ```json
+    {
+      "data": {
+        "address": "192.168.1.100",
+        "port": 8090,
+        "enabled": true,
+        "lastConnected": "2026-01-06T16:00:00Z"
+      }
+    }
+    ```
+
+    **Use Cases:**
+    - Check if a block has an IoT controller configured
+    - Get controller address for frontend to fetch sensor/relay data
+    - Verify controller configuration before fetching data
+    """
+    from fastapi import HTTPException
+
+    # Verify block belongs to farm
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    # Return IoT controller configuration or null
+    controller_data = None
+    if block.iotController:
+        controller_data = {
+            "address": block.iotController.address,
+            "port": block.iotController.port,
+            "enabled": block.iotController.enabled,
+            "lastConnected": block.iotController.lastConnected.isoformat() if block.iotController.lastConnected else None
+        }
+
+    return SuccessResponse(
+        data=controller_data,
+        message="IoT controller configuration retrieved successfully" if controller_data else "No IoT controller configured"
+    )
+
+
+@router.delete(
+    "/{block_id}/iot-controller",
+    response_model=SuccessResponse[dict],
+    summary="Remove IoT controller configuration from a block"
+)
+async def delete_iot_controller(
+    farm_id: UUID,
+    block_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("farm.manage"))
+):
+    """
+    Remove the IoT controller configuration from a block.
+
+    **Requirements:**
+    - Requires **farm.manage** permission
+    - Block must exist and belong to the specified farm
+
+    **Effect:**
+    - Removes IoT controller configuration
+    - Block can still function normally without IoT integration
+    - No data is lost (only configuration is removed)
+
+    **Use Cases:**
+    - Decommission an IoT controller
+    - Switch to manual sensor management
+    - Remove outdated controller configuration
+    """
+    from fastapi import HTTPException
+
+    # Verify block belongs to farm
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    # Update block to remove IoT controller
+    from ...models.block import BlockUpdate
+    update_data = BlockUpdate(iotController=None)
+    await BlockService.update_block(block_id, update_data)
+
+    return SuccessResponse(
+        data={"blockId": str(block_id)},
+        message="IoT controller configuration removed successfully"
     )

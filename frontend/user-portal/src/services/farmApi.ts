@@ -696,6 +696,56 @@ export function getRelativeTime(dateString: string): string {
   return formatDateForDisplay(dateString);
 }
 
+// ============================================================================
+// IOT CONTROLLER ENDPOINTS
+// ============================================================================
+
+/**
+ * Get IoT controller configuration for a block
+ */
+export async function getBlockIoTController(farmId: string, blockId: string) {
+  const response = await apiClient.get<{ data: any }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/iot-controller`
+  );
+  return response.data.data;
+}
+
+/**
+ * Update IoT controller configuration for a block
+ */
+export async function updateBlockIoTController(
+  farmId: string,
+  blockId: string,
+  data: { address: string; port: number; enabled: boolean }
+) {
+  const response = await apiClient.patch<{ data: any }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/iot-controller`,
+    data
+  );
+  return response.data.data;
+}
+
+/**
+ * Proxy request to IoT controller device
+ * This fetches data from the actual IoT hardware via our backend proxy
+ */
+export async function iotProxyGet(url: string) {
+  const response = await apiClient.get<any>('/v1/farm/iot-proxy', {
+    params: { url },
+  });
+  return response.data;
+}
+
+/**
+ * Proxy PUT request to IoT controller (for controlling relays)
+ */
+export async function iotProxyPut(url: string, data: any) {
+  const response = await apiClient.put<any>('/v1/farm/iot-proxy', data, {
+    params: { url },
+  });
+  return response.data;
+}
+
 // Export all functions as a single object for convenience
 export const farmApi = {
   // Managers
@@ -764,6 +814,12 @@ export const farmApi = {
   calculatePlantCount,
   updateSpacingStandards,
   resetSpacingStandards,
+
+  // IoT Controller
+  getBlockIoTController,
+  updateBlockIoTController,
+  iotProxyGet,
+  iotProxyPut,
 
   // Utilities
   calculateTotalPlants,

@@ -44,6 +44,24 @@ class BlockLocation(BaseModel):
     longitude: float = Field(..., ge=-180, le=180, description="Longitude")
 
 
+class IoTController(BaseModel):
+    """IoT Controller configuration for block sensor and relay management"""
+    address: str = Field(..., description="IP address or hostname of IoT controller")
+    port: int = Field(..., gt=0, le=65535, description="Port number")
+    enabled: bool = Field(True, description="Whether to fetch from controller")
+    lastConnected: Optional[datetime] = Field(None, description="Last successful connection timestamp")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "address": "192.168.1.100",
+                "port": 8090,
+                "enabled": True,
+                "lastConnected": "2026-01-06T16:00:00Z"
+            }
+        }
+
+
 class BlockBoundary(BaseModel):
     """Block boundary with metadata for geo-fencing"""
     geometry: GeoJSONPolygon = Field(..., description="GeoJSON polygon geometry")
@@ -147,6 +165,7 @@ class BlockBase(BaseModel):
     area: Optional[float] = Field(None, gt=0, description="Block area")
     areaUnit: str = Field("sqm", description="Area unit (sqm, hectares, acres)")
     boundary: Optional[BlockBoundary] = Field(None, description="Geo-fence polygon boundary for map visualization")
+    iotController: Optional[IoTController] = Field(None, description="IoT controller configuration for sensors and relays")
 
 
 class BlockCreate(BlockBase):
@@ -169,6 +188,14 @@ class BlockUpdate(BaseModel):
     areaUnit: Optional[str] = None
     actualPlantCount: Optional[int] = Field(None, ge=0)
     boundary: Optional[BlockBoundary] = Field(None, description="Geo-fence polygon boundary")
+    iotController: Optional[IoTController] = Field(None, description="IoT controller configuration for sensors and relays")
+
+
+class IoTControllerUpdate(BaseModel):
+    """Schema for updating IoT controller configuration"""
+    address: str = Field(..., description="IP address or hostname of IoT controller")
+    port: int = Field(..., gt=0, le=65535, description="Port number")
+    enabled: bool = Field(True, description="Whether to fetch from controller")
 
 
 class BlockStatusUpdate(BaseModel):

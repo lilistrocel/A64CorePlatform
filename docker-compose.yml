@@ -227,6 +227,29 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # IoT Simulator - Simulates greenhouse sensors and relays for testing
+  iot-simulator:
+    container_name: a64core-iot-simulator
+    build:
+      context: ./services/iot-simulator
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+    networks:
+      - a64core-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   a64core-network:
     driver: bridge
