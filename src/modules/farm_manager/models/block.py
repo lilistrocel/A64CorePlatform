@@ -47,8 +47,9 @@ class BlockLocation(BaseModel):
 class IoTController(BaseModel):
     """IoT Controller configuration for block sensor and relay management"""
     address: str = Field(..., description="IP address or hostname of IoT controller")
-    port: int = Field(..., gt=0, le=65535, description="Port number")
+    port: int = Field(..., gt=0, le=65535, description="Port number (use 443 for HTTPS)")
     enabled: bool = Field(True, description="Whether to fetch from controller")
+    apiKey: Optional[str] = Field(None, description="API key for authenticated endpoints (relay control)")
     lastConnected: Optional[datetime] = Field(None, description="Last successful connection timestamp")
 
     class Config:
@@ -57,6 +58,7 @@ class IoTController(BaseModel):
                 "address": "192.168.1.100",
                 "port": 8090,
                 "enabled": True,
+                "apiKey": "your-api-key-here",
                 "lastConnected": "2026-01-06T16:00:00Z"
             }
         }
@@ -194,8 +196,9 @@ class BlockUpdate(BaseModel):
 class IoTControllerUpdate(BaseModel):
     """Schema for updating IoT controller configuration"""
     address: str = Field(..., description="IP address or hostname of IoT controller")
-    port: int = Field(..., gt=0, le=65535, description="Port number")
+    port: int = Field(..., gt=0, le=65535, description="Port number (use 443 for HTTPS)")
     enabled: bool = Field(True, description="Whether to fetch from controller")
+    apiKey: Optional[str] = Field(None, description="API key for authenticated endpoints (relay control)")
 
 
 class BlockStatusUpdate(BaseModel):

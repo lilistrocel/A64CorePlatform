@@ -5,7 +5,7 @@ Proxy endpoints for IoT controller communication to handle CORS and provide a se
 """
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib.parse import unquote
 import httpx
 import logging
@@ -25,6 +25,7 @@ router = APIRouter(prefix="/iot-proxy", tags=["iot-proxy"])
 )
 async def proxy_get_request(
     url: str = Query(..., description="URL-encoded target URL of the IoT controller endpoint"),
+    apiKey: Optional[str] = Query(None, description="API key to forward to IoT controller (X-API-Key header)"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -77,7 +78,12 @@ async def proxy_get_request(
     # Reason: Use httpx for async HTTP requests with timeout to prevent hanging
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(decoded_url)
+            # Reason: Forward API key as X-API-Key header if provided
+            headers = {}
+            if apiKey:
+                headers["X-API-Key"] = apiKey
+
+            response = await client.get(decoded_url, headers=headers)
 
             # Reason: Check if response is successful before processing
             response.raise_for_status()
@@ -128,6 +134,7 @@ async def proxy_get_request(
 )
 async def proxy_put_request(
     url: str = Query(..., description="URL-encoded target URL of the IoT controller endpoint"),
+    apiKey: Optional[str] = Query(None, description="API key to forward to IoT controller (X-API-Key header)"),
     request: Request = None,
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
@@ -203,10 +210,13 @@ async def proxy_put_request(
     # Reason: Use httpx for async HTTP requests with timeout
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            # Reason: Forward the request body and content-type header
+            # Reason: Forward the request body, content-type header, and API key
             headers = {}
             if request.headers.get("content-type"):
                 headers["content-type"] = request.headers.get("content-type")
+            # Reason: Forward API key as X-API-Key header if provided (required for Pi relay control)
+            if apiKey:
+                headers["X-API-Key"] = apiKey
 
             response = await client.put(
                 decoded_url,

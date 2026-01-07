@@ -728,21 +728,30 @@ export async function updateBlockIoTController(
 /**
  * Proxy request to IoT controller device
  * This fetches data from the actual IoT hardware via our backend proxy
+ * @param url - The target IoT controller URL
+ * @param apiKey - Optional API key for authenticated endpoints (forwarded as X-API-Key)
  */
-export async function iotProxyGet(url: string) {
-  const response = await apiClient.get<any>('/v1/farm/iot-proxy', {
-    params: { url },
-  });
+export async function iotProxyGet(url: string, apiKey?: string) {
+  const params: Record<string, string> = { url };
+  if (apiKey) {
+    params.apiKey = apiKey;
+  }
+  const response = await apiClient.get<any>('/v1/farm/iot-proxy', { params });
   return response.data.data;
 }
 
 /**
  * Proxy PUT request to IoT controller (for controlling relays)
+ * @param url - The target IoT controller URL
+ * @param data - The request body to send
+ * @param apiKey - Optional API key for authenticated endpoints (forwarded as X-API-Key)
  */
-export async function iotProxyPut(url: string, data: any) {
-  const response = await apiClient.put<any>('/v1/farm/iot-proxy', data, {
-    params: { url },
-  });
+export async function iotProxyPut(url: string, data: any, apiKey?: string) {
+  const params: Record<string, string> = { url };
+  if (apiKey) {
+    params.apiKey = apiKey;
+  }
+  const response = await apiClient.put<any>('/v1/farm/iot-proxy', data, { params });
   return response.data.data;
 }
 

@@ -62,6 +62,7 @@ interface IoTControllerConfig {
   address: string;
   port: number;
   enabled: boolean;
+  apiKey?: string;
 }
 
 interface SensorReading {
@@ -110,7 +111,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
-  const [configForm, setConfigForm] = useState({ address: '', port: 8090, enabled: true });
+  const [configForm, setConfigForm] = useState({ address: '', port: 8090, enabled: true, apiKey: '' });
   const [configSaving, setConfigSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [togglingRelay, setTogglingRelay] = useState<string | null>(null);
@@ -129,7 +130,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
       setIoTConfig(config);
 
       if (config && config.enabled && config.address) {
-        await fetchDeviceData(config.address, config.port);
+        await fetchDeviceData(config.address, config.port, config.apiKey);
       }
     } catch (err: any) {
       if (err.response?.status === 404) {
@@ -150,11 +151,11 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
   // FETCH DEVICE DATA
   // ============================================================================
 
-  const fetchDeviceData = async (address: string, port: number) => {
+  const fetchDeviceData = async (address: string, port: number, apiKey?: string) => {
     try {
       setError(null);
       const url = buildIoTUrl(address, port, '/api/devices');
-      const data = await iotProxyGet(url);
+      const data = await iotProxyGet(url, apiKey);
       setDeviceData(data);
       setLastRefresh(new Date());
     } catch (err: any) {
@@ -175,7 +176,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
 
   const handleRefresh = async () => {
     if (iotConfig && iotConfig.enabled && iotConfig.address) {
-      await fetchDeviceData(iotConfig.address, iotConfig.port);
+      await fetchDeviceData(iotConfig.address, iotConfig.port, iotConfig.apiKey);
     }
   };
 
@@ -186,7 +187,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
   useEffect(() => {
     if (autoRefresh && iotConfig && iotConfig.enabled && iotConfig.address) {
       autoRefreshInterval.current = setInterval(() => {
-        fetchDeviceData(iotConfig.address, iotConfig.port);
+        fetchDeviceData(iotConfig.address, iotConfig.port, iotConfig.apiKey);
       }, 10000); // 10 seconds
 
       return () => {
@@ -210,7 +211,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
       setShowConfigModal(false);
 
       if (updatedConfig.enabled && updatedConfig.address) {
-        await fetchDeviceData(updatedConfig.address, updatedConfig.port);
+        await fetchDeviceData(updatedConfig.address, updatedConfig.port, updatedConfig.apiKey);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to save IoT controller configuration');
@@ -228,7 +229,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
       setTestingConnection(true);
       setError(null);
       const url = buildIoTUrl(configForm.address, configForm.port, '/api/devices');
-      await iotProxyGet(url);
+      await iotProxyGet(url, configForm.apiKey || undefined);
       alert('Connection successful! Controller is responding.');
     } catch (err: any) {
       alert('Connection failed: ' + (err.message || 'Controller not responding'));
@@ -249,15 +250,15 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
       setError(null);
 
       const url = buildIoTUrl(iotConfig.address, iotConfig.port, `/api/relays/${relayId}`);
-      await iotProxyPut(url, { state: !currentState });
+      await iotProxyPut(url, { state: !currentState }, iotConfig.apiKey);
 
       // Refresh device data to get updated relay state
-      await fetchDeviceData(iotConfig.address, iotConfig.port);
+      await fetchDeviceData(iotConfig.address, iotConfig.port, iotConfig.apiKey);
     } catch (err: any) {
       setError(err.message || 'Failed to toggle relay');
       // Rollback on error by refetching data
       if (iotConfig) {
-        await fetchDeviceData(iotConfig.address, iotConfig.port);
+        await fetchDeviceData(iotConfig.address, iotConfig.port, iotConfig.apiKey);
       }
     } finally {
       setTogglingRelay(null);
@@ -274,9 +275,10 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
         address: iotConfig.address || '',
         port: iotConfig.port || 8090,
         enabled: iotConfig.enabled,
+        apiKey: iotConfig.apiKey || '',
       });
     } else {
-      setConfigForm({ address: '', port: 8090, enabled: true });
+      setConfigForm({ address: '', port: 8090, enabled: true, apiKey: '' });
     }
     setShowConfigModal(true);
   };
@@ -539,6 +541,17 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                   />
                   Enable IoT Controller
                 </CheckboxLabel>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>API Key (optional, for relay control)</Label>
+                <Input
+                  type="password"
+                  placeholder="Enter API key for authenticated endpoints"
+                  value={configForm.apiKey}
+                  onChange={(e) => setConfigForm({ ...configForm, apiKey: e.target.value })}
+                />
+                <HelpText>Required for controllers that need authentication (e.g., Raspberry Pi)</HelpText>
               </FormGroup>
 
               <ButtonGroup>
@@ -1102,6 +1115,12 @@ const CheckboxLabel = styled.label`
   input[type='checkbox'] {
     cursor: pointer;
   }
+`;
+
+const HelpText = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
 const ButtonGroup = styled.div`
