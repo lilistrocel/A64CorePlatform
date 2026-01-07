@@ -716,7 +716,7 @@ export async function getBlockIoTController(farmId: string, blockId: string) {
 export async function updateBlockIoTController(
   farmId: string,
   blockId: string,
-  data: { address: string; port: number; enabled: boolean }
+  data: { address: string; port: number; enabled: boolean; apiKey?: string }
 ) {
   const response = await apiClient.patch<{ data: any }>(
     `/v1/farm/farms/${farmId}/blocks/${blockId}/iot-controller`,
