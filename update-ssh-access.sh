@@ -3,6 +3,7 @@
 # Run this script whenever your IP changes: ./update-ssh-access.sh
 
 SECURITY_GROUP_ID="sg-046c0c2ce3f13c605"
+AWS_REGION="me-central-1"  # UAE region
 CURRENT_IP=$(curl -s https://api.ipify.org)
 
 echo "Current IP: $CURRENT_IP"
@@ -14,6 +15,7 @@ echo "Step 1: Cleaning up old dynamic IP rules..."
 # Add new IP
 echo "Step 2: Adding current IP to security group..."
 aws ec2 authorize-security-group-ingress \
+    --region $AWS_REGION \
     --group-id $SECURITY_GROUP_ID \
     --protocol tcp \
     --port 22 \
