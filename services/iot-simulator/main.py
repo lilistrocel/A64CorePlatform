@@ -82,20 +82,55 @@ sensor_labels: Dict[str, str] = {
 # HELPER FUNCTIONS - Simulate realistic sensor variations
 # ============================================================================
 
-def simulate_variation(base_value: float, variation_percent: float = 5.0) -> float:
-    """Add realistic random variation to sensor readings"""
-    variation = base_value * (variation_percent / 100)
-    return round(base_value + random.uniform(-variation, variation), 2)
+# Persistent state for smooth sensor readings (avoids jumpy values)
+_sensor_state: Dict[str, float] = {}
+
+def simulate_variation(base_value: float, variation_percent: float = 0.5, sensor_key: str = None) -> float:
+    """
+    Add realistic random variation to sensor readings.
+    Uses small variations (0.1-0.5%) like real sensors.
+    Optionally maintains state for smooth transitions.
+    """
+    global _sensor_state
+
+    # Very small variation for realistic sensor behavior
+    max_variation = base_value * (variation_percent / 100)
+
+    if sensor_key and sensor_key in _sensor_state:
+        # Smooth transition from previous value (max 0.1% change per reading)
+        prev_value = _sensor_state[sensor_key]
+        max_change = base_value * 0.001  # 0.1% max change per reading
+        change = random.uniform(-max_change, max_change)
+        new_value = prev_value + change
+        # Keep within bounds of base value +/- variation
+        new_value = max(base_value - max_variation, min(base_value + max_variation, new_value))
+    else:
+        # Initial value with small random offset
+        new_value = base_value + random.uniform(-max_variation, max_variation)
+
+    if sensor_key:
+        _sensor_state[sensor_key] = new_value
+
+    return round(new_value, 2)
 
 
 def get_time_based_variation() -> float:
-    """Simulate temperature variation based on time of day"""
+    """
+    Simulate temperature variation based on time of day.
+    Uses smooth sinusoidal curve instead of random jumps.
+    Peak at 2pm (14:00), lowest at 4am (04:00).
+    """
     hour = datetime.now().hour
-    # Warmer during day (6am-6pm), cooler at night
-    if 6 <= hour <= 18:
-        return random.uniform(0, 3)  # Daytime boost
-    else:
-        return random.uniform(-2, 0)  # Nighttime cooling
+    minute = datetime.now().minute
+
+    # Convert to decimal hours
+    decimal_hour = hour + minute / 60.0
+
+    # Sinusoidal variation: peak at 14:00 (+2°C), lowest at 02:00 (-1°C)
+    # Using sine wave shifted to peak at 14:00
+    variation = 1.5 * math.sin((decimal_hour - 8) * math.pi / 12) + 0.5
+
+    return round(variation, 2)
 
 
 def calculate_effect_of_fans() -> float:
@@ -124,6 +159,10 @@ def get_sensor_data() -> List[Dict[str, Any]]:
     pump_humidity = calculate_effect_of_pump()
     time_variation = get_time_based_variation()
 
+    # Base values adjusted for environmental effects
+    adjusted_air_temp = BASE_AIR_TEMP + fan_cooling + time_variation
+    adjusted_humidity = min(99, BASE_AIR_HUMIDITY + pump_humidity)
+
     return [
         {
             "id": "sensor1",
@@ -135,11 +174,11 @@ def get_sensor_data() -> List[Dict[str, Any]]:
             "lastUpdate": datetime.now().isoformat(),
             "readings": {
                 "temperature": {
-                    "value": simulate_variation(BASE_AIR_TEMP + fan_cooling + time_variation, 3),
+                    "value": simulate_variation(adjusted_air_temp, 0.3, "air_temp"),
                     "unit": "°C"
                 },
                 "humidity": {
-                    "value": min(99, simulate_variation(BASE_AIR_HUMIDITY + pump_humidity, 5)),
+                    "value": simulate_variation(adjusted_humidity, 0.5, "air_humidity"),
                     "unit": "%"
                 }
             }
@@ -154,31 +193,31 @@ def get_sensor_data() -> List[Dict[str, Any]]:
             "lastUpdate": datetime.now().isoformat(),
             "readings": {
                 "moisture": {
-                    "value": simulate_variation(BASE_SOIL_MOISTURE, 3),
+                    "value": simulate_variation(BASE_SOIL_MOISTURE, 0.3, "soil_moisture"),
                     "unit": "%"
                 },
                 "temperature": {
-                    "value": simulate_variation(BASE_SOIL_TEMP, 2),
+                    "value": simulate_variation(BASE_SOIL_TEMP, 0.2, "soil_temp"),
                     "unit": "°C"
                 },
                 "ec": {
-                    "value": int(simulate_variation(BASE_SOIL_EC, 5)),
+                    "value": int(simulate_variation(BASE_SOIL_EC, 0.5, "soil_ec")),
                     "unit": "μS/cm"
                 },
                 "ph": {
-                    "value": simulate_variation(BASE_SOIL_PH, 2),
+                    "value": simulate_variation(BASE_SOIL_PH, 0.2, "soil_ph"),
                     "unit": ""
                 },
                 "nitrogen": {
-                    "value": int(simulate_variation(BASE_SOIL_NITROGEN, 3)),
+                    "value": int(simulate_variation(BASE_SOIL_NITROGEN, 0.3, "soil_n")),
                     "unit": "mg/kg"
                 },
                 "phosphorus": {
-                    "value": int(simulate_variation(BASE_SOIL_PHOSPHORUS, 3)),
+                    "value": int(simulate_variation(BASE_SOIL_PHOSPHORUS, 0.3, "soil_p")),
                     "unit": "mg/kg"
                 },
                 "potassium": {
-                    "value": int(simulate_variation(BASE_SOIL_POTASSIUM, 3)),
+                    "value": int(simulate_variation(BASE_SOIL_POTASSIUM, 0.3, "soil_k")),
                     "unit": "mg/kg"
                 }
             }
