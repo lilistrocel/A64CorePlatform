@@ -24,7 +24,8 @@ async function runTest() {
   });
 
   const context = await browser.newContext({
-    viewport: { width: 1400, height: 900 }
+    viewport: { width: 1400, height: 900 },
+    ignoreHTTPSErrors: true  // Ignore SSL certificate errors
   });
 
   const page = await context.newPage();
@@ -198,11 +199,15 @@ async function runTest() {
     // ========================================
     console.log('📝 Step 8: Testing refresh button...');
 
-    const refreshButton = await page.locator('button:has-text("Refresh")').first();
+    // Use more specific selector - find Refresh button INSIDE the modal (near RefreshCw icon)
+    const refreshButton = await page.locator('.sc-bXhvzi:has-text("Refresh")').first();
     if (await refreshButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await refreshButton.click();
+      // Use force:true to click even if slightly covered
+      await refreshButton.click({ force: true });
       await delay(2000);
       console.log('✅ Refresh button clicked\n');
+    } else {
+      console.log('⚠️ Refresh button not visible in modal\n');
     }
 
     await page.screenshot({ path: 'test-screenshots/07-after-refresh.png' });

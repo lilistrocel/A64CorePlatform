@@ -1,9 +1,5 @@
 # A64 Core Platform - Development Guide
 
-## Quick Reference for Developers
-
-This is a quick reference guide. **Specialized agents have their own rules** in `.claude/agent-rules/`.
-
 ## Core Principles
 
 - **KISS** - Keep It Simple, Stupid
