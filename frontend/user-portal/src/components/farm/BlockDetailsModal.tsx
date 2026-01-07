@@ -397,6 +397,7 @@ const Header = styled.div`
   justify-content: space-between;
   padding: ${({ theme }) => theme.spacing.lg};
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  flex-shrink: 0;
 `;
 
 const TabBar = styled.div`
@@ -404,6 +405,7 @@ const TabBar = styled.div`
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   overflow-x: auto;
   background: ${({ theme }) => theme.colors.surface};
+  flex-shrink: 0;
 
   &::-webkit-scrollbar {
     height: 4px;
