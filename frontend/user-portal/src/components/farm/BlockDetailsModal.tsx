@@ -486,6 +486,9 @@ const Content = styled.div`
   gap: ${({ theme }) => theme.spacing.xl};
   position: relative;
   z-index: 1;
+  /* Enable proper scrolling in flex container */
+  flex: 1;
+  min-height: 0;
 `;
 
 const Section = styled.div`
