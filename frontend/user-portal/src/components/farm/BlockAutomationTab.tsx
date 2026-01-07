@@ -34,6 +34,26 @@ import {
 } from '../../services/farmApi';
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Build IoT controller URL with proper protocol based on port
+ * - Port 443: Use HTTPS without explicit port
+ * - Port 80: Use HTTP without explicit port
+ * - Other ports: Use HTTP with explicit port
+ */
+function buildIoTUrl(address: string, port: number, path: string): string {
+  if (port === 443) {
+    return `https://${address}${path}`;
+  } else if (port === 80) {
+    return `http://${address}${path}`;
+  } else {
+    return `http://${address}:${port}${path}`;
+  }
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -133,7 +153,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
   const fetchDeviceData = async (address: string, port: number) => {
     try {
       setError(null);
-      const url = `http://${address}:${port}/api/devices`;
+      const url = buildIoTUrl(address, port, '/api/devices');
       const data = await iotProxyGet(url);
       setDeviceData(data);
       setLastRefresh(new Date());
@@ -207,7 +227,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
     try {
       setTestingConnection(true);
       setError(null);
-      const url = `http://${configForm.address}:${configForm.port}/api/devices`;
+      const url = buildIoTUrl(configForm.address, configForm.port, '/api/devices');
       await iotProxyGet(url);
       alert('Connection successful! Controller is responding.');
     } catch (err: any) {
@@ -228,7 +248,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
       setTogglingRelay(relayId);
       setError(null);
 
-      const url = `http://${iotConfig.address}:${iotConfig.port}/api/relays/${relayId}`;
+      const url = buildIoTUrl(iotConfig.address, iotConfig.port, `/api/relays/${relayId}`);
       await iotProxyPut(url, { state: !currentState });
 
       // Refresh device data to get updated relay state
@@ -501,7 +521,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
               </FormGroup>
 
               <FormGroup>
-                <Label>Port</Label>
+                <Label>Port (use 443 for HTTPS)</Label>
                 <Input
                   type="number"
                   placeholder="8090"
