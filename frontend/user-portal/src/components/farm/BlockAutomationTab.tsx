@@ -25,6 +25,9 @@ import {
   RefreshCw,
   WifiOff,
   Wifi,
+  Edit2,
+  Check,
+  X,
 } from 'lucide-react';
 import {
   getBlockIoTController,
@@ -63,6 +66,7 @@ interface IoTControllerConfig {
   port: number;
   enabled: boolean;
   apiKey?: string;
+  relayLabels?: Record<string, string>;
 }
 
 interface SensorReading {
@@ -115,6 +119,9 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
   const [configSaving, setConfigSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [togglingRelay, setTogglingRelay] = useState<string | null>(null);
+  const [editingRelayLabel, setEditingRelayLabel] = useState<string | null>(null);
+  const [editLabelValue, setEditLabelValue] = useState('');
+  const [savingRelayLabel, setSavingRelayLabel] = useState(false);
 
   const autoRefreshInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -263,6 +270,62 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
     } finally {
       setTogglingRelay(null);
     }
+  };
+
+  // ============================================================================
+  // EDIT RELAY LABEL
+  // ============================================================================
+
+  const handleStartEditLabel = (relayId: string, currentLabel: string) => {
+    setEditingRelayLabel(relayId);
+    setEditLabelValue(currentLabel);
+  };
+
+  const handleCancelEditLabel = () => {
+    setEditingRelayLabel(null);
+    setEditLabelValue('');
+  };
+
+  const handleSaveRelayLabel = async (relayId: string) => {
+    if (!iotConfig) return;
+
+    try {
+      setSavingRelayLabel(true);
+      setError(null);
+
+      // Merge new label with existing labels
+      const updatedLabels = {
+        ...(iotConfig.relayLabels || {}),
+        [relayId]: editLabelValue.trim(),
+      };
+
+      // If the label is empty, remove it (use default from device)
+      if (!editLabelValue.trim()) {
+        delete updatedLabels[relayId];
+      }
+
+      // Save to backend
+      const updatedConfig = await updateBlockIoTController(farmId, blockId, {
+        address: iotConfig.address,
+        port: iotConfig.port,
+        enabled: iotConfig.enabled,
+        apiKey: iotConfig.apiKey,
+        relayLabels: updatedLabels,
+      });
+
+      setIoTConfig(updatedConfig);
+      setEditingRelayLabel(null);
+      setEditLabelValue('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to save relay label');
+    } finally {
+      setSavingRelayLabel(false);
+    }
+  };
+
+  const getRelayDisplayLabel = (relay: Relay): string => {
+    // Use custom label if available, otherwise use device default
+    return iotConfig?.relayLabels?.[relay.id] || relay.label;
   };
 
   // ============================================================================
@@ -476,10 +539,47 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                     <Power size={20} />
                   </RelayIconWrapper>
                   <RelayInfo>
-                    <RelayName>{relay.label}</RelayName>
+                    {editingRelayLabel === relay.id ? (
+                      <RelayLabelEditRow>
+                        <RelayLabelInput
+                          type="text"
+                          value={editLabelValue}
+                          onChange={(e) => setEditLabelValue(e.target.value)}
+                          placeholder={relay.label}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveRelayLabel(relay.id);
+                            if (e.key === 'Escape') handleCancelEditLabel();
+                          }}
+                        />
+                        <RelayLabelAction
+                          onClick={() => handleSaveRelayLabel(relay.id)}
+                          disabled={savingRelayLabel}
+                          title="Save"
+                        >
+                          <Check size={14} />
+                        </RelayLabelAction>
+                        <RelayLabelAction onClick={handleCancelEditLabel} title="Cancel">
+                          <X size={14} />
+                        </RelayLabelAction>
+                      </RelayLabelEditRow>
+                    ) : (
+                      <RelayNameRow>
+                        <RelayName>{getRelayDisplayLabel(relay)}</RelayName>
+                        <EditLabelButton
+                          onClick={() => handleStartEditLabel(relay.id, getRelayDisplayLabel(relay))}
+                          title="Edit label"
+                        >
+                          <Edit2 size={12} />
+                        </EditLabelButton>
+                      </RelayNameRow>
+                    )}
                     <RelayMeta>
                       <StatusDot $online={relay.online} />
                       <RelayStatus>{relay.online ? 'Online' : 'Offline'}</RelayStatus>
+                      {iotConfig?.relayLabels?.[relay.id] && (
+                        <DeviceLabel title="Device default label">({relay.label})</DeviceLabel>
+                      )}
                     </RelayMeta>
                   </RelayInfo>
                 </RelayHeader>
@@ -957,6 +1057,90 @@ const RelayName = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const RelayNameRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const EditLabelButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    opacity: 1;
+    background: ${({ theme }) => theme.colors.neutral[100]};
+    color: ${({ theme }) => theme.colors.primary[500]};
+  }
+`;
+
+const RelayLabelEditRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const RelayLabelInput = styled.input`
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid ${({ theme }) => theme.colors.primary[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface};
+  min-width: 100px;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
+  }
+`;
+
+const RelayLabelAction = styled.button<{ disabled?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.primary[50]};
+    border-color: ${({ theme }) => theme.colors.primary[300]};
+    color: ${({ theme }) => theme.colors.primary[500]};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const DeviceLabel = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  opacity: 0.7;
+  font-style: italic;
 `;
 
 const RelayMeta = styled.div`

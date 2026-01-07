@@ -6,7 +6,7 @@ Represents a designated planting area within a farm.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
@@ -50,6 +50,7 @@ class IoTController(BaseModel):
     port: int = Field(..., gt=0, le=65535, description="Port number (use 443 for HTTPS)")
     enabled: bool = Field(True, description="Whether to fetch from controller")
     apiKey: Optional[str] = Field(None, description="API key for authenticated endpoints (relay control)")
+    relayLabels: Optional[Dict[str, str]] = Field(default_factory=dict, description="Custom labels for relays (relay_id -> custom_label)")
     lastConnected: Optional[datetime] = Field(None, description="Last successful connection timestamp")
 
     class Config:
@@ -59,6 +60,7 @@ class IoTController(BaseModel):
                 "port": 8090,
                 "enabled": True,
                 "apiKey": "your-api-key-here",
+                "relayLabels": {"pump": "Main Irrigation", "fan1": "Exhaust Fan"},
                 "lastConnected": "2026-01-06T16:00:00Z"
             }
         }
@@ -199,6 +201,7 @@ class IoTControllerUpdate(BaseModel):
     port: int = Field(..., gt=0, le=65535, description="Port number (use 443 for HTTPS)")
     enabled: bool = Field(True, description="Whether to fetch from controller")
     apiKey: Optional[str] = Field(None, description="API key for authenticated endpoints (relay control)")
+    relayLabels: Optional[Dict[str, str]] = Field(None, description="Custom labels for relays (relay_id -> custom_label)")
 
 
 class BlockStatusUpdate(BaseModel):

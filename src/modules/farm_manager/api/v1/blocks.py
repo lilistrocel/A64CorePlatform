@@ -868,6 +868,7 @@ async def get_iot_controller(
         "port": block.iotController.port,
         "enabled": block.iotController.enabled,
         "apiKey": block.iotController.apiKey,
+        "relayLabels": block.iotController.relayLabels or {},
         "lastConnected": block.iotController.lastConnected.isoformat() if block.iotController.lastConnected else None
     }
 
