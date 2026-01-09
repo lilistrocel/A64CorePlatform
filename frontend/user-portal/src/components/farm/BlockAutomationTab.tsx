@@ -161,7 +161,8 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
   const fetchDeviceData = async (address: string, port: number, apiKey?: string) => {
     try {
       setError(null);
-      const url = buildIoTUrl(address, port, '/api/devices');
+      // Use /api/a64core endpoint for aggregated device data format
+      const url = buildIoTUrl(address, port, '/api/a64core');
       const data = await iotProxyGet(url, apiKey);
       setDeviceData(data);
       setLastRefresh(new Date());
@@ -235,7 +236,8 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
     try {
       setTestingConnection(true);
       setError(null);
-      const url = buildIoTUrl(configForm.address, configForm.port, '/api/devices');
+      // Use /api/a64core endpoint for connection test
+      const url = buildIoTUrl(configForm.address, configForm.port, '/api/a64core');
       await iotProxyGet(url, configForm.apiKey || undefined);
       alert('Connection successful! Controller is responding.');
     } catch (err: any) {
