@@ -45,14 +45,26 @@ import {
  * - Port 443: Use HTTPS without explicit port
  * - Port 80: Use HTTP without explicit port
  * - Other ports: Use HTTP with explicit port
+ *
+ * Handles addresses that may already include protocol prefix
  */
 function buildIoTUrl(address: string, port: number, path: string): string {
+  // Strip existing protocol if present
+  let cleanAddress = address;
+  if (cleanAddress.startsWith('https://')) {
+    cleanAddress = cleanAddress.substring(8);
+  } else if (cleanAddress.startsWith('http://')) {
+    cleanAddress = cleanAddress.substring(7);
+  }
+  // Remove trailing slash if present
+  cleanAddress = cleanAddress.replace(/\/$/, '');
+
   if (port === 443) {
-    return `https://${address}${path}`;
+    return `https://${cleanAddress}${path}`;
   } else if (port === 80) {
-    return `http://${address}${path}`;
+    return `http://${cleanAddress}${path}`;
   } else {
-    return `http://${address}:${port}${path}`;
+    return `http://${cleanAddress}:${port}${path}`;
   }
 }
 
