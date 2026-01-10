@@ -792,12 +792,14 @@ async def update_iot_controller(
             detail="Block not found in this farm"
         )
 
-    # Create IoTController object with current timestamp
+    # Create IoTController object with all fields from config
     from ...models.block import IoTController
     iot_controller = IoTController(
         address=controller_config.address,
         port=controller_config.port,
         enabled=controller_config.enabled,
+        apiKey=controller_config.apiKey,
+        relayLabels=controller_config.relayLabels or {},
         lastConnected=None  # Will be updated when frontend successfully connects
     )
 
