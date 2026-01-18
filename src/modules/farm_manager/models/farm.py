@@ -69,6 +69,7 @@ class FarmUpdate(BaseModel):
 class Farm(FarmBase):
     """Complete farm model with all fields"""
     farmId: UUID = Field(default_factory=uuid4, description="Unique farm identifier")
+    farmCode: Optional[str] = Field(None, description="Human-readable farm code (e.g., F001)")
 
     # Manager information
     managerId: UUID = Field(..., description="User ID of farm manager")
@@ -85,6 +86,7 @@ class Farm(FarmBase):
         json_schema_extra = {
             "example": {
                 "farmId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+                "farmCode": "F001",
                 "name": "Green Valley Farm",
                 "description": "Organic vegetable farm in central valley",
                 "owner": "John Smith",

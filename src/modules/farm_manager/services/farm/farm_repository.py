@@ -26,9 +26,30 @@ class FarmRepository:
         """Get farms collection"""
         return farm_db.get_collection(self.collection_name)
 
+    async def _get_next_farm_sequence(self) -> int:
+        """
+        Get next farm sequence number using atomic increment.
+
+        Uses a counters collection to maintain an atomic counter for farm codes.
+
+        Returns:
+            Next sequence number for farm code
+        """
+        db = farm_db.get_database()
+
+        # Use findOneAndUpdate with upsert to atomically get and increment
+        result = await db.counters.find_one_and_update(
+            {"_id": "farm_sequence"},
+            {"$inc": {"value": 1}},
+            upsert=True,
+            return_document=True
+        )
+
+        return result["value"]
+
     async def create(self, farm_data: FarmCreate, manager_id: UUID, manager_email: str) -> Farm:
         """
-        Create a new farm
+        Create a new farm with auto-generated farmCode
 
         Args:
             farm_data: Farm creation data
@@ -40,9 +61,14 @@ class FarmRepository:
         """
         collection = self._get_collection()
 
+        # Generate farm code (e.g., "F001", "F002")
+        sequence = await self._get_next_farm_sequence()
+        farm_code = f"F{sequence:03d}"
+
         farm_dict = farm_data.model_dump()
         farm = Farm(
             **farm_dict,
+            farmCode=farm_code,
             managerId=manager_id,
             managerEmail=manager_email,
             createdAt=datetime.utcnow(),
@@ -52,10 +78,12 @@ class FarmRepository:
         farm_doc = farm.model_dump(by_alias=True)
         farm_doc["farmId"] = str(farm_doc["farmId"])  # Convert UUID to string for MongoDB
         farm_doc["managerId"] = str(farm_doc["managerId"])
+        # Initialize block sequence counter for this farm
+        farm_doc["nextBlockSequence"] = 1
 
         await collection.insert_one(farm_doc)
 
-        logger.info(f"Created farm: {farm.farmId}")
+        logger.info(f"Created farm: {farm.farmId} with code {farm_code}")
         return farm
 
     async def get_by_id(self, farm_id: UUID) -> Optional[Farm]:
