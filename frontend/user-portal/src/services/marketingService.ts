@@ -279,10 +279,30 @@ export async function deleteEvent(eventId: string): Promise<{ message: string }>
 
 /**
  * Get marketing dashboard statistics
+ * Transforms nested API response to flat structure expected by frontend
  */
 export async function getDashboardStats(): Promise<MarketingDashboardStats> {
-  const response = await apiClient.get<{ data: MarketingDashboardStats }>('/v1/marketing/dashboard');
-  return response.data.data;
+  const response = await apiClient.get<{ data: any }>('/v1/marketing/dashboard');
+  const data = response.data.data;
+
+  // Transform nested API response to flat structure
+  return {
+    totalBudget: data.budgets?.totalAmount || 0,
+    allocatedBudget: data.budgets?.allocated || 0,
+    spentBudget: data.budgets?.spent || 0,
+    activeCampaigns: data.campaigns?.active || 0,
+    totalCampaigns: data.campaigns?.total || 0,
+    totalImpressions: data.campaigns?.performance?.impressions || 0,
+    totalClicks: data.campaigns?.performance?.clicks || 0,
+    totalConversions: data.campaigns?.performance?.conversions || 0,
+    averageROI: 0, // Can be calculated if needed
+    upcomingEvents: data.events?.upcoming || 0,
+    totalEvents: data.events?.total || 0,
+    activeChannels: data.channels?.active || 0,
+    topCampaigns: [], // Would need separate API call
+    upcomingEventsList: [], // Would need separate API call
+    budgetUtilization: [], // Would need separate API call
+  };
 }
 
 // ============================================================================
