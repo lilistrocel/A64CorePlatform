@@ -71,7 +71,7 @@ class Contract(ContractBase):
                 "employeeId": "e47ac10b-58cc-4372-a567-0e02b2c3d479",
                 "type": "full_time",
                 "startDate": "2024-01-15",
-                "endDate": null,
+                "endDate": None,
                 "salary": 75000.00,
                 "currency": "USD",
                 "benefits": ["Health Insurance", "401k Matching", "PTO"],
