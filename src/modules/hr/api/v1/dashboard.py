@@ -32,7 +32,7 @@ async def get_dashboard_stats(
     """Get comprehensive HR dashboard statistics"""
 
     # Get employee counts by status
-    all_employees = await employee_service.get_employees(page=1, per_page=1000)
+    all_employees = await employee_service.get_all_employees(page=1, per_page=1000)
     employees_list = all_employees.get("items", [])
 
     total_employees = len(employees_list)
@@ -55,7 +55,7 @@ async def get_dashboard_stats(
         # Get all visas and filter for expiring soon
         for employee in employees_list[:50]:  # Limit to avoid too many API calls
             try:
-                visas_result = await visa_service.get_visas(str(employee.employeeId), page=1, per_page=10)
+                visas_result = await visa_service.get_employee_visas(str(employee.employeeId), page=1, per_page=10)
                 visas = visas_result.get("items", [])
                 for visa in visas:
                     if hasattr(visa, 'expiryDate') and visa.expiryDate:

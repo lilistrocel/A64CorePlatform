@@ -31,7 +31,7 @@ async def get_dashboard_stats(
     """Get comprehensive sales dashboard statistics"""
 
     # Get order statistics
-    orders_result = await order_service.get_orders(page=1, per_page=1000)
+    orders_result = await order_service.get_all_orders(page=1, per_page=1000)
     orders_list = orders_result.get("items", [])
 
     total_orders = len(orders_list)
@@ -48,7 +48,7 @@ async def get_dashboard_stats(
     )
 
     # Get inventory statistics
-    inventory_result = await inventory_service.get_inventory(page=1, per_page=1000)
+    inventory_result = await inventory_service.get_all_inventory(page=1, per_page=1000)
     inventory_list = inventory_result.get("items", [])
 
     total_inventory = len(inventory_list)
@@ -57,7 +57,7 @@ async def get_dashboard_stats(
     sold_inventory = sum(1 for i in inventory_list if i.status == "sold")
 
     # Get purchase order statistics
-    po_result = await po_service.get_purchase_orders(page=1, per_page=1000)
+    po_result = await po_service.get_all_purchase_orders(page=1, per_page=1000)
     po_list = po_result.get("items", [])
 
     total_purchase_orders = len(po_list)
