@@ -235,6 +235,18 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
       newErrors.email = 'Invalid email format';
     }
 
+    if (!formData.department.trim()) {
+      newErrors.department = 'Department is required';
+    }
+
+    if (!formData.position.trim()) {
+      newErrors.position = 'Position is required';
+    }
+
+    if (!formData.hireDate) {
+      newErrors.hireDate = 'Hire date is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -246,20 +258,28 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
     setIsSubmitting(true);
     try {
+      // Only include emergencyContact if at least one field is filled
+      const hasEmergencyContact =
+        formData.emergencyContact.name.trim() ||
+        formData.emergencyContact.phone.trim() ||
+        formData.emergencyContact.relationship.trim();
+
       const submitData: EmployeeCreate | EmployeeUpdate = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone || undefined,
-        department: formData.department || undefined,
-        position: formData.position || undefined,
-        hireDate: formData.hireDate || undefined,
+        department: formData.department,
+        position: formData.position,
+        hireDate: formData.hireDate,
         status: formData.status,
-        emergencyContact: {
-          name: formData.emergencyContact.name || undefined,
-          phone: formData.emergencyContact.phone || undefined,
-          relationship: formData.emergencyContact.relationship || undefined,
-        },
+        emergencyContact: hasEmergencyContact
+          ? {
+              name: formData.emergencyContact.name,
+              phone: formData.emergencyContact.phone,
+              relationship: formData.emergencyContact.relationship,
+            }
+          : undefined,
       };
 
       await onSubmit(submitData);
@@ -333,34 +353,46 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
         <Row>
           <FormField>
-            <Label>Department</Label>
+            <Label>
+              Department <Required>*</Required>
+            </Label>
             <Input
               type="text"
               value={formData.department}
               onChange={(e) => handleChange('department', e.target.value)}
+              $hasError={!!errors.department}
               placeholder="Engineering, Sales, etc."
             />
+            {errors.department && <ErrorText>{errors.department}</ErrorText>}
           </FormField>
 
           <FormField>
-            <Label>Position</Label>
+            <Label>
+              Position <Required>*</Required>
+            </Label>
             <Input
               type="text"
               value={formData.position}
               onChange={(e) => handleChange('position', e.target.value)}
+              $hasError={!!errors.position}
               placeholder="Software Engineer, Manager, etc."
             />
+            {errors.position && <ErrorText>{errors.position}</ErrorText>}
           </FormField>
         </Row>
 
         <Row>
           <FormField>
-            <Label>Hire Date</Label>
+            <Label>
+              Hire Date <Required>*</Required>
+            </Label>
             <Input
               type="date"
               value={formData.hireDate}
               onChange={(e) => handleChange('hireDate', e.target.value)}
+              $hasError={!!errors.hireDate}
             />
+            {errors.hireDate && <ErrorText>{errors.hireDate}</ErrorText>}
           </FormField>
 
           <FormField>
