@@ -32,8 +32,8 @@ async def get_dashboard_stats(
     """Get comprehensive logistics dashboard statistics"""
 
     # Get vehicle statistics
-    vehicles_result = await vehicle_service.get_all_vehicles(page=1, per_page=1000)
-    vehicles_list = vehicles_result.get("items", [])
+    # Service returns tuple: (vehicles_list, total_count, total_pages)
+    vehicles_list, _, _ = await vehicle_service.get_all_vehicles(page=1, per_page=1000)
 
     total_vehicles = len(vehicles_list)
     available_vehicles = sum(1 for v in vehicles_list if v.status == "available")
@@ -41,15 +41,15 @@ async def get_dashboard_stats(
     maintenance_vehicles = sum(1 for v in vehicles_list if v.status == "maintenance")
 
     # Get route statistics
-    routes_result = await route_service.get_all_routes(page=1, per_page=1000)
-    routes_list = routes_result.get("items", [])
+    # Service returns tuple: (routes_list, total_count, total_pages)
+    routes_list, _, _ = await route_service.get_all_routes(page=1, per_page=1000)
 
     total_routes = len(routes_list)
     active_routes = sum(1 for r in routes_list if hasattr(r, 'isActive') and r.isActive)
 
     # Get shipment statistics
-    shipments_result = await shipment_service.get_all_shipments(page=1, per_page=1000)
-    shipments_list = shipments_result.get("items", [])
+    # Service returns tuple: (shipments_list, total_count, total_pages)
+    shipments_list, _, _ = await shipment_service.get_all_shipments(page=1, per_page=1000)
 
     total_shipments = len(shipments_list)
     scheduled_shipments = sum(1 for s in shipments_list if s.status == "scheduled")

@@ -31,8 +31,8 @@ async def get_dashboard_stats(
     """Get comprehensive sales dashboard statistics"""
 
     # Get order statistics
-    orders_result = await order_service.get_all_orders(page=1, per_page=1000)
-    orders_list = orders_result.get("items", [])
+    # Service returns tuple: (orders_list, total_count, total_pages)
+    orders_list, _, _ = await order_service.get_all_orders(page=1, per_page=1000)
 
     total_orders = len(orders_list)
     confirmed_orders = sum(1 for o in orders_list if o.status == "confirmed")
@@ -48,8 +48,8 @@ async def get_dashboard_stats(
     )
 
     # Get inventory statistics
-    inventory_result = await inventory_service.get_all_inventory(page=1, per_page=1000)
-    inventory_list = inventory_result.get("items", [])
+    # Service returns tuple: (inventory_list, total_count, total_pages)
+    inventory_list, _, _ = await inventory_service.get_all_inventory(page=1, per_page=1000)
 
     total_inventory = len(inventory_list)
     available_inventory = sum(1 for i in inventory_list if i.status == "available")
@@ -57,8 +57,8 @@ async def get_dashboard_stats(
     sold_inventory = sum(1 for i in inventory_list if i.status == "sold")
 
     # Get purchase order statistics
-    po_result = await po_service.get_all_purchase_orders(page=1, per_page=1000)
-    po_list = po_result.get("items", [])
+    # Service returns tuple: (po_list, total_count, total_pages)
+    po_list, _, _ = await po_service.get_all_purchase_orders(page=1, per_page=1000)
 
     total_purchase_orders = len(po_list)
     sent_purchase_orders = sum(1 for p in po_list if p.status == "sent")
