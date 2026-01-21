@@ -267,7 +267,11 @@ export function EmployeeDetailPage() {
       setIsNew(true);
       setEditMode(true);
       setLoading(false);
+      setEmployee(null);
     } else if (employeeId) {
+      // Reset states when navigating to an existing employee (e.g., after creation)
+      setIsNew(false);
+      setEditMode(false);
       loadEmployee();
     }
   }, [employeeId]);
