@@ -273,7 +273,11 @@ export function CustomerDetailPage() {
       setIsNew(true);
       setEditMode(true);
       setLoading(false);
+      setCustomer(null);
     } else if (customerId) {
+      // Reset states when navigating to an existing customer (e.g., after creation)
+      setIsNew(false);
+      setEditMode(false);
       loadCustomer();
     }
   }, [customerId]);
