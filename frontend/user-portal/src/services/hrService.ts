@@ -248,7 +248,7 @@ export async function deletePerformanceReview(reviewId: string): Promise<{ messa
  * Get HR dashboard statistics
  */
 export async function getDashboardStats(): Promise<HRDashboardStats> {
-  const response = await apiClient.get<{ data: HRDashboardStats }>('/v1/hr/performance/dashboard');
+  const response = await apiClient.get<{ data: HRDashboardStats }>('/v1/hr/dashboard');
   return response.data.data;
 }
 
