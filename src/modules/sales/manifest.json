@@ -1,0 +1,26 @@
+{
+  "module_name": "sales",
+  "display_name": "Sales",
+  "version": "1.0.0",
+  "description": "Sales and inventory management system for managing sales orders, harvest inventory, and purchase orders",
+  "route_prefix": "/api/v1/sales",
+  "dependencies": {
+    "core": ">=1.3.0",
+    "python": ">=3.11",
+    "crm": ">=1.0.0"
+  },
+  "database_collections": [
+    "sales_orders",
+    "harvest_inventory",
+    "purchase_orders"
+  ],
+  "permissions": [
+    "sales.view",
+    "sales.create",
+    "sales.edit",
+    "sales.delete"
+  ],
+  "license_required": false,
+  "enabled_by_default": true,
+  "core_module": false
+}

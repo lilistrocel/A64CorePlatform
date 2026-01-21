@@ -80,6 +80,26 @@ export function MainLayout() {
             <NavIcon>📦</NavIcon>
             <span>Inventory</span>
           </NavItem>
+          <NavItem to="/crm/customers" onClick={closeMobileMenu}>
+            <NavIcon>👥</NavIcon>
+            <span>CRM</span>
+          </NavItem>
+          <NavItem to="/hr" onClick={closeMobileMenu}>
+            <NavIcon>👔</NavIcon>
+            <span>HR</span>
+          </NavItem>
+          <NavItem to="/logistics" onClick={closeMobileMenu}>
+            <NavIcon>🚚</NavIcon>
+            <span>Logistics</span>
+          </NavItem>
+          <NavItem to="/sales" onClick={closeMobileMenu}>
+            <NavIcon>💰</NavIcon>
+            <span>Sales</span>
+          </NavItem>
+          <NavItem to="/marketing" onClick={closeMobileMenu}>
+            <NavIcon>📢</NavIcon>
+            <span>Marketing</span>
+          </NavItem>
           <NavItem to="/ai-analytics" onClick={closeMobileMenu}>
             <NavIcon>🤖</NavIcon>
             <span>AI Analytics</span>

@@ -1,0 +1,244 @@
+"""
+Vehicle Repository
+
+Data access layer for Vehicle operations.
+Handles all database interactions for vehicles.
+"""
+
+from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
+import logging
+
+from src.modules.logistics.models.vehicle import Vehicle, VehicleCreate, VehicleUpdate, VehicleStatus
+from src.modules.logistics.services.database import logistics_db
+
+logger = logging.getLogger(__name__)
+
+
+class VehicleRepository:
+    """Repository for Vehicle data access"""
+
+    def __init__(self):
+        self.collection_name = "vehicles"
+
+    def _get_collection(self):
+        """Get vehicles collection"""
+        return logistics_db.get_collection(self.collection_name)
+
+    async def _get_next_vehicle_sequence(self) -> int:
+        """
+        Get next vehicle sequence number using atomic increment.
+
+        Uses a counters collection to maintain an atomic counter for vehicle codes.
+
+        Returns:
+            Next sequence number for vehicle code
+        """
+        db = logistics_db.get_database()
+
+        # Use findOneAndUpdate with upsert to atomically get and increment
+        result = await db.counters.find_one_and_update(
+            {"_id": "vehicle_sequence"},
+            {"$inc": {"value": 1}},
+            upsert=True,
+            return_document=True
+        )
+
+        return result["value"]
+
+    async def create(self, vehicle_data: VehicleCreate, created_by: UUID) -> Vehicle:
+        """
+        Create a new vehicle with auto-generated vehicleCode
+
+        Args:
+            vehicle_data: Vehicle creation data
+            created_by: ID of the user creating the vehicle
+
+        Returns:
+            Created vehicle
+        """
+        collection = self._get_collection()
+
+        # Generate vehicle code (e.g., "V001", "V002")
+        sequence = await self._get_next_vehicle_sequence()
+        vehicle_code = f"V{sequence:03d}"
+
+        vehicle_dict = vehicle_data.model_dump()
+        vehicle = Vehicle(
+            **vehicle_dict,
+            vehicleCode=vehicle_code,
+            createdBy=created_by,
+            createdAt=datetime.utcnow(),
+            updatedAt=datetime.utcnow()
+        )
+
+        vehicle_doc = vehicle.model_dump(by_alias=True)
+        vehicle_doc["vehicleId"] = str(vehicle_doc["vehicleId"])  # Convert UUID to string for MongoDB
+        vehicle_doc["createdBy"] = str(vehicle_doc["createdBy"])
+
+        # Convert date to datetime for MongoDB
+        if "purchaseDate" in vehicle_doc and vehicle_doc["purchaseDate"]:
+            vehicle_doc["purchaseDate"] = datetime.combine(vehicle_doc["purchaseDate"], datetime.min.time())
+        if "maintenanceSchedule" in vehicle_doc and vehicle_doc["maintenanceSchedule"]:
+            vehicle_doc["maintenanceSchedule"] = datetime.combine(vehicle_doc["maintenanceSchedule"], datetime.min.time())
+
+        await collection.insert_one(vehicle_doc)
+
+        logger.info(f"Created vehicle: {vehicle.vehicleId} with code {vehicle_code}")
+        return vehicle
+
+    async def get_by_id(self, vehicle_id: UUID) -> Optional[Vehicle]:
+        """
+        Get vehicle by ID
+
+        Args:
+            vehicle_id: Vehicle ID
+
+        Returns:
+            Vehicle if found, None otherwise
+        """
+        collection = self._get_collection()
+        vehicle_doc = await collection.find_one({"vehicleId": str(vehicle_id)})
+
+        if vehicle_doc:
+            vehicle_doc.pop("_id", None)  # Remove MongoDB _id
+            # Convert datetime back to date
+            if "purchaseDate" in vehicle_doc and isinstance(vehicle_doc["purchaseDate"], datetime):
+                vehicle_doc["purchaseDate"] = vehicle_doc["purchaseDate"].date()
+            if "maintenanceSchedule" in vehicle_doc and isinstance(vehicle_doc["maintenanceSchedule"], datetime):
+                vehicle_doc["maintenanceSchedule"] = vehicle_doc["maintenanceSchedule"].date()
+            return Vehicle(**vehicle_doc)
+        return None
+
+    async def get_all(
+        self,
+        skip: int = 0,
+        limit: int = 20,
+        status: Optional[VehicleStatus] = None,
+        type: Optional[str] = None
+    ) -> tuple[List[Vehicle], int]:
+        """
+        Get all vehicles with pagination and filters
+
+        Args:
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+            status: Filter by vehicle status (optional)
+            type: Filter by vehicle type (optional)
+
+        Returns:
+            Tuple of (list of vehicles, total count)
+        """
+        collection = self._get_collection()
+        query = {}
+
+        if status:
+            query["status"] = status.value
+        if type:
+            query["type"] = type
+
+        # Get total count
+        total = await collection.count_documents(query)
+
+        # Get vehicles
+        cursor = collection.find(query).sort("createdAt", -1).skip(skip).limit(limit)
+        vehicles = []
+
+        async for vehicle_doc in cursor:
+            vehicle_doc.pop("_id", None)
+            # Convert datetime back to date
+            if "purchaseDate" in vehicle_doc and isinstance(vehicle_doc["purchaseDate"], datetime):
+                vehicle_doc["purchaseDate"] = vehicle_doc["purchaseDate"].date()
+            if "maintenanceSchedule" in vehicle_doc and isinstance(vehicle_doc["maintenanceSchedule"], datetime):
+                vehicle_doc["maintenanceSchedule"] = vehicle_doc["maintenanceSchedule"].date()
+            vehicles.append(Vehicle(**vehicle_doc))
+
+        return vehicles, total
+
+    async def get_available_vehicles(
+        self,
+        skip: int = 0,
+        limit: int = 20
+    ) -> tuple[List[Vehicle], int]:
+        """
+        Get all available vehicles
+
+        Args:
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            Tuple of (list of vehicles, total count)
+        """
+        return await self.get_all(skip, limit, status=VehicleStatus.AVAILABLE)
+
+    async def update(self, vehicle_id: UUID, update_data: VehicleUpdate) -> Optional[Vehicle]:
+        """
+        Update a vehicle
+
+        Args:
+            vehicle_id: Vehicle ID
+            update_data: Fields to update
+
+        Returns:
+            Updated vehicle if found, None otherwise
+        """
+        collection = self._get_collection()
+
+        update_dict = update_data.model_dump(exclude_unset=True)
+        if not update_dict:
+            return await self.get_by_id(vehicle_id)
+
+        update_dict["updatedAt"] = datetime.utcnow()
+
+        # Convert date to datetime for MongoDB
+        if "purchaseDate" in update_dict and update_dict["purchaseDate"]:
+            update_dict["purchaseDate"] = datetime.combine(update_dict["purchaseDate"], datetime.min.time())
+        if "maintenanceSchedule" in update_dict and update_dict["maintenanceSchedule"]:
+            update_dict["maintenanceSchedule"] = datetime.combine(update_dict["maintenanceSchedule"], datetime.min.time())
+
+        result = await collection.update_one(
+            {"vehicleId": str(vehicle_id)},
+            {"$set": update_dict}
+        )
+
+        if result.modified_count > 0:
+            logger.info(f"Updated vehicle: {vehicle_id}")
+            return await self.get_by_id(vehicle_id)
+
+        return None
+
+    async def delete(self, vehicle_id: UUID) -> bool:
+        """
+        Delete a vehicle (hard delete)
+
+        Args:
+            vehicle_id: Vehicle ID
+
+        Returns:
+            True if deleted, False otherwise
+        """
+        collection = self._get_collection()
+
+        result = await collection.delete_one({"vehicleId": str(vehicle_id)})
+
+        if result.deleted_count > 0:
+            logger.info(f"Deleted vehicle: {vehicle_id}")
+            return True
+
+        return False
+
+    async def exists(self, vehicle_id: UUID) -> bool:
+        """
+        Check if vehicle exists
+
+        Args:
+            vehicle_id: Vehicle ID
+
+        Returns:
+            True if exists, False otherwise
+        """
+        collection = self._get_collection()
+        count = await collection.count_documents({"vehicleId": str(vehicle_id)})
+        return count > 0
