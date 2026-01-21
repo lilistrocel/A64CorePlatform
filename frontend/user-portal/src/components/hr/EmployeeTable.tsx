@@ -31,7 +31,7 @@ const TableContainer = styled.div`
   background: white;
   border-radius: 12px;
   border: 1px solid #e0e0e0;
-  overflow: hidden;
+  overflow-x: auto;
 `;
 
 const Table = styled.table`
