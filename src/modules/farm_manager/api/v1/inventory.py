@@ -19,6 +19,7 @@ from ...middleware.auth import get_current_active_user, CurrentUser
 from src.modules.farm_manager.models.inventory import (
     # Enums
     InventoryType,
+    InventoryScope,
     InputCategory,
     AssetCategory,
     AssetStatus,
@@ -26,6 +27,10 @@ from src.modules.farm_manager.models.inventory import (
     MovementType,
     BaseUnit,
     DisplayUnit,
+    # Products
+    Product,
+    ProductCreate,
+    ProductUpdate,
     # Harvest
     HarvestInventory,
     HarvestInventoryCreate,
@@ -40,6 +45,10 @@ from src.modules.farm_manager.models.inventory import (
     AssetInventoryUpdate,
     # Movement
     InventoryMovement,
+    # Transfer
+    TransferRequest,
+    TransferResponse,
+    TransferRecord,
     # Summary
     InventorySummary,
     # Unit conversion functions
@@ -72,6 +81,84 @@ def serialize_doc(doc: dict) -> dict:
     return doc
 
 
+def compute_inventory_scope(farm_id: Optional[UUID]) -> InventoryScope:
+    """
+    Compute inventory scope based on farmId.
+
+    Args:
+        farm_id: The farm ID (None for organization-level)
+
+    Returns:
+        InventoryScope: ORGANIZATION if farmId is None, else FARM
+    """
+    return InventoryScope.ORGANIZATION if farm_id is None else InventoryScope.FARM
+
+
+def validate_scope_rules(
+    farm_id: Optional[UUID],
+    block_id: Optional[UUID],
+    inventory_scope: InventoryScope
+) -> None:
+    """
+    Validate inventory scope rules.
+
+    Validation Rules:
+    1. If farmId is None, inventoryScope must be ORGANIZATION
+    2. If farmId is present, inventoryScope must be FARM
+    3. blockId can only be present if farmId is present (blocks belong to farms)
+
+    Args:
+        farm_id: Farm ID
+        block_id: Block ID
+        inventory_scope: Computed inventory scope
+
+    Raises:
+        HTTPException: If validation fails
+    """
+    # Rule 1: farmId None => ORGANIZATION scope
+    if farm_id is None and inventory_scope != InventoryScope.ORGANIZATION:
+        raise HTTPException(
+            status_code=400,
+            detail="Default inventory (farmId=null) must have inventoryScope='organization'"
+        )
+
+    # Rule 2: farmId present => FARM scope
+    if farm_id is not None and inventory_scope != InventoryScope.FARM:
+        raise HTTPException(
+            status_code=400,
+            detail="Farm inventory must have inventoryScope='farm'"
+        )
+
+    # Rule 3: blockId only valid for farm inventory
+    if block_id is not None and farm_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="blockId can only be set for farm-scoped inventory (farmId must be present)"
+        )
+
+
+async def get_organization_id(current_user: CurrentUser) -> UUID:
+    """
+    Get organization ID from current user.
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        UUID: Organization ID
+
+    Raises:
+        HTTPException: If user has no organization
+    """
+    org_id = getattr(current_user, 'organizationId', None)
+    if not org_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User must belong to an organization"
+        )
+    return UUID(org_id) if isinstance(org_id, str) else org_id
+
+
 async def record_movement(
     db: AsyncIOMotorDatabase,
     inventory_id: UUID,
@@ -80,10 +167,33 @@ async def record_movement(
     quantity_before: float,
     quantity_change: float,
     user_id: UUID,
+    organization_id: UUID,
     reason: Optional[str] = None,
-    reference_id: Optional[str] = None
+    reference_id: Optional[str] = None,
+    from_scope: Optional[InventoryScope] = None,
+    to_scope: Optional[InventoryScope] = None,
+    from_farm_id: Optional[UUID] = None,
+    to_farm_id: Optional[UUID] = None
 ):
-    """Record an inventory movement"""
+    """
+    Record an inventory movement.
+
+    Args:
+        db: Database instance
+        inventory_id: Inventory item ID
+        inventory_type: Type of inventory
+        movement_type: Type of movement
+        quantity_before: Quantity before movement
+        quantity_change: Change in quantity
+        user_id: User performing the movement
+        organization_id: Organization ID
+        reason: Optional reason for movement
+        reference_id: Optional reference to related record
+        from_scope: Source scope (for transfers)
+        to_scope: Destination scope (for transfers)
+        from_farm_id: Source farm (for transfers)
+        to_farm_id: Destination farm (for transfers)
+    """
     movement = InventoryMovement(
         inventoryId=inventory_id,
         inventoryType=inventory_type,
@@ -91,6 +201,11 @@ async def record_movement(
         quantityBefore=quantity_before,
         quantityChange=quantity_change,
         quantityAfter=quantity_before + quantity_change,
+        organizationId=organization_id,
+        fromScope=from_scope,
+        toScope=to_scope,
+        fromFarmId=from_farm_id,
+        toFarmId=to_farm_id,
         reason=reason,
         referenceId=reference_id,
         performedBy=user_id,
@@ -195,7 +310,8 @@ async def get_inventory_summary(
 
 @router.get("/harvest", response_model=dict)
 async def list_harvest_inventory(
-    farm_id: Optional[UUID] = Query(None),
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
     quality_grade: Optional[QualityGrade] = Query(None),
     search: Optional[str] = Query(None, max_length=100),
     page: int = Query(1, ge=1),
@@ -203,10 +319,32 @@ async def list_harvest_inventory(
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
-    """List harvest inventory items with pagination"""
-    query = {}
-    if farm_id:
+    """
+    List harvest inventory items with pagination.
+
+    Query Parameters:
+    - scope=organization: Show only default inventory (farmId=null)
+    - scope=farm&farmId=xxx: Show only specific farm's inventory
+    - scope=farm: Show all farm inventories
+    - (no scope): Show all inventory (default + all farms)
+    """
+    # Get organization ID from current user
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+
+    # Scope filtering
+    if scope == InventoryScope.ORGANIZATION:
+        query["farmId"] = None  # Default inventory only
+    elif scope == InventoryScope.FARM:
+        if farm_id:
+            query["farmId"] = str(farm_id)  # Specific farm
+        else:
+            query["farmId"] = {"$ne": None}  # All farms
+    elif farm_id:
+        # If farm_id provided without scope, filter by farm
         query["farmId"] = str(farm_id)
+
     if quality_grade:
         query["qualityGrade"] = quality_grade.value
     if search:
@@ -234,9 +372,25 @@ async def create_harvest_inventory(
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
-    """Create a new harvest inventory item"""
+    """
+    Create a new harvest inventory item.
+
+    Can create either:
+    - Farm inventory: Provide farmId
+    - Default inventory: Set farmId=null (organization-level)
+    """
+    # Get organization ID from current user
+    org_id = await get_organization_id(current_user)
+
+    # Compute inventory scope
+    inventory_scope = compute_inventory_scope(data.farmId)
+
+    # Validate scope rules
+    validate_scope_rules(data.farmId, data.blockId, inventory_scope)
+
     inventory = HarvestInventory(
         **data.model_dump(),
+        inventoryScope=inventory_scope,
         availableQuantity=data.quantity,
         createdBy=UUID(current_user.userId)
     )
@@ -253,6 +407,7 @@ async def create_harvest_inventory(
         quantity_before=0,
         quantity_change=data.quantity,
         user_id=UUID(current_user.userId),
+        organization_id=org_id,
         reason="Initial inventory creation"
     )
 
@@ -280,9 +435,15 @@ async def update_harvest_inventory(
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """Update a harvest inventory item"""
+    org_id = await get_organization_id(current_user)
+
     item = await db.inventory_harvest.find_one({"inventoryId": str(inventory_id)})
     if not item:
         raise HTTPException(status_code=404, detail="Harvest inventory item not found")
+
+    # Verify organization
+    if item.get("organizationId") != str(org_id):
+        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
 
     update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
     update_data["updatedAt"] = datetime.utcnow().isoformat()
@@ -303,6 +464,7 @@ async def update_harvest_inventory(
                 quantity_before=old_quantity,
                 quantity_change=new_quantity - old_quantity,
                 user_id=UUID(current_user.userId),
+                organization_id=org_id,
                 reason="Manual quantity adjustment"
             )
 
@@ -333,7 +495,8 @@ async def delete_harvest_inventory(
 
 @router.get("/input", response_model=dict)
 async def list_input_inventory(
-    farm_id: Optional[UUID] = Query(None),
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
     category: Optional[InputCategory] = Query(None),
     low_stock_only: bool = Query(False),
     search: Optional[str] = Query(None, max_length=100),
@@ -342,10 +505,32 @@ async def list_input_inventory(
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
-    """List input inventory items with pagination"""
-    query = {}
-    if farm_id:
+    """
+    List input inventory items with pagination.
+
+    Query Parameters:
+    - scope=organization: Show only default inventory (farmId=null)
+    - scope=farm&farmId=xxx: Show only specific farm's inventory
+    - scope=farm: Show all farm inventories
+    - (no scope): Show all inventory (default + all farms)
+    """
+    # Get organization ID from current user
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+
+    # Scope filtering
+    if scope == InventoryScope.ORGANIZATION:
+        query["farmId"] = None  # Default inventory only
+    elif scope == InventoryScope.FARM:
+        if farm_id:
+            query["farmId"] = str(farm_id)  # Specific farm
+        else:
+            query["farmId"] = {"$ne": None}  # All farms
+    elif farm_id:
+        # If farm_id provided without scope, filter by farm
         query["farmId"] = str(farm_id)
+
     if category:
         query["category"] = category.value
     if low_stock_only:
@@ -376,7 +561,22 @@ async def create_input_inventory(
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
-    """Create a new input inventory item"""
+    """
+    Create a new input inventory item.
+
+    Can create either:
+    - Farm inventory: Provide farmId
+    - Default inventory: Set farmId=null (organization-level)
+    """
+    # Get organization ID from current user
+    org_id = await get_organization_id(current_user)
+
+    # Compute inventory scope
+    inventory_scope = compute_inventory_scope(data.farmId)
+
+    # Validate scope rules (blockId not applicable for input inventory)
+    validate_scope_rules(data.farmId, None, inventory_scope)
+
     is_low_stock = data.quantity <= data.minimumStock if data.minimumStock > 0 else False
 
     # Calculate base unit and quantities for automated calculations
@@ -386,6 +586,7 @@ async def create_input_inventory(
 
     inventory = InputInventory(
         **data.model_dump(),
+        inventoryScope=inventory_scope,
         baseUnit=base_unit,
         baseQuantity=base_quantity,
         baseMinimumStock=base_minimum_stock,
@@ -405,6 +606,7 @@ async def create_input_inventory(
         quantity_before=0,
         quantity_change=data.quantity,
         user_id=UUID(current_user.userId),
+        organization_id=org_id,
         reason="Initial inventory creation"
     )
 
@@ -432,9 +634,15 @@ async def update_input_inventory(
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """Update an input inventory item"""
+    org_id = await get_organization_id(current_user)
+
     item = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
     if not item:
         raise HTTPException(status_code=404, detail="Input inventory item not found")
+
+    # Verify organization
+    if item.get("organizationId") != str(org_id):
+        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
 
     update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
     update_data["updatedAt"] = datetime.utcnow().isoformat()
@@ -466,6 +674,7 @@ async def update_input_inventory(
                 quantity_before=old_quantity,
                 quantity_change=new_quantity - old_quantity,
                 user_id=UUID(current_user.userId),
+                organization_id=org_id,
                 reason="Manual quantity adjustment"
             )
 
@@ -495,33 +704,144 @@ async def delete_input_inventory(
 async def use_input_inventory(
     inventory_id: UUID,
     quantity: float = Query(..., gt=0, description="Quantity to use in display units"),
+    farm_id: Optional[UUID] = Query(None, description="Farm requesting inventory (for pool fallback)"),
+    allow_pool_deduction: bool = Query(True, description="Allow automatic fallback to default inventory"),
     reason: Optional[str] = Query(None, max_length=500),
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
-    """Record usage of an input inventory item"""
+    """
+    Record usage of an input inventory item with automatic pool fallback.
+
+    Pool Fallback Logic:
+    1. If farmId provided, try to deduct from farm's inventory first
+    2. If insufficient quantity in farm inventory and allow_pool_deduction=True,
+       automatically deduct remaining from default inventory
+    3. If allow_pool_deduction=False, fail if insufficient quantity in farm inventory
+    """
+    org_id = await get_organization_id(current_user)
+
+    # Try farm inventory first if farm_id provided
     item = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
     if not item:
         raise HTTPException(status_code=404, detail="Input inventory item not found")
 
+    # Verify organization
+    if item.get("organizationId") != str(org_id):
+        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+
     current_quantity = item.get("quantity", 0)
-    if quantity > current_quantity:
-        raise HTTPException(status_code=400, detail="Insufficient quantity available")
-
-    new_quantity = current_quantity - quantity
-    min_stock = item.get("minimumStock", 0)
-
-    # Calculate new base quantity
     category = InputCategory(item.get("category"))
     unit = item.get("unit", "kg")
-    new_base_quantity = convert_to_base_unit(new_quantity, unit, category)
+
+    # Check if sufficient quantity in this inventory
+    if quantity <= current_quantity:
+        # Sufficient quantity - proceed with deduction
+        new_quantity = current_quantity - quantity
+        min_stock = item.get("minimumStock", 0)
+        new_base_quantity = convert_to_base_unit(new_quantity, unit, category)
+
+        await db.inventory_input.update_one(
+            {"inventoryId": str(inventory_id)},
+            {"$set": {
+                "quantity": new_quantity,
+                "baseQuantity": new_base_quantity,
+                "isLowStock": new_quantity <= min_stock if min_stock > 0 else False,
+                "lastUsedAt": datetime.utcnow().isoformat(),
+                "updatedAt": datetime.utcnow().isoformat()
+            }}
+        )
+
+        await record_movement(
+            db=db,
+            inventory_id=inventory_id,
+            inventory_type=InventoryType.INPUT,
+            movement_type=MovementType.USAGE,
+            quantity_before=current_quantity,
+            quantity_change=-quantity,
+            user_id=UUID(current_user.userId),
+            organization_id=org_id,
+            reason=reason or "Input material usage"
+        )
+
+        updated = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
+        return serialize_doc(updated)
+
+    # Insufficient quantity - try pool fallback
+    if not allow_pool_deduction:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient quantity. Available: {current_quantity} {unit}, Requested: {quantity} {unit}"
+        )
+
+    # Check if this is farm inventory
+    item_farm_id = item.get("farmId")
+    if item_farm_id is None:
+        # Already default inventory - no fallback possible
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient quantity in default inventory. Available: {current_quantity} {unit}, Requested: {quantity} {unit}"
+        )
+
+    # Find default inventory with same item
+    default_item = await db.inventory_input.find_one({
+        "organizationId": str(org_id),
+        "farmId": None,
+        "itemName": item.get("itemName"),
+        "category": item.get("category")
+    })
+
+    if not default_item:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient quantity in farm inventory and no default inventory found. Available: {current_quantity} {unit}, Requested: {quantity} {unit}"
+        )
+
+    remaining_quantity = quantity - current_quantity
+    default_quantity = default_item.get("quantity", 0)
+
+    if remaining_quantity > default_quantity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient total quantity. Farm: {current_quantity} {unit}, Default: {default_quantity} {unit}, Requested: {quantity} {unit}"
+        )
+
+    # Deduct all from farm inventory (use everything available)
+    if current_quantity > 0:
+        await db.inventory_input.update_one(
+            {"inventoryId": str(inventory_id)},
+            {"$set": {
+                "quantity": 0,
+                "baseQuantity": 0,
+                "isLowStock": True,
+                "lastUsedAt": datetime.utcnow().isoformat(),
+                "updatedAt": datetime.utcnow().isoformat()
+            }}
+        )
+
+        await record_movement(
+            db=db,
+            inventory_id=inventory_id,
+            inventory_type=InventoryType.INPUT,
+            movement_type=MovementType.USAGE,
+            quantity_before=current_quantity,
+            quantity_change=-current_quantity,
+            user_id=UUID(current_user.userId),
+            organization_id=org_id,
+            reason=f"Partial usage (farm inventory): {reason or 'Input material usage'}"
+        )
+
+    # Deduct remaining from default inventory
+    new_default_quantity = default_quantity - remaining_quantity
+    min_stock_default = default_item.get("minimumStock", 0)
+    new_base_quantity_default = convert_to_base_unit(new_default_quantity, unit, category)
 
     await db.inventory_input.update_one(
-        {"inventoryId": str(inventory_id)},
+        {"inventoryId": str(default_item["inventoryId"])},
         {"$set": {
-            "quantity": new_quantity,
-            "baseQuantity": new_base_quantity,
-            "isLowStock": new_quantity <= min_stock if min_stock > 0 else False,
+            "quantity": new_default_quantity,
+            "baseQuantity": new_base_quantity_default,
+            "isLowStock": new_default_quantity <= min_stock_default if min_stock_default > 0 else False,
             "lastUsedAt": datetime.utcnow().isoformat(),
             "updatedAt": datetime.utcnow().isoformat()
         }}
@@ -529,17 +849,26 @@ async def use_input_inventory(
 
     await record_movement(
         db=db,
-        inventory_id=inventory_id,
+        inventory_id=UUID(default_item["inventoryId"]),
         inventory_type=InventoryType.INPUT,
         movement_type=MovementType.USAGE,
-        quantity_before=current_quantity,
-        quantity_change=-quantity,
+        quantity_before=default_quantity,
+        quantity_change=-remaining_quantity,
         user_id=UUID(current_user.userId),
-        reason=reason or "Input material usage"
+        organization_id=org_id,
+        reason=f"Pool fallback usage (from default inventory): {reason or 'Input material usage'}"
     )
 
-    updated = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
-    return serialize_doc(updated)
+    # Return both updated items
+    updated_farm = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
+    updated_default = await db.inventory_input.find_one({"inventoryId": str(default_item["inventoryId"])})
+
+    return {
+        "message": f"Successfully used {quantity} {unit} ({current_quantity} from farm, {remaining_quantity} from default inventory)",
+        "farmInventory": serialize_doc(updated_farm),
+        "defaultInventory": serialize_doc(updated_default),
+        "poolFallbackUsed": True
+    }
 
 
 # Automated deduction using base units (for irrigation/fertilization systems)
@@ -565,9 +894,15 @@ async def deduct_input_base_units(
     Returns:
         Updated inventory item with new quantities
     """
+    org_id = await get_organization_id(current_user)
+
     item = await db.inventory_input.find_one({"inventoryId": str(inventory_id)})
     if not item:
         raise HTTPException(status_code=404, detail="Input inventory item not found")
+
+    # Verify organization
+    if item.get("organizationId") != str(org_id):
+        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
 
     current_base_quantity = item.get("baseQuantity", 0)
     if base_quantity > current_base_quantity:
@@ -607,6 +942,7 @@ async def deduct_input_base_units(
         quantity_before=item.get("quantity", 0),
         quantity_change=-display_quantity_change,
         user_id=UUID(current_user.userId),
+        organization_id=org_id,
         reason=reason or f"Automated deduction ({base_quantity} {item.get('baseUnit', 'units')})",
         reference_id=reference_id
     )
@@ -662,20 +998,48 @@ async def get_units_for_category(
 
 @router.get("/asset", response_model=dict)
 async def list_asset_inventory(
-    farm_id: Optional[UUID] = Query(None),
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
     category: Optional[AssetCategory] = Query(None),
     status_filter: Optional[AssetStatus] = Query(None, alias="status"),
     maintenance_overdue: bool = Query(False),
+    allocated_to_farm: Optional[UUID] = Query(None, description="Filter by currently allocated farm"),
     search: Optional[str] = Query(None, max_length=100),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
-    """List asset inventory items with pagination"""
-    query = {}
-    if farm_id:
+    """
+    List asset inventory items with pagination.
+
+    Query Parameters:
+    - scope=organization: Show only default inventory (farmId=null)
+    - scope=farm&farmId=xxx: Show only specific farm's inventory
+    - allocatedToFarm=xxx: Show assets currently allocated to farm
+    - (no scope): Show all inventory (default + all farms)
+    """
+    # Get organization ID from current user
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+
+    # Scope filtering
+    if scope == InventoryScope.ORGANIZATION:
+        query["farmId"] = None  # Default inventory only
+    elif scope == InventoryScope.FARM:
+        if farm_id:
+            query["farmId"] = str(farm_id)  # Specific farm
+        else:
+            query["farmId"] = {"$ne": None}  # All farms
+    elif farm_id:
+        # If farm_id provided without scope, filter by farm
         query["farmId"] = str(farm_id)
+
+    # Allocation filtering
+    if allocated_to_farm:
+        query["currentAllocation.farmId"] = str(allocated_to_farm)
+
     if category:
         query["category"] = category.value
     if status_filter:
@@ -709,7 +1073,22 @@ async def create_asset_inventory(
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
-    """Create a new asset inventory item"""
+    """
+    Create a new asset inventory item.
+
+    Can create either:
+    - Farm inventory: Provide farmId
+    - Default inventory: Set farmId=null (organization-level shared asset)
+    """
+    # Get organization ID from current user
+    org_id = await get_organization_id(current_user)
+
+    # Compute inventory scope
+    inventory_scope = compute_inventory_scope(data.farmId)
+
+    # Validate scope rules (blockId not applicable for asset inventory)
+    validate_scope_rules(data.farmId, None, inventory_scope)
+
     # Check if maintenance is overdue
     maintenance_overdue = False
     if data.nextMaintenanceDate:
@@ -717,6 +1096,7 @@ async def create_asset_inventory(
 
     inventory = AssetInventory(
         **data.model_dump(),
+        inventoryScope=inventory_scope,
         maintenanceOverdue=maintenance_overdue,
         createdBy=UUID(current_user.userId)
     )
@@ -781,6 +1161,367 @@ async def delete_asset_inventory(
     result = await db.inventory_asset.delete_one({"inventoryId": str(inventory_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Asset inventory item not found")
+
+
+# ============================================================================
+# TRANSFER OPERATIONS
+# ============================================================================
+
+@router.post("/transfer", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def transfer_inventory(
+    transfer: TransferRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Transfer inventory between scopes.
+
+    Supported Transfers:
+    - Organization → Farm: Transfer from default inventory to farm
+    - Farm → Organization: Return from farm to default inventory
+    - Farm → Farm: Via organization (2 movements)
+
+    Business Logic:
+    - Reduces quantity from source
+    - Creates/updates destination inventory
+    - Records transfer in movement history
+    - Adds transfer record to item's transferHistory
+    """
+    # Get organization ID from current user
+    org_id = await get_organization_id(current_user)
+    user_id = UUID(current_user.userId)
+
+    # Validate transfer request
+    if transfer.fromScope == transfer.toScope == InventoryScope.ORGANIZATION:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot transfer within organization scope (use adjustment instead)"
+        )
+
+    if transfer.fromScope == InventoryScope.ORGANIZATION and transfer.fromFarmId:
+        raise HTTPException(
+            status_code=400,
+            detail="Organization inventory has no farmId (fromFarmId must be null)"
+        )
+
+    if transfer.toScope == InventoryScope.ORGANIZATION and transfer.toFarmId:
+        raise HTTPException(
+            status_code=400,
+            detail="Organization inventory has no farmId (toFarmId must be null)"
+        )
+
+    if transfer.fromScope == InventoryScope.FARM and not transfer.fromFarmId:
+        raise HTTPException(
+            status_code=400,
+            detail="Farm transfer requires fromFarmId"
+        )
+
+    if transfer.toScope == InventoryScope.FARM and not transfer.toFarmId:
+        raise HTTPException(
+            status_code=400,
+            detail="Farm transfer requires toFarmId"
+        )
+
+    # Get collection based on inventory type
+    if transfer.inventoryType == InventoryType.HARVEST:
+        collection = db.inventory_harvest
+    elif transfer.inventoryType == InventoryType.INPUT:
+        collection = db.inventory_input
+    elif transfer.inventoryType == InventoryType.ASSET:
+        collection = db.inventory_asset
+    else:
+        raise HTTPException(status_code=400, detail="Invalid inventory type")
+
+    # Find source inventory item
+    source_item = await collection.find_one({"inventoryId": str(transfer.inventoryId)})
+    if not source_item:
+        raise HTTPException(status_code=404, detail="Source inventory item not found")
+
+    # Verify source item belongs to organization
+    if source_item.get("organizationId") != str(org_id):
+        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+
+    # Verify source scope matches
+    source_farm_id = source_item.get("farmId")
+    actual_from_scope = InventoryScope.ORGANIZATION if source_farm_id is None else InventoryScope.FARM
+    if actual_from_scope != transfer.fromScope:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Source item is {actual_from_scope} scope, but transfer specifies {transfer.fromScope}"
+        )
+
+    # Check sufficient quantity
+    current_quantity = source_item.get("quantity", 0)
+    if transfer.quantity > current_quantity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient quantity. Available: {current_quantity} {transfer.unit}, Requested: {transfer.quantity} {transfer.unit}"
+        )
+
+    # Calculate base quantity for input inventory
+    if transfer.inventoryType == InventoryType.INPUT:
+        category = InputCategory(source_item.get("category"))
+        base_quantity_transferred = convert_to_base_unit(transfer.quantity, transfer.unit, category)
+    else:
+        base_quantity_transferred = transfer.quantity
+
+    # Generate transfer ID
+    transfer_id = uuid4()
+
+    # Update source: Reduce quantity
+    new_source_quantity = current_quantity - transfer.quantity
+    update_data = {
+        "quantity": new_source_quantity,
+        "updatedAt": datetime.utcnow().isoformat()
+    }
+
+    if transfer.inventoryType == InventoryType.HARVEST:
+        reserved = source_item.get("reservedQuantity", 0)
+        update_data["availableQuantity"] = new_source_quantity - reserved
+
+    if transfer.inventoryType == InventoryType.INPUT:
+        category = InputCategory(source_item.get("category"))
+        unit = source_item.get("unit")
+        new_base_quantity = convert_to_base_unit(new_source_quantity, unit, category)
+        update_data["baseQuantity"] = new_base_quantity
+        min_stock = source_item.get("minimumStock", 0)
+        update_data["isLowStock"] = new_source_quantity <= min_stock if min_stock > 0 else False
+
+    # Add to transfer history
+    transfer_record = TransferRecord(
+        transferId=transfer_id,
+        fromScope=transfer.fromScope,
+        toScope=transfer.toScope,
+        fromFarmId=transfer.fromFarmId,
+        toFarmId=transfer.toFarmId,
+        quantityTransferred=base_quantity_transferred if transfer.inventoryType == InventoryType.INPUT else transfer.quantity,
+        transferredBy=user_id,
+        reason=transfer.reason
+    )
+
+    if "transferHistory" in source_item:
+        update_data["transferHistory"] = source_item["transferHistory"] + [transfer_record.model_dump(mode="json")]
+    else:
+        update_data["transferHistory"] = [transfer_record.model_dump(mode="json")]
+
+    await collection.update_one(
+        {"inventoryId": str(transfer.inventoryId)},
+        {"$set": update_data}
+    )
+
+    # Record movement for source
+    await record_movement(
+        db=db,
+        inventory_id=transfer.inventoryId,
+        inventory_type=transfer.inventoryType,
+        movement_type=MovementType.TRANSFER,
+        quantity_before=current_quantity,
+        quantity_change=-transfer.quantity,
+        user_id=user_id,
+        organization_id=org_id,
+        from_scope=transfer.fromScope,
+        to_scope=transfer.toScope,
+        from_farm_id=transfer.fromFarmId,
+        to_farm_id=transfer.toFarmId,
+        reason=f"Transfer to {transfer.toScope}: {transfer.reason}",
+        reference_id=str(transfer_id)
+    )
+
+    # Create or update destination inventory
+    # For simplicity, create a new inventory item at destination
+    # (Alternative: Find existing item and increase quantity)
+    dest_inventory_data = {k: v for k, v in source_item.items() if k not in ["_id", "inventoryId", "farmId", "inventoryScope", "createdAt", "updatedAt", "createdBy"]}
+    dest_inventory_data.update({
+        "inventoryId": str(uuid4()),
+        "organizationId": str(org_id),
+        "farmId": str(transfer.toFarmId) if transfer.toFarmId else None,
+        "inventoryScope": transfer.toScope.value,
+        "quantity": transfer.quantity,
+        "createdBy": str(user_id),
+        "createdAt": datetime.utcnow().isoformat(),
+        "updatedAt": datetime.utcnow().isoformat()
+    })
+
+    if transfer.inventoryType == InventoryType.HARVEST:
+        dest_inventory_data["availableQuantity"] = transfer.quantity
+        dest_inventory_data["reservedQuantity"] = 0
+
+    if transfer.inventoryType == InventoryType.INPUT:
+        dest_inventory_data["baseQuantity"] = base_quantity_transferred
+        min_stock = dest_inventory_data.get("minimumStock", 0)
+        dest_inventory_data["isLowStock"] = transfer.quantity <= min_stock if min_stock > 0 else False
+
+    # Insert destination inventory
+    await collection.insert_one(dest_inventory_data)
+    dest_inventory_id = UUID(dest_inventory_data["inventoryId"])
+
+    # Record movement for destination
+    await record_movement(
+        db=db,
+        inventory_id=dest_inventory_id,
+        inventory_type=transfer.inventoryType,
+        movement_type=MovementType.ADDITION,
+        quantity_before=0,
+        quantity_change=transfer.quantity,
+        user_id=user_id,
+        organization_id=org_id,
+        from_scope=transfer.fromScope,
+        to_scope=transfer.toScope,
+        from_farm_id=transfer.fromFarmId,
+        to_farm_id=transfer.toFarmId,
+        reason=f"Transfer from {transfer.fromScope}: {transfer.reason}",
+        reference_id=str(transfer_id)
+    )
+
+    # Get updated source and destination
+    updated_source = await collection.find_one({"inventoryId": str(transfer.inventoryId)})
+    updated_destination = await collection.find_one({"inventoryId": str(dest_inventory_id)})
+
+    return {
+        "transferId": str(transfer_id),
+        "sourceInventory": serialize_doc(updated_source),
+        "destinationInventory": serialize_doc(updated_destination),
+        "message": f"Successfully transferred {transfer.quantity} {transfer.unit} from {transfer.fromScope} to {transfer.toScope}"
+    }
+
+
+# ============================================================================
+# PRODUCT CATALOG ENDPOINTS
+# ============================================================================
+
+@router.get("/products", response_model=dict)
+async def list_products(
+    category: Optional[InputCategory] = Query(None),
+    search: Optional[str] = Query(None, max_length=100),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """List products in the master catalog"""
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+    if category:
+        query["category"] = category.value
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"brand": {"$regex": search, "$options": "i"}},
+            {"sku": {"$regex": search, "$options": "i"}}
+        ]
+
+    skip = (page - 1) * per_page
+    total = await db.products.count_documents(query)
+    items = await db.products.find(query).sort("name", 1).skip(skip).limit(per_page).to_list(per_page)
+
+    return {
+        "items": [serialize_doc(item) for item in items],
+        "total": total,
+        "page": page,
+        "perPage": per_page,
+        "totalPages": (total + per_page - 1) // per_page
+    }
+
+
+@router.post("/products", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_product(
+    data: ProductCreate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Create a new product in the master catalog"""
+    org_id = await get_organization_id(current_user)
+
+    # Get base unit and calculate conversion factor
+    base_unit = get_base_unit_for_category(data.category)
+    conversion_factor = convert_to_base_unit(1.0, data.unit, data.category)
+
+    product = Product(
+        organizationId=org_id,
+        name=data.name,
+        category=data.category,
+        description=data.description,
+        unit=data.unit,
+        baseUnit=base_unit,
+        conversionFactor=conversion_factor,
+        brand=data.brand,
+        sku=data.sku,
+        createdBy=UUID(current_user.userId)
+    )
+
+    doc = product.model_dump(mode="json")
+    await db.products.insert_one(doc)
+
+    return serialize_doc(doc)
+
+
+@router.get("/products/{product_id}", response_model=dict)
+async def get_product(
+    product_id: UUID,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Get a specific product"""
+    org_id = await get_organization_id(current_user)
+
+    product = await db.products.find_one({
+        "productId": str(product_id),
+        "organizationId": str(org_id)
+    })
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    return serialize_doc(product)
+
+
+@router.patch("/products/{product_id}", response_model=dict)
+async def update_product(
+    product_id: UUID,
+    data: ProductUpdate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Update a product"""
+    org_id = await get_organization_id(current_user)
+
+    product = await db.products.find_one({
+        "productId": str(product_id),
+        "organizationId": str(org_id)
+    })
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
+    update_data["updatedAt"] = datetime.utcnow().isoformat()
+
+    await db.products.update_one(
+        {"productId": str(product_id)},
+        {"$set": update_data}
+    )
+
+    updated = await db.products.find_one({"productId": str(product_id)})
+    return serialize_doc(updated)
+
+
+@router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product(
+    product_id: UUID,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Delete a product"""
+    org_id = await get_organization_id(current_user)
+
+    result = await db.products.delete_one({
+        "productId": str(product_id),
+        "organizationId": str(org_id)
+    })
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
 
 
 # ============================================================================

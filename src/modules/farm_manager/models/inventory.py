@@ -18,6 +18,12 @@ from pydantic import BaseModel, Field
 # ENUMS
 # ============================================================================
 
+class InventoryScope(str, Enum):
+    """Inventory scope levels"""
+    ORGANIZATION = "organization"  # Default inventory (farmId = null)
+    FARM = "farm"                 # Farm-specific inventory
+
+
 class InventoryType(str, Enum):
     """Main inventory categories"""
     HARVEST = "harvest"
@@ -260,12 +266,83 @@ class MovementType(str, Enum):
 
 
 # ============================================================================
+# PRODUCT CATALOG (Master Product Database)
+# ============================================================================
+
+class Product(BaseModel):
+    """
+    Master product catalog for organization-wide product definitions.
+    Used for standardizing inventory items across all farms.
+    """
+    productId: UUID = Field(default_factory=uuid4, description="Unique product identifier")
+
+    # Organization scoping
+    organizationId: UUID = Field(..., description="Organization this product belongs to")
+
+    # Product identification
+    name: str = Field(..., min_length=1, max_length=200, description="Product name")
+    category: InputCategory = Field(..., description="Product category")
+    description: Optional[str] = Field(None, max_length=1000, description="Product description")
+
+    # Units and conversion
+    unit: str = Field(..., min_length=1, max_length=20, description="Default display unit (kg, L, units)")
+    baseUnit: BaseUnit = Field(..., description="Base unit for calculations (mg, ml, unit)")
+    conversionFactor: float = Field(..., gt=0, description="Convert display unit to base unit")
+
+    # Optional metadata
+    brand: Optional[str] = Field(None, max_length=100, description="Brand/manufacturer")
+    sku: Optional[str] = Field(None, max_length=50, description="Stock keeping unit/product code")
+
+    # Tracking
+    createdBy: UUID = Field(..., description="User who created this product")
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "productId": "prod-001",
+                "organizationId": "org-001",
+                "name": "NPK 20-20-20 Fertilizer",
+                "category": "fertilizer",
+                "description": "Balanced NPK fertilizer for general use",
+                "unit": "kg",
+                "baseUnit": "mg",
+                "conversionFactor": 1000000.0,
+                "brand": "GreenGrow",
+                "sku": "GG-NPK-2020"
+            }
+        }
+
+
+class ProductCreate(BaseModel):
+    """Schema for creating a product"""
+    name: str = Field(..., min_length=1, max_length=200)
+    category: InputCategory = Field(...)
+    description: Optional[str] = Field(None, max_length=1000)
+    unit: str = Field(..., min_length=1, max_length=20)
+    brand: Optional[str] = Field(None, max_length=100)
+    sku: Optional[str] = Field(None, max_length=50)
+
+
+class ProductUpdate(BaseModel):
+    """Schema for updating a product"""
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=1000)
+    brand: Optional[str] = Field(None, max_length=100)
+    sku: Optional[str] = Field(None, max_length=50)
+
+
+# ============================================================================
 # HARVEST INVENTORY (Harvested Plants for Sale)
 # ============================================================================
 
 class HarvestInventoryBase(BaseModel):
     """Base schema for harvest inventory"""
-    farmId: UUID = Field(..., description="Farm this inventory belongs to")
+    # MODIFIED: farmId now optional (null for default/organization inventory)
+    # Using UUID | None for Pydantic v2 compatibility with JSON null
+    farmId: UUID | None = Field(default=None, description="Farm this inventory belongs to (null for organization inventory)")
+    organizationId: UUID = Field(..., description="Organization this inventory belongs to")
     blockId: Optional[UUID] = Field(None, description="Source block (if applicable)")
 
     # Product identification
@@ -318,6 +395,9 @@ class HarvestInventory(HarvestInventoryBase):
     """Complete harvest inventory item"""
     inventoryId: UUID = Field(default_factory=uuid4, description="Unique identifier")
 
+    # NEW: Inventory scope (computed from farmId)
+    inventoryScope: InventoryScope = Field(..., description="Scope level: organization or farm")
+
     # Reserved for orders
     reservedQuantity: float = Field(0.0, ge=0, description="Quantity reserved for orders")
     availableQuantity: float = Field(..., ge=0, description="Available for sale")
@@ -360,7 +440,13 @@ class HarvestInventory(HarvestInventoryBase):
 
 class InputInventoryBase(BaseModel):
     """Base schema for input inventory"""
-    farmId: UUID = Field(..., description="Farm this inventory belongs to")
+    # MODIFIED: farmId now optional (null for default/organization inventory)
+    # Using UUID | None for Pydantic v2 compatibility with JSON null
+    farmId: UUID | None = Field(default=None, description="Farm this inventory belongs to (null for organization inventory)")
+    organizationId: UUID = Field(..., description="Organization this inventory belongs to")
+
+    # NEW: Product reference (optional - for standardized products)
+    productId: Optional[UUID] = Field(None, description="Reference to product catalog")
 
     # Item identification
     itemName: str = Field(..., min_length=1, max_length=200, description="Item name")
@@ -418,6 +504,9 @@ class InputInventory(InputInventoryBase):
     """Complete input inventory item"""
     inventoryId: UUID = Field(default_factory=uuid4, description="Unique identifier")
 
+    # NEW: Inventory scope (computed from farmId)
+    inventoryScope: InventoryScope = Field(..., description="Scope level: organization or farm")
+
     # Base unit tracking (for automated calculations and deductions)
     # These are calculated from quantity + unit when item is created/updated
     baseUnit: BaseUnit = Field(..., description="Base unit for calculations (mg, ml, or unit)")
@@ -426,6 +515,9 @@ class InputInventory(InputInventoryBase):
 
     # Low stock alert
     isLowStock: bool = Field(False, description="True if quantity below minimum")
+
+    # NEW: Transfer history tracking
+    transferHistory: List[dict] = Field(default_factory=list, description="History of transfers")
 
     # Tracking
     createdBy: UUID = Field(..., description="User who created this entry")
@@ -467,7 +559,10 @@ class InputInventory(InputInventoryBase):
 
 class AssetInventoryBase(BaseModel):
     """Base schema for asset inventory"""
-    farmId: UUID = Field(..., description="Farm this asset belongs to")
+    # MODIFIED: farmId now optional (null for default/organization inventory)
+    # Using UUID | None for Pydantic v2 compatibility with JSON null
+    farmId: UUID | None = Field(default=None, description="Farm this asset belongs to (null for organization inventory)")
+    organizationId: UUID = Field(..., description="Organization this asset belongs to")
 
     # Asset identification
     assetName: str = Field(..., min_length=1, max_length=200, description="Asset name")
@@ -533,8 +628,15 @@ class AssetInventory(AssetInventoryBase):
     """Complete asset inventory item"""
     inventoryId: UUID = Field(default_factory=uuid4, description="Unique identifier")
 
+    # NEW: Inventory scope (computed from farmId)
+    inventoryScope: InventoryScope = Field(..., description="Scope level: organization or farm")
+
     # Maintenance alerts
     maintenanceOverdue: bool = Field(False, description="True if maintenance is overdue")
+
+    # NEW: Asset allocation tracking (for shared assets)
+    currentAllocation: Optional[dict] = Field(None, description="Current allocation information")
+    allocationHistory: List[dict] = Field(default_factory=list, description="History of allocations")
 
     # Tracking
     createdBy: UUID = Field(..., description="User who created this entry")
@@ -583,6 +685,15 @@ class InventoryMovement(BaseModel):
     quantityChange: float = Field(..., description="Amount changed (positive or negative)")
     quantityAfter: float = Field(..., description="Quantity after movement")
 
+    # NEW: Organization context
+    organizationId: UUID = Field(..., description="Organization this movement belongs to")
+
+    # NEW: Scope tracking (for transfers)
+    fromScope: Optional[InventoryScope] = Field(None, description="Source scope (for transfers)")
+    toScope: Optional[InventoryScope] = Field(None, description="Destination scope (for transfers)")
+    fromFarmId: Optional[UUID] = Field(None, description="Source farm (for transfers)")
+    toFarmId: Optional[UUID] = Field(None, description="Destination farm (for transfers)")
+
     reason: Optional[str] = Field(None, max_length=500, description="Reason for movement")
     referenceId: Optional[str] = Field(None, max_length=100, description="Reference to related record (order, task)")
 
@@ -628,8 +739,67 @@ class InventorySearchParams(BaseModel):
     """Search parameters for inventory queries"""
     farmId: Optional[UUID] = None
     inventoryType: Optional[InventoryType] = None
+    inventoryScope: Optional[InventoryScope] = None  # NEW: Filter by scope
     search: Optional[str] = Field(None, max_length=100, description="Search term")
     category: Optional[str] = Field(None, description="Filter by category")
     lowStockOnly: bool = Field(False, description="Show only low stock items")
     page: int = Field(1, ge=1)
     perPage: int = Field(20, ge=1, le=100)
+
+
+# ============================================================================
+# TRANSFER MODELS
+# ============================================================================
+
+class TransferRequest(BaseModel):
+    """Request to transfer inventory between scopes"""
+    inventoryId: UUID = Field(..., description="Source inventory item ID")
+    inventoryType: InventoryType = Field(..., description="Type of inventory")
+
+    fromScope: InventoryScope = Field(..., description="Source scope")
+    toScope: InventoryScope = Field(..., description="Destination scope")
+
+    fromFarmId: Optional[UUID] = Field(None, description="Source farm ID (if from farm)")
+    toFarmId: Optional[UUID] = Field(None, description="Destination farm ID (if to farm)")
+
+    quantity: float = Field(..., gt=0, description="Quantity to transfer in display units")
+    unit: str = Field(..., description="Unit of quantity")
+
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for transfer")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "inventoryId": "inv-input-001",
+                "inventoryType": "input",
+                "fromScope": "organization",
+                "toScope": "farm",
+                "fromFarmId": None,
+                "toFarmId": "farm-001",
+                "quantity": 500.0,
+                "unit": "kg",
+                "reason": "Farm 1 requested fertilizer for Block B-15"
+            }
+        }
+
+
+class TransferResponse(BaseModel):
+    """Response after successful transfer"""
+    transferId: UUID = Field(..., description="Transfer transaction ID")
+    sourceInventory: dict = Field(..., description="Updated source inventory item")
+    destinationInventory: Optional[dict] = Field(None, description="Destination inventory item (if created)")
+    movement: dict = Field(..., description="Movement record")
+    message: str = Field(..., description="Success message")
+
+
+class TransferRecord(BaseModel):
+    """Record of a transfer in item's transfer history"""
+    transferId: UUID = Field(default_factory=uuid4, description="Transfer ID")
+    fromScope: InventoryScope = Field(..., description="Source scope")
+    toScope: InventoryScope = Field(..., description="Destination scope")
+    fromFarmId: Optional[UUID] = Field(None, description="Source farm")
+    toFarmId: Optional[UUID] = Field(None, description="Destination farm")
+    quantityTransferred: float = Field(..., description="Quantity transferred in base units")
+    transferredAt: datetime = Field(default_factory=datetime.utcnow)
+    transferredBy: UUID = Field(..., description="User who performed transfer")
+    reason: str = Field(..., description="Transfer reason")

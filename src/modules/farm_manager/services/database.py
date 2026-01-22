@@ -158,6 +158,77 @@ class FarmDatabaseManager:
                 unique=True
             )
 
+            # Product catalog collection (Master product database)
+            await db.products.create_index("productId", unique=True)
+            await db.products.create_index("organizationId")
+            await db.products.create_index("category")
+            await db.products.create_index("name")
+            await db.products.create_index([("organizationId", 1), ("category", 1)])
+            await db.products.create_index([("createdAt", -1)])
+
+            # Harvest inventory collection
+            await db.inventory_harvest.create_index("inventoryId", unique=True)
+            await db.inventory_harvest.create_index("farmId")
+            await db.inventory_harvest.create_index("organizationId")
+            await db.inventory_harvest.create_index("inventoryScope")
+            await db.inventory_harvest.create_index("blockId")
+            await db.inventory_harvest.create_index("plantDataId")
+            await db.inventory_harvest.create_index("qualityGrade")
+            await db.inventory_harvest.create_index([("harvestDate", -1)])
+            await db.inventory_harvest.create_index([("createdAt", -1)])
+            # Compound indexes for default inventory queries
+            await db.inventory_harvest.create_index([("organizationId", 1), ("inventoryScope", 1)])
+            await db.inventory_harvest.create_index([("organizationId", 1), ("farmId", 1)])
+            await db.inventory_harvest.create_index([("organizationId", 1), ("plantDataId", 1), ("inventoryScope", 1)])
+
+            # Input inventory collection
+            await db.inventory_input.create_index("inventoryId", unique=True)
+            await db.inventory_input.create_index("farmId")
+            await db.inventory_input.create_index("organizationId")
+            await db.inventory_input.create_index("inventoryScope")
+            await db.inventory_input.create_index("productId")
+            await db.inventory_input.create_index("category")
+            await db.inventory_input.create_index("isLowStock")
+            await db.inventory_input.create_index([("createdAt", -1)])
+            # Compound indexes for default inventory queries
+            await db.inventory_input.create_index([("organizationId", 1), ("inventoryScope", 1)])
+            await db.inventory_input.create_index([("organizationId", 1), ("category", 1), ("inventoryScope", 1)])
+            await db.inventory_input.create_index([("organizationId", 1), ("isLowStock", 1)])
+            await db.inventory_input.create_index([("organizationId", 1), ("farmId", 1)])
+
+            # Asset inventory collection
+            await db.inventory_asset.create_index("inventoryId", unique=True)
+            await db.inventory_asset.create_index("farmId")
+            await db.inventory_asset.create_index("organizationId")
+            await db.inventory_asset.create_index("inventoryScope")
+            await db.inventory_asset.create_index("category")
+            await db.inventory_asset.create_index("status")
+            await db.inventory_asset.create_index("maintenanceOverdue")
+            await db.inventory_asset.create_index([("createdAt", -1)])
+            await db.inventory_asset.create_index("currentAllocation.allocatedTo")
+            await db.inventory_asset.create_index("currentAllocation.farmId")
+            # Compound indexes for default inventory queries
+            await db.inventory_asset.create_index([("organizationId", 1), ("inventoryScope", 1)])
+            await db.inventory_asset.create_index([("organizationId", 1), ("status", 1), ("inventoryScope", 1)])
+            await db.inventory_asset.create_index([("organizationId", 1), ("currentAllocation.farmId", 1)])
+
+            # Inventory movements collection
+            await db.inventory_movements.create_index("movementId", unique=True)
+            await db.inventory_movements.create_index("inventoryId")
+            await db.inventory_movements.create_index("inventoryType")
+            await db.inventory_movements.create_index("movementType")
+            await db.inventory_movements.create_index("organizationId")
+            await db.inventory_movements.create_index([("performedAt", -1)])
+            # Transfer tracking indexes
+            await db.inventory_movements.create_index([("fromScope", 1), ("toScope", 1)])
+            await db.inventory_movements.create_index("fromFarmId")
+            await db.inventory_movements.create_index("toFarmId")
+            # Compound indexes for transfer queries
+            await db.inventory_movements.create_index([("organizationId", 1), ("movementType", 1), ("performedAt", -1)])
+            await db.inventory_movements.create_index([("inventoryId", 1), ("movementType", 1), ("performedAt", -1)])
+            await db.inventory_movements.create_index([("fromFarmId", 1), ("movementType", 1), ("performedAt", -1)])
+            await db.inventory_movements.create_index([("toFarmId", 1), ("movementType", 1), ("performedAt", -1)])
+
             logger.info("[Farm Module] MongoDB indexes created successfully")
         except Exception as e:
             logger.error(f"[Farm Module] Error creating MongoDB indexes: {e}")
