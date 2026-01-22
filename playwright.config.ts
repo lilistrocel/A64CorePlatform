@@ -8,8 +8,11 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost',
+    // Use production server for this test
+    baseURL: 'https://a64core.com',
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
   projects: [
     {
@@ -17,9 +20,5 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'echo "Using existing Docker containers"',
-    url: 'http://localhost',
-    reuseExistingServer: true,
-  },
+  // Remove web server config - testing against production
 });
