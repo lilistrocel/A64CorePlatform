@@ -2858,7 +2858,7 @@ The frontend provides Google Maps integration for drawing boundaries:
 ---
 
 ### Inventory Management
-**Status:** ✅ **IMPLEMENTED** (v1.9.0 - 2025-12-04)
+**Status:** ✅ **IMPLEMENTED** (v1.9.0 - 2025-12-04, v1.10.0 - 2026-01-22)
 **Base URL:** `/api/v1/farm/inventory`
 
 The Inventory Management system provides comprehensive tracking for three inventory types:
@@ -2867,12 +2867,20 @@ The Inventory Management system provides comprehensive tracking for three invent
 - **Asset Inventory:** Farm equipment, machinery, and infrastructure
 
 **Key Features:**
+- **Default Inventory System** (NEW v1.10.0): Organization-level centralized inventory pool
+- **Master Product Catalog** (NEW v1.10.0): Standardized product definitions across organization
+- **Inventory Transfer System** (NEW v1.10.0): Transfer inventory between organization and farms
+- **Automatic Pool Fallback** (NEW v1.10.0): Auto-deduct from organization inventory when farm inventory insufficient
 - Dual-unit system (display units for users, base units for automation)
 - Automatic unit conversion (kg → mg, L → ml)
 - Low stock alerts and tracking
 - Movement history and audit trail
 - Quality grading for harvests
 - Maintenance scheduling for assets
+
+**Inventory Scope Levels:**
+- **Organization Scope** (`farmId=null`): Default/centralized inventory accessible by all farms
+- **Farm Scope** (`farmId=<uuid>`): Farm-specific inventory owned by individual farm
 
 ---
 
@@ -2883,7 +2891,7 @@ GET /api/v1/farm/inventory/summary
 **Purpose:** Get comprehensive inventory summary across all types
 **Authentication:** Required (Bearer Token)
 **Query Parameters:**
-- `farmId` (UUID, required): Farm to get summary for
+- `farmId` (UUID, optional): Farm to get summary for (omit for organization inventory)
 
 **Response:** 200 OK
 ```json
@@ -2913,6 +2921,149 @@ GET /api/v1/farm/inventory/summary
 
 ---
 
+#### Product Catalog Management (NEW v1.10.0)
+
+The Product Catalog provides a master database of standardized products for organization-wide inventory management. Products defined here can be referenced when creating inventory items, ensuring consistency across all farms.
+
+##### List Products
+```
+GET /api/v1/farm/inventory/products
+```
+**Purpose:** List all products in the organization's master catalog
+**Authentication:** Required (Bearer Token)
+**Query Parameters:**
+- `category` (InputCategory, optional): Filter by category
+- `search` (string, optional): Search by name, brand, or SKU
+- `page` (integer, default: 1): Page number
+- `perPage` (integer, default: 20, max: 100): Items per page
+
+**Response:** 200 OK
+```json
+{
+  "items": [
+    {
+      "productId": "prod-uuid",
+      "organizationId": "org-uuid",
+      "name": "NPK 20-20-20 Fertilizer",
+      "category": "fertilizer",
+      "description": "Balanced NPK fertilizer for general use",
+      "unit": "kg",
+      "baseUnit": "mg",
+      "conversionFactor": 1000000.0,
+      "brand": "GreenGrow",
+      "sku": "GG-NPK-2020",
+      "createdBy": "user-uuid",
+      "createdAt": "2026-01-22T10:00:00.000Z",
+      "updatedAt": "2026-01-22T10:00:00.000Z"
+    }
+  ],
+  "total": 25,
+  "page": 1,
+  "perPage": 20,
+  "totalPages": 2
+}
+```
+
+---
+
+##### Create Product
+```
+POST /api/v1/farm/inventory/products
+```
+**Purpose:** Create a new product in the master catalog
+**Authentication:** Required (Bearer Token)
+**Request Body:**
+```json
+{
+  "name": "NPK 20-20-20 Fertilizer",
+  "category": "fertilizer",
+  "description": "Balanced NPK fertilizer for general use",
+  "unit": "kg",
+  "brand": "GreenGrow",
+  "sku": "GG-NPK-2020"
+}
+```
+
+**Automatic Calculations:**
+- `baseUnit`: Auto-determined from category (fertilizer → mg)
+- `conversionFactor`: Auto-calculated based on unit and category
+
+**Response:** 201 Created
+```json
+{
+  "_id": "mongo-id",
+  "productId": "prod-uuid",
+  "organizationId": "org-uuid",
+  "name": "NPK 20-20-20 Fertilizer",
+  "category": "fertilizer",
+  "description": "Balanced NPK fertilizer for general use",
+  "unit": "kg",
+  "baseUnit": "mg",
+  "conversionFactor": 1000000.0,
+  "brand": "GreenGrow",
+  "sku": "GG-NPK-2020",
+  "createdBy": "user-uuid",
+  "createdAt": "2026-01-22T10:00:00.000Z",
+  "updatedAt": "2026-01-22T10:00:00.000Z"
+}
+```
+
+---
+
+##### Get Product by ID
+```
+GET /api/v1/farm/inventory/products/{productId}
+```
+**Purpose:** Get detailed product information
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `productId` (UUID)
+
+**Response:** 200 OK (Product object)
+
+**Errors:**
+- 404: Product not found
+- 403: Product does not belong to your organization
+
+---
+
+##### Update Product
+```
+PATCH /api/v1/farm/inventory/products/{productId}
+```
+**Purpose:** Update product information
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `productId` (UUID)
+**Request Body:** (Partial update)
+```json
+{
+  "name": "NPK 20-20-20 Premium Fertilizer",
+  "description": "Enhanced balanced fertilizer",
+  "brand": "GreenGrow Pro",
+  "sku": "GG-NPK-2020-P"
+}
+```
+
+**Note:** Category and unit cannot be changed (create new product instead)
+
+**Response:** 200 OK (Updated product)
+
+---
+
+##### Delete Product
+```
+DELETE /api/v1/farm/inventory/products/{productId}
+```
+**Purpose:** Delete a product from the catalog
+**Authentication:** Required (Bearer Token)
+**Path Parameters:** `productId` (UUID)
+
+**Response:** 204 No Content
+
+**Errors:**
+- 404: Product not found
+
+---
+
 #### Input Inventory Management
 
 ##### List Input Inventory
@@ -2921,14 +3072,64 @@ GET /api/v1/farm/inventory/input
 ```
 **Purpose:** Get paginated list of input inventory items
 **Authentication:** Required (Bearer Token)
+
 **Query Parameters:**
-- `farmId` (UUID, required): Filter by farm
+- `farmId` (UUID, optional): Filter by specific farm ID
+- `scope` (InventoryScope, optional): Filter by scope level
+  - `organization`: Show only default inventory (farmId=null)
+  - `farm`: Show only farm inventories (requires farmId for specific farm, or shows all farms if farmId omitted)
 - `page` (integer, default: 1): Page number
 - `perPage` (integer, default: 20, max: 100): Items per page
-- `category` (string, optional): Filter by category
+- `category` (InputCategory, optional): Filter by category
 - `lowStockOnly` (boolean, optional): Show only low stock items
+- `search` (string, optional): Search by itemName, brand, or SKU
+
+**Query Examples:**
+- `GET /inventory/input?scope=organization` - Default inventory only (farmId=null)
+- `GET /inventory/input?scope=farm&farmId=xxx` - Specific farm inventory
+- `GET /inventory/input?scope=farm` - All farm inventories
+- `GET /inventory/input` - All inventory (organization + all farms)
+- `GET /inventory/input?farmId=xxx` - Specific farm (without explicit scope)
 
 **Response:** 200 OK (Paginated)
+```json
+{
+  "items": [
+    {
+      "inventoryId": "inv-uuid",
+      "farmId": null,
+      "organizationId": "org-uuid",
+      "inventoryScope": "organization",
+      "productId": "prod-uuid",
+      "itemName": "NPK 20-20-20 Fertilizer",
+      "category": "fertilizer",
+      "brand": "GreenGrow",
+      "sku": "GG-NPK-2020",
+      "quantity": 500.0,
+      "unit": "kg",
+      "baseUnit": "mg",
+      "baseQuantity": 500000000.0,
+      "minimumStock": 100.0,
+      "baseMinimumStock": 100000000.0,
+      "isLowStock": false,
+      "purchaseDate": "2026-01-01T00:00:00.000Z",
+      "expiryDate": "2027-01-01T00:00:00.000Z",
+      "storageLocation": "Central Warehouse",
+      "unitCost": 2.50,
+      "currency": "AED",
+      "supplier": "AgriSupply Co.",
+      "transferHistory": [],
+      "createdBy": "user-uuid",
+      "createdAt": "2026-01-22T10:00:00.000Z",
+      "updatedAt": "2026-01-22T10:00:00.000Z"
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "perPage": 20,
+  "totalPages": 3
+}
+```
 
 ---
 
@@ -2938,20 +3139,28 @@ POST /api/v1/farm/inventory/input
 ```
 **Purpose:** Add a new input inventory item with automatic base unit conversion
 **Authentication:** Required (Bearer Token)
+
+**Inventory Scope Rules:**
+- **Organization Inventory (Default)**: Set `farmId: null` to create centralized inventory accessible by all farms
+- **Farm Inventory**: Set `farmId: "farm-uuid"` to create farm-specific inventory
+
 **Request Body:**
 ```json
 {
-  "farmId": "farm-uuid",
+  "farmId": null,
+  "organizationId": "org-uuid",
+  "productId": "prod-uuid",
   "itemName": "NPK 20-20-20 Fertilizer",
   "category": "fertilizer",
   "brand": "AgriGrow",
-  "quantity": 5.0,
+  "sku": "GG-NPK-2020",
+  "quantity": 500.0,
   "unit": "kg",
-  "minimumStock": 1.0,
-  "purchaseDate": "2025-12-01",
-  "expiryDate": "2026-12-01",
-  "storageLocation": "Warehouse A",
-  "unitCost": 45.00,
+  "minimumStock": 100.0,
+  "purchaseDate": "2026-01-01",
+  "expiryDate": "2027-01-01",
+  "storageLocation": "Central Warehouse",
+  "unitCost": 2.50,
   "currency": "AED",
   "supplier": "Farm Supplies LLC",
   "activeIngredients": "N-P-K 20-20-20",
@@ -2962,28 +3171,33 @@ POST /api/v1/farm/inventory/input
 ```
 
 **Automatic Calculations:**
+- `inventoryScope`: Determined from farmId (null → "organization", present → "farm")
 - `baseUnit`: Determined from category (fertilizer → mg)
-- `baseQuantity`: Converted from display quantity (5 kg → 5,000,000 mg)
-- `baseMinimumStock`: Converted from minimum stock
+- `baseQuantity`: Converted from display quantity (500 kg → 500,000,000 mg)
+- `baseMinimumStock`: Converted from minimum stock (100 kg → 100,000,000 mg)
 - `isLowStock`: Calculated based on quantity vs minimum
 
 **Response:** 201 Created
 ```json
 {
-  "data": {
-    "inventoryId": "uuid-here",
-    "farmId": "farm-uuid",
-    "itemName": "NPK 20-20-20 Fertilizer",
-    "category": "fertilizer",
-    "quantity": 5.0,
-    "unit": "kg",
-    "baseUnit": "mg",
-    "baseQuantity": 5000000.0,
-    "baseMinimumStock": 1000000.0,
-    "isLowStock": false,
-    "createdAt": "2025-12-04T10:00:00.000Z"
-  },
-  "message": "Input inventory created successfully"
+  "_id": "mongo-id",
+  "inventoryId": "inv-uuid",
+  "farmId": null,
+  "organizationId": "org-uuid",
+  "inventoryScope": "organization",
+  "productId": "prod-uuid",
+  "itemName": "NPK 20-20-20 Fertilizer",
+  "category": "fertilizer",
+  "brand": "AgriGrow",
+  "quantity": 500.0,
+  "unit": "kg",
+  "baseUnit": "mg",
+  "baseQuantity": 500000000.0,
+  "baseMinimumStock": 100000000.0,
+  "isLowStock": false,
+  "transferHistory": [],
+  "createdAt": "2026-01-22T10:00:00.000Z",
+  "updatedAt": "2026-01-22T10:00:00.000Z"
 }
 ```
 
@@ -3042,32 +3256,88 @@ DELETE /api/v1/farm/inventory/input/{inventoryId}
 
 ---
 
-##### Use Input Inventory (Display Units)
+##### Use Input Inventory with Automatic Pool Fallback (NEW v1.10.0)
 ```
 POST /api/v1/farm/inventory/input/{inventoryId}/use
 ```
-**Purpose:** Record usage of input inventory in display units
+**Purpose:** Record usage of input inventory with automatic fallback to organization inventory
 **Authentication:** Required (Bearer Token)
+
 **Path Parameters:** `inventoryId` (UUID)
+
 **Query Parameters:**
 - `quantity` (float, required): Amount to use in display units
+- `farmId` (UUID, optional): Farm requesting inventory (enables pool fallback)
+- `allowPoolDeduction` (boolean, default: true): Allow automatic deduction from default inventory
 - `reason` (string, optional): Reason for usage
-- `referenceId` (string, optional): Link to task/block
+
+**Pool Fallback Logic:**
+1. Try to deduct from the specified inventory item first
+2. If insufficient quantity AND `allowPoolDeduction=true`:
+   - If farm inventory: Search for matching item in organization inventory (same name, category)
+   - Deduct remaining quantity from organization inventory automatically
+3. If `allowPoolDeduction=false`: Fail with 400 error if insufficient quantity
+
+**Use Cases:**
+- **Farm inventory with fallback**: Farm runs out of fertilizer, automatically pulls from central warehouse
+- **Direct usage**: Deduct from specific inventory only (set `allowPoolDeduction=false`)
+- **Organization inventory**: No fallback (already at top level)
+
+**Example 1: Sufficient Quantity (Normal)**
+```
+POST /inventory/input/{farm-inv-id}/use?quantity=10&farmId=farm-001&reason=Block+fertilization
+```
 
 **Response:** 200 OK
 ```json
 {
-  "data": {
-    "inventoryId": "uuid",
-    "previousQuantity": 5.0,
-    "usedQuantity": 0.5,
-    "newQuantity": 4.5,
+  "_id": "mongo-id",
+  "inventoryId": "farm-inv-uuid",
+  "farmId": "farm-001",
+  "inventoryScope": "farm",
+  "quantity": 40.0,
+  "unit": "kg",
+  "isLowStock": false,
+  "lastUsedAt": "2026-01-22T10:30:00.000Z",
+  "updatedAt": "2026-01-22T10:30:00.000Z"
+}
+```
+
+**Example 2: Pool Fallback Triggered**
+```
+POST /inventory/input/{farm-inv-id}/use?quantity=60&farmId=farm-001&allowPoolDeduction=true&reason=Block+fertilization
+```
+Farm has 50 kg, needs 60 kg. System:
+1. Deducts all 50 kg from farm inventory
+2. Finds matching item in organization inventory
+3. Deducts remaining 10 kg from organization inventory
+
+**Response:** 200 OK (Pool Fallback Used)
+```json
+{
+  "message": "Successfully used 60 kg (50 from farm, 10 from default inventory)",
+  "farmInventory": {
+    "inventoryId": "farm-inv-uuid",
+    "farmId": "farm-001",
+    "quantity": 0,
+    "unit": "kg",
+    "isLowStock": true
+  },
+  "defaultInventory": {
+    "inventoryId": "org-inv-uuid",
+    "farmId": null,
+    "inventoryScope": "organization",
+    "quantity": 490.0,
     "unit": "kg",
     "isLowStock": false
   },
-  "message": "Inventory used successfully"
+  "poolFallbackUsed": true
 }
 ```
+
+**Errors:**
+- 400: Insufficient quantity (if `allowPoolDeduction=false` or no matching organization inventory)
+- 404: Inventory item not found
 
 ---
 
@@ -3106,6 +3376,93 @@ POST /api/v1/farm/inventory/input/{id}/deduct-base?base_quantity=50000&reason=au
   "message": "Base quantity deducted successfully"
 }
 ```
+
+---
+
+##### Transfer Inventory Between Scopes (NEW v1.10.0)
+```
+POST /api/v1/farm/inventory/transfer
+```
+**Purpose:** Transfer inventory between organization and farm scopes
+**Authentication:** Required (Bearer Token)
+
+**Supported Transfer Flows:**
+- **Organization → Farm**: Transfer from centralized inventory to specific farm
+- **Farm → Organization**: Return from farm to centralized inventory
+- **Farm → Farm**: Via organization (2-step: Farm A → Org → Farm B)
+
+**Request Body:**
+```json
+{
+  "inventoryId": "source-inv-uuid",
+  "inventoryType": "input",
+  "fromScope": "organization",
+  "toScope": "farm",
+  "fromFarmId": null,
+  "toFarmId": "farm-001-uuid",
+  "quantity": 500.0,
+  "unit": "kg",
+  "reason": "Farm 1 requested fertilizer for Block B-15"
+}
+```
+
+**Business Logic:**
+1. Reduces quantity from source inventory
+2. Creates new inventory item at destination with same properties
+3. Records transfer in both inventories' `transferHistory`
+4. Creates inventory movement records for audit trail
+5. Updates source quantity and low stock status
+
+**Response:** 201 Created
+```json
+{
+  "transferId": "transfer-uuid",
+  "sourceInventory": {
+    "inventoryId": "source-inv-uuid",
+    "farmId": null,
+    "inventoryScope": "organization",
+    "quantity": 500.0,
+    "unit": "kg",
+    "transferHistory": [
+      {
+        "transferId": "transfer-uuid",
+        "fromScope": "organization",
+        "toScope": "farm",
+        "fromFarmId": null,
+        "toFarmId": "farm-001-uuid",
+        "quantityTransferred": 500000000.0,
+        "transferredAt": "2026-01-22T10:30:00.000Z",
+        "transferredBy": "user-uuid",
+        "reason": "Farm 1 requested fertilizer for Block B-15"
+      }
+    ]
+  },
+  "destinationInventory": {
+    "inventoryId": "dest-inv-uuid",
+    "farmId": "farm-001-uuid",
+    "inventoryScope": "farm",
+    "quantity": 500.0,
+    "unit": "kg",
+    "itemName": "NPK 20-20-20 Fertilizer",
+    "category": "fertilizer"
+  },
+  "message": "Successfully transferred 500 kg from organization to farm"
+}
+```
+
+**Validation Rules:**
+1. `fromScope=organization` requires `fromFarmId=null`
+2. `toScope=organization` requires `toFarmId=null`
+3. `fromScope=farm` requires `fromFarmId` to be present
+4. `toScope=farm` requires `toFarmId` to be present
+5. Cannot transfer within same scope (organization → organization)
+6. Source inventory must belong to user's organization
+7. Source must have sufficient quantity
+
+**Errors:**
+- 400: Invalid scope combination or insufficient quantity
+- 403: Inventory does not belong to your organization
+- 404: Source inventory item not found
 
 ---
 
@@ -3168,12 +3525,24 @@ GET /api/v1/farm/inventory/harvest
 ```
 **Purpose:** Get paginated list of harvest inventory
 **Authentication:** Required (Bearer Token)
+
 **Query Parameters:**
-- `farmId` (UUID, required): Filter by farm
-- `page`, `perPage`: Pagination
+- `farmId` (UUID, optional): Filter by specific farm ID
+- `scope` (InventoryScope, optional): Filter by scope level
+  - `organization`: Show only default inventory (farmId=null)
+  - `farm`: Show only farm inventories
+- `page` (integer, default: 1): Page number
+- `perPage` (integer, default: 20, max: 100): Items per page
 - `blockId` (UUID, optional): Filter by block
 - `plantDataId` (UUID, optional): Filter by plant type
-- `qualityGrade` (string, optional): Filter by grade
+- `qualityGrade` (QualityGrade, optional): Filter by grade
+- `search` (string, optional): Search by plantName or variety
+
+**Query Examples:**
+- `GET /inventory/harvest?scope=organization` - Default inventory only
+- `GET /inventory/harvest?scope=farm&farmId=xxx` - Specific farm inventory
+- `GET /inventory/harvest?scope=farm` - All farm inventories
+- `GET /inventory/harvest` - All inventory (organization + all farms)
 
 **Response:** 200 OK (Paginated)
 
@@ -3252,11 +3621,24 @@ GET /api/v1/farm/inventory/asset
 ```
 **Purpose:** Get paginated list of farm assets
 **Authentication:** Required (Bearer Token)
+
 **Query Parameters:**
-- `farmId` (UUID, required): Filter by farm
-- `page`, `perPage`: Pagination
-- `category` (string, optional): Filter by category
-- `status` (string, optional): Filter by status
+- `farmId` (UUID, optional): Filter by specific farm ID
+- `scope` (InventoryScope, optional): Filter by scope level
+  - `organization`: Show only default inventory (farmId=null) - shared assets
+  - `farm`: Show only farm inventories
+- `page` (integer, default: 1): Page number
+- `perPage` (integer, default: 20, max: 100): Items per page
+- `category` (AssetCategory, optional): Filter by category
+- `status` (AssetStatus, optional): Filter by status
+- `maintenanceOverdue` (boolean, optional): Filter assets with overdue maintenance
+- `allocatedToFarm` (UUID, optional): Filter by currently allocated farm
+- `search` (string, optional): Search by assetName, brand, model, or assetTag
+
+**Query Examples:**
+- `GET /inventory/asset?scope=organization` - Organization-wide shared assets
+- `GET /inventory/asset?scope=farm&farmId=xxx` - Specific farm assets
+- `GET /inventory/asset?allocatedToFarm=xxx` - Assets currently allocated to farm
 
 **Asset Categories:** tractor, harvester, irrigation_system, greenhouse, storage_facility, vehicle, tool, equipment, infrastructure, sensor, other
 
@@ -3343,11 +3725,20 @@ GET /api/v1/farm/inventory/movements
 | Category | Endpoints | Status | Version |
 |----------|-----------|--------|---------|
 | **Summary** | 1 endpoint | ✅ Active | v1.9.0 |
-| **Input Inventory** | 8 endpoints | ✅ Active | v1.9.0 |
-| **Harvest Inventory** | 5 endpoints | ✅ Active | v1.9.0 |
-| **Asset Inventory** | 5 endpoints | ✅ Active | v1.9.0 |
+| **Product Catalog** (NEW) | 5 endpoints | ✅ Active | v1.10.0 |
+| **Input Inventory** | 8 endpoints | ✅ Active | v1.9.0 → v1.10.0 |
+| **Harvest Inventory** | 5 endpoints | ✅ Active | v1.9.0 → v1.10.0 |
+| **Asset Inventory** | 5 endpoints | ✅ Active | v1.9.0 → v1.10.0 |
+| **Transfer Operations** (NEW) | 1 endpoint | ✅ Active | v1.10.0 |
 | **Movements** | 1 endpoint | ✅ Active | v1.9.0 |
-| **Total** | **20 endpoints** | ✅ Active | - |
+| **Total** | **26 endpoints** | ✅ Active | - |
+
+**v1.10.0 Additions (2026-01-22):**
+- Product Catalog Management (5 endpoints)
+- Inventory Transfer System (1 endpoint)
+- Inventory Scope Support (organization/farm levels)
+- Automatic Pool Fallback for input usage
+- Enhanced list endpoints with scope filtering
 
 ---
 
@@ -3644,6 +4035,35 @@ Current implementation uses mock data generators for development/testing:
 ---
 
 ## API Changelog
+
+### v1.10.0 - 2026-01-22
+- ✅ **Default Inventory System** implemented - Organization-level centralized inventory
+- ✅ **Product Catalog Management** - Master product database for standardization
+  - 5 new endpoints: List, Create, Get, Update, Delete products
+  - Auto-calculate base unit and conversion factors from category
+- ✅ **Inventory Scope System** - Two-tier inventory hierarchy
+  - Organization scope (`farmId=null`): Centralized inventory accessible by all farms
+  - Farm scope (`farmId=<uuid>`): Farm-specific inventory
+- ✅ **Inventory Transfer API** - Transfer inventory between scopes
+  - Organization → Farm transfers
+  - Farm → Organization returns
+  - Farm → Farm transfers (via organization)
+  - Automatic transfer history tracking
+- ✅ **Automatic Pool Fallback** for input usage
+  - When farm inventory insufficient, automatically deduct from organization inventory
+  - Configurable with `allowPoolDeduction` parameter
+  - Tracks partial usage from multiple sources
+- ✅ **Enhanced List Endpoints** - All inventory list endpoints support scope filtering
+  - `scope=organization`: Show only default inventory
+  - `scope=farm&farmId=xxx`: Show specific farm inventory
+  - `scope=farm`: Show all farm inventories
+  - No scope parameter: Show all inventory (organization + all farms)
+- ✅ **Asset Allocation Tracking** - Track which farm currently has organization-owned assets
+  - `allocatedToFarm` query parameter for asset filtering
+  - `currentAllocation` and `allocationHistory` fields in asset inventory
+- ✅ **Product Reference in Input Inventory** - Optional `productId` field to link to master catalog
+- ✅ **Transfer History** - `transferHistory` array in all inventory items
+- ✅ Total endpoints increased from 20 to 26
 
 ### v1.9.0 - 2025-12-04
 - ✅ **Inventory Management System** implemented

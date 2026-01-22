@@ -9,6 +9,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Default Inventory System (Farm Management Module v1.10.0) - 2026-01-22
+
+**Feature:** Organization-level centralized inventory system that allows maintaining default inventory pools accessible by all farms, with automatic transfer capabilities and pool fallback functionality.
+
+**Backend Implementation (~600 lines added/modified):**
+
+**Models Enhanced (inventory.py - 180 lines added):**
+- **InventoryScope Enum**: Added `ORGANIZATION` and `FARM` scope levels
+- **Product Model**: Master product catalog for standardized product definitions
+  - Fields: productId, organizationId, name, category, description, unit, baseUnit, conversionFactor, brand, sku
+  - Auto-calculates base unit and conversion factor from category
+  - ProductCreate, ProductUpdate schemas for CRUD operations
+- **Enhanced Inventory Base Models**: All inventory base models now support:
+  - Optional `farmId` field (null for organization inventory)
+  - Required `organizationId` field for organization-level filtering
+  - Computed `inventoryScope` field (ORGANIZATION or FARM)
+- **Transfer Models**: New transfer request/response/record models
+  - TransferRequest: Request to transfer inventory between scopes
+  - TransferResponse: Response after successful transfer with updated items
+  - TransferRecord: Historical record in item's transferHistory
+
+**API Endpoints Added (inventory.py - 420 lines added):**
+
+**Product Catalog Endpoints (5 new):**
+- `GET /api/v1/farm/inventory/products` - List products with pagination/search/filters
+- `POST /api/v1/farm/inventory/products` - Create new product with auto-calculations
+- `GET /api/v1/farm/inventory/products/{id}` - Get product details
+- `PATCH /api/v1/farm/inventory/products/{id}` - Update product (name, description, brand, sku)
+- `DELETE /api/v1/farm/inventory/products/{id}` - Delete product from catalog
+
+**Transfer Endpoint (1 new):**
+- `POST /api/v1/farm/inventory/transfer` - Transfer inventory between scopes
+  - Supports Organization → Farm, Farm → Organization, Farm → Farm (via org)
+  - Reduces source quantity, creates destination inventory
+  - Records transfer in transferHistory of both items
+  - Creates inventory movement records for audit trail
+
+**Enhanced Existing Endpoints:**
+- **All List Endpoints** (harvest, input, asset): Added `scope` query parameter
+  - `scope=organization`: Show only default inventory (farmId=null)
+  - `scope=farm&farmId=xxx`: Show specific farm inventory
+  - `scope=farm`: Show all farm inventories
+  - No scope: Show all (organization + all farms)
+- **POST /inventory/input/{id}/use**: Enhanced with automatic pool fallback
+  - New parameters: `farmId`, `allowPoolDeduction` (default: true)
+  - When farm inventory insufficient:
+    1. Deducts available quantity from farm inventory
+    2. Searches for matching item in organization inventory (same name, category)
+    3. Automatically deducts remaining from organization inventory
+    4. Returns both updated items + poolFallbackUsed flag
+  - Configurable fallback with `allowPoolDeduction=false` to fail on insufficient quantity
+
+**Database Schema Enhancements:**
+- **New Collection**: `products` - Master product catalog
+  - Indexes: productId (unique), organizationId, name, category, sku
+- **Enhanced Collections**: All inventory collections now have:
+  - `organizationId` field (required)
+  - `inventoryScope` field (computed from farmId)
+  - `productId` field (optional reference to products)
+  - `transferHistory` array (list of TransferRecord objects)
+- **Asset Inventory**: Added allocation tracking
+  - `currentAllocation` object (farmId, allocatedAt, allocatedBy)
+  - `allocationHistory` array (past allocations)
+
+**Business Logic & Validation:**
+- **Scope Validation Rules**:
+  - If `farmId=null`, `inventoryScope` must be ORGANIZATION
+  - If `farmId` present, `inventoryScope` must be FARM
+  - `blockId` can only be present if `farmId` is present (blocks belong to farms)
+- **Transfer Validation**:
+  - Organization transfers require fromFarmId=null / toFarmId=null appropriately
+  - Farm transfers require farmId to be present
+  - Cannot transfer within same scope (org → org)
+  - Source must have sufficient quantity
+  - Automatic scope verification
+- **Pool Fallback Logic**:
+  - Only triggers if farm inventory insufficient AND allowPoolDeduction=true
+  - Searches organization inventory by itemName and category match
+  - Fails gracefully if no matching organization inventory found
+  - Records separate movement entries for each deduction
+
+**Key Features:**
+- **Centralized Inventory Pool**: Organization-level inventory accessible by all farms
+- **Flexible Transfers**: Move inventory between organization and farms as needed
+- **Automatic Fallback**: Farms automatically pull from organization inventory when needed
+- **Product Standardization**: Master catalog ensures consistency across farms
+- **Complete Audit Trail**: All transfers and movements tracked with timestamps and users
+- **Backward Compatible**: Existing farm-specific inventory continues to work
+
+**Use Cases:**
+1. **Central Warehouse**: Maintain organization-wide inventory of fertilizers, seeds, tools
+2. **Farm Requisitions**: Farms can request transfers from central warehouse
+3. **Emergency Fallback**: When farm runs out, automatically use organization inventory
+4. **Asset Sharing**: Tractors and equipment owned by organization, allocated to farms
+5. **Inventory Returns**: Farms can return unused inventory to organization pool
+
+**Documentation:**
+- Updated API-Structure.md with 6 new endpoint sections
+- Updated CHANGELOG.md (this file) with complete feature description
+- Added inventory scope concept explanation
+- Added transfer flow documentation
+- Added pool fallback behavior documentation
+
+**Files Modified:** 3 files
+- `src/modules/farm_manager/models/inventory.py` (+180 lines)
+- `src/modules/farm_manager/api/v1/inventory.py` (+420 lines)
+- `src/modules/farm_manager/services/database.py` (indexes added)
+
+**API Endpoints:** +6 new endpoints (20 → 26 total)
+- Product Catalog: 5 endpoints
+- Transfer Operations: 1 endpoint
+- Enhanced existing: 8 endpoints (list endpoints with scope filtering)
+
+**Database Collections:** +1 new collection (products)
+**Database Indexes:** +8 new indexes (products, organizationId, inventoryScope, productId, currentAllocation)
+
+**Progress:**
+- Farm Management Module: Inventory Management v1.10.0 complete
+  - Product Catalog Management ✅
+  - Inventory Scope System (Organization/Farm) ✅
+  - Transfer API ✅
+  - Automatic Pool Fallback ✅
+  - Enhanced List Filtering ✅
+
+---
+
 #### Geofencing Support for Farms and Blocks - 2025-11-29
 
 ### Fixed
