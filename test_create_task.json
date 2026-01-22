@@ -1,8 +1,0 @@
-{
-  "farmId": "0bef9a0e-172c-4b5d-96a0-5fd98c268967",
-  "blockId": "218afb99-b01d-4951-8c99-b7e51c15c24c",
-  "taskType": "custom",
-  "scheduledDate": "2025-11-20T10:00:00Z",
-  "dueDate": "2025-11-20T18:00:00Z",
-  "description": "Test custom task from API testing"
-}
