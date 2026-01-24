@@ -10,8 +10,9 @@
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { getBlockHarvestSummary } from '../../services/farmApi';
-import type { DashboardBlock } from '../../types/farm';
+import { getBlockHarvestSummary, getBlockHarvests } from '../../services/farmApi';
+import { farmApi } from '../../services/farmApi';
+import type { DashboardBlock, BlockHarvest } from '../../types/farm';
 import { BlockAutomationTab } from './BlockAutomationTab';
 
 type QualityGrade = 'A' | 'B' | 'C';
@@ -52,6 +53,7 @@ type TabType = 'overview' | 'timeline' | 'harvests' | 'automation';
 export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetailsModalProps) {
   const [loading, setLoading] = useState(true);
   const [harvestSummary, setHarvestSummary] = useState<BlockHarvestSummary | null>(null);
+  const [harvests, setHarvests] = useState<BlockHarvest[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
 
   useEffect(() => {
@@ -64,13 +66,17 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
     try {
       setLoading(true);
 
-      // Fetch block harvest summary (only if block is harvesting or has harvests)
+      // Fetch block harvest summary and individual harvests (only if block is harvesting or has harvests)
       if (block.state === 'harvesting' || block.kpi.totalHarvests > 0) {
-        const summary = await getBlockHarvestSummary(farmId, block.blockId);
+        const [summary, harvestsResponse] = await Promise.all([
+          getBlockHarvestSummary(farmId, block.blockId).catch(() => null),
+          getBlockHarvests(farmId, block.blockId, 1, 100).catch(() => ({ items: [] })),
+        ]);
         setHarvestSummary(summary);
+        setHarvests(harvestsResponse.items || []);
       }
     } catch (error) {
-      console.error('Failed to load block harvest summary:', error);
+      console.error('Failed to load block harvest data:', error);
     } finally {
       setLoading(false);
     }
@@ -102,13 +108,49 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
   };
 
   const renderGrowthTimeline = () => {
+    // Helper to find actual status change date from history
+    const getActualChangeDate = (status: string): string | null => {
+      const change = block.statusChanges?.find(c => c.status === status);
+      return change?.changedAt || null;
+    };
+
+    // Build stages with both expected and actual dates
     const stages = [
-      { key: 'planned', label: 'Planned', date: null, icon: '📋' },
-      { key: 'planted', label: 'Planted', date: block.plantedDate, icon: '🌱' },
-      { key: 'growing', label: 'Growing', date: block.expectedStatusChanges?.growing, icon: '🌿' },
-      { key: 'fruiting', label: 'Fruiting', date: block.expectedStatusChanges?.fruiting, icon: '🌸' },
-      { key: 'harvesting', label: 'Harvesting', date: block.expectedHarvestDate, icon: '🧺' },
-      { key: 'cleaning', label: 'Cleaning', date: null, icon: '🧹' },
+      {
+        key: 'planned',
+        label: 'Planned',
+        actualDate: getActualChangeDate('planned'),
+        expectedDate: null,
+        icon: '📋'
+      },
+      {
+        key: 'growing',
+        label: 'Growing/Planted',
+        actualDate: getActualChangeDate('growing') || block.plantedDate,
+        expectedDate: block.expectedStatusChanges?.growing,
+        icon: '🌱'
+      },
+      {
+        key: 'fruiting',
+        label: 'Fruiting',
+        actualDate: getActualChangeDate('fruiting'),
+        expectedDate: block.expectedStatusChanges?.fruiting,
+        icon: '🌸'
+      },
+      {
+        key: 'harvesting',
+        label: 'Harvesting',
+        actualDate: getActualChangeDate('harvesting'),
+        expectedDate: block.expectedHarvestDate || block.expectedStatusChanges?.harvesting,
+        icon: '🧺'
+      },
+      {
+        key: 'cleaning',
+        label: 'Cleaning',
+        actualDate: getActualChangeDate('cleaning'),
+        expectedDate: null,
+        icon: '🧹'
+      },
     ];
 
     // Filter out fruiting if not applicable
@@ -125,6 +167,10 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
           const isCurrent = index === currentStageIndex;
           const isPending = index > currentStageIndex;
 
+          // Determine what date to show
+          const hasActualDate = stage.actualDate !== null;
+          const hasExpectedDate = stage.expectedDate !== null;
+
           return (
             <TimelineStage key={stage.key}>
               <TimelineIcon
@@ -134,13 +180,27 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
               </TimelineIcon>
               <TimelineContent>
                 <TimelineLabel $isCurrent={isCurrent}>{stage.label}</TimelineLabel>
-                {stage.date && (
-                  <TimelineDate>{formatDate(stage.date)}</TimelineDate>
+
+                {/* Show actual date if we have it (for completed or current stages) */}
+                {hasActualDate && (
+                  <TimelineDate>{formatDate(stage.actualDate)}</TimelineDate>
                 )}
-                {!stage.date && (isCompleted || isCurrent) && (
+
+                {/* Show expected date for pending stages or as secondary info */}
+                {!hasActualDate && hasExpectedDate && isPending && (
+                  <TimelineDate>Expected: {formatDate(stage.expectedDate)}</TimelineDate>
+                )}
+
+                {/* Show comparison for completed stages */}
+                {hasActualDate && hasExpectedDate && (isCompleted || isCurrent) && (
+                  <TimelineExpected>Expected: {formatDate(stage.expectedDate)}</TimelineExpected>
+                )}
+
+                {/* Fallback for stages with no dates */}
+                {!hasActualDate && !hasExpectedDate && (isCompleted || isCurrent) && (
                   <TimelineDate>Completed</TimelineDate>
                 )}
-                {!stage.date && isPending && (
+                {!hasActualDate && !hasExpectedDate && isPending && (
                   <TimelineDate>Pending</TimelineDate>
                 )}
               </TimelineContent>
@@ -155,7 +215,8 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
   };
 
   const renderHarvestHistory = () => {
-    if (!harvestSummary || harvestSummary.totalHarvests === 0) {
+    // Show empty state only if both summary and harvests are empty
+    if ((!harvestSummary || harvestSummary.totalHarvests === 0) && harvests.length === 0) {
       return (
         <EmptyState>
           <EmptyIcon>🧺</EmptyIcon>
@@ -165,72 +226,113 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
     }
 
     const grades: QualityGrade[] = ['A', 'B', 'C'];
-    const gradeQuantities: Record<QualityGrade, number> = {
+    const gradeQuantities: Record<QualityGrade, number> = harvestSummary ? {
       A: harvestSummary.qualityAKg,
       B: harvestSummary.qualityBKg,
       C: harvestSummary.qualityCKg,
-    };
+    } : { A: 0, B: 0, C: 0 };
     const hasGradeData = grades.some((grade) => gradeQuantities[grade] > 0);
 
     return (
       <HarvestHistorySection>
-        <HarvestStats>
-          <StatCard>
-            <StatLabel>Total Harvested</StatLabel>
-            <StatValue>{harvestSummary.totalQuantityKg.toFixed(2)} kg</StatValue>
-          </StatCard>
-          <StatCard>
-            <StatLabel>Total Harvests</StatLabel>
-            <StatValue>{harvestSummary.totalHarvests}</StatValue>
-          </StatCard>
-          <StatCard>
-            <StatLabel>Yield Progress</StatLabel>
-            <StatValue>
-              {block.kpi.actualYieldKg.toFixed(1)} / {block.kpi.predictedYieldKg.toFixed(1)} kg
-            </StatValue>
-            <StatSubtext>
-              {block.calculated.yieldProgress.toFixed(0)}% of predicted
-            </StatSubtext>
-          </StatCard>
-        </HarvestStats>
+        {harvestSummary && (
+          <>
+            <HarvestStats>
+              <StatCard>
+                <StatLabel>Total Harvested</StatLabel>
+                <StatValue>{harvestSummary.totalQuantityKg.toFixed(2)} kg</StatValue>
+              </StatCard>
+              <StatCard>
+                <StatLabel>Total Harvests</StatLabel>
+                <StatValue>{harvestSummary.totalHarvests}</StatValue>
+              </StatCard>
+              <StatCard>
+                <StatLabel>Yield Progress</StatLabel>
+                <StatValue>
+                  {block.kpi.actualYieldKg.toFixed(1)} / {block.kpi.predictedYieldKg.toFixed(1)} kg
+                </StatValue>
+                <StatSubtext>
+                  {block.calculated.yieldProgress.toFixed(0)}% of predicted
+                </StatSubtext>
+              </StatCard>
+            </HarvestStats>
 
-        {hasGradeData && (
-          <GradeBreakdown>
-            <SectionSubtitle>Quality Grade Breakdown</SectionSubtitle>
-            <GradeGrid>
-              {grades.map((grade) => {
-                const quantity = gradeQuantities[grade];
-                if (quantity === 0) return null;
-                const percentage = (quantity / harvestSummary.totalQuantityKg) * 100;
+            {hasGradeData && (
+              <GradeBreakdown>
+                <SectionSubtitle>Quality Grade Breakdown</SectionSubtitle>
+                <GradeGrid>
+                  {grades.map((grade) => {
+                    const quantity = gradeQuantities[grade];
+                    if (quantity === 0) return null;
+                    const percentage = (quantity / harvestSummary.totalQuantityKg) * 100;
 
-                return (
-                  <GradeCard key={grade} $color={HARVEST_GRADE_COLORS[grade]}>
-                    <GradeHeader>
-                      <GradeBadge>{grade}</GradeBadge>
-                      <GradeLabel>{HARVEST_GRADE_LABELS[grade]}</GradeLabel>
-                    </GradeHeader>
-                    <GradeQuantity>{quantity.toFixed(2)} kg</GradeQuantity>
-                    <GradePercentage>{percentage.toFixed(1)}%</GradePercentage>
-                  </GradeCard>
-                );
-              })}
-            </GradeGrid>
-          </GradeBreakdown>
+                    return (
+                      <GradeCard key={grade} $color={HARVEST_GRADE_COLORS[grade]}>
+                        <GradeHeader>
+                          <GradeBadge>{grade}</GradeBadge>
+                          <GradeLabel>{HARVEST_GRADE_LABELS[grade]}</GradeLabel>
+                        </GradeHeader>
+                        <GradeQuantity>{quantity.toFixed(2)} kg</GradeQuantity>
+                        <GradePercentage>{percentage.toFixed(1)}%</GradePercentage>
+                      </GradeCard>
+                    );
+                  })}
+                </GradeGrid>
+              </GradeBreakdown>
+            )}
+
+            {harvestSummary.firstHarvestDate && (
+              <HarvestDates>
+                <DateInfo>
+                  <DateLabel>First Harvest:</DateLabel>
+                  <DateValue>{formatDate(harvestSummary.firstHarvestDate)}</DateValue>
+                </DateInfo>
+                {harvestSummary.lastHarvestDate && (
+                  <DateInfo>
+                    <DateLabel>Last Harvest:</DateLabel>
+                    <DateValue>{formatDate(harvestSummary.lastHarvestDate)}</DateValue>
+                  </DateInfo>
+                )}
+              </HarvestDates>
+            )}
+          </>
         )}
 
-        {harvestSummary.firstHarvestDate && (
-          <HarvestDates>
-            <DateInfo>
-              <DateLabel>First Harvest:</DateLabel>
-              <DateValue>{formatDate(harvestSummary.firstHarvestDate)}</DateValue>
-            </DateInfo>
-            {harvestSummary.lastHarvestDate && (
-              <DateInfo>
-                <DateLabel>Last Harvest:</DateLabel>
-                <DateValue>{formatDate(harvestSummary.lastHarvestDate)}</DateValue>
-              </DateInfo>
-            )}
-          </HarvestDates>
+        {/* Individual Harvest Records */}
+        {harvests.length > 0 && (
+          <HarvestRecordsSection>
+            <SectionSubtitle>Harvest Records ({harvests.length})</SectionSubtitle>
+            <HarvestRecordsList>
+              {harvests.map((harvest) => (
+                <HarvestRecordCard key={harvest.harvestId}>
+                  <HarvestRecordInfo>
+                    <HarvestRecordDate>
+                      {farmApi.formatDateForDisplay(harvest.harvestDate)}
+                      {harvest.metadata?.crop && (
+                        <HarvestRecordCrop>({harvest.metadata.crop})</HarvestRecordCrop>
+                      )}
+                    </HarvestRecordDate>
+                    <HarvestRecordMeta>
+                      <span>{harvest.quantityKg} kg</span>
+                      <HarvestRecordDot />
+                      <HarvestQualityBadge $grade={harvest.qualityGrade as QualityGrade}>
+                        Grade {harvest.qualityGrade}
+                      </HarvestQualityBadge>
+                      {harvest.recordedByEmail && (
+                        <>
+                          <HarvestRecordDot />
+                          <span>by {harvest.recordedByEmail}</span>
+                        </>
+                      )}
+                    </HarvestRecordMeta>
+                    {harvest.notes && (
+                      <HarvestRecordNotes>{harvest.notes}</HarvestRecordNotes>
+                    )}
+                  </HarvestRecordInfo>
+                </HarvestRecordCard>
+              ))}
+            </HarvestRecordsList>
+          </HarvestRecordsSection>
         )}
       </HarvestHistorySection>
     );
@@ -596,6 +698,13 @@ const TimelineDate = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
+const TimelineExpected = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.neutral[400]};
+  font-style: italic;
+  margin-top: ${({ theme }) => theme.spacing.xs};
+`;
+
 const TimelineConnector = styled.div<{ $completed: boolean }>`
   position: absolute;
   left: 20px;
@@ -766,4 +875,99 @@ const LoadingState = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
   text-align: center;
   color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+// Individual Harvest Records Styles
+const HarvestRecordsSection = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.lg};
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding-top: ${({ theme }) => theme.spacing.lg};
+`;
+
+const HarvestRecordsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.sm};
+  max-height: 300px;
+  overflow-y: auto;
+`;
+
+const HarvestRecordCard = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: ${({ theme }) => theme.spacing.md};
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 150ms ease-in-out;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[50]};
+  }
+`;
+
+const HarvestRecordInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const HarvestRecordDate = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const HarvestRecordCrop = styled.span`
+  font-weight: ${({ theme }) => theme.typography.fontWeight.normal};
+  color: ${({ theme }) => theme.colors.success};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+`;
+
+const HarvestRecordMeta = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  flex-wrap: wrap;
+`;
+
+const HarvestRecordDot = styled.span`
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.neutral[400]};
+`;
+
+const HarvestRecordNotes = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-style: italic;
+  margin-top: ${({ theme }) => theme.spacing.xs};
+`;
+
+const HarvestQualityBadge = styled.span<{ $grade: QualityGrade }>`
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: white;
+  background: ${({ $grade }) => {
+    switch ($grade) {
+      case 'A':
+        return '#10b981';
+      case 'B':
+        return '#eab308';
+      case 'C':
+        return '#f97316';
+      default:
+        return '#9e9e9e';
+    }
+  }};
 `;

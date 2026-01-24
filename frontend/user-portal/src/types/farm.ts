@@ -1064,6 +1064,9 @@ export interface DashboardBlock {
   expectedHarvestDate: string | null;
   expectedStatusChanges: Record<string, string> | null;
 
+  // Status History (actual state change dates)
+  statusChanges?: StatusChange[];
+
   // KPI
   kpi: {
     predictedYieldKg: number;
