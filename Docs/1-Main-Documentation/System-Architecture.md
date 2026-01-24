@@ -1145,6 +1145,59 @@ Response → User
 - performedAt: descending
 ```
 
+#### crop_prices Collection (Sales & Pricing - v1.10.0)
+```javascript
+{
+  _id: ObjectId,
+  priceId: String (UUID),             // Unique price record identifier
+  date: Date,                         // Price date
+
+  // Customer information
+  customerId: String (UUID),          // Reference to customer (CRM)
+  customerName: String,               // Customer name snapshot
+
+  // Farm information
+  farmId: String (UUID),              // Reference to farm
+  farmName: String,                   // Farm name snapshot
+
+  // Product details
+  crop: String,                       // Crop/product name
+  grade: String,                      // Quality grade (A, B, C, premium, etc.)
+
+  // Quantity & pricing
+  quantity: Number,                   // Quantity sold
+  unit: String,                       // Unit of measurement (kg, lbs, etc.)
+  pricePerUnit: Number,               // Price per unit
+  totalPrice: Number,                 // Total transaction price
+  currency: String,                   // Currency code (AED, USD, etc.)
+
+  // Audit
+  createdBy: String (UUID),           // User who recorded price
+  createdAt: Date,                    // When price was recorded
+
+  // Migration tracking
+  _migrated: Boolean,                 // Migrated from old system
+  _oldRef: String (UUID)              // Original reference from old system
+}
+
+// Indexes
+- priceId: unique
+- date: descending (time-series queries)
+- customerId: non-unique (filter by customer)
+- farmId: non-unique (filter by farm)
+- crop: non-unique (filter by crop type)
+- grade: non-unique (filter by quality)
+- _oldRef: non-unique (migration reference)
+```
+
+**Purpose:**
+- Historical pricing data for crops and produce
+- Customer-specific pricing tracking
+- Grade-based pricing analysis
+- Revenue reporting and analytics
+- Market trend analysis
+- Pricing strategy optimization
+
 ### MySQL Tables
 
 #### users Table
@@ -1670,6 +1723,19 @@ logs/
 ---
 
 ## Version History
+
+### v1.10.0 - 2026-01-22
+- ✅ **Data Migration System** implemented
+- ✅ New collection: `crop_prices` for historical pricing data
+- ✅ Migration script for PostgreSQL → MongoDB (11 tables → 8 collections)
+- ✅ SQL parser for PostgreSQL INSERT statements
+- ✅ UUID mapping and reference resolution
+- ✅ Data transformation from old schema to new MongoDB schema
+- ✅ Batch processing for large datasets (harvest_reports: 2.8MB, order_list: 1.8MB)
+- ✅ Comprehensive statistics and error tracking
+- ✅ Index creation for optimal query performance
+- ✅ Migration tracking fields (_migrated, _oldRef) for data lineage
+- ✅ Support for 11 old tables: farms, blocks, plant_data, harvests, customers, vehicles, orders, crop_prices, block_archives
 
 ### v1.9.0 - 2025-12-04
 - ✅ **Inventory Management System** implemented
