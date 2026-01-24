@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CCMWidget, StatWidgetData } from '@a64core/shared';
 import { dashboardService } from '../services/dashboard.service';
+import { dashboardDataService } from '../services/dashboard-data.service';
 import type { Layout } from 'react-grid-layout';
 
 interface WidgetState {
@@ -84,60 +85,55 @@ export const useDashboardStore = create<DashboardState>()(
   loadDashboard: async () => {
     set({ isLoading: true, error: null });
     try {
-      // For now, use mock data until backend is ready
-      // TODO: Uncomment when backend API is available
-      // const layout = await dashboardService.getDashboardLayout();
-
-      // Mock widgets for development
-      const mockWidgets: CCMWidget[] = [
+      // Define widgets with real data sources
+      const widgets: CCMWidget[] = [
         {
-          id: 'sales-summary',
-          title: 'Sales Today',
-          description: 'Total sales for today',
-          dataSource: { type: 'module', moduleName: 'sales', endpoint: '/api/metrics/summary' },
+          id: 'total-farms',
+          title: 'Total Farms',
+          description: 'Number of registered farms',
+          dataSource: { type: 'module', moduleName: 'farm', endpoint: '/api/v1/farm/farms' },
           type: 'stat',
           size: 'medium',
         },
         {
-          id: 'system-health',
-          title: 'System Health',
-          description: 'Overall system status',
-          dataSource: { type: 'system', metric: 'health_score' },
+          id: 'total-blocks',
+          title: 'Total Blocks',
+          description: 'Total cultivation blocks across all farms',
+          dataSource: { type: 'module', moduleName: 'farm', endpoint: '/api/v1/farm/blocks' },
           type: 'stat',
           size: 'medium',
         },
         {
-          id: 'inventory-alerts',
-          title: 'Inventory Alerts',
-          description: 'Products running low on stock',
-          dataSource: { type: 'module', moduleName: 'inventory', endpoint: '/api/alerts/low-stock' },
+          id: 'total-harvests',
+          title: 'Total Harvests',
+          description: 'Completed harvest records',
+          dataSource: { type: 'module', moduleName: 'farm', endpoint: '/api/v1/farm/harvests' },
           type: 'stat',
           size: 'medium',
         },
         {
-          id: 'sales-trend-chart',
-          title: 'Sales Trend',
-          icon: '📈',
-          description: 'Weekly sales performance',
-          dataSource: { type: 'module', moduleName: 'sales', endpoint: '/api/analytics/trend' },
+          id: 'total-orders',
+          title: 'Total Orders',
+          description: 'Sales orders across all customers',
+          dataSource: { type: 'module', moduleName: 'sales', endpoint: '/api/v1/sales/orders' },
+          type: 'stat',
+          size: 'medium',
+        },
+        {
+          id: 'orders-by-status-chart',
+          title: 'Orders by Status',
+          icon: '📊',
+          description: 'Distribution of orders by status',
+          dataSource: { type: 'module', moduleName: 'sales', endpoint: '/api/v1/sales/dashboard' },
           type: 'chart',
           size: 'large',
         },
         {
-          id: 'revenue-breakdown-chart',
-          title: 'Revenue by Category',
-          icon: '💰',
-          description: 'Revenue distribution across product categories',
-          dataSource: { type: 'module', moduleName: 'sales', endpoint: '/api/analytics/revenue-breakdown' },
-          type: 'chart',
-          size: 'medium',
-        },
-        {
-          id: 'user-activity-chart',
-          title: 'User Activity',
-          icon: '👥',
-          description: 'Daily active users over the past week',
-          dataSource: { type: 'system', metric: 'user_activity' },
+          id: 'blocks-by-farm-chart',
+          title: 'Blocks by Farm',
+          icon: '🌾',
+          description: 'Block distribution across farms',
+          dataSource: { type: 'module', moduleName: 'farm', endpoint: '/api/v1/farm/farms' },
           type: 'chart',
           size: 'large',
         },
@@ -146,7 +142,7 @@ export const useDashboardStore = create<DashboardState>()(
       // Generate default layout if not exists or if layout doesn't match widgets
       const currentLayout = get().layout;
       const layoutWidgetIds = currentLayout.map(l => l.i);
-      const widgetIds = mockWidgets.map(w => w.id);
+      const widgetIds = widgets.map(w => w.id);
 
       // Check if any widgets overlap (indicating bad layout)
       const hasOverlaps = currentLayout.some((layout1, i) =>
@@ -163,9 +159,9 @@ export const useDashboardStore = create<DashboardState>()(
                            !hasOverlaps;
 
       // Force regenerate if layout is invalid or has overlaps
-      const newLayout = layoutIsValid ? currentLayout : generateDefaultLayout(mockWidgets);
+      const newLayout = layoutIsValid ? currentLayout : generateDefaultLayout(widgets);
 
-      set({ widgets: mockWidgets, layout: newLayout, isLoading: false });
+      set({ widgets: widgets, layout: newLayout, isLoading: false });
 
       // Load data for all widgets
       await Promise.all(widgetIds.map(id => get().loadWidgetData(id)));
@@ -190,93 +186,94 @@ export const useDashboardStore = create<DashboardState>()(
     }));
 
     try {
-      // For now, use mock data until backend is ready
-      // TODO: Uncomment when backend API is available
-      // const response = await dashboardService.getWidgetData(widgetId);
+      let data: any = null;
 
-      // Mock data for development
-      const mockData: Record<string, any> = {
-        'sales-summary': {
-          value: '$15,234',
-          label: 'Total Sales',
-          trend: 12.5,
-          trendLabel: 'vs yesterday',
-          secondaryMetrics: [
-            { value: '47', label: 'Orders' },
-            { value: '$324', label: 'Avg Order' },
-          ],
-        },
-        'system-health': {
-          value: '98%',
-          label: 'Health Score',
-          trend: 2.1,
-          trendLabel: 'vs last hour',
-          secondaryMetrics: [
-            { value: '3', label: 'Active Alerts' },
-            { value: '12', label: 'Services' },
-          ],
-        },
-        'inventory-alerts': {
-          value: '12',
-          label: 'Low Stock Items',
-          trend: -8.3,
-          trendLabel: 'vs last week',
-          secondaryMetrics: [
-            { value: '3', label: 'Critical' },
-            { value: '9', label: 'Warning' },
-          ],
-        },
-        'sales-trend-chart': {
-          chartType: 'line',
-          data: [
-            { date: 'Mon', sales: 4200, revenue: 12500 },
-            { date: 'Tue', sales: 5100, revenue: 15300 },
-            { date: 'Wed', sales: 3800, revenue: 11400 },
-            { date: 'Thu', sales: 6200, revenue: 18600 },
-            { date: 'Fri', sales: 7300, revenue: 21900 },
-            { date: 'Sat', sales: 8500, revenue: 25500 },
-            { date: 'Sun', sales: 6800, revenue: 20400 },
-          ],
-          xKey: 'date',
-          yKey: 'sales',
-          series: [
-            { name: 'Sales', dataKey: 'sales', color: '#3b82f6' },
-            { name: 'Revenue', dataKey: 'revenue', color: '#10b981' },
-          ],
-        },
-        'revenue-breakdown-chart': {
-          chartType: 'pie',
-          data: [
-            { category: 'Electronics', amount: 45000 },
-            { category: 'Clothing', amount: 32000 },
-            { category: 'Home & Garden', amount: 28000 },
-            { category: 'Sports', amount: 18000 },
-            { category: 'Books', amount: 12000 },
-          ],
-          xKey: 'category',
-          yKey: 'amount',
-        },
-        'user-activity-chart': {
-          chartType: 'bar',
-          data: [
-            { day: 'Mon', active: 320, new: 45 },
-            { day: 'Tue', active: 410, new: 52 },
-            { day: 'Wed', active: 380, new: 38 },
-            { day: 'Thu', active: 450, new: 61 },
-            { day: 'Fri', active: 520, new: 73 },
-            { day: 'Sat', active: 380, new: 42 },
-            { day: 'Sun', active: 290, new: 31 },
-          ],
-          xKey: 'day',
-          yKey: 'active',
-          series: [
-            { name: 'Active Users', dataKey: 'active', color: '#3b82f6' },
-            { name: 'New Users', dataKey: 'new', color: '#10b981' },
-          ],
-        },
-      };
+      // Fetch real data based on widget ID
+      switch (widgetId) {
+        case 'total-farms': {
+          const stats = await dashboardDataService.getFarmStats();
+          data = {
+            value: stats.totalFarms.toString(),
+            label: 'Total Farms',
+            secondaryMetrics: [
+              { value: stats.activeBlocks.toString(), label: 'Active Blocks' },
+            ],
+          };
+          break;
+        }
 
-      const data = mockData[widgetId] || null;
+        case 'total-blocks': {
+          const stats = await dashboardDataService.getFarmStats();
+          data = {
+            value: stats.totalBlocks.toString(),
+            label: 'Total Blocks',
+            secondaryMetrics: [
+              { value: stats.activeBlocks.toString(), label: 'Active' },
+              { value: (stats.totalBlocks - stats.activeBlocks).toString(), label: 'Idle' },
+            ],
+          };
+          break;
+        }
+
+        case 'total-harvests': {
+          const stats = await dashboardDataService.getFarmStats();
+          data = {
+            value: stats.totalHarvests.toString(),
+            label: 'Total Harvests',
+            secondaryMetrics: [
+              { value: stats.totalBlocks.toString(), label: 'Total Blocks' },
+            ],
+          };
+          break;
+        }
+
+        case 'total-orders': {
+          const stats = await dashboardDataService.getSalesStats();
+          data = {
+            value: stats.totalOrders.toString(),
+            label: 'Total Orders',
+            secondaryMetrics: [
+              { value: stats.deliveredOrders.toString(), label: 'Delivered' },
+              { value: stats.processingOrders.toString(), label: 'Processing' },
+            ],
+          };
+          break;
+        }
+
+        case 'orders-by-status-chart': {
+          const orderData = await dashboardDataService.getOrdersByStatus();
+          data = {
+            chartType: 'pie',
+            data: orderData.map(item => ({
+              name: item.status,
+              value: item.count,
+            })),
+            xKey: 'name',
+            yKey: 'value',
+          };
+          break;
+        }
+
+        case 'blocks-by-farm-chart': {
+          const blockData = await dashboardDataService.getBlocksByFarm();
+          data = {
+            chartType: 'bar',
+            data: blockData.map(item => ({
+              farm: item.farmName,
+              blocks: item.blockCount,
+            })),
+            xKey: 'farm',
+            yKey: 'blocks',
+            series: [
+              { name: 'Blocks', dataKey: 'blocks', color: '#3b82f6' },
+            ],
+          };
+          break;
+        }
+
+        default:
+          data = null;
+      }
 
       set((state) => ({
         widgetData: {
