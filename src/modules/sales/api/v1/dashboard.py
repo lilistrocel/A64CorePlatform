@@ -10,6 +10,7 @@ import logging
 from src.modules.sales.services.sales import OrderService, InventoryService, PurchaseOrderService
 from src.modules.sales.middleware.auth import require_permission, CurrentUser
 from src.modules.sales.utils.responses import SuccessResponse
+from src.modules.sales.models import SalesOrderStatus
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +33,13 @@ async def get_dashboard_stats(
 
     # Get order statistics
     # Service returns tuple: (orders_list, total_count, total_pages)
-    orders_list, _, _ = await order_service.get_all_orders(page=1, per_page=1000)
+    # Note: per_page is capped at 100 by service, so we use total_count for accurate stats
+    orders_list, total_orders, _ = await order_service.get_all_orders(page=1, per_page=100)
 
-    total_orders = len(orders_list)
-    confirmed_orders = sum(1 for o in orders_list if o.status == "confirmed")
-    shipped_orders = sum(1 for o in orders_list if o.status == "shipped")
-    delivered_orders = sum(1 for o in orders_list if o.status == "delivered")
+    # Get accurate status counts by querying with status filters
+    _, confirmed_orders, _ = await order_service.get_all_orders(page=1, per_page=1, status=SalesOrderStatus.CONFIRMED)
+    _, shipped_orders, _ = await order_service.get_all_orders(page=1, per_page=1, status=SalesOrderStatus.SHIPPED)
+    _, delivered_orders, _ = await order_service.get_all_orders(page=1, per_page=1, status=SalesOrderStatus.DELIVERED)
 
     # Calculate revenue
     total_revenue = sum(o.total for o in orders_list if hasattr(o, 'total') and o.total)
