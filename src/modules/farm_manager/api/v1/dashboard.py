@@ -124,6 +124,7 @@ async def get_farm_dashboard(
                 plantedDate=block.plantedDate,
                 expectedHarvestDate=block.expectedHarvestDate,
                 expectedStatusChanges=block.expectedStatusChanges,
+                statusChanges=block.statusChanges or [],
                 kpi={
                     "predictedYieldKg": block.kpi.predictedYieldKg,
                     "actualYieldKg": block.kpi.actualYieldKg,

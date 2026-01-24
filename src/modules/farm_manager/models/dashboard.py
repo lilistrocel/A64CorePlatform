@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Literal
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from .block import Block, BlockStatus, PerformanceCategory
+from .block import Block, BlockStatus, PerformanceCategory, StatusChange
 
 
 # ============================================================================
@@ -76,6 +76,9 @@ class DashboardBlock(BaseModel):
     plantedDate: Optional[datetime]
     expectedHarvestDate: Optional[datetime]
     expectedStatusChanges: Optional[Dict[str, datetime]]
+
+    # Status History (actual state change dates)
+    statusChanges: List[StatusChange] = Field(default_factory=list, description="Status change history with actual dates")
 
     # KPI
     kpi: Dict[str, float | int]  # predictedYieldKg, actualYieldKg, yieldEfficiencyPercent, totalHarvests
