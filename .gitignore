@@ -138,3 +138,6 @@ OldData/sql_dumps/
 OldData/*.json
 OldData/*.sql
 .credentials/
+
+# Database backups
+database_backup/
