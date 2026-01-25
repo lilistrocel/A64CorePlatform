@@ -122,6 +122,8 @@ test-results/
 *_test_results_*.json
 test_*.spec.ts
 test_*.py
+test-*.mjs
+test_*.mjs
 
 # Screenshots and images from testing
 *.png
