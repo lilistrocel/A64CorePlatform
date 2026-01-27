@@ -50,8 +50,8 @@ class DashboardDataService {
       await Promise.all(farms.map(async (farm: any) => {
         if (farm.farmId) {
           try {
-            // Get blocks
-            const blocksResponse = await apiClient.get(`/v1/farm/farms/${farm.farmId}/blocks`);
+            // Get blocks (virtual only - physical blocks are just containers)
+            const blocksResponse = await apiClient.get(`/v1/farm/farms/${farm.farmId}/blocks?blockCategory=virtual&perPage=100`);
             const blocks = Array.isArray(blocksResponse.data) ? blocksResponse.data : blocksResponse.data?.data || [];
             totalBlocks += blocks.length;
             activeBlocks += blocks.filter((b: any) => b.state !== 'IDLE' && b.state !== 'MAINTENANCE').length;
@@ -139,7 +139,8 @@ class DashboardDataService {
       await Promise.all(farms.map(async (farm: any) => {
         if (farm.farmId) {
           try {
-            const blocksResponse = await apiClient.get(`/v1/farm/farms/${farm.farmId}/blocks`);
+            // Get virtual blocks only (physical blocks are just containers)
+            const blocksResponse = await apiClient.get(`/v1/farm/farms/${farm.farmId}/blocks?blockCategory=virtual&perPage=100`);
             const blocks = Array.isArray(blocksResponse.data) ? blocksResponse.data : blocksResponse.data?.data || [];
 
             blocksByFarm.push({
