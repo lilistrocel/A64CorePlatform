@@ -133,9 +133,10 @@ export interface FarmSummary {
 export interface Block {
   blockId: string;
   farmId: string;
-  name: string;
+  name: string | null;
   state: BlockState;
-  area: number;
+  area?: number | null;
+  areaUnit?: string;
   maxPlants: number;
   currentPlantingId?: string;
   metadata?: Record<string, unknown>;
@@ -153,6 +154,7 @@ export interface Block {
 
   // Additional fields from backend
   blockCode?: string;
+  legacyBlockCode?: string;
   targetCrop?: string;
   targetCropName?: string;
   actualPlantCount?: number | null;

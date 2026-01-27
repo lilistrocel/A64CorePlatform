@@ -130,9 +130,11 @@ export async function getFarmSummary(farmId: string) {
 
 /**
  * Get all blocks for a farm
+ * @param farmId - Farm ID
+ * @param blockCategory - Filter by block category: 'virtual', 'physical', or 'all' (default: 'virtual')
  */
-export async function getBlocks(farmId: string) {
-  const response = await apiClient.get<{ data: Block[] }>(`/v1/farm/farms/${farmId}/blocks?perPage=100`);
+export async function getBlocks(farmId: string, blockCategory: 'virtual' | 'physical' | 'all' = 'virtual') {
+  const response = await apiClient.get<{ data: Block[] }>(`/v1/farm/farms/${farmId}/blocks?perPage=200&blockCategory=${blockCategory}`);
   return response.data.data;
 }
 

@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { BlockGrid } from './BlockGrid';
+import { PhysicalBlockGrid } from './PhysicalBlockGrid';
 import { CreateBlockModal } from './CreateBlockModal';
 import { EditBlockModal } from './EditBlockModal';
 import { EditFarmModal } from './EditFarmModal';
@@ -289,6 +290,8 @@ export function FarmDetail() {
   const [farm, setFarm] = useState<Farm | null>(null);
   const [summary, setSummary] = useState<FarmSummary | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [physicalBlocks, setPhysicalBlocks] = useState<Block[]>([]);
+  const [virtualBlocks, setVirtualBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -310,15 +313,19 @@ export function FarmDetail() {
       setLoading(true);
       setError(null);
 
-      const [farmData, summaryData, blocksData] = await Promise.all([
+      const [farmData, summaryData, physicalBlocksData, virtualBlocksData] = await Promise.all([
         farmApi.getFarm(farmId),
         farmApi.getFarmSummary(farmId),
-        farmApi.getBlocks(farmId),
+        farmApi.getBlocks(farmId, 'physical'),
+        farmApi.getBlocks(farmId, 'virtual'),
       ]);
 
       setFarm(farmData);
       setSummary(summaryData);
-      setBlocks(blocksData);
+      setPhysicalBlocks(physicalBlocksData);
+      setVirtualBlocks(virtualBlocksData);
+      // Keep combined blocks for backward compatibility with map view
+      setBlocks([...physicalBlocksData, ...virtualBlocksData]);
     } catch (err) {
       setError('Failed to load farm details. Please try again.');
       console.error('Error loading farm data:', err);
@@ -471,7 +478,7 @@ export function FarmDetail() {
             Overview
           </Tab>
           <Tab $active={activeTab === 'blocks'} onClick={() => setActiveTab('blocks')}>
-            Blocks ({summary.totalBlocks})
+            Blocks ({physicalBlocks.length} Physical · {virtualBlocks.length} Plantings)
           </Tab>
           <Tab $active={activeTab === 'map'} onClick={() => setActiveTab('map')}>
             Map
@@ -545,15 +552,10 @@ export function FarmDetail() {
           )}
 
           {activeTab === 'blocks' && (
-            <BlockGrid
-              blocks={blocks}
+            <PhysicalBlockGrid
+              physicalBlocks={physicalBlocks}
+              virtualBlocks={virtualBlocks}
               farmId={farmId!}
-              onCreateBlock={() => setShowCreateModal(true)}
-              onEditBlock={(blockId) => {
-                const block = blocks.find((b) => b.blockId === blockId);
-                if (block) setEditingBlock(block);
-              }}
-              onDeleteBlock={handleDeleteBlock}
               onRefresh={loadFarmData}
             />
           )}
