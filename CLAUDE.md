@@ -228,6 +228,34 @@
 - ❌ Manual browser testing (use Playwright MCP)
 - ❌ Postman/Insomnia screenshots (use Playwright MCP)
 
+### 🚨 CRITICAL: Limit Large MCP Tool Outputs 🚨
+
+**MCP tools can generate very large outputs that consume context. Be efficient:**
+
+1. **Playwright MCP - Minimize Output Size:**
+   - ✅ Use targeted element checks instead of full page snapshots
+   - ✅ Click directly on known element refs rather than searching
+   - ✅ Avoid repeated full-page `browser_snapshot` calls
+   - ✅ Use `browser_wait_for` with specific text instead of time delays + snapshots
+   - ✅ Once you have element refs, reuse them without re-snapshotting
+   - ❌ DON'T take full snapshots after every click
+   - ❌ DON'T navigate through many pages when you can go directly via URL
+   - ❌ DON'T repeat the same verification multiple times
+
+2. **When Testing:**
+   - ✅ Plan your test flow before starting
+   - ✅ Navigate directly to the page you need to test (via URL)
+   - ✅ Take ONE snapshot to get element refs, then interact
+   - ✅ Only take additional snapshots when the page content changes significantly
+   - ✅ Close browser when done testing
+
+3. **Output Too Large?**
+   - If snapshot output exceeds limits, use `Grep` or `Read` on the saved output file
+   - Extract only the specific information you need
+   - Don't try to read the entire large output
+
+**Remember: Efficient MCP usage = more context for actual work**
+
 ### 🚨 CRITICAL: UI Testing is the Ultimate Truth 🚨
 
 **MANDATORY: If it doesn't work in the UI using Playwright, it is NOT working - even if the API works.**

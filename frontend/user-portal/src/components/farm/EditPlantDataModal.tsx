@@ -1160,7 +1160,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
 
                     <FormGroup>
                       <Label htmlFor="currency">Currency</Label>
-                      <Input id="currency" type="text" placeholder="USD, EUR, etc." disabled={submitting} {...register('currency')} />
+                      <Input id="currency" type="text" placeholder="AED, USD, etc." disabled={submitting} {...register('currency')} />
                     </FormGroup>
                   </GridRow>
                 </Section>

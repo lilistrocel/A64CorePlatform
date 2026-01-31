@@ -169,3 +169,78 @@ class QuickHarvestRequest(BaseModel):
     quantityKg: float = Field(..., gt=0, description="Harvested amount in kg")
     qualityGrade: Literal["A", "B", "C"] = Field("A", description="Quality grade")
     notes: Optional[str] = Field(None, description="Optional harvest notes")
+
+
+# ============================================================================
+# DASHBOARD SUMMARY AGGREGATION (Single API Call)
+# ============================================================================
+
+class FarmBlockSummary(BaseModel):
+    """Block count summary for a single farm"""
+    farmId: UUID
+    farmName: str
+    totalBlocks: int
+    empty: int = 0
+    planned: int = 0
+    growing: int = 0
+    fruiting: int = 0
+    harvesting: int = 0
+    cleaning: int = 0
+    alert: int = 0
+    partial: int = 0
+
+
+class FarmHarvestSummary(BaseModel):
+    """Harvest summary for a single farm"""
+    farmId: UUID
+    farmName: str
+    totalKg: float
+    harvestCount: int
+
+
+class DashboardOverview(BaseModel):
+    """High-level dashboard overview metrics"""
+    totalFarms: int = 0
+    totalBlocks: int = 0
+    activePlantings: int = 0
+    upcomingHarvests: int = 0
+
+
+class DashboardBlocksByState(BaseModel):
+    """Block counts grouped by state (across all farms)"""
+    empty: int = 0
+    planned: int = 0
+    growing: int = 0
+    fruiting: int = 0
+    harvesting: int = 0
+    cleaning: int = 0
+    alert: int = 0
+    partial: int = 0
+
+
+class DashboardHarvestSummary(BaseModel):
+    """Harvest data summary"""
+    totalHarvestsKg: float = 0.0
+    harvestsByFarm: List[FarmHarvestSummary] = Field(default_factory=list)
+
+
+class DashboardRecentActivity(BaseModel):
+    """Recent activity counts"""
+    recentHarvests: int = 0
+    pendingTasks: int = 0
+    activeAlerts: int = 0
+
+
+class DashboardSummaryData(BaseModel):
+    """Complete aggregated dashboard data (single API call response)"""
+    overview: DashboardOverview
+    blocksByState: DashboardBlocksByState
+    blocksByFarm: List[FarmBlockSummary]
+    harvestSummary: DashboardHarvestSummary
+    recentActivity: DashboardRecentActivity
+
+
+class DashboardSummaryResponse(BaseModel):
+    """Response wrapper for dashboard summary endpoint"""
+    success: bool = True
+    data: DashboardSummaryData

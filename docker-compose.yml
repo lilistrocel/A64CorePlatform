@@ -14,6 +14,7 @@ services:
       - DEBUG=True
       - MONGODB_URL=mongodb://mongodb:27017
       - MONGODB_DB_NAME=a64core_db
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000

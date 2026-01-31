@@ -218,12 +218,47 @@ class HarvestService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
     ) -> Tuple[List[BlockHarvest], int, int]:
-        """List harvests for a block with pagination and date filters"""
+        """
+        List harvests for a block with pagination and date filters.
+
+        Behavior depends on block category:
+        - Physical blocks: Returns ALL harvests from this block + all child virtual blocks (complete history)
+        - Virtual blocks: Returns ONLY harvests from this block that occurred since the block's plantedDate (current cycle)
+        """
         skip = (page - 1) * per_page
 
-        harvests, total = await HarvestRepository.get_by_block(
-            block_id, skip, per_page, start_date, end_date
-        )
+        # Get block to determine category
+        block = await BlockRepository.get_by_id(block_id)
+        if not block:
+            # Block not found, return empty
+            return [], 0, 0
+
+        if block.blockCategory == 'physical':
+            # Physical block: get all harvests from this block + all child virtual blocks
+            block_ids = [str(block_id)]
+            if block.childBlockIds:
+                block_ids.extend(block.childBlockIds)
+
+            logger.info(f"[Harvest Service] Physical block {block_id}: fetching harvests from {len(block_ids)} blocks (including children)")
+
+            harvests, total = await HarvestRepository.get_harvests_for_multiple_blocks(
+                block_ids, skip, per_page, start_date, end_date
+            )
+        else:
+            # Virtual block: get only harvests since plantedDate (current cycle)
+            effective_start_date = start_date
+
+            # If block has a plantedDate and no explicit start_date, use plantedDate as start
+            if block.plantedDate and not start_date:
+                effective_start_date = block.plantedDate
+                logger.info(f"[Harvest Service] Virtual block {block_id}: filtering harvests from plantedDate {block.plantedDate}")
+            elif block.plantedDate and start_date:
+                # Use the later of the two dates
+                effective_start_date = max(start_date, block.plantedDate)
+
+            harvests, total = await HarvestRepository.get_by_block(
+                block_id, skip, per_page, effective_start_date, end_date
+            )
 
         total_pages = (total + per_page - 1) // per_page
 
@@ -327,5 +362,41 @@ class HarvestService:
 
     @staticmethod
     async def get_harvest_summary(block_id: UUID) -> BlockHarvestSummary:
-        """Get comprehensive harvest summary for a block"""
-        return await HarvestRepository.get_block_summary(block_id)
+        """
+        Get comprehensive harvest summary for a block.
+
+        Behavior depends on block category:
+        - Physical blocks: Returns summary for ALL harvests from this block + all child virtual blocks
+        - Virtual blocks: Returns summary ONLY for this block (current cycle harvests)
+        """
+        # Get block to determine category
+        block = await BlockRepository.get_by_id(block_id)
+        if not block:
+            # Block not found, return empty summary
+            return BlockHarvestSummary(
+                blockId=block_id,
+                totalHarvests=0,
+                totalQuantityKg=0.0,
+                qualityAKg=0.0,
+                qualityBKg=0.0,
+                qualityCKg=0.0,
+                averageQualityGrade="N/A",
+                firstHarvestDate=None,
+                lastHarvestDate=None
+            )
+
+        if block.blockCategory == 'physical':
+            # Physical block: get summary from this block + all child virtual blocks
+            block_ids = [str(block_id)]
+            if block.childBlockIds:
+                block_ids.extend(block.childBlockIds)
+
+            logger.info(f"[Harvest Service] Physical block {block_id}: fetching summary from {len(block_ids)} blocks")
+
+            summary = await HarvestRepository.get_summary_for_multiple_blocks(block_ids)
+            # Set the correct blockId in the summary
+            summary.blockId = block_id
+            return summary
+        else:
+            # Virtual block: get summary for only this block
+            return await HarvestRepository.get_block_summary(block_id)

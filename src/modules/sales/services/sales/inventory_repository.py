@@ -210,3 +210,49 @@ class InventoryRepository:
         collection = self._get_collection()
         count = await collection.count_documents({"inventoryId": str(inventory_id)})
         return count > 0
+
+    async def get_inventory_stats(self) -> dict:
+        """
+        Get aggregated inventory statistics across ALL items.
+
+        Uses MongoDB aggregation pipeline to count items by status.
+
+        Returns:
+            Dict with total, available, reserved, sold counts
+        """
+        collection = self._get_collection()
+
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$status",
+                    "count": {"$sum": 1}
+                }
+            }
+        ]
+
+        results = await collection.aggregate(pipeline).to_list(length=100)
+
+        stats = {
+            "total": 0,
+            "available": 0,
+            "reserved": 0,
+            "sold": 0,
+            "expired": 0
+        }
+
+        for result in results:
+            status = result.get("_id", "")
+            count = result.get("count", 0)
+            stats["total"] += count
+
+            if status == "available":
+                stats["available"] = count
+            elif status == "reserved":
+                stats["reserved"] = count
+            elif status == "sold":
+                stats["sold"] = count
+            elif status == "expired":
+                stats["expired"] = count
+
+        return stats

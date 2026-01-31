@@ -2,11 +2,13 @@
  * FarmDetail Component
  *
  * Displays detailed information about a farm with tabs for different views.
+ * Uses React Query for efficient data fetching and caching.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { useFarm, useFarmSummary, useFarmBlocks } from '../../hooks/queries';
 import { BlockGrid } from './BlockGrid';
 import { PhysicalBlockGrid } from './PhysicalBlockGrid';
 import { CreateBlockModal } from './CreateBlockModal';
@@ -287,51 +289,56 @@ export function FarmDetail() {
   const { farmId } = useParams<{ farmId: string }>();
   const navigate = useNavigate();
 
-  const [farm, setFarm] = useState<Farm | null>(null);
-  const [summary, setSummary] = useState<FarmSummary | null>(null);
-  const [blocks, setBlocks] = useState<Block[]>([]);
-  const [physicalBlocks, setPhysicalBlocks] = useState<Block[]>([]);
-  const [virtualBlocks, setVirtualBlocks] = useState<Block[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use React Query hooks for data fetching with automatic caching
+  const {
+    data: farm,
+    isLoading: farmLoading,
+    error: farmError,
+    refetch: refetchFarm,
+  } = useFarm(farmId);
+
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    error: summaryError,
+    refetch: refetchSummary,
+  } = useFarmSummary(farmId);
+
+  const {
+    data: physicalBlocks = [],
+    isLoading: physicalBlocksLoading,
+    error: physicalBlocksError,
+    refetch: refetchPhysicalBlocks,
+  } = useFarmBlocks(farmId, 'physical');
+
+  const {
+    data: virtualBlocks = [],
+    isLoading: virtualBlocksLoading,
+    error: virtualBlocksError,
+    refetch: refetchVirtualBlocks,
+  } = useFarmBlocks(farmId, 'virtual');
+
+  // Combine blocks for backward compatibility with map view
+  const blocks = [...physicalBlocks, ...virtualBlocks];
+
+  // Combine loading and error states
+  const loading = farmLoading || summaryLoading || physicalBlocksLoading || virtualBlocksLoading;
+  const error = farmError || summaryError || physicalBlocksError || virtualBlocksError;
+
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
   const [showBoundaryModal, setShowBoundaryModal] = useState(false);
   const [showEditFarmModal, setShowEditFarmModal] = useState(false);
 
-  useEffect(() => {
-    if (farmId) {
-      loadFarmData();
-    }
-  }, [farmId]);
-
+  // Refetch all data (used after mutations)
   const loadFarmData = async () => {
-    if (!farmId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [farmData, summaryData, physicalBlocksData, virtualBlocksData] = await Promise.all([
-        farmApi.getFarm(farmId),
-        farmApi.getFarmSummary(farmId),
-        farmApi.getBlocks(farmId, 'physical'),
-        farmApi.getBlocks(farmId, 'virtual'),
-      ]);
-
-      setFarm(farmData);
-      setSummary(summaryData);
-      setPhysicalBlocks(physicalBlocksData);
-      setVirtualBlocks(virtualBlocksData);
-      // Keep combined blocks for backward compatibility with map view
-      setBlocks([...physicalBlocksData, ...virtualBlocksData]);
-    } catch (err) {
-      setError('Failed to load farm details. Please try again.');
-      console.error('Error loading farm data:', err);
-    } finally {
-      setLoading(false);
-    }
+    await Promise.all([
+      refetchFarm(),
+      refetchSummary(),
+      refetchPhysicalBlocks(),
+      refetchVirtualBlocks(),
+    ]);
   };
 
   const handleBack = () => {
@@ -397,14 +404,28 @@ export function FarmDetail() {
     );
   }
 
-  if (error || !farm || !summary) {
+  if (error) {
     return (
       <Container>
         <BackButton onClick={handleBack}>
           <span>←</span>
           <span>Back to Farms</span>
         </BackButton>
-        <ErrorContainer>{error || 'Farm not found'}</ErrorContainer>
+        <ErrorContainer>
+          {error instanceof Error ? error.message : 'Failed to load farm details. Please try again.'}
+        </ErrorContainer>
+      </Container>
+    );
+  }
+
+  if (!farm || !summary) {
+    return (
+      <Container>
+        <BackButton onClick={handleBack}>
+          <span>←</span>
+          <span>Back to Farms</span>
+        </BackButton>
+        <ErrorContainer>Farm not found</ErrorContainer>
       </Container>
     );
   }

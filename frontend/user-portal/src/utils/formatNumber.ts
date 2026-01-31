@@ -98,18 +98,18 @@ export function formatNumber(
  * Format a currency value
  *
  * @param value - The number to format
- * @param currency - Currency code (default: 'USD')
- * @param locale - Locale to use (default: 'en-US')
+ * @param currency - Currency code (default: 'AED')
+ * @param locale - Locale to use (default: 'en-AE')
  * @returns Formatted currency string
  *
  * @example
- * formatCurrency(1234.56)           // "$1,234.56"
+ * formatCurrency(1234.56)           // "AED 1,234.56"
  * formatCurrency(1000, 'EUR', 'de-DE') // "1.000,00 €"
  */
 export function formatCurrency(
   value: number | string | null | undefined,
-  currency: string = 'USD',
-  locale: string = 'en-US'
+  currency: string = 'AED',
+  locale: string = 'en-AE'
 ): string {
   // Handle null/undefined
   if (value === null || value === undefined || value === '') {

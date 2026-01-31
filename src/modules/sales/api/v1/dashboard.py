@@ -11,6 +11,7 @@ from src.modules.sales.services.sales import OrderService, InventoryService, Pur
 from src.modules.sales.middleware.auth import require_permission, CurrentUser
 from src.modules.sales.utils.responses import SuccessResponse
 from src.modules.sales.models import SalesOrderStatus
+from src.core.cache import cache_response
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ router = APIRouter()
     summary="Get sales dashboard statistics",
     description="Get comprehensive sales dashboard statistics including orders, inventory, and purchase orders."
 )
+@cache_response(ttl=30, key_prefix="sales")
 async def get_dashboard_stats(
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     order_service: OrderService = Depends(),
@@ -33,7 +35,6 @@ async def get_dashboard_stats(
 
     # Get order statistics
     # Service returns tuple: (orders_list, total_count, total_pages)
-    # Note: per_page is capped at 100 by service, so we use total_count for accurate stats
     orders_list, total_orders, _ = await order_service.get_all_orders(page=1, per_page=100)
 
     # Get accurate status counts by querying with status filters
@@ -41,22 +42,17 @@ async def get_dashboard_stats(
     _, shipped_orders, _ = await order_service.get_all_orders(page=1, per_page=1, status=SalesOrderStatus.SHIPPED)
     _, delivered_orders, _ = await order_service.get_all_orders(page=1, per_page=1, status=SalesOrderStatus.DELIVERED)
 
-    # Calculate revenue
-    total_revenue = sum(o.total for o in orders_list if hasattr(o, 'total') and o.total)
-    pending_payments = sum(
-        o.total for o in orders_list
-        if hasattr(o, 'paymentStatus') and o.paymentStatus in ["pending", "partial"]
-        and hasattr(o, 'total') and o.total
-    )
+    # Get revenue stats using aggregation (across ALL orders, not just first 100)
+    revenue_stats = await order_service.get_revenue_stats()
+    total_revenue = revenue_stats.get("totalRevenue", 0)
+    pending_payments = revenue_stats.get("pendingPayments", 0)
 
-    # Get inventory statistics
-    # Service returns tuple: (inventory_list, total_count, total_pages)
-    inventory_list, _, _ = await inventory_service.get_all_inventory(page=1, per_page=1000)
-
-    total_inventory = len(inventory_list)
-    available_inventory = sum(1 for i in inventory_list if i.status == "available")
-    reserved_inventory = sum(1 for i in inventory_list if i.status == "reserved")
-    sold_inventory = sum(1 for i in inventory_list if i.status == "sold")
+    # Get inventory statistics using aggregation (across ALL items)
+    inventory_stats = await inventory_service.get_inventory_stats()
+    total_inventory = inventory_stats.get("total", 0)
+    available_inventory = inventory_stats.get("available", 0)
+    reserved_inventory = inventory_stats.get("reserved", 0)
+    sold_inventory = inventory_stats.get("sold", 0)
 
     # Get purchase order statistics
     # Service returns tuple: (po_list, total_count, total_pages)

@@ -19,7 +19,15 @@ from ...models.dashboard import (
     DashboardActivity,
     UpcomingEvent,
     QuickTransitionRequest,
-    QuickHarvestRequest
+    QuickHarvestRequest,
+    DashboardSummaryResponse,
+    DashboardSummaryData,
+    DashboardOverview,
+    DashboardBlocksByState,
+    DashboardHarvestSummary,
+    DashboardRecentActivity,
+    FarmBlockSummary,
+    FarmHarvestSummary
 )
 from ...models.block import Block, BlockStatus
 from ...services.farm.farm_repository import FarmRepository
@@ -27,10 +35,229 @@ from ...services.block.block_repository_new import BlockRepository
 from ...services.block.alert_repository import AlertRepository
 from ...utils.dashboard_calculator import calculate_block_metrics, calculate_farm_summary
 from ...middleware.auth import get_current_user, CurrentUser
+from src.core.cache import cache_response
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+
+# ============================================================================
+# DASHBOARD SUMMARY AGGREGATION ENDPOINT (Optimized - Single Call)
+# ============================================================================
+
+@router.get(
+    "/summary",
+    response_model=DashboardSummaryResponse,
+    summary="Get aggregated dashboard summary",
+    description="Get all dashboard data in a single optimized call using MongoDB aggregation pipelines"
+)
+@cache_response(ttl=30, key_prefix="farm")
+async def get_dashboard_summary(
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """
+    Get complete dashboard summary across all user's farms.
+
+    Uses MongoDB aggregation pipelines to minimize database calls.
+    Replaces 80+ individual API calls with a single optimized query.
+
+    Returns:
+    - Overview metrics (total farms, blocks, active plantings, upcoming harvests)
+    - Block counts by state (across all farms)
+    - Block counts grouped by farm
+    - Harvest totals by farm
+    - Recent activity counts
+    """
+    try:
+        from ...services.database import farm_db
+        from datetime import timedelta
+
+        db = farm_db.get_database()
+
+        # CRITICAL: Use MongoDB aggregation pipelines, NOT loops
+
+        # Step 1: Get all active farms for user
+        farms_pipeline = [
+            {"$match": {"isActive": True}},
+            {"$project": {
+                "farmId": 1,
+                "name": 1,
+                "_id": 0
+            }}
+        ]
+        farms = await db.farms.aggregate(farms_pipeline).to_list(None)
+        farm_ids = [farm["farmId"] for farm in farms]
+
+        # Step 2: Aggregate blocks by state (all farms)
+        blocks_by_state_pipeline = [
+            {"$match": {
+                "farmId": {"$in": farm_ids},
+                "isActive": True,
+                "blockCategory": "virtual"  # Only count virtual blocks (actual plantings)
+            }},
+            {"$group": {
+                "_id": "$state",
+                "count": {"$sum": 1}
+            }}
+        ]
+        blocks_by_state_result = await db.blocks.aggregate(blocks_by_state_pipeline).to_list(None)
+
+        # Convert to dict
+        blocks_by_state_dict = {item["_id"]: item["count"] for item in blocks_by_state_result}
+
+        # Step 3: Aggregate blocks grouped by farm
+        blocks_by_farm_pipeline = [
+            {"$match": {
+                "farmId": {"$in": farm_ids},
+                "isActive": True,
+                "blockCategory": "virtual"
+            }},
+            {"$group": {
+                "_id": {
+                    "farmId": "$farmId",
+                    "state": "$state"
+                },
+                "count": {"$sum": 1}
+            }},
+            {"$group": {
+                "_id": "$_id.farmId",
+                "states": {
+                    "$push": {
+                        "state": "$_id.state",
+                        "count": "$count"
+                    }
+                },
+                "totalBlocks": {"$sum": "$count"}
+            }}
+        ]
+        blocks_by_farm_result = await db.blocks.aggregate(blocks_by_farm_pipeline).to_list(None)
+
+        # Build FarmBlockSummary list
+        blocks_by_farm = []
+        for farm_data in blocks_by_farm_result:
+            farm_id = farm_data["_id"]
+            # Find farm name
+            farm_name = next((f["name"] for f in farms if f["farmId"] == farm_id), "Unknown Farm")
+
+            # Build state counts
+            state_counts = {
+                "empty": 0,
+                "planned": 0,
+                "growing": 0,
+                "fruiting": 0,
+                "harvesting": 0,
+                "cleaning": 0,
+                "alert": 0,
+                "partial": 0
+            }
+            for state_item in farm_data["states"]:
+                state_counts[state_item["state"]] = state_item["count"]
+
+            blocks_by_farm.append(FarmBlockSummary(
+                farmId=farm_id,
+                farmName=farm_name,
+                totalBlocks=farm_data["totalBlocks"],
+                **state_counts
+            ))
+
+        # Step 4: Aggregate harvest totals by farm
+        harvests_by_farm_pipeline = [
+            {"$match": {
+                "farmId": {"$in": farm_ids}
+            }},
+            {"$group": {
+                "_id": "$farmId",
+                "totalKg": {"$sum": "$quantityKg"},
+                "harvestCount": {"$sum": 1}
+            }}
+        ]
+        harvests_by_farm_result = await db.block_harvests.aggregate(harvests_by_farm_pipeline).to_list(None)
+
+        harvests_by_farm = []
+        total_harvests_kg = 0.0
+        for harvest_data in harvests_by_farm_result:
+            farm_id = harvest_data["_id"]
+            farm_name = next((f["name"] for f in farms if f["farmId"] == farm_id), "Unknown Farm")
+            total_kg = harvest_data["totalKg"]
+
+            harvests_by_farm.append(FarmHarvestSummary(
+                farmId=farm_id,
+                farmName=farm_name,
+                totalKg=total_kg,
+                harvestCount=harvest_data["harvestCount"]
+            ))
+            total_harvests_kg += total_kg
+
+        # Step 5: Count active alerts
+        active_alerts_count = await db.block_alerts.count_documents({
+            "farmId": {"$in": farm_ids},
+            "status": {"$in": ["open", "in_progress"]}
+        })
+
+        # Step 6: Count recent harvests (last 7 days)
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        recent_harvests_count = await db.block_harvests.count_documents({
+            "farmId": {"$in": farm_ids},
+            "harvestDate": {"$gte": seven_days_ago}
+        })
+
+        # Step 7: Count pending tasks (if task system exists)
+        pending_tasks_count = 0  # Placeholder - implement when task system is ready
+
+        # Calculate overview metrics
+        total_blocks = sum(blocks_by_state_dict.values())
+        active_plantings = sum([
+            blocks_by_state_dict.get("planned", 0),
+            blocks_by_state_dict.get("growing", 0),
+            blocks_by_state_dict.get("fruiting", 0),
+            blocks_by_state_dict.get("harvesting", 0)
+        ])
+        upcoming_harvests = blocks_by_state_dict.get("harvesting", 0)
+
+        # Build response
+        summary_data = DashboardSummaryData(
+            overview=DashboardOverview(
+                totalFarms=len(farms),
+                totalBlocks=total_blocks,
+                activePlantings=active_plantings,
+                upcomingHarvests=upcoming_harvests
+            ),
+            blocksByState=DashboardBlocksByState(
+                empty=blocks_by_state_dict.get("empty", 0),
+                planned=blocks_by_state_dict.get("planned", 0),
+                growing=blocks_by_state_dict.get("growing", 0),
+                fruiting=blocks_by_state_dict.get("fruiting", 0),
+                harvesting=blocks_by_state_dict.get("harvesting", 0),
+                cleaning=blocks_by_state_dict.get("cleaning", 0),
+                alert=blocks_by_state_dict.get("alert", 0),
+                partial=blocks_by_state_dict.get("partial", 0)
+            ),
+            blocksByFarm=blocks_by_farm,
+            harvestSummary=DashboardHarvestSummary(
+                totalHarvestsKg=total_harvests_kg,
+                harvestsByFarm=harvests_by_farm
+            ),
+            recentActivity=DashboardRecentActivity(
+                recentHarvests=recent_harvests_count,
+                pendingTasks=pending_tasks_count,
+                activeAlerts=active_alerts_count
+            )
+        )
+
+        logger.info(
+            f"[Dashboard Summary] User {current_user.email}: {len(farms)} farms, "
+            f"{total_blocks} blocks, {active_plantings} active plantings"
+        )
+
+        return DashboardSummaryResponse(
+            success=True,
+            data=summary_data
+        )
+
+    except Exception as e:
+        logger.error(f"[Dashboard Summary] Error: {str(e)}", exc_info=True)
+        raise HTTPException(500, f"Failed to load dashboard summary: {str(e)}")
 
 
 # ============================================================================
@@ -79,8 +306,10 @@ async def get_farm_dashboard(
             managerEmail=farm.managerEmail if hasattr(farm, 'managerEmail') else None
         )
 
-        # Get all blocks for farm
-        blocks, total = await BlockRepository.get_by_farm(farmId, skip=0, limit=1000)
+        # Get virtual blocks for farm (physical blocks are just containers)
+        blocks, total = await BlockRepository.get_by_farm(
+            farmId, skip=0, limit=1000, block_category='virtual'
+        )
 
         logger.info(f"[Dashboard] Found {total} blocks for farm {farmId}")
 
@@ -328,8 +557,10 @@ async def get_recent_activity(farm_id: UUID, days: int = 7) -> List[DashboardAct
     activities: List[DashboardActivity] = []
 
     try:
-        # Get all blocks for farm
-        blocks, _ = await BlockRepository.get_by_farm(farm_id, skip=0, limit=1000)
+        # Get virtual blocks for farm (physical blocks are just containers)
+        blocks, _ = await BlockRepository.get_by_farm(
+            farm_id, skip=0, limit=1000, block_category='virtual'
+        )
 
         cutoff_date = datetime.utcnow() - timedelta(days=days)
 

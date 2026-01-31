@@ -160,6 +160,8 @@ export interface Block {
   actualPlantCount?: number | null;
   plantedDate?: string | null;
   expectedHarvestDate?: string | null;
+  expectedStatusChanges?: Record<string, string> | null;
+  statusChanges?: StatusChange[];
   kpi?: {
     predictedYieldKg: number;
     actualYieldKg: number;

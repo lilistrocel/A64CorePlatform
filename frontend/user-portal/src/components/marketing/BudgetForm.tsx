@@ -21,7 +21,7 @@ const ErrorText = styled.div`color: #EF4444; font-size: 13px; margin-top: 8px;`;
 export function BudgetForm({ budget, onClose }: BudgetFormProps) {
   const [formData, setFormData] = useState({
     name: budget?.name || '', year: budget?.year || new Date().getFullYear(), quarter: budget?.quarter || 0, totalAmount: budget?.totalAmount || 0,
-    currency: budget?.currency || 'USD', status: budget?.status || 'draft',
+    currency: budget?.currency || 'AED', status: budget?.status || 'draft',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +75,7 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
             </Select>
           </FormGroup>
           <FormGroup><Label>Total Amount *</Label><Input type="number" name="totalAmount" value={formData.totalAmount} onChange={handleChange} required min="0" step="0.01" /></FormGroup>
-          <FormGroup><Label>Currency</Label><Input name="currency" value={formData.currency} onChange={handleChange} maxLength={3} placeholder="USD" /></FormGroup>
+          <FormGroup><Label>Currency</Label><Input name="currency" value={formData.currency} onChange={handleChange} maxLength={3} placeholder="AED" /></FormGroup>
           <FormGroup>
             <Label>Status</Label>
             <Select name="status" value={formData.status} onChange={handleChange}>

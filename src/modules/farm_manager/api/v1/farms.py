@@ -17,6 +17,7 @@ from ...services.farm.farm_analytics_service import FarmAnalyticsService
 from ...services.global_analytics_service import GlobalAnalyticsService
 from ...middleware.auth import get_current_active_user, require_permission, CurrentUser
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
+from src.core.cache import cache_response
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ async def create_farm(
     summary="Get all farms",
     description="Get all farms with pagination. Users see only their assigned farms unless admin."
 )
+@cache_response(ttl=60, key_prefix="farm")
 async def get_farms(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),

@@ -217,3 +217,12 @@ class InventoryService:
 
         logger.info(f"Inventory item deleted: {inventory_id}")
         return {"message": "Inventory item deleted successfully"}
+
+    async def get_inventory_stats(self) -> dict:
+        """
+        Get aggregated inventory statistics across ALL items.
+
+        Returns:
+            Dict with total, available, reserved, sold counts
+        """
+        return await self.repository.get_inventory_stats()

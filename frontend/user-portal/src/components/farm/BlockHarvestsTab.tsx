@@ -343,6 +343,65 @@ const DangerButton = styled.button`
   }
 `;
 
+const VirtualBlockInfoBanner = styled.div`
+  background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+`;
+
+const BannerTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const BannerText = styled.div`
+  font-size: 13px;
+  color: #3b82f6;
+  line-height: 1.5;
+`;
+
+const ViewHistoryLink = styled.button`
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background 150ms ease-in-out;
+
+  &:hover {
+    background: #2563eb;
+  }
+`;
+
+const PhysicalBlockBanner = styled.div`
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+`;
+
+const PhysicalBannerTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #065f46;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -350,10 +409,15 @@ const DangerButton = styled.button`
 interface BlockHarvestsTabProps {
   farmId: string;
   blockId: string;
+  blockCategory?: 'physical' | 'virtual';
+  parentBlockId?: string;
+  plantedDate?: string;
   onRefresh?: () => void;
+  onNavigateToBlock?: (blockId: string) => void;
 }
 
-export function BlockHarvestsTab({ farmId, blockId, onRefresh }: BlockHarvestsTabProps) {
+export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId, plantedDate, onRefresh, onNavigateToBlock }: BlockHarvestsTabProps) {
+  const isVirtualBlock = blockCategory === 'virtual';
   const [harvests, setHarvests] = useState<BlockHarvest[]>([]);
   const [summary, setSummary] = useState<BlockHarvestSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -412,8 +476,46 @@ export function BlockHarvestsTab({ farmId, blockId, onRefresh }: BlockHarvestsTa
     return <LoadingState>Loading harvests...</LoadingState>;
   }
 
+  // Handle navigation to parent physical block for full history
+  const handleViewFullHistory = () => {
+    if (parentBlockId && onNavigateToBlock) {
+      onNavigateToBlock(parentBlockId);
+    }
+  };
+
   return (
     <Container>
+      {/* Virtual Block Info Banner */}
+      {isVirtualBlock && (
+        <VirtualBlockInfoBanner>
+          <BannerTitle>
+            <span>&#x1F331;</span> Current Crop Cycle Harvests
+          </BannerTitle>
+          <BannerText>
+            This virtual block shows harvests from the current crop cycle only
+            {plantedDate && ` (since ${farmApi.formatDateForDisplay(plantedDate)})`}.
+            Historical harvests from previous cycles are stored in the parent physical block.
+          </BannerText>
+          {parentBlockId && onNavigateToBlock && (
+            <ViewHistoryLink onClick={handleViewFullHistory}>
+              View Full Harvest History
+            </ViewHistoryLink>
+          )}
+        </VirtualBlockInfoBanner>
+      )}
+
+      {/* Physical Block Info Banner */}
+      {blockCategory === 'physical' && (
+        <PhysicalBlockBanner>
+          <PhysicalBannerTitle>
+            <span>&#x1F4CA;</span> Complete Harvest History
+          </PhysicalBannerTitle>
+          <BannerText style={{ color: '#047857' }}>
+            This physical block displays all historical harvests across all crop cycles and virtual blocks.
+          </BannerText>
+        </PhysicalBlockBanner>
+      )}
+
       <Header>
         <Title>{harvests.length} Total Harvests</Title>
         <Button $variant="primary" onClick={() => setShowRecordModal(true)}>

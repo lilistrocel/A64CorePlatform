@@ -1,96 +1,142 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'styled-components';
+import { Suspense, lazy } from 'react';
 import { theme, GlobalStyles } from '@a64core/shared';
-import { Login } from './pages/auth/Login';
-import { Register } from './pages/auth/Register';
-import { Dashboard } from './pages/dashboard/Dashboard';
-import { Profile } from './pages/profile/Profile';
-import { Settings } from './pages/settings/Settings';
-import { FarmManager } from './pages/farm/FarmManager';
-import { OperationsDashboard } from './pages/operations/OperationsDashboard';
-import { FarmBlocksView } from './pages/operations/FarmBlocksView';
-import { BlockTaskList } from './pages/operations/BlockTaskList';
-import { AIAnalytics } from './pages/ai/AIAnalytics';
-import { ClearCache } from './pages/debug/ClearCache';
-import { InventoryDashboard } from './pages/inventory/InventoryDashboard';
-import { CRMPage } from './pages/crm/CRMPage';
-import { CustomerDetailPage } from './pages/crm/CustomerDetailPage';
-import { HRDashboardPage } from './pages/hr/HRDashboardPage';
-import { EmployeeListPage } from './pages/hr/EmployeeListPage';
-import { EmployeeDetailPage } from './pages/hr/EmployeeDetailPage';
-import { LogisticsDashboardPage } from './pages/logistics/LogisticsDashboardPage';
-import { VehicleManagementPage } from './pages/logistics/VehicleManagementPage';
-import { RouteManagementPage } from './pages/logistics/RouteManagementPage';
-import { ShipmentTrackingPage } from './pages/logistics/ShipmentTrackingPage';
-import { SalesDashboardPage } from './pages/sales/SalesDashboardPage';
-import { SalesOrdersPage } from './pages/sales/SalesOrdersPage';
-import { InventoryPage } from './pages/sales/InventoryPage';
-import { PurchaseOrdersPage } from './pages/sales/PurchaseOrdersPage';
-import { MarketingDashboardPage } from './pages/marketing/MarketingDashboardPage';
-import { CampaignManagementPage } from './pages/marketing/CampaignManagementPage';
-import { BudgetManagementPage } from './pages/marketing/BudgetManagementPage';
-import { EventManagementPage } from './pages/marketing/EventManagementPage';
-import { ChannelManagementPage } from './pages/marketing/ChannelManagementPage';
+import { queryClient } from './config/react-query.config';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 
+// Loading component for suspense fallback
+const PageLoader = () => (
+  <div style={{
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    fontSize: '1.2rem',
+    color: '#666'
+  }}>
+    Loading...
+  </div>
+);
+
+// Lazy load all page components for code splitting
+// Auth pages (small, load immediately for login)
+const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
+const Register = lazy(() => import('./pages/auth/Register').then(m => ({ default: m.Register })));
+
+// Core pages
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
+const Profile = lazy(() => import('./pages/profile/Profile').then(m => ({ default: m.Profile })));
+const Settings = lazy(() => import('./pages/settings/Settings').then(m => ({ default: m.Settings })));
+
+// Farm module (heavy - maps and charts)
+const FarmManager = lazy(() => import('./pages/farm/FarmManager').then(m => ({ default: m.FarmManager })));
+
+// Operations module
+const OperationsDashboard = lazy(() => import('./pages/operations/OperationsDashboard').then(m => ({ default: m.OperationsDashboard })));
+const FarmBlocksView = lazy(() => import('./pages/operations/FarmBlocksView').then(m => ({ default: m.FarmBlocksView })));
+const BlockTaskList = lazy(() => import('./pages/operations/BlockTaskList').then(m => ({ default: m.BlockTaskList })));
+
+// AI Analytics (loads Gemini client)
+const AIAnalytics = lazy(() => import('./pages/ai/AIAnalytics').then(m => ({ default: m.AIAnalytics })));
+
+// Inventory module
+const InventoryDashboard = lazy(() => import('./pages/inventory/InventoryDashboard').then(m => ({ default: m.InventoryDashboard })));
+
+// CRM module
+const CRMPage = lazy(() => import('./pages/crm/CRMPage').then(m => ({ default: m.CRMPage })));
+const CustomerDetailPage = lazy(() => import('./pages/crm/CustomerDetailPage').then(m => ({ default: m.CustomerDetailPage })));
+
+// HR module
+const HRDashboardPage = lazy(() => import('./pages/hr/HRDashboardPage').then(m => ({ default: m.HRDashboardPage })));
+const EmployeeListPage = lazy(() => import('./pages/hr/EmployeeListPage').then(m => ({ default: m.EmployeeListPage })));
+const EmployeeDetailPage = lazy(() => import('./pages/hr/EmployeeDetailPage').then(m => ({ default: m.EmployeeDetailPage })));
+
+// Logistics module
+const LogisticsDashboardPage = lazy(() => import('./pages/logistics/LogisticsDashboardPage').then(m => ({ default: m.LogisticsDashboardPage })));
+const VehicleManagementPage = lazy(() => import('./pages/logistics/VehicleManagementPage').then(m => ({ default: m.VehicleManagementPage })));
+const RouteManagementPage = lazy(() => import('./pages/logistics/RouteManagementPage').then(m => ({ default: m.RouteManagementPage })));
+const ShipmentTrackingPage = lazy(() => import('./pages/logistics/ShipmentTrackingPage').then(m => ({ default: m.ShipmentTrackingPage })));
+
+// Sales module
+const SalesDashboardPage = lazy(() => import('./pages/sales/SalesDashboardPage').then(m => ({ default: m.SalesDashboardPage })));
+const SalesOrdersPage = lazy(() => import('./pages/sales/SalesOrdersPage').then(m => ({ default: m.SalesOrdersPage })));
+const InventoryPage = lazy(() => import('./pages/sales/InventoryPage').then(m => ({ default: m.InventoryPage })));
+const PurchaseOrdersPage = lazy(() => import('./pages/sales/PurchaseOrdersPage').then(m => ({ default: m.PurchaseOrdersPage })));
+
+// Marketing module
+const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
+const CampaignManagementPage = lazy(() => import('./pages/marketing/CampaignManagementPage').then(m => ({ default: m.CampaignManagementPage })));
+const BudgetManagementPage = lazy(() => import('./pages/marketing/BudgetManagementPage').then(m => ({ default: m.BudgetManagementPage })));
+const EventManagementPage = lazy(() => import('./pages/marketing/EventManagementPage').then(m => ({ default: m.EventManagementPage })));
+const ChannelManagementPage = lazy(() => import('./pages/marketing/ChannelManagementPage').then(m => ({ default: m.ChannelManagementPage })));
+
+// Debug pages
+const ClearCache = lazy(() => import('./pages/debug/ClearCache').then(m => ({ default: m.ClearCache })));
+
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <GlobalStyles />
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <GlobalStyles />
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* Debug routes (development only) */}
-          <Route path="/debug/clear-cache" element={<ClearCache />} />
+            {/* Debug routes (development only) */}
+            <Route path="/debug/clear-cache" element={<ClearCache />} />
 
-          {/* Protected routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<MainLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/farm/*" element={<FarmManager />} />
-              <Route path="/operations" element={<OperationsDashboard />} />
-              <Route path="/operations/:farmId" element={<FarmBlocksView />} />
-              <Route path="/operations/:farmId/:blockId" element={<BlockTaskList />} />
-              <Route path="/inventory/*" element={<InventoryDashboard />} />
-              <Route path="/crm/customers" element={<CRMPage />} />
-              <Route path="/crm/customers/:customerId" element={<CustomerDetailPage />} />
-              <Route path="/hr" element={<HRDashboardPage />} />
-              <Route path="/hr/employees" element={<EmployeeListPage />} />
-              <Route path="/hr/employees/:employeeId" element={<EmployeeDetailPage />} />
-              <Route path="/logistics" element={<LogisticsDashboardPage />} />
-              <Route path="/logistics/vehicles" element={<VehicleManagementPage />} />
-              <Route path="/logistics/routes" element={<RouteManagementPage />} />
-              <Route path="/logistics/shipments" element={<ShipmentTrackingPage />} />
-              <Route path="/sales" element={<SalesDashboardPage />} />
-              <Route path="/sales/orders" element={<SalesOrdersPage />} />
-              <Route path="/sales/inventory" element={<InventoryPage />} />
-              <Route path="/sales/purchase-orders" element={<PurchaseOrdersPage />} />
-              <Route path="/marketing" element={<MarketingDashboardPage />} />
-              <Route path="/marketing/campaigns" element={<CampaignManagementPage />} />
-              <Route path="/marketing/budgets" element={<BudgetManagementPage />} />
-              <Route path="/marketing/events" element={<EventManagementPage />} />
-              <Route path="/marketing/channels" element={<ChannelManagementPage />} />
-              <Route path="/ai-analytics" element={<AIAnalytics />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<MainLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/farm/*" element={<FarmManager />} />
+                <Route path="/operations" element={<OperationsDashboard />} />
+                <Route path="/operations/:farmId" element={<FarmBlocksView />} />
+                <Route path="/operations/:farmId/:blockId" element={<BlockTaskList />} />
+                <Route path="/inventory/*" element={<InventoryDashboard />} />
+                <Route path="/crm/customers" element={<CRMPage />} />
+                <Route path="/crm/customers/:customerId" element={<CustomerDetailPage />} />
+                <Route path="/hr" element={<HRDashboardPage />} />
+                <Route path="/hr/employees" element={<EmployeeListPage />} />
+                <Route path="/hr/employees/:employeeId" element={<EmployeeDetailPage />} />
+                <Route path="/logistics" element={<LogisticsDashboardPage />} />
+                <Route path="/logistics/vehicles" element={<VehicleManagementPage />} />
+                <Route path="/logistics/routes" element={<RouteManagementPage />} />
+                <Route path="/logistics/shipments" element={<ShipmentTrackingPage />} />
+                <Route path="/sales" element={<SalesDashboardPage />} />
+                <Route path="/sales/orders" element={<SalesOrdersPage />} />
+                <Route path="/sales/inventory" element={<InventoryPage />} />
+                <Route path="/sales/purchase-orders" element={<PurchaseOrdersPage />} />
+                <Route path="/marketing" element={<MarketingDashboardPage />} />
+                <Route path="/marketing/campaigns" element={<CampaignManagementPage />} />
+                <Route path="/marketing/budgets" element={<BudgetManagementPage />} />
+                <Route path="/marketing/events" element={<EventManagementPage />} />
+                <Route path="/marketing/channels" element={<ChannelManagementPage />} />
+                <Route path="/ai-analytics" element={<AIAnalytics />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

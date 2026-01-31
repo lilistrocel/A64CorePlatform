@@ -203,7 +203,7 @@ class GeminiService:
                 # Use more tokens for reports (they can be longer than queries)
                 generation_config = self._create_generation_config(
                     temperature=0.3,  # Slightly higher for more creative reports
-                    max_output_tokens=4096  # Reports need more tokens than query generation
+                    max_output_tokens=8192  # Increased to prevent truncation
                 )
 
                 response = self.model.generate_content(
@@ -431,6 +431,59 @@ RULES:
             logger.error(f"Response text (first 1000 chars): {response_text[:1000]}")
             raise ValueError(f"Invalid JSON response from Gemini: {e}")
 
+    def _repair_truncated_json(self, text: str) -> str:
+        """
+        Attempt to repair truncated JSON by closing open brackets and braces.
+        """
+        # Count open brackets/braces
+        open_braces = text.count('{') - text.count('}')
+        open_brackets = text.count('[') - text.count(']')
+
+        # Remove any trailing incomplete string (ends with unclosed quote)
+        if text.count('"') % 2 == 1:
+            # Find last quote and truncate there, then close the string
+            last_quote = text.rfind('"')
+            text = text[:last_quote] + '..."'
+
+        # Close open brackets/braces
+        text = text.rstrip(',\n\t ')  # Remove trailing commas/whitespace
+        text += ']' * open_brackets
+        text += '}' * open_braces
+
+        return text
+
+    def _create_fallback_report(self, response_text: str, error: Exception) -> Dict[str, Any]:
+        """
+        Create a fallback report when JSON parsing fails completely.
+        Extracts what data we can from the truncated response.
+        """
+        import re
+
+        # Try to extract summary
+        summary_match = re.search(r'"summary"\s*:\s*"([^"]+)', response_text)
+        summary = summary_match.group(1) if summary_match else "Report generation was interrupted. Please try again."
+
+        # Try to extract insights
+        insights = []
+        insight_matches = re.findall(r'"([^"]{20,200})"', response_text)
+        for match in insight_matches[:3]:
+            if any(word in match.lower() for word in ['farm', 'block', 'yield', 'harvest', 'crop', 'performance']):
+                insights.append(match)
+
+        if not insights:
+            insights = ["Analysis was partially completed. Please try rephrasing your question."]
+
+        logger.warning(f"Created fallback report due to JSON parse error: {error}")
+
+        return {
+            "summary": summary,
+            "insights": insights,
+            "statistics": {},
+            "visualization_suggestions": [],
+            "markdown": f"## Analysis Results\n\n{summary}\n\n**Note:** The full report could not be generated. Please try again.",
+            "_fallback": True
+        }
+
     def _parse_report_response(self, response_text: str) -> Dict[str, Any]:
         """
         Parse report generation response.
@@ -459,7 +512,14 @@ RULES:
         except json.JSONDecodeError as e:
             logger.warning(f"Initial JSON parse failed: {e}, trying repair strategies...")
 
-            # Strategy 2: Try to fix truncated JSON by finding last complete brace
+            # Strategy 2: Try to repair truncated JSON
+            try:
+                repaired = self._repair_truncated_json(response_text)
+                return json.loads(repaired)
+            except json.JSONDecodeError:
+                pass
+
+            # Strategy 3: Try to find last complete brace
             try:
                 last_brace = response_text.rfind('}')
                 if last_brace > 0:
@@ -468,7 +528,7 @@ RULES:
             except json.JSONDecodeError:
                 pass
 
-            # Strategy 3: Try to extract JSON using regex (find outermost braces)
+            # Strategy 4: Try to extract JSON using regex (find outermost braces)
             try:
                 json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
                 if json_match:
@@ -476,10 +536,9 @@ RULES:
             except json.JSONDecodeError:
                 pass
 
-            # All strategies failed - log and raise error
-            logger.error(f"Failed to parse JSON response after all strategies: {e}")
-            logger.error(f"Response text (first 1000 chars): {response_text[:1000]}")
-            raise ValueError(f"Invalid JSON response from Gemini: {e}")
+            # Strategy 5: Return a fallback response with extracted data
+            logger.warning(f"All JSON parse strategies failed, creating fallback report")
+            return self._create_fallback_report(response_text, e)
 
     def _estimate_cost(self, response: Any) -> Dict[str, Any]:
         """

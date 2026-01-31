@@ -227,7 +227,8 @@ async def get_inventory_summary(
     """Get inventory summary for dashboard"""
     farm_filter = {"farmId": str(farm_id)} if farm_id else {}
 
-    # Harvest inventory stats
+    # Harvest inventory stats from Farm Manager's inventory_harvest collection
+    # This collection contains aggregated harvest data grouped by farm + crop + grade + productType
     harvest_pipeline = [
         {"$match": farm_filter},
         {"$group": {

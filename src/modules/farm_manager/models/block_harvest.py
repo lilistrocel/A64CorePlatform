@@ -5,8 +5,9 @@ Represents individual harvest events for blocks (daily harvests).
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Union, Any
 from uuid import UUID, uuid4
+from datetime import datetime
 from pydantic import BaseModel, Field
 from enum import Enum
 
@@ -41,13 +42,16 @@ class BlockHarvestUpdate(BaseModel):
 class HarvestMetadata(BaseModel):
     """Optional metadata for harvest records (e.g., from migrations)"""
     migratedFrom: Optional[str] = None
-    migratedAt: Optional[str] = None
+    migratedAt: Optional[Union[str, datetime]] = None  # Accept both string and datetime
+    recordedByMigratedAt: Optional[Union[str, datetime]] = None  # From recordedBy fix migration
     oldRef: Optional[str] = None
     oldFarmBlockRef: Optional[str] = None
     harvestSeason: Optional[int] = None
     viewingYear: Optional[int] = None
     crop: Optional[str] = None
     mainBlock: Optional[str] = None
+    legacyBlockCode: Optional[str] = None  # From field rename migration
+    season: Optional[Union[str, int]] = None  # Accept both string and int from legacy data
 
     class Config:
         extra = "allow"  # Allow additional fields

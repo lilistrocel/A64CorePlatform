@@ -160,6 +160,14 @@ class BlockKPI(BaseModel):
         return self.performance_category.value.upper()
 
 
+class HistoricalKPI(BaseModel):
+    """Historical KPI metrics for physical blocks (aggregated from completed virtual block cycles)"""
+    totalYieldKg: float = Field(0.0, ge=0, description="Sum of all yield from completed cycles")
+    totalHarvests: int = Field(0, ge=0, description="Total harvest events across all completed cycles")
+    completedCycles: int = Field(0, ge=0, description="Number of completed growing cycles")
+    avgYieldPerCycle: float = Field(0.0, ge=0, description="Average yield per completed cycle")
+
+
 class BlockBase(BaseModel):
     """Base block fields"""
     name: Optional[str] = Field(None, max_length=200, description="Optional block name")
@@ -222,6 +230,7 @@ class Block(BlockBase):
     """Complete block model with all fields"""
     blockId: UUID = Field(default_factory=uuid4, description="Unique block identifier")
     blockCode: Optional[str] = Field(None, description="Human-readable code (e.g., F001-005)")
+    legacyBlockCode: Optional[str] = Field(None, description="Original block code from legacy system (e.g., A-31, A-31-002)")
     farmId: UUID = Field(..., description="Farm this block belongs to")
     farmCode: Optional[str] = Field(None, description="Farm numeric code (e.g., F001)")
     sequenceNumber: Optional[int] = Field(None, ge=1, description="Block sequence number")
@@ -247,6 +256,9 @@ class Block(BlockBase):
 
     # KPI Tracking
     kpi: BlockKPI = Field(default_factory=BlockKPI, description="Block KPI metrics")
+
+    # Historical KPI (physical blocks only - aggregated from completed virtual block cycles)
+    historicalKpi: Optional[HistoricalKPI] = Field(None, description="Physical blocks: aggregated KPIs from completed cycles")
 
     # Cycle Tracking
     plantedDate: Optional[datetime] = Field(None, description="When planting started")

@@ -268,3 +268,134 @@ class HarvestRepository:
         """Get number of harvest events for a block"""
         db = farm_db.get_database()
         return await db.block_harvests.count_documents({"blockId": str(block_id)})
+
+    @staticmethod
+    async def get_harvests_for_multiple_blocks(
+        block_ids: List[str],
+        skip: int = 0,
+        limit: int = 100,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ) -> Tuple[List[BlockHarvest], int]:
+        """
+        Get harvests for multiple blocks (used for physical block + all children).
+        Returns combined harvests from all specified block IDs.
+        """
+        db = farm_db.get_database()
+
+        if not block_ids:
+            return [], 0
+
+        # Build query for multiple blocks
+        query = {"blockId": {"$in": block_ids}}
+
+        if start_date or end_date:
+            query["harvestDate"] = {}
+            if start_date:
+                query["harvestDate"]["$gte"] = start_date
+            if end_date:
+                query["harvestDate"]["$lte"] = end_date
+
+        # Get total count
+        total = await db.block_harvests.count_documents(query)
+
+        # Get paginated results (most recent first)
+        cursor = db.block_harvests.find(query).sort("harvestDate", -1).skip(skip).limit(limit)
+        harvest_docs = await cursor.to_list(length=limit)
+
+        harvests = [BlockHarvest(**doc) for doc in harvest_docs]
+
+        return harvests, total
+
+    @staticmethod
+    async def get_summary_for_multiple_blocks(block_ids: List[str]) -> BlockHarvestSummary:
+        """
+        Get combined harvest summary for multiple blocks.
+        Used for physical block history (includes all child virtual blocks).
+        """
+        db = farm_db.get_database()
+
+        if not block_ids:
+            return BlockHarvestSummary(
+                blockId=UUID("00000000-0000-0000-0000-000000000000"),
+                totalHarvests=0,
+                totalQuantityKg=0.0,
+                qualityAKg=0.0,
+                qualityBKg=0.0,
+                qualityCKg=0.0,
+                averageQualityGrade="N/A",
+                firstHarvestDate=None,
+                lastHarvestDate=None
+            )
+
+        pipeline = [
+            {"$match": {"blockId": {"$in": block_ids}}},
+            {
+                "$group": {
+                    "_id": None,
+                    "totalHarvests": {"$sum": 1},
+                    "totalQuantityKg": {"$sum": "$quantityKg"},
+                    "qualityAKg": {
+                        "$sum": {
+                            "$cond": [{"$eq": ["$qualityGrade", "A"]}, "$quantityKg", 0]
+                        }
+                    },
+                    "qualityBKg": {
+                        "$sum": {
+                            "$cond": [{"$eq": ["$qualityGrade", "B"]}, "$quantityKg", 0]
+                        }
+                    },
+                    "qualityCKg": {
+                        "$sum": {
+                            "$cond": [{"$eq": ["$qualityGrade", "C"]}, "$quantityKg", 0]
+                        }
+                    },
+                    "firstHarvestDate": {"$min": "$harvestDate"},
+                    "lastHarvestDate": {"$max": "$harvestDate"}
+                }
+            }
+        ]
+
+        result = await db.block_harvests.aggregate(pipeline).to_list(length=1)
+
+        if not result:
+            return BlockHarvestSummary(
+                blockId=UUID("00000000-0000-0000-0000-000000000000"),
+                totalHarvests=0,
+                totalQuantityKg=0.0,
+                qualityAKg=0.0,
+                qualityBKg=0.0,
+                qualityCKg=0.0,
+                averageQualityGrade="N/A",
+                firstHarvestDate=None,
+                lastHarvestDate=None
+            )
+
+        data = result[0]
+
+        # Calculate average quality grade
+        total_kg = data["totalQuantityKg"]
+        if total_kg > 0:
+            a_percent = (data["qualityAKg"] / total_kg) * 100
+            b_percent = (data["qualityBKg"] / total_kg) * 100
+
+            if a_percent >= 60:
+                avg_grade = "A"
+            elif a_percent + b_percent >= 80:
+                avg_grade = "B"
+            else:
+                avg_grade = "C"
+        else:
+            avg_grade = "N/A"
+
+        return BlockHarvestSummary(
+            blockId=UUID("00000000-0000-0000-0000-000000000000"),  # Placeholder for combined
+            totalHarvests=data["totalHarvests"],
+            totalQuantityKg=data["totalQuantityKg"],
+            qualityAKg=data["qualityAKg"],
+            qualityBKg=data["qualityBKg"],
+            qualityCKg=data["qualityCKg"],
+            averageQualityGrade=avg_grade,
+            firstHarvestDate=data.get("firstHarvestDate"),
+            lastHarvestDate=data.get("lastHarvestDate")
+        )

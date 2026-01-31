@@ -13,6 +13,26 @@ from pydantic import BaseModel, Field
 from .spacing_standards import SpacingCategory
 
 
+class DataContributor(BaseModel):
+    """External data contributor information"""
+    name: str = Field(..., description="Contributor's name")
+    organization: Optional[str] = Field(None, description="Organization name")
+    email: Optional[str] = Field(None, description="Contact email")
+    website: Optional[str] = Field(None, description="Website URL")
+    contributedAt: Optional[str] = Field(None, description="Date of contribution (e.g., 'January 2024')")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Tayeb",
+                "organization": "Agrinova",
+                "email": "tayeb@agrinovame.com",
+                "website": "agrinovame.com",
+                "contributedAt": "January 2024"
+            }
+        }
+
+
 class PlantDataBase(BaseModel):
     """Base plant data fields"""
     # Identification
@@ -47,6 +67,9 @@ class PlantDataBase(BaseModel):
     notes: Optional[str] = Field(None, description="Additional cultivation notes")
     tags: Optional[List[str]] = Field(None, description="Search tags")
 
+    # Data contributor (external source attribution)
+    contributor: Optional[DataContributor] = Field(None, description="External data contributor")
+
 
 class PlantDataCreate(PlantDataBase):
     """Schema for creating new plant data"""
@@ -70,6 +93,7 @@ class PlantDataUpdate(BaseModel):
     spacingCategory: Optional[SpacingCategory] = None
     notes: Optional[str] = None
     tags: Optional[List[str]] = None
+    contributor: Optional[DataContributor] = None
 
 
 class PlantData(PlantDataBase):
@@ -104,6 +128,13 @@ class PlantData(PlantDataBase):
                 "spacingCategory": "l",
                 "notes": "Requires staking, prune suckers",
                 "tags": ["vegetable", "fruit", "summer"],
+                "contributor": {
+                    "name": "Tayeb",
+                    "organization": "Agrinova",
+                    "email": "tayeb@agrinovame.com",
+                    "website": "agrinovame.com",
+                    "contributedAt": "January 2024"
+                },
                 "dataVersion": 1,
                 "createdBy": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "createdByEmail": "agronomist@example.com",

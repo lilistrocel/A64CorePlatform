@@ -21,6 +21,7 @@ from .services.database import mongodb
 from .services.port_manager import init_port_manager, get_port_manager
 from .services.module_manager import module_manager
 from .core.plugin_system import get_plugin_manager
+from .core.cache import get_redis_cache, close_redis_cache
 
 # Configure logging
 logging.basicConfig(
@@ -112,6 +113,16 @@ async def startup_event() -> None:
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
 
+    # Connect to Redis Cache
+    try:
+        cache = await get_redis_cache()
+        if cache.is_available:
+            logger.info("Redis cache connected successfully")
+        else:
+            logger.warning("Redis cache unavailable - caching disabled, using direct DB queries")
+    except Exception as e:
+        logger.warning(f"Redis cache connection failed: {e}. Caching disabled.")
+
     # Initialize Port Manager
     try:
         await init_port_manager(mongodb.get_database())
@@ -141,6 +152,10 @@ async def shutdown_event() -> None:
     # Disconnect from MongoDB
     await mongodb.disconnect()
     logger.info("Database connection closed")
+
+    # Disconnect from Redis Cache
+    await close_redis_cache()
+    logger.info("Redis cache connection closed")
 
 # Run the application
 if __name__ == "__main__":

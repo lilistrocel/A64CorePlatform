@@ -12,6 +12,7 @@ import logging
 
 from ...models.farm import Farm, FarmCreate, FarmUpdate
 from .farm_repository import FarmRepository
+from src.core.cache import get_redis_cache
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,10 @@ class FarmService:
 
             farm = await self.repository.create(farm_data, manager_id, manager_email)
             logger.info(f"Farm created: {farm.farmId} by manager {manager_id}")
+
+            # Invalidate farm list and dashboard caches
+            await self._invalidate_farm_caches()
+
             return farm
 
         except HTTPException:
@@ -178,6 +183,10 @@ class FarmService:
             )
 
         logger.info(f"Farm updated: {farm_id} by user {user_id}")
+
+        # Invalidate farm list and dashboard caches
+        await self._invalidate_farm_caches()
+
         return updated_farm
 
     async def delete_farm(self, farm_id: UUID, user_id: UUID) -> dict:
@@ -215,4 +224,32 @@ class FarmService:
             )
 
         logger.info(f"Farm deleted: {farm_id} by user {user_id}")
+
+        # Invalidate farm list and dashboard caches
+        await self._invalidate_farm_caches()
+
         return {"message": "Farm deleted successfully"}
+
+    async def _invalidate_farm_caches(self) -> None:
+        """
+        Invalidate all farm-related caches after mutations.
+
+        Invalidates:
+        - Farm list caches (get_farms)
+        - Dashboard summary caches (get_dashboard_summary)
+        """
+        try:
+            cache = await get_redis_cache()
+
+            if cache.is_available:
+                # Invalidate farm list caches (all variations with different params)
+                await cache.delete_pattern("get_farms:*", prefix="farm")
+
+                # Invalidate dashboard summary caches
+                await cache.delete_pattern("get_dashboard_summary:*", prefix="farm")
+
+                logger.info("[Cache] Invalidated farm and dashboard caches after mutation")
+
+        except Exception as e:
+            # CRITICAL: Never break the application due to cache errors
+            logger.warning(f"[Cache] Error invalidating farm caches: {str(e)}")

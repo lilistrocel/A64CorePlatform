@@ -68,6 +68,17 @@ const StatValue = styled.div`
   color: #212121;
 `;
 
+const CurrencyValue = styled.div`
+  font-size: 24px;
+  font-weight: 600;
+  color: #212121;
+  word-break: break-word;
+
+  @media (max-width: 1200px) {
+    font-size: 20px;
+  }
+`;
+
 const WidgetsRow = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -281,16 +292,16 @@ export function SalesDashboardPage() {
       <StatsGrid>
         <StatCard>
           <StatLabel>Total Revenue</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>
+          <CurrencyValue style={{ color: '#10B981' }}>
             {salesApi.formatCurrency(stats.totalRevenue)}
-          </StatValue>
+          </CurrencyValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Pending Payments</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>
+          <CurrencyValue style={{ color: '#F59E0B' }}>
             {salesApi.formatCurrency(stats.pendingPayments)}
-          </StatValue>
+          </CurrencyValue>
         </StatCard>
 
         <StatCard>

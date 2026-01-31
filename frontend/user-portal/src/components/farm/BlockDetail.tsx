@@ -743,7 +743,15 @@ export function BlockDetail() {
           )}
 
           {activeTab === 'harvests' && farmId && blockId && (
-            <BlockHarvestsTab farmId={farmId} blockId={blockId} onRefresh={loadBlockData} />
+            <BlockHarvestsTab
+              farmId={farmId}
+              blockId={blockId}
+              blockCategory={block?.blockCategory}
+              parentBlockId={block?.parentBlockId || undefined}
+              plantedDate={block?.plantedDate || undefined}
+              onRefresh={loadBlockData}
+              onNavigateToBlock={(targetBlockId) => navigate(`/farm/farms/${farmId}/blocks/${targetBlockId}`)}
+            />
           )}
 
           {activeTab === 'archives' && farmId && blockId && (

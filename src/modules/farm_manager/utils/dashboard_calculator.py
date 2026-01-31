@@ -36,12 +36,32 @@ async def calculate_block_metrics(
     # ==================================================
 
     # Days in current state
+    days_in_state = 0
+
+    # First try: use actual statusChanges history
     last_change = block.statusChanges[-1] if block.statusChanges else None
-    days_in_state = (
-        (now - last_change.changedAt).days
-        if last_change
-        else 0
-    )
+    if last_change and last_change.changedAt:
+        days_in_state = (now - last_change.changedAt).days
+
+    # Fallback: use expectedStatusChanges if no actual history
+    elif block.expectedStatusChanges:
+        current_state_date = block.expectedStatusChanges.get(block.state.value)
+        if current_state_date:
+            # Handle string dates from migration (ISO format)
+            if isinstance(current_state_date, str):
+                try:
+                    current_state_date = datetime.fromisoformat(current_state_date.replace('Z', '+00:00'))
+                except ValueError:
+                    current_state_date = None
+
+            if current_state_date:
+                days_diff = (now - current_state_date).days
+                # Only use positive values (state should have started by now)
+                days_in_state = max(0, days_diff)
+
+    # Final fallback: use plantedDate for total days since planting
+    elif block.plantedDate:
+        days_in_state = (now - block.plantedDate).days
 
     # Next transition
     expected_next_date = None
@@ -63,7 +83,15 @@ async def calculate_block_metrics(
             expected_next_date = block.expectedStatusChanges.get(next_state)
 
             if expected_next_date:
-                days_until_next = (expected_next_date.date() - now.date()).days
+                # Handle string dates from migration (ISO format)
+                if isinstance(expected_next_date, str):
+                    try:
+                        expected_next_date = datetime.fromisoformat(expected_next_date.replace('Z', '+00:00'))
+                    except ValueError:
+                        expected_next_date = None
+
+                if expected_next_date:
+                    days_until_next = (expected_next_date.date() - now.date()).days
 
     # Delay calculation
     is_delayed = False

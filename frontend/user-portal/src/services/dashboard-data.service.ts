@@ -33,9 +33,98 @@ export interface BlocksByFarmData {
   blockCount: number;
 }
 
+// New aggregated dashboard summary types
+export interface DashboardOverview {
+  totalFarms: number;
+  totalBlocks: number;
+  activePlantings: number;
+  upcomingHarvests: number;
+}
+
+export interface DashboardBlocksByState {
+  empty: number;
+  planned: number;
+  growing: number;
+  fruiting: number;
+  harvesting: number;
+  cleaning: number;
+  alert: number;
+  partial: number;
+}
+
+export interface FarmBlockSummary {
+  farmId: string;
+  farmName: string;
+  totalBlocks: number;
+  empty: number;
+  planned: number;
+  growing: number;
+  fruiting: number;
+  harvesting: number;
+  cleaning: number;
+  alert: number;
+  partial: number;
+}
+
+export interface FarmHarvestSummary {
+  farmId: string;
+  farmName: string;
+  totalKg: number;
+  harvestCount: number;
+}
+
+export interface DashboardHarvestSummary {
+  totalHarvestsKg: number;
+  harvestsByFarm: FarmHarvestSummary[];
+}
+
+export interface DashboardRecentActivity {
+  recentHarvests: number;
+  pendingTasks: number;
+  activeAlerts: number;
+}
+
+export interface DashboardSummaryData {
+  overview: DashboardOverview;
+  blocksByState: DashboardBlocksByState;
+  blocksByFarm: FarmBlockSummary[];
+  harvestSummary: DashboardHarvestSummary;
+  recentActivity: DashboardRecentActivity;
+}
+
+export interface DashboardSummaryResponse {
+  success: boolean;
+  data: DashboardSummaryData;
+}
+
 class DashboardDataService {
   /**
+   * Get complete dashboard summary in a single optimized call
+   *
+   * Replaces 80+ individual API calls with one aggregated endpoint.
+   * Uses MongoDB aggregation pipelines for maximum performance.
+   */
+  async getDashboardSummary(): Promise<DashboardSummaryData> {
+    try {
+      const response = await apiClient.get<DashboardSummaryResponse>('/v1/farm/dashboard/summary');
+      const responseData = response.data?.data || response.data;
+
+      // Handle both wrapped and unwrapped responses
+      if ('success' in response.data && response.data.success) {
+        return response.data.data;
+      }
+
+      return responseData as DashboardSummaryData;
+    } catch (error) {
+      console.error('Error fetching dashboard summary:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get farm statistics
+   *
+   * @deprecated Use getDashboardSummary() instead for better performance
    */
   async getFarmStats(): Promise<FarmStats> {
     try {

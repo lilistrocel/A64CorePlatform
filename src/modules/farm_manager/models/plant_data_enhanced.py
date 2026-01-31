@@ -13,6 +13,8 @@ from enum import Enum
 
 # Import spacing category from spacing_standards module
 from .spacing_standards import SpacingCategory
+# Import DataContributor from plant_data module
+from .plant_data import DataContributor
 
 
 # ==================== Enums and Type Definitions ====================

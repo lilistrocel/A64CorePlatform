@@ -22,6 +22,7 @@ from .archive_repository import ArchiveRepository
 from ...models.block_archive import BlockArchive, QualityBreakdown, AlertsSummary
 from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
 from ..task.task_generator import TaskGeneratorService
+from src.core.cache import get_redis_cache
 
 logger = logging.getLogger(__name__)
 
@@ -715,6 +716,10 @@ class BlockService:
             raise HTTPException(500, "Failed to update block status")
 
         logger.info(f"[Block Service] Changed status for block {block_id}: {current_block.state.value} → {new_status.value}")
+
+        # Invalidate dashboard caches after block status change
+        await BlockService._invalidate_dashboard_caches()
+
         return block
 
     @staticmethod
@@ -1049,3 +1054,25 @@ class BlockService:
         )
 
         return updated_block
+
+    @staticmethod
+    async def _invalidate_dashboard_caches() -> None:
+        """
+        Invalidate dashboard caches after block mutations.
+
+        Invalidates:
+        - Dashboard summary caches (get_dashboard_summary)
+        - Farm-specific dashboard caches
+        """
+        try:
+            cache = await get_redis_cache()
+
+            if cache.is_available:
+                # Invalidate dashboard summary caches
+                await cache.delete_pattern("get_dashboard_summary:*", prefix="farm")
+
+                logger.info("[Cache] Invalidated dashboard caches after block mutation")
+
+        except Exception as e:
+            # CRITICAL: Never break the application due to cache errors
+            logger.warning(f"[Cache] Error invalidating dashboard caches: {str(e)}")

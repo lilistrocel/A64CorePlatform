@@ -441,7 +441,7 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
     defaultValues: {
       plantType: 'vegetable',
       farmTypeCompatibility: [],
-      currency: 'USD',
+      currency: 'AED',
       yieldUnit: 'kg',
       waterAmountUnit: 'L',
     },
@@ -1121,7 +1121,7 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
                       <Input
                         id="currency"
                         type="text"
-                        placeholder="USD, EUR, etc."
+                        placeholder="AED, USD, etc."
                         disabled={submitting}
                         {...register('currency')}
                       />

@@ -245,3 +245,44 @@ class OrderRepository:
         collection = self._get_collection()
         count = await collection.count_documents({"orderId": str(order_id)})
         return count > 0
+
+    async def get_revenue_stats(self) -> dict:
+        """
+        Get aggregated revenue statistics across ALL orders.
+
+        Uses MongoDB aggregation pipeline to calculate:
+        - Total revenue from all orders
+        - Pending payments (orders with pending/partial payment status)
+
+        Returns:
+            Dict with totalRevenue and pendingPayments
+        """
+        collection = self._get_collection()
+
+        pipeline = [
+            {
+                "$group": {
+                    "_id": None,
+                    "totalRevenue": {"$sum": {"$ifNull": ["$total", 0]}},
+                    "pendingPayments": {
+                        "$sum": {
+                            "$cond": [
+                                {"$in": ["$paymentStatus", ["pending", "partial"]]},
+                                {"$ifNull": ["$total", 0]},
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        ]
+
+        results = await collection.aggregate(pipeline).to_list(length=1)
+
+        if results:
+            return {
+                "totalRevenue": round(results[0].get("totalRevenue", 0), 2),
+                "pendingPayments": round(results[0].get("pendingPayments", 0), 2)
+            }
+
+        return {"totalRevenue": 0, "pendingPayments": 0}

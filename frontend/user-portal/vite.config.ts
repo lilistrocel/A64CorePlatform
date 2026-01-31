@@ -14,6 +14,33 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'styled-components'], // Pre-bundle these dependencies
   },
+  build: {
+    // Code splitting configuration
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React libraries
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // UI framework
+          'vendor-ui': ['styled-components', 'lucide-react'],
+          // Charts library (heavy)
+          'vendor-charts': ['recharts'],
+          // Map libraries (very heavy)
+          'vendor-maps': ['maplibre-gl', '@turf/turf'],
+          // Form and state management
+          'vendor-state': ['zustand', 'react-hook-form', '@hookform/resolvers', 'zod'],
+          // HTTP and data fetching
+          'vendor-data': ['axios', '@tanstack/react-query'],
+        },
+      },
+    },
+    // Increase chunk size warning limit (we're optimizing, not hiding)
+    chunkSizeWarningLimit: 600,
+    // Enable source maps for debugging (optional, remove for smaller builds)
+    sourcemap: false,
+    // Minification settings (esbuild is default and faster)
+    minify: 'esbuild',
+  },
   server: {
     host: '0.0.0.0', // Listen on all network interfaces
     port: 5173,
@@ -24,6 +51,8 @@ export default defineConfig({
       'user-portal', // Allow nginx to proxy requests in Docker network
       'a64core.com', // Production domain
       '.a64core.com', // Production subdomains
+      'a20core.com', // Cloudflare tunnel domain
+      '.a20core.com', // Cloudflare tunnel subdomains
     ],
     headers: {
       // Disable caching in development to prevent cache issues
@@ -33,9 +62,10 @@ export default defineConfig({
       'Surrogate-Control': 'no-store',
     },
     proxy: {
-      // Proxy all API requests through nginx (works both in Docker and local dev)
+      // Proxy all API requests through nginx
+      // Uses localhost for local dev, nginx for Docker
       '/api': {
-        target: 'http://nginx',
+        target: process.env.VITE_API_TARGET || 'http://localhost',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path,  // Keep path as-is

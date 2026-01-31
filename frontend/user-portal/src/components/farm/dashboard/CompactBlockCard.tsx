@@ -700,8 +700,10 @@ const CapacityPercent = styled.div`
 
 const StateInfo = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 4px;
 `;
 
 const InfoItem = styled.div`
@@ -726,6 +728,8 @@ const DelayBadge = styled.div<{ $color: string }>`
   color: white;
   font-size: 10px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 `;
 
 const Timeline = styled.div`

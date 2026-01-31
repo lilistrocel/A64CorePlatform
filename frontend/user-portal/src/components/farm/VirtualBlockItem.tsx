@@ -113,11 +113,35 @@ export function VirtualBlockItem({ virtualBlock, farmId }: VirtualBlockItemProps
 
   // Calculate days in current state
   const calculateDaysInState = (): number => {
+    const currentState = virtualBlock.state;
+    const now = new Date();
+
+    // First, try to use actual statusChanges if available
+    if (virtualBlock.statusChanges && virtualBlock.statusChanges.length > 0) {
+      // Find the most recent status change to current state
+      const currentStateChange = [...virtualBlock.statusChanges]
+        .reverse()
+        .find(sc => sc.status === currentState);
+      if (currentStateChange?.changedAt) {
+        const stateStartDate = new Date(currentStateChange.changedAt);
+        const diffMs = now.getTime() - stateStartDate.getTime();
+        return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      }
+    }
+
+    // Fall back to expectedStatusChanges (predicted dates)
+    if (virtualBlock.expectedStatusChanges && virtualBlock.expectedStatusChanges[currentState]) {
+      const expectedStateDate = new Date(virtualBlock.expectedStatusChanges[currentState]);
+      const diffMs = now.getTime() - expectedStateDate.getTime();
+      // Only return positive values (state should have started by now)
+      return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    }
+
+    // Final fallback: use plantedDate for total days since planting
     if (!virtualBlock.plantedDate) return 0;
     const planted = new Date(virtualBlock.plantedDate);
-    const now = new Date();
     const diffMs = now.getTime() - planted.getTime();
-    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
   };
 
   const daysInState = calculateDaysInState();

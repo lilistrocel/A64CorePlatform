@@ -14,6 +14,7 @@ import logging
 from ...models.sales_order import SalesOrder, SalesOrderCreate, SalesOrderUpdate, SalesOrderStatus
 from .order_repository import OrderRepository
 from ..database import sales_db
+from src.core.cache import get_redis_cache
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,10 @@ class OrderService:
 
             order = await self.repository.create(order_data, created_by)
             logger.info(f"Sales order created: {order.orderId} by user {created_by}")
+
+            # Invalidate sales dashboard cache
+            await self._invalidate_sales_dashboard_cache()
+
             return order
 
         except HTTPException:
@@ -214,6 +219,10 @@ class OrderService:
             )
 
         logger.info(f"Sales order updated: {order_id}")
+
+        # Invalidate sales dashboard cache
+        await self._invalidate_sales_dashboard_cache()
+
         return updated_order
 
     async def update_order_status(
@@ -272,3 +281,32 @@ class OrderService:
 
         logger.info(f"Sales order deleted: {order_id}")
         return {"message": "Sales order deleted successfully"}
+
+    async def get_revenue_stats(self) -> dict:
+        """
+        Get aggregated revenue statistics across ALL orders.
+
+        Returns:
+            Dict with totalRevenue and pendingPayments
+        """
+        return await self.repository.get_revenue_stats()
+
+    async def _invalidate_sales_dashboard_cache(self) -> None:
+        """
+        Invalidate sales dashboard caches after mutations.
+
+        Invalidates:
+        - Sales dashboard statistics (get_dashboard_stats)
+        """
+        try:
+            cache = await get_redis_cache()
+
+            if cache.is_available:
+                # Invalidate sales dashboard caches
+                await cache.delete_pattern("get_dashboard_stats:*", prefix="sales")
+
+                logger.info("[Cache] Invalidated sales dashboard caches after order mutation")
+
+        except Exception as e:
+            # CRITICAL: Never break the application due to cache errors
+            logger.warning(f"[Cache] Error invalidating sales dashboard caches: {str(e)}")

@@ -380,8 +380,14 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
         <div>
           <BlockIcon>{getStateIcon(block.state)}</BlockIcon>
           <BlockName onClick={() => navigate(`/farm/farms/${farmId}/blocks/${block.blockId}`)}>
-            {block.name}
+            {block.name || block.targetCropName || block.blockCode}
           </BlockName>
+          {block.blockCode && (
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              {block.blockCode}
+              {block.legacyBlockCode && ` (${block.legacyBlockCode})`}
+            </div>
+          )}
         </div>
         <StateBadge $color={stateColor}>{stateLabel}</StateBadge>
       </Header>
@@ -390,10 +396,15 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
         <StatItem>
           <StatLabel>Area</StatLabel>
           <StatValue>
-            {block.areaUnit === 'sqm' || block.areaUnit === 'sqft'
-              ? `${formatNumber((block.area ?? 0) / 10000, { decimals: 2 })} ha`
-              : `${formatNumber(block.area, { decimals: 2 })} ${block.areaUnit || 'ha'}`
-            }
+            {(() => {
+              // Use allocatedArea for virtual blocks, area for physical
+              const areaValue = block.allocatedArea || block.area || 0;
+              const unit = block.areaUnit || 'sqm';
+              if (unit === 'sqm' || unit === 'sqft') {
+                return `${formatNumber(areaValue / 10000, { decimals: 2 })} ha`;
+              }
+              return `${formatNumber(areaValue, { decimals: 2 })} ${unit}`;
+            })()}
           </StatValue>
         </StatItem>
         <StatItem>

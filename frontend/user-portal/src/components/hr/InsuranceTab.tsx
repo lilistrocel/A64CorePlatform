@@ -411,8 +411,8 @@ export function InsuranceTab({ employeeId }: InsuranceTabProps) {
                 <div>Policy: {ins.policyNumber}</div>
                 <div>Start: {formatDate(ins.startDate)}</div>
                 {ins.endDate && <div>End: {formatDate(ins.endDate)}</div>}
-                {ins.coverage && <div>Coverage: {formatCurrency(ins.coverage, 'USD')}</div>}
-                {ins.monthlyCost && <div>Monthly Cost: {formatCurrency(ins.monthlyCost, 'USD')}</div>}
+                {ins.coverage && <div>Coverage: {formatCurrency(ins.coverage)}</div>}
+                {ins.monthlyCost && <div>Monthly Cost: {formatCurrency(ins.monthlyCost)}</div>}
               </CardDetails>
               <Actions>
                 <ActionButton onClick={() => handleEdit(ins)}>Edit</ActionButton>

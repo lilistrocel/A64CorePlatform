@@ -13,6 +13,7 @@ from ...models.plant_data import PlantData, PlantDataCreate, PlantDataUpdate
 from ...services.plant_data import PlantDataService
 from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
+from src.core.cache import cache_response
 
 router = APIRouter(prefix="/plant-data", tags=["plant-data"])
 
@@ -55,6 +56,7 @@ async def create_plant_data(
     response_model=PaginatedResponse[PlantData],
     summary="List plant data"
 )
+@cache_response(ttl=300, key_prefix="farm")
 async def list_plant_data(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
