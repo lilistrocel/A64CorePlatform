@@ -141,3 +141,23 @@ OldData/*.sql
 
 # Database backups
 database_backup/
+
+# Test artifacts and screenshots
+test-screenshots/
+test-screenshots-detailed/
+test_block_monitor.js
+check_farms_api.mjs
+
+# Temporary files
+cloudflared.deb
+dashboard-optimization-summary.md
+REACT_QUERY_IMPLEMENTATION.md
+
+# Session documentation (generated during dev sessions)
+*_TEST_REPORT.md
+*_SUMMARY.md
+*_DIAGRAM.md
+COMPONENT_HIERARCHY_DIAGRAM.md
+HIERARCHICAL_BLOCKS_VISUAL_SUMMARY.md
+IMPLEMENTATION_SUMMARY_PHYSICAL_BLOCKS.md
+TEST_PLAN_PHYSICAL_BLOCKS.md
