@@ -40,13 +40,13 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
-# CORS Middleware
+# CORS Middleware - Restricted to specific methods and headers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
 )
 
 # Global exception handler
@@ -105,6 +105,14 @@ async def startup_event() -> None:
     logger.info("Starting A64 Core Platform API Hub...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Debug mode: {settings.DEBUG}")
+
+    # Security warnings for production readiness
+    if settings.SECRET_KEY == "dev_secret_key_change_in_production":
+        logger.warning("SECURITY: Using default SECRET_KEY - set a strong key via environment variable for production!")
+    if settings.DEBUG and settings.ENVIRONMENT == "production":
+        logger.warning("SECURITY: DEBUG mode is enabled in production - this exposes sensitive error details!")
+    if settings.ENVIRONMENT == "production" and "localhost" in str(settings.ALLOWED_ORIGINS):
+        logger.warning("SECURITY: localhost origins allowed in production CORS settings")
 
     # Connect to MongoDB
     try:
