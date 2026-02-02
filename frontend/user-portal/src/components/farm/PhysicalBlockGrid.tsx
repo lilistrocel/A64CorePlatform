@@ -19,6 +19,7 @@ export interface PhysicalBlockGridProps {
   virtualBlocks: Block[];
   farmId: string;
   onRefresh?: () => void;
+  onCreateBlock?: () => void;
 }
 
 // ============================================================================
@@ -114,6 +115,25 @@ const EmptyDescription = styled.p`
   margin: 0;
 `;
 
+const CreateButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #10B981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #059669;
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -125,6 +145,7 @@ export function PhysicalBlockGrid({
   virtualBlocks,
   farmId,
   onRefresh,
+  onCreateBlock,
 }: PhysicalBlockGridProps) {
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -150,21 +171,29 @@ export function PhysicalBlockGrid({
 
     if (filter === 'with-plantings') {
       return physicalBlocks.filter((pb) => {
+        // Check if physical block itself has a planting
+        // Exclude: empty, cleaning, partial (partial = has virtual children, not a direct planting)
+        const physicalBlockHasPlanting =
+          pb.state !== 'empty' && pb.state !== 'cleaning' && pb.state !== 'partial';
+        // Check virtual block children
         const children = virtualBlocksByParent.get(pb.blockId) || [];
         const activePlantings = children.filter(
           (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
         );
-        return activePlantings.length > 0;
+        return physicalBlockHasPlanting || activePlantings.length > 0;
       });
     }
 
     if (filter === 'empty') {
       return physicalBlocks.filter((pb) => {
+        // Physical block must be in 'empty' state (not 'cleaning')
+        const isPhysicalBlockEmpty = pb.state === 'empty';
+        // Check virtual block children
         const children = virtualBlocksByParent.get(pb.blockId) || [];
         const activePlantings = children.filter(
           (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
         );
-        return activePlantings.length === 0;
+        return isPhysicalBlockEmpty && activePlantings.length === 0;
       });
     }
 
@@ -174,13 +203,25 @@ export function PhysicalBlockGrid({
   // Calculate counts for filters
   const totalPhysicalBlocks = physicalBlocks.length;
   const blocksWithPlantings = physicalBlocks.filter((pb) => {
+    // Check if physical block itself has a planting
+    // Exclude: empty, cleaning, partial (partial = has virtual children, not a direct planting)
+    const physicalBlockHasPlanting =
+      pb.state !== 'empty' && pb.state !== 'cleaning' && pb.state !== 'partial';
+    // Check virtual block children
     const children = virtualBlocksByParent.get(pb.blockId) || [];
     const activePlantings = children.filter(
       (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
     );
-    return activePlantings.length > 0;
+    return physicalBlockHasPlanting || activePlantings.length > 0;
   }).length;
-  const emptyBlocks = totalPhysicalBlocks - blocksWithPlantings;
+  const emptyBlocks = physicalBlocks.filter((pb) => {
+    const isPhysicalBlockEmpty = pb.state === 'empty';
+    const children = virtualBlocksByParent.get(pb.blockId) || [];
+    const activePlantings = children.filter(
+      (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
+    );
+    return isPhysicalBlockEmpty && activePlantings.length === 0;
+  }).length;
 
   return (
     <Container>
@@ -191,6 +232,12 @@ export function PhysicalBlockGrid({
             {totalPhysicalBlocks} physical blocks · {virtualBlocks.length} total plantings
           </BlockCount>
         </div>
+        {onCreateBlock && (
+          <CreateButton onClick={onCreateBlock}>
+            <span>+</span>
+            <span>Create Block</span>
+          </CreateButton>
+        )}
       </Header>
 
       <FilterBar>

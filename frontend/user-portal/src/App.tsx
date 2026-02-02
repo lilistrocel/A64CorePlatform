@@ -65,6 +65,10 @@ const SalesDashboardPage = lazy(() => import('./pages/sales/SalesDashboardPage')
 const SalesOrdersPage = lazy(() => import('./pages/sales/SalesOrdersPage').then(m => ({ default: m.SalesOrdersPage })));
 const InventoryPage = lazy(() => import('./pages/sales/InventoryPage').then(m => ({ default: m.InventoryPage })));
 const PurchaseOrdersPage = lazy(() => import('./pages/sales/PurchaseOrdersPage').then(m => ({ default: m.PurchaseOrdersPage })));
+const ReturnsPage = lazy(() => import('./pages/sales/ReturnsPage').then(m => ({ default: m.ReturnsPage })));
+
+// Waste Inventory (default export)
+const WasteInventoryList = lazy(() => import('./pages/inventory/WasteInventoryList'));
 
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
@@ -118,6 +122,8 @@ function App() {
                 <Route path="/sales/orders" element={<SalesOrdersPage />} />
                 <Route path="/sales/inventory" element={<InventoryPage />} />
                 <Route path="/sales/purchase-orders" element={<PurchaseOrdersPage />} />
+                <Route path="/sales/returns" element={<ReturnsPage />} />
+                <Route path="/inventory/waste" element={<WasteInventoryList />} />
                 <Route path="/marketing" element={<MarketingDashboardPage />} />
                 <Route path="/marketing/campaigns" element={<CampaignManagementPage />} />
                 <Route path="/marketing/budgets" element={<BudgetManagementPage />} />

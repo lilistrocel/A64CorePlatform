@@ -12,7 +12,6 @@ import { farmApi, calculatePlantCount } from '../../services/farmApi';
 import { getActivePlants } from '../../services/plantDataEnhancedApi';
 import type { Block, PlantDataEnhanced, SpacingCategory } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS } from '../../types/farm';
-import { PendingTasksWarningModal } from './PendingTasksWarningModal';
 
 // ============================================================================
 // TYPES
@@ -399,6 +398,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
   // Form state
   const [selectedPlantId, setSelectedPlantId] = useState<string>('');
   const [plantCount, setPlantCount] = useState<string>('');
+  const [allocatedArea, setAllocatedArea] = useState<string>('');
   const [plannedDate, setPlannedDate] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
@@ -414,19 +414,17 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Phase 3: Warning modal state
-  const [showWarningModal, setShowWarningModal] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState<any[]>([]);
-  const [targetStatus, setTargetStatus] = useState<string>('');
-
   // Load plant data on mount
   useEffect(() => {
     if (isOpen) {
       loadPlants();
       // Set default planned date to today
       setPlannedDate(new Date().toISOString().split('T')[0]);
+      // Set default allocated area to available area or total area
+      const defaultArea = block.availableArea ?? block.area ?? 0;
+      setAllocatedArea(String(defaultArea));
     }
-  }, [isOpen]);
+  }, [isOpen, block.availableArea, block.area]);
 
   const loadPlants = async () => {
     try {
@@ -444,7 +442,9 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
 
   // Auto-calculate plant count when plant is selected
   const autoCalculatePlantCount = useCallback(async (plant: PlantDataEnhanced) => {
-    if (!plant.spacingCategory || !block.area) {
+    const areaToUse = parseFloat(allocatedArea) || block.area || 0;
+
+    if (!plant.spacingCategory || !areaToUse) {
       setIsAutoCalculated(false);
       setCalculatedPlantCount(null);
       setCalculationInfo('');
@@ -452,8 +452,8 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
 
     try {
-      // Block area is stored in square meters
-      const result = await calculatePlantCount(block.area, 'sqm', plant.spacingCategory);
+      // Use allocated area for plant count calculation
+      const result = await calculatePlantCount(areaToUse, 'sqm', plant.spacingCategory);
 
       // Cap at block maxPlants
       const cappedCount = Math.min(result.plantCount, block.maxPlants);
@@ -477,7 +477,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
       setCalculatedPlantCount(null);
       setCalculationInfo('');
     }
-  }, [block.area, block.maxPlants, isManualOverride]);
+  }, [allocatedArea, block.area, block.maxPlants, isManualOverride]);
 
   // Effect to trigger auto-calculation when plant selection changes
   useEffect(() => {
@@ -547,8 +547,10 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     const cleaningDate = new Date(harvestDate);
     cleaningDate.setDate(cleaningDate.getDate() + harvestDurationDays);
 
-    // Calculate utilization
-    const utilizationPercent = (count / block.maxPlants) * 100;
+    // Calculate utilization (based on area allocated)
+    const areaToUse = parseFloat(allocatedArea) || block.area || 0;
+    const totalBlockArea = block.area || 0;
+    const utilizationPercent = totalBlockArea > 0 ? (areaToUse / totalBlockArea) * 100 : 0;
 
     setPreview({
       selectedPlant: plant,
@@ -577,6 +579,14 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
       newErrors.plantCount = `Cannot exceed block capacity of ${block.maxPlants} plants`;
     }
 
+    const area = parseFloat(allocatedArea);
+    const availableArea = block.availableArea ?? block.area ?? 0;
+    if (!allocatedArea || isNaN(area) || area <= 0) {
+      newErrors.allocatedArea = 'Please enter a valid area';
+    } else if (area > availableArea) {
+      newErrors.allocatedArea = `Cannot exceed available area of ${(availableArea / 10000).toFixed(2)} ha`;
+    }
+
     if (!plannedDate) {
       newErrors.plannedDate = 'Please select a planting date';
     }
@@ -598,19 +608,15 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     try {
       setSubmitting(true);
 
-      // Always transition to 'planned' state first
-      // Users will later transition from 'planned' to 'growing' when ready to plant
-      const plantingDate = new Date(plannedDate);
-      plantingDate.setHours(0, 0, 0, 0);
-      const newStatus = 'planned';
+      // Use addVirtualCrop API to create a virtual block for this planting
+      // This is the correct approach - physical blocks stay as containers
+      const plantingDateValue = plannedDate ? new Date(plannedDate).toISOString() : undefined;
 
-      await farmApi.transitionBlockState(block.farmId, block.blockId, {
-        newStatus,
-        targetCrop: selectedPlantId,
-        actualPlantCount: parseInt(plantCount),
-        plannedPlantingDate: plantingDate.toISOString(), // Convert to ISO datetime string for backend
-        notes: notes || `Scheduled ${preview.selectedPlant?.plantName} for ${plannedDate}`,
-        force, // Phase 3: Pass force parameter
+      await farmApi.addVirtualCrop(block.farmId, block.blockId, {
+        cropId: selectedPlantId,
+        allocatedArea: parseFloat(allocatedArea),
+        plantCount: parseInt(plantCount),
+        plantingDate: plantingDateValue,
       });
 
       onSuccess();
@@ -618,12 +624,11 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     } catch (error: any) {
       console.error('Error assigning plant:', error);
 
-      // Phase 3: Check for HTTP 409 Conflict (pending tasks warning)
-      if (error.response?.status === 409 && error.response?.data?.detail?.error === 'pending_tasks_exist') {
-        const detail = error.response.data.detail;
-        setPendingTasks(detail.pendingTasks || []);
-        setTargetStatus(detail.targetStatus || '');
-        setShowWarningModal(true);
+      // Check for specific error responses
+      if (error.response?.status === 409) {
+        alert('Conflict: ' + (error.response.data?.detail || 'Unable to add planting'));
+      } else if (error.response?.data?.detail) {
+        alert('Error: ' + error.response.data.detail);
       } else {
         alert('Failed to assign plant. Please try again.');
       }
@@ -632,18 +637,10 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
     }
   };
 
-  const handleForceSubmit = () => {
-    setShowWarningModal(false);
-    handleSubmit(true);
-  };
-
-  const handleCancelWarning = () => {
-    setShowWarningModal(false);
-  };
-
   const handleClose = () => {
     setSelectedPlantId('');
     setPlantCount('');
+    setAllocatedArea('');
     setPlannedDate('');
     setNotes('');
     setErrors({});
@@ -773,6 +770,27 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
 
                 <FormGroup>
                   <Label>
+                    Allocated Area (m²)<RequiredMark>*</RequiredMark>
+                  </Label>
+                  <Input
+                    type="number"
+                    value={allocatedArea}
+                    onChange={(e) => setAllocatedArea(e.target.value)}
+                    placeholder="Area to allocate for this planting"
+                    min="1"
+                    max={block.availableArea ?? block.area ?? 0}
+                    step="0.01"
+                    disabled={submitting}
+                  />
+                  <HelpText>
+                    Available area: {((block.availableArea ?? block.area ?? 0) / 10000).toFixed(2)} ha
+                    ({(block.availableArea ?? block.area ?? 0).toFixed(0)} m²)
+                  </HelpText>
+                  {errors.allocatedArea && <ErrorText>{errors.allocatedArea}</ErrorText>}
+                </FormGroup>
+
+                <FormGroup>
+                  <Label>
                     Planned Planting Date<RequiredMark>*</RequiredMark>
                   </Label>
                   <Input
@@ -831,10 +849,10 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                       </PreviewItem>
 
                       <PreviewItem>
-                        <PreviewLabel>Block Utilization</PreviewLabel>
+                        <PreviewLabel>Area Allocation</PreviewLabel>
                         <PreviewValue>{preview.utilizationPercent.toFixed(0)}%</PreviewValue>
                         <PreviewSubtext>
-                          {preview.plantCount} of {block.maxPlants} plants
+                          {(parseFloat(allocatedArea) / 10000).toFixed(2)} ha of {((block.area || 0) / 10000).toFixed(2)} ha
                         </PreviewSubtext>
                       </PreviewItem>
                     </PreviewGrid>
@@ -870,27 +888,18 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
             type="button"
             $variant="primary"
             onClick={handlePreview}
-            disabled={!selectedPlantId || !plantCount || !plannedDate || submitting}
+            disabled={!selectedPlantId || !plantCount || !allocatedArea || !plannedDate || submitting}
           >
             📊 Preview
           </Button>
 
           {showPreview && (
-            <Button type="button" $variant="success" onClick={() => handleSubmit(false)} disabled={submitting}>
-              {submitting ? 'Assigning...' : '✅ Confirm & Plant'}
+            <Button type="button" $variant="success" onClick={() => handleSubmit()} disabled={submitting}>
+              {submitting ? 'Creating Planting...' : '✅ Confirm & Create Planting'}
             </Button>
           )}
         </ModalFooter>
       </ModalContainer>
-
-      {/* Phase 3: Warning Modal */}
-      <PendingTasksWarningModal
-        isOpen={showWarningModal}
-        targetStatus={targetStatus}
-        pendingTasks={pendingTasks}
-        onCancel={handleCancelWarning}
-        onForce={handleForceSubmit}
-      />
     </Overlay>
   );
 

@@ -803,3 +803,128 @@ class TransferRecord(BaseModel):
     transferredAt: datetime = Field(default_factory=datetime.utcnow)
     transferredBy: UUID = Field(..., description="User who performed transfer")
     reason: str = Field(..., description="Transfer reason")
+
+
+# ============================================================================
+# WASTE INVENTORY
+# ============================================================================
+
+class WasteSourceType(str, Enum):
+    """Source of waste"""
+    HARVEST = "harvest"       # Waste from harvest (spoiled before sale)
+    RETURN = "return"         # Waste from returned items
+    EXPIRED = "expired"       # Items expired in inventory
+    DAMAGED = "damaged"       # Items damaged in storage/transport
+    QUALITY_REJECT = "quality_reject"  # Failed quality inspection
+    OTHER = "other"
+
+
+class DisposalMethod(str, Enum):
+    """Method of waste disposal"""
+    COMPOST = "compost"           # Composted for fertilizer
+    ANIMAL_FEED = "animal_feed"   # Used as animal feed
+    DISCARD = "discard"           # Discarded/thrown away
+    SOLD_DISCOUNT = "sold_discount"  # Sold at discount price
+    DONATED = "donated"           # Donated to charity
+    PENDING = "pending"           # Disposal pending
+
+
+class WasteInventoryBase(BaseModel):
+    """Base schema for waste inventory"""
+    organizationId: UUID = Field(..., description="Organization this waste belongs to")
+    farmId: Optional[UUID] = Field(None, description="Farm where waste originated")
+
+    # Source tracking
+    sourceType: WasteSourceType = Field(..., description="Source of waste")
+    sourceInventoryId: Optional[UUID] = Field(None, description="Original inventory item ID")
+    sourceOrderId: Optional[UUID] = Field(None, description="Sales order ID (for returns)")
+    sourceReturnId: Optional[UUID] = Field(None, description="Return order ID (for returns)")
+    sourceBlockId: Optional[UUID] = Field(None, description="Block ID (for harvest waste)")
+
+    # Product info
+    plantName: str = Field(..., min_length=1, max_length=200, description="Product/plant name")
+    variety: Optional[str] = Field(None, max_length=100, description="Plant variety")
+    quantity: float = Field(..., gt=0, description="Waste quantity")
+    unit: str = Field(..., min_length=1, max_length=20, description="Unit of measurement")
+    originalGrade: Optional[str] = Field(None, description="Original quality grade")
+
+    # Waste details
+    wasteReason: str = Field(..., max_length=500, description="Reason for waste")
+    wasteDate: datetime = Field(default_factory=datetime.utcnow, description="Date item became waste")
+
+    # Disposal
+    disposalMethod: DisposalMethod = Field(DisposalMethod.PENDING, description="Disposal method")
+    disposalDate: Optional[datetime] = Field(None, description="Date of disposal")
+    disposalNotes: Optional[str] = Field(None, max_length=500, description="Disposal notes")
+
+    # Value tracking (for reporting)
+    estimatedValue: Optional[float] = Field(None, ge=0, description="Estimated value of waste")
+    currency: str = Field("AED", max_length=3, description="Currency code")
+
+    # Notes
+    notes: Optional[str] = Field(None, max_length=1000, description="Additional notes")
+
+
+class WasteInventoryCreate(WasteInventoryBase):
+    """Schema for creating waste inventory item"""
+    pass
+
+
+class WasteInventoryUpdate(BaseModel):
+    """Schema for updating waste inventory item"""
+    disposalMethod: Optional[DisposalMethod] = None
+    disposalDate: Optional[datetime] = None
+    disposalNotes: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=1000)
+
+
+class WasteInventory(WasteInventoryBase):
+    """Complete waste inventory item"""
+    wasteId: UUID = Field(default_factory=uuid4, description="Unique identifier")
+
+    # Tracking
+    recordedBy: UUID = Field(..., description="User who recorded this waste")
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "wasteId": "waste-001",
+                "organizationId": "org-001",
+                "farmId": "farm-001",
+                "sourceType": "return",
+                "sourceOrderId": "order-001",
+                "sourceReturnId": "return-001",
+                "plantName": "Roma Tomatoes",
+                "variety": "Roma VF",
+                "quantity": 10.0,
+                "unit": "kg",
+                "originalGrade": "grade_a",
+                "wasteReason": "customer_rejected: damaged",
+                "wasteDate": "2025-01-20T14:00:00Z",
+                "disposalMethod": "compost",
+                "disposalDate": "2025-01-21T10:00:00Z",
+                "estimatedValue": 55.00,
+                "currency": "AED"
+            }
+        }
+
+
+class MoveToWasteRequest(BaseModel):
+    """Request to move inventory to waste"""
+    inventoryId: UUID = Field(..., description="Harvest inventory ID to move to waste")
+    inventoryType: InventoryType = Field(InventoryType.HARVEST, description="Type of inventory")
+    quantity: float = Field(..., gt=0, description="Quantity to move to waste")
+    wasteReason: str = Field(..., max_length=500, description="Reason for waste")
+    sourceType: WasteSourceType = Field(WasteSourceType.EXPIRED, description="Source type")
+
+
+class WasteSummary(BaseModel):
+    """Summary statistics for waste"""
+    totalWasteRecords: int = Field(0, description="Total number of waste records")
+    totalQuantity: float = Field(0, description="Total waste quantity")
+    totalEstimatedValue: float = Field(0, description="Total estimated value of waste")
+    bySourceType: dict = Field(default_factory=dict, description="Breakdown by source type")
+    byDisposalMethod: dict = Field(default_factory=dict, description="Breakdown by disposal method")
+    pendingDisposal: int = Field(0, description="Count of items pending disposal")

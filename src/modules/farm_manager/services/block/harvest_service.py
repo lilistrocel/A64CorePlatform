@@ -16,7 +16,7 @@ from ...models.block_harvest import (
     BlockHarvestSummary, QualityGrade as HarvestQualityGrade
 )
 from ...models.inventory import (
-    HarvestInventory, InventoryType, QualityGrade, MovementType, InventoryMovement
+    HarvestInventory, InventoryType, QualityGrade, MovementType, InventoryMovement, InventoryScope
 )
 from .harvest_repository import HarvestRepository
 from .block_repository_new import BlockRepository
@@ -71,11 +71,17 @@ class HarvestService:
             total_harvests=new_harvest_count
         )
 
+        # Get user's organizationId for inventory
+        db = farm_db.get_database()
+        user_doc = await db.users.find_one({"userId": str(user_id)})
+        organization_id = user_doc.get("organizationId") if user_doc else None
+
         # Add to Harvest Inventory automatically
         await HarvestService._add_to_inventory(
             harvest=harvest,
             block=block,
-            user_id=user_id
+            user_id=user_id,
+            organization_id=organization_id
         )
 
         logger.info(
@@ -90,7 +96,8 @@ class HarvestService:
     async def _add_to_inventory(
         harvest: BlockHarvest,
         block,
-        user_id: UUID
+        user_id: UUID,
+        organization_id: str = None
     ) -> None:
         """
         Add a harvest record to the inventory system.
@@ -145,6 +152,7 @@ class HarvestService:
                 quantityBefore=old_quantity,
                 quantityChange=harvest.quantityKg,
                 quantityAfter=new_quantity,
+                organizationId=organization_id,
                 reason=f"Harvest from block {block.blockCode}",
                 referenceId=str(harvest.harvestId),
                 performedBy=user_id,
@@ -158,8 +166,20 @@ class HarvestService:
             )
         else:
             # Create new inventory entry
+            # Use passed organization_id, or try to get from block/farm
+            org_id = organization_id
+            if not org_id:
+                org_id = getattr(block, 'organizationId', None)
+            if not org_id:
+                # Fallback: try to get from farm
+                farm_doc = await db.farms.find_one({"farmId": str(harvest.farmId)})
+                if farm_doc:
+                    org_id = farm_doc.get("organizationId")
+
             inventory_item = HarvestInventory(
                 farmId=harvest.farmId,
+                organizationId=org_id,
+                inventoryScope=InventoryScope.FARM,  # Farm-specific inventory
                 blockId=harvest.blockId,
                 plantDataId=plant_data_id if plant_data_id else harvest.blockId,  # Use blockId as fallback
                 plantName=plant_name,
@@ -188,6 +208,7 @@ class HarvestService:
                 quantityBefore=0,
                 quantityChange=harvest.quantityKg,
                 quantityAfter=harvest.quantityKg,
+                organizationId=org_id,
                 reason=f"Harvest from block {block.blockCode}",
                 referenceId=str(harvest.harvestId),
                 performedBy=user_id,

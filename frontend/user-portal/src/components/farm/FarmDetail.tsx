@@ -578,6 +578,7 @@ export function FarmDetail() {
               virtualBlocks={virtualBlocks}
               farmId={farmId!}
               onRefresh={loadFarmData}
+              onCreateBlock={() => setShowCreateModal(true)}
             />
           )}
 

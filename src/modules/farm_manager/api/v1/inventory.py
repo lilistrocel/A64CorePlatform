@@ -27,6 +27,8 @@ from src.modules.farm_manager.models.inventory import (
     MovementType,
     BaseUnit,
     DisplayUnit,
+    WasteSourceType,
+    DisposalMethod,
     # Products
     Product,
     ProductCreate,
@@ -49,6 +51,12 @@ from src.modules.farm_manager.models.inventory import (
     TransferRequest,
     TransferResponse,
     TransferRecord,
+    # Waste
+    WasteInventory,
+    WasteInventoryCreate,
+    WasteInventoryUpdate,
+    MoveToWasteRequest,
+    WasteSummary,
     # Summary
     InventorySummary,
     # Unit conversion functions
@@ -1587,3 +1595,280 @@ async def get_asset_statuses():
 async def get_quality_grades():
     """Get list of quality grades"""
     return [{"value": g.value, "label": g.value.replace("_", " ").title()} for g in QualityGrade]
+
+
+# ============================================================================
+# WASTE INVENTORY ENDPOINTS
+# ============================================================================
+
+@router.get("/waste", response_model=dict)
+async def list_waste_inventory(
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    source_type: Optional[WasteSourceType] = Query(None, description="Filter by source type"),
+    disposal_method: Optional[DisposalMethod] = Query(None, description="Filter by disposal method"),
+    pending_only: bool = Query(False, description="Show only pending disposal"),
+    search: Optional[str] = Query(None, max_length=100),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """List waste inventory items with pagination"""
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+
+    if farm_id:
+        query["farmId"] = str(farm_id)
+    if source_type:
+        query["sourceType"] = source_type.value
+    if disposal_method:
+        query["disposalMethod"] = disposal_method.value
+    if pending_only:
+        query["disposalMethod"] = DisposalMethod.PENDING.value
+    if search:
+        query["$or"] = [
+            {"plantName": {"$regex": search, "$options": "i"}},
+            {"variety": {"$regex": search, "$options": "i"}},
+            {"wasteReason": {"$regex": search, "$options": "i"}}
+        ]
+
+    skip = (page - 1) * per_page
+    total = await db.inventory_waste.count_documents(query)
+    items = await db.inventory_waste.find(query).sort("wasteDate", -1).skip(skip).limit(per_page).to_list(per_page)
+
+    return {
+        "items": [serialize_doc(item) for item in items],
+        "total": total,
+        "page": page,
+        "perPage": per_page,
+        "totalPages": (total + per_page - 1) // per_page
+    }
+
+
+@router.post("/waste", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_waste_inventory(
+    data: WasteInventoryCreate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Create a new waste inventory record"""
+    org_id = await get_organization_id(current_user)
+
+    waste = WasteInventory(
+        **data.model_dump(),
+        recordedBy=UUID(current_user.userId)
+    )
+
+    doc = waste.model_dump(mode="json")
+    await db.inventory_waste.insert_one(doc)
+
+    return serialize_doc(doc)
+
+
+# NOTE: Static routes MUST come before dynamic /{waste_id} routes
+@router.get("/waste/summary", response_model=WasteSummary)
+async def get_waste_summary(
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm"),
+    start_date: Optional[datetime] = Query(None, description="Start date for summary"),
+    end_date: Optional[datetime] = Query(None, description="End date for summary"),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Get waste inventory summary statistics"""
+    org_id = await get_organization_id(current_user)
+
+    match_query = {"organizationId": str(org_id)}
+    if farm_id:
+        match_query["farmId"] = str(farm_id)
+    if start_date or end_date:
+        match_query["wasteDate"] = {}
+        if start_date:
+            match_query["wasteDate"]["$gte"] = start_date.isoformat()
+        if end_date:
+            match_query["wasteDate"]["$lte"] = end_date.isoformat()
+
+    # Aggregation pipeline
+    pipeline = [
+        {"$match": match_query},
+        {"$group": {
+            "_id": None,
+            "totalRecords": {"$sum": 1},
+            "totalQuantity": {"$sum": "$quantity"},
+            "totalValue": {"$sum": {"$ifNull": ["$estimatedValue", 0]}},
+            "pendingDisposal": {
+                "$sum": {"$cond": [{"$eq": ["$disposalMethod", "pending"]}, 1, 0]}
+            }
+        }}
+    ]
+
+    result = await db.inventory_waste.aggregate(pipeline).to_list(1)
+    stats = result[0] if result else {"totalRecords": 0, "totalQuantity": 0, "totalValue": 0, "pendingDisposal": 0}
+
+    # Get breakdown by source type
+    source_pipeline = [
+        {"$match": match_query},
+        {"$group": {"_id": "$sourceType", "count": {"$sum": 1}, "quantity": {"$sum": "$quantity"}}}
+    ]
+    source_result = await db.inventory_waste.aggregate(source_pipeline).to_list(100)
+    by_source = {r["_id"]: {"count": r["count"], "quantity": r["quantity"]} for r in source_result}
+
+    # Get breakdown by disposal method
+    disposal_pipeline = [
+        {"$match": match_query},
+        {"$group": {"_id": "$disposalMethod", "count": {"$sum": 1}, "quantity": {"$sum": "$quantity"}}}
+    ]
+    disposal_result = await db.inventory_waste.aggregate(disposal_pipeline).to_list(100)
+    by_disposal = {r["_id"]: {"count": r["count"], "quantity": r["quantity"]} for r in disposal_result}
+
+    return WasteSummary(
+        totalWasteRecords=stats.get("totalRecords", 0),
+        totalQuantity=stats.get("totalQuantity", 0),
+        totalEstimatedValue=stats.get("totalValue", 0),
+        bySourceType=by_source,
+        byDisposalMethod=by_disposal,
+        pendingDisposal=stats.get("pendingDisposal", 0)
+    )
+
+
+@router.post("/waste/from-harvest", response_model=dict)
+async def move_harvest_to_waste(
+    request: MoveToWasteRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Move inventory from harvest to waste.
+
+    Deducts quantity from harvest inventory and creates a waste record.
+    """
+    org_id = await get_organization_id(current_user)
+    user_id = UUID(current_user.userId)
+
+    # Get harvest inventory item
+    harvest_item = await db.inventory_harvest.find_one({"inventoryId": str(request.inventoryId)})
+    if not harvest_item:
+        raise HTTPException(status_code=404, detail="Harvest inventory item not found")
+
+    # Verify organization
+    if harvest_item.get("organizationId") != str(org_id):
+        raise HTTPException(status_code=403, detail="Inventory item does not belong to your organization")
+
+    # Check available quantity
+    available = harvest_item.get("availableQuantity", harvest_item.get("quantity", 0))
+    if request.quantity > available:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient quantity. Available: {available}, Requested: {request.quantity}"
+        )
+
+    # Deduct from harvest inventory
+    current_qty = harvest_item.get("quantity", 0)
+    current_available = harvest_item.get("availableQuantity", 0)
+    new_qty = current_qty - request.quantity
+    new_available = current_available - request.quantity
+
+    await db.inventory_harvest.update_one(
+        {"inventoryId": str(request.inventoryId)},
+        {"$set": {
+            "quantity": new_qty,
+            "availableQuantity": new_available,
+            "updatedAt": datetime.utcnow().isoformat()
+        }}
+    )
+
+    # Record movement
+    await record_movement(
+        db=db,
+        inventory_id=request.inventoryId,
+        inventory_type=InventoryType.HARVEST,
+        movement_type=MovementType.WASTE,
+        quantity_before=current_qty,
+        quantity_change=-request.quantity,
+        user_id=user_id,
+        organization_id=org_id,
+        reason=f"Moved to waste: {request.wasteReason}"
+    )
+
+    # Create waste record
+    waste = WasteInventory(
+        organizationId=org_id,
+        farmId=UUID(harvest_item["farmId"]) if harvest_item.get("farmId") else None,
+        sourceType=request.sourceType,
+        sourceInventoryId=request.inventoryId,
+        sourceBlockId=UUID(harvest_item["blockId"]) if harvest_item.get("blockId") else None,
+        plantName=harvest_item.get("plantName", "Unknown"),
+        variety=harvest_item.get("variety"),
+        quantity=request.quantity,
+        unit=harvest_item.get("unit", "kg"),
+        originalGrade=harvest_item.get("qualityGrade"),
+        wasteReason=request.wasteReason,
+        wasteDate=datetime.utcnow(),
+        estimatedValue=request.quantity * (harvest_item.get("unitPrice", 0) or 0),
+        currency=harvest_item.get("currency", "AED"),
+        recordedBy=user_id
+    )
+
+    waste_doc = waste.model_dump(mode="json")
+    await db.inventory_waste.insert_one(waste_doc)
+
+    return {
+        "message": f"Moved {request.quantity} {harvest_item.get('unit', 'units')} to waste",
+        "wasteRecord": serialize_doc(waste_doc),
+        "updatedInventory": serialize_doc(await db.inventory_harvest.find_one({"inventoryId": str(request.inventoryId)}))
+    }
+
+
+# Dynamic routes with path parameters must come AFTER static routes
+@router.get("/waste/{waste_id}", response_model=dict)
+async def get_waste_inventory(
+    waste_id: UUID,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Get a specific waste inventory item"""
+    item = await db.inventory_waste.find_one({"wasteId": str(waste_id)})
+    if not item:
+        raise HTTPException(status_code=404, detail="Waste inventory item not found")
+    return serialize_doc(item)
+
+
+@router.patch("/waste/{waste_id}", response_model=dict)
+async def update_waste_inventory(
+    waste_id: UUID,
+    data: WasteInventoryUpdate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Update a waste inventory item (usually for disposal tracking)"""
+    org_id = await get_organization_id(current_user)
+
+    item = await db.inventory_waste.find_one({"wasteId": str(waste_id)})
+    if not item:
+        raise HTTPException(status_code=404, detail="Waste inventory item not found")
+
+    if item.get("organizationId") != str(org_id):
+        raise HTTPException(status_code=403, detail="Waste item does not belong to your organization")
+
+    update_data = {k: v for k, v in data.model_dump(mode="json").items() if v is not None}
+    update_data["updatedAt"] = datetime.utcnow().isoformat()
+
+    await db.inventory_waste.update_one(
+        {"wasteId": str(waste_id)},
+        {"$set": update_data}
+    )
+
+    updated = await db.inventory_waste.find_one({"wasteId": str(waste_id)})
+    return serialize_doc(updated)
+
+
+@router.delete("/waste/{waste_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_waste_inventory(
+    waste_id: UUID,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """Delete a waste inventory item"""
+    result = await db.inventory_waste.delete_one({"wasteId": str(waste_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Waste inventory item not found")

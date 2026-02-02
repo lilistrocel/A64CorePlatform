@@ -306,12 +306,29 @@ async def get_farm_dashboard(
             managerEmail=farm.managerEmail if hasattr(farm, 'managerEmail') else None
         )
 
-        # Get virtual blocks for farm (physical blocks are just containers)
-        blocks, total = await BlockRepository.get_by_farm(
+        # Get virtual blocks for farm
+        virtual_blocks, virtual_total = await BlockRepository.get_by_farm(
             farmId, skip=0, limit=1000, block_category='virtual'
         )
 
-        logger.info(f"[Dashboard] Found {total} blocks for farm {farmId}")
+        # Also get physical blocks that have active plantings (not empty or cleaning)
+        # This handles the case where a planting is made directly on a physical block
+        physical_blocks, _ = await BlockRepository.get_by_farm(
+            farmId, skip=0, limit=1000, block_category='physical'
+        )
+
+        # Filter physical blocks to only include those with active plantings
+        # Exclude: EMPTY (no planting), CLEANING (between cycles), PARTIAL (has virtual children instead)
+        active_physical_blocks = [
+            pb for pb in physical_blocks
+            if pb.state not in [BlockStatus.EMPTY, BlockStatus.CLEANING, BlockStatus.PARTIAL]
+        ]
+
+        # Combine virtual blocks with active physical blocks
+        blocks = list(virtual_blocks) + active_physical_blocks
+        total = len(blocks)
+
+        logger.info(f"[Dashboard] Found {total} blocks for farm {farmId} ({virtual_total} virtual, {len(active_physical_blocks)} active physical)")
 
         # Calculate summary statistics
         summary_dict = calculate_farm_summary(blocks)
