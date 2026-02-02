@@ -5,11 +5,14 @@ Endpoints for shipment CRUD operations.
 """
 
 from fastapi import APIRouter, Depends, status, Query, Body
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 import logging
 
-from src.modules.logistics.models.shipment import Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus
+from src.modules.logistics.models.shipment import (
+    Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus,
+    OrderAssignmentRequest, OrderAssignmentResponse
+)
 from src.modules.logistics.services.logistics import ShipmentService
 from src.modules.logistics.middleware.auth import require_permission, CurrentUser
 from src.modules.logistics.utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
@@ -149,4 +152,89 @@ async def delete_shipment(
     return SuccessResponse(
         data=result,
         message="Shipment deleted successfully"
+    )
+
+
+@router.post(
+    "/{shipment_id}/assign-orders",
+    response_model=SuccessResponse[OrderAssignmentResponse],
+    summary="Assign orders to shipment",
+    description="Assign multiple sales orders to a shipment. Requires logistics.edit permission."
+)
+async def assign_orders_to_shipment(
+    shipment_id: UUID,
+    request: OrderAssignmentRequest,
+    current_user: CurrentUser = Depends(require_permission("logistics.edit")),
+    service: ShipmentService = Depends()
+):
+    """Assign sales orders to a shipment"""
+    result = await service.assign_orders_to_shipment(
+        shipment_id,
+        request.orderIds,
+        UUID(current_user.userId)
+    )
+
+    return SuccessResponse(
+        data=result,
+        message=f"Successfully assigned {len(request.orderIds)} orders to shipment"
+    )
+
+
+@router.post(
+    "/{shipment_id}/start-delivery",
+    response_model=SuccessResponse[Shipment],
+    summary="Start shipment delivery",
+    description="Start delivery for shipment, updating all linked orders to in_transit. Requires logistics.edit permission."
+)
+async def start_shipment_delivery(
+    shipment_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("logistics.edit")),
+    service: ShipmentService = Depends()
+):
+    """Start delivery for shipment and update linked orders"""
+    shipment = await service.start_delivery(shipment_id, UUID(current_user.userId))
+
+    return SuccessResponse(
+        data=shipment,
+        message="Shipment delivery started, all linked orders updated to in_transit"
+    )
+
+
+@router.post(
+    "/{shipment_id}/complete-delivery",
+    response_model=SuccessResponse[dict],
+    summary="Complete shipment delivery",
+    description="Complete delivery for shipment, updating all linked orders to delivered. Requires logistics.edit permission."
+)
+async def complete_shipment_delivery(
+    shipment_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("logistics.edit")),
+    service: ShipmentService = Depends()
+):
+    """Complete delivery for shipment and update linked orders"""
+    result = await service.complete_delivery(shipment_id, UUID(current_user.userId))
+
+    return SuccessResponse(
+        data=result,
+        message="Shipment delivery completed, all linked orders marked as delivered"
+    )
+
+
+@router.get(
+    "/{shipment_id}/orders",
+    response_model=SuccessResponse[List[dict]],
+    summary="Get orders in shipment",
+    description="Get all sales orders assigned to a shipment. Requires logistics.view permission."
+)
+async def get_shipment_orders(
+    shipment_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("logistics.view")),
+    service: ShipmentService = Depends()
+):
+    """Get orders assigned to shipment"""
+    orders = await service.get_shipment_orders(shipment_id)
+
+    return SuccessResponse(
+        data=orders,
+        message=f"Retrieved {len(orders)} orders from shipment"
     )

@@ -7,13 +7,20 @@ Handles validation, permissions, and orchestration.
 
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 from fastapi import HTTPException, status
 import logging
 
-from src.modules.logistics.models.shipment import Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus
+from src.modules.logistics.models.shipment import (
+    Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus,
+    OrderAssignmentResponse
+)
 from src.modules.logistics.services.logistics.shipment_repository import ShipmentRepository
 from src.modules.logistics.services.logistics.vehicle_repository import VehicleRepository
 from src.modules.logistics.services.logistics.route_repository import RouteRepository
+from src.modules.sales.models.sales_order import SalesOrderStatus
+from src.modules.sales.services.database import sales_db
+from src.modules.sales.services.sales.order_service import OrderService
 
 logger = logging.getLogger(__name__)
 
@@ -261,3 +268,237 @@ class ShipmentService:
 
         logger.info(f"Shipment deleted: {shipment_id}")
         return {"message": "Shipment deleted successfully"}
+
+    async def assign_orders_to_shipment(
+        self,
+        shipment_id: UUID,
+        order_ids: List[UUID],
+        assigned_by: UUID
+    ) -> OrderAssignmentResponse:
+        """
+        Assign multiple sales orders to a shipment.
+
+        Args:
+            shipment_id: Shipment ID
+            order_ids: List of order IDs to assign
+            assigned_by: User performing the assignment
+
+        Returns:
+            OrderAssignmentResponse with updated shipment and orders
+
+        Raises:
+            HTTPException: If shipment not found, orders invalid, or wrong status
+        """
+        # Get shipment
+        shipment = await self.get_shipment(shipment_id)
+
+        # Validate shipment status allows assignment
+        if shipment.status not in [ShipmentStatus.PENDING, ShipmentStatus.SCHEDULED, ShipmentStatus.LOADING]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot assign orders to shipment with status: {shipment.status.value}"
+            )
+
+        # Get sales orders and validate
+        db = sales_db.get_database()
+        orders_collection = db.sales_orders
+        assigned_orders = []
+        total_weight = 0.0
+
+        for order_id in order_ids:
+            order_doc = await orders_collection.find_one({"orderId": str(order_id)})
+            if not order_doc:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Sales order {order_id} not found"
+                )
+
+            # Validate order status - must be CONFIRMED
+            if order_doc.get("status") != SalesOrderStatus.CONFIRMED.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Order {order_id} is not in CONFIRMED status. Current: {order_doc.get('status')}"
+                )
+
+            # Check order not already assigned to another shipment
+            if order_doc.get("shipmentId") and order_doc.get("shipmentId") != str(shipment_id):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Order {order_id} is already assigned to shipment {order_doc.get('shipmentId')}"
+                )
+
+            # Calculate weight from order items (estimate: quantity as weight)
+            for item in order_doc.get("items", []):
+                total_weight += item.get("quantity", 0)
+
+            assigned_orders.append(order_doc)
+
+        # Update shipment with order IDs
+        current_order_ids = [str(oid) for oid in (shipment.orderIds or [])]
+        new_order_ids = list(set(current_order_ids + [str(oid) for oid in order_ids]))
+
+        await self.repository._get_collection().update_one(
+            {"shipmentId": str(shipment_id)},
+            {
+                "$set": {
+                    "orderIds": new_order_ids,
+                    "updatedAt": datetime.utcnow()
+                }
+            }
+        )
+
+        # Update each order with shipment ID and status to ASSIGNED
+        for order_id in order_ids:
+            await orders_collection.update_one(
+                {"orderId": str(order_id)},
+                {
+                    "$set": {
+                        "shipmentId": str(shipment_id),
+                        "status": SalesOrderStatus.ASSIGNED.value,
+                        "updatedAt": datetime.utcnow()
+                    }
+                }
+            )
+
+        # Get updated shipment
+        updated_shipment = await self.get_shipment(shipment_id)
+
+        logger.info(f"Assigned {len(order_ids)} orders to shipment {shipment_id}")
+
+        return OrderAssignmentResponse(
+            shipment=updated_shipment.model_dump(mode="json"),
+            assignedOrders=[{k: v for k, v in o.items() if k != "_id"} for o in assigned_orders],
+            totalCargoWeight=total_weight,
+            message=f"Successfully assigned {len(order_ids)} orders to shipment"
+        )
+
+    async def start_delivery(
+        self,
+        shipment_id: UUID,
+        started_by: UUID
+    ) -> Shipment:
+        """
+        Start delivery for shipment and update all linked orders to IN_TRANSIT.
+
+        Args:
+            shipment_id: Shipment ID
+            started_by: User starting the delivery
+
+        Returns:
+            Updated shipment
+        """
+        shipment = await self.get_shipment(shipment_id)
+
+        # Validate shipment can start delivery
+        if shipment.status not in [ShipmentStatus.SCHEDULED, ShipmentStatus.LOADING]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot start delivery for shipment with status: {shipment.status.value}"
+            )
+
+        # Update shipment status
+        updated_shipment = await self.update_shipment_status(shipment_id, ShipmentStatus.IN_TRANSIT)
+
+        # Update all linked orders to IN_TRANSIT
+        if shipment.orderIds:
+            db = sales_db.get_database()
+            for order_id in shipment.orderIds:
+                await db.sales_orders.update_one(
+                    {"orderId": str(order_id)},
+                    {
+                        "$set": {
+                            "status": SalesOrderStatus.IN_TRANSIT.value,
+                            "updatedAt": datetime.utcnow()
+                        }
+                    }
+                )
+
+            logger.info(f"Updated {len(shipment.orderIds)} orders to IN_TRANSIT for shipment {shipment_id}")
+
+        return updated_shipment
+
+    async def complete_delivery(
+        self,
+        shipment_id: UUID,
+        completed_by: UUID
+    ) -> dict:
+        """
+        Complete delivery for shipment and update all linked orders to DELIVERED.
+
+        This method uses the OrderService to update order status, which triggers
+        inventory fulfillment (deducting sold quantities from inventory).
+
+        Args:
+            shipment_id: Shipment ID
+            completed_by: User completing the delivery
+
+        Returns:
+            Dictionary with shipment and order update results
+        """
+        shipment = await self.get_shipment(shipment_id)
+
+        # Validate shipment can be completed
+        if shipment.status != ShipmentStatus.IN_TRANSIT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot complete delivery for shipment with status: {shipment.status.value}"
+            )
+
+        # Update shipment status
+        updated_shipment = await self.update_shipment_status(shipment_id, ShipmentStatus.DELIVERED)
+
+        # Update all linked orders to DELIVERED using OrderService
+        # This triggers inventory fulfillment (deducts sold quantities)
+        orders_updated = 0
+        orders_failed = []
+        if shipment.orderIds:
+            order_service = OrderService()
+            for order_id in shipment.orderIds:
+                try:
+                    # Use OrderService to update status - this triggers inventory fulfillment
+                    await order_service.update_order_status(
+                        UUID(str(order_id)),
+                        SalesOrderStatus.DELIVERED
+                    )
+                    orders_updated += 1
+                    logger.info(f"Order {order_id} marked as DELIVERED with inventory fulfilled")
+                except Exception as e:
+                    logger.error(f"Failed to update order {order_id} to DELIVERED: {e}")
+                    orders_failed.append(str(order_id))
+
+            logger.info(f"Updated {orders_updated} orders to DELIVERED for shipment {shipment_id}")
+            if orders_failed:
+                logger.warning(f"Failed to update orders: {orders_failed}")
+
+        return {
+            "shipment": updated_shipment.model_dump(mode="json"),
+            "ordersUpdated": orders_updated,
+            "ordersFailed": orders_failed,
+            "message": f"Delivery completed. {orders_updated} orders marked as delivered."
+        }
+
+    async def get_shipment_orders(self, shipment_id: UUID) -> List[dict]:
+        """
+        Get all sales orders assigned to a shipment.
+
+        Args:
+            shipment_id: Shipment ID
+
+        Returns:
+            List of order documents
+        """
+        shipment = await self.get_shipment(shipment_id)
+
+        if not shipment.orderIds:
+            return []
+
+        db = sales_db.get_database()
+        orders = []
+
+        for order_id in shipment.orderIds:
+            order_doc = await db.sales_orders.find_one({"orderId": str(order_id)})
+            if order_doc:
+                order_doc.pop("_id", None)
+                orders.append(order_doc)
+
+        return orders

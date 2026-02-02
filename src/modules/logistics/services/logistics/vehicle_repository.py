@@ -6,11 +6,11 @@ Handles all database interactions for vehicles.
 """
 
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 import logging
 
-from src.modules.logistics.models.vehicle import Vehicle, VehicleCreate, VehicleUpdate, VehicleStatus
+from src.modules.logistics.models.vehicle import Vehicle, VehicleCreate, VehicleUpdate, VehicleStatus, VehicleType, VehicleOwnership
 from src.modules.logistics.services.database import logistics_db
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,68 @@ class VehicleRepository:
 
     def __init__(self):
         self.collection_name = "vehicles"
+
+    def _normalize_legacy_vehicle(self, vehicle_doc: dict) -> dict:
+        """
+        Normalize legacy vehicle data to match current schema.
+
+        Handles migration from old schema:
+        - vehicleType -> type
+        - plateNumber -> licensePlate
+        - capacity: null -> default VehicleCapacity object
+        - isActive -> status
+        - Missing ownership, createdBy
+        """
+        normalized = vehicle_doc.copy()
+
+        # Map vehicleType to type enum
+        if "type" not in normalized and "vehicleType" in normalized:
+            vehicle_type_str = normalized.get("vehicleType", "").upper()
+            # Try to map to VehicleType enum
+            if "TRUCK" in vehicle_type_str or "CANTER" in vehicle_type_str:
+                normalized["type"] = VehicleType.TRUCK.value
+            elif "VAN" in vehicle_type_str or "HIACE" in vehicle_type_str:
+                normalized["type"] = VehicleType.VAN.value
+            elif "PICKUP" in vehicle_type_str:
+                normalized["type"] = VehicleType.PICKUP.value
+            elif "REFRIG" in vehicle_type_str:
+                normalized["type"] = VehicleType.REFRIGERATED.value
+            else:
+                normalized["type"] = VehicleType.VAN.value  # Default
+
+        # Map plateNumber to licensePlate
+        if "licensePlate" not in normalized and "plateNumber" in normalized:
+            normalized["licensePlate"] = normalized.get("plateNumber", "UNKNOWN")
+
+        # Provide default licensePlate if still missing
+        if "licensePlate" not in normalized or not normalized["licensePlate"]:
+            normalized["licensePlate"] = normalized.get("name", "UNKNOWN")[:50]
+
+        # Provide default ownership if missing
+        if "ownership" not in normalized:
+            normalized["ownership"] = VehicleOwnership.OWNED.value
+
+        # Provide default capacity if null or missing
+        if normalized.get("capacity") is None:
+            normalized["capacity"] = {
+                "weight": 1000.0,  # Default 1000 kg
+                "volume": 10.0,   # Default 10 m3
+                "unit": "kg/m3"
+            }
+
+        # Map isActive to status
+        if "status" not in normalized and "isActive" in normalized:
+            normalized["status"] = VehicleStatus.AVAILABLE.value if normalized.get("isActive") else VehicleStatus.RETIRED.value
+
+        # Provide default status if missing
+        if "status" not in normalized:
+            normalized["status"] = VehicleStatus.AVAILABLE.value
+
+        # Provide default createdBy if missing (use a placeholder UUID)
+        if "createdBy" not in normalized:
+            normalized["createdBy"] = str(uuid4())  # System-generated placeholder
+
+        return normalized
 
     def _get_collection(self):
         """Get vehicles collection"""
@@ -103,6 +165,8 @@ class VehicleRepository:
 
         if vehicle_doc:
             vehicle_doc.pop("_id", None)  # Remove MongoDB _id
+            # Normalize legacy data
+            vehicle_doc = self._normalize_legacy_vehicle(vehicle_doc)
             # Convert datetime back to date
             if "purchaseDate" in vehicle_doc and isinstance(vehicle_doc["purchaseDate"], datetime):
                 vehicle_doc["purchaseDate"] = vehicle_doc["purchaseDate"].date()
@@ -147,6 +211,8 @@ class VehicleRepository:
 
         async for vehicle_doc in cursor:
             vehicle_doc.pop("_id", None)
+            # Normalize legacy data
+            vehicle_doc = self._normalize_legacy_vehicle(vehicle_doc)
             # Convert datetime back to date
             if "purchaseDate" in vehicle_doc and isinstance(vehicle_doc["purchaseDate"], datetime):
                 vehicle_doc["purchaseDate"] = vehicle_doc["purchaseDate"].date()

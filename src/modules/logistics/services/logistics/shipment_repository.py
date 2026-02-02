@@ -173,6 +173,8 @@ class ShipmentRepository:
             update_dict["vehicleId"] = str(update_dict["vehicleId"])
         if "driverId" in update_dict:
             update_dict["driverId"] = str(update_dict["driverId"])
+        if "orderIds" in update_dict:
+            update_dict["orderIds"] = [str(oid) for oid in update_dict["orderIds"]]
 
         result = await collection.update_one(
             {"shipmentId": str(shipment_id)},

@@ -13,7 +13,9 @@ from enum import Enum
 
 class ShipmentStatus(str, Enum):
     """Shipment status enumeration"""
+    PENDING = "pending"        # Created but not ready
     SCHEDULED = "scheduled"
+    LOADING = "loading"        # Being loaded with cargo
     IN_TRANSIT = "in_transit"
     DELIVERED = "delivered"
     CANCELLED = "cancelled"
@@ -35,7 +37,11 @@ class ShipmentBase(BaseModel):
     scheduledDate: datetime = Field(..., description="Scheduled departure date")
     actualDepartureDate: Optional[datetime] = Field(None, description="Actual departure date")
     actualArrivalDate: Optional[datetime] = Field(None, description="Actual arrival date")
-    cargo: List[CargoItem] = Field(..., min_length=1, description="List of cargo items")
+    cargo: List[CargoItem] = Field(default_factory=list, description="List of cargo items (can be auto-populated from orders)")
+
+    # Order linkage
+    orderIds: List[UUID] = Field(default_factory=list, description="Sales Order IDs assigned to this shipment")
+
     totalCost: Optional[float] = Field(None, ge=0, description="Total shipment cost")
     notes: Optional[str] = Field(None, max_length=1000, description="Additional notes")
 
@@ -55,6 +61,7 @@ class ShipmentUpdate(BaseModel):
     actualDepartureDate: Optional[datetime] = None
     actualArrivalDate: Optional[datetime] = None
     cargo: Optional[List[CargoItem]] = Field(None, min_length=1)
+    orderIds: Optional[List[UUID]] = None
     totalCost: Optional[float] = Field(None, ge=0)
     notes: Optional[str] = Field(None, max_length=1000)
 
@@ -88,6 +95,7 @@ class Shipment(ShipmentBase):
                         "weight": 25.5
                     }
                 ],
+                "orderIds": ["a1b2c3d4-e5f6-7890-abcd-ef1234567890", "b2c3d4e5-f6a7-8901-bcde-f12345678901"],
                 "totalCost": 150.00,
                 "notes": "Handle with care - perishable goods",
                 "createdBy": "d4e5f6a7-b8c9-0123-def1-234567890123",
@@ -95,3 +103,16 @@ class Shipment(ShipmentBase):
                 "updatedAt": "2025-01-15T10:00:00Z"
             }
         }
+
+
+class OrderAssignmentRequest(BaseModel):
+    """Request to assign orders to a shipment"""
+    orderIds: List[UUID] = Field(..., min_length=1, description="Order IDs to assign")
+
+
+class OrderAssignmentResponse(BaseModel):
+    """Response after assigning orders to shipment"""
+    shipment: dict = Field(..., description="Updated shipment")
+    assignedOrders: List[dict] = Field(..., description="List of assigned orders")
+    totalCargoWeight: float = Field(..., description="Total weight of cargo from orders")
+    message: str = Field(..., description="Success message")
