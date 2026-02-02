@@ -23,6 +23,10 @@ import type {
   PurchaseOrderSearchParams,
   PaginatedPurchaseOrders,
   SalesDashboardStats,
+  ReturnOrder,
+  ReturnOrderCreate,
+  ReturnStatus,
+  PaginatedReturns,
 } from '../types/sales';
 
 // ============================================================================
@@ -240,6 +244,87 @@ export async function getDashboardStats(): Promise<SalesDashboardStats> {
 }
 
 // ============================================================================
+// RETURN ORDER ENDPOINTS
+// ============================================================================
+
+/**
+ * Create a return order
+ */
+export async function createReturnOrder(data: ReturnOrderCreate): Promise<ReturnOrder> {
+  const response = await apiClient.post<{ data: ReturnOrder }>('/v1/sales/returns', data);
+  return response.data.data;
+}
+
+/**
+ * Get all returns with search and pagination
+ */
+export async function getReturns(params?: {
+  page?: number;
+  perPage?: number;
+  status?: ReturnStatus;
+  orderId?: string;
+}): Promise<PaginatedReturns> {
+  const response = await apiClient.get<any>('/v1/sales/returns', {
+    params: {
+      page: params?.page || 1,
+      perPage: params?.perPage || 20,
+      status: params?.status,
+      orderId: params?.orderId,
+    },
+  });
+
+  return {
+    items: response.data.data || [],
+    total: response.data.meta?.total || 0,
+    page: response.data.meta?.page || 1,
+    perPage: response.data.meta?.perPage || 20,
+    totalPages: response.data.meta?.totalPages || 1,
+  };
+}
+
+/**
+ * Get return by ID
+ */
+export async function getReturnOrder(returnId: string): Promise<ReturnOrder> {
+  const response = await apiClient.get<{ data: ReturnOrder }>(`/v1/sales/returns/${returnId}`);
+  return response.data.data;
+}
+
+/**
+ * Get returns for a specific order
+ */
+export async function getReturnsForOrder(orderId: string): Promise<ReturnOrder[]> {
+  const response = await apiClient.get<{ data: ReturnOrder[] }>(`/v1/sales/returns/order/${orderId}`);
+  return response.data.data;
+}
+
+/**
+ * Process a return order
+ */
+export async function processReturnOrder(
+  returnId: string,
+  itemOverrides?: Array<{
+    orderItemId: string;
+    returnToInventory?: boolean;
+    newGrade?: string;
+  }>
+): Promise<any> {
+  const response = await apiClient.post<{ data: any }>(`/v1/sales/returns/${returnId}/process`, {
+    returnId,
+    itemOverrides,
+  });
+  return response.data.data;
+}
+
+/**
+ * Delete return order
+ */
+export async function deleteReturnOrder(returnId: string): Promise<{ message: string }> {
+  const response = await apiClient.delete<{ message: string }>(`/v1/sales/returns/${returnId}`);
+  return response.data;
+}
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
@@ -391,6 +476,14 @@ export const salesApi = {
   updatePurchaseOrder,
   updatePurchaseOrderStatus,
   deletePurchaseOrder,
+
+  // Return Orders
+  createReturnOrder,
+  getReturns,
+  getReturnOrder,
+  getReturnsForOrder,
+  processReturnOrder,
+  deleteReturnOrder,
 
   // Dashboard
   getDashboardStats,

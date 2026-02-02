@@ -16,8 +16,12 @@ class SalesOrderStatus(str, Enum):
     DRAFT = "draft"
     CONFIRMED = "confirmed"
     PROCESSING = "processing"
-    SHIPPED = "shipped"
+    ASSIGNED = "assigned"        # Assigned to shipment
+    IN_TRANSIT = "in_transit"    # Being delivered
+    SHIPPED = "shipped"          # Keep for backward compatibility
     DELIVERED = "delivered"
+    PARTIALLY_RETURNED = "partially_returned"  # Some items returned
+    RETURNED = "returned"        # Fully returned
     CANCELLED = "cancelled"
 
 
@@ -35,6 +39,11 @@ class OrderItem(BaseModel):
     quantity: float = Field(..., gt=0, description="Quantity ordered")
     unitPrice: float = Field(..., ge=0, description="Unit price")
     totalPrice: float = Field(..., ge=0, description="Total price for this item")
+
+    # Inventory integration fields
+    inventoryId: Optional[UUID] = Field(None, description="Link to harvest inventory item")
+    qualityGrade: Optional[str] = Field(None, description="Quality grade being sold (e.g., grade_a, grade_b)")
+    sourceType: str = Field("fresh", description="Source type: 'fresh' or 'returned'")
 
 
 class ShippingAddress(BaseModel):
@@ -61,6 +70,9 @@ class SalesOrderBase(BaseModel):
     shippingAddress: Optional[ShippingAddress] = Field(None, description="Shipping address")
     notes: Optional[str] = Field(None, max_length=1000, description="Additional notes")
 
+    # Shipment integration field
+    shipmentId: Optional[UUID] = Field(None, description="Linked shipment ID (when assigned)")
+
 
 class SalesOrderCreate(SalesOrderBase):
     """Schema for creating a new sales order"""
@@ -81,6 +93,7 @@ class SalesOrderUpdate(BaseModel):
     paymentStatus: Optional[PaymentStatus] = None
     shippingAddress: Optional[ShippingAddress] = None
     notes: Optional[str] = Field(None, max_length=1000)
+    shipmentId: Optional[UUID] = None
 
 
 class SalesOrder(SalesOrderBase):
@@ -100,7 +113,7 @@ class SalesOrder(SalesOrderBase):
                 "orderCode": "SO001",
                 "customerId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "customerName": "Acme Corporation",
-                "status": "confirmed",
+                "status": "assigned",
                 "orderDate": "2025-01-20T10:00:00Z",
                 "items": [
                     {
@@ -108,7 +121,10 @@ class SalesOrder(SalesOrderBase):
                         "productName": "Fresh Lettuce",
                         "quantity": 50,
                         "unitPrice": 2.50,
-                        "totalPrice": 125.00
+                        "totalPrice": 125.00,
+                        "inventoryId": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+                        "qualityGrade": "grade_a",
+                        "sourceType": "fresh"
                     }
                 ],
                 "subtotal": 125.00,
@@ -124,6 +140,7 @@ class SalesOrder(SalesOrderBase):
                     "postalCode": "10001"
                 },
                 "notes": "Rush order - deliver by Friday",
+                "shipmentId": "f7a8b9c0-d1e2-3456-f789-abc012345678",
                 "createdBy": "d4e5f6a7-b8c9-0123-def1-234567890123",
                 "createdAt": "2025-01-20T10:00:00Z",
                 "updatedAt": "2025-01-20T10:00:00Z"

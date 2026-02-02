@@ -8,7 +8,7 @@
 // ORDER TYPES
 // ============================================================================
 
-export type OrderStatus = 'draft' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'draft' | 'confirmed' | 'processing' | 'assigned' | 'in_transit' | 'shipped' | 'delivered' | 'partially_returned' | 'returned' | 'cancelled';
 export type PaymentStatus = 'pending' | 'partial' | 'paid';
 
 export interface OrderItem {
@@ -17,6 +17,10 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  // Inventory integration fields
+  inventoryId?: string;
+  qualityGrade?: string;
+  sourceType?: 'fresh' | 'returned';
 }
 
 export interface ShippingAddress {
@@ -42,6 +46,7 @@ export interface SalesOrder {
   paymentStatus: PaymentStatus;
   shippingAddress?: ShippingAddress;
   notes?: string;
+  shipmentId?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -252,4 +257,135 @@ export interface SalesDashboardStats {
   recentOrders?: SalesOrder[];
   lowStockItems?: HarvestInventory[];
   expiringItems?: HarvestInventory[];
+}
+
+// ============================================================================
+// RETURN ORDER TYPES
+// ============================================================================
+
+export type ReturnReason = 'customer_rejected' | 'quality_issue' | 'wrong_item' | 'damaged_in_transit' | 'expired' | 'oversupply' | 'other';
+export type ReturnCondition = 'resellable' | 'damaged' | 'spoiled' | 'contaminated';
+export type ReturnStatus = 'pending' | 'processing' | 'completed' | 'rejected';
+
+export interface ReturnItem {
+  orderItemId: string;
+  originalOrderItemProductId: string;
+  productName: string;
+  orderedQuantity: number;
+  returnedQuantity: number;
+  originalGrade: string;
+  newGrade?: string;
+  reason: ReturnReason;
+  condition: ReturnCondition;
+  inventoryId?: string;
+  returnToInventory: boolean;
+  notes?: string;
+}
+
+export interface ReturnOrder {
+  returnId: string;
+  returnCode: string;
+  orderId: string;
+  shipmentId?: string;
+  orderCode?: string;
+  customerName?: string;
+  status: ReturnStatus;
+  returnDate: string;
+  processedDate?: string;
+  items: ReturnItem[];
+  totalReturnedQuantity: number;
+  totalRefundAmount?: number;
+  notes?: string;
+  processedBy?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReturnOrderCreate {
+  orderId: string;
+  shipmentId?: string;
+  items: Array<{
+    originalOrderItemProductId: string;
+    productName: string;
+    orderedQuantity: number;
+    returnedQuantity: number;
+    originalGrade: string;
+    newGrade?: string;
+    reason: ReturnReason;
+    condition: ReturnCondition;
+    inventoryId?: string;
+    returnToInventory?: boolean;
+    notes?: string;
+  }>;
+  notes?: string;
+}
+
+export interface PaginatedReturns {
+  items: ReturnOrder[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+}
+
+// ============================================================================
+// WASTE INVENTORY TYPES
+// ============================================================================
+
+export type WasteSourceType = 'harvest' | 'return' | 'expired' | 'damaged' | 'quality_reject' | 'other';
+export type DisposalMethod = 'compost' | 'animal_feed' | 'discard' | 'sold_discount' | 'donated' | 'pending';
+
+export interface WasteInventory {
+  wasteId: string;
+  organizationId: string;
+  farmId?: string;
+  sourceType: WasteSourceType;
+  sourceInventoryId?: string;
+  sourceOrderId?: string;
+  sourceReturnId?: string;
+  plantName: string;
+  variety?: string;
+  quantity: number;
+  unit: string;
+  originalGrade?: string;
+  wasteReason: string;
+  wasteDate: string;
+  disposalMethod: DisposalMethod;
+  disposalDate?: string;
+  disposalNotes?: string;
+  estimatedValue?: number;
+  currency: string;
+  notes?: string;
+  recordedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WasteInventoryCreate {
+  organizationId: string;
+  farmId?: string;
+  sourceType: WasteSourceType;
+  sourceInventoryId?: string;
+  plantName: string;
+  quantity: number;
+  unit: string;
+  wasteReason: string;
+}
+
+export interface WasteSummary {
+  totalWasteRecords: number;
+  totalQuantity: number;
+  totalEstimatedValue: number;
+  bySourceType: Record<string, { count: number; quantity: number }>;
+  byDisposalMethod: Record<string, { count: number; quantity: number }>;
+  pendingDisposal: number;
+}
+
+export interface PaginatedWaste {
+  items: WasteInventory[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
 }

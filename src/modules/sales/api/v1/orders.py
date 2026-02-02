@@ -174,6 +174,38 @@ async def update_order_status(
     )
 
 
+@router.post(
+    "/{order_id}/confirm",
+    response_model=SuccessResponse[SalesOrder],
+    summary="Confirm a sales order",
+    description="Confirm a draft order and reserve inventory. Requires sales.edit permission."
+)
+async def confirm_order(
+    order_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("sales.edit")),
+    service: OrderService = Depends()
+):
+    """
+    Confirm a sales order and reserve inventory.
+
+    - **order_id**: Sales order UUID (must be in draft status)
+
+    This action:
+    - Validates the order is in draft status
+    - Reserves inventory for items with inventoryId
+    - Updates order status to confirmed
+    """
+    order = await service.confirm_order(
+        order_id,
+        UUID(current_user.userId)
+    )
+
+    return SuccessResponse(
+        data=order,
+        message="Sales order confirmed and inventory reserved"
+    )
+
+
 @router.delete(
     "/{order_id}",
     response_model=SuccessResponse[dict],

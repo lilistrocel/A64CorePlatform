@@ -77,10 +77,14 @@ class OrderRepository:
         order_doc["orderId"] = str(order_doc["orderId"])  # Convert UUID to string for MongoDB
         order_doc["customerId"] = str(order_doc["customerId"])
         order_doc["createdBy"] = str(order_doc["createdBy"])
+        if order_doc.get("shipmentId"):
+            order_doc["shipmentId"] = str(order_doc["shipmentId"])
 
-        # Convert item productIds to strings
+        # Convert item UUIDs to strings
         for item in order_doc["items"]:
             item["productId"] = str(item["productId"])
+            if item.get("inventoryId"):
+                item["inventoryId"] = str(item["inventoryId"])
 
         await collection.insert_one(order_doc)
 
@@ -169,6 +173,8 @@ class OrderRepository:
         if "items" in update_dict:
             for item in update_dict["items"]:
                 item["productId"] = str(item["productId"])
+                if item.get("inventoryId"):
+                    item["inventoryId"] = str(item["inventoryId"])
 
         update_dict["updatedAt"] = datetime.utcnow()
 
