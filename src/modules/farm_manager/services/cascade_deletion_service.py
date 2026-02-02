@@ -68,6 +68,45 @@ class CascadeDeletionService:
         farm = await db.farms.find_one({"farmId": block.get("farmId")})
         farm_name = farm.get("name", "Unknown Farm") if farm else "Unknown Farm"
 
+        # 1b. Delete virtual children first (if this is a physical block with children)
+        child_block_ids = block.get("childBlockIds", [])
+        virtual_children_deleted = 0
+        if child_block_ids:
+            logger.info(f"[Cascade Delete] Block {block_id} has {len(child_block_ids)} virtual children to delete")
+            for child_id in child_block_ids:
+                try:
+                    child_result = await CascadeDeletionService.delete_block_with_cascade(
+                        block_id=UUID(child_id),
+                        user_id=user_id,
+                        user_email=user_email,
+                        reason=f"Deleted with parent block: {reason}" if reason else "Deleted with parent block",
+                        deleted_with_farm=deleted_with_farm
+                    )
+                    if child_result.get("success"):
+                        virtual_children_deleted += 1
+                except Exception as e:
+                    logger.error(f"[Cascade Delete] Failed to delete child block {child_id}: {e}")
+
+            logger.info(f"[Cascade Delete] Deleted {virtual_children_deleted} virtual children")
+
+        # Also find any orphaned virtual blocks that reference this as parent but aren't in childBlockIds
+        orphaned_children = await db.blocks.find({"parentBlockId": block_id_str}).to_list(None)
+        for orphan in orphaned_children:
+            orphan_id = orphan.get("blockId")
+            if orphan_id not in child_block_ids:
+                try:
+                    orphan_result = await CascadeDeletionService.delete_block_with_cascade(
+                        block_id=UUID(orphan_id),
+                        user_id=user_id,
+                        user_email=user_email,
+                        reason=f"Deleted with parent block: {reason}" if reason else "Deleted with parent block",
+                        deleted_with_farm=deleted_with_farm
+                    )
+                    if orphan_result.get("success"):
+                        virtual_children_deleted += 1
+                except Exception as e:
+                    logger.error(f"[Cascade Delete] Failed to delete orphaned child block {orphan_id}: {e}")
+
         # 2. Count related records
         archives_count = await db.block_archives.count_documents({"blockId": block_id_str})
         harvests_count = await db.block_harvests.count_documents({"blockId": block_id_str})
@@ -165,6 +204,7 @@ class CascadeDeletionService:
             "success": True,
             "blockId": block_id_str,
             "statistics": {
+                "virtualChildrenDeleted": virtual_children_deleted,
                 "archivesMoved": archives_count,
                 "harvestsMoved": harvests_count,
                 "alertsDeleted": alerts_count,
@@ -213,6 +253,7 @@ class CascadeDeletionService:
         # 3. Delete each block with cascade
         total_stats = {
             "blocksMoved": 0,
+            "virtualChildrenDeleted": 0,
             "archivesMoved": 0,
             "harvestsMoved": 0,
             "alertsDeleted": 0,
@@ -234,6 +275,7 @@ class CascadeDeletionService:
             if result.get("success"):
                 stats = result.get("statistics", {})
                 total_stats["blocksMoved"] += 1
+                total_stats["virtualChildrenDeleted"] += stats.get("virtualChildrenDeleted", 0)
                 total_stats["archivesMoved"] += stats.get("archivesMoved", 0)
                 total_stats["harvestsMoved"] += stats.get("harvestsMoved", 0)
                 total_stats["alertsDeleted"] += stats.get("alertsDeleted", 0)

@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { VirtualBlockItem } from './VirtualBlockItem';
 import { PlantAssignmentModal } from './PlantAssignmentModal';
+import { deleteBlock } from '../../services/farmApi';
 import { formatNumber } from '../../utils';
 import type { Block } from '../../types/farm';
 
@@ -159,7 +160,7 @@ const Actions = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
+const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   flex: 1;
   padding: 10px 16px;
   border-radius: 8px;
@@ -180,6 +181,16 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
         color: white;
         &:hover {
           background: #388e3c;
+        }
+      `;
+    }
+    if ($variant === 'danger') {
+      return `
+        background: transparent;
+        color: #dc2626;
+        border: 1px solid #dc2626;
+        &:hover {
+          background: #fef2f2;
         }
       `;
     }
@@ -208,6 +219,71 @@ const AvailableAreaInfo = styled.div`
   border-radius: 6px;
 `;
 
+const PhysicalBlockPlantingInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+  border-radius: 8px;
+  margin-bottom: 8px;
+`;
+
+const PlantingState = styled.div<{ $state: string }>`
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: ${({ $state }) => {
+    switch ($state) {
+      case 'planned':
+        return '#e3f2fd';
+      case 'growing':
+        return '#e8f5e9';
+      case 'fruiting':
+        return '#fff3e0';
+      case 'harvesting':
+        return '#fce4ec';
+      default:
+        return '#f5f5f5';
+    }
+  }};
+  color: ${({ $state }) => {
+    switch ($state) {
+      case 'planned':
+        return '#1565c0';
+      case 'growing':
+        return '#2e7d32';
+      case 'fruiting':
+        return '#e65100';
+      case 'harvesting':
+        return '#c2185b';
+      default:
+        return '#616161';
+    }
+  }};
+`;
+
+const PlantingDetails = styled.div`
+  flex: 1;
+`;
+
+const PlantingCrop = styled.div`
+  font-size: 15px;
+  font-weight: 600;
+  color: #212121;
+`;
+
+const PlantingMeta = styled.div`
+  font-size: 12px;
+  color: #757575;
+  margin-top: 2px;
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -220,13 +296,54 @@ export function PhysicalBlockCard({
 }: PhysicalBlockCardProps) {
   const navigate = useNavigate();
   const [showPlantModal, setShowPlantModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const activePlantings = virtualBlocks.filter(
     (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
   );
 
+  // Check if the physical block itself has an active planting (not just virtual children)
+  // Exclude: empty, cleaning, partial (partial = has virtual children, not a direct planting)
+  const physicalBlockHasPlanting =
+    physicalBlock.state !== 'empty' &&
+    physicalBlock.state !== 'cleaning' &&
+    physicalBlock.state !== 'partial';
+
+  // Block is truly empty only if state is 'empty'
+  const isBlockEmpty = physicalBlock.state === 'empty';
+  const isBlockCleaning = physicalBlock.state === 'cleaning';
+  const isBlockPartial = physicalBlock.state === 'partial';
+
+  // Can add planting if block is empty OR if it's partial and has available area
+  const canAddPlanting = isBlockEmpty ||
+    (isBlockPartial && (physicalBlock.availableArea || 0) > 0);
+
   const handleBlockNameClick = () => {
     navigate(`/farm/farms/${farmId}/blocks/${physicalBlock.blockId}`);
+  };
+
+  const handleDeleteBlock = async () => {
+    const blockName = physicalBlock.name || physicalBlock.blockCode;
+    const hasChildren = virtualBlocks.length > 0;
+
+    const confirmMessage = hasChildren
+      ? `Are you sure you want to delete "${blockName}" and its ${virtualBlocks.length} planting(s)? This action cannot be undone.`
+      : `Are you sure you want to delete "${blockName}"? This action cannot be undone.`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteBlock(farmId, physicalBlock.blockId);
+      onRefresh?.();
+    } catch (error) {
+      console.error('Failed to delete block:', error);
+      alert('Failed to delete block. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const getBlockTypeIcon = (): string => {
@@ -253,8 +370,9 @@ export function PhysicalBlockCard({
           <BlockType>{physicalBlock.metadata?.blockType || 'Physical Block'}</BlockType>
         </LeftSection>
 
-        <PlantingCountBadge $count={activePlantings.length}>
-          {activePlantings.length} Active {activePlantings.length === 1 ? 'Planting' : 'Plantings'}
+        <PlantingCountBadge $count={activePlantings.length + (physicalBlockHasPlanting ? 1 : 0)}>
+          {activePlantings.length + (physicalBlockHasPlanting ? 1 : 0)} Active{' '}
+          {activePlantings.length + (physicalBlockHasPlanting ? 1 : 0) === 1 ? 'Planting' : 'Plantings'}
         </PlantingCountBadge>
       </Header>
 
@@ -281,22 +399,58 @@ export function PhysicalBlockCard({
 
       <PlantingsSection>
         <PlantingsSectionTitle>
-          {activePlantings.length > 0 ? 'Active Plantings' : 'No Active Plantings'}
+          {activePlantings.length > 0 || physicalBlockHasPlanting
+            ? 'Active Plantings'
+            : 'No Active Plantings'}
         </PlantingsSectionTitle>
 
-        {activePlantings.length > 0 ? (
+        {/* Show physical block's own planting if it has one */}
+        {physicalBlockHasPlanting && (
+          <PhysicalBlockPlantingInfo>
+            <PlantingState $state={physicalBlock.state}>
+              {physicalBlock.state === 'planned' && '📋'}
+              {physicalBlock.state === 'growing' && '🌱'}
+              {physicalBlock.state === 'fruiting' && '🍅'}
+              {physicalBlock.state === 'harvesting' && '🌾'}
+              {physicalBlock.state}
+            </PlantingState>
+            <PlantingDetails>
+              <PlantingCrop>{physicalBlock.targetCropName || 'Unknown Crop'}</PlantingCrop>
+              <PlantingMeta>
+                {physicalBlock.actualPlantCount
+                  ? `${formatNumber(physicalBlock.actualPlantCount)} plants`
+                  : ''}
+                {physicalBlock.expectedHarvestDate && (
+                  <>
+                    {' • '}
+                    Harvest: {new Date(physicalBlock.expectedHarvestDate).toLocaleDateString()}
+                  </>
+                )}
+              </PlantingMeta>
+            </PlantingDetails>
+          </PhysicalBlockPlantingInfo>
+        )}
+
+        {/* Show virtual block plantings */}
+        {activePlantings.length > 0 && (
           <VirtualBlocksList>
             {activePlantings.map((virtualBlock) => (
               <VirtualBlockItem
                 key={virtualBlock.blockId}
                 virtualBlock={virtualBlock}
                 farmId={farmId}
+                onRefresh={onRefresh}
               />
             ))}
           </VirtualBlocksList>
-        ) : (
+        )}
+
+        {/* Show empty/cleaning state messages */}
+        {!physicalBlockHasPlanting && activePlantings.length === 0 && (
           <EmptyPlantingsMessage>
-            This block is empty and ready for planting
+            {isBlockCleaning
+              ? '🧹 This block is being cleaned and will be ready for planting soon'
+              : 'This block is empty and ready for planting'}
           </EmptyPlantingsMessage>
         )}
       </PlantingsSection>
@@ -308,14 +462,37 @@ export function PhysicalBlockCard({
       )}
 
       <Actions>
-        <ActionButton $variant="primary" onClick={() => setShowPlantModal(true)}>
-          <span>🌱</span>
-          <span>Add New Planting</span>
-        </ActionButton>
+        {/* Show Add New Planting for empty blocks or partial blocks with available area */}
+        {canAddPlanting && (
+          <ActionButton $variant="primary" onClick={() => setShowPlantModal(true)}>
+            <span>🌱</span>
+            <span>{isBlockEmpty ? 'Add New Planting' : 'Add Another Planting'}</span>
+          </ActionButton>
+        )}
+
+        {/* Show status-appropriate action for non-empty blocks */}
+        {isBlockCleaning && (
+          <ActionButton $variant="secondary" disabled>
+            <span>🧹</span>
+            <span>Cleaning in Progress</span>
+          </ActionButton>
+        )}
+
+        {physicalBlockHasPlanting && (
+          <ActionButton $variant="secondary" onClick={handleBlockNameClick}>
+            <span>📈</span>
+            <span>Manage Planting</span>
+          </ActionButton>
+        )}
 
         <ActionButton $variant="secondary" onClick={handleBlockNameClick}>
           <span>📊</span>
           <span>View Details</span>
+        </ActionButton>
+
+        <ActionButton $variant="danger" onClick={handleDeleteBlock} disabled={isDeleting}>
+          <span>🗑️</span>
+          <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
         </ActionButton>
       </Actions>
 

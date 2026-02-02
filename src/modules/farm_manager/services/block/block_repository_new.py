@@ -93,6 +93,10 @@ class BlockRepository:
         block_dict["blockId"] = str(block_dict["blockId"])
         block_dict["farmId"] = str(block_dict["farmId"])
 
+        # Initialize availableArea to total area for new physical blocks
+        if block_dict.get("area") and block_dict.get("blockCategory") != "virtual":
+            block_dict["availableArea"] = block_dict["area"]
+
         # Convert nested objects for MongoDB
         if block_dict.get("location"):
             block_dict["location"] = dict(block_dict["location"])
@@ -561,6 +565,7 @@ class BlockRepository:
         - Decrement availableArea by allocated_area
         - Increment virtualBlockCounter to new_counter
         - Add child_id to childBlockIds array
+        - Set state to "partial" (indicates physical block has virtual children)
 
         Args:
             parent_id: Parent block UUID
@@ -576,6 +581,7 @@ class BlockRepository:
                 "$inc": {"availableArea": -allocated_area},
                 "$set": {
                     "virtualBlockCounter": new_counter,
+                    "state": "partial",  # Physical block now has virtual children
                     "updatedAt": datetime.utcnow()
                 },
                 "$push": {"childBlockIds": child_id}

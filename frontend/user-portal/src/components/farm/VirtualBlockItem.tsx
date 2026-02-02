@@ -5,8 +5,10 @@
  * Shows crop name, state, and days in current state in a single row.
  */
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { deleteBlock } from '../../services/farmApi';
 import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
 import type { Block, BlockState } from '../../types/farm';
 
@@ -17,6 +19,7 @@ import type { Block, BlockState } from '../../types/farm';
 export interface VirtualBlockItemProps {
   virtualBlock: Block;
   farmId: string;
+  onRefresh?: () => void;
 }
 
 // ============================================================================
@@ -101,12 +104,36 @@ const DaysInfo = styled.div`
   white-space: nowrap;
 `;
 
+const DeleteButton = styled.button`
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid #dc2626;
+  border-radius: 4px;
+  color: #dc2626;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: #fef2f2;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function VirtualBlockItem({ virtualBlock, farmId }: VirtualBlockItemProps) {
+export function VirtualBlockItem({ virtualBlock, farmId, onRefresh }: VirtualBlockItemProps) {
   const navigate = useNavigate();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const stateColor = BLOCK_STATE_COLORS[virtualBlock.state];
   const stateLabel = BLOCK_STATE_LABELS[virtualBlock.state];
@@ -165,6 +192,26 @@ export function VirtualBlockItem({ virtualBlock, farmId }: VirtualBlockItemProps
     navigate(`/farm/farms/${farmId}/blocks/${virtualBlock.blockId}`);
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking delete
+
+    const cropName = virtualBlock.targetCropName || virtualBlock.name || 'this planting';
+    if (!window.confirm(`Are you sure you want to delete "${cropName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteBlock(farmId, virtualBlock.blockId);
+      onRefresh?.();
+    } catch (error) {
+      console.error('Failed to delete planting:', error);
+      alert('Failed to delete planting. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Container onClick={handleClick}>
       <LeftSection>
@@ -178,6 +225,9 @@ export function VirtualBlockItem({ virtualBlock, farmId }: VirtualBlockItemProps
       <RightSection>
         <StateBadge $color={stateColor}>{stateLabel}</StateBadge>
         {daysInState > 0 && <DaysInfo>📊 {daysInState}d</DaysInfo>}
+        <DeleteButton onClick={handleDelete} disabled={isDeleting}>
+          🗑️ {isDeleting ? '...' : ''}
+        </DeleteButton>
       </RightSection>
     </Container>
   );
