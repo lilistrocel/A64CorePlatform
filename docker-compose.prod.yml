@@ -10,6 +10,27 @@ services:
     environment:
       - ENVIRONMENT=production
       - DEBUG=False
+      - MONGODB_URL=mongodb://${MONGO_APP_USER:-a64core_app}:${MONGO_APP_PASSWORD}@mongodb:27017/${MONGODB_DB_NAME:-a64core_db}?authSource=${MONGODB_DB_NAME:-a64core_db}
+    restart: always
+
+  # MongoDB - Production (auth enabled, no external ports)
+  mongodb:
+    ports: []  # Remove external port exposure in production
+    environment:
+      - MONGO_INITDB_DATABASE=a64core_db
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./logs/mongodb:/var/log/mongodb
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro
+    command: ["mongod", "--auth"]
+    restart: always
+
+  # Redis - Production (no external ports)
+  redis:
+    ports: []  # Remove external port exposure in production
     restart: always
 
   # User Portal - Production Build (Static Nginx)
@@ -31,4 +52,24 @@ services:
       - ./logs/nginx:/var/log/nginx
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro  # Let's Encrypt SSL certificates
+    restart: always
+
+  # Adminer - Disabled in production
+  adminer:
+    profiles:
+      - donotstart  # Prevent Adminer from starting in production
+
+  # Local Registry - Localhost only in production
+  registry:
+    ports:
+      - "127.0.0.1:5000:5000"  # Localhost only
+    restart: always
+
+  # Cron Service - Production overrides
+  cron:
+    environment:
+      - TZ=UTC
+      - API_HOST=api:8000
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@a64platform.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     restart: always

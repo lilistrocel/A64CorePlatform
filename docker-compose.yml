@@ -60,6 +60,8 @@ services:
       - "27017:27017"
     environment:
       - MONGO_INITDB_DATABASE=a64core_db
+      - MONGO_APP_USER=${MONGO_APP_USER:-a64core_app}
+      - MONGO_APP_PASSWORD=${MONGO_APP_PASSWORD:-changeme_in_production}
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
@@ -213,8 +215,8 @@ services:
     environment:
       - TZ=UTC  # Timezone for cron (11 PM UTC = 11 PM UTC)
       - API_HOST=api:8000
-      - ADMIN_EMAIL=admin@a64platform.com
-      - ADMIN_PASSWORD=SuperAdmin123!
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@a64platform.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
     volumes:
       - ./logs/cron:/var/log/cron
     networks:
@@ -251,6 +253,43 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Backup Service - Automated MongoDB backups with retention policy
+  backup:
+    container_name: a64core-backup
+    build:
+      context: .
+      dockerfile: docker/backup/Dockerfile
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=a64core_db
+      - MONGO_USER=${MONGO_APP_USER:-a64core_app}
+      - MONGO_PASSWORD=${MONGO_APP_PASSWORD:-changeme_in_production}
+      - MONGO_AUTH_DB=admin
+      - BACKUP_DIR=/backups/mongodb
+      - LOG_FILE=/var/log/backup/mongodb_backup.log
+      - BACKUP_RETENTION_DAILY=${BACKUP_RETENTION_DAILY:-7}
+      - BACKUP_RETENTION_WEEKLY=${BACKUP_RETENTION_WEEKLY:-4}
+      - BACKUP_RETENTION_MONTHLY=${BACKUP_RETENTION_MONTHLY:-3}
+      - TZ=UTC
+    volumes:
+      - backup_data:/backups
+      - ./scripts/backup:/scripts:ro
+      - ./logs/backup:/var/log/backup
+    networks:
+      - a64core-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    profiles:
+      - backup
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   a64core-network:
     driver: bridge
@@ -265,4 +304,6 @@ volumes:
   registry_data:
     driver: local
   nginx_modules_config:
+    driver: local
+  backup_data:
     driver: local

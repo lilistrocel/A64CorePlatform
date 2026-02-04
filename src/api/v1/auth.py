@@ -105,19 +105,19 @@ async def login(credentials: UserLogin) -> TokenResponse:
     ```
     """
     # Check for too many failed login attempts
-    login_rate_limiter.check_login_attempts(credentials.email)
+    await login_rate_limiter.check_login_attempts(credentials.email)
 
     try:
         token_response = await auth_service.login_user(credentials)
 
         # Clear failed attempts on successful login
-        login_rate_limiter.clear_attempts(credentials.email)
+        await login_rate_limiter.clear_attempts(credentials.email)
 
         return token_response
     except HTTPException as e:
         # Record failed attempt if credentials were invalid
         if e.status_code == status.HTTP_401_UNAUTHORIZED:
-            login_rate_limiter.record_failed_attempt(credentials.email)
+            await login_rate_limiter.record_failed_attempt(credentials.email)
         raise
 
 

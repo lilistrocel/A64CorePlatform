@@ -5,6 +5,7 @@ Manages environment variables and configuration settings
 """
 
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from typing import List
 import os
 
@@ -52,6 +53,18 @@ class Settings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    @model_validator(mode='after')
+    def validate_production_settings(self):
+        if self.ENVIRONMENT != "development":
+            if self.SECRET_KEY == "dev_secret_key_change_in_production":
+                raise ValueError(
+                    "SECRET_KEY must be set in production! "
+                    "Do not use the default value."
+                )
+            if self.DEBUG:
+                raise ValueError("DEBUG must be False in production!")
+        return self
 
     class Config:
         """Pydantic config class"""
