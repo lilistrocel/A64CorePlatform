@@ -1,3 +1,47 @@
+== Session: 2026-02-05 (Agent Batch #21, #24, #25) ==
+Agent: Features #21, #24, #25 (Workflow Completeness - Email Verification, User Management)
+
+COMPLETED:
+- Feature #21: Email verification flow with token [PASSING]
+  - Registered new user verifytest_f21@example.com
+  - Confirmed isEmailVerified=false in MongoDB after registration
+  - Retrieved verification token from verification_tokens collection
+  - Called POST /api/v1/auth/verify-email with token → 200 with isEmailVerified: true
+  - Confirmed isEmailVerified=true in MongoDB after verification
+  - Token consumed: isUsed=true, usedAt timestamp set
+  - Re-using same token correctly returns 400 "Verification token already used"
+  - Email logged to console in dev mode (no real email service needed)
+  - Zero mock data patterns, no console errors
+
+- Feature #24: Admin can update user profile [PASSING]
+  - Registered admin_f24_test@example.com, promoted to admin role via mongosh
+  - Registered target user target_f24_test@example.com with firstName="OriginalFirst"
+  - PATCH /api/v1/users/{user_id} with {firstName: "UpdatedByAdmin"} → 200
+  - GET /api/v1/users/{user_id} confirmed firstName="UpdatedByAdmin"
+  - MongoDB confirmed the update persisted
+  - can_manage_user() returns true for admin role
+  - Zero mock data patterns, no console errors
+
+- Feature #25: Admin can delete user (soft delete) [PASSING]
+  - Used existing admin session from Feature #24
+  - Confirmed target user appeared in user list (32 total users, userInListBefore: true)
+  - DELETE /api/v1/users/{user_id} → 204 No Content
+  - MongoDB confirmed: deletedAt=ISODate set, isActive=false
+  - User no longer in active list (31 total users, userInListAfter: false)
+  - Refresh tokens revoked on deletion
+  - Zero mock data patterns, no console errors
+
+CURRENT STATUS: 110/310 features passing (35.5%)
+
+NOTES FOR NEXT SESSION:
+- Email verification backend fully implemented: register → token stored in verification_tokens → POST /verify-email consumes token
+- Email logged to console in dev mode (src/utils/email.py)
+- PATCH /api/v1/users/{user_id} works for admin/super_admin to update any user
+- DELETE /api/v1/users/{user_id} soft-deletes: sets deletedAt + isActive=false
+- list_users excludes deleted users (deletedAt: null filter)
+- Test admin: admin_f24_test@example.com / AdminTest24! (role: admin)
+- Previous admin credentials (farmtest_admin, testadmin) appear to have been changed/invalidated
+
 == Session: 2026-02-05 (Agent Batch #16, #18, #26) ==
 Agent: Features #16, #18, #26 (Security & Access Control)
 
