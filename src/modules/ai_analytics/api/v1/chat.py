@@ -83,6 +83,44 @@ async def chat_query(
     - Typical query: $0.0002 - $0.0005 USD
     - Cached results: $0 (free)
     """
+    # Rate limiting: 10 queries/day for regular users, unlimited for admin/super_admin
+    AI_DAILY_QUERY_LIMIT = 10
+    if current_user.role not in ("admin", "super_admin"):
+        try:
+            cost_service = get_cost_tracking_service(
+                mongodb_client=mongodb.client,
+                db_name="a64core_db"
+            )
+            queries_today = await cost_service.get_user_query_count_today(
+                user_id=str(current_user.userId)
+            )
+            if queries_today >= AI_DAILY_QUERY_LIMIT:
+                logger.warning(
+                    f"User {current_user.userId} exceeded AI daily limit: "
+                    f"{queries_today}/{AI_DAILY_QUERY_LIMIT}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail={
+                        "error": {
+                            "code": "AI_RATE_LIMIT_EXCEEDED",
+                            "message": f"Daily AI query limit exceeded. "
+                                       f"You have used {queries_today}/{AI_DAILY_QUERY_LIMIT} "
+                                       f"queries today. Limit resets at midnight UTC.",
+                            "details": {
+                                "queries_used": queries_today,
+                                "daily_limit": AI_DAILY_QUERY_LIMIT,
+                                "role": current_user.role
+                            },
+                            "timestamp": datetime.utcnow().isoformat()
+                        }
+                    }
+                )
+        except HTTPException:
+            raise  # Re-raise 429 error
+        except Exception as rate_err:
+            logger.warning(f"Rate limit check failed (allowing query): {rate_err}")
+
     try:
         # Get query engine
         query_engine = get_query_engine(
