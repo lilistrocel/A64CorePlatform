@@ -330,6 +330,17 @@ const HelpText = styled.span`
 `;
 
 // ============================================================================
+// DATE UTILITIES
+// ============================================================================
+
+/**
+ * Get today's date in YYYY-MM-DD format for date inputs
+ */
+function getToday(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -549,7 +560,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
           <Form onSubmit={handleSubmit}>
             <FormField>
               <Label>Review Date</Label>
-              <Input type="date" value={formData.reviewDate} onChange={(e) => setFormData({ ...formData, reviewDate: e.target.value })} required />
+              <Input type="date" value={formData.reviewDate} onChange={(e) => setFormData({ ...formData, reviewDate: e.target.value })} max={getToday()} required />
             </FormField>
 
             <FormField>

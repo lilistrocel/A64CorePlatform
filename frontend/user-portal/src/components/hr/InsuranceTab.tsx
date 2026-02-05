@@ -266,6 +266,26 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 `;
 
 // ============================================================================
+// DATE UTILITIES
+// ============================================================================
+
+/**
+ * Get today's date in YYYY-MM-DD format for date inputs
+ */
+function getToday(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Get a date N years from today in YYYY-MM-DD format
+ */
+function getDateYearsFromNow(years: number): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + years);
+  return date.toISOString().split('T')[0];
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -326,8 +346,8 @@ export function InsuranceTab({ employeeId }: InsuranceTabProps) {
       policyNumber: '',
       type: 'health',
       coverage: '',
-      startDate: '',
-      endDate: '',
+      startDate: getToday(),
+      endDate: getDateYearsFromNow(1),
       monthlyCost: '',
     });
     setModalOpen(true);
@@ -495,6 +515,7 @@ export function InsuranceTab({ employeeId }: InsuranceTabProps) {
                 type="date"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                min={formData.startDate || getToday()}
               />
             </FormField>
 

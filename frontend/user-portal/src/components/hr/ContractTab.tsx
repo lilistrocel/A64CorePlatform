@@ -266,6 +266,26 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 `;
 
 // ============================================================================
+// DATE UTILITIES
+// ============================================================================
+
+/**
+ * Get today's date in YYYY-MM-DD format for date inputs
+ */
+function getToday(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Get a date N years from today in YYYY-MM-DD format
+ */
+function getDateYearsFromNow(years: number): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + years);
+  return date.toISOString().split('T')[0];
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -305,8 +325,8 @@ export function ContractTab({ employeeId }: ContractTabProps) {
     setEditingContract(null);
     setFormData({
       type: 'full_time',
-      startDate: '',
-      endDate: '',
+      startDate: getToday(),
+      endDate: getDateYearsFromNow(1),
       salary: '',
       currency: 'AED',
       benefits: '',
@@ -434,7 +454,7 @@ export function ContractTab({ employeeId }: ContractTabProps) {
 
             <FormField>
               <Label>End Date</Label>
-              <Input type="date" value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} />
+              <Input type="date" value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} min={formData.startDate || getToday()} />
             </FormField>
 
             <FormField>

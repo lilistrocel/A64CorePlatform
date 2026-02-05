@@ -293,6 +293,26 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 `;
 
 // ============================================================================
+// DATE UTILITIES
+// ============================================================================
+
+/**
+ * Get today's date in YYYY-MM-DD format for date inputs
+ */
+function getToday(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Get a date N years from today in YYYY-MM-DD format
+ */
+function getDateYearsFromNow(years: number): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + years);
+  return date.toISOString().split('T')[0];
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -349,8 +369,8 @@ export function VisaTab({ employeeId }: VisaTabProps) {
     setFormData({
       visaType: '',
       country: '',
-      issueDate: '',
-      expiryDate: '',
+      issueDate: getToday(),
+      expiryDate: getDateYearsFromNow(2),
       status: 'valid',
       documentUrl: '',
     });
@@ -496,6 +516,7 @@ export function VisaTab({ employeeId }: VisaTabProps) {
                 type="date"
                 value={formData.issueDate}
                 onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
+                max={getToday()}
                 required
               />
             </FormField>
@@ -506,6 +527,7 @@ export function VisaTab({ employeeId }: VisaTabProps) {
                 type="date"
                 value={formData.expiryDate}
                 onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                min={formData.issueDate || getToday()}
                 required
               />
             </FormField>
