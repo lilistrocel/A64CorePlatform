@@ -1,3 +1,87 @@
+== Session: 2026-02-05 (Agent 22) ==
+Agent: Features #15, #195, #96 (Navigation Integrity)
+Stats: 82/310 passing (26.5%)
+
+COMPLETED:
+- Feature #15: Auto-redirect to login on 401 response [PASSING]
+  - Existing implementation already fully functional in api.ts response interceptor
+  - On 401: tries token refresh, if fails clears tokens and redirects to /login?expired=true
+  - Login page shows "Your session has expired. Please sign in again." banner
+  - Verified: invalidated token + removed refresh token → navigated to /farm/farms → redirected to /login?expired=true
+  - User can successfully sign back in after redirect
+  - Zero console errors
+
+- Feature #195: Marketing dashboard page [PASSING]
+  - Fixed getDashboardStats to fetch real campaigns, events, and budgets (was hardcoded to empty arrays)
+  - Now fetches campaigns, events, and budgets in parallel alongside dashboard stats
+  - Top Campaigns widget shows real campaigns sorted by impressions
+  - Upcoming Events widget shows planned/ongoing events sorted by date
+  - Budget Utilization widget shows real budget progress bars with utilization percentages
+  - Budget overview: Total Budget, Allocated, Spent, Available all from real API
+  - Campaign stats: Active Campaigns, Total Impressions, Clicks, Conversions all from real API
+  - Quick action buttons: Manage Campaigns, View Budgets, Manage Events, View Channels
+  - Zero console errors, no mock data patterns
+  - Test data cleaned up after verification
+
+- Feature #96: 404 page for non-existent routes [PASSING]
+  - Created NotFound.tsx page component with styled 404 display
+  - Large "404" heading, "Page Not Found" title, user-friendly message
+  - "Go to Dashboard" button navigates to /dashboard
+  - "Go Back" button navigates to previous page
+  - Replaced catch-all redirect (Navigate to /dashboard) with proper 404 page
+  - Works for all non-existent routes including deeply nested paths
+  - Zero console errors, no mock data patterns
+
+FIXES APPLIED:
+- frontend/user-portal/src/services/marketingService.ts - Fetch real campaigns, events, budgets for dashboard
+- frontend/user-portal/src/pages/NotFound.tsx - NEW: 404 page component
+- frontend/user-portal/src/App.tsx - Replace catch-all redirect with 404 page
+
+CURRENT STATUS: 82/310 features passing (26.5%)
+
+NOTES FOR NEXT SESSION:
+- 401 auto-redirect handled by Axios interceptor in api.ts (lines 46-110)
+- Login page shows expired session banner via ?expired=true query param
+- Marketing dashboard now fetches real data for all widgets (campaigns, events, budgets)
+- 404 page is a standalone page outside MainLayout (no sidebar)
+- Test user: testadmin@a64core.com / TestPass123@ (role: user)
+
+== Session: 2026-02-05 (Agent 20) ==
+Agent: Features #130, #131, #132 (Data Cleanup & Cascade)
+Stats: 75/310 passing (24.2%)
+
+COMPLETED:
+- Feature #130: Customer deletion affects sales orders [PASSING]
+  - Implemented cascade delete logic in customer_service.py
+  - Active orders (draft, confirmed, processing, assigned, in_transit, shipped) block deletion with 409 Conflict
+  - Completed/cancelled orders are cascade deleted with the customer
+  - API verified: create customer → create order → attempt delete (blocked) → cancel order → delete (success)
+  - Browser UI verified: CRM page, delete with cascade, zero console errors
+  - Fixed customer sequence counter desync (E11000 duplicate key error)
+
+- Feature #131: User soft delete preserves data but hides from lists [PASSING]
+  - Verified existing implementation in user_service.py
+  - Soft delete sets deletedAt timestamp + isActive=false
+  - User hidden from active user list (GET /api/v1/users)
+  - User data still exists in MongoDB (deletedAt field preserved)
+  - Soft-deleted user cannot login (403 Forbidden)
+
+- Feature #132: Deleted items removed from search results [PASSING]
+  - API test: create customer → search (found) → delete → search (not found, 0 results)
+  - Both search endpoints verified: ?search= param and /search?q= dedicated endpoint
+  - Browser UI: searched "UITEST_DELETESEARCH" (found) → deleted → "No results found"
+  - Zero console errors
+
+FILES MODIFIED:
+- src/modules/crm/services/customer/customer_service.py (cascade delete logic)
+- frontend/user-portal/src/pages/crm/CRMPage.tsx (error handler reads FastAPI detail field)
+- scripts/test_feature130.sh, test_feature131.sh, test_feature132.sh (test scripts)
+- scripts/fix_counter.js, verify_soft_delete.js (utility scripts)
+
+ISSUES FIXED:
+- MongoDB counter desync: customer_sequence was at 3 but max code was C119 → fixed to 120
+- Frontend error handler: CRMPage.tsx only checked message field, now also checks detail field for FastAPI errors
+
 == Session: 2026-02-05 (Agent 19) ==
 Agent: Features #12, #196, #19 (Auth Logout, AI Analytics Chat, Password Reset)
 
