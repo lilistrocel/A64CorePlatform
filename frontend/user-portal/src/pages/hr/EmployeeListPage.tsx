@@ -139,6 +139,33 @@ const FilterButton = styled.button<{ $active: boolean }>`
   }
 `;
 
+const FilterSelect = styled.select`
+  padding: 8px 32px 8px 12px;
+  background: white;
+  color: #616161;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23616161' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  min-width: 150px;
+
+  &:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:hover {
+    border-color: #bdbdbd;
+  }
+`;
+
 const ViewToggle = styled.div`
   display: flex;
   gap: 8px;
@@ -332,6 +359,20 @@ const ClearFiltersButton = styled.button`
 // COMPONENT
 // ============================================================================
 
+// Common departments for filtering
+const DEPARTMENTS = [
+  'Farm Operations',
+  'Engineering',
+  'HR',
+  'Sales',
+  'Marketing',
+  'Finance',
+  'IT',
+  'Administration',
+  'Logistics',
+  'Quality Assurance',
+];
+
 export function EmployeeListPage() {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -404,6 +445,11 @@ export function EmployeeListPage() {
     setPage(1);
   };
 
+  const handleDepartmentFilter = (department: string) => {
+    setDepartmentFilter(department);
+    setPage(1);
+  };
+
   const handleCreateEmployee = () => {
     navigate('/hr/employees/new');
   };
@@ -471,6 +517,20 @@ export function EmployeeListPage() {
           <FilterButton $active={statusFilter === 'terminated'} onClick={() => handleStatusFilter('terminated')}>
             Terminated
           </FilterButton>
+        </FilterGroup>
+
+        <FilterGroup>
+          <FilterLabel>Department:</FilterLabel>
+          <FilterSelect
+            value={departmentFilter}
+            onChange={(e) => handleDepartmentFilter(e.target.value)}
+            aria-label="Department filter"
+          >
+            <option value="all">All Departments</option>
+            {DEPARTMENTS.map((dept) => (
+              <option key={dept} value={dept}>{dept}</option>
+            ))}
+          </FilterSelect>
         </FilterGroup>
 
         <ViewToggle>
