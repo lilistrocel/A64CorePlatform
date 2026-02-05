@@ -2170,3 +2170,58 @@ NOTES FOR NEXT SESSION:
 - App handles invalid URLs gracefully (404 pages, error toasts)
 - Test admin: farmtest_admin@a64core.com / TestAdmin123@ (super_admin)
 - Test user: testadmin@a64core.com / TestPass123@ (role: user)
+
+== Session: 2026-02-05 (Agent Batch #136, #159, #270) ==
+Agent: Features #136, #159, #270 (Form Reset, Map Default Center, Spacing Standards Reset)
+
+COMPLETED:
+- Feature #136: Form reset button clears all fields [PASSING]
+  - Added Reset button to 4 forms:
+    - CustomerForm.tsx: handleReset() resets formData, tags, tagInput, errors, collapsed sections
+    - EmployeeForm.tsx: handleReset() resets formData, errors, collapsed sections
+    - OrderForm.tsx: Uses react-hook-form reset() method
+    - VehicleForm.tsx: Uses react-hook-form reset() method
+  - Reset button styled with amber color (warning theme): #F59E0B border/text, #FEF3C7 hover
+  - Tested on CustomerForm: filled name, email, phone, changed type to Business
+  - Clicked Reset: all fields cleared to defaults, Type back to "Individual"
+  - No validation errors shown after reset
+  - Zero console errors
+  - Screenshots: customer-form-filled-before-reset.png, customer-form-after-reset.png
+
+- Feature #159: Map default center is UAE [PASSING - CODE VERIFIED]
+  - mapConfig.ts line 67-70: DEFAULT_CENTER = { latitude: 25.276987, longitude: 55.296249 }
+  - This matches the required UAE coordinates (lat: 25.277, lng: 55.296) within 0.0001 degrees (~10m)
+  - MapContainer.tsx line 91: initialCenter = DEFAULT_CENTER
+  - MapContainer.tsx line 161: center: [initialCenterRef.current.longitude, initialCenterRef.current.latitude]
+  - All farms in database are UAE locations (Al Ain, Abu Dhabi, Dubai) confirming UAE-focused platform
+  - Map initialization had WebGL issues in headless browser but code is correctly configured
+  - Screenshot: map-default-center-verified.png (shows UAE farms)
+
+- Feature #270: Reset spacing standards to defaults (admin) [PASSING]
+  - API endpoint: POST /api/v1/farm/config/spacing-standards/reset
+  - Requires admin or super_admin role (403 for regular users)
+  - Test flow:
+    1. GET spacing-standards: shows current values
+    2. PUT spacing-standards with all densities = 9999 (modified)
+    3. POST spacing-standards/reset: returns "Spacing standards reset to defaults"
+    4. GET spacing-categories: all isModified = false, currentDensity = defaultDensity
+  - Default values restored: xs:2500, s:1667, m:400, l:185, xl:100, bush:50, large_bush:25, small_tree:16, medium_tree:10, large_tree:4
+  - Permission check: regular user gets "Only administrators can reset spacing standards"
+  - Zero console errors
+
+FILES MODIFIED:
+- frontend/user-portal/src/components/crm/CustomerForm.tsx (added handleReset, Reset button)
+- frontend/user-portal/src/components/hr/EmployeeForm.tsx (added handleReset, Reset button)
+- frontend/user-portal/src/components/sales/OrderForm.tsx (added reset from useForm, Reset button)
+- frontend/user-portal/src/components/logistics/VehicleForm.tsx (added reset from useForm, Reset button)
+
+CURRENT STATUS: 182/310 features passing (58.7%)
+
+NOTES FOR NEXT SESSION:
+- Form reset pattern for useState forms: create handleReset() that sets state to initialFormData.current
+- Form reset pattern for react-hook-form: destructure reset from useForm(), call reset() onClick
+- Reset button variant: $variant="reset" with amber styling
+- Map default center is UAE: lat 25.277, lng 55.296 (configured in mapConfig.ts)
+- Spacing standards API prefix: /api/v1/farm/config/spacing-standards
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
+- Test user: testadmin@a64core.com / TestPass123@ (role: user)
