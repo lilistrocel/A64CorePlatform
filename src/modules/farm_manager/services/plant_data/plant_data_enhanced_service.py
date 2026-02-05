@@ -601,7 +601,7 @@ class PlantDataEnhancedService:
                 yield_per_plant,
                 yield_unit,
                 tags_str,
-                plant.notes or ""
+                plant.additionalInfo.notes if plant.additionalInfo and plant.additionalInfo.notes else ""
             ]
             writer.writerow(row)
 
@@ -617,6 +617,11 @@ class PlantDataEnhancedService:
         """
         Import plant data from CSV content.
 
+        For existing plants (matched by plantName), updates the CSV-exported fields:
+        temperature, pH, watering, yield, tags, scientificName, farmTypeCompatibility.
+        For new plants not already in the database, creates them with sensible defaults
+        for required nested fields that are not included in the CSV.
+
         Args:
             csv_content: CSV file content as string
             user_id: User ID performing the import
@@ -628,6 +633,27 @@ class PlantDataEnhancedService:
         Raises:
             HTTPException: If CSV parsing or validation fails
         """
+        from ...models.plant_data_enhanced import (
+            PlantDataEnhancedCreate,
+            PlantDataEnhancedUpdate,
+            GrowthCycleDuration,
+            TemperatureRange,
+            EnvironmentalRequirements,
+            PHRequirements,
+            SoilRequirements,
+            WateringRequirements,
+            YieldInfo,
+            LightRequirements,
+            EconomicsAndLabor,
+            AdditionalInformation,
+            SpacingRequirements,
+            LightTypeEnum,
+            GrowthHabitEnum,
+            SoilTypeEnum,
+            WaterTypeEnum,
+            ToleranceLevelEnum,
+        )
+
         # Parse CSV
         csv_file = io.StringIO(csv_content)
         reader = csv.DictReader(csv_file)
@@ -656,45 +682,30 @@ class PlantDataEnhancedService:
 
                 # Parse tags
                 tags_str = row.get("tags", "")
-                tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()]
+                tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()] or None
 
                 # Parse numeric fields with defaults
-                growth_cycle_days = int(row.get("growthCycleDays", 0))
-                min_temp = float(row.get("minTemperatureCelsius", 15.0))
-                max_temp = float(row.get("maxTemperatureCelsius", 30.0))
-                optimal_temp = float(row.get("optimalTemperatureCelsius", 24.0))
-                min_ph = float(row.get("minPH", 6.0))
-                max_ph = float(row.get("maxPH", 7.0))
-                optimal_ph = float(row.get("optimalPH", 6.5))
-                watering_freq = int(row.get("wateringFrequencyDays", 2))
-                yield_per_plant = float(row.get("yieldPerPlant", 1.0))
-                yield_unit = row.get("yieldUnit", "kg")
+                growth_cycle_days = int(row.get("growthCycleDays", 0) or 0)
+                min_temp = float(row.get("minTemperatureCelsius", 15.0) or 15.0)
+                max_temp = float(row.get("maxTemperatureCelsius", 30.0) or 30.0)
+                optimal_temp = float(row.get("optimalTemperatureCelsius", 24.0) or 24.0)
+                min_ph = float(row.get("minPH", 6.0) or 6.0)
+                max_ph = float(row.get("maxPH", 7.0) or 7.0)
+                optimal_ph = float(row.get("optimalPH", 6.5) or 6.5)
+                watering_freq = int(row.get("wateringFrequencyDays", 2) or 2)
+                yield_per_plant = float(row.get("yieldPerPlant", 1.0) or 1.0)
+                yield_unit = row.get("yieldUnit", "kg") or "kg"
 
-                # Build PlantDataEnhancedCreate object with minimal required fields
-                # Note: CSV import only supports basic fields, not comprehensive data
-                from ...models.plant_data_enhanced import (
-                    PlantDataEnhancedCreate,
-                    GrowthCycleDuration,
-                    TemperatureRange,
-                    HumidityRange,
-                    EnvironmentalRequirements,
-                    PHRequirements,
-                    SoilRequirements,
-                    WateringRequirements,
-                    YieldInfo
-                )
-
-                # Create minimal growth cycle (simplified for CSV import)
+                # Build nested structures from CSV flat fields
                 growth_cycle = GrowthCycleDuration(
-                    germinationDays=int(growth_cycle_days * 0.1),  # 10% of total
-                    vegetativeDays=int(growth_cycle_days * 0.5),   # 50% of total
-                    floweringDays=int(growth_cycle_days * 0.2),    # 20% of total
-                    fruitingDays=int(growth_cycle_days * 0.15),    # 15% of total
-                    harvestDurationDays=int(growth_cycle_days * 0.05),  # 5% of total
-                    totalCycleDays=growth_cycle_days
+                    germinationDays=max(int(growth_cycle_days * 0.1), 1) if growth_cycle_days > 0 else 1,
+                    vegetativeDays=max(int(growth_cycle_days * 0.5), 1) if growth_cycle_days > 0 else 1,
+                    floweringDays=int(growth_cycle_days * 0.2),
+                    fruitingDays=int(growth_cycle_days * 0.15),
+                    harvestDurationDays=max(int(growth_cycle_days * 0.05), 1) if growth_cycle_days > 0 else 1,
+                    totalCycleDays=max(growth_cycle_days, 1)
                 )
 
-                # Create environmental requirements
                 environmental_reqs = EnvironmentalRequirements(
                     temperature=TemperatureRange(
                         minCelsius=min_temp,
@@ -702,66 +713,46 @@ class PlantDataEnhancedService:
                         optimalCelsius=optimal_temp
                     ),
                     humidity=None,
-                    co2Requirements=None,
+                    co2RequirementPpm=None,
                     airCirculation=None
                 )
 
-                # Create soil requirements
                 soil_reqs = SoilRequirements(
                     phRequirements=PHRequirements(
                         minPH=min_ph,
                         maxPH=max_ph,
                         optimalPH=optimal_ph
                     ),
-                    soilTypes=None,
-                    ecTdsRange=None
+                    soilTypes=[SoilTypeEnum.LOAMY]
                 )
 
-                # Create watering requirements
                 watering_reqs = WateringRequirements(
                     frequencyDays=watering_freq,
-                    waterType=None,
-                    volumePerPlantLiters=None,
-                    droughtTolerance=None
+                    waterType=WaterTypeEnum.TAP,
+                    amountPerPlantLiters=None,
+                    droughtTolerance=ToleranceLevelEnum.MEDIUM
                 )
 
-                # Create yield estimate
-                yield_estimate = YieldInfo(
+                yield_info = YieldInfo(
                     yieldPerPlant=yield_per_plant,
                     yieldUnit=yield_unit,
                     expectedWastePercentage=0.0
-                )
-
-                plant_data = PlantDataEnhancedCreate(
-                    plantName=row["plantName"],
-                    scientificName=row.get("scientificName") or None,
-                    farmTypeCompatibility=farm_types if farm_types else [FarmTypeEnum.OPEN_FIELD],
-                    growthCycle=growth_cycle,
-                    environmentalRequirements=environmental_reqs,
-                    soilRequirements=soil_reqs,
-                    wateringRequirements=watering_reqs,
-                    yieldEstimate=yield_estimate,
-                    tags=tags,
-                    notes=row.get("notes") or None
                 )
 
                 # Check if plant already exists
                 existing = await PlantDataEnhancedRepository.get_by_name(row["plantName"])
 
                 if existing:
-                    # Update existing plant
-                    from ...models.plant_data_enhanced import PlantDataEnhancedUpdate
-
+                    # Update existing plant with CSV fields only
                     update_data = PlantDataEnhancedUpdate(
-                        scientificName=plant_data.scientificName,
-                        farmTypeCompatibility=plant_data.farmTypeCompatibility,
-                        growthCycle=plant_data.growthCycle,
-                        environmentalRequirements=plant_data.environmentalRequirements,
-                        soilRequirements=plant_data.soilRequirements,
-                        wateringRequirements=plant_data.wateringRequirements,
-                        yieldEstimate=plant_data.yieldEstimate,
-                        tags=plant_data.tags,
-                        notes=plant_data.notes
+                        scientificName=row.get("scientificName") or None,
+                        farmTypeCompatibility=farm_types if farm_types else None,
+                        growthCycle=growth_cycle,
+                        environmentalRequirements=environmental_reqs,
+                        soilRequirements=soil_reqs,
+                        wateringRequirements=watering_reqs,
+                        yieldInfo=yield_info,
+                        tags=tags
                     )
 
                     await PlantDataEnhancedRepository.update(
@@ -771,7 +762,37 @@ class PlantDataEnhancedService:
                     )
                     updated_count += 1
                 else:
-                    # Create new plant
+                    # Create new plant with required defaults for non-CSV fields
+                    plant_data = PlantDataEnhancedCreate(
+                        plantName=row["plantName"],
+                        scientificName=row.get("scientificName") or None,
+                        farmTypeCompatibility=farm_types if farm_types else [FarmTypeEnum.OPEN_FIELD],
+                        growthCycle=growth_cycle,
+                        yieldInfo=yield_info,
+                        environmentalRequirements=environmental_reqs,
+                        wateringRequirements=watering_reqs,
+                        soilRequirements=soil_reqs,
+                        diseasesAndPests=[],
+                        lightRequirements=LightRequirements(
+                            lightType=LightTypeEnum.FULL_SUN,
+                            minHoursDaily=6.0,
+                            maxHoursDaily=12.0,
+                            optimalHoursDaily=8.0,
+                        ),
+                        gradingStandards=[],
+                        economicsAndLabor=EconomicsAndLabor(
+                            totalManHoursPerPlant=1.0,
+                        ),
+                        additionalInfo=AdditionalInformation(
+                            growthHabit=GrowthHabitEnum.BUSH,
+                            spacing=SpacingRequirements(
+                                betweenPlantsCm=30.0,
+                                betweenRowsCm=60.0,
+                            ),
+                        ),
+                        tags=tags
+                    )
+
                     await PlantDataEnhancedRepository.create(
                         plant_data,
                         user_id,
