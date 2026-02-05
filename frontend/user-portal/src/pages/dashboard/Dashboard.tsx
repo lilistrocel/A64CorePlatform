@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { StatWidget, ChartWidget, Spinner } from '@a64core/shared';
-import { useDashboardStore } from '../../stores/dashboard.store';
+import { useDashboardStore, waitForHydration } from '../../stores/dashboard.store';
 import GridLayout, { type Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 
@@ -19,39 +19,51 @@ export function Dashboard() {
   } = useDashboardStore();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [containerWidth, setContainerWidth] = useState(1200);
   const [columns, setColumns] = useState(4);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [gridWidth, setGridWidth] = useState(0);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
   const prevColumnsRef = useRef<number>(4);
   const initialLoadDoneRef = useRef(false);
 
-  // Use useLayoutEffect to measure width BEFORE browser paint
-  // This prevents the flash of incorrect layout on first render
+  // Measure grid container width synchronously before paint
+  // Column breakpoints based on VIEWPORT width for consistent responsive behavior:
+  // - >= 1200px viewport: 4 columns (large desktop)
+  // - >= 900px viewport: 3 columns (desktop/tablet landscape)
+  // - >= 600px viewport: 2 columns (tablet portrait)
+  // - < 600px viewport: 1 column (mobile)
   useLayoutEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        const width = containerRef.current.offsetWidth;
-        setContainerWidth(width);
+    const measure = () => {
+      if (gridContainerRef.current) {
+        const containerWidth = gridContainerRef.current.offsetWidth;
+        setGridWidth(containerWidth);
 
-        // Set columns based on viewport width
-        if (width < 768) {
-          setColumns(2); // Mobile: 2 columns
-        } else if (width < 1024) {
-          setColumns(3); // Tablet: 3 columns
+        // Use viewport width for responsive breakpoints (not container width)
+        // This ensures consistent column counts regardless of sidebar state
+        const viewportWidth = window.innerWidth;
+        if (viewportWidth < 600) {
+          setColumns(1);
+        } else if (viewportWidth < 900) {
+          setColumns(2);
+        } else if (viewportWidth < 1200) {
+          setColumns(3);
         } else {
-          setColumns(4); // Desktop: 4 columns
+          setColumns(4);
         }
       }
     };
 
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
   }, []);
 
   useEffect(() => {
-    loadDashboard().then(() => {
-      initialLoadDoneRef.current = true;
+    // Wait for Zustand persist hydration before loading dashboard
+    // This ensures stored layout from localStorage is available when loadDashboard runs
+    waitForHydration().then(() => {
+      loadDashboard().then(() => {
+        initialLoadDoneRef.current = true;
+      });
     });
   }, [loadDashboard]);
 
@@ -79,7 +91,9 @@ export function Dashboard() {
         if (!widget) return;
 
         let idealWidth = item.w;
-        if (columns === 2) {
+        if (columns === 1) {
+          idealWidth = 1; // All widgets take full width on mobile
+        } else if (columns === 2) {
           idealWidth = widget.size === 'large' || widget.size === 'wide' ? 2 : 1;
         } else if (columns === 3) {
           idealWidth = widget.size === 'large' ? 2 : widget.size === 'wide' ? 3 : 1;
@@ -163,45 +177,54 @@ export function Dashboard() {
         </EditModeBanner>
       )}
 
-      <GridContainer ref={containerRef}>
-        <GridLayout
-          className="layout"
-          layout={layout}
-          cols={columns}
-          rowHeight={150}
-          width={containerWidth}
-          onLayoutChange={(newLayout) => updateLayout(newLayout)}
-          isDraggable={isEditing}
-          isResizable={isEditing}
-          compactType="vertical"
-          preventCollision={false}
-        >
-        {widgets.map((widget) => {
-          const widgetState = widgetData[widget.id];
-          const isChart = widget.type === 'chart';
+      <GridContainer ref={gridContainerRef}>
+        {gridWidth > 0 && widgets.length > 0 && layout.length > 0 && (
+          <GridLayout
+            className="layout"
+            layout={layout}
+            cols={columns}
+            rowHeight={150}
+            width={gridWidth}
+            onDragStop={(_layout: Layout[]) => {
+              // Only save layout after user drag interaction
+              updateLayout(_layout);
+            }}
+            onResizeStop={(_layout: Layout[]) => {
+              // Only save layout after user resize interaction
+              updateLayout(_layout);
+            }}
+            isDraggable={isEditing}
+            isResizable={isEditing}
+            compactType="vertical"
+            preventCollision={false}
+          >
+          {widgets.map((widget) => {
+            const widgetState = widgetData[widget.id];
+            const isChart = widget.type === 'chart';
 
-          return (
-            <WidgetContainer key={widget.id}>
-              {isChart ? (
-                <ChartWidget
-                  widget={{ ...widget, chartType: widgetState?.data?.chartType }}
-                  data={widgetState?.data || null}
-                  loading={widgetState?.loading || false}
-                  error={widgetState?.error || null}
-                  onRefresh={() => useDashboardStore.getState().refreshWidget(widget.id)}
-                />
-              ) : (
-                <StatWidget
-                  widget={widget}
-                  data={widgetState?.data || null}
-                  loading={widgetState?.loading || false}
-                  error={widgetState?.error || null}
-                />
-              )}
-            </WidgetContainer>
-          );
-        })}
-        </GridLayout>
+            return (
+              <WidgetContainer key={widget.id}>
+                {isChart ? (
+                  <ChartWidget
+                    widget={{ ...widget, chartType: widgetState?.data?.chartType }}
+                    data={widgetState?.data || null}
+                    loading={widgetState?.loading || false}
+                    error={widgetState?.error || null}
+                    onRefresh={() => useDashboardStore.getState().refreshWidget(widget.id)}
+                  />
+                ) : (
+                  <StatWidget
+                    widget={widget}
+                    data={widgetState?.data || null}
+                    loading={widgetState?.loading || false}
+                    error={widgetState?.error || null}
+                  />
+                )}
+              </WidgetContainer>
+            );
+          })}
+          </GridLayout>
+        )}
       </GridContainer>
 
       {widgets.length === 0 && !isLoading && (
@@ -416,57 +439,6 @@ const GridContainer = styled.div`
     border-right: 2px solid rgba(0, 0, 0, 0.4);
     border-bottom: 2px solid rgba(0, 0, 0, 0.4);
   }
-`;
-
-const WidgetGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  width: 100%;
-
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 1600px) {
-    gap: 2rem;
-  }
-`;
-
-const WidgetWrapper = styled.div<{ $size?: string }>`
-  /* Default: medium - 1 column */
-  grid-column: span 1;
-
-  /* Large widgets span 2 columns on tablet and up */
-  ${({ $size }) =>
-    $size === 'large' &&
-    `
-    @media (min-width: 640px) {
-      grid-column: span 2;
-    }
-  `}
-
-  /* Wide widgets span full width on desktop */
-  ${({ $size }) =>
-    $size === 'wide' &&
-    `
-    @media (min-width: 1024px) {
-      grid-column: span 4;
-    }
-  `}
-
-  /* Full-width widgets always span all columns */
-  ${({ $size }) =>
-    $size === 'full-width' &&
-    `
-    grid-column: 1 / -1;
-  `}
 `;
 
 const LoadingContainer = styled.div`
