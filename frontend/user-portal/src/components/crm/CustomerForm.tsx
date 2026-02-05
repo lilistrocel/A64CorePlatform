@@ -4,9 +4,10 @@
  * Form for creating and editing customers with validation.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import type { Customer, CustomerCreate, CustomerUpdate, CustomerType, CustomerStatus } from '../../types/crm';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -288,11 +289,9 @@ export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false, onD
   const [addressCollapsed, setAddressCollapsed] = useState(true);
 
   // Track dirty state by comparing current form data with initial values
-  useEffect(() => {
-    if (!onDirtyChange) return;
-
+  const isDirty = useMemo(() => {
     const initial = initialFormData.current;
-    const isDirty =
+    return (
       formData.name !== initial.name ||
       formData.email !== initial.email ||
       formData.phone !== initial.phone ||
@@ -305,10 +304,19 @@ export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false, onD
       formData.address.state !== initial.address.state ||
       formData.address.country !== initial.address.country ||
       formData.address.postalCode !== initial.address.postalCode ||
-      JSON.stringify(tags) !== JSON.stringify(initialTags.current);
+      JSON.stringify(tags) !== JSON.stringify(initialTags.current)
+    );
+  }, [formData, tags]);
 
-    onDirtyChange(isDirty);
-  }, [formData, tags, onDirtyChange]);
+  // Notify parent about dirty state changes
+  useEffect(() => {
+    if (onDirtyChange) {
+      onDirtyChange(isDirty);
+    }
+  }, [isDirty, onDirtyChange]);
+
+  // Warn user on page refresh if form has unsaved changes
+  useUnsavedChanges(isDirty);
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({

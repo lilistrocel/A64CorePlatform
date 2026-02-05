@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import type { VehicleCreate, VehicleUpdate, Vehicle } from '../../types/logistics';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 // ============================================================================
 // VALIDATION SCHEMA
@@ -184,7 +185,7 @@ export function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting = false 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: vehicle
@@ -208,6 +209,9 @@ export function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting = false 
           capacityUnit: 'm³',
         },
   });
+
+  // Warn user on page refresh if form has unsaved changes
+  useUnsavedChanges(isDirty);
 
   const onSubmitForm = async (data: VehicleFormData) => {
     const vehicleData: VehicleCreate | VehicleUpdate = {

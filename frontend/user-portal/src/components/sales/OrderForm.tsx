@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import type { SalesOrderCreate, SalesOrderUpdate, SalesOrder } from '../../types/sales';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 // ============================================================================
 // VALIDATION SCHEMA
@@ -278,7 +279,7 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
     handleSubmit,
     control,
     watch,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
     defaultValues: order
@@ -311,6 +312,9 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
     control,
     name: 'items',
   });
+
+  // Warn user on page refresh if form has unsaved changes
+  useUnsavedChanges(isDirty);
 
   // Watch for changes to calculate totals
   const watchedItems = watch('items');

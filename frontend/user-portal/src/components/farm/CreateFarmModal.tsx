@@ -14,6 +14,7 @@ import { farmApi } from '../../services/farmApi';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { CreateFarmFormData, Manager, GeoJSONPolygon, FarmBoundary } from '../../types/farm';
 import { useMapDrawing } from '../../hooks/map/useMapDrawing';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 // Lazy load map components for better performance
 const MapContainer = lazy(() => import('../map/MapContainer').then(m => ({ default: m.MapContainer })));
@@ -328,7 +329,7 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
     reset,
     setValue,
     watch,
@@ -338,6 +339,9 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
       isActive: true,
     },
   });
+
+  // Warn user on page refresh if form has unsaved changes
+  useUnsavedChanges(isOpen && isDirty);
 
   // Watch totalArea to sync with polygon
   const watchedTotalArea = watch('totalArea');

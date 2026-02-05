@@ -4,9 +4,10 @@
  * Form for creating and editing employees with validation.
  */
 
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import type { Employee, EmployeeCreate, EmployeeUpdate, EmployeeStatus } from '../../types/hr';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -197,6 +198,25 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emergencyContactCollapsed, setEmergencyContactCollapsed] = useState(true);
+
+  // Track initial form values for dirty state detection
+  const initialFormData = useRef(formData);
+  const isDirty = useMemo(() => {
+    const initial = initialFormData.current;
+    return (
+      formData.firstName !== initial.firstName ||
+      formData.lastName !== initial.lastName ||
+      formData.email !== initial.email ||
+      formData.phone !== initial.phone ||
+      formData.department !== initial.department ||
+      formData.position !== initial.position ||
+      formData.hireDate !== initial.hireDate ||
+      formData.status !== initial.status
+    );
+  }, [formData]);
+
+  // Warn user on page refresh if form has unsaved changes
+  useUnsavedChanges(isDirty);
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({
