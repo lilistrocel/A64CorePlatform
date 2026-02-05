@@ -1,3 +1,47 @@
+== Session: 2026-02-05 (Agent Batch #54, #240, #20) ==
+Agent: Features #54, #240, #20
+
+COMPLETED:
+- Feature #54: Logistics - Create vehicle [PASSING]
+  - Logged in as admin (farmtest_admin@a64core.com / TestAdmin123@)
+  - POST /api/v1/logistics/vehicles with name, type, ownership, licensePlate, capacity → 201
+  - Vehicle stored in MongoDB vehicles collection with vehicleId, vehicleCode (V014)
+  - Vehicle visible in UI at /logistics/vehicles with correct data
+  - Deleted test vehicle after verification
+  - Zero console errors, no mock data patterns
+
+- Feature #240: Numeric field validation (area, quantity, price) [PASSING]
+  - Farm creation with area='abc' → HTML number input blocks non-numeric; backend returns "Input should be a valid number"
+  - Farm creation with area=-100 → Frontend shows "Area must be greater than 0"; backend returns "Input should be greater than 0"
+  - Inventory with quantity=0 → Backend (waste, input, harvest) returns "Input should be greater than 0"
+  - Valid numbers succeed → Farm created with area=25.5 ha successfully
+  - Fixed frontend farm forms: z.preprocess handles NaN gracefully for numberOfStaff field
+  - Fixed backend: HarvestInventoryCreate and InputInventoryCreate now use gt=0 for quantity
+
+- Feature #20: Password reset with valid token [PASSING]
+  - POST /api/v1/auth/request-password-reset for test user → success message
+  - Reset token found in MongoDB verification_tokens collection with 1-hour expiry
+  - POST /api/v1/auth/reset-password with token and newPassword → "Password reset successfully"
+  - Login with new password succeeds (access_token returned)
+  - Login with old password fails ("Invalid credentials")
+  - Token marked as isUsed: true with usedAt timestamp
+  - Token reuse correctly blocked ("Password reset token already used")
+  - Restored original password for other agents
+
+FIXES APPLIED:
+- frontend/user-portal/src/components/farm/CreateFarmModal.tsx - z.preprocess for totalArea & numberOfStaff
+- frontend/user-portal/src/components/farm/EditFarmModal.tsx - Same z.preprocess fix
+- src/modules/farm_manager/models/inventory.py - HarvestInventoryCreate/InputInventoryCreate quantity gt=0
+
+CURRENT STATUS: 90/310 features passing (29.0%)
+
+NOTES FOR NEXT SESSION:
+- Admin user: farmtest_admin@a64core.com / TestAdmin123@ (role: admin) - password restored
+- Test user: testadmin@a64core.com / TestPass123@ (role: user)
+- Password reset flow fully functional (backend only, no frontend pages yet)
+- Email sends are logged to console in dev mode (not sent via email provider)
+- Inventory quantity validation now stricter: create requires > 0, update allows >= 0
+
 == Session: 2026-02-05 (Agent 24) ==
 Agent: Features #28, #29, #175 (User Profile, Profile Update, Inventory Dashboard)
 
