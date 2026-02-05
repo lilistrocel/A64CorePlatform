@@ -4,7 +4,7 @@ PlantData Enhanced API Routes
 Endpoints for managing comprehensive plant cultivation data with enhanced schema.
 """
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, UploadFile, File
 from fastapi.responses import Response
 from typing import Optional, List
 from uuid import UUID
@@ -362,6 +362,109 @@ async def download_csv_template(
         headers={
             "Content-Disposition": "attachment; filename=plant_data_enhanced_template.csv"
         }
+    )
+
+
+@router.get(
+    "/export/csv",
+    summary="Export all active plant data to CSV",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "description": "CSV file with all active plant data"
+        }
+    }
+)
+async def export_plant_data_csv(
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Export all active plant data to CSV format.
+
+    Returns a CSV file containing all active plants with basic fields:
+    - plantName, scientificName, farmTypeCompatibility
+    - growthCycleDays
+    - minTemperatureCelsius, maxTemperatureCelsius, optimalTemperatureCelsius
+    - minPH, maxPH, optimalPH
+    - wateringFrequencyDays
+    - yieldPerPlant, yieldUnit
+    - tags, notes
+
+    **Use Case**:
+    - Backup plant data in CSV format
+    - Import into Excel or other tools
+    - Share basic plant data with external teams
+
+    **Note**: This export includes only basic fields. Complex nested data
+    (fertilizer schedules, pest management, etc.) is not included.
+    Use JSON API for comprehensive data.
+    """
+    csv_content = await PlantDataEnhancedService.export_to_csv()
+
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=plant_data_export.csv"
+        }
+    )
+
+
+@router.post(
+    "/import/csv",
+    response_model=SuccessResponse[dict],
+    status_code=status.HTTP_200_OK,
+    summary="Import plant data from CSV file"
+)
+async def import_plant_data_csv(
+    file: UploadFile = File(..., description="CSV file to import"),
+    current_user: CurrentUser = Depends(require_permission("agronomist"))
+):
+    """
+    Import plant data from CSV file.
+
+    Requires **agronomist** permission.
+
+    **CSV Format**:
+    - Use the template from `/template/csv` endpoint
+    - Required columns: plantName, growthCycleDays
+    - Optional columns: scientificName, farmTypeCompatibility, temperature ranges, pH ranges, etc.
+
+    **Behavior**:
+    - If a plant with the same name already exists, it will be **updated**
+    - If a plant doesn't exist, it will be **created**
+    - Invalid rows are skipped and reported in the response
+
+    **Farm Type Compatibility**:
+    - Comma-separated values: `open_field,greenhouse,hydroponic`
+    - Valid values: open_field, greenhouse, hydroponic, vertical_farm, aquaponic
+
+    **Tags**:
+    - Comma-separated values: `vegetable,summer,high-value`
+
+    **Returns**:
+    - `created`: Number of new plants created
+    - `updated`: Number of existing plants updated
+    - `errors`: List of error messages (if any rows failed)
+
+    **Note**: CSV import only supports basic fields. For comprehensive data
+    including fertilizer schedules, pest management, and grading standards,
+    use the JSON API endpoints directly.
+    """
+    # Read CSV file content
+    csv_content = await file.read()
+    csv_string = csv_content.decode("utf-8")
+
+    # Import CSV
+    result = await PlantDataEnhancedService.import_from_csv(
+        csv_string,
+        UUID(current_user.userId),
+        current_user.email
+    )
+
+    return SuccessResponse(
+        data=result,
+        message=f"CSV import completed: {result['created']} created, {result['updated']} updated"
     )
 
 

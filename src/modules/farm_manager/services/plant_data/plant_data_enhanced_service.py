@@ -522,3 +522,285 @@ class PlantDataEnhancedService:
         total_pages = (total + per_page - 1) // per_page
 
         return plants, total, total_pages
+
+    @staticmethod
+    async def export_to_csv() -> str:
+        """
+        Export all active plant data to CSV format.
+
+        Returns:
+            CSV content as string with all active plants
+
+        Raises:
+            HTTPException: If export fails
+        """
+        # Get all active plants
+        plants = await PlantDataEnhancedRepository.get_active_plants()
+
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write headers
+        headers = [
+            "plantName",
+            "scientificName",
+            "farmTypeCompatibility",
+            "growthCycleDays",
+            "minTemperatureCelsius",
+            "maxTemperatureCelsius",
+            "optimalTemperatureCelsius",
+            "minPH",
+            "maxPH",
+            "optimalPH",
+            "wateringFrequencyDays",
+            "yieldPerPlant",
+            "yieldUnit",
+            "tags",
+            "notes"
+        ]
+        writer.writerow(headers)
+
+        # Write data rows
+        for plant in plants:
+            # Flatten nested structures for CSV
+            farm_types = ",".join([ft.value for ft in plant.farmTypeCompatibility])
+            tags_str = ",".join(plant.tags) if plant.tags else ""
+
+            # Extract temperature data
+            temp = plant.environmentalRequirements.temperature
+            min_temp = temp.minCelsius
+            max_temp = temp.maxCelsius
+            optimal_temp = temp.optimalCelsius
+
+            # Extract pH data
+            ph = plant.soilRequirements.phRequirements
+            min_ph = ph.minPH
+            max_ph = ph.maxPH
+            optimal_ph = ph.optimalPH
+
+            # Extract watering frequency (simplified)
+            watering_freq = plant.wateringRequirements.frequencyDays if plant.wateringRequirements else 0
+
+            # Extract yield data
+            yield_per_plant = plant.yieldEstimate.yieldPerPlant
+            yield_unit = plant.yieldEstimate.yieldUnit
+
+            row = [
+                plant.plantName,
+                plant.scientificName or "",
+                farm_types,
+                plant.growthCycle.totalCycleDays,
+                min_temp,
+                max_temp,
+                optimal_temp,
+                min_ph,
+                max_ph,
+                optimal_ph,
+                watering_freq,
+                yield_per_plant,
+                yield_unit,
+                tags_str,
+                plant.notes or ""
+            ]
+            writer.writerow(row)
+
+        logger.info(f"[PlantData Enhanced Service] Exported {len(plants)} plants to CSV")
+        return output.getvalue()
+
+    @staticmethod
+    async def import_from_csv(
+        csv_content: str,
+        user_id: UUID,
+        user_email: str
+    ) -> dict:
+        """
+        Import plant data from CSV content.
+
+        Args:
+            csv_content: CSV file content as string
+            user_id: User ID performing the import
+            user_email: Email of user performing the import
+
+        Returns:
+            Dictionary with created and updated counts
+
+        Raises:
+            HTTPException: If CSV parsing or validation fails
+        """
+        # Parse CSV
+        csv_file = io.StringIO(csv_content)
+        reader = csv.DictReader(csv_file)
+
+        created_count = 0
+        updated_count = 0
+        errors = []
+
+        for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
+            try:
+                # Validate required fields
+                if not row.get("plantName"):
+                    errors.append(f"Row {row_num}: plantName is required")
+                    continue
+
+                # Parse farm types
+                farm_types_str = row.get("farmTypeCompatibility", "")
+                farm_types = []
+                if farm_types_str:
+                    for ft in farm_types_str.split(","):
+                        ft_clean = ft.strip()
+                        try:
+                            farm_types.append(FarmTypeEnum(ft_clean))
+                        except ValueError:
+                            errors.append(f"Row {row_num}: Invalid farm type '{ft_clean}'")
+
+                # Parse tags
+                tags_str = row.get("tags", "")
+                tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()]
+
+                # Parse numeric fields with defaults
+                growth_cycle_days = int(row.get("growthCycleDays", 0))
+                min_temp = float(row.get("minTemperatureCelsius", 15.0))
+                max_temp = float(row.get("maxTemperatureCelsius", 30.0))
+                optimal_temp = float(row.get("optimalTemperatureCelsius", 24.0))
+                min_ph = float(row.get("minPH", 6.0))
+                max_ph = float(row.get("maxPH", 7.0))
+                optimal_ph = float(row.get("optimalPH", 6.5))
+                watering_freq = int(row.get("wateringFrequencyDays", 2))
+                yield_per_plant = float(row.get("yieldPerPlant", 1.0))
+                yield_unit = row.get("yieldUnit", "kg")
+
+                # Build PlantDataEnhancedCreate object with minimal required fields
+                # Note: CSV import only supports basic fields, not comprehensive data
+                from ...models.plant_data_enhanced import (
+                    PlantDataEnhancedCreate,
+                    GrowthCycleDuration,
+                    TemperatureRange,
+                    HumidityRange,
+                    EnvironmentalRequirements,
+                    PHRequirements,
+                    SoilRequirements,
+                    WateringRequirements,
+                    YieldInfo
+                )
+
+                # Create minimal growth cycle (simplified for CSV import)
+                growth_cycle = GrowthCycleDuration(
+                    germinationDays=int(growth_cycle_days * 0.1),  # 10% of total
+                    vegetativeDays=int(growth_cycle_days * 0.5),   # 50% of total
+                    floweringDays=int(growth_cycle_days * 0.2),    # 20% of total
+                    fruitingDays=int(growth_cycle_days * 0.15),    # 15% of total
+                    harvestDurationDays=int(growth_cycle_days * 0.05),  # 5% of total
+                    totalCycleDays=growth_cycle_days
+                )
+
+                # Create environmental requirements
+                environmental_reqs = EnvironmentalRequirements(
+                    temperature=TemperatureRange(
+                        minCelsius=min_temp,
+                        maxCelsius=max_temp,
+                        optimalCelsius=optimal_temp
+                    ),
+                    humidity=None,
+                    co2Requirements=None,
+                    airCirculation=None
+                )
+
+                # Create soil requirements
+                soil_reqs = SoilRequirements(
+                    phRequirements=PHRequirements(
+                        minPH=min_ph,
+                        maxPH=max_ph,
+                        optimalPH=optimal_ph
+                    ),
+                    soilTypes=None,
+                    ecTdsRange=None
+                )
+
+                # Create watering requirements
+                watering_reqs = WateringRequirements(
+                    frequencyDays=watering_freq,
+                    waterType=None,
+                    volumePerPlantLiters=None,
+                    droughtTolerance=None
+                )
+
+                # Create yield estimate
+                yield_estimate = YieldInfo(
+                    yieldPerPlant=yield_per_plant,
+                    yieldUnit=yield_unit,
+                    expectedWastePercentage=0.0
+                )
+
+                plant_data = PlantDataEnhancedCreate(
+                    plantName=row["plantName"],
+                    scientificName=row.get("scientificName") or None,
+                    farmTypeCompatibility=farm_types if farm_types else [FarmTypeEnum.OPEN_FIELD],
+                    growthCycle=growth_cycle,
+                    environmentalRequirements=environmental_reqs,
+                    soilRequirements=soil_reqs,
+                    wateringRequirements=watering_reqs,
+                    yieldEstimate=yield_estimate,
+                    tags=tags,
+                    notes=row.get("notes") or None
+                )
+
+                # Check if plant already exists
+                existing = await PlantDataEnhancedRepository.get_by_name(row["plantName"])
+
+                if existing:
+                    # Update existing plant
+                    from ...models.plant_data_enhanced import PlantDataEnhancedUpdate
+
+                    update_data = PlantDataEnhancedUpdate(
+                        scientificName=plant_data.scientificName,
+                        farmTypeCompatibility=plant_data.farmTypeCompatibility,
+                        growthCycle=plant_data.growthCycle,
+                        environmentalRequirements=plant_data.environmentalRequirements,
+                        soilRequirements=plant_data.soilRequirements,
+                        wateringRequirements=plant_data.wateringRequirements,
+                        yieldEstimate=plant_data.yieldEstimate,
+                        tags=plant_data.tags,
+                        notes=plant_data.notes
+                    )
+
+                    await PlantDataEnhancedRepository.update(
+                        existing.plantDataId,
+                        update_data,
+                        increment_version=True
+                    )
+                    updated_count += 1
+                else:
+                    # Create new plant
+                    await PlantDataEnhancedRepository.create(
+                        plant_data,
+                        user_id,
+                        user_email
+                    )
+                    created_count += 1
+
+            except ValueError as e:
+                errors.append(f"Row {row_num}: Invalid numeric value - {str(e)}")
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+
+        # If all rows failed, raise error
+        if created_count == 0 and updated_count == 0 and errors:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "CSV import failed",
+                    "errors": errors[:10]  # Limit to first 10 errors
+                }
+            )
+
+        logger.info(
+            f"[PlantData Enhanced Service] CSV import completed: "
+            f"{created_count} created, {updated_count} updated"
+        )
+
+        return {
+            "created": created_count,
+            "updated": updated_count,
+            "errors": errors if errors else None
+        }
