@@ -80,6 +80,9 @@ const BudgetManagementPage = lazy(() => import('./pages/marketing/BudgetManageme
 const EventManagementPage = lazy(() => import('./pages/marketing/EventManagementPage').then(m => ({ default: m.EventManagementPage })));
 const ChannelManagementPage = lazy(() => import('./pages/marketing/ChannelManagementPage').then(m => ({ default: m.ChannelManagementPage })));
 
+// Admin pages
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
+
 // Debug pages
 const ClearCache = lazy(() => import('./pages/debug/ClearCache').then(m => ({ default: m.ClearCache })));
 
@@ -141,6 +144,7 @@ function App() {
                 <Route path="/ai-analytics" element={<AIAnalytics />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/admin/users" element={<UserManagementPage />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
               </Route>
             </Route>

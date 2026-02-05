@@ -48,6 +48,8 @@ export async function listHarvestInventory(params: {
   farmId?: string;
   qualityGrade?: QualityGrade;
   search?: string;
+  sortBy?: 'harvestDate' | 'createdAt' | 'plantName' | 'quantity' | 'qualityGrade';
+  sortOrder?: 'asc' | 'desc';
   page?: number;
   perPage?: number;
 }): Promise<PaginatedResponse<HarvestInventory>> {
@@ -56,6 +58,8 @@ export async function listHarvestInventory(params: {
       farm_id: params.farmId,
       quality_grade: params.qualityGrade,
       search: params.search,
+      sort_by: params.sortBy || 'harvestDate',
+      sort_order: params.sortOrder || 'desc',
       page: params.page || 1,
       per_page: params.perPage || 20,
     },

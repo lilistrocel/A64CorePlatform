@@ -27,6 +27,9 @@ interface Props {
   onUpdate?: () => void;
 }
 
+type SortField = 'harvestDate' | 'createdAt' | 'plantName' | 'quantity' | 'qualityGrade';
+type SortOrder = 'asc' | 'desc';
+
 export function HarvestInventoryList({ onUpdate }: Props) {
   const [inventory, setInventory] = useState<HarvestInventory[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
@@ -35,18 +38,20 @@ export function HarvestInventoryList({ onUpdate }: Props) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortField>('harvestDate');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editItem, setEditItem] = useState<HarvestInventory | null>(null);
 
   useEffect(() => {
     loadData();
-  }, [page, search]);
+  }, [page, search, sortBy, sortOrder]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [inventoryData, farmsData, plantData] = await Promise.all([
-        listHarvestInventory({ search, page, perPage: 20 }),
+        listHarvestInventory({ search, sortBy, sortOrder, page, perPage: 20 }),
         getFarms(),
         getPlantDataEnhancedList({ perPage: 100 }), // Load all plant data for dropdown
       ]);
@@ -59,6 +64,23 @@ export function HarvestInventoryList({ onUpdate }: Props) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortBy === field) {
+      // Toggle sort order if clicking same field
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field with descending order by default
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+    setPage(1); // Reset to first page on sort
+  };
+
+  const getSortIndicator = (field: SortField) => {
+    if (sortBy !== field) return '';
+    return sortOrder === 'asc' ? ' ▲' : ' ▼';
   };
 
   const handleDelete = async (item: HarvestInventory) => {
@@ -121,11 +143,31 @@ export function HarvestInventoryList({ onUpdate }: Props) {
           <Table>
             <thead>
               <tr>
-                <Th>Product</Th>
+                <ThSortable
+                  $active={sortBy === 'plantName'}
+                  onClick={() => handleSort('plantName')}
+                >
+                  Product{getSortIndicator('plantName')}
+                </ThSortable>
                 <Th>Farm</Th>
-                <Th>Quantity</Th>
-                <Th>Grade</Th>
-                <Th>Harvest Date</Th>
+                <ThSortable
+                  $active={sortBy === 'quantity'}
+                  onClick={() => handleSort('quantity')}
+                >
+                  Quantity{getSortIndicator('quantity')}
+                </ThSortable>
+                <ThSortable
+                  $active={sortBy === 'qualityGrade'}
+                  onClick={() => handleSort('qualityGrade')}
+                >
+                  Grade{getSortIndicator('qualityGrade')}
+                </ThSortable>
+                <ThSortable
+                  $active={sortBy === 'harvestDate'}
+                  onClick={() => handleSort('harvestDate')}
+                >
+                  Harvest Date{getSortIndicator('harvestDate')}
+                </ThSortable>
                 <Th>Expiry</Th>
                 <Th>Price</Th>
                 <Th>Actions</Th>
@@ -637,6 +679,22 @@ const Th = styled.th`
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+`;
+
+const ThSortable = styled(Th)<{ $active?: boolean }>`
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[200]};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  ${({ $active, theme }) => $active && `
+    background: ${theme.colors.neutral[200]};
+    color: ${theme.colors.primary[600]};
+  `}
 `;
 
 const Tr = styled.tr`

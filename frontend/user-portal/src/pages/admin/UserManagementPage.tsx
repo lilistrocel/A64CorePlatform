@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Card } from '@a64core/shared';
-import { api } from '../../services/api';
+import { apiClient } from '../../services/api';
 import { useAuthStore } from '../../stores/auth.store';
 import { useToastStore } from '../../stores/toast.store';
 
@@ -54,7 +54,7 @@ export function UserManagementPage() {
       if (roleFilter) params.set('role', roleFilter);
       if (statusFilter) params.set('isActive', statusFilter);
 
-      const response = await api.get<UsersResponse>(`/users?${params.toString()}`);
+      const response = await apiClient.get<UsersResponse>(`/v1/users?${params.toString()}`);
       setUsers(response.data.data);
       setMeta(response.data.meta);
     } catch (err: any) {
@@ -78,7 +78,7 @@ export function UserManagementPage() {
 
   const handleRoleChange = async (userId: string, role: string) => {
     try {
-      await api.put(`/users/${userId}/role`, { role });
+      await apiClient.put(`/v1/users/${userId}/role`, { role });
       addToast('success', 'User role updated successfully');
       fetchUsers();
       setEditingUser(null);
@@ -90,7 +90,7 @@ export function UserManagementPage() {
 
   const handleActivate = async (userId: string) => {
     try {
-      await api.put(`/users/${userId}/activate`);
+      await apiClient.put(`/v1/users/${userId}/activate`);
       addToast('success', 'User activated successfully');
       fetchUsers();
     } catch (err: any) {
@@ -101,7 +101,7 @@ export function UserManagementPage() {
 
   const handleDeactivate = async (userId: string) => {
     try {
-      await api.put(`/users/${userId}/deactivate`);
+      await apiClient.put(`/v1/users/${userId}/deactivate`);
       addToast('success', 'User deactivated successfully');
       fetchUsers();
     } catch (err: any) {
@@ -115,7 +115,7 @@ export function UserManagementPage() {
       return;
     }
     try {
-      await api.delete(`/users/${userId}`);
+      await apiClient.delete(`/v1/users/${userId}`);
       addToast('success', 'User deleted successfully');
       fetchUsers();
     } catch (err: any) {

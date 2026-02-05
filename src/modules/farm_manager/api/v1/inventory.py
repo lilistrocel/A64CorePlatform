@@ -341,6 +341,8 @@ async def list_harvest_inventory(
     scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
     quality_grade: Optional[QualityGrade] = Query(None),
     search: Optional[str] = Query(None, max_length=100),
+    sort_by: str = Query("harvestDate", description="Field to sort by (harvestDate, createdAt, plantName, quantity)"),
+    sort_order: str = Query("desc", description="Sort order (asc or desc)"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(get_database),
@@ -382,7 +384,14 @@ async def list_harvest_inventory(
 
     skip = (page - 1) * per_page
     total = await db.inventory_harvest.count_documents(query)
-    items = await db.inventory_harvest.find(query).sort("createdAt", -1).skip(skip).limit(per_page).to_list(per_page)
+
+    # Validate and apply sorting
+    valid_sort_fields = ["harvestDate", "createdAt", "plantName", "quantity", "qualityGrade"]
+    if sort_by not in valid_sort_fields:
+        sort_by = "harvestDate"
+    sort_direction = 1 if sort_order.lower() == "asc" else -1
+
+    items = await db.inventory_harvest.find(query).sort(sort_by, sort_direction).skip(skip).limit(per_page).to_list(per_page)
 
     return {
         "items": [serialize_doc(item) for item in items],
