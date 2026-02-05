@@ -96,7 +96,8 @@ class UserService:
     async def list_users(
         skip: int = 0,
         limit: int = 20,
-        role: Optional[UserRole] = None
+        role: Optional[UserRole] = None,
+        search: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         List users with pagination
@@ -105,10 +106,12 @@ class UserService:
             skip: Number of users to skip (offset)
             limit: Maximum number of users to return (max 100)
             role: Optional role filter
+            search: Optional search term for email, firstName, or lastName
 
         Returns:
             Dict with data, meta, and links for pagination
         """
+        import re
         db = mongodb.get_database()
 
         # Limit max page size per User-Structure.md (max 100)
@@ -119,6 +122,16 @@ class UserService:
 
         if role:
             query["role"] = role.value
+
+        # Add search filter (partial match on email, firstName, lastName)
+        if search and search.strip():
+            escaped_search = re.escape(search.strip())
+            regex_pattern = {"$regex": escaped_search, "$options": "i"}
+            query["$or"] = [
+                {"email": regex_pattern},
+                {"firstName": regex_pattern},
+                {"lastName": regex_pattern}
+            ]
 
         # Get total count
         total = await db.users.count_documents(query)
