@@ -349,7 +349,7 @@ export function CRMPage() {
       loadCustomers();
     } catch (err: any) {
       console.error('Failed to delete customer:', err);
-      alert(err.response?.data?.message || 'Failed to delete customer');
+      alert(err.response?.data?.detail || err.response?.data?.message || 'Failed to delete customer');
     }
   };
 
