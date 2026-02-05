@@ -1,3 +1,52 @@
+== Session: 2026-02-05 (Agent Batch #210, #235, #266) ==
+Agent: Features #210, #235, #266 (Real Data Verification)
+
+COMPLETED:
+- Feature #210: Empty collections show correct count of zero [PASSING]
+  - Verified API returns total: 0 and empty array for empty collections
+  - Purchase orders: {"data":[],"meta":{"total":0,"page":1,"perPage":20,"totalPages":0}}
+  - Returns: {"data":[],"meta":{"total":0,"page":1,"perPage":20,"totalPages":0}}
+  - Farms list filter shows "Inactive (0)" with empty state
+  - Returns page shows stat cards: Total Returns: 0, Pending: 0, Processing: 0, Completed: 0
+  - Screenshots: feature210-purchase-orders-empty-full.png, feature210-returns-empty-zero-counts.png, feature210-farms-inactive-zero-count.png
+  - Zero console errors
+
+- Feature #235: Order subtotal, tax, discount, total calculations [PASSING]
+  - Created test order with items: [{qty: 5, unitPrice: 10, totalPrice: 50}, {qty: 3, unitPrice: 20, totalPrice: 60}]
+  - Subtotal correctly = 110 (50 + 60)
+  - Tax of 5.5 (5% of 110) applied correctly
+  - Discount of 10 applied correctly
+  - Total correctly = 105.5 (110 + 5.5 - 10)
+  - Backend validates: subtotal = sum(item.totalPrice), total = subtotal + tax - discount
+  - Tested decimal rounding: values preserved to 2 decimal places
+  - Validation rejects incorrect calculations with error: "Subtotal mismatch" or "Total mismatch"
+  - Screenshot: feature235-order-list-with-calc.png
+  - Zero console errors
+
+- Feature #266: Block archive listing per farm [PASSING]
+  - GET /api/v1/farm/{farm_id}/archives returns paginated archive records
+  - Tested on FEAT44_FILTER_TEST_FARM with 1 archive record
+  - Archive data includes comprehensive cycle info:
+    - archiveId, blockId, blockCode, farmId, farmName, blockType
+    - plantedDate, harvestCompletedDate, cycleDurationDays
+    - predictedYieldKg, actualYieldKg, yieldEfficiencyPercent
+    - totalHarvests, qualityBreakdown (qualityAKg, qualityBKg, qualityCKg)
+    - statusChanges array (full status transition history)
+    - alertsSummary (totalAlerts, resolvedAlerts, averageResolutionTimeHours)
+    - archivedAt, archivedBy, archivedByEmail
+  - UI "History" tab displays farm cycle history with visual cards
+  - Screenshot: feature266-farm-archives-history.png
+  - Zero console errors
+
+CURRENT STATUS: 257/310 features passing (82.9%)
+
+NOTES FOR NEXT SESSION:
+- Empty collection handling: API returns total:0 with empty data array
+- Sales order validation: Backend validates subtotal = sum(items.totalPrice), total = subtotal + tax - discount
+- Farm archives: GET /api/v1/farm/{farm_id}/archives returns paginated list of completed block cycles
+- Archive data includes comprehensive cycle metrics, quality breakdown, status history, and alerts summary
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
+
 == Session: 2026-02-05 (Agent Batch #212, #213, #214) ==
 Agent: Features #212, #213, #214 (Search & Filter Edge Cases)
 
