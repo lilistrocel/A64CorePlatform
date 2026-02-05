@@ -169,7 +169,7 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
           <WidgetTitle>{widget.title}</WidgetTitle>
         </WidgetHeaderLeft>
         {onRefresh && (
-          <RefreshButton onClick={onRefresh} disabled={loading}>
+          <RefreshButton onClick={onRefresh} disabled={loading} aria-label={`Refresh ${widget.title}`}>
             🔄
           </RefreshButton>
         )}

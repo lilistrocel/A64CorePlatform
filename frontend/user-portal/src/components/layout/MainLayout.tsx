@@ -63,7 +63,7 @@ export function MainLayout() {
       </MobileHeader>
 
       {/* Sidebar - Hidden on mobile, visible on desktop */}
-      <Sidebar $isOpen={isMobileMenuOpen}>
+      <Sidebar $isOpen={isMobileMenuOpen} aria-label="Sidebar">
         <SidebarHeader>
           <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
           <UserInfo>
@@ -72,7 +72,7 @@ export function MainLayout() {
           </UserInfo>
         </SidebarHeader>
 
-        <Nav>
+        <Nav aria-label="Main navigation">
           <NavItem to="/dashboard" onClick={(e) => handleNavClick(e, '/dashboard')}>
             <NavIcon>📊</NavIcon>
             <span>Dashboard</span>

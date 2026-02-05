@@ -422,7 +422,7 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
       <Modal>
         <ModalHeader>
           <ModalTitle>Create New Farm</ModalTitle>
-          <CloseButton onClick={handleClose} disabled={submitting}>
+          <CloseButton onClick={handleClose} disabled={submitting} aria-label="Close modal">
             ✕
           </CloseButton>
         </ModalHeader>

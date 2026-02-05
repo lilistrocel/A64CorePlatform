@@ -167,7 +167,7 @@ export function Dashboard() {
       {error && (
         <ErrorBanner>
           {error}
-          <CloseButton onClick={() => useDashboardStore.getState().clearError()}>×</CloseButton>
+          <CloseButton onClick={() => useDashboardStore.getState().clearError()} aria-label="Dismiss error">×</CloseButton>
         </ErrorBanner>
       )}
 
