@@ -7,7 +7,9 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { salesApi } from '../../services/salesService';
+import { crmApi } from '../../services/crmService';
 import type { SalesOrder, OrderStatus, PaymentStatus } from '../../types/sales';
+import type { Customer } from '../../types/crm';
 import { OrderTable } from '../../components/sales/OrderTable';
 import { OrderForm } from '../../components/sales/OrderForm';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
@@ -226,6 +228,8 @@ export function SalesOrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | ''>('');
+  const [customerFilter, setCustomerFilter] = useState<string>('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -235,9 +239,23 @@ export function SalesOrdersPage() {
 
   const perPage = 20;
 
+  // Load customers for filter dropdown on mount
+  useEffect(() => {
+    loadCustomers();
+  }, []);
+
   useEffect(() => {
     loadOrders();
-  }, [currentPage, statusFilter, paymentFilter, searchTerm]);
+  }, [currentPage, statusFilter, paymentFilter, customerFilter, searchTerm]);
+
+  const loadCustomers = async () => {
+    try {
+      const response = await crmApi.getCustomers({ perPage: 100 });
+      setCustomers(response.items);
+    } catch (err) {
+      console.error('Failed to load customers:', err);
+    }
+  };
 
   const loadOrders = async () => {
     setLoading(true);
@@ -249,6 +267,7 @@ export function SalesOrdersPage() {
         search: searchTerm || undefined,
         status: statusFilter || undefined,
         paymentStatus: paymentFilter || undefined,
+        customerId: customerFilter || undefined,
       });
       setOrders(response.items);
       setTotal(response.total);
@@ -273,6 +292,11 @@ export function SalesOrdersPage() {
 
   const handlePaymentFilterChange = (value: string) => {
     setPaymentFilter(value as PaymentStatus | '');
+    setCurrentPage(1);
+  };
+
+  const handleCustomerFilterChange = (value: string) => {
+    setCustomerFilter(value);
     setCurrentPage(1);
   };
 
@@ -353,6 +377,14 @@ export function SalesOrdersPage() {
           <option value="pending">Pending</option>
           <option value="partial">Partial</option>
           <option value="paid">Paid</option>
+        </Select>
+        <Select value={customerFilter} onChange={(e) => handleCustomerFilterChange(e.target.value)}>
+          <option value="">All Customers</option>
+          {customers.map((customer) => (
+            <option key={customer.customerId} value={customer.customerId}>
+              {customer.name}
+            </option>
+          ))}
         </Select>
       </FiltersRow>
 
