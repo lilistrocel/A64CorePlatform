@@ -101,3 +101,25 @@ async def get_dashboard_stats(
     }
 
     return SuccessResponse(data=dashboard_stats)
+
+
+@router.get(
+    "/stats",
+    response_model=SuccessResponse[dict],
+    summary="Get sales dashboard stats (alias)",
+    description="Alias for GET /api/v1/sales/dashboard - returns sales metrics including total orders, revenue, and status breakdown."
+)
+@cache_response(ttl=30, key_prefix="sales_stats")
+async def get_dashboard_stats_alias(
+    current_user: CurrentUser = Depends(require_permission("sales.view")),
+    order_service: OrderService = Depends(),
+    inventory_service: InventoryService = Depends(),
+    po_service: PurchaseOrderService = Depends()
+):
+    """Get sales dashboard stats - alias endpoint for /dashboard/stats"""
+    return await get_dashboard_stats(
+        current_user=current_user,
+        order_service=order_service,
+        inventory_service=inventory_service,
+        po_service=po_service
+    )
