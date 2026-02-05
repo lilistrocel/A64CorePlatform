@@ -1,0 +1,4 @@
+plantName,scientificName,plantType,growthCycleDays,minTemperatureCelsius,maxTemperatureCelsius,optimalPHMin,optimalPHMax,wateringFrequencyDays,sunlightHoursDaily,expectedYieldPerPlant,yieldUnit,notes,tags
+CSV_TEST_Basil_50,Ocimum basilicum,Herb,60,20,30,6.0,7.0,1,6,0.5,kg,Imported via CSV test feature 50,"herb,culinary,test"
+CSV_TEST_Lettuce_50,Lactuca sativa,Crop,45,10,22,6.0,7.0,1,4,0.3,kg,Imported via CSV test feature 50,"vegetable,salad,test"
+CSV_TEST_Pepper_50,Capsicum annuum,Crop,75,18,30,6.0,6.8,2,8,2.0,kg,Imported via CSV test feature 50,"vegetable,spicy,test"

@@ -69,6 +69,7 @@ async def get_campaigns(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     status: Optional[CampaignStatus] = Query(None, description="Filter by campaign status"),
     budgetId: Optional[UUID] = Query(None, description="Filter by budget ID"),
+    search: Optional[str] = Query(None, description="Search campaigns by name"),
     current_user: CurrentUser = Depends(require_permission("marketing.view")),
     service: CampaignService = Depends()
 ):
@@ -79,9 +80,10 @@ async def get_campaigns(
     - **perPage**: Items per page (default: 20, max: 100)
     - **status**: Filter by campaign status (optional)
     - **budgetId**: Filter by budget ID (optional)
+    - **search**: Search campaigns by name (optional)
     """
     campaigns, total, total_pages = await service.get_all_campaigns(
-        page, perPage, status, budgetId
+        page, perPage, status, budgetId, search
     )
 
     return PaginatedResponse(

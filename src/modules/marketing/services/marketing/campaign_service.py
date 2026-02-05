@@ -138,7 +138,8 @@ class CampaignService:
         page: int = 1,
         per_page: int = 20,
         status: Optional[CampaignStatus] = None,
-        budget_id: Optional[UUID] = None
+        budget_id: Optional[UUID] = None,
+        search: Optional[str] = None
     ) -> tuple[List[Campaign], int, int]:
         """
         Get all campaigns with pagination
@@ -148,6 +149,7 @@ class CampaignService:
             per_page: Items per page
             status: Filter by campaign status (optional)
             budget_id: Filter by budget ID (optional)
+            search: Search campaigns by name (optional)
 
         Returns:
             Tuple of (campaigns, total, total_pages)
@@ -158,7 +160,7 @@ class CampaignService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        campaigns, total = await self.repository.get_all(skip, per_page, status, budget_id)
+        campaigns, total = await self.repository.get_all(skip, per_page, status, budget_id, search)
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 

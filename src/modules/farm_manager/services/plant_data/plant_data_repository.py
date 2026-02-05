@@ -264,6 +264,7 @@ class PlantDataRepository:
 
             plant_dict = plant.model_dump()
             plant_dict["plantDataId"] = str(plant_dict["plantDataId"])
+            plant_dict["createdBy"] = str(plant_dict["createdBy"])  # Convert UUID to string for MongoDB
             plant_dicts.append(plant_dict)
 
         # Bulk insert

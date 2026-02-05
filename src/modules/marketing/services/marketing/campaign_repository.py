@@ -117,7 +117,8 @@ class CampaignRepository:
         skip: int = 0,
         limit: int = 20,
         status: Optional[CampaignStatus] = None,
-        budget_id: Optional[UUID] = None
+        budget_id: Optional[UUID] = None,
+        search: Optional[str] = None
     ) -> tuple[List[Campaign], int]:
         """
         Get all campaigns with pagination and filters
@@ -127,6 +128,7 @@ class CampaignRepository:
             limit: Maximum number of records to return
             status: Filter by campaign status (optional)
             budget_id: Filter by budget ID (optional)
+            search: Search campaigns by name (optional)
 
         Returns:
             Tuple of (list of campaigns, total count)
@@ -138,6 +140,9 @@ class CampaignRepository:
             query["status"] = status.value
         if budget_id:
             query["budgetId"] = str(budget_id)
+        if search:
+            # Case-insensitive search on campaign name
+            query["name"] = {"$regex": search, "$options": "i"}
 
         # Get total count
         total = await collection.count_documents(query)
