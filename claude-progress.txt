@@ -1,3 +1,40 @@
+== Session: 2026-02-05 (Agent 14) ==
+Agent: Features #114, #115, #116 (Date Sorting, Timestamps, Empty Search)
+
+COMPLETED:
+- Feature #114: Date sorting works across month/year boundaries [PASSING]
+  - Created 4 test orders with dates: Dec 15 2024, Dec 31 2024, Jan 1 2025, Jan 15 2025
+  - Sorted ascending: Dec dates appear before Jan dates (correct)
+  - Sorted descending: Jan dates appear before Dec dates (correct)
+  - Frontend uses new Date().getTime() for numeric comparison (handles boundaries correctly)
+  - OrderTable, EmployeeTable, VehicleTable, CustomerTable all use same pattern
+  - Zero console errors, test data cleaned up
+
+- Feature #115: CreatedAt and updatedAt timestamps accurate [PASSING]
+  - Created test farm TIMESTAMP_TEST_FARM_115
+  - createdAt within 0.008 seconds of client-side timestamp (well within 5 sec)
+  - updatedAt nearly equals createdAt on creation (1 microsecond difference)
+  - After PATCH update: createdAt unchanged (still 17:24:51.044000)
+  - After PATCH update: updatedAt changed to 17:25:08.585000 (17.5 sec newer)
+  - GET after update confirms both timestamps persisted correctly
+  - Zero console errors, test farm cleaned up
+
+- Feature #116: Search with empty string returns all results [PASSING]
+  - Farm list: typed "Liwa" -> 1 farm shown, cleared to "" -> all 9 farms shown
+  - Employee list: typed "Belal" -> 3 employees shown, cleared to "" -> all 156 employees (Page 1 of 8)
+  - Farm search uses client-side filter: `includes('')` always returns true
+  - Employee search uses server-side: empty string converted to undefined, backend returns all
+  - Zero console errors
+
+CURRENT STATUS: 51/310 features passing (16.5%)
+
+NOTES FOR NEXT SESSION:
+- Date sorting uses new Date().getTime() in all table components (client-side)
+- Farm search is client-side (filter on fetched data)
+- Employee search is server-side (API query param)
+- Docker containers may restart unexpectedly - check with docker ps
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
 == Session: 2026-02-05 (Agent 13) ==
 Agent: Features #107, #108, #109 (Accessibility: Focus Rings, Form Labels, ARIA Navigation)
 
