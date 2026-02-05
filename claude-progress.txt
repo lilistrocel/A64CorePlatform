@@ -1,3 +1,47 @@
+== Session: 2026-02-05 (Agent 15) ==
+Agent: Features #22, #23, #234 (User List Pagination, User Details, Widget Refresh)
+
+COMPLETED:
+- Feature #22: Admin can list all users with pagination [PASSING]
+  - GET /api/v1/users?page=1&perPage=10 returns paginated user list (200)
+  - Pagination metadata: total, page, perPage, totalPages correct
+  - User objects include userId, email, firstName, lastName, role, isActive
+  - No passwordHash exposed in response
+  - Page 2 returns remaining users correctly
+  - Unauthenticated access returns 401
+  - Zero console errors
+
+- Feature #23: Admin can get user details by ID [PASSING]
+  - GET /api/v1/users/{user_id} returns full user profile (200)
+  - All fields returned: email, firstName, lastName, role, isActive, etc.
+  - No passwordHash in response (verified explicitly)
+  - Non-existent user returns 404
+  - Unauthenticated access returns 401
+  - Tested with super_admin, admin, and regular user profiles
+
+- Feature #234: Widget refresh updates data [PASSING]
+  - Added onRefresh prop to StatWidget with 🔄 button for each stat card
+  - Fixed refreshWidget/refreshAllWidgets to use queryClient.removeQueries() for cache busting
+  - Individual refresh: created new farm, clicked stat card 🔄, Total Farms updated 11→12
+  - Refresh All: created another farm, clicked Refresh All, Total Farms updated to 13
+  - All chart widgets (Orders by Status, Blocks by Farm) also refresh correctly
+  - Test data cleaned up after verification
+  - Zero console errors, no mock data patterns
+
+FILES MODIFIED:
+- frontend/shared/src/components/widgets/StatWidget.tsx - Added onRefresh prop, RefreshRow, StatRefreshButton, RetryLink
+- frontend/user-portal/src/pages/dashboard/Dashboard.tsx - Pass onRefresh to StatWidget
+- frontend/user-portal/src/stores/dashboard.store.ts - Fixed refreshWidget/refreshAllWidgets cache busting
+
+CURRENT STATUS: 52/310 features passing (16.8%)
+
+NOTES FOR NEXT SESSION:
+- StatWidget now supports individual refresh via onRefresh prop (same as ChartWidget)
+- Dashboard refresh uses queryClient.removeQueries() to bust React Query cache
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+- Users API fully functional: list with pagination, get by ID, update, delete, role change
+- Farm CRUD tested end-to-end including dashboard summary integration
+
 == Session: 2026-02-05 (Agent 14) ==
 Agent: Features #114, #115, #116 (Date Sorting, Timestamps, Empty Search)
 
