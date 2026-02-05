@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { UnsavedChangesDialog } from './components/common/UnsavedChangesDialog';
+import { ToastContainer } from './components/common/ToastContainer';
 
 // Loading component for suspense fallback
 const PageLoader = () => (
@@ -95,6 +96,7 @@ function App() {
         >
         <UnsavedChangesProvider>
         <UnsavedChangesDialog />
+        <ToastContainer />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes */}

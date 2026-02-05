@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { showErrorToast } from '../stores/toast.store';
 
 // Use nginx proxy (port 80) instead of direct API (port 8000)
 // This allows nginx to route /api/v1/farm/* to farm-management:8001
@@ -85,8 +86,61 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // Show error toast for API errors (except 401 which is handled by token refresh above)
+    if (error.response) {
+      const status = error.response.status;
+      // Don't show toast for 401 (handled by redirect) or if this was a retry request
+      if (status !== 401 || originalRequest._retry) {
+        const message = extractErrorMessage(error.response.data, status);
+        showErrorToast(message);
+      }
+    } else if (error.request) {
+      // Network error (no response received)
+      showErrorToast('Network error. Please check your connection and try again.');
+    }
+
     return Promise.reject(error);
   }
 );
+
+// Extract a human-readable error message from API error response data
+function extractErrorMessage(data: any, status: number): string {
+  if (!data) return getDefaultErrorMessage(status);
+
+  // Handle string detail (most common: "Campaign not found", etc.)
+  if (typeof data.detail === 'string') return data.detail;
+
+  // Handle FastAPI validation errors: detail is an array of objects with 'msg' field
+  if (Array.isArray(data.detail) && data.detail.length > 0) {
+    const firstError = data.detail[0];
+    if (firstError.msg) {
+      const field = firstError.loc?.slice(-1)?.[0] || '';
+      return field ? `${field}: ${firstError.msg}` : firstError.msg;
+    }
+    return getDefaultErrorMessage(status);
+  }
+
+  // Handle other message formats
+  if (typeof data.message === 'string') return data.message;
+  if (typeof data.error === 'string') return data.error;
+
+  return getDefaultErrorMessage(status);
+}
+
+// Default error messages based on HTTP status codes
+function getDefaultErrorMessage(status: number): string {
+  switch (status) {
+    case 400: return 'Bad request. Please check your input.';
+    case 403: return 'You do not have permission to perform this action.';
+    case 404: return 'The requested resource was not found.';
+    case 409: return 'Conflict. The resource may already exist.';
+    case 422: return 'Validation error. Please check your input.';
+    case 429: return 'Too many requests. Please try again later.';
+    case 500: return 'Internal server error. Please try again later.';
+    case 502: return 'Server is temporarily unavailable. Please try again.';
+    case 503: return 'Service unavailable. Please try again later.';
+    default: return `Request failed (${status}). Please try again.`;
+  }
+}
 
 export default apiClient;
