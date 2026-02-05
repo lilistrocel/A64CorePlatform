@@ -725,10 +725,12 @@ class InventorySummary(BaseModel):
     harvestInventory: dict = Field(default_factory=dict, description="Harvest inventory summary")
     inputInventory: dict = Field(default_factory=dict, description="Input inventory summary")
     assetInventory: dict = Field(default_factory=dict, description="Asset inventory summary")
+    wasteInventory: dict = Field(default_factory=dict, description="Waste inventory summary")
 
     totalHarvestValue: float = Field(0.0, description="Total value of harvest inventory")
     totalInputValue: float = Field(0.0, description="Total value of input inventory")
     totalAssetValue: float = Field(0.0, description="Total value of assets")
+    totalWasteValue: float = Field(0.0, description="Total estimated value of waste")
 
     lowStockAlerts: int = Field(0, description="Number of low stock items")
     expiringItems: int = Field(0, description="Items expiring within 7 days")
@@ -866,8 +868,8 @@ class WasteInventoryBase(BaseModel):
 
 
 class WasteInventoryCreate(WasteInventoryBase):
-    """Schema for creating waste inventory item"""
-    pass
+    """Schema for creating waste inventory item - organizationId set from auth context"""
+    organizationId: Optional[UUID] = Field(None, description="Organization (set automatically from auth)")
 
 
 class WasteInventoryUpdate(BaseModel):

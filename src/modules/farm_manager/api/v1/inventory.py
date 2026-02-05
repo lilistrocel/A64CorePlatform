@@ -277,6 +277,19 @@ async def get_inventory_summary(
     asset_result = await db.inventory_asset.aggregate(asset_pipeline).to_list(1)
     asset_stats = asset_result[0] if asset_result else {"totalItems": 0, "totalValue": 0, "maintenanceOverdueCount": 0}
 
+    # Waste inventory stats
+    waste_pipeline = [
+        {"$match": farm_filter},
+        {"$group": {
+            "_id": None,
+            "totalItems": {"$sum": 1},
+            "totalValue": {"$sum": {"$ifNull": ["$estimatedValue", 0]}},
+            "pendingDisposal": {"$sum": {"$cond": [{"$eq": ["$disposalMethod", "pending"]}, 1, 0]}}
+        }}
+    ]
+    waste_result = await db.inventory_waste.aggregate(waste_pipeline).to_list(1)
+    waste_stats = waste_result[0] if waste_result else {"totalItems": 0, "totalValue": 0, "pendingDisposal": 0}
+
     # Count expiring items (within 7 days)
     seven_days = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     from datetime import timedelta
@@ -304,9 +317,14 @@ async def get_inventory_summary(
             "totalItems": asset_stats.get("totalItems", 0),
             "operationalCount": sum(1 for s in asset_stats.get("byStatus", []) if s == "operational")
         },
+        wasteInventory={
+            "totalItems": waste_stats.get("totalItems", 0),
+            "pendingDisposal": waste_stats.get("pendingDisposal", 0)
+        },
         totalHarvestValue=harvest_stats.get("totalValue", 0),
         totalInputValue=input_stats.get("totalValue", 0),
         totalAssetValue=asset_stats.get("totalValue", 0),
+        totalWasteValue=waste_stats.get("totalValue", 0),
         lowStockAlerts=input_stats.get("lowStockCount", 0),
         expiringItems=expiring_harvest + expiring_input,
         maintenanceOverdue=asset_stats.get("maintenanceOverdueCount", 0)
@@ -1655,8 +1673,11 @@ async def create_waste_inventory(
     """Create a new waste inventory record"""
     org_id = await get_organization_id(current_user)
 
+    waste_data = data.model_dump()
+    waste_data["organizationId"] = org_id  # Set from auth context
+
     waste = WasteInventory(
-        **data.model_dump(),
+        **waste_data,
         recordedBy=UUID(current_user.userId)
     )
 
