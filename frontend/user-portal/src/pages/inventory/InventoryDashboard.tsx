@@ -5,9 +5,10 @@
  * - Harvest Inventory
  * - Input Inventory
  * - Asset Inventory
+ * - Waste Inventory
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { getInventorySummary } from '../../services/inventoryApi';
@@ -15,6 +16,8 @@ import type { InventorySummary } from '../../types/inventory';
 import { HarvestInventoryList } from './HarvestInventoryList';
 import { InputInventoryList } from './InputInventoryList';
 import { AssetInventoryList } from './AssetInventoryList';
+
+const WasteInventoryList = lazy(() => import('./WasteInventoryList'));
 
 export function InventoryDashboard() {
   const [summary, setSummary] = useState<InventorySummary | null>(null);
@@ -49,7 +52,7 @@ export function InventoryDashboard() {
     <Container>
       <Header>
         <Title>Inventory Management</Title>
-        <Subtitle>Manage harvest, inputs, and farm assets</Subtitle>
+        <Subtitle>Manage harvest, inputs, farm assets, and waste tracking</Subtitle>
       </Header>
 
       {/* Summary Cards */}
@@ -95,6 +98,21 @@ export function InventoryDashboard() {
           </CardContent>
         </SummaryCard>
 
+        <SummaryCard $variant="waste">
+          <CardIcon>🗑️</CardIcon>
+          <CardContent>
+            <CardLabel>Waste Inventory</CardLabel>
+            <CardValue>{loading ? '...' : summary?.wasteInventory?.totalItems || 0}</CardValue>
+            <CardSubtext>
+              {summary?.wasteInventory?.pendingDisposal ? (
+                <AlertText>{summary.wasteInventory.pendingDisposal} pending disposal</AlertText>
+              ) : (
+                `Value: AED ${(summary?.totalWasteValue || 0).toLocaleString()}`
+              )}
+            </CardSubtext>
+          </CardContent>
+        </SummaryCard>
+
         <SummaryCard $variant="alerts">
           <CardIcon>⚠️</CardIcon>
           <CardContent>
@@ -123,15 +141,22 @@ export function InventoryDashboard() {
           <TabIcon>🚜</TabIcon>
           Assets
         </TabLink>
+        <TabLink to="/inventory/waste">
+          <TabIcon>🗑️</TabIcon>
+          Waste
+        </TabLink>
       </TabNav>
 
       {/* Content Area */}
       <ContentArea>
-        <Routes>
-          <Route path="harvest" element={<HarvestInventoryList onUpdate={loadSummary} />} />
-          <Route path="input" element={<InputInventoryList onUpdate={loadSummary} />} />
-          <Route path="assets" element={<AssetInventoryList onUpdate={loadSummary} />} />
-        </Routes>
+        <Suspense fallback={<LoadingText>Loading...</LoadingText>}>
+          <Routes>
+            <Route path="harvest" element={<HarvestInventoryList onUpdate={loadSummary} />} />
+            <Route path="input" element={<InputInventoryList onUpdate={loadSummary} />} />
+            <Route path="assets" element={<AssetInventoryList onUpdate={loadSummary} />} />
+            <Route path="waste" element={<WasteInventoryList />} />
+          </Routes>
+        </Suspense>
       </ContentArea>
     </Container>
   );
@@ -163,13 +188,13 @@ const Subtitle = styled.p`
 
 const SummaryGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: ${({ theme }) => theme.spacing.lg};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
 `;
 
 interface SummaryCardProps {
-  $variant: 'harvest' | 'input' | 'asset' | 'alerts';
+  $variant: 'harvest' | 'input' | 'asset' | 'waste' | 'alerts';
 }
 
 const SummaryCard = styled.div<SummaryCardProps>`
@@ -185,6 +210,7 @@ const SummaryCard = styled.div<SummaryCardProps>`
       case 'harvest': return theme.colors.success;
       case 'input': return theme.colors.primary[500];
       case 'asset': return theme.colors.warning;
+      case 'waste': return theme.colors.neutral[500] || '#6b7280';
       case 'alerts': return theme.colors.error;
       default: return theme.colors.neutral[300];
     }
@@ -227,6 +253,7 @@ const TabNav = styled.nav`
   gap: ${({ theme }) => theme.spacing.sm};
   border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
+  overflow-x: auto;
 `;
 
 const TabLink = styled(NavLink)`
@@ -241,6 +268,7 @@ const TabLink = styled(NavLink)`
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
   transition: all 0.2s ease;
+  white-space: nowrap;
 
   &:hover {
     color: ${({ theme }) => theme.colors.primary[500]};
@@ -258,4 +286,10 @@ const TabIcon = styled.span`
 
 const ContentArea = styled.div`
   min-height: 400px;
+`;
+
+const LoadingText = styled.div`
+  text-align: center;
+  padding: ${({ theme }) => theme.spacing.xl};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;

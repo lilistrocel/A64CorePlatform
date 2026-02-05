@@ -374,9 +374,14 @@ export interface InventorySummary {
     totalItems: number;
     operationalCount: number;
   };
+  wasteInventory: {
+    totalItems: number;
+    pendingDisposal: number;
+  };
   totalHarvestValue: number;
   totalInputValue: number;
   totalAssetValue: number;
+  totalWasteValue: number;
   lowStockAlerts: number;
   expiringItems: number;
   maintenanceOverdue: number;
