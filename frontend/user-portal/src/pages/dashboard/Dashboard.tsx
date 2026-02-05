@@ -15,6 +15,7 @@ export function Dashboard() {
     error,
     loadDashboard,
     refreshAllWidgets,
+    removeWidget,
     updateLayout,
     resetLayout,
   } = useDashboardStore();
@@ -209,6 +210,22 @@ export function Dashboard() {
 
             return (
               <WidgetContainer key={widget.id}>
+                {isEditing && (
+                  <RemoveWidgetButton
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      removeWidget(widget.id);
+                    }}
+                    aria-label={`Remove ${widget.title} widget`}
+                    title={`Remove ${widget.title}`}
+                  >
+                    ✕
+                  </RemoveWidgetButton>
+                )}
                 {isChart ? (
                   <ChartWidget
                     widget={{ ...widget, chartType: widgetState?.data?.chartType }}
@@ -399,6 +416,33 @@ const EditModeBanner = styled.div`
 const WidgetContainer = styled.div`
   height: 100%;
   width: 100%;
+  position: relative;
+`;
+
+const RemoveWidgetButton = styled.button`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: white;
+  border: 2px solid white;
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s, background 0.15s;
+
+  &:hover {
+    transform: scale(1.15);
+    background: ${({ theme }) => theme.colors.error ? '#dc2626' : '#dc2626'};
+  }
 `;
 
 const GridContainer = styled.div`
