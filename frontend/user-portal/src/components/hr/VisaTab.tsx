@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { hrApi, getVisaStatusColor, formatDate } from '../../services/hrService';
+import { hrApi, getVisaStatusColor, formatDate, isVisaExpiringSoon } from '../../services/hrService';
 import type { Visa, VisaCreate, VisaUpdate, VisaStatus } from '../../types/hr';
 
 // ============================================================================
@@ -88,6 +88,33 @@ const StatusBadge = styled.span<{ $color: string }>`
   background: ${({ $color }) => $color}20;
   color: ${({ $color }) => $color};
   text-transform: capitalize;
+`;
+
+const ExpiryWarning = styled.div<{ $type: 'expired' | 'expiring_soon' }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  ${({ $type }) =>
+    $type === 'expired'
+      ? `
+    background: #FEE2E2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+  `
+      : `
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+  `}
+`;
+
+const ExpiryIcon = styled.span`
+  font-size: 16px;
 `;
 
 const CardDetails = styled.div`
@@ -269,6 +296,24 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 // COMPONENT
 // ============================================================================
 
+function getExpiryInfo(visa: Visa): { isExpired: boolean; isExpiringSoon: boolean; daysText: string } {
+  const expiryDate = new Date(visa.expiryDate);
+  const now = new Date();
+  const diffMs = expiryDate.getTime() - now.getTime();
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (days < 0) {
+    return { isExpired: true, isExpiringSoon: false, daysText: `Expired ${Math.abs(days)} day${Math.abs(days) !== 1 ? 's' : ''} ago` };
+  }
+  if (days === 0) {
+    return { isExpired: true, isExpiringSoon: false, daysText: 'Expires today' };
+  }
+  if (days <= 60) {
+    return { isExpired: false, isExpiringSoon: true, daysText: `Expires in ${days} day${days !== 1 ? 's' : ''}` };
+  }
+  return { isExpired: false, isExpiringSoon: false, daysText: '' };
+}
+
 export function VisaTab({ employeeId }: VisaTabProps) {
   const [visas, setVisas] = useState<Visa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -378,12 +423,26 @@ export function VisaTab({ employeeId }: VisaTabProps) {
         <EmptyText>No visas found</EmptyText>
       ) : (
         <CardList>
-          {visas.map((visa) => (
+          {visas.map((visa) => {
+            const expiryInfo = getExpiryInfo(visa);
+            return (
             <Card key={visa.visaId}>
               <CardHeader>
                 <CardTitle>{visa.visaType} - {visa.country}</CardTitle>
                 <StatusBadge $color={getVisaStatusColor(visa.status)}>{visa.status.replace('_', ' ')}</StatusBadge>
               </CardHeader>
+              {expiryInfo.isExpired && (
+                <ExpiryWarning $type="expired">
+                  <ExpiryIcon>&#9888;</ExpiryIcon>
+                  {expiryInfo.daysText}
+                </ExpiryWarning>
+              )}
+              {expiryInfo.isExpiringSoon && (
+                <ExpiryWarning $type="expiring_soon">
+                  <ExpiryIcon>&#9888;</ExpiryIcon>
+                  {expiryInfo.daysText}
+                </ExpiryWarning>
+              )}
               <CardDetails>
                 <div>Issue Date: {formatDate(visa.issueDate)}</div>
                 <div>Expiry Date: {formatDate(visa.expiryDate)}</div>
@@ -396,7 +455,8 @@ export function VisaTab({ employeeId }: VisaTabProps) {
                 </ActionButton>
               </Actions>
             </Card>
-          ))}
+            );
+          })}
         </CardList>
       )}
 
