@@ -32,3 +32,44 @@ CURRENT STATUS: 2/310 features passing (0.6%)
 NEXT STEPS:
 - Continue with next assigned infrastructure or auth features
 - All infrastructure foundation features (1-5) should be prioritized
+
+== Session: 2026-02-05 (Agent 2) ==
+Agent: Features #1, #2, #3 (Infrastructure)
+
+COMPLETED:
+- Feature #1: Database connection established [PASSING]
+  - Enhanced /api/health endpoint to include `database` and `redis` connection status fields
+  - MongoDB connection verified via ping command
+  - Redis connection verified via is_available property + live ping
+  - Health endpoint returns: {"status":"healthy","database":"connected","redis":"connected",...}
+  - Screenshot verification taken
+
+- Feature #2: Database schema applied correctly [PASSING]
+  - Verified 48+ collections exist in a64core_db
+  - All required collections verified: users, farms, blocks, employees, customers,
+    sales_orders, vehicles, routes, shipments, marketing_campaigns, marketing_budgets,
+    marketing_events, marketing_channels
+  - Fixed logistics index creation: changed vehicles licensePlate unique index to sparse=True
+  - All indexes across all collections verified with correct uniqueness constraints
+
+- Feature #3: Data persists across server restart [PASSING]
+  - Registered test user RESTART_TEST_12345@test.com, promoted to super_admin
+  - Created farm RESTART_TEST_FARM_12345 via POST /api/v1/farm/farms
+  - Stopped API container completely, confirmed DOWN
+  - Restarted API container, logged in again, verified farm still exists
+  - No mock data patterns found in src/ directory
+  - Cleaned up test data after verification
+
+FIXES APPLIED:
+- src/api/health.py - Enhanced health endpoint with database and redis status fields
+- src/modules/logistics/services/database.py - Fixed licensePlate index to sparse=True
+- docker-compose.yml - Changed registry port from 5000 to 5050 (port conflict)
+
+CURRENT STATUS: 5/310 features passing (1.6%) - all 5 infrastructure features done
+
+NOTES FOR NEXT SESSION:
+- Admin user admin@a64platform.com exists but password unknown
+- API container does NOT auto-reload on code changes, must docker restart
+- Port 5000 was in use, registry moved to 5050
+- Farm API: POST/GET at /api/v1/farm/farms
+- Auth API: /api/v1/auth/register, /api/v1/auth/login
