@@ -140,6 +140,57 @@ class AuthService:
             )
 
     @staticmethod
+    async def register_user_with_tokens(user_data: UserCreate) -> TokenResponse:
+        """
+        Register a new user and return JWT tokens (auto-login after registration)
+
+        Args:
+            user_data: User registration data
+
+        Returns:
+            TokenResponse with access token, refresh token, and user info
+
+        Raises:
+            HTTPException: 409 if email already exists
+        """
+        # First register the user
+        user = await AuthService.register_user(user_data)
+
+        db = mongodb.get_database()
+
+        # Generate tokens for auto-login
+        access_token = create_access_token(
+            user_id=user.userId,
+            email=user.email,
+            role=user.role
+        )
+
+        refresh_token, token_id = create_refresh_token(user_id=user.userId)
+
+        # Store refresh token in database
+        refresh_token_doc = {
+            "tokenId": token_id,
+            "userId": user.userId,
+            "token": refresh_token,
+            "expiresAt": datetime.utcnow() + timedelta(days=7),
+            "isRevoked": False,
+            "createdAt": datetime.utcnow(),
+            "lastUsedAt": None
+        }
+
+        await db.refresh_tokens.insert_one(refresh_token_doc)
+
+        logger.info(f"Auto-login tokens generated for newly registered user: {user.email}")
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=3600,
+            user=user
+        )
+
+    @staticmethod
     async def login_user(credentials: UserLogin) -> TokenResponse:
         """
         Authenticate user and return tokens

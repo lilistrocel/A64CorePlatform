@@ -25,10 +25,10 @@ from ...middleware.rate_limit import login_rate_limiter
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate) -> UserResponse:
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def register(user_data: UserCreate) -> TokenResponse:
     """
-    Register a new user
+    Register a new user and return JWT tokens (auto-login)
 
     **Authentication:** None required
 
@@ -43,7 +43,7 @@ async def register(user_data: UserCreate) -> UserResponse:
     - locale: Optional language code (ISO 639-1)
 
     **Returns:**
-    - 201: User created successfully (verification email sent automatically)
+    - 201: User created successfully with JWT tokens (verification email sent automatically)
     - 409: Email already registered
     - 422: Validation error (password requirements not met)
 
@@ -57,19 +57,19 @@ async def register(user_data: UserCreate) -> UserResponse:
     }
     ```
     """
-    user = await auth_service.register_user(user_data)
+    token_response = await auth_service.register_user_with_tokens(user_data)
 
     # Automatically send verification email after registration
     try:
-        await auth_service.send_verification_email(user.userId)
+        await auth_service.send_verification_email(token_response.user.userId)
     except Exception as e:
         # Log error but don't fail registration if email fails
         # Reason: User is registered, email can be resent later
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Failed to send verification email to {user.email}: {e}")
+        logger.error(f"Failed to send verification email to {token_response.user.email}: {e}")
 
-    return user
+    return token_response
 
 
 @router.post("/login", response_model=TokenResponse)

@@ -87,19 +87,29 @@ class AuthService {
   }
 
   /**
-   * Register new user
+   * Register new user (returns tokens for auto-login)
    */
   async register(data: RegisterData): Promise<AuthResponse> {
     // Use regular axios for register (no auth token needed)
-    const response = await axios.post<AuthResponse>(`${API_URL}/v1/auth/register`, data);
+    const response = await axios.post<any>(`${API_URL}/v1/auth/register`, data);
+
+    // Backend returns snake_case (access_token, refresh_token)
+    // Convert to camelCase for frontend
+    const accessToken = response.data.access_token;
+    const refreshToken = response.data.refresh_token;
 
     // Store tokens
-    this.accessToken = response.data.accessToken;
-    this.refreshToken = response.data.refreshToken;
-    localStorage.setItem('accessToken', this.accessToken);
-    localStorage.setItem('refreshToken', this.refreshToken);
+    this.accessToken = accessToken;
+    this.refreshToken = refreshToken;
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
 
-    return response.data;
+    // Return camelCase response
+    return {
+      accessToken,
+      refreshToken,
+      user: response.data.user
+    };
   }
 
   /**
