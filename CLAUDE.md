@@ -1,789 +1,613 @@
-# A64 Core Platform - Development Guide
-
-## Core Principles
-
-- **KISS** - Keep It Simple, Stupid
-- **YAGNI** - You Aren't Gonna Need It
-- **Cross-Platform** - Code MUST work on Windows AND Linux
-- **Never Assume** - When in doubt, ask for clarification
-- **Delegate to Specialists** - Use specialized agents for complex tasks
-
-## ⚠️ CRITICAL RULES - READ FIRST ⚠️
-
-### Documentation-First Approach
-**BEFORE starting ANY task:**
-1. ✅ **CHECK relevant documentation** in `Docs/1-Main-Documentation/`
-2. ✅ **READ existing code** to understand current implementation
-3. ✅ **VERIFY** you understand the requirements completely
-
-### Never Assume Policy
-**STOP and ASK the user if:**
-- ❌ Requirements are ambiguous or unclear
-- ❌ Multiple implementation approaches are possible
-- ❌ You're unsure about architecture decisions
-- ❌ Documentation conflicts with code
-- ❌ Security implications are involved
-- ❌ Breaking changes might occur
-
-### 🚨 CRITICAL: Always Delegate to Specialized Agents 🚨
-
-**MANDATORY: If a specialized agent is available for a task, you MUST delegate to that agent.**
-
-**This is NON-NEGOTIABLE. Specialized agents have:**
-- Deep domain expertise and best practices
-- Task-specific validation and safety checks
-- Comprehensive testing and verification
-- Documentation and standards enforcement
-- Error prevention and quality assurance
-
-**When to Delegate:**
-- ✅ **Backend Development** → Use `@agent-backend-dev-expert`
-- ✅ **Frontend Development** → Use `@agent-frontend-dev-expert`
-- ✅ **API Design** → Use `@agent-api-developer`
-- ✅ **Database Schema** → Use `@agent-database-schema-architect`
-- ✅ **Testing** → Use appropriate testing agents
-- ✅ **Documentation & Commits** → Use `@agent-change-guardian`
-
-**When NOT to Delegate:**
-- ❌ Simple file reads (< 5 lines)
-- ❌ Quick documentation lookups
-- ❌ Answering questions about existing code
-- ❌ Trivial configuration changes
-
-**Why This Is Critical:**
-1. **Quality Assurance** - Agents enforce standards you might miss
-2. **Security** - Agents check for vulnerabilities and best practices
-3. **Consistency** - Agents follow established patterns
-4. **Efficiency** - Agents have specialized tools and knowledge
-5. **Error Prevention** - Agents catch mistakes before they happen
-
-**Example of WRONG Behavior (DON'T DO THIS):**
-```
-❌ User: "Add a new API endpoint for user registration"
-   You: *Directly implements the endpoint without using @agent-api-developer*
-```
-
-**Example of CORRECT Behavior (DO THIS):**
-```
-✅ User: "Add a new API endpoint for user registration"
-   You: "I'll delegate this to @agent-api-developer who will ensure proper
-        API design, security, validation, and documentation."
-
-   *Uses Task tool with subagent_type='api-developer'*
-```
-
-**Remember: Delegation is not a sign of weakness - it's a sign of knowing when to use the right tool for the job.**
-
-### What NOT to Do
-- ❌ NEVER make changes based on assumptions
-- ❌ NEVER skip reading relevant documentation
-- ❌ NEVER proceed with unclear requirements
-- ❌ NEVER implement quick fixes without understanding root cause
-- ❌ NEVER modify code you don't fully understand
-- ❌ NEVER rush to fix things - we are NEVER in a rush
-
-**When in doubt: STOP → READ DOCS → ASK USER → THEN PROCEED**
-
-### 🚨 CRITICAL: Never Rush Fixes 🚨
-
-**WE ARE NEVER IN A RUSH. QUALITY AND STABILITY OVER SPEED.**
-
-**MANDATORY approach to fixes:**
-
-1. **Understand the Root Cause** - Don't just treat symptoms
-   - Read the error messages completely
-   - Trace the issue back to its source
-   - Understand WHY the problem exists
-
-2. **Consider the Impact** - Think before acting
-   - Will this fix cause other issues?
-   - Is this a proper solution or a workaround?
-   - What are the long-term implications?
-
-3. **Ask for Opinion** - When in doubt, consult
-   - ⚠️ **ALWAYS ask the user** if the fix seems like a quick fix just to achieve a goal
-   - ⚠️ **ALWAYS ask the user** if you're considering a workaround instead of a proper fix
-   - ⚠️ **ALWAYS ask the user** if the fix might have unintended consequences
-
-4. **Implement Stable Fixes** - Do it right, not fast
-   - ✅ Fix the root cause, not the symptoms
-   - ✅ Ensure backward compatibility
-   - ✅ Add proper error handling
-   - ✅ Update documentation
-   - ✅ Consider migration paths for data changes
-
-**Examples of BAD quick fixes to AVOID:**
-- Making required fields optional just to stop errors (without migration)
-- Adding try-catch to hide errors instead of fixing them
-- Hardcoding values to bypass validation
-- Disabling checks temporarily "until we fix it properly"
-- Commenting out code that's causing issues
-
-**Examples of GOOD stable fixes:**
-- Making fields optional WITH a migration script to populate existing data
-- Fixing the underlying validation logic causing errors
-- Adding proper default values with clear documentation
-- Creating a deprecation path for old functionality
-- Refactoring code to handle edge cases properly
-
-**Remember: A rushed fix today creates technical debt tomorrow. Take the time to do it right.**
-
-### 🚨 CRITICAL: Never Skip Errors During Testing 🚨
-
-**MANDATORY approach when encountering errors during testing or E2E verification:**
-
-1. **NEVER Skip or Ignore Errors** - Every error must be addressed
-   - ❌ NEVER think "I'll skip this for now and continue testing"
-   - ❌ NEVER assume an error is minor or unrelated
-   - ❌ NEVER proceed to the next test step if the current one failed
-   - ✅ ALWAYS stop and investigate when an error occurs
-   - ✅ ALWAYS consult the user before deciding to skip an error
-
-2. **Why This Is Critical**
-   - Errors during testing often indicate blocking issues
-   - Skipped errors cascade into bigger problems
-   - Tests become unreliable if errors are ignored
-   - What seems minor might be a critical system issue
-   - User needs visibility into ALL problems, not just successes
-
-3. **What To Do When You Encounter an Error**
-   - ⚠️ **STOP immediately** - Don't continue to next test step
-   - 📋 **Document the error** - Capture exact error message, stack trace, context
-   - 🔍 **Investigate root cause** - Don't just report it, understand it
-   - 💬 **Consult the user** - Present findings and ask for direction
-   - ✅ **Fix or explicitly decide** - Either fix it or user explicitly approves skipping
-
-4. **Example of WRONG Behavior (DON'T DO THIS)**
-   ```
-   ❌ "I encountered a validation error in the dashboard API, but I'll skip that
-      and continue testing the alert resolution since that's the main goal."
-   ```
-
-5. **Example of CORRECT Behavior (DO THIS)**
-   ```
-   ✅ "I encountered a validation error in the dashboard API:
-
-      Error: 'severity' field validation failed - receiving <AlertSeverity.HIGH: 'high'>
-      instead of string 'high'
-
-      This error is blocking the Block Monitor page from loading. Before continuing
-      with the alert resolution test, should we:
-
-      1. Fix this validation error now (recommended - it's blocking functionality)
-      2. Use an alternative method to verify alert resolution
-      3. Document and continue (only if you confirm this won't affect our test)
-
-      What would you like me to do?"
-   ```
-
-**Remember: Comprehensive testing means investigating ALL errors, not just the happy path. The user hired you to find and fix problems, not to skip over them.**
-
-### MCP Tool Requirements
-**CRITICAL: When testing or debugging, ALWAYS use MCP tools:**
-
-**This is NON-NEGOTIABLE. MCP tools MUST be used instead of traditional methods.**
-
-1. **Playwright MCP** - MANDATORY for:
-   - ✅ Testing frontend UI components and user flows
-   - ✅ Verifying API endpoints and responses (instead of curl/wget)
-   - ✅ Debugging browser behavior and interactions
-   - ✅ Visual confirmation of changes
-   - ✅ Real-time interaction debugging
-   - ✅ Testing authentication flows
-   - ✅ Verifying CORS configuration
-   - ❌ NEVER use curl, wget, Postman screenshots, or manual browser testing
-
-2. **MongoDB Verification** - Use mongosh (TEMPORARY WORKAROUND):
-   - ⚠️ **CRITICAL:** MongoDB MCP is currently broken (connection doesn't persist)
-   - ✅ **MUST use mongosh via Bash** for database verification until MCP is fixed
-   - ✅ Pattern: `mongosh --eval "db.collection.find()" mongodb://localhost:27017/a64core_db --quiet`
-   - ✅ Inspecting database collections and documents
-   - ✅ Running queries and aggregations
-   - ✅ Verifying data structure and schemas
-   - ✅ Testing database operations
-   - ✅ Checking index usage with explain()
-   - ✅ Performance testing queries
-   - ❌ NEVER use mongo shell interactive mode or pymongo print statements
-   - 📝 NOTE: Will switch to MongoDB MCP when connection persistence is fixed
-   - 📄 See MCP_TOOLS_TROUBLESHOOTING.md for details
-
-### Why MCP Tools Are Mandatory
-
-**Better Visibility:**
-- Playwright MCP shows actual browser rendering and interactions
-- MongoDB MCP provides structured query results with proper formatting
-
-**Proper Validation:**
-- Playwright MCP validates UI/UX behavior, not just HTTP responses
-- MongoDB MCP ensures query correctness and data integrity
-
-**Debugging Capability:**
-- Playwright MCP allows inspecting DOM, network requests, console logs
-- MongoDB MCP provides query explain plans and performance metrics
-
-**Never Use Instead of MCP:**
-- ❌ curl/wget for API testing (use Playwright MCP)
-- ❌ mongo shell commands (use MongoDB MCP)
-- ❌ Python print statements for database queries (use MongoDB MCP)
-- ❌ Manual browser testing (use Playwright MCP)
-- ❌ Postman/Insomnia screenshots (use Playwright MCP)
-
-### 🚨 CRITICAL: Limit Large MCP Tool Outputs 🚨
-
-**MCP tools can generate very large outputs that consume context. Be efficient:**
-
-1. **Playwright MCP - Minimize Output Size:**
-   - ✅ Use targeted element checks instead of full page snapshots
-   - ✅ Click directly on known element refs rather than searching
-   - ✅ Avoid repeated full-page `browser_snapshot` calls
-   - ✅ Use `browser_wait_for` with specific text instead of time delays + snapshots
-   - ✅ Once you have element refs, reuse them without re-snapshotting
-   - ❌ DON'T take full snapshots after every click
-   - ❌ DON'T navigate through many pages when you can go directly via URL
-   - ❌ DON'T repeat the same verification multiple times
-
-2. **When Testing:**
-   - ✅ Plan your test flow before starting
-   - ✅ Navigate directly to the page you need to test (via URL)
-   - ✅ Take ONE snapshot to get element refs, then interact
-   - ✅ Only take additional snapshots when the page content changes significantly
-   - ✅ Close browser when done testing
-
-3. **Output Too Large?**
-   - If snapshot output exceeds limits, use `Grep` or `Read` on the saved output file
-   - Extract only the specific information you need
-   - Don't try to read the entire large output
-
-**Remember: Efficient MCP usage = more context for actual work**
-
-### 🚨 CRITICAL: UI Testing is the Ultimate Truth 🚨
-
-**MANDATORY: If it doesn't work in the UI using Playwright, it is NOT working - even if the API works.**
-
-**This is NON-NEGOTIABLE. Real users interact through the UI, not the API.**
-
-**Critical Principle:**
-- ✅ **API working + UI working** = Feature is complete ✅
-- ❌ **API working + UI broken** = Feature is BROKEN ❌
-- ❌ **API tests pass but UI tests fail** = There is a PROBLEM that MUST be addressed
-
-**Why This Is Critical:**
-1. **Users don't call APIs directly** - They use the UI
-2. **API success ≠ User success** - Backend might work but frontend might fail
-3. **CORS, auth, data format issues** - Often only visible in browser
-4. **Real-world validation** - Playwright tests actual user experience
-5. **Integration issues** - API and frontend might have different expectations
-
-**What This Means:**
-- ⚠️ **NEVER** declare a feature "working" based only on API tests
-- ⚠️ **NEVER** skip UI testing because "the API works"
-- ⚠️ **NEVER** ignore UI errors just because backend responds correctly
-- ✅ **ALWAYS** test features end-to-end through the UI using Playwright MCP
-- ✅ **ALWAYS** investigate and fix UI issues even if API works
-- ✅ **ALWAYS** ensure both API AND UI work before considering feature complete
-
-**Example of WRONG Behavior (DON'T DO THIS):**
-```
-❌ "I tested the task completion endpoint with curl and it works perfectly!
-   The task status is updated in the database. Feature is complete."
-
-   [User opens UI and task completion button doesn't work - CORS error]
-```
-
-**Example of CORRECT Behavior (DO THIS):**
-```
-✅ "I tested the task completion endpoint with curl and it works.
-   Now let me verify it works in the UI using Playwright MCP..."
-
-   [Playwright test reveals CORS error preventing UI from calling endpoint]
-
-   "I found a CORS configuration issue blocking the UI. The API works but
-   users can't access it from the browser. I need to fix the CORS headers
-   in nginx.conf before this feature is complete."
-```
-
-**Testing Sequence:**
-1. **Unit Test** - Test individual functions/components
-2. **API Test** - Verify backend endpoints work (curl/Playwright MCP)
-3. **UI Test** - Verify frontend works (Playwright MCP) ⚠️ **MOST CRITICAL**
-4. **E2E Test** - Complete user journey through UI (Playwright MCP)
-
-**Only after ALL tests pass, especially UI tests, can a feature be considered working.**
-
-**Remember: If a user can't use it through the UI, it doesn't work - period.**
-
-## Agent Delegation Strategy
-
-### When to Use Specialized Agents
-
-**ALWAYS delegate these tasks to specialized agents:**
-
-1. **Backend Development** → `@agent-backend-dev-expert`
-   - FastAPI endpoint implementation
-   - Database queries and operations
-   - Security-sensitive code (auth, validation)
-   - Python import structure issues
-   - Environment configuration
-
-2. **Frontend Development** → `@agent-frontend-dev-expert`
-   - React component creation/modification
-   - TypeScript type definitions
-   - Styled-components implementation
-   - CORS and API integration issues
-   - UI/UX implementation
-
-3. **API Design** → `@agent-api-developer`
-   - New REST API endpoints
-   - API structure review
-   - Authentication flows
-   - API documentation updates
-
-4. **Database Schema** → `@agent-database-schema-architect`
-   - New database tables/collections
-   - Schema modifications
-   - Indexing strategies
-   - Database migrations
-
-5. **Testing** → Specialized testing agents
-   - `@agent-testing-backend-specialist` - Backend/API tests
-   - `@agent-frontend-testing-playwright` - Frontend/UI tests
-
-6. **Documentation & Version Control** → `@agent-change-guardian`
-   - After completing features
-   - Before releases
-   - Updating CHANGELOG.md
-   - Creating git commits
-   - Version management
-
-### ⚠️ CRITICAL: Instructing Agents to Use MCP Tools
-
-**When delegating tasks to any agent, you MUST explicitly instruct them to use MCP tools.**
-
-**ALWAYS include these instructions when calling agents:**
-
-```
-CRITICAL Instructions for this task:
-- MUST use Playwright MCP for all frontend/API testing and verification
-- MUST use MongoDB MCP for all database operations and verification
-- NEVER use curl, wget, or manual browser testing
-- NEVER use mongo shell commands or pymongo print statements
-```
-
-**Example of correct agent delegation:**
-
-```
-Good: "Implement user login endpoint. CRITICAL: Use Playwright MCP to test
-       the endpoint and MongoDB MCP to verify user session creation."
-
-Bad:  "Implement user login endpoint."
-```
-
-**Why this is critical:**
-- Agents may default to traditional methods (curl, mongo shell) if not explicitly told
-- MCP tools provide better visibility and debugging
-- Ensures consistent testing approach across all agents
-- Prevents agents from skipping proper verification
-
-**Template for Agent Instructions:**
-
-```
-Task: [Your task description]
-
-CRITICAL MCP Tool Requirements:
-✅ Use Playwright MCP for: [specific testing needs]
-✅ Use MongoDB MCP for: [specific database verification]
-❌ Do NOT use: curl, wget, mongo shell, or print statements
-
-Expected MCP Verification:
-1. [What to verify with Playwright MCP]
-2. [What to verify with MongoDB MCP]
-```
-
-### Multi-Agent Workflows
-
-For complete features, use this sequence:
-
-```
-1. Implementation Agent (backend/frontend/api)
-   ↓
-2. Testing Agent (verify functionality)
-   ↓
-3. Change Guardian (document & commit)
-```
-
-**Example:**
-```
-User: "Add user registration feature"
-→ @agent-backend-dev-expert (implement API)
-→ @agent-frontend-dev-expert (implement UI)
-→ @agent-frontend-testing-playwright (test UI flow)
-→ @agent-change-guardian (document & commit)
-```
-
-### When NOT to Use Agents
-
-**Handle directly for:**
-- Simple file reads
-- Quick documentation lookups
-- Answering questions about code
-- Small configuration changes
-- Single-file edits (< 10 lines)
-
-## Project Structure
-
-### Documentation
-- **Main Documentation:** [`Docs/1-Main-Documentation/`](Docs/1-Main-Documentation/) - Single source of truth
-  - [System-Architecture.md](Docs/1-Main-Documentation/System-Architecture.md)
-  - [API-Structure.md](Docs/1-Main-Documentation/API-Structure.md)
-  - [User-Structure.md](Docs/1-Main-Documentation/User-Structure.md)
-  - [Versioning.md](Docs/1-Main-Documentation/Versioning.md)
-- **Working Progress:** [`Docs/2-Working-Progress/`](Docs/2-Working-Progress/) - Active tasks
-- **DevLog:** [`Docs/3-DevLog/`](Docs/3-DevLog/) - Development history
-
-### DevLog Journal Policy
-
-**When user requests "keep journal" or "create journal":**
-
-Create a **dated summary journal** in `Docs/3-DevLog/` following this format:
-
-**Filename:** `YYYY-MM-DD_descriptive-session-name.md`
-**Example:** `2025-11-01_plant-data-testing-session.md`
-
-**Required Content:**
-1. **Session Header**
-   - Date, session type, duration, focus area, status
-   - Session objective (what user requested)
-
-2. **What We Accomplished** ✅
-   - Documentation reviewed
-   - Code files analyzed
-   - Bugs fixed
-   - Features implemented
-   - Tests completed
-
-3. **Bugs/Issues Discovered** 🐛
-   - Severity level and status
-   - Detailed description with file locations and line numbers
-   - Root cause analysis
-   - Code snippets showing the issue
-   - Suggested fixes with examples
-   - Reproduction steps
-
-4. **What We Need To Do Next** 🎯
-   - Prioritized action items
-   - Exact file locations and line numbers
-   - Step-by-step instructions for each task
-   - Expected outcomes
-
-5. **Important Context for Next Session**
-   - Key files to remember
-   - Testing tools and credentials
-   - Current state of features
-   - Git status snapshot
-   - Questions for user
-
-6. **Files Modified**
-   - List all files changed with status
-   - Commit readiness
-
-7. **Session Metrics**
-   - Time breakdown
-   - Lines of code read/written
-   - Tools used
-   - Key achievements
-
-**Purpose:**
-- Provides complete context continuity when conversation resets
-- Ensures no work is lost or needs to be re-investigated
-- Makes it easy to pick up exactly where we left off
-- Documents debugging work and decisions made
-
-**When to Create:**
-- At end of long testing/debugging sessions
-- When major bugs are discovered
-- Before context limit is reached
-- When user explicitly requests "keep journal"
-- When switching between major tasks
-
-## Getting Started
-
-1. Check relevant documentation in `Docs/1-Main-Documentation/`
-2. Review project structure and architecture
-3. **Identify if task needs specialized agent** - Check agent delegation strategy above
-4. Follow cross-platform standards (Windows + Linux)
-5. Update documentation as you work
-
-## Key Standards
-
-- ✅ Cross-platform compatibility required
-- ✅ Security-first approach
-- ✅ Test everything
-- ✅ Document first, code second
-- ✅ Use specialized agents for complex tasks
-
-## API Endpoint Reference
-
-**CRITICAL: Always use these exact endpoint URLs when testing or making API calls.**
-
-### Base URL Structure
-- **Local Development:** `http://localhost/api/v1`
-- **Production:** `https://a64core.com/api/v1`
-- **Health Check:** `http://localhost/api/health`
-
-### Authentication Endpoints (`/api/v1/auth/*`)
-```
-POST   /api/v1/auth/register              # Create new user account
-POST   /api/v1/auth/login                 # Login and get tokens ⚠️ CORRECT URL
-POST   /api/v1/auth/logout                # Logout and invalidate token
-POST   /api/v1/auth/refresh               # Refresh access token
-GET    /api/v1/auth/me                    # Get current user info
-POST   /api/v1/auth/send-verification-email
-POST   /api/v1/auth/verify-email
-POST   /api/v1/auth/request-password-reset
-POST   /api/v1/auth/reset-password
+---
+description: Create an app spec for autonomous coding (project)
+---
+
+# PROJECT DIRECTORY
+
+This command **requires** the project directory as an argument via `/home/noobcity/Code/A64CorePlatform`.
+
+**Example:** `/create-spec generations/my-app`
+
+**Output location:** `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/app_spec.txt` and `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/initializer_prompt.md`
+
+If `/home/noobcity/Code/A64CorePlatform` is empty, inform the user they must provide a project path and exit.
+
+---
+
+# GOAL
+
+Help the user create a comprehensive project specification for a long-running autonomous coding process. This specification will be used by AI coding agents to build their application across multiple sessions.
+
+This tool works for projects of any size - from simple utilities to large-scale applications.
+
+---
+
+# YOUR ROLE
+
+You are the **Spec Creation Assistant** - an expert at translating project ideas into detailed technical specifications. Your job is to:
+
+1. Understand what the user wants to build (in their own words)
+2. Ask about features and functionality (things anyone can describe)
+3. **Derive** the technical details (database, API, architecture) from their requirements
+4. Generate the specification files that autonomous coding agents will use
+
+**IMPORTANT: Cater to all skill levels.** Many users are product owners or have functional knowledge but aren't technical. They know WHAT they want to build, not HOW to build it. You should:
+
+- Ask questions anyone can answer (features, user flows, what screens exist)
+- **Derive** technical details (database schema, API endpoints, architecture) yourself
+- Only ask technical questions if the user wants to be involved in those decisions
+
+**Use conversational questions** to gather information. For questions with clear options, present them as numbered choices that the user can select from. For open-ended exploration, use natural conversation.
+
+---
+
+# CONVERSATION FLOW
+
+There are two paths through this process:
+
+**Quick Path** (recommended for most users): You describe what you want, agent derives the technical details
+**Detailed Path**: You want input on technology choices, database design, API structure, etc.
+
+**CRITICAL: This is a CONVERSATION, not a form.**
+
+- Ask questions for ONE phase at a time
+- WAIT for the user to respond before moving to the next phase
+- Acknowledge their answers before continuing
+- Do NOT bundle multiple phases into one message
+
+---
+
+## Phase 1: Project Overview
+
+Start with simple questions anyone can answer:
+
+1. **Project Name**: What should this project be called?
+2. **Description**: In your own words, what are you building and what problem does it solve?
+3. **Target Audience**: Who will use this?
+
+**IMPORTANT: Ask these questions and WAIT for the user to respond before continuing.**
+Do NOT immediately jump to Phase 2. Let the user answer, acknowledge their responses, then proceed.
+
+---
+
+## Phase 2: Involvement Level
+
+Ask the user about their involvement preference:
+
+> "How involved do you want to be in technical decisions?
+>
+> 1. **Quick Mode (Recommended)** - You describe what you want, I'll handle database, API, and architecture
+> 2. **Detailed Mode** - You want input on technology choices and architecture decisions
+>
+> Which would you prefer?"
+
+**If Quick Mode**: Skip to Phase 3, then go to Phase 4 (Features). You will derive technical details yourself.
+**If Detailed Mode**: Go through all phases, asking technical questions.
+
+## Phase 3: Technology Preferences
+
+**For Quick Mode users**, also ask about tech preferences:
+
+> "Any technology preferences, or should I choose sensible defaults?
+>
+> 1. **Use defaults (Recommended)** - React, Node.js, SQLite - solid choices for most apps
+> 2. **I have preferences** - I'll specify my preferred languages/frameworks"
+
+**For Detailed Mode users**, ask specific tech questions about frontend, backend, database, etc.
+
+### Phase 3b: Database Requirements (MANDATORY)
+
+**Always ask this question regardless of mode:**
+
+> "One foundational question about data storage:
+>
+> **Does this application need to store user data persistently?**
+>
+> 1. **Yes, needs a database** - Users create, save, and retrieve data (most apps)
+> 2. **No, stateless** - Pure frontend, no data storage needed (calculators, static sites)
+> 3. **Not sure** - Let me describe what I need and you decide"
+
+**Branching logic:**
+
+- **If "Yes" or "Not sure"**: Continue normally. The spec will include database in tech stack and the initializer will create 5 mandatory Infrastructure features (indices 0-4) to verify database connectivity and persistence.
+
+- **If "No, stateless"**: Note this in the spec. Skip database from tech stack. Infrastructure features will be simplified (no database persistence tests). Mark this clearly:
+  ```xml
+  <database>none - stateless application</database>
+  ```
+
+## Phase 4: Features (THE MAIN PHASE)
+
+This is where you spend most of your time. Ask questions in plain language that anyone can answer.
+
+**Start broad with open conversation:**
+
+> "Walk me through your app. What does a user see when they first open it? What can they do?"
+
+**Then ask about key feature areas:**
+
+> "Let me ask about a few common feature areas:
+>
+> 1. **User Accounts** - Do users need to log in / have accounts? (Yes with profiles, No anonymous use, or Maybe optional)
+> 2. **Mobile Support** - Should this work well on mobile phones? (Yes fully responsive, Desktop only, or Basic mobile)
+> 3. **Search** - Do users need to search or filter content? (Yes, No, or Basic only)
+> 4. **Sharing** - Any sharing or collaboration features? (Yes, No, or Maybe later)"
+
+**Then drill into the "Yes" answers with open conversation:**
+
+**4a. The Main Experience**
+
+- What's the main thing users do in your app?
+- Walk me through a typical user session
+
+**4b. User Accounts** (if they said Yes)
+
+- What can they do with their account?
+- Any roles or permissions?
+
+**4c. What Users Create/Manage**
+
+- What "things" do users create, save, or manage?
+- Can they edit or delete these things?
+- Can they organize them (folders, tags, categories)?
+
+**4d. Settings & Customization**
+
+- What should users be able to customize?
+- Light/dark mode? Other display preferences?
+
+**4e. Search & Finding Things** (if they said Yes)
+
+- What do they search for?
+- What filters would be helpful?
+
+**4f. Sharing & Collaboration** (if they said Yes)
+
+- What can be shared?
+- View-only or collaborative editing?
+
+**4g. Any Dashboards or Analytics?**
+
+- Does the user see any stats, reports, or metrics?
+
+**4h. Domain-Specific Features**
+
+- What else is unique to your app?
+- Any features we haven't covered?
+
+**4i. Security & Access Control (if app has authentication)**
+
+Ask about user roles:
+
+> "Who are the different types of users?
+>
+> 1. **Just regular users** - Everyone has the same permissions
+> 2. **Users + Admins** - Regular users and administrators with extra powers
+> 3. **Multiple roles** - Several distinct user types (e.g., viewer, editor, manager, admin)"
+
+**If multiple roles, explore in conversation:**
+
+- What can each role see?
+- What can each role do?
+- Are there pages only certain roles can access?
+- What happens if someone tries to access something they shouldn't?
+
+**Also ask about authentication:**
+
+- How do users log in? (email/password, social login, SSO)
+- Password requirements? (for security testing)
+- Session timeout? Auto-logout after inactivity?
+- Any sensitive operations requiring extra confirmation?
+
+**4j. Data Flow & Integration**
+
+- What data do users create vs what's system-generated?
+- Are there workflows that span multiple steps or pages?
+- What happens to related data when something is deleted?
+- Are there any external systems or APIs to integrate with?
+- Any import/export functionality?
+
+**4k. Error & Edge Cases**
+
+- What should happen if the network fails mid-action?
+- What about duplicate entries (e.g., same email twice)?
+- Very long text inputs?
+- Empty states (what shows when there's no data)?
+
+**Keep asking follow-up questions until you have a complete picture.** For each feature area, understand:
+
+- What the user sees
+- What actions they can take
+- What happens as a result
+- Who is allowed to do it (permissions)
+- What errors could occur
+
+## Phase 4L: Derive Feature Count (DO NOT ASK THE USER)
+
+After gathering all features, **you** (the agent) should tally up the testable features. Do NOT ask the user how many features they want - derive it from what was discussed.
+
+**Typical ranges for reference:**
+
+- **Simple apps** (todo list, calculator, notes): ~25-55 features (includes 5 infrastructure)
+- **Medium apps** (blog, task manager with auth): ~105 features (includes 5 infrastructure)
+- **Advanced apps** (e-commerce, CRM, full SaaS): ~155-205 features (includes 5 infrastructure)
+
+These are just reference points - your actual count should come from the requirements discussed.
+
+**MANDATORY: Infrastructure Features**
+
+If the app requires a database (Phase 3b answer was "Yes" or "Not sure"), you MUST include 5 Infrastructure features (indices 0-4):
+1. Database connection established
+2. Database schema applied correctly
+3. Data persists across server restart
+4. No mock data patterns in codebase
+5. Backend API queries real database
+
+These features ensure the coding agent implements a real database, not mock data or in-memory storage.
+
+**How to count features:**
+For each feature area discussed, estimate the number of discrete, testable behaviors:
+
+- Each CRUD operation = 1 feature (create, read, update, delete)
+- Each UI interaction = 1 feature (click, drag, hover effect)
+- Each validation/error case = 1 feature
+- Each visual requirement = 1 feature (styling, animation, responsive behavior)
+
+**Present your estimate to the user:**
+
+> "Based on what we discussed, here's my feature breakdown:
+>
+> - **Infrastructure (required)**: 5 features (database setup, persistence verification)
+> - [Category 1]: ~X features
+> - [Category 2]: ~Y features
+> - [Category 3]: ~Z features
+> - ...
+>
+> **Total: ~N features** (including 5 infrastructure)
+>
+> Does this seem right, or should I adjust?"
+
+Let the user confirm or adjust. This becomes your `feature_count` for the spec.
+
+**Important:** The first 5 features (indices 0-4) created by the initializer MUST be the Infrastructure category with no dependencies. All other features depend on these.
+
+## Phase 5: Technical Details (DERIVED OR DISCUSSED)
+
+**For Quick Mode users:**
+Tell them: "Based on what you've described, I'll design the database, API, and architecture. Here's a quick summary of what I'm planning..."
+
+Then briefly outline:
+
+- Main data entities you'll create (in plain language: "I'll create tables for users, projects, documents, etc.")
+- Overall app structure ("sidebar navigation with main content area")
+- Any key technical decisions
+
+Ask: "Does this sound right? Any concerns?"
+
+**For Detailed Mode users:**
+Walk through each technical area:
+
+**5a. Database Design**
+
+- What entities/tables are needed?
+- Key fields for each?
+- Relationships?
+
+**5b. API Design**
+
+- What endpoints are needed?
+- How should they be organized?
+
+**5c. UI Layout**
+
+- Overall structure (columns, navigation)
+- Key screens/pages
+- Design preferences (colors, themes)
+
+**5d. Implementation Phases**
+
+- What order to build things?
+- Dependencies?
+
+## Phase 6: Success Criteria
+
+Ask in simple terms:
+
+> "What does 'done' look like for you? When would you consider this app complete and successful?"
+
+Prompt for:
+
+- Must-have functionality
+- Quality expectations (polished vs functional)
+- Any specific requirements
+
+## Phase 7: Review & Approval
+
+Present everything gathered:
+
+1. **Summary of the app** (in plain language)
+2. **Feature count**
+3. **Technology choices** (whether specified or derived)
+4. **Brief technical plan** (for their awareness)
+
+First ask in conversation if they want to make changes.
+
+**Then ask for final confirmation:**
+
+> "Ready to generate the specification files?
+>
+> 1. **Yes, generate files** - Create app_spec.txt and update prompt files
+> 2. **I have changes** - Let me add or modify something first"
+
+---
+
+# FILE GENERATION
+
+**Note: This section is for YOU (the agent) to execute. Do not burden the user with these technical details.**
+
+## Output Directory
+
+The output directory is: `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/`
+
+Once the user approves, generate these files:
+
+## 1. Generate `app_spec.txt`
+
+**Output path:** `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/app_spec.txt`
+
+Create a new file using this XML structure:
+
+```xml
+<project_specification>
+  <project_name>[Project Name]</project_name>
+
+  <overview>
+    [2-3 sentence description from Phase 1]
+  </overview>
+
+  <technology_stack>
+    <frontend>
+      <framework>[Framework]</framework>
+      <styling>[Styling solution]</styling>
+      [Additional frontend config]
+    </frontend>
+    <backend>
+      <runtime>[Runtime]</runtime>
+      <database>[Database]</database>
+      [Additional backend config]
+    </backend>
+    <communication>
+      <api>[API style]</api>
+      [Additional communication config]
+    </communication>
+  </technology_stack>
+
+  <prerequisites>
+    <environment_setup>
+      [Setup requirements]
+    </environment_setup>
+  </prerequisites>
+
+  <feature_count>[derived count from Phase 4L]</feature_count>
+
+  <security_and_access_control>
+    <user_roles>
+      <role name="[role_name]">
+        <permissions>
+          - [Can do X]
+          - [Can see Y]
+          - [Cannot access Z]
+        </permissions>
+        <protected_routes>
+          - /admin/* (admin only)
+          - /settings (authenticated users)
+        </protected_routes>
+      </role>
+      [Repeat for each role]
+    </user_roles>
+    <authentication>
+      <method>[email/password | social | SSO]</method>
+      <session_timeout>[duration or "none"]</session_timeout>
+      <password_requirements>[if applicable]</password_requirements>
+    </authentication>
+    <sensitive_operations>
+      - [Delete account requires password confirmation]
+      - [Financial actions require 2FA]
+    </sensitive_operations>
+  </security_and_access_control>
+
+  <core_features>
+    <[category_name]>
+      - [Feature 1]
+      - [Feature 2]
+      - [Feature 3]
+    </[category_name]>
+    [Repeat for all feature categories]
+  </core_features>
+
+  <database_schema>
+    <tables>
+      <[table_name]>
+        - [field1], [field2], [field3]
+        - [additional fields]
+      </[table_name]>
+      [Repeat for all tables]
+    </tables>
+  </database_schema>
+
+  <api_endpoints_summary>
+    <[category]>
+      - [VERB] /api/[path]
+      - [VERB] /api/[path]
+    </[category]>
+    [Repeat for all categories]
+  </api_endpoints_summary>
+
+  <ui_layout>
+    <main_structure>
+      [Layout description]
+    </main_structure>
+    [Additional UI sections as needed]
+  </ui_layout>
+
+  <design_system>
+    <color_palette>
+      [Colors]
+    </color_palette>
+    <typography>
+      [Font preferences]
+    </typography>
+  </design_system>
+
+  <implementation_steps>
+    <step number="1">
+      <title>[Phase Title]</title>
+      <tasks>
+        - [Task 1]
+        - [Task 2]
+      </tasks>
+    </step>
+    [Repeat for all phases]
+  </implementation_steps>
+
+  <success_criteria>
+    <functionality>
+      [Functionality criteria]
+    </functionality>
+    <user_experience>
+      [UX criteria]
+    </user_experience>
+    <technical_quality>
+      [Technical criteria]
+    </technical_quality>
+    <design_polish>
+      [Design criteria]
+    </design_polish>
+  </success_criteria>
+</project_specification>
 ```
 
-### User Management Endpoints (`/api/v1/users/*`)
-```
-GET    /api/v1/users                      # List all users (paginated)
-GET    /api/v1/users/{user_id}            # Get specific user
-PATCH  /api/v1/users/{user_id}            # Update user details
-DELETE /api/v1/users/{user_id}            # Delete user
-```
+## 2. Update `initializer_prompt.md`
 
-### Admin Endpoints (`/api/v1/admin/*`)
-```
-GET    /api/v1/admin/users                # Admin view of all users
-GET    /api/v1/admin/users/{user_id}      # Admin view of specific user
-PATCH  /api/v1/admin/users/{user_id}/role # Update user role
-PATCH  /api/v1/admin/users/{user_id}/status # Update user status
-DELETE /api/v1/admin/users/{user_id}      # Admin delete user
-```
+**Output path:** `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/initializer_prompt.md`
 
-### Module Management Endpoints (`/api/v1/modules/*`)
+If the output directory has an existing `initializer_prompt.md`, read it and update the feature count.
+If not, copy from `.claude/templates/initializer_prompt.template.md` first, then update.
+
+**CRITICAL: You MUST update the feature count placeholder:**
+
+1. Find the line containing `**[FEATURE_COUNT]**` in the "REQUIRED FEATURE COUNT" section
+2. Replace `[FEATURE_COUNT]` with the exact number agreed upon in Phase 4L (e.g., `25`)
+3. The result should read like: `You must create exactly **25** features using the...`
+
+**Example edit:**
 ```
-POST   /api/v1/modules/install            # Install new module
-GET    /api/v1/modules/installed          # List installed modules
-GET    /api/v1/modules/available          # List available modules
-DELETE /api/v1/modules/{module_name}      # Uninstall module
-GET    /api/v1/modules/{module_name}/health # Check module health
-GET    /api/v1/modules/{module_name}/logs # Get module logs
+Before: **CRITICAL:** You must create exactly **[FEATURE_COUNT]** features using the `feature_create_bulk` tool.
+After:  **CRITICAL:** You must create exactly **25** features using the `feature_create_bulk` tool.
 ```
 
-### Dashboard Endpoints (`/api/v1/dashboard/*`)
-```
-GET    /api/v1/dashboard/stats            # Get dashboard statistics
-POST   /api/v1/dashboard/modules/{module_name}/start  # Start module
-POST   /api/v1/dashboard/modules/{module_name}/stop   # Stop module
-GET    /api/v1/dashboard/system           # Get system info
-```
+**Verify the update:** After editing, read the file again to confirm the feature count appears correctly. If `[FEATURE_COUNT]` still appears in the file, the update failed and you must try again.
 
-### Farm Management Module Endpoints (`/api/v1/farm/*`)
+**Note:** You may also update `coding_prompt.md` if the user requests changes to how the coding agent should work. Include it in the status file if modified.
 
-**⚠️ IMPORTANT: All farm endpoints are now part of the main API (previously separate microservice)**
+## 3. Write Status File (REQUIRED - Do This Last)
 
-#### Farms
-```
-GET    /api/v1/farm/farms                 # List all farms
-POST   /api/v1/farm/farms                 # Create new farm
-GET    /api/v1/farm/farms/{farm_id}       # Get farm details
-PATCH  /api/v1/farm/farms/{farm_id}       # Update farm
-DELETE /api/v1/farm/farms/{farm_id}       # Delete farm
-```
+**Output path:** `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/.spec_status.json`
 
-#### Blocks
-```
-GET    /api/v1/farm/farms/{farm_id}/blocks                    # List farm blocks
-POST   /api/v1/farm/farms/{farm_id}/blocks                    # Create block
-GET    /api/v1/farm/farms/{farm_id}/blocks/{block_id}         # Get block details
-PATCH  /api/v1/farm/farms/{farm_id}/blocks/{block_id}         # Update block
-PATCH  /api/v1/farm/farms/{farm_id}/blocks/{block_id}/status  # Change block status
-DELETE /api/v1/farm/farms/{farm_id}/blocks/{block_id}         # Delete block
+**CRITICAL:** After you have completed ALL requested file changes, write this status file to signal completion to the UI. This is required for the "Continue to Project" button to appear.
+
+Write this JSON file:
+
+```json
+{
+  "status": "complete",
+  "version": 1,
+  "timestamp": "[current ISO 8601 timestamp, e.g., 2025-01-15T14:30:00.000Z]",
+  "files_written": [
+    ".autoforge/prompts/app_spec.txt",
+    ".autoforge/prompts/initializer_prompt.md"
+  ],
+  "feature_count": [the feature count from Phase 4L]
+}
 ```
 
-#### Plant Data
-```
-GET    /api/v1/farm/plant-data            # List plant data (simple schema)
-POST   /api/v1/farm/plant-data            # Create plant data
-GET    /api/v1/farm/plant-data/{id}       # Get plant details
-PATCH  /api/v1/farm/plant-data/{id}       # Update plant
-DELETE /api/v1/farm/plant-data/{id}       # Delete plant
+**Include ALL files you modified** in the `files_written` array. If the user asked you to also modify `coding_prompt.md`, include it:
 
-GET    /api/v1/farm/plant-data-enhanced   # List plant data (enhanced schema with growthCycle)
-POST   /api/v1/farm/plant-data-enhanced   # Create enhanced plant data
-GET    /api/v1/farm/plant-data-enhanced/{id}  # Get enhanced plant details
-PATCH  /api/v1/farm/plant-data-enhanced/{id}  # Update enhanced plant
-DELETE /api/v1/farm/plant-data-enhanced/{id}  # Delete enhanced plant
-```
-
-#### Block Harvests
-```
-GET    /api/v1/farm/farms/{farm_id}/blocks/{block_id}/harvests     # List block harvests
-POST   /api/v1/farm/farms/{farm_id}/blocks/{block_id}/harvests     # Create harvest record
-GET    /api/v1/farm/farms/{farm_id}/harvests                       # List all farm harvests
+```json
+{
+  "status": "complete",
+  "version": 1,
+  "timestamp": "2025-01-15T14:30:00.000Z",
+  "files_written": [
+    ".autoforge/prompts/app_spec.txt",
+    ".autoforge/prompts/initializer_prompt.md",
+    ".autoforge/prompts/coding_prompt.md"
+  ],
+  "feature_count": 35
+}
 ```
 
-#### Block Alerts
-```
-GET    /api/v1/farm/farms/{farm_id}/blocks/{block_id}/alerts       # List block alerts
-POST   /api/v1/farm/farms/{farm_id}/blocks/{block_id}/alerts       # Create alert
-GET    /api/v1/farm/farms/{farm_id}/alerts                         # List all farm alerts
-```
+**IMPORTANT:**
+- Write this file LAST, after all other files are successfully written
+- Only write it when you consider ALL requested work complete
+- The UI polls this file to detect completion and show the Continue button
+- If the user asks for additional changes after you've written this, you may update it again when the new changes are complete
 
-#### Farm Dashboard
-```
-GET    /api/v1/farm/dashboard             # Farm management dashboard stats
-```
+---
 
-### Testing Examples
+# AFTER FILE GENERATION: NEXT STEPS
 
-**Login (CORRECT URL):**
-```python
-import requests
+Once files are generated, tell the user what to do next:
 
-# Login
-response = requests.post(
-    "http://localhost/api/v1/auth/login",  # ⚠️ /auth/login NOT /users/login
-    json={
-        "email": "admin@a64platform.com",
-        "password": "SuperAdmin123!"
-    }
-)
-token = response.json()["access_token"]
+> "Your specification files have been created in `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/`!
+>
+> **Files created:**
+> - `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/app_spec.txt`
+> - `/home/noobcity/Code/A64CorePlatform/.autoforge/prompts/initializer_prompt.md`
+>
+> The **Continue to Project** button should now appear. Click it to start the autonomous coding agent!
+>
+> **If you don't see the button:** Type `/exit` or click **Exit to Project** in the header.
+>
+> **Important timing expectations:**
+>
+> - **First session:** The agent generates features in the database. This takes several minutes.
+> - **Subsequent sessions:** Each coding iteration takes 5-15 minutes depending on complexity.
+> - **Full app:** Building all [X] features will take many hours across multiple sessions.
+>
+> **Controls:**
+>
+> - Press `Ctrl+C` to pause the agent at any time
+> - Run `start.bat` (Windows) or `./start.sh` (Mac/Linux) to resume where you left off"
 
-# Use token for authenticated requests
-headers = {"Authorization": f"Bearer {token}"}
-farms = requests.get("http://localhost/api/v1/farm/farms", headers=headers)
-```
+Replace `[X]` with their feature count.
 
-**Common Mistakes to Avoid:**
-- ❌ `/api/v1/users/login` - WRONG! This endpoint doesn't exist
-- ❌ `/api/v1/farm-management/farms` - WRONG! No longer a separate service
-- ✅ `/api/v1/auth/login` - CORRECT login endpoint
-- ✅ `/api/v1/farm/farms` - CORRECT farm endpoint (integrated into main API)
+---
 
-## Remote Server & Git Synchronization
+# IMPORTANT REMINDERS
 
-**CRITICAL: When working with remote servers (EC2, VPS, etc.), ALWAYS keep Git synchronized:**
+- **Meet users where they are**: Not everyone is technical. Ask about what they want, not how to build it.
+- **Quick Mode is the default**: Most users should be able to describe their app and let you handle the technical details.
+- **Derive, don't interrogate**: For non-technical users, derive database schema, API endpoints, and architecture from their feature descriptions. Don't ask them to specify these.
+- **Use plain language**: Instead of "What entities need CRUD operations?", ask "What things can users create, edit, or delete?"
+- **Be thorough on features**: This is where to spend time. Keep asking follow-up questions until you have a complete picture.
+- **Derive feature count, don't guess**: After gathering requirements, tally up testable features yourself and present the estimate. Don't use fixed tiers or ask users to guess.
+- **Validate before generating**: Present a summary including your derived feature count and get explicit approval before creating files.
 
-### 🚨 LOCAL-FIRST DEVELOPMENT RULE 🚨
+---
 
-**ALWAYS make changes on your LOCAL machine FIRST, then sync to remote servers.**
+# BEGIN
 
-**This is NON-NEGOTIABLE to avoid file conflicts and maintain consistency:**
-- ❌ **NEVER** edit code files directly on remote servers
-- ❌ **NEVER** make changes on both local and remote simultaneously
-- ❌ **NEVER** skip Git when making code changes
-- ✅ **ALWAYS** edit locally → commit → push → pull on remote
-- ✅ **ALWAYS** use Git as the single source of truth
+Start by greeting the user warmly. Ask ONLY the Phase 1 questions:
 
-**Why this prevents conflicts:**
-1. Git tracks who changed what and when
-2. Merge conflicts are detected and can be resolved properly
-3. You can't accidentally overwrite someone else's work
-4. Both environments stay synchronized automatically
-5. Easy to roll back if something breaks
+> "Hi! I'm here to help you create a detailed specification for your app.
+>
+> Let's start with the basics:
+>
+> 1. What do you want to call this project?
+> 2. In your own words, what are you building?
+> 3. Who will use it - just you, or others too?"
 
-### Git Sync Workflow
+**STOP HERE and wait for their response.** Do not ask any other questions yet. Do not use AskUserQuestion yet. Just have a conversation about their project basics first.
 
-**MANDATORY steps when making changes:**
-
-1. **Make changes locally FIRST** - Edit files on your local development machine (NEVER on server)
-2. **Test locally** (if applicable) - Verify changes work in local environment
-3. **Commit to Git** - Create descriptive commit with proper message format
-4. **Push to GitHub** - `git push origin main`
-5. **Pull on remote server** - SSH to server and `git pull origin main`
-6. **Apply changes** - Rebuild Docker containers, restart services as needed
-7. **Test on remote** - Verify changes work in production environment
-
-### Why This Is Critical
-
-**Never edit files directly on remote servers:**
-- ❌ Changes get lost when you pull new code
-- ❌ No version control or history of modifications
-- ❌ Cannot roll back if something breaks
-- ❌ Local and remote environments become inconsistent
-- ❌ Other developers won't have your changes
-
-**Always use Git as the single source of truth:**
-- ✅ All changes tracked and versioned
-- ✅ Easy rollback if problems occur
-- ✅ Consistent state between local and remote
-- ✅ Full change history for debugging
-- ✅ Team members stay synchronized
-
-### Production Server Connection
-
-**IMPORTANT: Always use these exact connection details:**
-
-- **Domain**: `a64core.com` (NOT a64platform.com)
-- **IP Address**: `51.112.224.227`
-- **SSH Key**: `a64-platform-key.pem` (in project root)
-- **User**: `ubuntu`
-
-**SSH Command Format:**
-```bash
-ssh -i a64-platform-key.pem ubuntu@51.112.224.227
-# OR
-ssh -i a64-platform-key.pem ubuntu@a64core.com
-```
-
-**Dynamic IP Access:**
-If your IP changes frequently (mobile/travel), run the update script:
-```bash
-bash update-ssh-access.sh
-```
-This script updates AWS Security Group (sg-046c0c2ce3f13c605) with your current IP.
-
-### Example Workflow
-
-```bash
-# 1. Local: Make changes to code
-# Edit files locally in your IDE
-
-# 2. Local: Commit and push
-git add .
-git commit -m "fix: update API URL configuration for production"
-git push origin main
-
-# 3. Remote: Pull changes
-ssh -i a64-platform-key.pem ubuntu@51.112.224.227
-cd ~/A64CorePlatform
-git pull origin main
-
-# 4. Remote: Apply changes (if needed)
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build <service>
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d <service>
-
-# 5. Remote: Verify changes
-docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail 20 <service>
-```
-
-### Exception: Environment-Specific Files
-
-**Only edit these files directly on servers:**
-- `.env.production` - Production environment variables
-- `.env.local` - Server-specific configuration
-- SSL certificates and keys
-- Server-specific configuration that should NOT be in Git
-
-**These files should:**
-- Be listed in `.gitignore`
-- Never be committed to Git (security risk)
-- Be documented in deployment guides
-
-### Troubleshooting Git Sync
-
-**If you accidentally edited on remote:**
-```bash
-# Save your changes first
-git diff > my-changes.patch
-
-# Discard local changes and sync with Git
-git reset --hard origin/main
-
-# Apply your changes as a proper commit locally
-# Then follow the Git Sync Workflow above
-```
-
-**Remember:** Git is your safety net. Use it consistently!
+After they respond, acknowledge what they said, then move to Phase 2.

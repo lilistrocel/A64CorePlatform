@@ -1,0 +1,1143 @@
+<project_specification>
+  <project_name>A64 Core Platform</project_name>
+
+  <overview>
+    A64 Core Platform is a comprehensive, enterprise-grade agricultural technology platform serving as a central API hub with modular business applications. It provides authentication, authorization, user management, and orchestrates multiple integrated modules including Farm Management, HR, CRM, Sales, Logistics, Marketing, and AI Analytics. The platform targets agricultural operations (UAE-focused) with features like multi-crop farm block management, harvest tracking, inventory systems, employee management with Arabic name support and Emirates ID handling, and AI-powered conversational analytics via Google Vertex AI.
+  </overview>
+
+  <technology_stack>
+    <frontend>
+      <framework>React 18.3.1 with TypeScript</framework>
+      <build_tool>Vite 5.0.11</build_tool>
+      <styling>styled-components 6.1.19</styling>
+      <state_management>Zustand 4.4.7</state_management>
+      <server_state>TanStack React Query 5.17.19</server_state>
+      <http_client>Axios 1.6.5</http_client>
+      <routing>React Router v6</routing>
+      <charts>Recharts 3.3.0</charts>
+      <maps>MapLibre GL 5.13.0, react-map-gl 8.1.0</maps>
+      <forms>React Hook Form 7.49.3, Zod 3.22.4</forms>
+      <grid_layout>react-grid-layout</grid_layout>
+      <dev_server_port>5173</dev_server_port>
+    </frontend>
+    <backend>
+      <runtime>Python 3.11+ with FastAPI 0.128.0</runtime>
+      <server>Uvicorn (async)</server>
+      <database>MongoDB 7.0 (primary NoSQL), MySQL 8.0 (secondary/relational)</database>
+      <cache>Redis 7 (caching, rate limiting, session management)</cache>
+      <password_hashing>passlib with bcrypt (cost factor 12)</password_hashing>
+      <jwt>python-jose with HS256</jwt>
+      <encryption>cryptography (Fernet + PBKDF2HMAC for license keys)</encryption>
+      <email_validation>email-validator 2.2.0</email_validation>
+      <api_port>8000</api_port>
+    </backend>
+    <ai>
+      <provider>Google Vertex AI</provider>
+      <model>Gemini 2.5-flash</model>
+      <credentials>/app/.credentials/vertex-ai-service-account.json</credentials>
+    </ai>
+    <infrastructure>
+      <containerization>Docker + Docker Compose</containerization>
+      <reverse_proxy>Nginx 1.25-alpine (ports 80/443)</reverse_proxy>
+      <module_management>Docker SDK, PyYAML, jsonschema</module_management>
+      <local_registry>Docker Registry 2 (port 5000)</local_registry>
+      <db_admin>Adminer (port 8080)</db_admin>
+      <iot_simulator>Port 8090</iot_simulator>
+      <backup>MongoDB backup with AES-256 encryption (profile: backup)</backup>
+      <cron>Automated scheduled tasks service</cron>
+    </infrastructure>
+    <communication>
+      <api>RESTful JSON API, versioned at /api/v1</api>
+      <documentation>Swagger/ReDoc auto-generated via FastAPI</documentation>
+    </communication>
+  </technology_stack>
+
+  <prerequisites>
+    <environment_setup>
+      - Docker 20.10+ and Docker Compose 2.0+
+      - Python 3.11+
+      - Node.js 18+ with npm
+      - MongoDB 7.0, Redis 7, MySQL 8.0 (all via Docker)
+      - SSL certificates for production (Let's Encrypt)
+      - Google Vertex AI service account credentials (for AI Analytics)
+      - WeatherBit API key (for weather integration)
+      - Environment variables configured (25+ vars, no .env file loading in prod)
+    </environment_setup>
+  </prerequisites>
+
+  <feature_count>310</feature_count>
+
+  <security_and_access_control>
+    <user_roles>
+      <role name="super_admin">
+        <permissions>
+          - Full system access, all CRUD operations
+          - Module installation/uninstallation
+          - User role management
+          - System configuration
+          - All farm, HR, CRM, Sales, Logistics, Marketing operations
+          - AI Analytics access (unlimited queries)
+          - Rate limit: 1000 requests/min
+        </permissions>
+        <protected_routes>
+          - All routes accessible
+          - /api/v1/modules/* (module management)
+          - /api/v1/admin/* (admin panel)
+        </protected_routes>
+      </role>
+      <role name="admin">
+        <permissions>
+          - User management (CRUD, role changes, activation)
+          - Content management across all modules
+          - Farm management with full CRUD
+          - HR, CRM, Sales, Logistics, Marketing management
+          - Dashboard configuration
+          - Rate limit: 500 requests/min
+        </permissions>
+        <protected_routes>
+          - /api/v1/admin/* (admin panel)
+          - /api/v1/users/* (user management)
+        </protected_routes>
+      </role>
+      <role name="moderator">
+        <permissions>
+          - Content moderation
+          - User support operations
+          - View farm data and reports
+          - Limited edit capabilities
+          - Rate limit: 200 requests/min
+        </permissions>
+      </role>
+      <role name="user">
+        <permissions>
+          - Standard platform access (default role)
+          - View and manage assigned farms/blocks
+          - Create/edit own data
+          - View dashboards and reports
+          - AI Analytics access (10 queries/day)
+          - Rate limit: 100 requests/min
+        </permissions>
+      </role>
+      <role name="guest">
+        <permissions>
+          - Limited read-only access
+          - View public data only
+          - No create/edit/delete operations
+          - Rate limit: 10 requests/min
+        </permissions>
+      </role>
+    </user_roles>
+    <authentication>
+      <method>Email/password with JWT Bearer tokens</method>
+      <jwt_algorithm>HS256 (HMAC-SHA256)</jwt_algorithm>
+      <access_token_expiry>1 hour</access_token_expiry>
+      <refresh_token_expiry>7 days with rotation</refresh_token_expiry>
+      <session_timeout>Token-based expiry</session_timeout>
+      <password_requirements>
+        - 8-128 characters
+        - At least 1 uppercase letter
+        - At least 1 lowercase letter
+        - At least 1 number
+        - At least 1 special character
+      </password_requirements>
+      <rate_limiting>Login: 5 attempts, 15-minute lockout on failure</rate_limiting>
+      <email_verification>Required, token-based with TTL</email_verification>
+      <password_reset>Token-based with time-limited links</password_reset>
+    </authentication>
+    <sensitive_operations>
+      - Module installation requires super_admin role
+      - User deletion requires admin role
+      - Role changes require admin or super_admin
+      - Farm deletion requires farm.manage permission
+      - SECRET_KEY validation fails in production if using default
+      - Database ports closed in production
+    </sensitive_operations>
+    <pending_security>
+      - MFA/TOTP (planned)
+      - OAuth/SSO integration (planned)
+      - WAF (planned)
+      - Field-level encryption for emiratesId, salary (planned)
+      - Data masking middleware (planned)
+    </pending_security>
+  </security_and_access_control>
+
+  <core_features>
+    <infrastructure>
+      - Database connection established (MongoDB + Redis)
+      - Database schema/collections applied correctly
+      - Data persists across server restart
+      - No mock data patterns in codebase
+      - Backend API queries real database
+    </infrastructure>
+
+    <authentication_and_authorization>
+      - User registration with email validation
+      - Email verification flow with token
+      - User login with JWT access + refresh tokens
+      - Token refresh with rotation (both tokens updated)
+      - User logout with refresh token revocation
+      - Password reset request via email
+      - Password reset with token validation
+      - Rate limiting on login (5 attempts, 15-min lockout)
+      - Role-based access control (5 roles: super_admin, admin, moderator, user, guest)
+      - Permission middleware for endpoint protection
+      - Protected route component on frontend
+      - Auto-redirect to login on 401
+      - Token persistence in localStorage
+      - Auto token refresh on API call failure
+      - Session initialization on app start
+      - Permission-based UI element visibility
+      - JWT payload includes userId, email, role, exp
+      - Bcrypt password hashing (cost factor 12)
+      - Verification token TTL indexes (auto-cleanup)
+      - Refresh token TTL indexes (auto-cleanup)
+      - GET /api/v1/auth/me returns current user info
+      - POST /api/v1/auth/send-verification-email resends verification
+      - CORS configuration
+      - HSTS, CSP, Permissions-Policy security headers via Nginx
+      - Redis-backed rate limiting with in-memory fallback
+    </authentication_and_authorization>
+
+    <user_management>
+      - GET /api/v1/users - List users (paginated, searchable)
+      - GET /api/v1/users/{user_id} - Get user details
+      - PATCH /api/v1/users/{user_id} - Update user profile
+      - DELETE /api/v1/users/{user_id} - Delete user (admin only)
+      - PUT /api/v1/users/{user_id}/role - Change user role
+      - PUT /api/v1/users/{user_id}/activate - Activate user
+      - PUT /api/v1/users/{user_id}/deactivate - Deactivate user
+      - Admin user list with role/status filters
+      - User soft delete support
+      - Optional fields: phone, avatar, timezone, locale, metadata
+      - Profile page with editable fields
+      - Settings page for user preferences
+      - User search and filtering
+      - Pagination with configurable page size
+      - User status indicators (active/inactive, email verified)
+    </user_management>
+
+    <farm_management>
+      - Farm CRUD (create, read, update, delete)
+      - Farm listing with pagination (admins see all, users see assigned)
+      - Farm summary/KPI endpoint
+      - Block CRUD within farms
+      - Block listing with filters (status, type, crop, category)
+      - Block state transitions (empty → planned → planted → growing → harvesting → harvested)
+      - Valid transition enforcement
+      - Physical blocks (single crop area)
+      - Virtual blocks (multi-crop within parent block)
+      - Add virtual crop to block
+      - Get block children (virtual sub-blocks)
+      - Preview/empty virtual block with archive
+      - Plant data library with CRUD
+      - Enhanced plant data with extended metadata
+      - CSV import for plant data (batch)
+      - CSV template download
+      - Planting plans (create, list, detail)
+      - Mark planting as planted
+      - Plant spacing standards and density calculations
+      - Calculate plant count from area + spacing category
+      - Update/reset spacing standards (admin)
+      - Block-level alerts (create, resolve, dismiss)
+      - Active alerts per block
+      - Alert severity levels
+      - Block harvest recording
+      - Harvest summary per block
+      - Delete harvest records
+      - Block cycle history and archiving
+      - Farm-level archive listing
+      - Block archive listing
+      - Delete archive records
+      - IoT controller config per block (get/update)
+      - IoT proxy GET/PUT to devices
+      - Farm manager assignment
+      - Get all farm managers
+      - Farm boundary mapping (MapLibre GL)
+      - Block visualization on map
+    </farm_management>
+
+    <harvest_and_inventory>
+      - Harvest inventory CRUD (farm module)
+      - Input inventory CRUD (seeds, fertilizers, pesticides, etc.)
+      - Asset inventory CRUD (equipment, tools, machinery)
+      - Waste inventory tracking
+      - Inventory scopes: organization-level (default) and farm-level
+      - Inventory transfers between organization and farm
+      - Default/centralized inventory pools
+      - Unit conversion system (mg/ml/unit base units)
+      - Display units (kg, g, L, ml, pieces, etc.)
+      - Category-based automatic unit assignment
+      - Input categories: fertilizer, pesticide, herbicide, fungicide, seed, seedling, soil, substrate, nutrient_solution, growth_regulator, packaging, other
+      - Harvest product types: fresh, processed, dried, frozen, packaged
+      - Inventory status tracking (available, reserved, sold, expired)
+      - Quality grades (A, B, C)
+      - Storage location tracking
+      - Expiry date tracking
+      - Inventory dashboard with overview stats
+      - Inventory filtering by category, status, farm
+      - Inventory pagination
+      - Sales harvest inventory (separate from farm inventory)
+      - Purchase order inventory integration
+      - Inventory quantity validation (must be > 0)
+      - Created by user tracking
+      - Timestamp tracking (created/updated)
+    </harvest_and_inventory>
+
+    <operations_and_tasks>
+      - Task CRUD (create, read, update, delete)
+      - Task assignment to users
+      - Task completion with reporting
+      - Task listing per block
+      - Operations dashboard
+      - Farm blocks overview page
+      - Block task list page
+      - Task completion modal
+      - Harvest entry modal
+      - Report alert modal
+      - Pending task count badges
+      - Task priority management
+    </operations_and_tasks>
+
+    <weather_integration>
+      - WeatherBit API integration
+      - Background weather data refresh (hourly)
+      - Weather cache in MongoDB
+      - Current weather display per farm
+      - Weather forecast data
+    </weather_integration>
+
+    <crm_module>
+      - Customer CRUD (create, read, update, delete)
+      - Customer listing with pagination
+      - Customer search
+      - Customer type filter (individual/business)
+      - Customer status filter
+      - Customer detail page
+      - Customer address formatting
+      - Customer status color coding
+      - Customer type labels
+      - Quick customer search
+      - CRM page with full table
+      - Customer deletion
+    </crm_module>
+
+    <hr_module>
+      - Employee CRUD (create, read, update, delete)
+      - Employee listing with pagination
+      - Employee search (name, department)
+      - Employee status filter
+      - Employee department filter
+      - Employee detail page
+      - Arabic name support (arabicFirstName, arabicMiddleName, arabicLastName)
+      - Emirates ID field (UAE-specific)
+      - Gender, nationality, marital status fields
+      - Emergency contact (name + phone)
+      - Employment contracts CRUD
+      - Work visa tracking CRUD
+      - Health/life insurance CRUD
+      - Performance review CRUD
+      - HR dashboard with stats
+      - HR dashboard page
+      - Employee list page
+      - Employee detail page with tabs
+      - Department-based organization
+      - Position and hire date tracking
+    </hr_module>
+
+    <sales_module>
+      - Sales order CRUD (create, read, update, delete)
+      - Sales order listing with pagination
+      - Order status filter (draft, confirmed, processing, shipped, delivered, cancelled)
+      - Customer ID filter on orders
+      - Order status transitions
+      - Order items with quantity and pricing
+      - Subtotal, tax, discount, total calculations
+      - Payment status tracking (pending, partial, paid, refunded)
+      - Shipping address
+      - CRM customer validation on order creation
+      - Sales inventory CRUD (harvest products for sale)
+      - Purchase order CRUD
+      - Purchase order status management
+      - Returns workflow CRUD
+      - Sales dashboard with stats
+      - Sales orders page
+      - Sales inventory page
+      - Purchase orders page
+      - Returns page
+    </sales_module>
+
+    <logistics_module>
+      - Vehicle CRUD (create, read, update, delete)
+      - Vehicle listing with filters (type, status, ownership)
+      - Available vehicles filter
+      - Route CRUD (create, read, update, delete)
+      - Route listing with filters
+      - Shipment CRUD (create, read, update, delete)
+      - Shipment listing with filters (status, vehicle)
+      - Shipment status workflow
+      - Real-time shipment GPS tracking
+      - Logistics dashboard with fleet stats
+      - Vehicle management page
+      - Route management page
+      - Shipment tracking page
+      - Logistics dashboard page
+      - Vehicle ownership types
+    </logistics_module>
+
+    <marketing_module>
+      - Campaign CRUD (create, read, update, delete)
+      - Campaign listing with filters (status, search)
+      - Campaign status tracking
+      - Budget CRUD (create, read, update, delete)
+      - Budget allocation and monitoring
+      - Event CRUD (create, read, update, delete)
+      - Event management
+      - Channel CRUD (create, read, update, delete)
+      - Multi-channel marketing support
+      - Marketing dashboard with stats
+      - Campaign management page
+      - Budget management page
+      - Event management page
+      - Channel management page
+      - Campaign performance metrics
+      - Marketing dashboard page
+    </marketing_module>
+
+    <ai_analytics>
+      - POST /api/v1/ai/chat - Natural language to MongoDB query
+      - AI query execution with Gemini 2.5-flash
+      - Query validation for security
+      - Human-readable report generation with insights
+      - Conversation history support
+      - Force refresh (bypass cache) option
+      - GET /api/v1/ai/schema - Database schema introspection
+      - GET /api/v1/ai/cost - User cost tracking
+      - Rate limiting: 10 queries/day (free users), unlimited (admin)
+      - Cached query results ($0 cost)
+      - AI Analytics chat page (full-screen interface)
+    </ai_analytics>
+
+    <dashboard>
+      - Widget-based dashboard system (CCM)
+      - Drag-and-drop widget layout (react-grid-layout)
+      - Stat card widgets (total farms, blocks, harvests, orders)
+      - Pie chart widgets (orders by status)
+      - Bar chart widgets (blocks by farm)
+      - Widget data API endpoint
+      - Aggregated dashboard summary endpoint (single call)
+      - Responsive layout (2/3/4 column layouts)
+      - Layout persistence in localStorage
+      - Layout validation (overlap detection)
+      - Add/remove widgets
+      - Reset layout to defaults
+      - Widget refresh (individual and all)
+      - Dashboard loading states
+    </dashboard>
+
+    <module_management>
+      - POST /api/v1/modules/install - Install Docker-based module
+      - GET /api/v1/modules/installed - List installed modules
+      - DELETE /api/v1/modules/{module_name} - Uninstall module
+      - GET /api/v1/modules/{module_name}/status - Module health/status
+      - GET /api/v1/modules/audit-log - Module operation audit trail
+      - Dynamic port allocation for modules
+      - Nginx proxy configuration for module routing
+      - License validation with Fernet encryption
+    </module_management>
+
+    <ui_and_navigation>
+      - Sidebar navigation with module sections
+      - Protected route wrapper component
+      - Lazy loading for all pages (React.lazy + Suspense)
+      - Responsive layout (desktop, tablet, mobile)
+      - Login page
+      - Registration page
+      - Dashboard page
+      - Profile page
+      - Settings page
+      - Debug/cache clear page (dev only)
+      - 36 total frontend pages across all modules
+      - 93 reusable components
+      - Light neutral color palette with accent colors
+      - styled-components theming
+    </ui_and_navigation>
+
+    <search_and_filtering>
+      - Pagination across all list endpoints (page, perPage, configurable)
+      - Search by name/email across modules
+      - Filter by status in all relevant modules
+      - Filter by type/category where applicable
+      - Filter by date ranges
+      - Block category filter (physical/virtual/all)
+      - Block status filter
+      - Block type filter
+      - Target crop filter
+      - Customer type filter (individual/business)
+      - Employee department filter
+    </search_and_filtering>
+
+    <maps_and_visualization>
+      - MapLibre GL map integration
+      - ESRI World Imagery satellite tiles
+      - OpenStreetMap fallback tiles
+      - Farm boundary drawing tools (MapBox GL Draw)
+      - Block visualization on map
+      - Location search bar
+      - Default center: UAE (lat: 25.277, lng: 55.296)
+      - Recharts integration (pie, bar, line charts)
+      - Dashboard stat cards with hover effects
+      - Responsive chart sizing
+    </maps_and_visualization>
+
+    <health_and_monitoring>
+      - GET / - Root API info
+      - GET /api/health - Health status
+      - GET /api/ready - Readiness check with service status (MongoDB, Redis)
+      - Structured JSON logging to files
+      - Docker health checks for all services
+      - Backup infrastructure with AES-256 encryption
+      - Cron-based automated tasks
+    </health_and_monitoring>
+  </core_features>
+
+  <database_schema>
+    <tables>
+      <users>
+        - userId (UUID, unique), email (unique), passwordHash, firstName, lastName
+        - role (enum: super_admin, admin, moderator, user, guest)
+        - isActive (bool), isEmailVerified (bool), lastLoginAt (datetime)
+        - phone (optional), avatar (optional), timezone (optional), locale (optional), metadata (dict)
+        - createdAt, updatedAt, deletedAt (soft delete)
+        - Indexes: email (unique), userId (unique), role, isActive
+      </users>
+      <refresh_tokens>
+        - tokenId (UUID), userId, refreshToken, accessToken
+        - createdAt, expiresAt
+        - Indexes: refreshToken (unique), userId, TTL on expiresAt (auto-delete)
+      </refresh_tokens>
+      <verification_tokens>
+        - tokenId (UUID), email, token, type (email_verification/password_reset)
+        - createdAt, expiresAt
+        - Indexes: token (unique), email, TTL on expiresAt (auto-delete)
+      </verification_tokens>
+      <installed_modules>
+        - moduleId, moduleName, version, status
+        - containerName, port, config
+        - installedBy, installedAt, updatedAt
+      </installed_modules>
+      <module_audit_log>
+        - logId, moduleName, action, performedBy
+        - details, timestamp
+      </module_audit_log>
+      <farms>
+        - farmId (UUID), organizationId, name, description
+        - location (GeoJSON), totalArea, areaUnit (default: hectares)
+        - managerId (UUID), managerEmail
+        - isActive (bool), createdAt, updatedAt
+        - Indexes: organizationId, managerId, isActive
+      </farms>
+      <blocks>
+        - blockId (UUID), farmId (UUID), name (unique within farm)
+        - blockType, blockCategory (physical/virtual), parentBlockId (for virtual)
+        - status (enum: empty, planned, planted, growing, harvesting, harvested)
+        - statusHistory (array of transitions)
+        - targetCrop (UUID ref to plant_data), maxPlants
+        - area, areaUnit, coordinates
+        - iotControllerId, iotControllerConfig
+        - isActive, createdAt, updatedAt, createdBy, createdByEmail
+        - Indexes: farmId, status, blockCategory, targetCrop
+      </blocks>
+      <plant_data>
+        - plantDataId (UUID), name, scientificName, category
+        - growthStages, requirements, expectedYieldPerPlant
+        - daysToHarvest, optimalTemperature, waterRequirements
+        - createdAt, updatedAt
+      </plant_data>
+      <plant_data_enhanced>
+        - Extended plant data with additional metadata fields
+        - nutritionalInfo, companionPlants, pests, diseases
+      </plant_data_enhanced>
+      <block_harvests>
+        - harvestId (UUID), blockId (UUID), farmId (UUID), cycleId
+        - entries (array: plantDataId, plantName, quantityHarvested, qualityGrade, notes)
+        - totalQuantity, yieldUnit, predictedYield, yieldEfficiency
+        - harvestedBy (UUID), harvestedByEmail
+        - harvestStartDate, harvestEndDate, totalHarvestDays
+        - notes, createdAt, updatedAt
+      </block_harvests>
+      <block_cycles>
+        - cycleId (UUID), blockId (UUID), farmId (UUID), cycleNumber
+        - plantingId, plants (frozen snapshot), totalPlants
+        - plannedBy, plantedBy, timestamps
+        - estimatedHarvestStartDate, actualHarvestStartDate, actualHarvestEndDate
+        - predictedYield, actualYield, yieldEfficiency
+        - dailyHarvests, totalHarvestDays
+        - alerts (array), totalAlerts, criticalAlerts
+        - harvestDelayDays, qualityIssues
+        - status (active/completed), completedBy, completedAt
+      </block_cycles>
+      <growth_plans>
+        - Planned crop cycles with scheduling
+      </growth_plans>
+      <inventory_harvest>
+        - inventoryId (UUID), productName, category
+        - farmId, blockId, harvestDate, quantity, unit
+        - scope (organization/farm), status, quality grade
+        - storageLocation, expiryDate
+        - baseQuantity, baseUnit, displayUnit
+        - createdBy, createdAt, updatedAt
+      </inventory_harvest>
+      <inventory_inputs>
+        - inventoryId (UUID), name, inputCategory (enum: 12 categories)
+        - farmId, scope (organization/farm)
+        - quantity, displayUnit, baseQuantity, baseUnit
+        - supplier, batchNumber, expiryDate
+        - minimumStockLevel, reorderPoint
+        - createdBy, createdAt, updatedAt
+      </inventory_inputs>
+      <inventory_assets>
+        - assetId (UUID), name, assetType
+        - farmId, scope (organization/farm)
+        - serialNumber, manufacturer, purchaseDate, purchasePrice
+        - condition, location, assignedTo
+        - maintenanceSchedule, lastMaintenanceDate
+        - createdBy, createdAt, updatedAt
+      </inventory_assets>
+      <block_tasks>
+        - taskId (UUID), blockId, farmId
+        - title, description, priority, status
+        - assignedTo, dueDate, completedAt
+        - createdBy, createdAt, updatedAt
+      </block_tasks>
+      <block_alerts>
+        - alertId (UUID), blockId, farmId
+        - title, description, severity (enum)
+        - type, triggeredAt, resolvedAt
+        - resolvedBy, resolutionNotes
+        - isDismissed
+      </block_alerts>
+      <weather_cache>
+        - farmId, location, weatherData
+        - forecast, lastUpdated
+        - TTL-based expiry
+      </weather_cache>
+      <products>
+        - Master product catalog
+      </products>
+      <employees>
+        - employeeId (UUID), firstName, lastName
+        - arabicFirstName, arabicMiddleName, arabicLastName
+        - email, phone, gender, nationality, maritalStatus
+        - emiratesId (T1-RESTRICTED), department, position
+        - hireDate, status
+        - emergencyContact (name, phone)
+        - createdAt, updatedAt
+      </employees>
+      <employee_contracts>
+        - contractId, employeeId, contractType
+        - startDate, endDate, salary (T1-RESTRICTED)
+        - benefits, terms
+      </employee_contracts>
+      <employee_visas>
+        - visaId, employeeId, visaType
+        - issueDate, expiryDate, status
+        - sponsorInfo
+      </employee_visas>
+      <employee_insurance>
+        - insuranceId, employeeId, insuranceType
+        - provider, policyNumber
+        - startDate, endDate, coverage
+      </employee_insurance>
+      <employee_performance>
+        - reviewId, employeeId, reviewerId
+        - reviewPeriod, rating, goals
+        - strengths, improvements, comments
+        - reviewDate
+      </employee_performance>
+      <customers>
+        - customerId (UUID), name, type (individual/business)
+        - email, phone, address
+        - status (active/inactive), contactHistory
+        - createdAt, updatedAt
+      </customers>
+      <sales_orders>
+        - orderId (UUID), customerId, customerName
+        - status (draft, confirmed, processing, shipped, delivered, cancelled)
+        - orderDate, items (array: product, quantity, unitPrice, total)
+        - subtotal, tax, discount, total
+        - paymentStatus (pending, partial, paid, refunded)
+        - shippingAddress, notes
+        - createdBy, createdAt, updatedAt
+      </sales_orders>
+      <harvest_inventory_sales>
+        - inventoryId, productName, category
+        - farmId, blockId, harvestDate
+        - quantity, unit, quality, status
+        - expiryDate, storageLocation
+        - createdBy, createdAt, updatedAt
+      </harvest_inventory_sales>
+      <purchase_orders>
+        - poId (UUID), supplierId, items
+        - status, totalAmount
+        - orderDate, expectedDelivery
+        - createdBy, createdAt, updatedAt
+      </purchase_orders>
+      <vehicles>
+        - vehicleId (UUID), type, make, model
+        - licensePlate, ownershipType
+        - status, capacity
+        - createdAt, updatedAt
+      </vehicles>
+      <routes>
+        - routeId (UUID), name, origin, destination
+        - waypoints, distance, estimatedDuration
+        - status, createdAt, updatedAt
+      </routes>
+      <shipments>
+        - shipmentId (UUID), vehicleId, routeId
+        - status (pending, in_transit, delivered, cancelled)
+        - items, weight
+        - departureTime, estimatedArrival, actualArrival
+        - gpsTracking, createdAt, updatedAt
+      </shipments>
+      <campaigns>
+        - campaignId, name, description
+        - status, startDate, endDate
+        - budget, channelId
+        - metrics, createdAt, updatedAt
+      </campaigns>
+      <budgets>
+        - budgetId, name, totalAmount, allocatedAmount
+        - period, department
+        - createdAt, updatedAt
+      </budgets>
+      <events>
+        - eventId, name, type, date
+        - location, description, status
+        - createdAt, updatedAt
+      </events>
+      <channels>
+        - channelId, name, type
+        - description, status, metrics
+        - createdAt, updatedAt
+      </channels>
+    </tables>
+  </database_schema>
+
+  <api_endpoints_summary>
+    <system>
+      - GET / (root API info)
+      - GET /api/health (health status)
+      - GET /api/ready (readiness check with service status)
+    </system>
+    <authentication>
+      - POST /api/v1/auth/register
+      - POST /api/v1/auth/login
+      - POST /api/v1/auth/logout
+      - POST /api/v1/auth/refresh
+      - GET /api/v1/auth/me
+      - POST /api/v1/auth/send-verification-email
+      - POST /api/v1/auth/verify-email
+      - POST /api/v1/auth/request-password-reset
+      - POST /api/v1/auth/reset-password
+    </authentication>
+    <user_management>
+      - GET /api/v1/users
+      - GET /api/v1/users/{user_id}
+      - PATCH /api/v1/users/{user_id}
+      - DELETE /api/v1/users/{user_id}
+      - PUT /api/v1/users/{user_id}/role
+      - PUT /api/v1/users/{user_id}/activate
+      - PUT /api/v1/users/{user_id}/deactivate
+    </user_management>
+    <admin>
+      - GET /api/v1/admin/users
+      - PUT /api/v1/admin/users/{user_id}/role
+      - PUT /api/v1/admin/users/{user_id}/status
+    </admin>
+    <modules>
+      - POST /api/v1/modules/install
+      - GET /api/v1/modules/installed
+      - DELETE /api/v1/modules/{module_name}
+      - GET /api/v1/modules/{module_name}/status
+      - GET /api/v1/modules/audit-log
+    </modules>
+    <dashboard>
+      - GET /api/v1/dashboard/widgets/{widget_id}/data
+      - GET /api/v1/dashboard/summary
+    </dashboard>
+    <farm_management>
+      - POST /api/v1/farm (create farm)
+      - GET /api/v1/farm (list farms, paginated)
+      - GET /api/v1/farm/{farm_id} (get farm)
+      - PATCH /api/v1/farm/{farm_id} (update farm)
+      - DELETE /api/v1/farm/{farm_id} (delete farm)
+      - GET /api/v1/farm/{farm_id}/summary (farm KPIs)
+      - POST /api/v1/farm/{farm_id}/blocks (create block)
+      - GET /api/v1/farm/{farm_id}/blocks (list blocks)
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id} (get block)
+      - PATCH /api/v1/farm/{farm_id}/blocks/{block_id} (update block)
+      - DELETE /api/v1/farm/{farm_id}/blocks/{block_id} (delete block)
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/summary (block KPIs)
+      - PATCH /api/v1/farm/{farm_id}/blocks/{block_id}/status (transition state)
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/transitions (valid transitions)
+      - POST /api/v1/farm/{farm_id}/blocks/{block_id}/virtual-crops (add virtual crop)
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/children (get children)
+      - POST /api/v1/farm/{farm_id}/blocks/{block_id}/alerts (create alert)
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/alerts (list alerts)
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/alerts/active (active alerts)
+      - PATCH /api/v1/farm/{farm_id}/blocks/{block_id}/alerts/{alert_id}/resolve
+      - PATCH /api/v1/farm/{farm_id}/blocks/{block_id}/alerts/{alert_id}/dismiss
+      - POST /api/v1/farm/{farm_id}/blocks/{block_id}/harvests (record harvest)
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/harvests (list harvests)
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/harvests/summary
+      - DELETE /api/v1/farm/{farm_id}/blocks/{block_id}/harvests/{harvest_id}
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/archives
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/cycle-history
+      - GET /api/v1/farm/{farm_id}/archives
+      - GET /api/v1/farm/{farm_id}/blocks/{block_id}/iot-controller
+      - PATCH /api/v1/farm/{farm_id}/blocks/{block_id}/iot-controller
+    </farm_management>
+    <plant_data>
+      - GET /api/v1/farm/plant-data (list with search)
+      - GET /api/v1/farm/plant-data/{id} (get by ID)
+      - POST /api/v1/farm/plant-data (create)
+      - PATCH /api/v1/farm/plant-data/{id} (update)
+      - DELETE /api/v1/farm/plant-data/{id} (delete)
+      - POST /api/v1/farm/plant-data/import-csv (batch import)
+      - GET /api/v1/farm/plant-data/template (download CSV template)
+    </plant_data>
+    <plantings>
+      - GET /api/v1/farm/{farm_id}/plantings (list)
+      - GET /api/v1/farm/plantings/{planting_id} (detail)
+      - POST /api/v1/farm/{farm_id}/plantings (create)
+      - PATCH /api/v1/farm/plantings/{planting_id}/planted (mark as planted)
+    </plantings>
+    <spacing>
+      - GET /api/v1/farm/spacing-categories
+      - POST /api/v1/farm/calculate-plant-count
+      - PUT /api/v1/farm/spacing-standards (admin)
+      - POST /api/v1/farm/spacing-standards/reset (admin)
+    </spacing>
+    <inventory>
+      - CRUD endpoints for harvest inventory (/api/v1/farm/inventory/harvest)
+      - CRUD endpoints for input inventory (/api/v1/farm/inventory/inputs)
+      - CRUD endpoints for asset inventory (/api/v1/farm/inventory/assets)
+      - CRUD endpoints for waste inventory (/api/v1/farm/inventory/waste)
+      - POST /api/v1/farm/inventory/transfer (transfer between scopes)
+    </inventory>
+    <weather>
+      - GET /api/v1/farm/{farm_id}/weather
+    </weather>
+    <crm>
+      - GET /api/v1/crm/customers (list, paginated)
+      - GET /api/v1/crm/customers/search (quick search)
+      - GET /api/v1/crm/customers/{customer_id}
+      - POST /api/v1/crm/customers
+      - PATCH /api/v1/crm/customers/{customer_id}
+      - DELETE /api/v1/crm/customers/{customer_id}
+    </crm>
+    <hr>
+      - GET /api/v1/hr/employees (list, paginated)
+      - GET /api/v1/hr/employees/search
+      - GET /api/v1/hr/employees/{employee_id}
+      - POST /api/v1/hr/employees
+      - PATCH /api/v1/hr/employees/{employee_id}
+      - DELETE /api/v1/hr/employees/{employee_id}
+      - CRUD /api/v1/hr/employees/{employee_id}/contracts
+      - CRUD /api/v1/hr/employees/{employee_id}/visas
+      - CRUD /api/v1/hr/employees/{employee_id}/insurance
+      - CRUD /api/v1/hr/employees/{employee_id}/performance
+      - GET /api/v1/hr/dashboard/stats
+    </hr>
+    <sales>
+      - POST /api/v1/sales/orders (create, requires sales.create)
+      - GET /api/v1/sales/orders (list, requires sales.view)
+      - GET /api/v1/sales/orders/{order_id} (requires sales.view)
+      - PATCH /api/v1/sales/orders/{order_id} (requires sales.edit)
+      - PATCH /api/v1/sales/orders/{order_id}/status
+      - DELETE /api/v1/sales/orders/{order_id}
+      - CRUD /api/v1/sales/inventory
+      - CRUD /api/v1/sales/purchase-orders
+      - CRUD /api/v1/sales/returns
+      - GET /api/v1/sales/dashboard/stats
+    </sales>
+    <logistics>
+      - CRUD /api/v1/logistics/vehicles
+      - GET /api/v1/logistics/vehicles/available
+      - CRUD /api/v1/logistics/routes
+      - CRUD /api/v1/logistics/shipments
+      - PATCH /api/v1/logistics/shipments/{shipment_id}/status
+      - GET /api/v1/logistics/shipments/{shipment_id}/track
+      - GET /api/v1/logistics/dashboard/stats
+    </logistics>
+    <marketing>
+      - CRUD /api/v1/marketing/campaigns
+      - CRUD /api/v1/marketing/budgets
+      - CRUD /api/v1/marketing/events
+      - CRUD /api/v1/marketing/channels
+      - GET /api/v1/marketing/dashboard/stats
+    </marketing>
+    <ai_analytics>
+      - POST /api/v1/ai/chat (natural language query)
+      - GET /api/v1/ai/schema (database schema introspection)
+      - GET /api/v1/ai/cost (user cost tracking)
+    </ai_analytics>
+  </api_endpoints_summary>
+
+  <ui_layout>
+    <main_structure>
+      Sidebar navigation (left) with collapsible module sections + main content area (right).
+      Top bar with user profile, notifications, and settings.
+      Responsive: sidebar collapses to hamburger menu on mobile.
+    </main_structure>
+    <pages>
+      - Auth: Login, Register (public routes)
+      - Core: Dashboard, Profile, Settings
+      - Farm: Farm Manager (map + list), Farm Dashboard, Plant Data Library
+      - Operations: Operations Dashboard, Farm Blocks View, Block Task List
+      - Inventory: Inventory Dashboard, Input/Harvest/Asset/Waste Inventory Lists
+      - CRM: Customer List, Customer Detail
+      - HR: HR Dashboard, Employee List, Employee Detail
+      - Sales: Sales Dashboard, Orders, Inventory, Purchase Orders, Returns
+      - Logistics: Logistics Dashboard, Vehicles, Routes, Shipment Tracking
+      - Marketing: Marketing Dashboard, Campaigns, Budgets, Events, Channels
+      - AI: AI Analytics (full-screen chat)
+      - Debug: Cache Clear (dev only)
+      Total: 36 pages
+    </pages>
+    <navigation_sections>
+      - Dashboard (home)
+      - Farm Management (farms, plant library)
+      - Operations (tasks, blocks)
+      - Inventory (all 4 types)
+      - CRM (customers)
+      - HR (employees)
+      - Sales (orders, inventory, POs, returns)
+      - Logistics (vehicles, routes, shipments)
+      - Marketing (campaigns, budgets, events, channels)
+      - AI Analytics
+      - Settings / Profile
+    </navigation_sections>
+  </ui_layout>
+
+  <design_system>
+    <color_palette>
+      - Primary text: #212121 (dark gray)
+      - Secondary text: #616161 (medium gray)
+      - Background: #FFFFFF, #F5F5F5 (light gray)
+      - Borders: #E0E0E0
+      - Success: #10B981 (green)
+      - Info: #3B82F6 (blue)
+      - Warning: #F59E0B (amber)
+      - Error: #EF4444 (red)
+      - Light neutral palette with color accents
+    </color_palette>
+    <typography>
+      - Font weights: 400 (regular), 600 (semi-bold)
+      - Font sizes: 12px (small) to 36px (large headings)
+      - Line heights: automatic spacing
+    </typography>
+    <components>
+      - Stat cards: white background, 12px rounded corners, hover shadow
+      - Modals: dialog overlays with white background
+      - Tables: paginated with sorting, striped rows
+      - Forms: input fields, dropdowns, date pickers, validation messages
+      - Charts: Recharts pie/bar/line
+      - Maps: MapLibre GL with satellite imagery
+      - Grid layout: react-grid-layout for dashboard widgets (2-4 columns responsive)
+      - Buttons: primary (blue), secondary (gray), danger (red)
+    </components>
+  </design_system>
+
+  <implementation_steps>
+    <step number="1">
+      <title>Infrastructure & Core Setup</title>
+      <tasks>
+        - Docker Compose with MongoDB, Redis, Nginx, FastAPI
+        - Database connection and health checks
+        - Environment configuration
+        - Project directory structure
+      </tasks>
+    </step>
+    <step number="2">
+      <title>Authentication & User Management</title>
+      <tasks>
+        - User registration with email verification
+        - JWT login/logout with refresh token rotation
+        - RBAC middleware (5 roles)
+        - User CRUD with admin panel
+        - Rate limiting
+      </tasks>
+    </step>
+    <step number="3">
+      <title>Frontend Foundation</title>
+      <tasks>
+        - React + TypeScript + Vite setup
+        - Auth store (Zustand) and protected routes
+        - API client with auto token refresh
+        - Layout components (sidebar, topbar)
+        - Login/Register pages
+      </tasks>
+    </step>
+    <step number="4">
+      <title>Dashboard & Widget System</title>
+      <tasks>
+        - CCM widget architecture
+        - Drag-and-drop grid layout
+        - Stat card and chart widgets
+        - Dashboard summary API
+      </tasks>
+    </step>
+    <step number="5">
+      <title>Farm Management Module</title>
+      <tasks>
+        - Farm and block CRUD with state machine
+        - Plant data library with CSV import
+        - Planting plans and spacing calculations
+        - Map integration (MapLibre GL)
+        - Block alerts and harvest recording
+        - Cycle history and archiving
+      </tasks>
+    </step>
+    <step number="6">
+      <title>Inventory System</title>
+      <tasks>
+        - Harvest, input, asset, waste inventory CRUD
+        - Organization vs farm scope
+        - Unit conversion system
+        - Inventory transfers
+        - Inventory dashboard
+      </tasks>
+    </step>
+    <step number="7">
+      <title>Operations & Tasks</title>
+      <tasks>
+        - Task CRUD and assignment
+        - Operations dashboard
+        - Task completion workflow
+      </tasks>
+    </step>
+    <step number="8">
+      <title>CRM Module</title>
+      <tasks>
+        - Customer CRUD with search/filter
+        - Customer detail page
+        - CRM integration with Sales
+      </tasks>
+    </step>
+    <step number="9">
+      <title>HR Module</title>
+      <tasks>
+        - Employee CRUD with Arabic name support
+        - Contracts, visas, insurance, performance sub-modules
+        - HR dashboard
+      </tasks>
+    </step>
+    <step number="10">
+      <title>Sales Module</title>
+      <tasks>
+        - Sales order CRUD with status workflow
+        - Purchase orders and returns
+        - Sales inventory
+        - CRM customer validation
+      </tasks>
+    </step>
+    <step number="11">
+      <title>Logistics Module</title>
+      <tasks>
+        - Vehicle, route, shipment CRUD
+        - Shipment status workflow
+        - GPS tracking
+        - Logistics dashboard
+      </tasks>
+    </step>
+    <step number="12">
+      <title>Marketing Module</title>
+      <tasks>
+        - Campaign, budget, event, channel CRUD
+        - Marketing dashboard
+      </tasks>
+    </step>
+    <step number="13">
+      <title>AI Analytics</title>
+      <tasks>
+        - Vertex AI (Gemini) integration
+        - Natural language to MongoDB query engine
+        - Query validation and security
+        - Report generation
+        - Chat UI
+      </tasks>
+    </step>
+    <step number="14">
+      <title>Weather & IoT Integration</title>
+      <tasks>
+        - WeatherBit API integration
+        - Background weather refresh
+        - IoT controller proxy
+      </tasks>
+    </step>
+    <step number="15">
+      <title>Module Management System</title>
+      <tasks>
+        - Docker-based module install/uninstall
+        - Dynamic port allocation
+        - Nginx proxy configuration
+        - Audit logging
+      </tasks>
+    </step>
+    <step number="16">
+      <title>Security Hardening & Polish</title>
+      <tasks>
+        - Security headers (HSTS, CSP, Permissions-Policy)
+        - Database port closure in production
+        - Backup encryption
+        - Structured JSON logging
+        - Responsive design polish
+      </tasks>
+    </step>
+  </implementation_steps>
+
+  <success_criteria>
+    <functionality>
+      - All 7 modules fully operational (Farm, HR, CRM, Sales, Logistics, Marketing, AI Analytics)
+      - Complete CRUD operations for all entities
+      - RBAC enforced across all endpoints
+      - JWT authentication with secure token management
+      - Real database persistence (no mock data)
+      - All 310 features passing
+    </functionality>
+    <user_experience>
+      - Responsive design (desktop, tablet, mobile)
+      - Intuitive sidebar navigation
+      - Fast page loads with lazy loading
+      - Real-time data refresh
+      - Clear error messages and loading states
+      - Drag-and-drop dashboard customization
+    </user_experience>
+    <technical_quality>
+      - TypeScript type safety on frontend
+      - Pydantic validation on backend
+      - Async operations throughout
+      - Redis caching for performance
+      - Proper error handling and logging
+      - Docker containerization for all services
+    </technical_quality>
+    <design_polish>
+      - Consistent color palette and typography
+      - Professional stat cards, tables, charts
+      - Map integration with satellite imagery
+      - Smooth transitions and hover effects
+      - Clean, neutral design with accent colors
+    </design_polish>
+    <security>
+      - No hardcoded secrets
+      - Bcrypt password hashing
+      - JWT with rotation
+      - Rate limiting on sensitive endpoints
+      - CORS, HSTS, CSP headers
+      - Input validation on all endpoints
+      - Role-based access control enforcement
+    </security>
+  </success_criteria>
+</project_specification>
