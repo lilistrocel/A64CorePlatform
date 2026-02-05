@@ -8,6 +8,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
+import { Breadcrumb } from '@a64core/shared';
+import type { BreadcrumbItem } from '@a64core/shared';
 import type { Block, BlockSummary } from '../../types/farm';
 
 // Import tab components
@@ -503,13 +505,23 @@ export function BlockDetail() {
     );
   }
 
+  // Breadcrumb items for navigation
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+    { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+    { label: block?.farmName || 'Farm', path: `/farm/farms/${farmId}` },
+    { label: block?.blockCode || block?.name || 'Block Details', icon: '🌾' },
+  ];
+
   if (error || !block || !summary) {
     return (
       <Container>
-        <BackButton onClick={handleBack}>
-          <span>←</span>
-          <span>Back to Farm</span>
-        </BackButton>
+        <Breadcrumb items={[
+          { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+          { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+          { label: 'Farm', path: `/farm/farms/${farmId}` },
+          { label: 'Error' },
+        ]} />
         <ErrorContainer>{error || 'Block not found'}</ErrorContainer>
       </Container>
     );
@@ -517,10 +529,7 @@ export function BlockDetail() {
 
   return (
     <Container>
-      <BackButton onClick={handleBack}>
-        <span>←</span>
-        <span>Back to Farm</span>
-      </BackButton>
+      <Breadcrumb items={breadcrumbItems} />
 
       <Header>
         <TitleRow>

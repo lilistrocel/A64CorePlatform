@@ -18,6 +18,7 @@ export function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get('expired') === 'true';
+  const redirectTo = searchParams.get('redirect');
   const { login, isLoading, error, clearError } = useAuthStore();
 
   const {
@@ -32,7 +33,9 @@ export function Login() {
     try {
       clearError();
       await login(data);
-      navigate('/dashboard');
+      // Redirect to intended page if provided, otherwise dashboard
+      const destination = redirectTo ? decodeURIComponent(redirectTo) : '/dashboard';
+      navigate(destination);
     } catch (err) {
       // Error is handled by the store
     }

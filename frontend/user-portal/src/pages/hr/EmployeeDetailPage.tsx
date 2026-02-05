@@ -14,6 +14,8 @@ import { InsuranceTab } from '../../components/hr/InsuranceTab';
 import { PerformanceTab } from '../../components/hr/PerformanceTab';
 import { hrApi, getEmployeeFullName, getEmployeeStatusColor, getEmployeeStatusLabel } from '../../services/hrService';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
+import { Breadcrumb } from '@a64core/shared';
+import type { BreadcrumbItem } from '@a64core/shared';
 import type { Employee, EmployeeUpdate } from '../../types/hr';
 
 // ============================================================================
@@ -351,10 +353,23 @@ export function EmployeeDetailPage() {
     );
   }
 
+  // Breadcrumb items for navigation
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+    { label: 'HR', path: '/hr', icon: '👔' },
+    { label: 'Employees', path: '/hr/employees' },
+    { label: isNew ? 'New Employee' : employee ? getEmployeeFullName(employee) : 'Employee' },
+  ];
+
   if (error) {
     return (
       <Container>
-        <BackButton onClick={handleBack}>← Back to Employees</BackButton>
+        <Breadcrumb items={[
+          { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+          { label: 'HR', path: '/hr', icon: '👔' },
+          { label: 'Employees', path: '/hr/employees' },
+          { label: 'Error' },
+        ]} />
         <ErrorContainer>{error}</ErrorContainer>
       </Container>
     );
@@ -363,7 +378,7 @@ export function EmployeeDetailPage() {
   return (
     <Container>
       <Header>
-        <BackButton onClick={handleBack}>← Back to Employees</BackButton>
+        <Breadcrumb items={breadcrumbItems} />
         {!isNew && !editMode && activeTab === 'overview' && (
           <HeaderActions>
             <ActionButton onClick={handleEdit}>Edit</ActionButton>

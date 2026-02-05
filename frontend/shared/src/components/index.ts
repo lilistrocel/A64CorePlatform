@@ -1,6 +1,6 @@
 // Common components
-export { Button, Card, Spinner, Input } from './common';
-export type { ButtonProps, CardProps, SpinnerProps, InputProps } from './common';
+export { Button, Card, Spinner, Input, Breadcrumb } from './common';
+export type { ButtonProps, CardProps, SpinnerProps, InputProps, BreadcrumbItem } from './common';
 
 // Widget components
 export { StatWidget } from './widgets';

@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
 import { useEffect } from 'react';
 import styled from 'styled-components';
@@ -6,6 +6,7 @@ import { Spinner } from '@a64core/shared';
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading, loadUser, user } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     // Load user data if authenticated but user not loaded
@@ -24,7 +25,12 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Encode the current path + search params as redirect URL
+    const redirectTo = location.pathname + location.search;
+    const loginUrl = redirectTo && redirectTo !== '/' && redirectTo !== '/dashboard'
+      ? `/login?redirect=${encodeURIComponent(redirectTo)}`
+      : '/login';
+    return <Navigate to={loginUrl} replace />;
   }
 
   return <Outlet />;

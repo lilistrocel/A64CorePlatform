@@ -19,6 +19,8 @@ import { FarmHistoryTab } from './FarmHistoryTab';
 import { FarmMapView } from './FarmMapView';
 import { AgriDataTab, SensorFusionTab } from './weather';
 import { farmApi } from '../../services/farmApi';
+import { Breadcrumb } from '@a64core/shared';
+import type { BreadcrumbItem } from '@a64core/shared';
 import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate, FarmUpdate } from '../../types/farm';
 
 // ============================================================================
@@ -404,13 +406,21 @@ export function FarmDetail() {
     );
   }
 
+  // Breadcrumb items for navigation
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+    { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+    { label: farm?.name || 'Farm Details' },
+  ];
+
   if (error) {
     return (
       <Container>
-        <BackButton onClick={handleBack}>
-          <span>←</span>
-          <span>Back to Farms</span>
-        </BackButton>
+        <Breadcrumb items={[
+          { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+          { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+          { label: 'Error' },
+        ]} />
         <ErrorContainer>
           {error instanceof Error ? error.message : 'Failed to load farm details. Please try again.'}
         </ErrorContainer>
@@ -421,10 +431,11 @@ export function FarmDetail() {
   if (!farm || !summary) {
     return (
       <Container>
-        <BackButton onClick={handleBack}>
-          <span>←</span>
-          <span>Back to Farms</span>
-        </BackButton>
+        <Breadcrumb items={[
+          { label: 'Dashboard', path: '/dashboard', icon: '📊' },
+          { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
+          { label: 'Not Found' },
+        ]} />
         <ErrorContainer>Farm not found</ErrorContainer>
       </Container>
     );
@@ -440,10 +451,7 @@ export function FarmDetail() {
 
   return (
     <Container>
-      <BackButton onClick={handleBack}>
-        <span>←</span>
-        <span>Back to Farms</span>
-      </BackButton>
+      <Breadcrumb items={breadcrumbItems} />
 
       <Header>
         <TitleRow>
