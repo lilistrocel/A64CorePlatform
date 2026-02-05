@@ -59,7 +59,7 @@ export function Register() {
           <Title>Create Account</Title>
           <Subtitle>Join us to get started with your ERP platform</Subtitle>
 
-          {error && <ErrorBanner>{error}</ErrorBanner>}
+          {error && <ErrorBanner role="alert" aria-live="assertive">{error}</ErrorBanner>}
 
           <RegisterForm onSubmit={handleSubmit(onSubmit)}>
             <FormRow>

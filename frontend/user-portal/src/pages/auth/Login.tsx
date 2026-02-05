@@ -47,10 +47,10 @@ export function Login() {
           <Subtitle>Sign in to your account to continue</Subtitle>
 
           {sessionExpired && (
-            <SessionExpiredBanner>Your session has expired. Please sign in again.</SessionExpiredBanner>
+            <SessionExpiredBanner role="alert" aria-live="assertive">Your session has expired. Please sign in again.</SessionExpiredBanner>
           )}
 
-          {error && <ErrorBanner>{error}</ErrorBanner>}
+          {error && <ErrorBanner role="alert" aria-live="assertive">{error}</ErrorBanner>}
 
           <LoginForm onSubmit={handleSubmit(onSubmit)}>
             <Input
