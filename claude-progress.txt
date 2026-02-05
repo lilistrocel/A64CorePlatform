@@ -1851,3 +1851,45 @@ NOTES FOR NEXT SESSION:
 - Test regular user: testadmin@a64core.com / TestPass123@
 - Legacy archives in block_archives have different schema - need proper BlockArchive format
 - BlockArchive required fields: archiveId (UUID), blockType (lowercase), status (enum values)
+
+== Session: 2026-02-05 (Agent - Features #94, #95, #260) ==
+Agent: Features #94, #95, #260 (Double-Action & Idempotency)
+
+COMPLETED:
+- Feature #94: Button disabled during form submission [PASSING]
+  - CreateFarmModal.tsx has double-submit protection:
+    - useState + useRef pattern: submitting state + submittingRef guard
+    - Synchronous ref check (if submittingRef.current) return prevents race conditions
+    - Button disabled={submitting} and text changes to "Creating..."
+  - Tested farm creation - only ONE farm created in database
+  - Button properly disabled during API call, re-enabled after completion
+  - Zero console errors
+
+- Feature #95: Double-click on delete does not cause errors [PASSING]
+  - FarmCard.tsx uses window.confirm() dialog for delete confirmation
+  - Dialog blocks UI, preventing rapid double-clicks naturally
+  - Created test farm, clicked delete, dialog appeared
+  - Accepted dialog - only ONE delete operation executed
+  - Database verified: farm moved to deleted_farms collection (only 1 record)
+  - Zero console errors, UI remains stable
+
+- Feature #260: Rapid delete clicks handled safely [PASSING]
+  - Same protection mechanism as Feature #95
+  - window.confirm() provides natural blocking for rapid clicks
+  - Created test farm, clicked delete multiple times
+  - Only ONE confirmation dialog appeared
+  - Only ONE farm deleted from database
+  - Zero console errors, UI remains stable
+
+UI CACHING NOTE:
+- Deleted farms may still appear in list until page refresh (React Query cache)
+- This is a separate cache invalidation issue, not related to double-click protection
+- The actual database operations are correctly idempotent
+
+CURRENT STATUS: 154/310 features passing (49.7%)
+
+NOTES FOR NEXT SESSION:
+- Double-submit protection pattern: useState + useRef with synchronous ref guard
+- Delete protection: window.confirm() naturally blocks rapid clicks
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
+- React Query cache may show stale data after deletes - refresh page if needed

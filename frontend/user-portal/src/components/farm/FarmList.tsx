@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { FarmCard } from './FarmCard';
 import { CreateFarmModal } from './CreateFarmModal';
@@ -236,13 +237,17 @@ const PageInfo = styled.span`
 type FilterType = 'all' | 'active' | 'inactive';
 
 export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [summaries, setSummaries] = useState<Record<string, FarmSummary>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<FilterType>('all');
-  const [page, setPage] = useState(1);
+
+  // Get filter values from URL params with defaults
+  const searchTerm = searchParams.get('search') || '';
+  const filterType = (searchParams.get('filter') as FilterType) || 'all';
+  const page = parseInt(searchParams.get('page') || '1', 10);
+
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -250,6 +255,23 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [selectedFarmName, setSelectedFarmName] = useState<string>('');
   const perPage = 12;
+
+  // Helper function to update URL params
+  const updateParams = (updates: Record<string, string | null>) => {
+    const newParams = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '' || (key === 'filter' && value === 'all') || (key === 'page' && value === '1')) {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value);
+      }
+    });
+    setSearchParams(newParams, { replace: true });
+  };
+
+  const setSearchTerm = (value: string) => updateParams({ search: value });
+  const setFilterType = (value: FilterType) => updateParams({ filter: value, page: '1' });
+  const setPage = (value: number) => updateParams({ page: value.toString() });
 
   // Load farms
   useEffect(() => {

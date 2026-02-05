@@ -17,8 +17,10 @@ import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 const orderItemSchema = z.object({
   productName: z.string().min(1, 'Product name is required'),
-  quantity: z.coerce.number({ invalid_type_error: 'Quantity is required' }).gt(0, 'Quantity must be greater than 0'),
-  unitPrice: z.coerce.number({ invalid_type_error: 'Unit price is required' }).min(0, 'Unit price cannot be negative'),
+  quantity: z.coerce.number({ invalid_type_error: 'Quantity is required' })
+    .refine((val) => val > 0, { message: 'Quantity must be greater than 0' }),
+  unitPrice: z.coerce.number({ invalid_type_error: 'Unit price is required' })
+    .refine((val) => val >= 0, { message: 'Unit price cannot be negative' }),
 });
 
 const orderSchema = z.object({
