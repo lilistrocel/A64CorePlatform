@@ -173,11 +173,44 @@ const CardGrid = styled.div`
 
 const LoadingContainer = styled.div`
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 400px;
   font-size: 16px;
   color: #9e9e9e;
+  gap: 16px;
+`;
+
+const Spinner = styled.div`
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const CreateActionButton = styled.button`
+  padding: 12px 24px;
+  background: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #1976d2;
+  }
 `;
 
 const ErrorContainer = styled.div`
@@ -417,7 +450,10 @@ export function CRMPage() {
       {error && <ErrorContainer>{error}</ErrorContainer>}
 
       {loading ? (
-        <LoadingContainer>Loading customers...</LoadingContainer>
+        <LoadingContainer>
+          <Spinner />
+          Loading customers...
+        </LoadingContainer>
       ) : !loading && customers.length === 0 && searchQuery ? (
         <EmptyStateContainer>
           <EmptyStateIcon>🔍</EmptyStateIcon>
@@ -428,6 +464,17 @@ export function CRMPage() {
           <ClearSearchButton onClick={() => { setSearchQuery(''); setPage(1); }}>
             Clear Search
           </ClearSearchButton>
+        </EmptyStateContainer>
+      ) : !loading && customers.length === 0 && !searchQuery ? (
+        <EmptyStateContainer>
+          <EmptyStateIcon>👥</EmptyStateIcon>
+          <EmptyStateTitle>No customers yet</EmptyStateTitle>
+          <EmptyStateMessage>
+            Get started by adding your first customer to the CRM.
+          </EmptyStateMessage>
+          <CreateActionButton onClick={handleCreateCustomer}>
+            + Create Your First Customer
+          </CreateActionButton>
         </EmptyStateContainer>
       ) : viewMode === 'table' ? (
         <CustomerTable

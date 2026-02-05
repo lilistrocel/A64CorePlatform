@@ -76,12 +76,18 @@ apiClient.interceptors.response.use(
 
           // Retry the original request
           return apiClient(originalRequest);
+        } else {
+          // No refresh token available - redirect to login
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          window.location.href = '/login?expired=true';
+          return Promise.reject(error);
         }
       } catch (refreshError) {
         // Refresh failed, clear tokens and redirect to login
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        window.location.href = '/login?expired=true';
         return Promise.reject(refreshError);
       }
     }

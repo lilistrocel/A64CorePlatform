@@ -173,11 +173,28 @@ const CardGrid = styled.div`
 
 const LoadingContainer = styled.div`
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 400px;
   font-size: 16px;
   color: #9e9e9e;
+  gap: 16px;
+`;
+
+const Spinner = styled.div`
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
 const ErrorContainer = styled.div`
@@ -256,6 +273,22 @@ const EmptyStateMessage = styled.p`
 
 const ClearSearchButton = styled.button`
   padding: 10px 24px;
+  background: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #1976d2;
+  }
+`;
+
+const CreateActionButton = styled.button`
+  padding: 12px 24px;
   background: #3B82F6;
   color: white;
   border: none;
@@ -396,7 +429,10 @@ export function EmployeeListPage() {
       {error && <ErrorContainer>{error}</ErrorContainer>}
 
       {loading ? (
-        <LoadingContainer>Loading employees...</LoadingContainer>
+        <LoadingContainer>
+          <Spinner />
+          Loading employees...
+        </LoadingContainer>
       ) : !loading && employees.length === 0 && searchQuery ? (
         <EmptyStateContainer>
           <EmptyStateIcon>🔍</EmptyStateIcon>
@@ -407,6 +443,17 @@ export function EmployeeListPage() {
           <ClearSearchButton onClick={() => { setSearchQuery(''); setPage(1); }}>
             Clear Search
           </ClearSearchButton>
+        </EmptyStateContainer>
+      ) : !loading && employees.length === 0 && !searchQuery ? (
+        <EmptyStateContainer>
+          <EmptyStateIcon>👔</EmptyStateIcon>
+          <EmptyStateTitle>No employees yet</EmptyStateTitle>
+          <EmptyStateMessage>
+            Get started by adding your first employee to the HR system.
+          </EmptyStateMessage>
+          <CreateActionButton onClick={handleCreateEmployee}>
+            + Add Your First Employee
+          </CreateActionButton>
         </EmptyStateContainer>
       ) : viewMode === 'table' ? (
         <EmployeeTable

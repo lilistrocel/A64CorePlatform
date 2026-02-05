@@ -11,6 +11,7 @@ from typing import Dict, Any
 from ...models.user import (
     UserCreate,
     UserLogin,
+    UserUpdate,
     TokenResponse,
     UserResponse,
     EmailVerificationRequest,
@@ -19,6 +20,7 @@ from ...models.user import (
     PasswordResetConfirm
 )
 from ...services.auth_service import auth_service
+from ...services.user_service import user_service
 from ...middleware.auth import get_current_user
 from ...middleware.rate_limit import login_rate_limiter
 
@@ -193,6 +195,41 @@ async def get_current_user_info(
     **Response:** Complete user profile (excluding password)
     """
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_current_user_profile(
+    update_data: UserUpdate,
+    current_user: UserResponse = Depends(get_current_user)
+) -> UserResponse:
+    """
+    Update current authenticated user's profile
+
+    **Authentication:** Required (Bearer token)
+
+    **Request Body (all fields optional):**
+    - firstName: Updated first name
+    - lastName: Updated last name
+    - phone: Updated phone number
+    - avatar: Updated avatar URL
+    - timezone: Updated timezone
+    - locale: Updated locale
+
+    **Returns:**
+    - 200: Updated user information
+    - 401: Not authenticated
+    - 404: User not found
+
+    **Example:**
+    ```json
+    {
+      "firstName": "Jane",
+      "lastName": "Smith"
+    }
+    ```
+    """
+    updated_user = await user_service.update_user(current_user.userId, update_data)
+    return updated_user
 
 
 @router.post("/send-verification-email")

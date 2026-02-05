@@ -144,6 +144,14 @@ class AuthService {
   }
 
   /**
+   * Update current user's profile
+   */
+  async updateProfile(data: Partial<Pick<User, 'firstName' | 'lastName'>> & { phone?: string }): Promise<User> {
+    const response = await apiClient.patch<User>('/v1/auth/me', data);
+    return response.data;
+  }
+
+  /**
    * Refresh access token using refresh token
    */
   async refreshAccessToken(): Promise<string> {

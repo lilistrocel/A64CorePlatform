@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button, Input } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 
@@ -16,6 +16,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get('expired') === 'true';
   const { login, isLoading, error, clearError } = useAuthStore();
 
   const {
@@ -43,6 +45,10 @@ export function Login() {
           <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
           <Title>Welcome Back</Title>
           <Subtitle>Sign in to your account to continue</Subtitle>
+
+          {sessionExpired && (
+            <SessionExpiredBanner>Your session has expired. Please sign in again.</SessionExpiredBanner>
+          )}
 
           {error && <ErrorBanner>{error}</ErrorBanner>}
 
@@ -172,6 +178,17 @@ const Subtitle = styled.p`
     font-size: 1rem;
     margin-bottom: 2rem;
   }
+`;
+
+const SessionExpiredBanner = styled.div`
+  background: ${({ theme }) => `${theme.colors.warning}15`};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  color: ${({ theme }) => theme.colors.warning};
+  font-size: 0.875rem;
+  text-align: center;
 `;
 
 const ErrorBanner = styled.div`
