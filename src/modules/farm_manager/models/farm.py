@@ -64,6 +64,8 @@ class FarmUpdate(BaseModel):
     numberOfStaff: Optional[int] = Field(None, ge=0)
     isActive: Optional[bool] = None
     boundary: Optional[FarmBoundary] = Field(None, description="Geo-fence polygon boundary")
+    managerId: Optional[UUID] = Field(None, description="User ID of farm manager (admin only)")
+    managerEmail: Optional[str] = Field(None, description="Email of farm manager (admin only)")
 
 
 class Farm(FarmBase):

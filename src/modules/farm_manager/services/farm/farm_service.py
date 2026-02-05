@@ -168,6 +168,13 @@ class FarmService:
                 detail="Only the farm manager can update this farm"
             )
 
+        # Only admins can change the manager
+        if update_data.managerId is not None and not is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admins can change the farm manager"
+            )
+
         # Validate update data
         if update_data.totalArea is not None and update_data.totalArea <= 0:
             raise HTTPException(

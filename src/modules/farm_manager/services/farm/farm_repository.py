@@ -183,6 +183,10 @@ class FarmRepository:
         if not update_dict:
             return await self.get_by_id(farm_id)
 
+        # Convert managerId UUID to string for MongoDB storage
+        if "managerId" in update_dict and update_dict["managerId"] is not None:
+            update_dict["managerId"] = str(update_dict["managerId"])
+
         update_dict["updatedAt"] = datetime.utcnow()
 
         result = await collection.update_one(
