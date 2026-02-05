@@ -1,3 +1,48 @@
+== Session: 2026-02-05 (Agent Batch #144, #145, #146) ==
+Agent: Features #144, #145, #146 (Security & Access Control)
+
+COMPLETED:
+- Feature #144: Bcrypt password hashing with cost factor 12 [PASSING]
+  - Registered new user bcrypt_test_feature144@example.com
+  - Verified hash in MongoDB: $2b$12$iVECXeRIiuLEmCbINWBwsusCvvksfd19DOnUDBVh5dawuyuxtn7ue
+  - Confirmed bcrypt prefix: $2b$ (bcrypt identifier)
+  - Confirmed cost factor: 12 (specified in security.py line 19: bcrypt__rounds=12)
+  - Verified plain password NOT stored (only passwordHash field exists)
+  - Code location: src/utils/security.py - pwd_context = CryptContext(schemes=["bcrypt"], bcrypt__rounds=12)
+  - Screenshot: feature144-bcrypt-verified.png
+
+- Feature #145: Refresh token revoked on logout [PASSING]
+  - Logged in, captured refresh token (tokenId: a33e4404-a0de-4b6c-972e-cc05395dbfd5)
+  - Verified token in DB: isRevoked: false initially
+  - Called POST /api/v1/auth/logout with refresh_token
+  - Verified token in DB: isRevoked: true after logout
+  - Attempted to use revoked token: POST /api/v1/auth/refresh
+  - Got 401 "Refresh token has been revoked" - correctly rejected
+  - Token revocation works via isRevoked flag (not deletion)
+
+- Feature #146: Data isolation between users [PASSING]
+  - Created two regular users: User A (bcrypt_test_feature144) and User B (isolation_test_userb)
+  - User B attempted to access User A's profile: GET /api/v1/users/{userA_id}
+  - Result: 403 "Insufficient permissions to view this user"
+  - User B attempted to list users: GET /api/v1/users
+  - Result: 403 "Admin access required"
+  - User B's farm list: GET /api/v1/farm/farms → empty array (sees only managed farms)
+  - Farm dashboard shows 0 counts for User B (isolated from other users' data)
+  - Code enforcing isolation:
+    - farms.py line 91-95: Regular users get farms via get_user_farms(userId)
+    - farm_service.py line 165: Manager check for updates
+    - auth middleware line 204: farm.manage requires admin/moderator role
+  - Screenshots: feature146-userb-farm-dashboard-isolated.png, feature146-userb-no-farms-isolated.png
+
+CURRENT STATUS: 189/310 features passing (61.0%)
+
+NOTES FOR NEXT SESSION:
+- Bcrypt is properly configured with cost factor 12 (src/utils/security.py)
+- Refresh tokens use isRevoked flag, not deletion, for logout
+- Data isolation enforced via managerId matching for farms
+- Regular users cannot view other users' profiles or list all users
+- Test users created: bcrypt_test_feature144@example.com, isolation_test_userb@example.com
+
 == Session: 2026-02-05 (Agent Batch #104, #105, #162) ==
 Agent: Features #104, #105, #162 (Mobile Tables, Modal Responsiveness, Stat Card Hover)
 
