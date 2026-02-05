@@ -32,7 +32,7 @@ from ...models.module import (
     ModuleAuditLog
 )
 from ...services.module_manager import module_manager
-from ...middleware.permissions import require_role
+from ...middleware.permissions import require_role, require_super_admin
 from ...middleware.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -77,14 +77,14 @@ router = APIRouter(prefix="/modules", tags=["Module Management"])
 )
 async def install_module(
     config: ModuleConfig,
-    current_user: UserInDB = Depends(get_current_user)
+    current_user: UserInDB = Depends(require_super_admin)
 ) -> ModuleInstallResponse:
     """
     Install a new module.
 
     Args:
         config: Module configuration (request body)
-        current_user: Current authenticated user (from JWT)
+        current_user: Current authenticated user (from JWT, must be super_admin)
 
     Returns:
         ModuleInstallResponse with installation status
@@ -95,8 +95,6 @@ async def install_module(
         HTTPException 409: If module already exists
         HTTPException 500: If installation fails
     """
-    # Check super_admin role
-    require_role([UserRole.SUPER_ADMIN], current_user)
 
     try:
         logger.info(
@@ -183,7 +181,7 @@ async def install_module(
 async def list_installed_modules(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
-    current_user: UserInDB = Depends(get_current_user)
+    current_user: UserInDB = Depends(require_super_admin)
 ) -> ModuleListResponse:
     """
     List all installed modules with pagination.
@@ -191,7 +189,7 @@ async def list_installed_modules(
     Args:
         page: Page number (1-indexed)
         per_page: Items per page (1-100)
-        current_user: Current authenticated user
+        current_user: Current authenticated user (must be super_admin)
 
     Returns:
         ModuleListResponse with paginated module list
@@ -200,8 +198,6 @@ async def list_installed_modules(
         HTTPException 403: If user is not super_admin
         HTTPException 500: If query fails
     """
-    # Check super_admin role
-    require_role([UserRole.SUPER_ADMIN], current_user)
 
     try:
         logger.info(f"List modules request: page={page}, per_page={per_page} by {current_user.email}")
