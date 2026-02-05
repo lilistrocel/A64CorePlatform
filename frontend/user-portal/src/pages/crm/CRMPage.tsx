@@ -395,7 +395,7 @@ export function CRMPage() {
         </CardGrid>
       )}
 
-      {totalPages > 1 && (
+      {!loading && customers.length > 0 && (
         <Pagination>
           <PageButton onClick={() => setPage(page - 1)} disabled={page === 1}>
             Previous
@@ -403,7 +403,7 @@ export function CRMPage() {
           <PageInfo>
             Page {page} of {totalPages} ({total} total)
           </PageInfo>
-          <PageButton onClick={() => setPage(page + 1)} disabled={page === totalPages}>
+          <PageButton onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
             Next
           </PageButton>
         </Pagination>

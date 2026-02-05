@@ -39,8 +39,12 @@ export function EventForm({ event, onClose }: EventFormProps) {
     try {
       const data: MarketingEventCreate | MarketingEventUpdate = {
         ...formData,
-        budget: Number(formData.budget) || undefined,
-        expectedAttendees: Number(formData.expectedAttendees) || undefined,
+        date: formData.date || undefined,
+        description: formData.description || undefined,
+        location: formData.location || undefined,
+        notes: formData.notes || undefined,
+        budget: Number(formData.budget) || 0,
+        expectedAttendees: Number(formData.expectedAttendees) || 0,
       };
 
       if (event) {
