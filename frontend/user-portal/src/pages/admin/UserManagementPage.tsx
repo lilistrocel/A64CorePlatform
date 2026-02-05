@@ -444,8 +444,17 @@ const TableHeader = styled.th`
 `;
 
 const TableRow = styled.tr`
-  &:hover {
+  /* Striped rows for readability - alternating row colors */
+  &:nth-child(even) {
     background: ${({ theme }) => theme.colors.neutral[50]};
+  }
+
+  &:nth-child(odd) {
+    background: #ffffff;
+  }
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
 

@@ -71,8 +71,17 @@ const TableRow = styled.tr`
   border-bottom: 1px solid #e0e0e0;
   transition: background 150ms ease-in-out;
 
+  /* Striped rows for readability - alternating row colors */
+  &:nth-child(even) {
+    background: #f9fafb;
+  }
+
+  &:nth-child(odd) {
+    background: #ffffff;
+  }
+
   &:hover {
-    background: #fafafa;
+    background: #f0f4f8;
   }
 
   &:last-child {

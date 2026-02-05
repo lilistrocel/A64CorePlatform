@@ -146,12 +146,21 @@ const TableHead = styled.thead`
 const TableRow = styled.tr`
   border-bottom: 1px solid #e0e0e0;
 
+  /* Striped rows for readability - alternating row colors */
+  &:nth-child(even) {
+    background: #f9fafb;
+  }
+
+  &:nth-child(odd) {
+    background: #ffffff;
+  }
+
   &:last-child {
     border-bottom: none;
   }
 
   &:hover {
-    background: #f9fafb;
+    background: #f0f4f8;
   }
 `;
 

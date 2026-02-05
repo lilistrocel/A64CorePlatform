@@ -212,8 +212,17 @@ const TableHeader = styled.th`
 `;
 
 const TableRow = styled.tr`
+  /* Striped rows for readability - alternating row colors */
+  &:nth-child(even) {
+    background: #f9fafb;
+  }
+
+  &:nth-child(odd) {
+    background: #ffffff;
+  }
+
   &:hover {
-    background: #f8f9fa;
+    background: #f0f4f8;
   }
 `;
 
