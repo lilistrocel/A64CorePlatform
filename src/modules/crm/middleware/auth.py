@@ -161,7 +161,8 @@ def require_permission(permission: str):
                     detail=f"Permission denied: Missing {permission}"
                 )
         elif permission == "crm.view":
-            if current_user.role not in ["admin", "super_admin", "moderator", "user"]:
+            # Guest users have read-only access to view data
+            if current_user.role not in ["admin", "super_admin", "moderator", "user", "guest"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"Permission denied: Missing {permission}"

@@ -152,6 +152,10 @@ apiClient.interceptors.response.use(
 function extractErrorMessage(data: any, status: number): string {
   if (!data) return getDefaultErrorMessage(status);
 
+  // For 500 errors, ALWAYS use the default user-friendly message
+  // This prevents leaking internal error details, stack traces, or exception messages
+  if (status >= 500) return getDefaultErrorMessage(status);
+
   // Handle string detail (most common: "Campaign not found", etc.)
   if (typeof data.detail === 'string') return data.detail;
 

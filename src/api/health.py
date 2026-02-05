@@ -53,6 +53,15 @@ async def health_check() -> Dict[str, Any]:
     }
 
 
+@router.get("/test-500", status_code=status.HTTP_200_OK)
+async def test_500_error() -> Dict[str, Any]:
+    """
+    Test endpoint for 500 error - Feature #138 verification.
+    This endpoint intentionally raises an exception to test error handling.
+    """
+    raise Exception("Intentional test error for Feature #138 verification")
+
+
 @router.get("/ready", status_code=status.HTTP_200_OK)
 async def readiness_check() -> Dict[str, Any]:
     """
