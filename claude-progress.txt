@@ -1,3 +1,50 @@
+== Session: 2026-02-05 (Agent Batch #147, #148, #197) ==
+Agent: Features #147, #148, #197 (Security & Access Control)
+
+COMPLETED:
+- Feature #147: Guest role has read-only access [PASSING]
+  - Created guest user (guest_test_147@a64core.com) for testing
+  - Updated 5 module auth middleware files to add "guest" to view permission lists
+  - Files: crm/middleware/auth.py, hr/middleware/auth.py, sales/middleware/auth.py,
+           marketing/middleware/auth.py, logistics/middleware/auth.py
+  - Guest users can now GET/view data (200 OK)
+  - Guest users blocked from POST/PATCH/DELETE (403 Forbidden)
+  - Verified both API and browser tests pass
+
+- Feature #148: Rate limits differ by role [PASSING]
+  - Created RateLimitMiddleware class in src/middleware/rate_limit.py
+  - Middleware extracts user from JWT token and sets role-based limits
+  - Added X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers
+  - Rate limits: Guest=10, User=100, Moderator=200, Admin=500, Super Admin=1000
+  - Updated CORS expose_headers in src/main.py to allow frontend access
+  - Verified headers show correct limits for different roles
+
+- Feature #197: Admin user list with role filter [PASSING]
+  - API GET /api/v1/admin/users already supported role filter parameter
+  - Tested ?role=user, ?role=admin, ?role=guest filters via API
+  - Verified UI role filter dropdown at /admin/users page
+  - Selecting "admin" filters to show only admin users
+  - Selecting "guest" filters to show only guest users
+  - Pagination updates correctly based on filter results
+
+FILES MODIFIED:
+- src/modules/crm/middleware/auth.py - Added "guest" to view permissions
+- src/modules/hr/middleware/auth.py - Added "guest" to view permissions
+- src/modules/sales/middleware/auth.py - Added "guest" to view permissions
+- src/modules/marketing/middleware/auth.py - Added "guest" to view permissions
+- src/modules/logistics/middleware/auth.py - Added "guest" to view permissions
+- src/middleware/rate_limit.py - Added RateLimitMiddleware class
+- src/middleware/__init__.py - Added RateLimitMiddleware export
+- src/main.py - Added RateLimitMiddleware and CORS expose_headers
+
+CURRENT STATUS: 199/310 features passing (64.2%)
+
+NOTES FOR NEXT SESSION:
+- Guest users have read-only access across all modules (CRM, HR, Sales, Marketing, Logistics)
+- Rate limit headers returned on all API responses when authenticated
+- Role-based rate limits: guest(10), user(100), moderator(200), admin(500), super_admin(1000)
+- Admin user list supports filtering by role via dropdown or ?role= query param
+
 == Session: 2026-02-05 (Agent Batch #138, #139, #140) ==
 Agent: Features #138, #139, #140 (Error Handling)
 

@@ -302,6 +302,49 @@ const EmptyDescription = styled.p`
   margin: 0;
 `;
 
+const ImportFeedback = styled.div<{ $type: 'success' | 'error' }>`
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  ${({ $type }) =>
+    $type === 'success'
+      ? `
+    background: #DCFCE7;
+    border: 1px solid #22C55E;
+    color: #166534;
+  `
+      : `
+    background: #FEE2E2;
+    border: 1px solid #EF4444;
+    color: #991B1B;
+  `}
+`;
+
+const ImportFeedbackIcon = styled.span`
+  font-size: 20px;
+  line-height: 1;
+`;
+
+const ImportFeedbackContent = styled.div`
+  flex: 1;
+`;
+
+const ImportFeedbackTitle = styled.div`
+  font-weight: 600;
+  margin-bottom: 4px;
+`;
+
+const ImportFeedbackDetails = styled.div`
+  font-size: 14px;
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -575,12 +618,54 @@ export function PlantDataLibrary() {
             📥 Download CSV Template
           </Button>
           {hasAgronomistPermission && (
-            <Button $variant="primary" onClick={handleCreateNew}>
-              ➕ New Plant
-            </Button>
+            <>
+              <Button $variant="secondary" onClick={handleImportClick} disabled={importing}>
+                {importing ? '⏳ Importing...' : '📤 Import CSV'}
+              </Button>
+              <Button $variant="primary" onClick={handleCreateNew}>
+                ➕ New Plant
+              </Button>
+            </>
           )}
         </HeaderActions>
       </Header>
+
+      {/* Hidden file input for CSV import */}
+      <HiddenFileInput
+        type="file"
+        ref={fileInputRef}
+        accept=".csv"
+        onChange={handleFileChange}
+      />
+
+      {/* Import result feedback */}
+      {importResult && (
+        <ImportFeedback $type="success">
+          <ImportFeedbackIcon>✅</ImportFeedbackIcon>
+          <ImportFeedbackContent>
+            <ImportFeedbackTitle>CSV Import Successful</ImportFeedbackTitle>
+            <ImportFeedbackDetails>
+              {importResult.created} plant(s) created, {importResult.updated} plant(s) updated
+              {importResult.errors && importResult.errors.length > 0 && (
+                <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                  <strong>Warnings:</strong> {importResult.errors.join('; ')}
+                </div>
+              )}
+            </ImportFeedbackDetails>
+          </ImportFeedbackContent>
+        </ImportFeedback>
+      )}
+
+      {/* Import error feedback */}
+      {importError && (
+        <ImportFeedback $type="error">
+          <ImportFeedbackIcon>❌</ImportFeedbackIcon>
+          <ImportFeedbackContent>
+            <ImportFeedbackTitle>CSV Import Failed</ImportFeedbackTitle>
+            <ImportFeedbackDetails>{importError}</ImportFeedbackDetails>
+          </ImportFeedbackContent>
+        </ImportFeedback>
+      )}
 
       <StatsRow>
         <StatCard>
