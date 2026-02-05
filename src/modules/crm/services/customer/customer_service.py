@@ -12,6 +12,7 @@ import logging
 
 from ...models.customer import Customer, CustomerCreate, CustomerUpdate, CustomerStatus
 from .customer_repository import CustomerRepository
+from src.services.database import mongodb
 
 logger = logging.getLogger(__name__)
 
@@ -182,20 +183,57 @@ class CustomerService:
 
     async def delete_customer(self, customer_id: UUID) -> dict:
         """
-        Delete a customer
+        Delete a customer with sales order cascade handling.
+
+        If the customer has active orders (not cancelled or delivered),
+        the deletion is blocked with a clear error message.
+        If all orders are completed/cancelled, associated orders are
+        cascade deleted along with the customer.
 
         Args:
             customer_id: Customer ID
 
         Returns:
-            Success message
+            Success message with cascade details
 
         Raises:
-            HTTPException: If customer not found
+            HTTPException: If customer not found or has active orders
         """
         # Check customer exists
-        await self.get_customer(customer_id)
+        customer = await self.get_customer(customer_id)
 
+        # Check for associated sales orders
+        db = mongodb.get_database()
+
+        # Find all orders for this customer
+        all_orders_count = await db.sales_orders.count_documents(
+            {"customerId": str(customer_id)}
+        )
+
+        if all_orders_count > 0:
+            # Check for active orders (not cancelled or delivered)
+            active_statuses = ["draft", "confirmed", "processing", "assigned", "in_transit", "shipped"]
+            active_orders_count = await db.sales_orders.count_documents({
+                "customerId": str(customer_id),
+                "status": {"$in": active_statuses}
+            })
+
+            if active_orders_count > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Cannot delete customer '{customer.name}': {active_orders_count} active sales order(s) exist. Cancel or complete all orders before deleting this customer."
+                )
+
+            # All orders are completed/cancelled - cascade delete them
+            delete_result = await db.sales_orders.delete_many(
+                {"customerId": str(customer_id)}
+            )
+            orders_deleted = delete_result.deleted_count
+            logger.info(f"Cascade deleted {orders_deleted} sales orders for customer {customer_id}")
+        else:
+            orders_deleted = 0
+
+        # Delete the customer
         success = await self.repository.delete(customer_id)
         if not success:
             raise HTTPException(
@@ -203,5 +241,10 @@ class CustomerService:
                 detail=f"Customer {customer_id} not found"
             )
 
-        logger.info(f"Customer deleted: {customer_id}")
-        return {"message": "Customer deleted successfully"}
+        logger.info(f"Customer deleted: {customer_id} (cascade: {orders_deleted} orders)")
+        return {
+            "message": "Customer deleted successfully",
+            "relatedRecordsDeleted": {
+                "salesOrders": orders_deleted
+            }
+        }
