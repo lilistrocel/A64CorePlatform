@@ -60,13 +60,15 @@ class TaskService:
 
         # Validate assigned user if specified
         if task_data.assignedTo:
-            # Check user has access to this farm
+            # Check user has access to this farm (either via farmer_assignments or as farm manager)
             assignment = await db.farmer_assignments.find_one({
                 "userId": str(task_data.assignedTo),
                 "farmId": str(task_data.farmId),
                 "isActive": True
             })
-            if not assignment:
+            # Also allow if user is the farm manager
+            is_manager = farm.get("managerId") == str(task_data.assignedTo)
+            if not assignment and not is_manager:
                 raise ValueError(f"User {task_data.assignedTo} is not assigned to farm {task_data.farmId}")
 
         # Custom tasks are never auto-generated
@@ -189,7 +191,7 @@ class TaskService:
             # Single farm specified
             farm_ids = [farm_id]
         else:
-            # Get all farms user is assigned to
+            # Get all farms user is assigned to via farmer_assignments
             cursor = db.farmer_assignments.find({
                 "userId": str(user_id),
                 "isActive": True
@@ -197,6 +199,16 @@ class TaskService:
             farm_ids = []
             async for assignment in cursor:
                 farm_ids.append(UUID(assignment["farmId"]))
+
+            # Also include farms where user is the manager
+            manager_cursor = db.farms.find({
+                "managerId": str(user_id),
+                "isActive": True
+            })
+            async for farm in manager_cursor:
+                farm_uuid = UUID(farm["farmId"])
+                if farm_uuid not in farm_ids:
+                    farm_ids.append(farm_uuid)
 
         # Get tasks for each farm
         all_tasks = []
