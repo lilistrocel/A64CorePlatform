@@ -351,10 +351,11 @@ export function CustomerDetailPage() {
     if (window.confirm(`Are you sure you want to delete "${customer?.name}"?`)) {
       try {
         await crmApi.deleteCustomer(customerId);
+        showSuccessToast('Customer deleted successfully');
         navigate('/crm/customers');
       } catch (err: any) {
         console.error('Failed to delete customer:', err);
-        alert(err.response?.data?.message || 'Failed to delete customer');
+        showErrorToast(err.response?.data?.message || 'Failed to delete customer');
       }
     }
   };

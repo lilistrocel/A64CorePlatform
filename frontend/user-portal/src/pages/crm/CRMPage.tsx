@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { CustomerTable } from '../../components/crm/CustomerTable';
 import { CustomerCard } from '../../components/crm/CustomerCard';
 import { crmApi } from '../../services/crmService';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Customer, CustomerType, CustomerStatus } from '../../types/crm';
 
 // Mobile breakpoint for responsive view switching
@@ -423,10 +424,11 @@ export function CRMPage() {
   const handleDeleteCustomer = async (customerId: string) => {
     try {
       await crmApi.deleteCustomer(customerId);
+      showSuccessToast('Customer deleted successfully');
       loadCustomers();
     } catch (err: any) {
       console.error('Failed to delete customer:', err);
-      alert(err.response?.data?.detail || err.response?.data?.message || 'Failed to delete customer');
+      showErrorToast(err.response?.data?.detail || err.response?.data?.message || 'Failed to delete customer');
     }
   };
 

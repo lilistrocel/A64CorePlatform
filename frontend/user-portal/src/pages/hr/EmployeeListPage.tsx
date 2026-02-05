@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { EmployeeTable } from '../../components/hr/EmployeeTable';
 import { EmployeeCard } from '../../components/hr/EmployeeCard';
 import { hrApi } from '../../services/hrService';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Employee, EmployeeStatus } from '../../types/hr';
 
 // Mobile breakpoint for responsive view switching
@@ -418,10 +419,11 @@ export function EmployeeListPage() {
   const handleDeleteEmployee = async (employeeId: string) => {
     try {
       await hrApi.deleteEmployee(employeeId);
+      showSuccessToast('Employee deleted successfully');
       loadEmployees();
     } catch (err: any) {
       console.error('Failed to delete employee:', err);
-      alert(err.response?.data?.message || 'Failed to delete employee');
+      showErrorToast(err.response?.data?.message || 'Failed to delete employee');
     }
   };
 

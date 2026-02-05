@@ -11,6 +11,7 @@ import { FarmCard } from './FarmCard';
 import { CreateFarmModal } from './CreateFarmModal';
 import { FarmAnalyticsModal } from './FarmAnalyticsModal';
 import { farmApi } from '../../services/farmApi';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Farm, FarmSummary } from '../../types/farm';
 
 // ============================================================================
@@ -345,9 +346,10 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const handleDelete = async (farmId: string) => {
     try {
       await farmApi.deleteFarm(farmId);
+      showSuccessToast('Farm deleted successfully');
       loadFarms(); // Reload list
     } catch (err) {
-      alert('Failed to delete farm. Please try again.');
+      showErrorToast('Failed to delete farm. Please try again.');
       console.error('Error deleting farm:', err);
     }
   };
