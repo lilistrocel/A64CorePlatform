@@ -11,6 +11,7 @@ import { VehicleCard } from '../../components/logistics/VehicleCard';
 import { VehicleForm } from '../../components/logistics/VehicleForm';
 import { logisticsApi } from '../../services/logisticsService';
 import type { Vehicle, VehicleType, VehicleStatus, VehicleOwnership, VehicleCreate, VehicleUpdate } from '../../types/logistics';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -321,10 +322,11 @@ export function VehicleManagementPage() {
     try {
       await logisticsApi.createVehicle(data);
       setShowCreateModal(false);
+      showSuccessToast('Vehicle created successfully');
       loadVehicles();
     } catch (err: any) {
       console.error('Failed to create vehicle:', err);
-      alert(err.response?.data?.message || 'Failed to create vehicle');
+      showErrorToast(err.response?.data?.message || 'Failed to create vehicle');
     } finally {
       setIsSubmitting(false);
     }
@@ -336,10 +338,11 @@ export function VehicleManagementPage() {
     try {
       await logisticsApi.updateVehicle(editingVehicle.vehicleId, data);
       setEditingVehicle(null);
+      showSuccessToast('Vehicle updated successfully');
       loadVehicles();
     } catch (err: any) {
       console.error('Failed to update vehicle:', err);
-      alert(err.response?.data?.message || 'Failed to update vehicle');
+      showErrorToast(err.response?.data?.message || 'Failed to update vehicle');
     } finally {
       setIsSubmitting(false);
     }

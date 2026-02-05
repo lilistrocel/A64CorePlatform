@@ -54,6 +54,7 @@ export interface SalesOrder {
 
 export interface SalesOrderCreate {
   customerId: string;
+  customerName: string;
   orderDate: string;
   items: OrderItem[];
   subtotal: number;
@@ -67,6 +68,7 @@ export interface SalesOrderCreate {
 
 export interface SalesOrderUpdate {
   customerId?: string;
+  customerName?: string;
   status?: OrderStatus;
   orderDate?: string;
   items?: OrderItem[];

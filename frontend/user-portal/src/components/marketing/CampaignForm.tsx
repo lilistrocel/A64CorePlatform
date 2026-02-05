@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
 import type { MarketingCampaign, MarketingCampaignCreate, MarketingCampaignUpdate } from '../../types/marketing';
+import { showSuccessToast } from '../../stores/toast.store';
 
 interface CampaignFormProps {
   campaign: MarketingCampaign | null;
@@ -69,8 +70,10 @@ export function CampaignForm({ campaign, onClose }: CampaignFormProps) {
 
       if (campaign) {
         await marketingApi.updateCampaign(campaign.campaignId, data as MarketingCampaignUpdate);
+        showSuccessToast('Campaign updated successfully');
       } else {
         await marketingApi.createCampaign(data as MarketingCampaignCreate);
+        showSuccessToast('Campaign created successfully');
       }
       onClose();
     } catch (err: any) {

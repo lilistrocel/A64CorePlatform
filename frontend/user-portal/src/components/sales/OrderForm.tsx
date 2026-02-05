@@ -16,12 +16,13 @@ import type { SalesOrderCreate, SalesOrderUpdate, SalesOrder } from '../../types
 
 const orderItemSchema = z.object({
   productName: z.string().min(1, 'Product name is required'),
-  quantity: z.string().min(1, 'Quantity is required'),
-  unitPrice: z.string().min(1, 'Unit price is required'),
+  quantity: z.coerce.number({ invalid_type_error: 'Quantity is required' }).gt(0, 'Quantity must be greater than 0'),
+  unitPrice: z.coerce.number({ invalid_type_error: 'Unit price is required' }).min(0, 'Unit price cannot be negative'),
 });
 
 const orderSchema = z.object({
   customerId: z.string().min(1, 'Customer ID is required'),
+  customerName: z.string().min(1, 'Customer name is required'),
   orderDate: z.string().min(1, 'Order date is required'),
   items: z.array(orderItemSchema).min(1, 'At least one item is required'),
   tax: z.string().optional(),
@@ -283,11 +284,12 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
     defaultValues: order
       ? {
           customerId: order.customerId,
+          customerName: order.customerName || '',
           orderDate: order.orderDate.split('T')[0],
           items: order.items.map((item) => ({
             productName: item.productName,
-            quantity: item.quantity.toString(),
-            unitPrice: item.unitPrice.toString(),
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
           })),
           tax: order.tax?.toString() || '',
           discount: order.discount?.toString() || '',
@@ -300,7 +302,7 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
           notes: order.notes || '',
         }
       : {
-          items: [{ productName: '', quantity: '', unitPrice: '' }],
+          items: [{ productName: '', quantity: '' as any, unitPrice: '' as any }],
           paymentStatus: 'pending',
         },
   });
@@ -317,8 +319,10 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
 
   const calculateTotals = () => {
     const subtotal = watchedItems.reduce((sum, item) => {
-      const qty = parseFloat(item.quantity) || 0;
-      const price = parseFloat(item.unitPrice) || 0;
+      const rawQty = typeof item.quantity === 'number' ? item.quantity : parseFloat(String(item.quantity));
+      const rawPrice = typeof item.unitPrice === 'number' ? item.unitPrice : parseFloat(String(item.unitPrice));
+      const qty = isNaN(rawQty) ? 0 : rawQty;
+      const price = isNaN(rawPrice) ? 0 : rawPrice;
       return sum + qty * price;
     }, 0);
 
@@ -334,12 +338,13 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
   const onSubmitForm = async (data: OrderFormData) => {
     const orderData: SalesOrderCreate | SalesOrderUpdate = {
       customerId: data.customerId,
+      customerName: data.customerName,
       orderDate: data.orderDate,
       items: data.items.map((item) => ({
         productName: item.productName,
-        quantity: parseInt(item.quantity),
-        unitPrice: parseFloat(item.unitPrice),
-        totalPrice: parseInt(item.quantity) * parseFloat(item.unitPrice),
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.quantity * item.unitPrice,
       })),
       subtotal,
       tax: data.tax ? parseFloat(data.tax) : undefined,
@@ -372,6 +377,18 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
             {...register('customerId')}
           />
           {errors.customerId && <ErrorText>{errors.customerId.message}</ErrorText>}
+        </FormGroup>
+
+        <FormGroup>
+          <Label>Customer Name *</Label>
+          <Input
+            type="text"
+            placeholder="Enter customer name"
+            $hasError={!!errors.customerName}
+            disabled={isSubmitting}
+            {...register('customerName')}
+          />
+          {errors.customerName && <ErrorText>{errors.customerName.message}</ErrorText>}
         </FormGroup>
 
         <FormGroup>
@@ -425,10 +442,12 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
             <FormGroup>
               <Input
                 type="number"
+                min="1"
+                step="1"
                 placeholder="Quantity"
                 $hasError={!!errors.items?.[index]?.quantity}
                 disabled={isSubmitting}
-                {...register(`items.${index}.quantity`)}
+                {...register(`items.${index}.quantity`, { valueAsNumber: true })}
               />
               {errors.items?.[index]?.quantity && <ErrorText>{errors.items[index]?.quantity?.message}</ErrorText>}
             </FormGroup>
@@ -436,11 +455,12 @@ export function OrderForm({ order, onSubmit, onCancel, isSubmitting = false }: O
             <FormGroup>
               <Input
                 type="number"
+                min="0"
                 step="0.01"
                 placeholder="Unit Price"
                 $hasError={!!errors.items?.[index]?.unitPrice}
                 disabled={isSubmitting}
-                {...register(`items.${index}.unitPrice`)}
+                {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
               />
               {errors.items?.[index]?.unitPrice && <ErrorText>{errors.items[index]?.unitPrice?.message}</ErrorText>}
             </FormGroup>

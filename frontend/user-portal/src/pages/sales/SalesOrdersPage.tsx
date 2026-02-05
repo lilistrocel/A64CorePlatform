@@ -10,6 +10,7 @@ import { salesApi } from '../../services/salesService';
 import type { SalesOrder, OrderStatus, PaymentStatus } from '../../types/sales';
 import { OrderTable } from '../../components/sales/OrderTable';
 import { OrderForm } from '../../components/sales/OrderForm';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -302,8 +303,10 @@ export function SalesOrdersPage() {
     try {
       if (selectedOrder) {
         await salesApi.updateSalesOrder(selectedOrder.orderId, data);
+        showSuccessToast('Sales order updated successfully');
       } else {
         await salesApi.createSalesOrder(data);
+        showSuccessToast('Sales order created successfully');
       }
       setShowModal(false);
       loadOrders();
