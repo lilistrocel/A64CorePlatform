@@ -118,7 +118,7 @@ class PlantDataRepository:
         """
         db = farm_db.get_database()
 
-        # Build query
+        # Build query - by default exclude soft-deleted records
         query = {}
         if search:
             query["$or"] = [
@@ -127,6 +127,9 @@ class PlantDataRepository:
             ]
         if is_active is not None:
             query["isActive"] = is_active
+        else:
+            # Default: exclude soft-deleted plants (isActive=False)
+            query["isActive"] = {"$ne": False}
 
         # Get total count
         total = await db.plant_data.count_documents(query)
