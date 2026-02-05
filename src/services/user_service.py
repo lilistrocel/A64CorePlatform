@@ -97,6 +97,7 @@ class UserService:
         skip: int = 0,
         limit: int = 20,
         role: Optional[UserRole] = None,
+        is_active: Optional[bool] = None,
         search: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -106,6 +107,7 @@ class UserService:
             skip: Number of users to skip (offset)
             limit: Maximum number of users to return (max 100)
             role: Optional role filter
+            is_active: Optional active status filter (True/False)
             search: Optional search term for email, firstName, or lastName
 
         Returns:
@@ -122,6 +124,10 @@ class UserService:
 
         if role:
             query["role"] = role.value
+
+        # Add isActive filter
+        if is_active is not None:
+            query["isActive"] = is_active
 
         # Add search filter (partial match on email, firstName, lastName)
         if search and search.strip():

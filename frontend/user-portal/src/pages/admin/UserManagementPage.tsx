@@ -90,7 +90,7 @@ export function UserManagementPage() {
 
   const handleActivate = async (userId: string) => {
     try {
-      await apiClient.put(`/v1/users/${userId}/activate`);
+      await apiClient.post(`/v1/users/${userId}/activate`);
       addToast('success', 'User activated successfully');
       fetchUsers();
     } catch (err: any) {
@@ -101,7 +101,7 @@ export function UserManagementPage() {
 
   const handleDeactivate = async (userId: string) => {
     try {
-      await apiClient.put(`/v1/users/${userId}/deactivate`);
+      await apiClient.post(`/v1/users/${userId}/deactivate`);
       addToast('success', 'User deactivated successfully');
       fetchUsers();
     } catch (err: any) {

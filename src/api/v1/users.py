@@ -25,6 +25,7 @@ async def list_users(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, alias="perPage", description="Items per page (max 100)"),
     role: Optional[UserRole] = Query(None, description="Filter by role"),
+    is_active: Optional[bool] = Query(None, alias="isActive", description="Filter by active status"),
     search: Optional[str] = Query(None, max_length=500, description="Search by email, first name, or last name"),
     current_user: UserResponse = Depends(require_admin)
 ) -> Dict[str, Any]:
@@ -37,6 +38,7 @@ async def list_users(
     - page: Page number (default: 1)
     - perPage: Items per page (default: 20, max: 100)
     - role: Optional role filter (super_admin, admin, moderator, user, guest)
+    - isActive: Optional active status filter (true/false)
     - search: Optional search by email, first name, or last name (partial match)
 
     **Returns:**
@@ -69,6 +71,7 @@ async def list_users(
         skip=skip,
         limit=per_page,
         role=role,
+        is_active=is_active,
         search=search
     )
 
