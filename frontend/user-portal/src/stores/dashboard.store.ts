@@ -377,3 +377,19 @@ export const useDashboardStore = create<DashboardState>()(
     }
   )
 );
+
+// Helper to wait for Zustand persist hydration before using persisted state
+export const waitForHydration = (): Promise<void> => {
+  return new Promise((resolve) => {
+    // If already hydrated, resolve immediately
+    if (useDashboardStore.persist.hasHydrated()) {
+      resolve();
+      return;
+    }
+    // Otherwise wait for hydration to finish
+    const unsub = useDashboardStore.persist.onFinishHydration(() => {
+      unsub();
+      resolve();
+    });
+  });
+};
