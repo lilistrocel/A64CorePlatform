@@ -244,6 +244,12 @@ export interface PerformanceReviewUpdate {
   notes?: string;
 }
 
+// Department distribution item
+export interface DepartmentDistribution {
+  department: string;
+  count: number;
+}
+
 // Dashboard
 export interface HRDashboardStats {
   totalEmployees: number;
@@ -253,4 +259,5 @@ export interface HRDashboardStats {
   recentHires: Employee[];
   upcomingVisaExpirations: Visa[];
   averagePerformanceRating: number;
+  departmentDistribution?: DepartmentDistribution[];
 }

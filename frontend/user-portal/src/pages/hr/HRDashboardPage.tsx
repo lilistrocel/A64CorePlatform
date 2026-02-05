@@ -191,6 +191,35 @@ const EmptyText = styled.div`
   color: #9e9e9e;
 `;
 
+const DepartmentItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-bottom: 8px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const DepartmentName = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: #212121;
+`;
+
+const DepartmentCount = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #3B82F6;
+  background: #EBF5FF;
+  padding: 4px 12px;
+  border-radius: 16px;
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -313,6 +342,22 @@ export function HRDashboardPage() {
             ))
           ) : (
             <EmptyText>No upcoming visa expirations</EmptyText>
+          )}
+        </Widget>
+      </WidgetsRow>
+
+      <WidgetsRow>
+        <Widget>
+          <WidgetTitle>Department Distribution</WidgetTitle>
+          {stats.departmentDistribution && stats.departmentDistribution.length > 0 ? (
+            stats.departmentDistribution.map((dept) => (
+              <DepartmentItem key={dept.department}>
+                <DepartmentName>{dept.department}</DepartmentName>
+                <DepartmentCount>{dept.count}</DepartmentCount>
+              </DepartmentItem>
+            ))
+          ) : (
+            <EmptyText>No department data available</EmptyText>
           )}
         </Widget>
       </WidgetsRow>
