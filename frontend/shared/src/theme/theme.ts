@@ -37,11 +37,11 @@ export const theme = {
       900: '#212121',
     },
 
-    // Semantic colors
-    success: '#4caf50',
-    warning: '#ff9800',
-    error: '#f44336',
-    info: '#2196f3',
+    // Semantic colors (matching app_spec.txt color palette)
+    success: '#10B981',   // Green - Tailwind emerald-500
+    warning: '#F59E0B',   // Amber - Tailwind amber-500
+    error: '#EF4444',     // Red - Tailwind red-500
+    info: '#3B82F6',      // Blue - Tailwind blue-500
 
     // Background & surface
     background: '#ffffff',
