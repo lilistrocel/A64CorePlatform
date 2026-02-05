@@ -58,7 +58,7 @@ class LogisticsDatabaseManager:
             # Vehicles collection
             await db.vehicles.create_index("vehicleId", unique=True)
             await db.vehicles.create_index("vehicleCode", unique=True)
-            await db.vehicles.create_index("licensePlate", unique=True)
+            await db.vehicles.create_index("licensePlate", unique=True, sparse=True)
             await db.vehicles.create_index("type")
             await db.vehicles.create_index("status")
             await db.vehicles.create_index("ownership")
