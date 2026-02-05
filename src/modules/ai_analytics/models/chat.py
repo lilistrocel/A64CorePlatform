@@ -4,7 +4,7 @@ AI Analytics Chat Models
 Pydantic models for API request/response validation.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -191,7 +191,7 @@ class CollectionFieldInfo(BaseModel):
 class CollectionIndexInfo(BaseModel):
     """Information about a collection index"""
     name: str = Field(..., description="Index name")
-    keys: Dict[str, int] = Field(..., description="Index keys and direction")
+    keys: Dict[str, Union[int, str]] = Field(..., description="Index keys and direction (int for normal, str for text indexes)")
     unique: bool = Field(default=False, description="Whether index is unique")
     sparse: bool = Field(default=False, description="Whether index is sparse")
 
