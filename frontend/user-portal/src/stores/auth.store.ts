@@ -135,4 +135,51 @@ export const useAuthStore = create<AuthState>()(
 // Initialize auth on app start
 if (typeof window !== 'undefined') {
   useAuthStore.getState().initializeAuth();
+
+  // Cross-tab session synchronization
+  // Listen for localStorage changes from other tabs to detect logout/login
+  window.addEventListener('storage', (event) => {
+    // Detect token removal (logout in another tab)
+    if (event.key === 'accessToken' && event.newValue === null) {
+      // Another tab logged out - clear auth state in this tab too
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
+    }
+
+    // Detect token added (login in another tab)
+    if (event.key === 'accessToken' && event.newValue && !event.oldValue) {
+      // Another tab logged in - update auth state
+      useAuthStore.setState({ isAuthenticated: true });
+      useAuthStore.getState().loadUser();
+    }
+
+    // Detect Zustand auth-storage changes (covers persist middleware updates)
+    if (event.key === 'auth-storage' && event.newValue) {
+      try {
+        const parsed = JSON.parse(event.newValue);
+        const state = parsed.state || parsed;
+        if (state.isAuthenticated === false) {
+          // Another tab logged out via Zustand persist
+          useAuthStore.setState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null,
+          });
+        } else if (state.isAuthenticated === true && state.user) {
+          // Another tab logged in - sync user data
+          useAuthStore.setState({
+            user: state.user,
+            isAuthenticated: true,
+          });
+        }
+      } catch {
+        // Ignore JSON parse errors
+      }
+    }
+  });
 }
