@@ -44,12 +44,13 @@ const StyledButton = styled.button<StyledButtonProps>`
   /* Variant styles */
   ${({ theme, $variant }) => {
     if ($variant === 'primary') {
+      // WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white text
       return `
-        background: ${theme.colors.primary[500]};
+        background: ${theme.colors.primary[700]};
         color: white;
 
         &:hover:not(:disabled) {
-          background: ${theme.colors.primary[700]};
+          background: ${theme.colors.primary[800]};
         }
       `;
     }
@@ -64,10 +65,11 @@ const StyledButton = styled.button<StyledButtonProps>`
       `;
     }
     if ($variant === 'outline') {
+      // WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background
       return `
         background: transparent;
-        color: ${theme.colors.primary[500]};
-        border: 1px solid ${theme.colors.primary[500]};
+        color: ${theme.colors.primary[700]};
+        border: 1px solid ${theme.colors.primary[700]};
 
         &:hover:not(:disabled) {
           background: ${theme.colors.primary[50]};
@@ -104,7 +106,7 @@ const StyledButton = styled.button<StyledButtonProps>`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.primary[700]};
     outline-offset: 2px;
   }
 `;

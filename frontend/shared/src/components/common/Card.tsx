@@ -34,6 +34,12 @@ const StyledCard = styled.div`
   height: 100%;
   display: flex;
   flex-direction: column;
+  transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+
+  &:hover {
+    box-shadow: ${({ theme }) => theme.shadows.lg};
+    transform: translateY(-2px);
+  }
 `;
 
 const CardHeader = styled.div`

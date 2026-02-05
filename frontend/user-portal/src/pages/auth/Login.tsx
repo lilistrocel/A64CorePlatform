@@ -213,7 +213,8 @@ const LoginForm = styled.form`
 `;
 
 const ForgotPasswordLink = styled(Link)`
-  color: ${({ theme }) => theme.colors.primary[500]};
+  /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
+  color: ${({ theme }) => theme.colors.primary[700]};
   font-size: 0.875rem;
   text-decoration: none;
   align-self: flex-end;
@@ -233,7 +234,8 @@ const RegisterPrompt = styled.p`
 `;
 
 const RegisterLink = styled(Link)`
-  color: ${({ theme }) => theme.colors.primary[500]};
+  /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
+  color: ${({ theme }) => theme.colors.primary[700]};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   text-decoration: none;
 
