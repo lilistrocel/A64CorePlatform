@@ -7,7 +7,7 @@ Handles all database interactions for campaigns.
 
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, date
 import logging
 
 from ...models.campaign import Campaign, CampaignCreate, CampaignUpdate, CampaignStatus
@@ -83,6 +83,11 @@ class CampaignRepository:
 
         # Convert channelIds to strings
         campaign_doc["channelIds"] = [str(cid) for cid in campaign_doc["channelIds"]]
+
+        # Convert date objects to datetime for MongoDB BSON encoding
+        for date_field in ["startDate", "endDate"]:
+            if date_field in campaign_doc and isinstance(campaign_doc[date_field], date):
+                campaign_doc[date_field] = datetime.combine(campaign_doc[date_field], datetime.min.time())
 
         await collection.insert_one(campaign_doc)
 
@@ -170,6 +175,11 @@ class CampaignRepository:
 
         if "channelIds" in update_dict:
             update_dict["channelIds"] = [str(cid) for cid in update_dict["channelIds"]]
+
+        # Convert date objects to datetime for MongoDB BSON encoding
+        for date_field in ["startDate", "endDate"]:
+            if date_field in update_dict and isinstance(update_dict[date_field], date):
+                update_dict[date_field] = datetime.combine(update_dict[date_field], datetime.min.time())
 
         update_dict["updatedAt"] = datetime.utcnow()
 
