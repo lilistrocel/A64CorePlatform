@@ -4,8 +4,10 @@ Dashboard API Endpoints
 API routes for CCM Dashboard widget data management.
 """
 
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
 
 from ...models.dashboard import (
     BulkWidgetDataRequest,
@@ -15,8 +17,210 @@ from ...models.dashboard import (
 from ...models.user import UserResponse
 from ...middleware.auth import get_current_active_user
 from ...services.dashboard_service import DashboardService
+from ...services.database import mongodb
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+
+# ============================================================================
+# Dashboard Summary Models
+# ============================================================================
+
+
+class ModuleSummary(BaseModel):
+    """Summary stats for a single module."""
+    total: int = Field(..., description="Total count")
+    active: Optional[int] = Field(None, description="Active count (if applicable)")
+    details: Optional[Dict[str, Any]] = Field(None, description="Additional module-specific details")
+
+
+class DashboardSummaryResponse(BaseModel):
+    """Aggregated dashboard summary response."""
+    farms: ModuleSummary = Field(..., description="Farm statistics")
+    blocks: ModuleSummary = Field(..., description="Block statistics")
+    employees: ModuleSummary = Field(..., description="Employee statistics")
+    customers: ModuleSummary = Field(..., description="Customer statistics")
+    orders: ModuleSummary = Field(..., description="Sales order statistics")
+    vehicles: ModuleSummary = Field(..., description="Vehicle statistics")
+    shipments: ModuleSummary = Field(..., description="Shipment statistics")
+    campaigns: ModuleSummary = Field(..., description="Marketing campaign statistics")
+    users: ModuleSummary = Field(..., description="System user statistics")
+    lastUpdated: datetime = Field(default_factory=datetime.utcnow, description="Timestamp of summary generation")
+
+
+# ============================================================================
+# Dashboard Summary Endpoint
+# ============================================================================
+
+
+@router.get(
+    "/summary",
+    response_model=DashboardSummaryResponse,
+    summary="Get aggregated dashboard summary",
+    description="Get a single aggregated response with counts from all modules (farms, employees, orders, etc.)",
+)
+async def get_dashboard_summary(
+    current_user: UserResponse = Depends(get_current_active_user),
+) -> DashboardSummaryResponse:
+    """
+    Get aggregated dashboard summary with counts from all modules.
+
+    **Authentication:** Required (JWT token)
+
+    **Permission:** Authenticated users only
+
+    **Returns:**
+        Aggregated counts from all modules in a single response:
+        - farms: Total farms and active farms
+        - blocks: Total blocks with status breakdown
+        - employees: Total employees and active employees
+        - customers: Total customers and active customers
+        - orders: Total orders with status breakdown
+        - vehicles: Total vehicles with status breakdown
+        - shipments: Total shipments with status breakdown
+        - campaigns: Total campaigns and active campaigns
+        - users: Total users and active users
+
+    **Example Response:**
+    ```json
+    {
+      "farms": {"total": 42, "active": 40, "details": null},
+      "blocks": {"total": 150, "active": 120, "details": {"growing": 80, "harvesting": 20}},
+      "employees": {"total": 156, "active": 150, "details": null},
+      "customers": {"total": 200, "active": 180, "details": null},
+      "orders": {"total": 3304, "active": null, "details": {"delivered": 2, "processing": 5}},
+      "vehicles": {"total": 11, "active": 11, "details": {"available": 10, "in_use": 1}},
+      "shipments": {"total": 2, "active": null, "details": {"delivered": 2}},
+      "campaigns": {"total": 5, "active": 3, "details": null},
+      "users": {"total": 37, "active": 35, "details": null},
+      "lastUpdated": "2026-02-05T23:30:00.000000"
+    }
+    ```
+    """
+    db = mongodb.get_database()
+
+    # Fetch all counts concurrently using aggregation pipelines
+    import asyncio
+
+    # Farm counts
+    async def get_farm_stats():
+        total = await db.farms.count_documents({})
+        active = await db.farms.count_documents({"isActive": True})
+        return ModuleSummary(total=total, active=active)
+
+    # Block counts with status breakdown
+    async def get_block_stats():
+        total = await db.blocks.count_documents({})
+        active = await db.blocks.count_documents({"isActive": True})
+        # Get status breakdown
+        pipeline = [
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+        ]
+        status_breakdown = {}
+        async for doc in db.blocks.aggregate(pipeline):
+            if doc["_id"]:
+                status_breakdown[doc["_id"]] = doc["count"]
+        return ModuleSummary(total=total, active=active, details=status_breakdown if status_breakdown else None)
+
+    # Employee counts
+    async def get_employee_stats():
+        total = await db.employees.count_documents({})
+        active = await db.employees.count_documents({"status": "active"})
+        return ModuleSummary(total=total, active=active)
+
+    # Customer counts
+    async def get_customer_stats():
+        total = await db.customers.count_documents({})
+        active = await db.customers.count_documents({"status": "active"})
+        return ModuleSummary(total=total, active=active)
+
+    # Sales order counts with status breakdown
+    async def get_order_stats():
+        total = await db.sales_orders.count_documents({})
+        # Get status breakdown
+        pipeline = [
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+        ]
+        status_breakdown = {}
+        async for doc in db.sales_orders.aggregate(pipeline):
+            if doc["_id"]:
+                status_breakdown[doc["_id"]] = doc["count"]
+        return ModuleSummary(total=total, details=status_breakdown if status_breakdown else None)
+
+    # Vehicle counts with status breakdown
+    async def get_vehicle_stats():
+        total = await db.vehicles.count_documents({})
+        # Get status breakdown
+        pipeline = [
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+        ]
+        status_breakdown = {}
+        async for doc in db.vehicles.aggregate(pipeline):
+            if doc["_id"]:
+                status_breakdown[doc["_id"]] = doc["count"]
+        available = status_breakdown.get("available", 0)
+        return ModuleSummary(total=total, active=available, details=status_breakdown if status_breakdown else None)
+
+    # Shipment counts with status breakdown
+    async def get_shipment_stats():
+        total = await db.shipments.count_documents({})
+        # Get status breakdown
+        pipeline = [
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+        ]
+        status_breakdown = {}
+        async for doc in db.shipments.aggregate(pipeline):
+            if doc["_id"]:
+                status_breakdown[doc["_id"]] = doc["count"]
+        return ModuleSummary(total=total, details=status_breakdown if status_breakdown else None)
+
+    # Campaign counts
+    async def get_campaign_stats():
+        total = await db.campaigns.count_documents({})
+        active = await db.campaigns.count_documents({"status": "active"})
+        return ModuleSummary(total=total, active=active)
+
+    # User counts
+    async def get_user_stats():
+        total = await db.users.count_documents({})
+        active = await db.users.count_documents({"isActive": True})
+        return ModuleSummary(total=total, active=active)
+
+    # Execute all queries concurrently
+    (
+        farms,
+        blocks,
+        employees,
+        customers,
+        orders,
+        vehicles,
+        shipments,
+        campaigns,
+        users,
+    ) = await asyncio.gather(
+        get_farm_stats(),
+        get_block_stats(),
+        get_employee_stats(),
+        get_customer_stats(),
+        get_order_stats(),
+        get_vehicle_stats(),
+        get_shipment_stats(),
+        get_campaign_stats(),
+        get_user_stats(),
+    )
+
+    return DashboardSummaryResponse(
+        farms=farms,
+        blocks=blocks,
+        employees=employees,
+        customers=customers,
+        orders=orders,
+        vehicles=vehicles,
+        shipments=shipments,
+        campaigns=campaigns,
+        users=users,
+        lastUpdated=datetime.utcnow(),
+    )
 
 
 @router.get(

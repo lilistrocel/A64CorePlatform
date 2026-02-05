@@ -149,7 +149,10 @@ class CustomerService:
         update_data: CustomerUpdate
     ) -> Customer:
         """
-        Update a customer
+        Update a customer with cascading updates to related entities.
+
+        When customer name is updated, all related sales orders are updated
+        to reflect the new customerName (denormalized field).
 
         Args:
             customer_id: Customer ID
@@ -161,8 +164,8 @@ class CustomerService:
         Raises:
             HTTPException: If customer not found or validation fails
         """
-        # Check customer exists
-        await self.get_customer(customer_id)
+        # Check customer exists and get current data
+        current_customer = await self.get_customer(customer_id)
 
         # Validate update data
         if update_data.name is not None and not update_data.name.strip():
@@ -171,6 +174,12 @@ class CustomerService:
                 detail="Customer name cannot be empty"
             )
 
+        # Check if name is being updated (for cascading)
+        name_changed = (
+            update_data.name is not None and
+            update_data.name.strip() != current_customer.name
+        )
+
         updated_customer = await self.repository.update(customer_id, update_data)
         if not updated_customer:
             raise HTTPException(
@@ -178,8 +187,45 @@ class CustomerService:
                 detail=f"Customer {customer_id} not found"
             )
 
+        # Cascade name update to related sales orders
+        if name_changed:
+            await self._cascade_customer_name_update(customer_id, updated_customer.name)
+
         logger.info(f"Customer updated: {customer_id}")
         return updated_customer
+
+    async def _cascade_customer_name_update(
+        self,
+        customer_id: UUID,
+        new_name: str
+    ) -> int:
+        """
+        Cascade customer name update to all related sales orders.
+
+        Updates the denormalized customerName field in all orders
+        belonging to this customer.
+
+        Args:
+            customer_id: Customer ID
+            new_name: New customer name
+
+        Returns:
+            Number of orders updated
+        """
+        db = mongodb.get_database()
+
+        result = await db.sales_orders.update_many(
+            {"customerId": str(customer_id)},
+            {"$set": {"customerName": new_name}}
+        )
+
+        if result.modified_count > 0:
+            logger.info(
+                f"Cascaded customer name update to {result.modified_count} "
+                f"sales orders for customer {customer_id}"
+            )
+
+        return result.modified_count
 
     async def delete_customer(self, customer_id: UUID) -> dict:
         """
