@@ -48,6 +48,9 @@ export interface User {
   lastName: string;
   role: string;
   permissions: string[];
+  timezone?: string;
+  locale?: string;
+  phone?: string;
 }
 
 class AuthService {
@@ -146,7 +149,7 @@ class AuthService {
   /**
    * Update current user's profile
    */
-  async updateProfile(data: Partial<Pick<User, 'firstName' | 'lastName'>> & { phone?: string }): Promise<User> {
+  async updateProfile(data: Partial<Pick<User, 'firstName' | 'lastName' | 'timezone' | 'locale' | 'phone'>>): Promise<User> {
     const response = await apiClient.patch<User>('/v1/auth/me', data);
     return response.data;
   }

@@ -4,19 +4,101 @@ import { Card } from '@a64core/shared';
 import { getSpacingCategories, updateSpacingStandards, resetSpacingStandards } from '../../services/farmApi';
 import type { SpacingCategoryInfo, SpacingCategory } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
+import { useAuthStore } from '../../stores/auth.store';
+import { authService } from '../../services/auth.service';
+import { useToastStore } from '../../stores/toast.store';
+
+// Common timezone options (IANA timezone names)
+const TIMEZONE_OPTIONS = [
+  { value: 'Asia/Dubai', label: 'Asia/Dubai (UTC+04:00)' },
+  { value: 'Asia/Abu_Dhabi', label: 'Asia/Abu Dhabi (UTC+04:00)' },
+  { value: 'Asia/Riyadh', label: 'Asia/Riyadh (UTC+03:00)' },
+  { value: 'Asia/Kolkata', label: 'Asia/Kolkata (UTC+05:30)' },
+  { value: 'Asia/Shanghai', label: 'Asia/Shanghai (UTC+08:00)' },
+  { value: 'Asia/Tokyo', label: 'Asia/Tokyo (UTC+09:00)' },
+  { value: 'Europe/London', label: 'Europe/London (UTC+00:00)' },
+  { value: 'Europe/Paris', label: 'Europe/Paris (UTC+01:00)' },
+  { value: 'Europe/Berlin', label: 'Europe/Berlin (UTC+01:00)' },
+  { value: 'America/New_York', label: 'America/New York (UTC-05:00)' },
+  { value: 'America/Chicago', label: 'America/Chicago (UTC-06:00)' },
+  { value: 'America/Los_Angeles', label: 'America/Los Angeles (UTC-08:00)' },
+  { value: 'Pacific/Auckland', label: 'Pacific/Auckland (UTC+12:00)' },
+  { value: 'Australia/Sydney', label: 'Australia/Sydney (UTC+10:00)' },
+  { value: 'UTC', label: 'UTC (UTC+00:00)' },
+];
+
+// Common locale options
+const LOCALE_OPTIONS = [
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'en-GB', label: 'English (UK)' },
+  { value: 'en-AE', label: 'English (UAE)' },
+  { value: 'ar-AE', label: 'Arabic (UAE)' },
+  { value: 'ar-SA', label: 'Arabic (Saudi Arabia)' },
+  { value: 'hi-IN', label: 'Hindi (India)' },
+  { value: 'fr-FR', label: 'French (France)' },
+  { value: 'de-DE', label: 'German (Germany)' },
+  { value: 'zh-CN', label: 'Chinese (Simplified)' },
+  { value: 'ja-JP', label: 'Japanese (Japan)' },
+];
 
 export function Settings() {
+  const { user, loadUser } = useAuthStore();
+  const { addToast } = useToastStore();
+
   const [spacingCategories, setSpacingCategories] = useState<SpacingCategoryInfo[]>([]);
   const [loadingSpacing, setLoadingSpacing] = useState(false);
   const [spacingError, setSpacingError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [updatedBy, setUpdatedBy] = useState<string | null>(null);
 
-  // Edit mode state
+  // Edit mode state for spacing
   const [isEditing, setIsEditing] = useState(false);
   const [editedDensities, setEditedDensities] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // User preferences state
+  const [selectedTimezone, setSelectedTimezone] = useState<string>('');
+  const [selectedLocale, setSelectedLocale] = useState<string>('');
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [prefsChanged, setPrefsChanged] = useState(false);
+
+  // Initialize preferences from user data
+  useEffect(() => {
+    if (user) {
+      const tz = (user as any).timezone || 'Asia/Dubai';
+      const loc = (user as any).locale || 'en-US';
+      setSelectedTimezone(tz);
+      setSelectedLocale(loc);
+    }
+  }, [user]);
+
+  // Track changes
+  useEffect(() => {
+    if (user) {
+      const origTz = (user as any).timezone || 'Asia/Dubai';
+      const origLoc = (user as any).locale || 'en-US';
+      setPrefsChanged(selectedTimezone !== origTz || selectedLocale !== origLoc);
+    }
+  }, [selectedTimezone, selectedLocale, user]);
+
+  const handleSavePreferences = async () => {
+    setSavingPrefs(true);
+    try {
+      await authService.updateProfile({
+        timezone: selectedTimezone,
+        locale: selectedLocale,
+      });
+      await loadUser();
+      addToast('success', 'Preferences updated successfully');
+      setPrefsChanged(false);
+    } catch (error: any) {
+      const msg = error.response?.data?.detail || 'Failed to update preferences';
+      addToast('error', msg);
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
 
   useEffect(() => {
     loadSpacingCategories();
@@ -247,16 +329,55 @@ export function Settings() {
           </SettingItem>
 
           <SettingItem>
-            <SettingLabel>Language</SettingLabel>
-            <SettingValue>English (US)</SettingValue>
-            <SettingDescription>Select your language preference</SettingDescription>
+            <SettingLabel htmlFor="locale-select">Language / Locale</SettingLabel>
+            <PreferenceSelect
+              id="locale-select"
+              value={selectedLocale}
+              onChange={(e) => setSelectedLocale(e.target.value)}
+              disabled={savingPrefs}
+              aria-label="Locale preference"
+            >
+              {LOCALE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </PreferenceSelect>
+            <SettingDescription>Select your language and regional format preference</SettingDescription>
           </SettingItem>
 
           <SettingItem>
-            <SettingLabel>Timezone</SettingLabel>
-            <SettingValue>UTC+00:00</SettingValue>
-            <SettingDescription>Set your local timezone</SettingDescription>
+            <SettingLabel htmlFor="timezone-select">Timezone</SettingLabel>
+            <PreferenceSelect
+              id="timezone-select"
+              value={selectedTimezone}
+              onChange={(e) => setSelectedTimezone(e.target.value)}
+              disabled={savingPrefs}
+              aria-label="Timezone preference"
+            >
+              {TIMEZONE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </PreferenceSelect>
+            <SettingDescription>Set your local timezone for date and time display</SettingDescription>
           </SettingItem>
+
+          {prefsChanged && (
+            <PrefsButtonRow>
+              <PrimaryButton onClick={handleSavePreferences} disabled={savingPrefs}>
+                {savingPrefs ? 'Saving...' : 'Save Preferences'}
+              </PrimaryButton>
+              <SecondaryButton
+                onClick={() => {
+                  const origTz = (user as any)?.timezone || 'Asia/Dubai';
+                  const origLoc = (user as any)?.locale || 'en-US';
+                  setSelectedTimezone(origTz);
+                  setSelectedLocale(origLoc);
+                }}
+                disabled={savingPrefs}
+              >
+                Cancel
+              </SecondaryButton>
+            </PrefsButtonRow>
+          )}
         </SettingsContent>
       </Card>
 
@@ -590,4 +711,34 @@ const DangerButton = styled(BaseButton)`
     background: ${({ theme }: any) => theme.colors.error[50]};
     border-color: ${({ theme }: any) => theme.colors.error[500]};
   }
+`;
+
+const PreferenceSelect = styled.select`
+  padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border-radius: 6px;
+  color: ${({ theme }: any) => theme.colors.primary[600]};
+  background: ${({ theme }: any) => theme.colors.white};
+  cursor: pointer;
+  width: 100%;
+  max-width: 350px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }: any) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+  }
+
+  &:disabled {
+    background: ${({ theme }: any) => theme.colors.neutral[100]};
+    cursor: not-allowed;
+  }
+`;
+
+const PrefsButtonRow = styled.div`
+  display: flex;
+  gap: ${({ theme }: any) => theme.spacing.md};
+  margin-top: ${({ theme }: any) => theme.spacing.md};
 `;
