@@ -247,14 +247,14 @@ async def list_installed_modules(
 )
 async def get_module_status(
     module_name: str,
-    current_user: UserInDB = Depends(get_current_user)
+    current_user: UserInDB = Depends(require_super_admin)
 ) -> ModuleStatusResponse:
     """
     Get detailed status for a specific module.
 
     Args:
         module_name: Module name
-        current_user: Current authenticated user
+        current_user: Current authenticated user (must be super_admin)
 
     Returns:
         ModuleStatusResponse with detailed status
@@ -264,8 +264,6 @@ async def get_module_status(
         HTTPException 404: If module not found
         HTTPException 500: If query fails
     """
-    # Check super_admin role
-    require_role([UserRole.SUPER_ADMIN], current_user)
 
     try:
         logger.info(f"Module status request: {module_name} by {current_user.email}")
@@ -320,14 +318,14 @@ async def get_module_status(
 )
 async def uninstall_module(
     module_name: str,
-    current_user: UserInDB = Depends(get_current_user)
+    current_user: UserInDB = Depends(require_super_admin)
 ) -> ModuleUninstallResponse:
     """
     Uninstall a module.
 
     Args:
         module_name: Module name to uninstall
-        current_user: Current authenticated user
+        current_user: Current authenticated user (must be super_admin)
 
     Returns:
         ModuleUninstallResponse with uninstallation result
@@ -337,8 +335,6 @@ async def uninstall_module(
         HTTPException 404: If module not found
         HTTPException 500: If uninstallation fails
     """
-    # Check super_admin role
-    require_role([UserRole.SUPER_ADMIN], current_user)
 
     try:
         logger.info(f"Module uninstallation request: {module_name} by {current_user.email}")
@@ -424,7 +420,7 @@ async def get_audit_log(
     operation: Optional[str] = Query(None, description="Filter by operation (install, uninstall, etc.)"),
     status: Optional[str] = Query(None, description="Filter by status (success, failure)"),
     user_id: Optional[str] = Query(None, description="Filter by user ID"),
-    current_user: UserInDB = Depends(get_current_user)
+    current_user: UserInDB = Depends(require_super_admin)
 ) -> dict:
     """
     Get module audit log with pagination and filters.
@@ -436,7 +432,7 @@ async def get_audit_log(
         operation: Filter by operation type
         status: Filter by status
         user_id: Filter by user ID
-        current_user: Current authenticated user
+        current_user: Current authenticated user (must be super_admin)
 
     Returns:
         Dictionary with paginated audit log
@@ -445,8 +441,6 @@ async def get_audit_log(
         HTTPException 403: If user is not super_admin
         HTTPException 500: If query fails
     """
-    # Check super_admin role
-    require_role([UserRole.SUPER_ADMIN], current_user)
 
     try:
         logger.info(f"Audit log request by {current_user.email}")
