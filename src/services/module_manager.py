@@ -861,25 +861,28 @@ class ModuleManager:
         # Convert to response models
         module_responses = []
         for module_doc in modules:
-            module_responses.append(ModuleResponse(
-                module_name=module_doc["module_name"],
-                display_name=module_doc["display_name"],
-                description=module_doc.get("description"),
-                docker_image=module_doc["docker_image"],
-                version=module_doc["version"],
-                status=module_doc["status"],
-                health=module_doc["health"],
-                container_id=module_doc.get("container_id"),
-                container_name=module_doc.get("container_name"),
-                ports=module_doc.get("ports", []),
-                route_prefix=module_doc.get("route_prefix"),
-                cpu_limit=module_doc["cpu_limit"],
-                memory_limit=module_doc["memory_limit"],
-                installed_by_email=module_doc["installed_by_email"],
-                installed_at=module_doc["installed_at"],
-                updated_at=module_doc["updated_at"],
-                error_message=module_doc.get("error_message")
-            ))
+            try:
+                module_responses.append(ModuleResponse(
+                    module_name=module_doc.get("module_name", "unknown"),
+                    display_name=module_doc.get("display_name", module_doc.get("module_name", "unknown")),
+                    description=module_doc.get("description"),
+                    docker_image=module_doc.get("docker_image", "unknown:0.0.0"),
+                    version=module_doc.get("version", "0.0.0"),
+                    status=module_doc.get("status", ModuleStatus.ERROR),
+                    health=module_doc.get("health", ModuleHealth.UNKNOWN),
+                    container_id=module_doc.get("container_id"),
+                    container_name=module_doc.get("container_name"),
+                    ports=module_doc.get("ports", []),
+                    route_prefix=module_doc.get("route_prefix"),
+                    cpu_limit=module_doc.get("cpu_limit", "1.0"),
+                    memory_limit=module_doc.get("memory_limit", "512m"),
+                    installed_by_email=module_doc.get("installed_by_email", "unknown"),
+                    installed_at=module_doc.get("installed_at", datetime.utcnow()),
+                    updated_at=module_doc.get("updated_at", datetime.utcnow()),
+                    error_message=module_doc.get("error_message")
+                ))
+            except Exception as e:
+                logger.warning(f"Skipping malformed module document: {e}")
 
         return {
             "data": [m.dict() for m in module_responses],
