@@ -1,3 +1,42 @@
+== Session: 2026-02-05 (Agent Batch #99, #221, #34) ==
+Agent: Features #99, #221, #34 (Pagination, Filters, Dashboard Reset)
+
+COMPLETED:
+- Feature #99: Pagination resets when switching contexts [PASSING]
+  - Navigated to farm list (38 farms, 4 pages), went to Page 3
+  - Navigated to employee list (/hr/employees) - verified page shows Page 1 of 8
+  - Navigated back to farms - verified page resets to Page 1 of 4
+  - Pagination state is in React useState, naturally resets on component unmount/remount
+  - Created 30 test farms to ensure enough pages for testing
+  - Zero console errors
+
+- Feature #221: Campaign status filter [PASSING]
+  - Created 6 test campaigns via API: 3 active, 1 draft, 1 paused, 1 completed
+  - Campaign page at /marketing/campaigns has status dropdown filter
+  - Selected "Active" filter - table shows only 3 active campaigns
+  - Backend API properly filters by status query param
+  - Full pipeline: Frontend dropdown → API ?status=active → MongoDB query → filtered results
+  - Zero console errors
+
+- Feature #34: Dashboard layout reset to defaults [PASSING]
+  - Logged in as admin (farmtest_admin@a64core.com)
+  - Dashboard at /dashboard shows 6 widgets in default grid layout
+  - Entered Edit Mode, dragged "Total Farms" widget to different position
+  - Verified localStorage layout changed (total-farms x:0→x:3)
+  - Clicked "↺ Reset" button
+  - Verified widgets returned to default positions visually
+  - Verified localStorage layout restored to defaults
+  - Zero console errors
+
+NOTES:
+- Farm pagination uses perPage=12, employee uses perPage=20
+- Campaign API at /api/v1/marketing/campaigns supports status filter param
+- Dashboard layout persisted in localStorage key 'dashboard-storage' via Zustand persist
+- Reset generates fresh layout from generateDefaultLayout() function
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
+CURRENT STATUS: 102/310 features passing (32.9%)
+
 == Session: 2026-02-05 (Agent Batch #111, #112, #106) ==
 Agent: Features #111, #112, #106 (Accessibility & Temporal)
 
