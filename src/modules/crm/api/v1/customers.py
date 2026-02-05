@@ -64,6 +64,7 @@ async def create_customer(
 async def get_customers(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(None, max_length=500, description="Search by name, email, or company"),
     status: Optional[CustomerStatus] = Query(None, description="Filter by customer status"),
     type: Optional[CustomerType] = Query(None, description="Filter by customer type"),
     current_user: CurrentUser = Depends(require_permission("crm.view")),
@@ -74,12 +75,21 @@ async def get_customers(
 
     - **page**: Page number (default: 1)
     - **perPage**: Items per page (default: 20, max: 100)
+    - **search**: Search by name, email, or company (optional, max 500 chars)
     - **status**: Filter by customer status (optional)
     - **type**: Filter by customer type (optional)
     """
-    customers, total, total_pages = await service.get_all_customers(
-        page, perPage, status, type.value if type else None
-    )
+    # If search provided, use search service; otherwise use regular listing
+    if search and search.strip():
+        # Truncate very long search strings to prevent issues
+        truncated_search = search.strip()[:500]
+        customers, total, total_pages = await service.search_customers(
+            truncated_search, page, perPage
+        )
+    else:
+        customers, total, total_pages = await service.get_all_customers(
+            page, perPage, status, type.value if type else None
+        )
 
     return PaginatedResponse(
         data=customers,
@@ -99,7 +109,7 @@ async def get_customers(
     description="Search customers by name, email, or company. Requires crm.view permission."
 )
 async def search_customers(
-    q: str = Query(..., min_length=1, description="Search term"),
+    q: str = Query(..., min_length=1, max_length=500, description="Search term"),
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: CurrentUser = Depends(require_permission("crm.view")),

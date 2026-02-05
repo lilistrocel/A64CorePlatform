@@ -249,10 +249,12 @@ export function EmployeeListPage() {
     setLoading(true);
     setError(null);
     try {
+      // Truncate search query to prevent issues with very long strings
+      const truncatedSearch = searchQuery ? searchQuery.slice(0, 500) : undefined;
       const result = await hrApi.getEmployees({
         page,
         perPage,
-        search: searchQuery || undefined,
+        search: truncatedSearch || undefined,
         status: statusFilter === 'all' ? undefined : statusFilter,
         department: departmentFilter === 'all' ? undefined : departmentFilter,
       });

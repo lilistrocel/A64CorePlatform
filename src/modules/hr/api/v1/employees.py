@@ -65,7 +65,7 @@ async def get_employees(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     status: Optional[EmployeeStatus] = Query(None, description="Filter by employee status"),
     department: Optional[str] = Query(None, description="Filter by department"),
-    search: Optional[str] = Query(None, description="Search by name, email, or department"),
+    search: Optional[str] = Query(None, max_length=500, description="Search by name, email, or department"),
     current_user: CurrentUser = Depends(require_permission("hr.view")),
     service: EmployeeService = Depends()
 ):
@@ -97,7 +97,7 @@ async def get_employees(
     description="Search employees by name, email, or department. Requires hr.view permission."
 )
 async def search_employees(
-    q: str = Query(..., min_length=1, description="Search term"),
+    q: str = Query(..., min_length=1, max_length=500, description="Search term"),
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: CurrentUser = Depends(require_permission("hr.view")),
@@ -105,7 +105,7 @@ async def search_employees(
 ):
     """Search employees"""
     employees, total, total_pages = await service.search_employees(
-        q, page, perPage
+        q.strip()[:500], page, perPage
     )
 
     return PaginatedResponse(

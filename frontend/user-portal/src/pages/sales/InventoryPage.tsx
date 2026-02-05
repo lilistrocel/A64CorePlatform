@@ -206,8 +206,10 @@ export function InventoryPage() {
   };
 
   const handleSearch = () => {
+    // Truncate search query to prevent issues with very long strings
+    const truncatedSearch = searchQuery ? searchQuery.slice(0, 500) : undefined;
     const params: InventorySearchParams = {
-      search: searchQuery || undefined,
+      search: truncatedSearch || undefined,
       status: statusFilter || undefined,
       quality: qualityFilter || undefined,
     };

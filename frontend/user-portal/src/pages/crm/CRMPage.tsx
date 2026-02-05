@@ -249,10 +249,12 @@ export function CRMPage() {
     setLoading(true);
     setError(null);
     try {
+      // Truncate search query to prevent issues with very long strings
+      const truncatedSearch = searchQuery ? searchQuery.slice(0, 500) : undefined;
       const result = await crmApi.getCustomers({
         page,
         perPage,
-        search: searchQuery || undefined,
+        search: truncatedSearch || undefined,
         type: typeFilter === 'all' ? undefined : typeFilter,
         status: statusFilter === 'all' ? undefined : statusFilter,
       });

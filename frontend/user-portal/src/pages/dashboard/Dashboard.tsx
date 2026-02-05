@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { StatWidget, ChartWidget, Spinner } from '@a64core/shared';
 import { useDashboardStore } from '../../stores/dashboard.store';
@@ -22,8 +22,12 @@ export function Dashboard() {
   const [containerWidth, setContainerWidth] = useState(1200);
   const [columns, setColumns] = useState(4);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevColumnsRef = useRef<number>(4);
+  const initialLoadDoneRef = useRef(false);
 
-  useEffect(() => {
+  // Use useLayoutEffect to measure width BEFORE browser paint
+  // This prevents the flash of incorrect layout on first render
+  useLayoutEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
         const width = containerRef.current.offsetWidth;
@@ -46,44 +50,45 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    loadDashboard();
+    loadDashboard().then(() => {
+      initialLoadDoneRef.current = true;
+    });
   }, [loadDashboard]);
 
-  // Adjust layout when columns change to make it truly responsive
+  // Adjust layout ONLY when columns actually change (responsive resize), not on initial load
   useEffect(() => {
-    if (layout.length > 0 && columns && widgets.length > 0) {
-      // Always reflow layout when columns change
+    // Skip if initial load hasn't completed yet or columns haven't changed
+    if (!initialLoadDoneRef.current || columns === prevColumnsRef.current) {
+      prevColumnsRef.current = columns;
+      return;
+    }
+    prevColumnsRef.current = columns;
+
+    if (layout.length > 0 && widgets.length > 0) {
       const adjustedLayout: Layout[] = [];
       let currentX = 0;
       let currentY = 0;
 
-      // Sort layout by original position to maintain order
       const sortedLayout = [...layout].sort((a, b) => {
         if (a.y === b.y) return a.x - b.x;
         return a.y - b.y;
       });
 
       sortedLayout.forEach(item => {
-        // Find the widget to get its original intended size
         const widget = widgets.find(w => w.id === item.i);
         if (!widget) return;
 
-        // Calculate ideal width based on widget size and current columns
         let idealWidth = item.w;
         if (columns === 2) {
-          // On mobile: large widgets take full width, medium take half
           idealWidth = widget.size === 'large' || widget.size === 'wide' ? 2 : 1;
         } else if (columns === 3) {
-          // On tablet: adjust proportionally
           idealWidth = widget.size === 'large' ? 2 : widget.size === 'wide' ? 3 : 1;
         } else {
-          // On desktop: use original sizing
           idealWidth = widget.size === 'large' ? 2 : widget.size === 'wide' ? 4 : 1;
         }
 
         const width = Math.min(idealWidth, columns);
 
-        // If widget doesn't fit in current row, move to next row
         if (currentX + width > columns) {
           currentX = 0;
           currentY = adjustedLayout.reduce((max, l) => Math.max(max, l.y + l.h), currentY);
@@ -99,20 +104,9 @@ export function Dashboard() {
         currentX += width;
       });
 
-      // Check if layout actually changed before updating
-      const layoutChanged = adjustedLayout.some((adjusted) => {
-        const original = layout.find(l => l.i === adjusted.i);
-        return !original ||
-               original.x !== adjusted.x ||
-               original.y !== adjusted.y ||
-               original.w !== adjusted.w;
-      });
-
-      if (layoutChanged) {
-        updateLayout(adjustedLayout);
-      }
+      updateLayout(adjustedLayout);
     }
-  }, [columns, widgets]);
+  }, [columns]);
 
   if (isLoading && widgets.length === 0) {
     return (
@@ -179,8 +173,8 @@ export function Dashboard() {
           onLayoutChange={(newLayout) => updateLayout(newLayout)}
           isDraggable={isEditing}
           isResizable={isEditing}
-          compactType={null}
-          preventCollision={true}
+          compactType="vertical"
+          preventCollision={false}
         >
         {widgets.map((widget) => {
           const widgetState = widgetData[widget.id];
@@ -379,7 +373,6 @@ const GridContainer = styled.div`
 
   .react-grid-layout {
     position: relative;
-    width: 100% !important;
   }
 
   .react-grid-item {
