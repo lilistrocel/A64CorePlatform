@@ -1,3 +1,49 @@
+== Session: 2026-02-05 (Agent Batch #59, #65, #72) ==
+Agent: Features #59, #65, #72 (Logistics Routes, Shipment Workflow, Marketing Budget CRUD)
+
+COMPLETED:
+- Feature #59: Logistics - Create route [PASSING]
+  - POST /api/v1/logistics/routes with name, origin, destination, distance, duration, cost -> 201
+  - Route stored in MongoDB with routeId and auto-generated routeCode (R004)
+  - Origin and destination include name, address, and optional GPS coordinates
+  - Route visible in UI at /logistics/routes with all fields displayed correctly
+  - Screenshot: feature59-route-visible.png
+  - Zero console errors, no mock data patterns
+  - Test route cleaned up after verification
+
+- Feature #65: Logistics - Shipment status workflow [PASSING]
+  - Created test shipment with routeId, vehicleId, driverId, cargo
+  - Valid transitions verified:
+    - pending -> scheduled (PATCH /status with status="scheduled") -> 200 OK
+    - scheduled -> in_transit -> actualDepartureDate set automatically
+    - in_transit -> delivered -> actualArrivalDate set automatically
+  - Cancelled transition verified: pending -> cancelled works correctly
+  - Invalid transition rejected: delivered -> pending returns 400 "Invalid status transition"
+  - Valid transitions map defined in shipment_service.py (lines 223-230)
+  - UI shows correct status badges (green for delivered, red for cancelled)
+  - Screenshot: feature65-shipment-status.png
+  - Zero console errors, test shipments cleaned up
+
+- Feature #72: Marketing - Budget CRUD [PASSING]
+  - CREATE: POST /api/v1/marketing/budgets with name, year, quarter, totalAmount -> 201
+  - READ: GET /api/v1/marketing/budgets returns paginated list with budget data
+  - UPDATE: PATCH /api/v1/marketing/budgets/{id} with allocatedAmount, status -> 200
+  - DELETE: DELETE /api/v1/marketing/budgets/{id} -> 200, subsequent GET returns 404
+  - Budget visible in UI at /marketing/budgets with formatted currency (AED 50,000.00)
+  - Screenshot: feature72-budget-crud.png
+  - Zero console errors, test budget cleaned up
+
+NOTES FOR NEXT SESSION:
+- Logistics route API: /api/v1/logistics/routes
+- Route model: name, origin (LocationInfo), destination (LocationInfo), distance, estimatedDuration, estimatedCost
+- Shipment status transitions are strictly validated in shipment_service.py
+- Valid shipment statuses: pending, scheduled, loading, in_transit, delivered, cancelled
+- Marketing budget API: /api/v1/marketing/budgets
+- Budget model: name, year, quarter (1-4), totalAmount, allocatedAmount, spentAmount, currency, status
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
+CURRENT STATUS: 130/310 features passing (41.9%)
+
 == Session: 2026-02-05 (Agent Batch #27, #40, #45) ==
 Agent: Features #27, #40, #45 (User Activate/Deactivate, Farm Update, Block Update)
 
