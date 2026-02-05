@@ -62,6 +62,16 @@ async def test_500_error() -> Dict[str, Any]:
     raise Exception("Intentional test error for Feature #138 verification")
 
 
+@router.get("/test-malformed", status_code=status.HTTP_200_OK)
+async def test_malformed_response() -> str:
+    """
+    Test endpoint for malformed response - Feature #139 verification.
+    Returns plain text instead of expected JSON to test frontend handling.
+    """
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(content="This is not JSON", media_type="text/plain")
+
+
 @router.get("/ready", status_code=status.HTTP_200_OK)
 async def readiness_check() -> Dict[str, Any]:
     """
