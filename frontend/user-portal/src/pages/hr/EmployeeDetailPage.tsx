@@ -13,6 +13,7 @@ import { VisaTab } from '../../components/hr/VisaTab';
 import { InsuranceTab } from '../../components/hr/InsuranceTab';
 import { PerformanceTab } from '../../components/hr/PerformanceTab';
 import { hrApi, getEmployeeFullName, getEmployeeStatusColor, getEmployeeStatusLabel } from '../../services/hrService';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Employee, EmployeeUpdate } from '../../types/hr';
 
 // ============================================================================
@@ -312,14 +313,17 @@ export function EmployeeDetailPage() {
     try {
       if (isNew) {
         const newEmployee = await hrApi.createEmployee(data);
+        showSuccessToast('Employee created successfully');
         navigate(`/hr/employees/${newEmployee.employeeId}`);
       } else if (employeeId) {
         const updatedEmployee = await hrApi.updateEmployee(employeeId, data);
         setEmployee(updatedEmployee);
         setEditMode(false);
+        showSuccessToast('Employee updated successfully');
       }
     } catch (err: any) {
       console.error('Failed to save employee:', err);
+      showErrorToast('Failed to save employee. Please try again.');
       throw err;
     }
   };

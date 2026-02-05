@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { CustomerForm } from '../../components/crm/CustomerForm';
 import { crmApi, formatCustomerAddress, getCustomerStatusColor, getCustomerTypeLabel } from '../../services/crmService';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Customer, CustomerUpdate } from '../../types/crm';
 
 // ============================================================================
@@ -329,14 +330,17 @@ export function CustomerDetailPage() {
       setFormDirty(false);
       if (isNew) {
         const newCustomer = await crmApi.createCustomer(data);
+        showSuccessToast('Customer created successfully');
         navigate(`/crm/customers/${newCustomer.customerId}`);
       } else if (customerId) {
         const updatedCustomer = await crmApi.updateCustomer(customerId, data);
         setCustomer(updatedCustomer);
         setEditMode(false);
+        showSuccessToast('Customer updated successfully');
       }
     } catch (err: any) {
       console.error('Failed to save customer:', err);
+      showErrorToast('Failed to save customer. Please try again.');
       throw err;
     }
   };

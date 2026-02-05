@@ -11,6 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Farm, FarmUpdate, Manager } from '../../types/farm';
 
 // ============================================================================
@@ -372,11 +373,12 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
 
       await farmApi.updateFarm(farm.farmId, updateData);
 
+      showSuccessToast('Farm updated successfully');
       onSuccess?.();
       onClose();
     } catch (error) {
       console.error('Error updating farm:', error);
-      alert('Failed to update farm. Please try again.');
+      showErrorToast('Failed to update farm. Please try again.');
     } finally {
       setSubmitting(false);
     }
