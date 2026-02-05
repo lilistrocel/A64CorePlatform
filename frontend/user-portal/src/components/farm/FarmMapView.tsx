@@ -340,6 +340,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
   const mapRef = useRef<maplibregl.Map | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<BlockPopupInfo | null>(null);
 
   // Check if farm or any blocks have boundaries
@@ -378,20 +379,27 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
 
     const center = getMapCenter();
 
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: SATELLITE_STYLE,
-      center: center,
-      zoom: hasAnyBoundary ? 15 : DEFAULT_ZOOM,
-      attributionControl: true,
-    });
+    try {
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: SATELLITE_STYLE,
+        center: center,
+        zoom: hasAnyBoundary ? 15 : DEFAULT_ZOOM,
+        attributionControl: true,
+      });
 
-    // Add controls
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    map.addControl(new maplibregl.ScaleControl(), 'bottom-right');
-    map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+      // Handle map errors (including WebGL errors)
+      map.on('error', (e) => {
+        console.error('Map error:', e);
+        setMapError('Failed to load map. Your browser may not support WebGL.');
+      });
 
-    map.on('load', () => {
+      // Add controls
+      map.addControl(new maplibregl.NavigationControl(), 'top-right');
+      map.addControl(new maplibregl.ScaleControl(), 'bottom-right');
+      map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+
+      map.on('load', () => {
       setMapLoaded(true);
 
       // Add farm boundary if available
@@ -543,12 +551,16 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
       }
     });
 
-    mapRef.current = map;
+      mapRef.current = map;
 
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
+      return () => {
+        map.remove();
+        mapRef.current = null;
+      };
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      setMapError('Failed to initialize map. Your browser may not support WebGL.');
+    }
   }, [farm, blocks, hasAnyBoundary, hasFarmBoundary, blocksWithBoundaries, getMapCenter]);
 
   // Handle popup for selected block
@@ -630,6 +642,21 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
       popupRef.current = popup;
     }
   }, [selectedBlock, mapLoaded, onBlockClick]);
+
+  // Show error message if map initialization failed
+  if (mapError) {
+    return (
+      <MapWrapper $height={height}>
+        <NoBoundaryMessage>
+          <NoBoundaryIcon>⚠️</NoBoundaryIcon>
+          <NoBoundaryText>{mapError}</NoBoundaryText>
+          <NoBoundaryHint>
+            This may happen if WebGL is not available in your browser. Try using a different browser or enabling hardware acceleration.
+          </NoBoundaryHint>
+        </NoBoundaryMessage>
+      </MapWrapper>
+    );
+  }
 
   // If no boundaries at all, show a message
   if (!hasAnyBoundary) {
