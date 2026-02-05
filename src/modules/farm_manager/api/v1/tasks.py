@@ -10,7 +10,7 @@ from uuid import UUID
 
 from ...models.farm_task import (
     FarmTask, FarmTaskCreate, FarmTaskUpdate,
-    TaskType, TaskStatus, HarvestEntryCreate, TaskCompletionData
+    TaskType, TaskStatus, TaskPriority, HarvestEntryCreate, TaskCompletionData
 )
 from ...services.task.task_service import TaskService
 from ...services.task.task_generator import TaskGeneratorService
@@ -120,6 +120,7 @@ async def list_block_tasks(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(50, ge=1, le=100, description="Items per page"),
     status_filter: Optional[TaskStatus] = Query(None, alias="status", description="Filter by status"),
+    sort_by: Optional[str] = Query("scheduledDate", description="Sort field: scheduledDate, priority, createdAt"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -129,14 +130,16 @@ async def list_block_tasks(
     - `page`: Page number (default: 1)
     - `perPage`: Items per page (default: 50, max: 100)
     - `status`: Filter by task status (optional)
+    - `sort_by`: Sort field - scheduledDate (default), priority, createdAt
 
-    **Response**: Paginated list of tasks sorted by scheduled date
+    **Response**: Paginated list of tasks sorted by specified field
     """
     response = await TaskService.get_block_tasks(
         block_id=block_id,
         status=status_filter,
         page=page,
-        per_page=perPage
+        per_page=perPage,
+        sort_by=sort_by
     )
 
     return response

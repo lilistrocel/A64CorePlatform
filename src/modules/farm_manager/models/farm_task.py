@@ -30,6 +30,13 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class TaskPriority(str, Enum):
+    """Task priority enumeration"""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class HarvestGrade(str, Enum):
     """Harvest quality grade"""
     A = "A"
@@ -158,6 +165,7 @@ class FarmTaskCreate(BaseModel):
     title: Optional[str] = Field(None, description="Task title (auto-generated or custom)")
     scheduledDate: datetime = Field(..., description="When task should be done")
     dueDate: Optional[datetime] = Field(None, description="Task deadline (optional)")
+    priority: TaskPriority = Field(TaskPriority.MEDIUM, description="Task priority (high, medium, low)")
     assignedTo: Optional[UUID] = Field(
         None,
         description="User ID for custom tasks (null for auto-tasks)"
@@ -203,6 +211,7 @@ class FarmTask(FarmTaskCreate):
                 "blockId": "b1234567-89ab-cdef-0123-456789abcdef",
                 "taskType": "daily_harvest",
                 "status": "in_progress",
+                "priority": "medium",
                 "scheduledDate": "2025-01-15T00:00:00Z",
                 "dueDate": "2025-01-15T23:59:59Z",
                 "assignedTo": None,
@@ -246,6 +255,7 @@ class FarmTaskUpdate(BaseModel):
     scheduledDate: Optional[datetime] = Field(None, description="New scheduled date")
     dueDate: Optional[datetime] = Field(None, description="New due date")
     status: Optional[TaskStatus] = Field(None, description="New status")
+    priority: Optional[TaskPriority] = Field(None, description="New priority (high, medium, low)")
     description: Optional[str] = Field(None, description="Updated description")
 
 

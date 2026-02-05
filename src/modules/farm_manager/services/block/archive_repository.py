@@ -330,3 +330,90 @@ class ArchiveRepository:
         """Get total number of archived cycles for a block"""
         db = farm_db.get_database()
         return await db.block_archives.count_documents({"blockId": str(block_id)})
+
+    @staticmethod
+    async def archive_block_cycle(
+        block_id: UUID,
+        user_id: UUID,
+        user_email: str,
+        archive_reason: str = "Cycle completed"
+    ) -> BlockArchive:
+        """
+        Archive the current cycle of a block.
+
+        Creates a BlockArchive record from the block's current state.
+        This is called when emptying a virtual block or completing a cycle.
+
+        Args:
+            block_id: Block ID to archive
+            user_id: User triggering the archive
+            user_email: Email of user
+            archive_reason: Reason for archiving
+
+        Returns:
+            Created BlockArchive
+
+        Raises:
+            Exception: If block not found or archiving fails
+        """
+        from .block_repository_new import BlockRepository
+
+        db = farm_db.get_database()
+
+        # Get the block
+        block = await BlockRepository.get_by_id(block_id)
+        if not block:
+            raise Exception(f"Block not found: {block_id}")
+
+        # Get farm info
+        farm_doc = await db.farms.find_one({"farmId": str(block.farmId)})
+        farm_name = farm_doc.get("name", "Unknown Farm") if farm_doc else "Unknown Farm"
+
+        # Calculate cycle duration
+        cycle_duration_days = 0
+        if block.plantedDate:
+            cycle_duration_days = (datetime.utcnow() - block.plantedDate).days
+            if cycle_duration_days < 1:
+                cycle_duration_days = 1
+
+        # Calculate yield efficiency
+        yield_efficiency = 0.0
+        if block.kpi and block.kpi.predictedYieldKg and block.kpi.predictedYieldKg > 0:
+            yield_efficiency = (block.kpi.actualYieldKg / block.kpi.predictedYieldKg) * 100
+
+        # Create archive record
+        archive = BlockArchive(
+            blockId=block.blockId,
+            blockCode=block.blockCode,
+            farmId=block.farmId,
+            farmName=farm_name,
+            blockType=block.blockType,
+            maxPlants=block.maxPlants,
+            actualPlantCount=block.actualPlantCount or 0,
+            location=block.location,
+            area=block.area,
+            areaUnit=block.areaUnit,
+            targetCrop=block.targetCrop,
+            targetCropName=block.targetCropName or "Unknown",
+            plantedDate=block.plantedDate or datetime.utcnow(),
+            harvestCompletedDate=datetime.utcnow(),
+            cycleDurationDays=cycle_duration_days,
+            predictedYieldKg=block.kpi.predictedYieldKg if block.kpi else 0.0,
+            actualYieldKg=block.kpi.actualYieldKg if block.kpi else 0.0,
+            yieldEfficiencyPercent=round(yield_efficiency, 2),
+            totalHarvests=block.kpi.totalHarvests if block.kpi else 0,
+            statusChanges=block.statusChanges or [],
+            archivedBy=user_id,
+            archivedByEmail=user_email
+        )
+
+        # Save to database
+        created_archive = await ArchiveRepository.create(archive)
+
+        logger.info(
+            f"[Archive Repository] Archived cycle for block {block.blockCode}: "
+            f"{cycle_duration_days} days, {yield_efficiency:.1f}% efficiency, "
+            f"reason: {archive_reason}"
+        )
+
+        return created_archive

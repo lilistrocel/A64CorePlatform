@@ -141,6 +141,8 @@ const Actions = styled.div`
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   padding: 6px 12px;
+  min-height: 44px; /* WCAG touch target minimum */
+  min-width: 44px; /* WCAG touch target minimum */
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;

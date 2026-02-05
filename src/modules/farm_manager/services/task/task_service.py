@@ -137,7 +137,8 @@ class TaskService:
         block_id: UUID,
         status: Optional[TaskStatus] = None,
         page: int = 1,
-        per_page: int = 50
+        per_page: int = 50,
+        sort_by: str = "scheduledDate"
     ) -> PaginatedResponse[FarmTask]:
         """
         Get tasks for a block
@@ -147,11 +148,12 @@ class TaskService:
             status: Optional status filter
             page: Page number
             per_page: Results per page
+            sort_by: Sort field (scheduledDate, priority, createdAt)
 
         Returns:
             PaginatedResponse with paginated tasks
         """
-        tasks, total = await TaskRepository.get_by_block(block_id, status, page, per_page)
+        tasks, total = await TaskRepository.get_by_block(block_id, status, page, per_page, sort_by)
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
         return PaginatedResponse(

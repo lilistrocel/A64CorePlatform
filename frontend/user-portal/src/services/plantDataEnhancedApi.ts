@@ -156,6 +156,7 @@ export async function downloadPlantDataEnhancedTemplate(): Promise<void> {
 /**
  * Import plant data from CSV file
  * @param file - CSV file to import
+ * @param onProgress - Optional callback for upload progress (0-100)
  * @returns Import result with created/updated counts and errors
  */
 export interface CSVImportResult {
@@ -164,7 +165,10 @@ export interface CSVImportResult {
   errors: string[] | null;
 }
 
-export async function importPlantDataEnhancedCSV(file: File): Promise<CSVImportResult> {
+export async function importPlantDataEnhancedCSV(
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<CSVImportResult> {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -174,6 +178,12 @@ export async function importPlantDataEnhancedCSV(file: File): Promise<CSVImportR
     {
       headers: {
         'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentCompleted);
+        }
       },
     }
   );

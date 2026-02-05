@@ -181,11 +181,15 @@ const MobileHeader = styled.header`
 const MenuButton = styled.button`
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
   gap: 4px;
   background: none;
   border: none;
   cursor: pointer;
   padding: ${({ theme }) => theme.spacing.sm};
+  min-width: 44px; /* WCAG touch target minimum */
+  min-height: 44px; /* WCAG touch target minimum */
 
   span {
     display: block;
@@ -297,6 +301,7 @@ const NavItem = styled(NavLink)`
   align-items: center;
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => theme.spacing.md};
+  min-height: 44px; /* WCAG touch target minimum */
   border-radius: ${({ theme }) => theme.borderRadius.md};
   color: ${({ theme }) => theme.colors.textSecondary};
   text-decoration: none;

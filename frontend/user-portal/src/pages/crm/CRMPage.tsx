@@ -58,6 +58,7 @@ const Actions = styled.div`
 
 const SearchInput = styled.input`
   padding: 12px 16px;
+  min-height: 44px; /* WCAG touch target minimum */
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   font-size: 14px;
@@ -77,6 +78,7 @@ const SearchInput = styled.input`
 
 const CreateButton = styled.button`
   padding: 12px 24px;
+  min-height: 44px; /* WCAG touch target minimum */
   background: #3B82F6;
   color: white;
   border: none;
@@ -125,6 +127,7 @@ const FilterLabel = styled.span`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
+  min-height: 44px; /* WCAG touch target minimum */
   background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
   color: ${({ $active }) => ($active ? 'white' : '#616161')};
   border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
@@ -149,6 +152,7 @@ const ViewToggle = styled.div`
 
 const ViewButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
+  min-height: 44px; /* WCAG touch target minimum */
   background: ${({ $active }) => ($active ? 'white' : 'transparent')};
   color: #616161;
   border: none;
@@ -236,6 +240,7 @@ const Pagination = styled.div`
 
 const PageButton = styled.button`
   padding: 8px 16px;
+  min-height: 44px; /* WCAG touch target minimum */
   background: white;
   color: #616161;
   border: 1px solid #e0e0e0;

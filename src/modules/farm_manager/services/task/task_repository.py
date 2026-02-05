@@ -11,7 +11,7 @@ import logging
 
 from ...models.farm_task import (
     FarmTask, FarmTaskCreate, FarmTaskUpdate,
-    TaskType, TaskStatus, HarvestEntry, HarvestEntryCreate,
+    TaskType, TaskStatus, TaskPriority, HarvestEntry, HarvestEntryCreate,
     HarvestTotal, TaskData
 )
 from ..database import farm_db
@@ -136,7 +136,8 @@ class TaskRepository:
         block_id: UUID,
         status: Optional[TaskStatus] = None,
         page: int = 1,
-        per_page: int = 50
+        per_page: int = 50,
+        sort_by: str = "scheduledDate"
     ) -> Tuple[List[FarmTask], int]:
         """
         Get tasks for a block
@@ -146,6 +147,7 @@ class TaskRepository:
             status: Optional status filter
             page: Page number
             per_page: Results per page
+            sort_by: Sort field (scheduledDate, priority, createdAt)
 
         Returns:
             Tuple of (tasks list, total count)
@@ -160,9 +162,20 @@ class TaskRepository:
         # Get total count
         total = await db.farm_tasks.count_documents(query)
 
-        # Get paginated results sorted by scheduled date
+        # Determine sort configuration
+        # Priority sort: high > medium > low (ascending order since h < l < m alphabetically doesn't work)
+        # We use a custom sort for priority: high=1, medium=2, low=3
         skip = (page - 1) * per_page
-        cursor = db.farm_tasks.find(query).sort("scheduledDate", 1).skip(skip).limit(per_page)
+
+        if sort_by == "priority":
+            # For priority sorting, we need to sort by priority value
+            # high < medium < low alphabetically, so ascending gives us the right order
+            cursor = db.farm_tasks.find(query).sort([("priority", 1), ("scheduledDate", 1)]).skip(skip).limit(per_page)
+        elif sort_by == "createdAt":
+            cursor = db.farm_tasks.find(query).sort("createdAt", -1).skip(skip).limit(per_page)
+        else:
+            # Default: scheduledDate
+            cursor = db.farm_tasks.find(query).sort("scheduledDate", 1).skip(skip).limit(per_page)
 
         tasks = []
         async for task_doc in cursor:
@@ -299,6 +312,10 @@ class TaskRepository:
         # Convert status enum to value if present
         if "status" in update_dict and isinstance(update_dict["status"], TaskStatus):
             update_dict["status"] = update_dict["status"].value
+
+        # Convert priority enum to value if present
+        if "priority" in update_dict and isinstance(update_dict["priority"], TaskPriority):
+            update_dict["priority"] = update_dict["priority"].value
 
         # Add updatedAt timestamp
         update_dict["updatedAt"] = datetime.utcnow()

@@ -345,6 +345,49 @@ const HiddenFileInput = styled.input`
   display: none;
 `;
 
+const ProgressContainer = styled.div`
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  background: #F0F9FF;
+  border: 1px solid #3B82F6;
+  border-radius: 8px;
+`;
+
+const ProgressHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+`;
+
+const ProgressLabel = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: #1E40AF;
+`;
+
+const ProgressPercent = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #3B82F6;
+`;
+
+const ProgressBarOuter = styled.div`
+  width: 100%;
+  height: 8px;
+  background: #DBEAFE;
+  border-radius: 4px;
+  overflow: hidden;
+`;
+
+const ProgressBarInner = styled.div<{ $progress: number }>`
+  width: ${({ $progress }) => $progress}%;
+  height: 100%;
+  background: linear-gradient(90deg, #3B82F6 0%, #1D4ED8 100%);
+  border-radius: 4px;
+  transition: width 200ms ease-out;
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -368,6 +411,7 @@ export function PlantDataLibrary() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [plantToEdit, setPlantToEdit] = useState<PlantDataEnhanced | null>(null);
   const [importing, setImporting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [importResult, setImportResult] = useState<CSVImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -480,11 +524,15 @@ export function PlantDataLibrary() {
     }
 
     setImporting(true);
+    setUploadProgress(0);
     setImportError(null);
     setImportResult(null);
 
     try {
-      const result = await plantDataEnhancedApi.importPlantDataEnhancedCSV(file);
+      const result = await plantDataEnhancedApi.importPlantDataEnhancedCSV(
+        file,
+        (progress) => setUploadProgress(progress)
+      );
       setImportResult(result);
       loadPlants(); // Refresh the list
     } catch (err: any) {
@@ -508,6 +556,7 @@ export function PlantDataLibrary() {
       }
     } finally {
       setImporting(false);
+      setUploadProgress(0);
       // Reset file input so user can select the same file again if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -637,6 +686,19 @@ export function PlantDataLibrary() {
         accept=".csv"
         onChange={handleFileChange}
       />
+
+      {/* Upload progress indicator */}
+      {importing && (
+        <ProgressContainer>
+          <ProgressHeader>
+            <ProgressLabel>📤 Uploading CSV file...</ProgressLabel>
+            <ProgressPercent>{uploadProgress}%</ProgressPercent>
+          </ProgressHeader>
+          <ProgressBarOuter>
+            <ProgressBarInner $progress={uploadProgress} />
+          </ProgressBarOuter>
+        </ProgressContainer>
+      )}
 
       {/* Import result feedback */}
       {importResult && (

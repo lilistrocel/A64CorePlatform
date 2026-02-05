@@ -334,10 +334,11 @@ export function EmployeeDetailPage() {
     if (window.confirm(`Are you sure you want to delete "${employee ? getEmployeeFullName(employee) : 'this employee'}"?`)) {
       try {
         await hrApi.deleteEmployee(employeeId);
+        showSuccessToast('Employee deleted successfully');
         navigate('/hr/employees');
       } catch (err: any) {
         console.error('Failed to delete employee:', err);
-        alert(err.response?.data?.message || 'Failed to delete employee');
+        showErrorToast(err.response?.data?.message || 'Failed to delete employee');
       }
     }
   };

@@ -148,6 +148,7 @@ class CustomerRepository:
     ) -> tuple[List[Customer], int]:
         """
         Search customers by name, email, or company using text search
+        with regex fallback for partial matching
 
         Args:
             search_term: Search term to match
@@ -157,24 +158,45 @@ class CustomerRepository:
         Returns:
             Tuple of (list of customers, total count)
         """
+        import re
         collection = self._get_collection()
 
-        # Use MongoDB text search
-        query = {"$text": {"$search": search_term}}
+        # First try MongoDB text search (faster for word matching)
+        text_query = {"$text": {"$search": search_term}}
+        total = await collection.count_documents(text_query)
 
-        # Get total count
-        total = await collection.count_documents(query)
+        if total > 0:
+            # Get customers with text score sorting
+            cursor = collection.find(
+                text_query,
+                {"score": {"$meta": "textScore"}}
+            ).sort([("score", {"$meta": "textScore"})]).skip(skip).limit(limit)
 
-        # Get customers with text score sorting
-        cursor = collection.find(
-            query,
-            {"score": {"$meta": "textScore"}}
-        ).sort([("score", {"$meta": "textScore"})]).skip(skip).limit(limit)
+            customers = []
+            async for customer_doc in cursor:
+                customer_doc.pop("_id", None)
+                customer_doc.pop("score", None)  # Remove score field
+                customers.append(Customer(**customer_doc))
+
+            return customers, total
+
+        # Fallback to regex for partial matching (case-insensitive)
+        escaped_term = re.escape(search_term)
+        regex_pattern = {"$regex": escaped_term, "$options": "i"}
+        regex_query = {
+            "$or": [
+                {"name": regex_pattern},
+                {"email": regex_pattern},
+                {"company": regex_pattern}
+            ]
+        }
+
+        total = await collection.count_documents(regex_query)
+        cursor = collection.find(regex_query).sort("name", 1).skip(skip).limit(limit)
 
         customers = []
         async for customer_doc in cursor:
             customer_doc.pop("_id", None)
-            customer_doc.pop("score", None)  # Remove score field
             customers.append(Customer(**customer_doc))
 
         return customers, total

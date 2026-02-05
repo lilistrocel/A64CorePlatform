@@ -62,10 +62,10 @@ export default defineConfig({
       'Surrogate-Control': 'no-store',
     },
     proxy: {
-      // Proxy all API requests through nginx
-      // Uses localhost for local dev, nginx for Docker
+      // Proxy all API requests through nginx or directly to API
+      // Uses port 8000 for local dev (API directly), nginx for Docker
       '/api': {
-        target: process.env.VITE_API_TARGET || 'http://localhost',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path,  // Keep path as-is
