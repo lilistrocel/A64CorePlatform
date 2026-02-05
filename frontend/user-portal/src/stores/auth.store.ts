@@ -45,9 +45,10 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } catch (error: any) {
+          const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Invalid email or password. Please try again.';
           set({
             isLoading: false,
-            error: error.response?.data?.message || 'Login failed. Please try again.',
+            error: typeof errorMessage === 'string' ? errorMessage : 'Invalid email or password. Please try again.',
           });
           throw error;
         }
@@ -64,9 +65,10 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } catch (error: any) {
+          const regErrorMessage = error.response?.data?.detail || error.response?.data?.message || 'Registration failed. Please try again.';
           set({
             isLoading: false,
-            error: error.response?.data?.message || 'Registration failed. Please try again.',
+            error: typeof regErrorMessage === 'string' ? regErrorMessage : 'Registration failed. Please try again.',
           });
           throw error;
         }
