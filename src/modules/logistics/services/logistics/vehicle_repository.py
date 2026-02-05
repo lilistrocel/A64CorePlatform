@@ -224,9 +224,29 @@ class VehicleRepository:
         """
         collection = self._get_collection()
         query = {}
+        and_conditions = []
 
         if status:
-            query["status"] = status.value
+            # Handle both new 'status' field and legacy 'isActive' field
+            # Legacy mapping: isActive=true -> available; isActive=false -> retired
+            if status == VehicleStatus.AVAILABLE:
+                and_conditions.append({
+                    "$or": [
+                        {"status": status.value},
+                        {"status": {"$exists": False}, "isActive": True},
+                        {"status": {"$exists": False}, "isActive": {"$exists": False}},  # Default to available if no status fields
+                    ]
+                })
+            elif status == VehicleStatus.RETIRED:
+                and_conditions.append({
+                    "$or": [
+                        {"status": status.value},
+                        {"status": {"$exists": False}, "isActive": False},
+                    ]
+                })
+            else:
+                # For in_use and maintenance, only match new status field (not in legacy)
+                and_conditions.append({"status": status.value})
         if type:
             # Build query that matches both new 'type' field and legacy 'vehicleType' field
             # Legacy vehicleType values: CANTER, TRUCK -> truck; VAN, HIACE, VOLVO -> van; PICKUP -> pickup; REFRIG -> refrigerated
@@ -238,12 +258,20 @@ class VehicleRepository:
             }
             legacy_match = legacy_patterns.get(type)
             if legacy_match:
-                query["$or"] = [
-                    {"type": type},
-                    {"vehicleType": legacy_match},
-                ]
+                and_conditions.append({
+                    "$or": [
+                        {"type": type},
+                        {"vehicleType": legacy_match},
+                    ]
+                })
             else:
-                query["type"] = type
+                and_conditions.append({"type": type})
+
+        # Build final query
+        if len(and_conditions) == 1:
+            query = and_conditions[0]
+        elif len(and_conditions) > 1:
+            query = {"$and": and_conditions}
 
         # Get total count
         total = await collection.count_documents(query)
