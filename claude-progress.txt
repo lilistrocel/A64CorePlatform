@@ -1,3 +1,56 @@
+== Session: 2026-02-05 (Agent 18) ==
+Agent: Features #63, #64, #256 (Logistics Shipments & Visa Expiry)
+
+COMPLETED:
+- Feature #63: Logistics - Create shipment [PASSING]
+  - Changed default shipment status from SCHEDULED to PENDING (per feature requirement)
+  - POST /api/v1/logistics/shipments with vehicleId, routeId, driverId, cargo, scheduledDate -> 201
+  - shipmentCode auto-generated (SH005), shipmentId UUID assigned
+  - Status defaults to "pending" as required
+  - Validates route and vehicle existence before creation
+  - Cargo items validated (at least one required)
+  - Visible in Shipment Tracking UI table
+  - Added PENDING status to valid_transitions map in shipment_service.py
+  - Zero console errors, no mock data patterns
+
+- Feature #64: Logistics - List shipments with filters [PASSING]
+  - GET /api/v1/logistics/shipments returns all shipments (4 total)
+  - Filter by status=pending -> only pending shipments returned (1 result)
+  - Filter by vehicleId -> only matching vehicle shipments returned (1 result)
+  - UI status filter buttons work: All, Pending, Scheduled, In Transit, Delivered, Cancelled
+  - Added "Pending" filter button to ShipmentTrackingPage.tsx (was missing)
+  - Clicking Pending filter in UI shows only pending shipments
+  - Zero console errors, no mock data patterns
+
+- Feature #256: Visa expiry date tracking [PASSING]
+  - Added visual expiry warning indicators to VisaTab component
+  - Near-future expiry (within 60 days): amber warning banner with "Expires in X days"
+  - Already expired: red warning banner with "Expired X days ago"
+  - Valid far-future visa: no warning, just green "Valid" badge
+  - Tested with 3 visas: Work Visa (38 days to expiry), Residence Visa (36 days overdue), Employment Visa (far future)
+  - Uses getExpiryInfo() helper function for day calculation
+  - Imported isVisaExpiringSoon from hrService.ts
+  - Styled with ExpiryWarning and ExpiryIcon components
+  - Zero console errors, no mock data patterns
+
+FIXES APPLIED:
+- src/modules/logistics/models/shipment.py - Changed default status from SCHEDULED to PENDING
+- src/modules/logistics/services/logistics/shipment_service.py - Added PENDING and LOADING to valid_transitions
+- frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx - Added Pending filter button
+- frontend/user-portal/src/components/hr/VisaTab.tsx - Added expiry warning indicators
+
+CURRENT STATUS: 67/310 features passing (21.6%)
+
+NOTES FOR NEXT SESSION:
+- Shipment default status is now PENDING (not SCHEDULED)
+- Valid transitions: PENDING -> SCHEDULED/LOADING/CANCELLED, SCHEDULED -> LOADING/IN_TRANSIT/CANCELLED
+- Shipment API: POST/GET /api/v1/logistics/shipments, filters: ?status=pending&vehicleId=UUID
+- Visa expiry warnings: amber (<60 days), red (expired), none (>60 days)
+- HR visa endpoint: POST /api/v1/hr/visas/employee/{id}/visas (body requires employeeId field)
+- Test user: testadmin@a64core.com / TestPass123@ (role: user)
+- 156 employees exist in the system
+- 11 vehicles, 1 route in logistics
+
 == Session: 2026-02-05 (Agent 17) ==
 Agent: Features #62, #66, #67 (Logistics CRUD & Dashboard)
 
