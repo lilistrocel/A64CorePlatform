@@ -187,6 +187,7 @@ services:
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost/api  # Runtime API URL (also needed for dev server)
+      - VITE_API_TARGET=http://api:8000  # Proxy target for Vite dev server (Docker network)
     volumes:
       - ./frontend/shared:/app/shared  # Hot-reload for shared library
       - ./frontend/user-portal/src:/app/user-portal/src  # Hot-reload for user-portal source
