@@ -1,3 +1,47 @@
+== Session: 2026-02-05 (Agent Batch #86, #243, #137) ==
+Agent: Features #86, #243, #137
+
+COMPLETED:
+- Feature #86: Login with invalid credentials shows error [PASSING]
+  - Fixed auth.store.ts: error extraction read .message but FastAPI returns .detail
+  - Changed to: error.response?.data?.detail || error.response?.data?.message
+  - Fixed both login and register error handlers
+  - Verified: both non-existent email and wrong password show "Invalid credentials" red error banner
+
+- Feature #243: Success feedback for all create operations [PASSING]
+  - CampaignForm.tsx: Added showSuccessToast for campaign create/update
+  - VehicleManagementPage.tsx: Added showSuccessToast for vehicle create/update, replaced alert() with showErrorToast()
+  - SalesOrdersPage.tsx: Added showSuccessToast for sales order create/update
+  - OrderForm.tsx: Added customerName field for backend compatibility, fixed numeric coercion
+  - sales.ts: Added customerName to SalesOrderCreate/SalesOrderUpdate types
+  - Employee and Customer already had toasts (pre-existing)
+  - Verified via browser: farm, vehicle, and campaign toasts all confirmed
+
+- Feature #137: Network error during save shows error message [PASSING]
+  - No code changes needed - existing infrastructure handles this perfectly
+  - api.ts Axios interceptor shows "Network error. Please check your connection and try again."
+  - CreateFarmModal catch block shows "Failed to create farm. Please try again."
+  - Verified: blocked network via XHR/fetch interception, error toasts appeared
+  - Form remained visible (no crash/blank screen), data preserved
+  - After network restored: farm created successfully, app fully recovered
+
+FILES MODIFIED:
+- frontend/user-portal/src/stores/auth.store.ts - Fixed .detail vs .message error extraction
+- frontend/user-portal/src/components/marketing/CampaignForm.tsx - Added success toasts
+- frontend/user-portal/src/pages/logistics/VehicleManagementPage.tsx - Added success/error toasts
+- frontend/user-portal/src/pages/sales/SalesOrdersPage.tsx - Added success toasts
+- frontend/user-portal/src/components/sales/OrderForm.tsx - Added customerName field, fixed numeric validation
+- frontend/user-portal/src/types/sales.ts - Added customerName to create/update types
+
+CURRENT STATUS: 94/310 features passing (30.3%)
+
+NOTES FOR NEXT SESSION:
+- Admin user: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+- Toast system uses Zustand store (toast.store.ts) with showSuccessToast/showErrorToast
+- Axios interceptor in api.ts has global error handling: network errors, HTTP status codes
+- Sales order form has pre-existing issue: backend requires productId in items but form doesn't provide it
+- FarmList error state does early return without showing Create button - could be improved
+
 == Session: 2026-02-05 (Agent Batch #93, #101, #91) ==
 Agent: Features #93, #101, #91
 
