@@ -50,7 +50,7 @@ const StyledInput = styled.input<{ $hasError: boolean }>`
     border-color: ${({ theme, $hasError }) =>
       $hasError ? theme.colors.error : theme.colors.primary[500]};
     box-shadow: 0 0 0 3px ${({ theme, $hasError }) =>
-      $hasError ? `${theme.colors.error}20` : `${theme.colors.primary[500]}20`};
+      $hasError ? `${theme.colors.error}40` : `${theme.colors.primary[500]}40`};
   }
 
   &:disabled {

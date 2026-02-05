@@ -46,6 +46,13 @@ export const GlobalStyles = createGlobalStyle`
   h5 { font-size: ${({ theme }) => theme.typography.fontSize.lg}; }
   h6 { font-size: ${({ theme }) => theme.typography.fontSize.base}; }
 
+  /* Global focus-visible styles for accessibility */
+  a:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
   a {
     color: ${({ theme }) => theme.colors.primary[500]};
     text-decoration: none;
@@ -58,6 +65,21 @@ export const GlobalStyles = createGlobalStyle`
   button {
     font-family: inherit;
     cursor: pointer;
+  }
+
+  button:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+  }
+
+  select:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 1px;
+  }
+
+  textarea:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 1px;
   }
 
   input, textarea, select {
