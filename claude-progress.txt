@@ -1805,3 +1805,49 @@ NOTES FOR NEXT SESSION:
 - Email validation uses both HTML5 type="email" and Zod z.string().email()
 - Test users cleaned up after verification
 - All features verified with browser screenshots and zero console errors
+
+== Session: 2026-02-05 (Agent - Features #82, #267, #285) ==
+Agent: Features #82, #267, #285 (Module Uninstall, Archive Delete, Token TTL)
+
+COMPLETED:
+- Feature #82: Module management - Uninstall module [PASSING]
+  - DELETE /api/v1/modules/{name} removes module from database and Docker
+  - Created test container a64core-test-feature82 (alpine:3.19)
+  - DELETE endpoint properly stopped (10s graceful) and removed container
+  - Module removed from installed_modules collection
+  - Audit log entry created with success status
+  - Returns 404 for non-existent module
+  - Returns 403 for non-super_admin users
+  - Zero console errors, no mock data patterns
+
+- Feature #267: Delete archive records [PASSING]
+  - DELETE /api/v1/farm/archives/{archive_id} removes archive from database
+  - Created test archive with proper BlockArchive schema (UUID archiveId, openfield blockType, etc.)
+  - Archive removed from list after deletion
+  - Returns 404 for already-deleted/non-existent archive
+  - Fixed require_permission("admin") to properly check admin/super_admin roles
+  - Regular users now get 403 Forbidden (permission enforced)
+  - Zero console errors, no mock data patterns
+
+- Feature #285: Token TTL auto-cleanup [PASSING]
+  - TTL indexes exist on refresh_tokens.expiresAt (expireAfterSeconds=0)
+  - TTL indexes exist on verification_tokens.expiresAt (expireAfterSeconds=0)
+  - Created expired test tokens with past dates
+  - Waited 70 seconds for MongoDB TTL cleanup cycle
+  - Both expired tokens automatically removed by MongoDB TTL
+  - Valid (non-expired) tokens remain unaffected (456 tokens still present)
+  - Zero console errors, no mock data patterns
+
+FIXES APPLIED:
+- src/modules/farm_manager/middleware/auth.py - Added "admin" permission check case
+
+CURRENT STATUS: 151/310 features passing (48.7%)
+
+NOTES FOR NEXT SESSION:
+- Module uninstall includes 10-second graceful stop before container removal
+- Archive delete requires admin or super_admin permission
+- MongoDB TTL cleanup runs every ~60 seconds for expired documents
+- Test super_admin: farmtest_admin@a64core.com / TestAdmin123@
+- Test regular user: testadmin@a64core.com / TestPass123@
+- Legacy archives in block_archives have different schema - need proper BlockArchive format
+- BlockArchive required fields: archiveId (UUID), blockType (lowercase), status (enum values)
