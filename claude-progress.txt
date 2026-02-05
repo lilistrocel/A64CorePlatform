@@ -1,3 +1,55 @@
+== Session: 2026-02-05 (Agent 12) ==
+Agent: Features #70, #92, #71 (Campaign Update, Error Toast, Campaign Delete)
+
+COMPLETED:
+- Feature #70: Marketing - Update campaign [PASSING]
+  - Created campaign via POST, PATCH with updated budget (5000->15000) and endDate
+  - GET confirmed all changes persisted in MongoDB
+  - UI Campaign Management table shows updated data
+  - Edit form pre-fills with updated values
+  - UI form update works via Save Campaign button (budget 15000->25000)
+  - updatedAt timestamp changes with each update
+  - Zero console errors, no mock data patterns
+
+- Feature #92: Error toast on failed operations [PASSING]
+  - Created global toast notification system using Zustand store
+  - ToastContainer component with slide-in/out animations, styled-components
+  - Added API response interceptor in axios to auto-show error toasts
+  - Handles string detail, array detail (FastAPI validation errors), and object formats
+  - Toast appears with meaningful error message from API (e.g., "Campaign not found")
+  - Toast has role="alert" for accessibility
+  - Toast auto-dismisses after 5 seconds (verified programmatically)
+  - Manual dismiss via close button (x) available
+  - Network errors show "Network error. Please check your connection."
+  - Zero console errors
+
+- Feature #71: Marketing - Delete campaign [PASSING]
+  - Created test campaign FEATURE71_DELETE_TEST via UI (MC004, AED 8,000.00)
+  - Clicked Delete button -> confirmation dialog appeared
+  - Accepted confirmation -> campaign removed from list immediately
+  - UI shows "No campaigns found" after deletion
+  - API GET /campaigns returns empty array (0 campaigns)
+  - Delete persisted across server restart (API container restarted, still 0 campaigns)
+  - Zero console errors, no mock data patterns
+
+FILES CREATED:
+- frontend/user-portal/src/stores/toast.store.ts - Zustand toast store with auto-dismiss
+- frontend/user-portal/src/components/common/ToastContainer.tsx - Toast UI component
+
+FILES MODIFIED:
+- frontend/user-portal/src/services/api.ts - Added error interceptor with extractErrorMessage()
+- frontend/user-portal/src/App.tsx - Mounted ToastContainer in app root
+
+CURRENT STATUS: 49/310 features passing (15.8%)
+
+NOTES FOR NEXT SESSION:
+- Toast system is global: any API error through apiClient shows error toast automatically
+- showErrorToast/showSuccessToast/showWarningToast/showInfoToast available from toast.store.ts
+- Can be called from outside React components (used in axios interceptor)
+- Toast uses 5s auto-dismiss by default, configurable via duration parameter
+- Campaign CRUD fully works: create, read, update, delete with UI at /marketing/campaigns
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
 == Session: 2026-02-05 (Agent 11) ==
 Agent: Features #49, #301, #208 (Plant Data CRUD, CSV Template, Real DB Verification)
 
