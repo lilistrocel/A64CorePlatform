@@ -154,6 +154,33 @@ export async function downloadPlantDataEnhancedTemplate(): Promise<void> {
 }
 
 /**
+ * Import plant data from CSV file
+ * @param file - CSV file to import
+ * @returns Import result with created/updated counts and errors
+ */
+export interface CSVImportResult {
+  created: number;
+  updated: number;
+  errors: string[] | null;
+}
+
+export async function importPlantDataEnhancedCSV(file: File): Promise<CSVImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await apiClient.post<{ data: CSVImportResult; message: string }>(
+    '/v1/farm/plant-data-enhanced/import/csv',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+  return response.data.data;
+}
+
+/**
  * Get plants by farm type
  */
 export async function getPlantsByFarmType(
@@ -295,6 +322,7 @@ export const plantDataEnhancedApi = {
   // Advanced
   clonePlantDataEnhanced,
   downloadPlantDataEnhancedTemplate,
+  importPlantDataEnhancedCSV,
   getPlantsByFarmType,
   getPlantsByTags,
   getPlantDataFilterOptions,

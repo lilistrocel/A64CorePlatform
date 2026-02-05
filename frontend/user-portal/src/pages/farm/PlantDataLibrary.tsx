@@ -5,13 +5,13 @@
  * Features: search, filters, cards grid, pagination, and quick stats.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { PlantDataCard } from '../../components/farm/PlantDataCard';
 import { PlantDataDetail } from '../../components/farm/PlantDataDetail';
 import { AddPlantDataModal } from '../../components/farm/AddPlantDataModal';
 import { EditPlantDataModal } from '../../components/farm/EditPlantDataModal';
-import { plantDataEnhancedApi } from '../../services/plantDataEnhancedApi';
+import { plantDataEnhancedApi, type CSVImportResult } from '../../services/plantDataEnhancedApi';
 import { useAuthStore } from '../../stores/auth.store';
 import type {
   PlantDataEnhanced,
@@ -324,6 +324,10 @@ export function PlantDataLibrary() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [plantToEdit, setPlantToEdit] = useState<PlantDataEnhanced | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<CSVImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const perPage = 12;
 
@@ -408,6 +412,61 @@ export function PlantDataLibrary() {
     } catch (err) {
       console.error('Error downloading template:', err);
       alert('Failed to download template');
+    }
+  };
+
+  const handleImportClick = () => {
+    if (!hasAgronomistPermission) {
+      alert('You do not have permission to import plant data. Agronomist role required.');
+      return;
+    }
+    setImportResult(null);
+    setImportError(null);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setImportError('Invalid file type. Please select a CSV file.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+
+    try {
+      const result = await plantDataEnhancedApi.importPlantDataEnhancedCSV(file);
+      setImportResult(result);
+      loadPlants(); // Refresh the list
+    } catch (err: any) {
+      console.error('Error importing CSV:', err);
+      // Handle different error formats
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'object' && detail.message) {
+          // Format: { message: "...", errors: [...] }
+          const errorMessages = detail.errors?.length > 0
+            ? `${detail.message}: ${detail.errors.join(', ')}`
+            : detail.message;
+          setImportError(errorMessages);
+        } else if (typeof detail === 'string') {
+          setImportError(detail);
+        } else {
+          setImportError('Failed to import CSV file. Please check the file format.');
+        }
+      } else {
+        setImportError(err.message || 'Failed to import CSV file. Please check the file format.');
+      }
+    } finally {
+      setImporting(false);
+      // Reset file input so user can select the same file again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
