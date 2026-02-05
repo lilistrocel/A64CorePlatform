@@ -348,6 +348,6 @@ class DashboardService:
             - Implement rate limiting
             - Cache external API responses
         """
-        # Placeholder for external API data fetching
-        # TODO: Implement external API data fetching
-        raise NotImplementedError("External API data fetching not yet implemented")
+        # External data fetching - not yet implemented
+        # Will be added when external integrations are configured
+        raise NotImplementedError("External data fetching not yet implemented")
