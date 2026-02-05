@@ -19,6 +19,7 @@ from ...models.chat import (
 )
 from ...services.query_engine import get_query_engine, QueryExecutionError
 from ...services.schema_service import get_schema_service
+from ...services.cost_tracking_service import get_cost_tracking_service
 from ...utils.validators import QueryValidationError
 
 # Import dependencies from main app
@@ -107,6 +108,26 @@ async def chat_query(
             conversation_history=conversation_history,
             force_refresh=request.force_refresh
         )
+
+        # Log query cost to MongoDB for tracking
+        try:
+            cost_service = get_cost_tracking_service(
+                mongodb_client=mongodb.client,
+                db_name="a64core_db"
+            )
+            metadata = result.get("metadata", {})
+            cost_data = metadata.get("cost", {})
+            await cost_service.log_query(
+                user_id=str(current_user.userId),
+                prompt=request.prompt,
+                collection_queried=result.get("query", {}).get("collection", "unknown"),
+                cost_data=cost_data,
+                execution_time_seconds=metadata.get("execution_time_seconds", 0),
+                result_count=metadata.get("result_count", 0),
+                cache_hit=metadata.get("cache_hit", False)
+            )
+        except Exception as log_err:
+            logger.warning(f"Failed to log query cost (non-blocking): {log_err}")
 
         return ChatQueryResponse(**result)
 

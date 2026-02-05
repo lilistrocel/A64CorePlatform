@@ -583,8 +583,8 @@ class PlantDataEnhancedService:
             watering_freq = plant.wateringRequirements.frequencyDays if plant.wateringRequirements else 0
 
             # Extract yield data
-            yield_per_plant = plant.yieldEstimate.yieldPerPlant
-            yield_unit = plant.yieldEstimate.yieldUnit
+            yield_per_plant = plant.yieldInfo.yieldPerPlant if plant.yieldInfo else 0
+            yield_unit = plant.yieldInfo.yieldUnit if plant.yieldInfo else "kg"
 
             row = [
                 plant.plantName,

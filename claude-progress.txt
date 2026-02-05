@@ -154,6 +154,55 @@ NOTES FOR NEXT SESSION:
 - Test users should use passwords meeting requirements: 8+ chars, uppercase, lowercase, number, special char
 - Example valid password: SecurePass123!
 
+== Session: 2026-02-05 (Agent 6) ==
+Agent: Features #38, #43, #47 (Farm & Block CRUD + State Transitions)
+
+COMPLETED:
+- Feature #38: Farm CRUD - Create farm [PASSING]
+  - Created test admin user (farmtest_admin@a64core.com), promoted to admin role
+  - POST /api/v1/farm/farms with name, description, location, totalArea → 201 with farmId
+  - Farm stored in MongoDB: verified via mongosh query
+  - GET /api/v1/farm/farms/{farmId} returns all matching fields
+  - Farm visible in UI at /farm/farms with correct data (name, area, location)
+  - Zero console errors
+  - Screenshot verification taken
+
+- Feature #43: Block CRUD - Create block within farm [PASSING]
+  - POST /api/v1/farm/farms/{farmId}/blocks with name, blockType, maxPlants, area → 201
+  - Block stored in MongoDB with correct farmId linkage
+  - Block appears in farm's block list (GET farms/{farmId}/blocks returns 1 block)
+  - Block visible in UI under farm detail Blocks tab
+  - Block code auto-generated: F006-002
+  - Zero console errors
+  - Screenshot verification taken
+
+- Feature #47: Block state transitions follow valid workflow [PASSING]
+  - Created FEATURE47_TRANSITION_BLOCK in empty state
+  - Valid transitions from empty: [planned, alert] ✓
+  - Invalid transition empty→harvesting rejected with 400 ✓
+  - Transition empty→planned succeeded (requires targetCrop + actualPlantCount) ✓
+  - Valid transitions from planned: [growing, empty, alert] ✓
+  - Transition planned→growing succeeded (plantedDate set) ✓
+  - Valid transitions from growing: [fruiting, harvesting, alert] ✓
+  - Transition growing→harvesting succeeded ✓
+  - Valid transitions from harvesting: [cleaning, alert] ✓
+  - Transition harvesting→cleaning succeeded ✓
+  - statusHistory array has 5 entries: empty→planned→growing→harvesting→cleaning
+  - Each entry has: status, changedAt, changedBy, changedByEmail, notes
+  - Block detail UI shows correct "Cleaning" state with Potato crop
+  - Zero console errors
+
+NOTES:
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+- Farm API route: /api/v1/farm/farms (prefix is /farms not /farm)
+- Block creation requires only maxPlants field (name, blockType optional)
+- Status transitions require force=true to bypass pending task checks
+- planned/growing transitions require targetCrop UUID + actualPlantCount
+- Actual status workflow: empty→planned→growing→fruiting→harvesting→cleaning→empty
+- Plant data "Potato" ID: 01dfdea2-04c6-4c07-bbb5-9a1cd5c6b9cd
+
+CURRENT STATUS: 19/310 features passing (6.1%)
+
 == Session: 2026-02-05 (Agent 5) ==
 Agent: Features #8, #177, #193 (Navigation Integrity)
 
