@@ -112,3 +112,44 @@ NOTES FOR NEXT SESSION:
 - All dashboard data comes from real MongoDB via aggregated endpoints
 - ChartWidget component supports line, bar, and pie chart types via Recharts
 - Dashboard uses react-grid-layout for drag-and-drop widget positioning
+
+== Session: 2026-02-05 (Agent 4) ==
+Agent: Features #9, #10, #11 (Auth UI & Workflows)
+
+COMPLETED:
+- Feature #9: Registration page renders correctly [PASSING]
+  - Navigated to /register, all fields present: first name, last name, email, password, confirm password
+  - Register button ("Create Account") present
+  - Link to login page ("Sign in" -> /login) present
+  - Zero console errors
+  - Screenshot verification taken
+
+- Feature #10: User can register a new account [PASSING]
+  - Filled in registration form with test_feature10@example.com
+  - Submitted form, user auto-logged-in with JWT tokens
+  - Redirected to /dashboard showing "TestUser Feature10" in sidebar
+  - Verified user record in MongoDB via mongosh query
+  - Zero console errors, no mock data patterns
+  - Cleaned up test data after verification
+
+- Feature #11: User can login with valid credentials [PASSING]
+  - Logged out, navigated to /login
+  - Filled in credentials for test_feature10@example.com
+  - Submitted form, received JWT access + refresh tokens
+  - Redirected to /dashboard with user info in sidebar
+  - Verified tokens in localStorage and user info in Zustand auth store
+  - Zero console errors
+
+FIXES APPLIED:
+- src/api/v1/auth.py - Changed register endpoint to return TokenResponse (auto-login)
+- src/services/auth_service.py - Added register_user_with_tokens method
+- frontend/user-portal/src/services/auth.service.ts - Fixed register to handle snake_case token response
+
+CURRENT STATUS: 11/310 features passing (3.5%)
+
+NOTES FOR NEXT SESSION:
+- Registration now returns JWT tokens (auto-login after register)
+- Backend register response uses snake_case (access_token, refresh_token)
+- Frontend auth.service.ts converts snake_case to camelCase for both login and register
+- Test users should use passwords meeting requirements: 8+ chars, uppercase, lowercase, number, special char
+- Example valid password: SecurePass123!
