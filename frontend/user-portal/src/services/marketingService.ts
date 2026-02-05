@@ -282,8 +282,38 @@ export async function deleteEvent(eventId: string): Promise<{ message: string }>
  * Transforms nested API response to flat structure expected by frontend
  */
 export async function getDashboardStats(): Promise<MarketingDashboardStats> {
-  const response = await apiClient.get<{ data: any }>('/v1/marketing/dashboard');
-  const data = response.data.data;
+  // Fetch dashboard stats and supporting data in parallel
+  const [dashboardRes, campaignsRes, eventsRes, budgetsRes] = await Promise.all([
+    apiClient.get<{ data: any }>('/v1/marketing/dashboard'),
+    apiClient.get<{ data: any[] }>('/v1/marketing/campaigns', { params: { per_page: 5 } }).catch(() => ({ data: { data: [] } })),
+    apiClient.get<{ data: any[] }>('/v1/marketing/events', { params: { per_page: 5 } }).catch(() => ({ data: { data: [] } })),
+    apiClient.get<{ data: any[] }>('/v1/marketing/budgets', { params: { per_page: 5 } }).catch(() => ({ data: { data: [] } })),
+  ]);
+
+  const data = dashboardRes.data.data;
+  const campaigns = Array.isArray(campaignsRes.data.data) ? campaignsRes.data.data : [];
+  const events = Array.isArray(eventsRes.data.data) ? eventsRes.data.data : [];
+  const budgets = Array.isArray(budgetsRes.data.data) ? budgetsRes.data.data : [];
+
+  // Sort campaigns by impressions descending for "top" campaigns
+  const topCampaigns = campaigns
+    .sort((a: any, b: any) => (b.metrics?.impressions || 0) - (a.metrics?.impressions || 0))
+    .slice(0, 5);
+
+  // Filter upcoming/ongoing events sorted by date
+  const upcomingEventsList = events
+    .filter((e: any) => e.status === 'planned' || e.status === 'ongoing' || e.status === 'upcoming')
+    .sort((a: any, b: any) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime())
+    .slice(0, 5);
+
+  // Map budgets to utilization format
+  const budgetUtilization = budgets.map((b: any) => ({
+    budgetId: b.budgetId,
+    name: b.name,
+    totalAmount: b.totalAmount || 0,
+    spentAmount: b.spentAmount || 0,
+    utilizationPercentage: b.totalAmount > 0 ? Math.round((b.spentAmount || 0) / b.totalAmount * 100) : 0,
+  }));
 
   // Transform nested API response to flat structure
   return {
@@ -295,13 +325,13 @@ export async function getDashboardStats(): Promise<MarketingDashboardStats> {
     totalImpressions: data.campaigns?.performance?.impressions || 0,
     totalClicks: data.campaigns?.performance?.clicks || 0,
     totalConversions: data.campaigns?.performance?.conversions || 0,
-    averageROI: 0, // Can be calculated if needed
+    averageROI: 0,
     upcomingEvents: data.events?.upcoming || 0,
     totalEvents: data.events?.total || 0,
     activeChannels: data.channels?.active || 0,
-    topCampaigns: [], // Would need separate API call
-    upcomingEventsList: [], // Would need separate API call
-    budgetUtilization: [], // Would need separate API call
+    topCampaigns,
+    upcomingEventsList,
+    budgetUtilization,
   };
 }
 
