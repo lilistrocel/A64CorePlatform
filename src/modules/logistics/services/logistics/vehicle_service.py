@@ -93,7 +93,8 @@ class VehicleService:
         page: int = 1,
         per_page: int = 20,
         status: Optional[VehicleStatus] = None,
-        type: Optional[str] = None
+        type: Optional[str] = None,
+        ownership: Optional[str] = None
     ) -> tuple[List[Vehicle], int, int]:
         """
         Get all vehicles with pagination
@@ -103,6 +104,7 @@ class VehicleService:
             per_page: Items per page
             status: Filter by vehicle status (optional)
             type: Filter by vehicle type (optional)
+            ownership: Filter by ownership type (optional)
 
         Returns:
             Tuple of (vehicles, total, total_pages)
@@ -113,7 +115,7 @@ class VehicleService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        vehicles, total = await self.repository.get_all(skip, per_page, status, type)
+        vehicles, total = await self.repository.get_all(skip, per_page, status, type, ownership)
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 

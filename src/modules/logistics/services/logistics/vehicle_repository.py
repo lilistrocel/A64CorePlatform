@@ -208,7 +208,8 @@ class VehicleRepository:
         skip: int = 0,
         limit: int = 20,
         status: Optional[VehicleStatus] = None,
-        type: Optional[str] = None
+        type: Optional[str] = None,
+        ownership: Optional[str] = None
     ) -> tuple[List[Vehicle], int]:
         """
         Get all vehicles with pagination and filters
@@ -218,6 +219,7 @@ class VehicleRepository:
             limit: Maximum number of records to return
             status: Filter by vehicle status (optional)
             type: Filter by vehicle type (optional)
+            ownership: Filter by ownership type (optional)
 
         Returns:
             Tuple of (list of vehicles, total count)
@@ -225,6 +227,10 @@ class VehicleRepository:
         collection = self._get_collection()
         query = {}
         and_conditions = []
+
+        if ownership:
+            # Filter by ownership type (matches both new 'ownership' field)
+            and_conditions.append({"ownership": ownership})
 
         if status:
             # Handle both new 'status' field and legacy 'isActive' field

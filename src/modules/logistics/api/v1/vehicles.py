@@ -9,7 +9,7 @@ from typing import Optional
 from uuid import UUID
 import logging
 
-from src.modules.logistics.models.vehicle import Vehicle, VehicleCreate, VehicleUpdate, VehicleStatus, VehicleType
+from src.modules.logistics.models.vehicle import Vehicle, VehicleCreate, VehicleUpdate, VehicleStatus, VehicleType, VehicleOwnership
 from src.modules.logistics.services.logistics import VehicleService
 from src.modules.logistics.middleware.auth import require_permission, CurrentUser
 from src.modules.logistics.utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
@@ -54,12 +54,13 @@ async def get_vehicles(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     status: Optional[VehicleStatus] = Query(None, description="Filter by vehicle status"),
     type: Optional[VehicleType] = Query(None, description="Filter by vehicle type"),
+    ownershipType: Optional[VehicleOwnership] = Query(None, description="Filter by ownership type"),
     current_user: CurrentUser = Depends(require_permission("logistics.view")),
     service: VehicleService = Depends()
 ):
     """Get all vehicles with pagination"""
     vehicles, total, total_pages = await service.get_all_vehicles(
-        page, perPage, status, type.value if type else None
+        page, perPage, status, type.value if type else None, ownershipType.value if ownershipType else None
     )
 
     return PaginatedResponse(
