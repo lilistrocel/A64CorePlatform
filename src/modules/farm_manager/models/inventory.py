@@ -376,7 +376,8 @@ class HarvestInventoryBase(BaseModel):
 
 class HarvestInventoryCreate(HarvestInventoryBase):
     """Schema for creating harvest inventory item"""
-    pass
+    # Override: quantity must be > 0 when creating (ge=0 in base allows deductions to reach 0)
+    quantity: float = Field(..., gt=0, description="Initial quantity must be greater than 0")
 
 
 class HarvestInventoryUpdate(BaseModel):
@@ -483,7 +484,8 @@ class InputInventoryBase(BaseModel):
 
 class InputInventoryCreate(InputInventoryBase):
     """Schema for creating input inventory item"""
-    pass
+    # Override: quantity must be > 0 when creating (ge=0 in base allows deductions to reach 0)
+    quantity: float = Field(..., gt=0, description="Initial quantity must be greater than 0")
 
 
 class InputInventoryUpdate(BaseModel):

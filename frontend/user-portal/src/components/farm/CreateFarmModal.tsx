@@ -11,6 +11,7 @@ import { z } from 'zod';
 import styled from 'styled-components';
 import maplibregl from 'maplibre-gl';
 import { farmApi } from '../../services/farmApi';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { CreateFarmFormData, Manager, GeoJSONPolygon, FarmBoundary } from '../../types/farm';
 import { useMapDrawing } from '../../hooks/map/useMapDrawing';
 
@@ -28,8 +29,17 @@ const farmSchema = z.object({
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
   country: z.string().min(1, 'Country is required'),
-  totalArea: z.number().min(0.1, 'Area must be greater than 0'),
-  numberOfStaff: z.number().min(0, 'Number of staff must be 0 or greater').optional(),
+  totalArea: z.preprocess(
+    (val) => (val === '' || val === undefined || Number.isNaN(Number(val)) ? undefined : Number(val)),
+    z.number({ required_error: 'Area is required', invalid_type_error: 'Area must be a valid number' })
+      .gt(0, 'Area must be greater than 0')
+  ),
+  numberOfStaff: z.preprocess(
+    (val) => (val === '' || val === undefined || Number.isNaN(Number(val)) ? undefined : Number(val)),
+    z.number({ invalid_type_error: 'Must be a valid number' })
+      .min(0, 'Number of staff must be 0 or greater')
+      .optional()
+  ),
   managerId: z.string().min(1, 'Manager ID is required'),
   isActive: z.boolean(),
 });
@@ -397,11 +407,12 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
       reset();
       clearPolygon();
       setShowMap(false);
+      showSuccessToast('Farm created successfully');
       onSuccess?.();
       onClose();
     } catch (error) {
       console.error('Error creating farm:', error);
-      alert('Failed to create farm. Please try again.');
+      showErrorToast('Failed to create farm. Please try again.');
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

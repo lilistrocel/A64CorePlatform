@@ -26,8 +26,18 @@ const farmUpdateSchema = z.object({
   country: z.string().min(1, 'Country is required'),
   latitude: z.number().min(-90, 'Invalid latitude').max(90, 'Invalid latitude').optional().nullable(),
   longitude: z.number().min(-180, 'Invalid longitude').max(180, 'Invalid longitude').optional().nullable(),
-  totalArea: z.number().min(0.1, 'Area must be greater than 0'),
-  numberOfStaff: z.number().min(0, 'Number of staff must be 0 or greater').optional().nullable(),
+  totalArea: z.preprocess(
+    (val) => (val === '' || val === undefined || val === null || Number.isNaN(Number(val)) ? undefined : Number(val)),
+    z.number({ required_error: 'Area is required', invalid_type_error: 'Area must be a valid number' })
+      .gt(0, 'Area must be greater than 0')
+  ),
+  numberOfStaff: z.preprocess(
+    (val) => (val === '' || val === undefined || val === null || Number.isNaN(Number(val)) ? undefined : Number(val)),
+    z.number({ invalid_type_error: 'Must be a valid number' })
+      .min(0, 'Number of staff must be 0 or greater')
+      .optional()
+      .nullable()
+  ),
   managerId: z.string().min(1, 'Manager is required'),
   isActive: z.boolean(),
 });
