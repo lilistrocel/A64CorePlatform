@@ -1,3 +1,50 @@
+== Session: 2026-02-05 (Agent 24) ==
+Agent: Features #28, #29, #175 (User Profile, Profile Update, Inventory Dashboard)
+
+COMPLETED:
+- Feature #28: User profile page displays current user info [PASSING]
+  - Profile page at /profile shows firstName, lastName, email, role
+  - Role displayed as styled badge (e.g., "User", "Admin")
+  - Edit Profile button present with edit capability
+  - Permissions section shows assigned permissions or "No permissions assigned"
+  - Zero console errors, no mock data patterns
+
+- Feature #29: User can update own profile [PASSING]
+  - Edit Profile button switches to editable form (firstName, lastName, phone)
+  - Email shown as read-only with "Email cannot be changed" note
+  - Save Changes calls PATCH /api/v1/auth/me with updated fields
+  - Success toast "Profile updated successfully" shown on save
+  - Sidebar name updates in real-time after save
+  - Page refresh confirms data persisted in MongoDB
+  - Cancel button reverts unsaved changes
+  - Zero console errors
+
+- Feature #175: Inventory dashboard with overview stats [PASSING]
+  - Added wasteInventory to InventorySummary backend model and API endpoint
+  - Summary endpoint now aggregates stats from all 4 collections: inventory_harvest, inventory_input, inventory_asset, inventory_waste
+  - Dashboard shows 5 summary cards: Harvest (139 items), Input, Assets, Waste, Alerts
+  - Added Waste tab to inventory navigation (joins Harvest, Inputs, Assets)
+  - WasteInventoryList renders as nested route at /inventory/waste
+  - Created test items in all 4 types, verified counts match, cleaned up test data
+  - Zero console errors, no mock data patterns
+
+FIXES APPLIED:
+- frontend/user-portal/src/pages/profile/Profile.tsx - Added edit mode with form, toast, loadUser refresh
+- frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx - Added waste card and waste tab
+- frontend/user-portal/src/types/inventory.ts - Added wasteInventory and totalWasteValue to InventorySummary
+- src/modules/farm_manager/models/inventory.py - Added wasteInventory and totalWasteValue fields
+- src/modules/farm_manager/api/v1/inventory.py - Added waste aggregation pipeline to summary endpoint
+
+CURRENT STATUS: 86/310 features passing (27.7%)
+
+NOTES FOR NEXT SESSION:
+- Profile page edit uses PATCH /api/v1/auth/me (firstName, lastName, phone)
+- Auth store loadUser() refreshes user data after profile update
+- Inventory summary endpoint returns all 4 inventory type stats
+- Waste tab uses lazy-loaded WasteInventoryList component
+- organizationId for inventory creation: 02f7cab7-3ae3-496f-af2b-a58745c2bb07
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
 == Session: 2026-02-05 (Agent 23) ==
 Agent: Features #41, #174, #52 (Farm Delete, Waste Inventory, Sales Returns)
 
