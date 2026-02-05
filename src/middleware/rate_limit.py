@@ -5,8 +5,9 @@ Implements rate limiting per user role as defined in User-Structure.md
 Uses Redis for distributed rate limiting with in-memory fallback
 """
 
-from fastapi import Request, HTTPException, status
-from typing import Dict, Optional
+from fastapi import Request, HTTPException, status, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+from typing import Dict, Optional, Tuple
 from datetime import datetime, timedelta
 import logging
 import os
@@ -200,9 +201,12 @@ class RateLimiter:
 
         return is_allowed, request_count + 1 if is_allowed else request_count
 
-    async def check_rate_limit(self, request: Request) -> None:
+    async def check_rate_limit(self, request: Request) -> Tuple[int, int, int]:
         """
         Check if request is within rate limit
+
+        Returns:
+            Tuple of (limit, remaining, current_count) for headers
 
         Raises:
             HTTPException: 429 if rate limit exceeded
@@ -235,6 +239,9 @@ class RateLimiter:
                 limit
             )
 
+        # Calculate remaining requests
+        remaining = max(0, limit - current_count)
+
         # Check if limit exceeded
         if not is_allowed:
             logger.warning(
@@ -244,7 +251,12 @@ class RateLimiter:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Rate limit exceeded. Maximum {limit} requests per minute.",
-                headers={"Retry-After": "60"}
+                headers={
+                    "Retry-After": "60",
+                    "X-RateLimit-Limit": str(limit),
+                    "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Reset": "60"
+                }
             )
 
         # Log if approaching limit (80% threshold)
@@ -254,12 +266,14 @@ class RateLimiter:
                 f"{current_count}/{limit} requests"
             )
 
+        return limit, remaining, current_count
+
 
 # Global rate limiter instance
 rate_limiter = RateLimiter()
 
 
-async def rate_limit_dependency(request: Request) -> None:
+async def rate_limit_dependency(request: Request) -> Tuple[int, int, int]:
     """
     FastAPI dependency for rate limiting
 
@@ -267,8 +281,104 @@ async def rate_limit_dependency(request: Request) -> None:
         @router.get("/endpoint", dependencies=[Depends(rate_limit_dependency)])
         async def my_endpoint():
             ...
+
+    Returns:
+        Tuple of (limit, remaining, current_count)
     """
-    await rate_limiter.check_rate_limit(request)
+    return await rate_limiter.check_rate_limit(request)
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to add rate limit headers to all responses.
+
+    Headers added:
+    - X-RateLimit-Limit: Maximum requests per minute for user's role
+    - X-RateLimit-Remaining: Remaining requests in current window
+    - X-RateLimit-Reset: Seconds until the rate limit resets
+
+    Rate limits by role (per minute):
+    - Guest: 10
+    - User: 100
+    - Moderator: 200
+    - Admin: 500
+    - Super Admin: 1000
+    """
+
+    def _extract_user_from_token(self, request: Request) -> Optional[object]:
+        """
+        Extract user info from JWT token in Authorization header.
+
+        Returns a simple object with userId and role attributes, or None if no valid token.
+        """
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return None
+
+        try:
+            from jose import jwt, JWTError
+            from ..config.settings import settings
+
+            token = auth_header[7:]  # Remove "Bearer " prefix
+            payload = jwt.decode(
+                token,
+                settings.SECRET_KEY,
+                algorithms=["HS256"]
+            )
+
+            user_id = payload.get("userId")
+            role = payload.get("role")
+
+            if not user_id or not role:
+                return None
+
+            # Create a simple user object
+            class SimpleUser:
+                def __init__(self, user_id: str, role_str: str):
+                    self.userId = user_id
+                    try:
+                        self.role = UserRole(role_str)
+                    except ValueError:
+                        self.role = UserRole.GUEST
+
+            return SimpleUser(user_id, role)
+
+        except (JWTError, Exception) as e:
+            logger.debug(f"Failed to extract user from token: {e}")
+            return None
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip rate limiting for health check endpoints
+        if request.url.path in ["/api/health", "/api/ready", "/"]:
+            return await call_next(request)
+
+        try:
+            # Extract user from JWT token and set in request state
+            user = self._extract_user_from_token(request)
+            if user:
+                request.state.user = user
+
+            # Check rate limit and get info for headers
+            limit, remaining, current_count = await rate_limiter.check_rate_limit(request)
+
+            # Process the request
+            response = await call_next(request)
+
+            # Add rate limit headers to response
+            response.headers["X-RateLimit-Limit"] = str(limit)
+            response.headers["X-RateLimit-Remaining"] = str(remaining)
+            response.headers["X-RateLimit-Reset"] = "60"  # Reset window is 60 seconds
+
+            return response
+
+        except HTTPException as exc:
+            # Rate limit exceeded - return 429 response with headers
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail},
+                headers=exc.headers or {}
+            )
 
 
 class LoginRateLimiter:

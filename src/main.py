@@ -23,6 +23,7 @@ from .services.module_manager import module_manager
 from .core.plugin_system import get_plugin_manager
 from .core.cache import get_redis_cache, close_redis_cache
 from .core.logging_config import setup_logging
+from .middleware.rate_limit import RateLimitMiddleware
 
 # Configure structured logging (JSON in production, text in development)
 setup_logging(log_level=settings.LOG_LEVEL, environment=settings.ENVIRONMENT)
@@ -39,13 +40,19 @@ app = FastAPI(
 )
 
 # CORS Middleware - Restricted to specific methods and headers
+# Note: Middleware is applied in reverse order (last added = first executed)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
+
+# Rate Limiting Middleware - Applied after CORS
+# Limits vary by role: Guest=10, User=100, Moderator=200, Admin=500, Super Admin=1000 req/min
+app.add_middleware(RateLimitMiddleware)
 
 # Global exception handler
 @app.exception_handler(Exception)

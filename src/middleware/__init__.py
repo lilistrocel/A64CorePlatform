@@ -15,7 +15,8 @@ from .permissions import (
 from .rate_limit import (
     rate_limiter,
     rate_limit_dependency,
-    login_rate_limiter
+    login_rate_limiter,
+    RateLimitMiddleware
 )
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     "can_change_role",
     "rate_limiter",
     "rate_limit_dependency",
-    "login_rate_limiter"
+    "login_rate_limiter",
+    "RateLimitMiddleware"
 ]
