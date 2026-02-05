@@ -238,8 +238,13 @@ export function Dashboard() {
           <EmptyIcon>📊</EmptyIcon>
           <EmptyTitle>No widgets configured</EmptyTitle>
           <EmptyText>Add widgets to your dashboard to start monitoring your business</EmptyText>
+          <ActionButton onClick={() => setShowAddWidget(true)} $variant="primary" style={{ marginTop: '1rem' }}>
+            ➕ Add Widget
+          </ActionButton>
         </EmptyState>
       )}
+
+      <AddWidgetModal isOpen={showAddWidget} onClose={() => setShowAddWidget(false)} />
     </DashboardContainer>
   );
 }
