@@ -10,6 +10,7 @@
 #   MONGO_USER - MongoDB user (optional, for auth)
 #   MONGO_PASSWORD - MongoDB password (optional, for auth)
 #   MONGO_AUTH_DB - Authentication database (default: admin)
+#   BACKUP_ENCRYPTION_KEY - Decryption key (required if backup is encrypted)
 #
 # Usage:
 #   ./mongodb_restore.sh /backups/mongodb/2025-11-01_14-30-00
@@ -83,11 +84,57 @@ if [[ ! -d "${BACKUP_PATH}" ]]; then
     exit 1
 fi
 
+# Check if backup is encrypted
+ENCRYPTED_FILE="${BACKUP_PATH}/backup.enc"
+IS_ENCRYPTED=false
+RESTORE_PATH="${BACKUP_PATH}"
+
+if [[ -f "${ENCRYPTED_FILE}" ]]; then
+    IS_ENCRYPTED=true
+    log "Encrypted backup detected"
+
+    BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:-}"
+    if [[ -z "${BACKUP_ENCRYPTION_KEY}" ]]; then
+        error "Backup is encrypted but BACKUP_ENCRYPTION_KEY is not set!"
+        exit 1
+    fi
+
+    # Decrypt to temporary directory
+    TEMP_DIR=$(mktemp -d)
+    TEMP_ARCHIVE="${TEMP_DIR}/backup.tar.gz"
+    trap 'rm -rf "${TEMP_DIR}"' EXIT
+
+    log "Decrypting backup..."
+    if openssl enc -aes-256-cbc -d -salt -pbkdf2 -iter 100000 \
+        -in "${ENCRYPTED_FILE}" \
+        -out "${TEMP_ARCHIVE}" \
+        -pass env:BACKUP_ENCRYPTION_KEY 2>>"${LOG_FILE}"; then
+        log "Decryption successful"
+    else
+        error "Decryption failed! Wrong key or corrupted backup."
+        exit 1
+    fi
+
+    # Extract tarball
+    log "Extracting decrypted backup..."
+    tar -xzf "${TEMP_ARCHIVE}" -C "${TEMP_DIR}"
+    rm -f "${TEMP_ARCHIVE}"
+
+    # Find the extracted backup directory (named by timestamp)
+    EXTRACTED_DIR=$(find "${TEMP_DIR}" -maxdepth 1 -mindepth 1 -type d | head -1)
+    if [[ -z "${EXTRACTED_DIR}" ]]; then
+        error "Could not find extracted backup directory"
+        exit 1
+    fi
+    RESTORE_PATH="${EXTRACTED_DIR}"
+    log "Restore path: ${RESTORE_PATH}"
+fi
+
 # Check if backup contains the database directory
-DB_BACKUP_PATH="${BACKUP_PATH}/${MONGO_DB}"
+DB_BACKUP_PATH="${RESTORE_PATH}/${MONGO_DB}"
 if [[ ! -d "${DB_BACKUP_PATH}" ]]; then
     error "Database backup not found in: ${DB_BACKUP_PATH}"
-    error "Expected structure: ${BACKUP_PATH}/${MONGO_DB}/"
+    error "Expected structure: ${RESTORE_PATH}/${MONGO_DB}/"
     exit 1
 fi
 
@@ -100,6 +147,9 @@ if [[ "${GZ_COUNT}" -eq 0 ]]; then
 fi
 
 log "Found ${GZ_COUNT} collection backup files"
+if [[ "${IS_ENCRYPTED}" == "true" ]]; then
+    log "Backup was encrypted (decrypted to temp directory)"
+fi
 
 # Get backup metadata
 if [[ -f "${BACKUP_PATH}/.daily" ]]; then

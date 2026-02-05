@@ -15,11 +15,7 @@ from .config.settings import settings
 from .services.database import farm_db
 from .api import api_router
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Logging is configured centrally by src/core/logging_config.py
 logger = logging.getLogger(__name__)
 
 

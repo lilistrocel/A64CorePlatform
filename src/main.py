@@ -22,12 +22,10 @@ from .services.port_manager import init_port_manager, get_port_manager
 from .services.module_manager import module_manager
 from .core.plugin_system import get_plugin_manager
 from .core.cache import get_redis_cache, close_redis_cache
+from .core.logging_config import setup_logging
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Configure structured logging (JSON in production, text in development)
+setup_logging(log_level=settings.LOG_LEVEL, environment=settings.ENVIRONMENT)
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app

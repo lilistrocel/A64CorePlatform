@@ -32,6 +32,10 @@ LOG_FILE="${LOG_FILE:-/var/log/backup/mongodb_backup.log}"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 BACKUP_PATH="${BACKUP_DIR}/${TIMESTAMP}"
 
+# Encryption settings
+BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:-}"
+ENCRYPT_BACKUPS="${ENCRYPT_BACKUPS:-false}"
+
 # Retention settings
 RETENTION_DAILY="${BACKUP_RETENTION_DAILY:-7}"
 RETENTION_WEEKLY="${BACKUP_RETENTION_WEEKLY:-4}"
@@ -53,7 +57,21 @@ mkdir -p "$(dirname "${LOG_FILE}")"
 log "=== MongoDB Backup Started ==="
 log "Database: ${MONGO_DB}"
 log "Backup Path: ${BACKUP_PATH}"
+log "Encryption: ${ENCRYPT_BACKUPS}"
 log "Retention Policy: Daily=${RETENTION_DAILY}, Weekly=${RETENTION_WEEKLY}, Monthly=${RETENTION_MONTHLY}"
+
+# Validate encryption config
+if [[ "${ENCRYPT_BACKUPS}" == "true" ]]; then
+    if [[ -z "${BACKUP_ENCRYPTION_KEY}" ]]; then
+        error "ENCRYPT_BACKUPS=true but BACKUP_ENCRYPTION_KEY is not set!"
+        exit 1
+    fi
+    if ! command -v openssl &> /dev/null; then
+        error "openssl is required for backup encryption but not found"
+        exit 1
+    fi
+    log "Backup encryption enabled (AES-256-CBC)"
+fi
 
 # Build mongodump command
 MONGODUMP_CMD="mongodump --host=${MONGO_HOST} --port=${MONGO_PORT} --db=${MONGO_DB} --gzip --out=${BACKUP_PATH}"
@@ -71,6 +89,33 @@ if ${MONGODUMP_CMD} >> "${LOG_FILE}" 2>&1; then
     # Get backup size
     BACKUP_SIZE=$(du -sh "${BACKUP_PATH}" | cut -f1)
     log "Backup size: ${BACKUP_SIZE}"
+
+    # Encrypt backup if enabled
+    if [[ "${ENCRYPT_BACKUPS}" == "true" ]]; then
+        log "Encrypting backup..."
+        ARCHIVE_FILE="${BACKUP_DIR}/${TIMESTAMP}.tar.gz"
+        ENCRYPTED_FILE="${BACKUP_DIR}/${TIMESTAMP}.tar.gz.enc"
+
+        # Create tarball of the backup directory
+        tar -czf "${ARCHIVE_FILE}" -C "${BACKUP_DIR}" "${TIMESTAMP}"
+
+        # Encrypt with AES-256-CBC using PBKDF2 key derivation
+        openssl enc -aes-256-cbc -salt -pbkdf2 -iter 100000 \
+            -in "${ARCHIVE_FILE}" \
+            -out "${ENCRYPTED_FILE}" \
+            -pass env:BACKUP_ENCRYPTION_KEY
+
+        # Remove unencrypted files
+        rm -f "${ARCHIVE_FILE}"
+        rm -rf "${BACKUP_PATH}"
+
+        # Recreate backup path as a marker directory for retention tracking
+        mkdir -p "${BACKUP_PATH}"
+        mv "${ENCRYPTED_FILE}" "${BACKUP_PATH}/backup.enc"
+
+        ENCRYPTED_SIZE=$(du -sh "${BACKUP_PATH}/backup.enc" | cut -f1)
+        log "Backup encrypted successfully (${ENCRYPTED_SIZE})"
+    fi
 
     # Tag backup type for retention
     CURRENT_DATE=$(date +"%Y-%m-%d")

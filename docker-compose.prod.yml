@@ -73,3 +73,10 @@ services:
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@a64platform.com}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     restart: always
+
+  # Backup Service - Production (encryption enabled)
+  backup:
+    environment:
+      - ENCRYPT_BACKUPS=true
+      - BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY}
+    restart: always

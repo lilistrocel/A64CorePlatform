@@ -3,9 +3,9 @@
 
 FROM mongo:7.0
 
-# Install bash and cron (Alpine packages)
+# Install bash, cron, and openssl for encrypted backups
 RUN apt-get update && \
-    apt-get install -y cron bash && \
+    apt-get install -y cron bash openssl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
