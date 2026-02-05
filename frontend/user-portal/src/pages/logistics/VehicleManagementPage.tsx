@@ -4,7 +4,7 @@
  * Vehicle fleet management with filters and CRUD operations.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { VehicleTable } from '../../components/logistics/VehicleTable';
 import { VehicleCard } from '../../components/logistics/VehicleCard';
@@ -12,6 +12,9 @@ import { VehicleForm } from '../../components/logistics/VehicleForm';
 import { logisticsApi } from '../../services/logisticsService';
 import type { Vehicle, VehicleType, VehicleStatus, VehicleOwnership, VehicleCreate, VehicleUpdate } from '../../types/logistics';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
+
+// Mobile breakpoint for responsive view switching
+const MOBILE_BREAKPOINT = 768;
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -279,7 +282,8 @@ export function VehicleManagementPage() {
   const [typeFilter, setTypeFilter] = useState<VehicleType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [ownershipFilter, setOwnershipFilter] = useState<VehicleOwnership | 'all'>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
+  const [userViewPreference, setUserViewPreference] = useState<'table' | 'grid' | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -287,6 +291,25 @@ export function VehicleManagementPage() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const perPage = 20;
+
+  // Calculate actual view mode: on mobile, default to grid unless user explicitly chose table
+  const viewMode: 'table' | 'grid' = isMobile
+    ? (userViewPreference || 'grid')
+    : (userViewPreference || 'table');
+
+  // Handle window resize for responsive view switching
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Handle view mode change (user explicit choice)
+  const setViewMode = useCallback((mode: 'table' | 'grid') => {
+    setUserViewPreference(mode);
+  }, []);
 
   useEffect(() => {
     loadVehicles();

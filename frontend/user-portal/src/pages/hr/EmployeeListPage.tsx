@@ -4,13 +4,16 @@
  * Main employee list page with search, filters, and pagination.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { EmployeeTable } from '../../components/hr/EmployeeTable';
 import { EmployeeCard } from '../../components/hr/EmployeeCard';
 import { hrApi } from '../../services/hrService';
 import type { Employee, EmployeeStatus } from '../../types/hr';
+
+// Mobile breakpoint for responsive view switching
+const MOBILE_BREAKPOINT = 768;
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -336,11 +339,31 @@ export function EmployeeListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | 'all'>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
+  const [userViewPreference, setUserViewPreference] = useState<'table' | 'grid' | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const perPage = 20;
+
+  // Calculate actual view mode: on mobile, default to grid unless user explicitly chose table
+  const viewMode: 'table' | 'grid' = isMobile
+    ? (userViewPreference || 'grid')
+    : (userViewPreference || 'table');
+
+  // Handle window resize for responsive view switching
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Handle view mode change (user explicit choice)
+  const setViewMode = useCallback((mode: 'table' | 'grid') => {
+    setUserViewPreference(mode);
+  }, []);
 
   useEffect(() => {
     loadEmployees();
