@@ -397,7 +397,7 @@ async def get_cache_stats(
 
 
 # ============================================================================
-# Cost/Usage Endpoints (Placeholder - implement in Phase 4)
+# Cost/Usage Endpoints
 # ============================================================================
 
 @router.get(
@@ -419,19 +419,46 @@ async def get_cost_stats(
     - this_month: Current month's costs
     - all_time: Total costs
 
-    **Note:** This is a placeholder endpoint.
-    Full cost tracking will be implemented in Phase 4.
+    Returns real cost data tracked from AI chat queries.
     """
-    # Placeholder response
-    return UserCostResponse(
-        user_id=str(current_user.userId),
-        period=period,
-        cost_summary={
-            "total_queries": 0,
-            "total_cost_usd": 0.0,
-            "average_cost_per_query": 0.0,
-            "total_tokens": 0,
-            "cache_hit_rate": 0.0
-        },
-        daily_breakdown=None
-    )
+    try:
+        cost_service = get_cost_tracking_service(
+            mongodb_client=mongodb.client,
+            db_name="a64core_db"
+        )
+
+        # Get cost summary for the requested period
+        cost_summary = await cost_service.get_user_cost_summary(
+            user_id=str(current_user.userId),
+            period=period
+        )
+
+        # Get daily breakdown for this_month and all_time periods
+        daily_breakdown = None
+        if period in ("this_month", "all_time"):
+            days = 30 if period == "this_month" else 365
+            daily_breakdown = await cost_service.get_user_daily_breakdown(
+                user_id=str(current_user.userId),
+                days=days
+            )
+
+        return UserCostResponse(
+            user_id=str(current_user.userId),
+            period=period,
+            cost_summary=cost_summary,
+            daily_breakdown=daily_breakdown
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to get cost stats: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": {
+                    "code": "COST_STATS_FAILED",
+                    "message": "Failed to retrieve cost statistics",
+                    "details": {"error": str(e)},
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            }
+        )

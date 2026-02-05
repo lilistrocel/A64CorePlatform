@@ -106,6 +106,11 @@ class MongoDBManager:
                 expireAfterSeconds=7776000  # TTL index: 90 days (90*24*60*60)
             )
 
+            # AI query log collection indexes (AI Analytics cost tracking)
+            await cls.db.ai_query_log.create_index("user_id")
+            await cls.db.ai_query_log.create_index([("timestamp", -1)])
+            await cls.db.ai_query_log.create_index([("user_id", 1), ("timestamp", -1)])
+
             logger.info("MongoDB indexes created successfully")
         except Exception as e:
             logger.error(f"Error creating MongoDB indexes: {e}")
