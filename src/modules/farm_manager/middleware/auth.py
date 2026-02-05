@@ -218,6 +218,12 @@ def require_permission(permission: str):
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Permission denied: Agronomist role required"
                 )
+        elif permission == "admin":
+            if current_user.role not in ["admin", "super_admin"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Permission denied: Admin access required"
+                )
 
         return current_user
 
