@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { StatWidget, ChartWidget, Spinner } from '@a64core/shared';
 import { useDashboardStore, waitForHydration } from '../../stores/dashboard.store';
+import { AddWidgetModal } from '../../components/dashboard/AddWidgetModal';
 import GridLayout, { type Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 
@@ -19,6 +20,7 @@ export function Dashboard() {
   } = useDashboardStore();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [showAddWidget, setShowAddWidget] = useState(false);
   const [columns, setColumns] = useState(4);
   const [gridWidth, setGridWidth] = useState(0);
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -150,6 +152,9 @@ export function Dashboard() {
           </Subtitle>
         </HeaderLeft>
         <HeaderRight>
+          <ActionButton onClick={() => setShowAddWidget(true)} $variant="secondary">
+            ➕ Add Widget
+          </ActionButton>
           <ActionButton onClick={() => setIsEditing(!isEditing)} $variant={isEditing ? 'primary' : 'secondary'}>
             {isEditing ? '✓ Done' : '✏️ Edit Layout'}
           </ActionButton>
@@ -218,6 +223,7 @@ export function Dashboard() {
                     data={widgetState?.data || null}
                     loading={widgetState?.loading || false}
                     error={widgetState?.error || null}
+                    onRefresh={() => useDashboardStore.getState().refreshWidget(widget.id)}
                   />
                 )}
               </WidgetContainer>

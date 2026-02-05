@@ -3,7 +3,7 @@ import { WidgetProps, StatWidgetData } from '../../types/widget.types';
 import { Card } from '../common/Card';
 import { Spinner } from '../common/Spinner';
 
-export function StatWidget({ widget, data, loading, error }: WidgetProps) {
+export function StatWidget({ widget, data, loading, error, onRefresh }: WidgetProps) {
   if (loading) {
     return (
       <Card title={widget.title} subtitle={widget.description}>
@@ -19,6 +19,7 @@ export function StatWidget({ widget, data, loading, error }: WidgetProps) {
       <Card title={widget.title} subtitle={widget.description}>
         <ErrorContainer>
           <ErrorText>Failed to load data</ErrorText>
+          {onRefresh && <RetryLink onClick={onRefresh}>Retry</RetryLink>}
         </ErrorContainer>
       </Card>
     );
@@ -28,6 +29,13 @@ export function StatWidget({ widget, data, loading, error }: WidgetProps) {
 
   return (
     <Card title={widget.title} subtitle={widget.description}>
+      {onRefresh && (
+        <RefreshRow>
+          <StatRefreshButton onClick={onRefresh} aria-label={`Refresh ${widget.title}`}>
+            🔄
+          </StatRefreshButton>
+        </RefreshRow>
+      )}
       <StatContainer>
         <StatValue>{statData.value}</StatValue>
         <StatLabel>{statData.label}</StatLabel>
@@ -152,4 +160,45 @@ const ErrorText = styled.div`
   color: ${({ theme }) => theme.colors.error};
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+`;
+
+const RetryLink = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  margin-top: ${({ theme }) => theme.spacing.sm};
+  text-decoration: underline;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary[600]};
+  }
+`;
+
+const RefreshRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -${({ theme }) => theme.spacing.sm};
+`;
+
+const StatRefreshButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary[500]};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 `;

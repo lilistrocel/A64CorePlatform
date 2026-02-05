@@ -93,13 +93,41 @@ class VehicleRepository:
         Get next vehicle sequence number using atomic increment.
 
         Uses a counters collection to maintain an atomic counter for vehicle codes.
+        On first use or when counter is behind existing data, syncs with max existing code.
 
         Returns:
             Next sequence number for vehicle code
         """
         db = logistics_db.get_database()
+        collection = self._get_collection()
 
-        # Use findOneAndUpdate with upsert to atomically get and increment
+        # Find the highest existing vehicle code number
+        pipeline = [
+            {"$match": {"vehicleCode": {"$regex": "^V\\d+"}}},
+            {"$project": {
+                "codeNum": {"$toInt": {"$substr": ["$vehicleCode", 1, -1]}}
+            }},
+            {"$sort": {"codeNum": -1}},
+            {"$limit": 1}
+        ]
+        cursor = collection.aggregate(pipeline)
+        max_existing = 0
+        async for doc in cursor:
+            max_existing = doc.get("codeNum", 0)
+
+        # Get current counter value
+        counter_doc = await db.counters.find_one({"_id": "vehicle_sequence"})
+        current_value = counter_doc["value"] if counter_doc else 0
+
+        # If counter is behind existing data, sync it up
+        if current_value <= max_existing:
+            await db.counters.update_one(
+                {"_id": "vehicle_sequence"},
+                {"$set": {"value": max_existing}},
+                upsert=True
+            )
+
+        # Now atomically increment
         result = await db.counters.find_one_and_update(
             {"_id": "vehicle_sequence"},
             {"$inc": {"value": 1}},
