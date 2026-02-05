@@ -1,3 +1,47 @@
+== Session: 2026-02-05 (Agent Batch #111, #112, #106) ==
+Agent: Features #111, #112, #106 (Accessibility & Temporal)
+
+COMPLETED:
+- Feature #111: Error messages announced to screen readers [PASSING]
+  - Shared Input component already has role="alert" on ErrorText and aria-describedby linking input to error
+  - Added role="alert" and aria-live="assertive" to Login ErrorBanner and SessionExpiredBanner
+  - Added role="alert" and aria-live="assertive" to Register ErrorBanner
+  - Verified: submitting empty login form shows 2 alerts (Invalid email, Password min 8 chars)
+  - Verified: submitting invalid credentials shows "Invalid credentials" with role=alert + aria-live=assertive
+  - DOM inspection confirmed: aria-invalid, aria-describedby, role="alert" all present
+  - Zero console errors
+
+- Feature #112: Timestamps display correctly in local timezone [PASSING]
+  - No code changes needed - existing implementation already correct
+  - Farm detail page shows createdAt as "Feb 5, 2026" (human-readable)
+  - Uses formatDateForDisplay() with toLocaleDateString('en-US', { year, month: 'short', day })
+  - toLocaleDateString automatically converts to user's local timezone
+  - Verified no raw ISO strings (YYYY-MM-DDTHH:MM:SS) visible on pages
+  - Screenshot verification taken on farm detail page
+
+- Feature #106: Tab navigation works throughout app [PASSING]
+  - No code changes needed - existing implementation already correct
+  - Login page tab order: Email → Password → Forgot password → Sign In → Sign up (5 elements, logical order)
+  - Dashboard: 25 focusable elements total, all with tabIndex=0
+  - Sidebar nav: all 13 links tabbable and focusable (Dashboard through Settings)
+  - Tab order: sidebar nav → logout → main content buttons → widget controls
+  - Only tabindex=-1 elements are SVG decorative elements from Recharts (correct)
+  - Focus indicators visible on all elements (blue outline/highlight)
+  - Zero console errors
+
+FIXES APPLIED:
+- frontend/user-portal/src/pages/auth/Login.tsx - Added role="alert" aria-live="assertive" to ErrorBanner and SessionExpiredBanner
+- frontend/user-portal/src/pages/auth/Register.tsx - Added role="alert" aria-live="assertive" to ErrorBanner
+
+CURRENT STATUS: 97/310 features passing (31.3%)
+
+NOTES FOR NEXT SESSION:
+- Shared Input component (frontend/shared/src/components/common/Input.tsx) has excellent a11y: aria-invalid, aria-describedby, role="alert"
+- ToastContainer also has role="alert" and aria-live="assertive"
+- formatDateForDisplay() in farmApi.ts handles all date formatting consistently
+- All interactive elements throughout app are keyboard-accessible via Tab
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
 == Session: 2026-02-05 (Agent Batch #86, #243, #137) ==
 Agent: Features #86, #243, #137
 
