@@ -83,6 +83,9 @@ const ChannelManagementPage = lazy(() => import('./pages/marketing/ChannelManage
 // Debug pages
 const ClearCache = lazy(() => import('./pages/debug/ClearCache').then(m => ({ default: m.ClearCache })));
 
+// 404 page
+const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -142,8 +145,8 @@ function App() {
               </Route>
             </Route>
 
-            {/* Catch-all redirect */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            {/* 404 Not Found page */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
         </UnsavedChangesProvider>
