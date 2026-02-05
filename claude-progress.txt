@@ -1,3 +1,46 @@
+== Session: 2026-02-05 (Agent Batch #27, #40, #45) ==
+Agent: Features #27, #40, #45 (User Activate/Deactivate, Farm Update, Block Update)
+
+COMPLETED:
+- Feature #27: Admin can activate and deactivate users [PASSING]
+  - Registered test user feature27_test@a64core.com
+  - POST /api/v1/users/{id}/deactivate as admin -> 200, isActive: false
+  - Deactivated user login attempt -> 403 "Account is inactive" (API + UI verified)
+  - POST /api/v1/users/{id}/activate as admin -> 200, isActive: true
+  - Reactivated user login -> 200, JWT tokens issued, dashboard reached (API + UI verified)
+  - Deactivation also revokes all refresh tokens (security measure)
+  - Zero console errors, no mock data patterns
+  - Screenshot: feature27-deactivated-login-blocked.png, feature27-reactivated-login-success.png
+
+- Feature #40: Farm CRUD - Update farm [PASSING]
+  - Created test farm FEATURE40_TEST_FARM with totalArea 500, location Abu Dhabi
+  - PATCH /api/v1/farm/farms/{id} with name + description -> 200
+  - GET confirms name="FEATURE40_UPDATED_FARM", description updated
+  - updatedAt changed from 18:54:30 to 18:54:37 (timestamp verification)
+  - Other fields unchanged (location, totalArea preserved by partial update)
+  - Farm visible in UI at /farm/farms with updated name
+  - Screenshot: feature40-farm-updated-in-list.png
+
+- Feature #45: Block CRUD - Update block [PASSING]
+  - Created test farm + block (FEATURE45_ORIGINAL_BLOCK, area: 50, greenhouse)
+  - PATCH /api/v1/farm/farms/{farmId}/blocks/{blockId} with name + area -> 200
+  - GET confirms name="FEATURE45_UPDATED_BLOCK", area=75
+  - Other fields unchanged (blockType: greenhouse, maxPlants: 100)
+  - updatedAt changed from 18:55:53 to 18:56:01 (timestamp verification)
+  - Block visible in UI under farm Blocks tab with updated name
+  - Screenshot: feature45-block-updated-ui.png
+
+NOTES FOR NEXT SESSION:
+- User activate/deactivate endpoints: POST /api/v1/users/{id}/activate and /deactivate
+- Login checks isActive field - returns 403 "Account is inactive" if false
+- Farm PATCH: /api/v1/farm/farms/{farmId} - partial update (only specified fields)
+- Block PATCH: /api/v1/farm/farms/{farmId}/blocks/{blockId} - partial update
+- FarmLocation must be object: { address, city, country, latitude, longitude }
+- BlockUpdate fields: name, blockType, maxPlants, area, areaUnit, location
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
+CURRENT STATUS: 115/310 features passing (37.1%)
+
 == Session: 2026-02-05 (Agent Batch #35, #36, #37) ==
 Agent: Features #35, #36, #37 (Real Data Verification - API Endpoints)
 
