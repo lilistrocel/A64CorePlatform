@@ -11,7 +11,7 @@ import logging
 
 from src.modules.logistics.models.shipment import (
     Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus,
-    OrderAssignmentRequest, OrderAssignmentResponse
+    OrderAssignmentRequest, OrderAssignmentResponse, ShipmentTrackingData
 )
 from src.modules.logistics.services.logistics import ShipmentService
 from src.modules.logistics.middleware.auth import require_permission, CurrentUser
@@ -75,6 +75,22 @@ async def get_shipments(
             totalPages=total_pages
         )
     )
+
+
+@router.get(
+    "/{shipment_id}/track",
+    response_model=SuccessResponse[ShipmentTrackingData],
+    summary="Get shipment GPS tracking data",
+    description="Get GPS tracking data for a shipment including origin, destination, current location, and progress. Requires logistics.view permission."
+)
+async def get_shipment_tracking(
+    shipment_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("logistics.view")),
+    service: ShipmentService = Depends()
+):
+    """Get GPS tracking data for a shipment"""
+    tracking_data = await service.get_tracking_data(shipment_id)
+    return SuccessResponse(data=tracking_data)
 
 
 @router.get(

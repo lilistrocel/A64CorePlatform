@@ -199,7 +199,7 @@ export function RouteForm({ route, onSubmit, onCancel, isSubmitting = false }: R
           destinationLat: route.destination.coordinates?.lat.toString() || '',
           destinationLng: route.destination.coordinates?.lng.toString() || '',
           distance: route.distance?.toString() || '',
-          estimatedDuration: route.estimatedDuration?.toString() || '',
+          estimatedDuration: route.estimatedDuration ? (route.estimatedDuration / 60).toString() : '',
           estimatedCost: route.estimatedCost?.toString() || '',
           isActive: route.isActive,
         }
@@ -234,7 +234,7 @@ export function RouteForm({ route, onSubmit, onCancel, isSubmitting = false }: R
             : undefined,
       },
       distance: data.distance ? parseFloat(data.distance) : undefined,
-      estimatedDuration: data.estimatedDuration ? parseFloat(data.estimatedDuration) : undefined,
+      estimatedDuration: data.estimatedDuration ? Math.round(parseFloat(data.estimatedDuration) * 60) : undefined,
       estimatedCost: data.estimatedCost ? parseFloat(data.estimatedCost) : undefined,
       isActive: data.isActive,
     };

@@ -33,7 +33,7 @@ class ShipmentBase(BaseModel):
     routeId: UUID = Field(..., description="Route ID")
     vehicleId: UUID = Field(..., description="Vehicle ID")
     driverId: UUID = Field(..., description="Driver ID (employee ID from HR)")
-    status: ShipmentStatus = Field(ShipmentStatus.SCHEDULED, description="Shipment status")
+    status: ShipmentStatus = Field(ShipmentStatus.PENDING, description="Shipment status")
     scheduledDate: datetime = Field(..., description="Scheduled departure date")
     actualDepartureDate: Optional[datetime] = Field(None, description="Actual departure date")
     actualArrivalDate: Optional[datetime] = Field(None, description="Actual arrival date")
@@ -103,6 +103,32 @@ class Shipment(ShipmentBase):
                 "updatedAt": "2025-01-15T10:00:00Z"
             }
         }
+
+
+class TrackingLocation(BaseModel):
+    """GPS tracking location"""
+    lat: float = Field(..., description="Latitude")
+    lng: float = Field(..., description="Longitude")
+    name: Optional[str] = Field(None, description="Location name")
+    address: Optional[str] = Field(None, description="Location address")
+
+
+class ShipmentTrackingData(BaseModel):
+    """GPS tracking data for a shipment"""
+    shipmentId: UUID = Field(..., description="Shipment ID")
+    shipmentCode: Optional[str] = Field(None, description="Shipment code")
+    status: ShipmentStatus = Field(..., description="Current shipment status")
+    origin: Optional[TrackingLocation] = Field(None, description="Origin GPS location")
+    destination: Optional[TrackingLocation] = Field(None, description="Destination GPS location")
+    currentLocation: Optional[TrackingLocation] = Field(None, description="Current estimated GPS location")
+    progressPercent: float = Field(0, description="Estimated delivery progress (0-100)")
+    routeName: Optional[str] = Field(None, description="Route name")
+    routeDistance: Optional[float] = Field(None, description="Route distance in km")
+    scheduledDate: Optional[datetime] = None
+    actualDepartureDate: Optional[datetime] = None
+    actualArrivalDate: Optional[datetime] = None
+    estimatedArrival: Optional[datetime] = None
+    lastUpdated: datetime = Field(default_factory=datetime.utcnow, description="Last tracking update time")
 
 
 class OrderAssignmentRequest(BaseModel):

@@ -266,6 +266,9 @@ export function ShipmentTrackingPage() {
           <FilterButton $active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
             All
           </FilterButton>
+          <FilterButton $active={statusFilter === 'pending'} onClick={() => setStatusFilter('pending')}>
+            Pending
+          </FilterButton>
           <FilterButton $active={statusFilter === 'scheduled'} onClick={() => setStatusFilter('scheduled')}>
             Scheduled
           </FilterButton>

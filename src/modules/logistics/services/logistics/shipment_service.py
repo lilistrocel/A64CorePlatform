@@ -13,7 +13,7 @@ import logging
 
 from src.modules.logistics.models.shipment import (
     Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus,
-    OrderAssignmentResponse
+    OrderAssignmentResponse, ShipmentTrackingData, TrackingLocation
 )
 from src.modules.logistics.services.logistics.shipment_repository import ShipmentRepository
 from src.modules.logistics.services.logistics.vehicle_repository import VehicleRepository
@@ -221,7 +221,9 @@ class ShipmentService:
 
         # Validate status transition
         valid_transitions = {
-            ShipmentStatus.SCHEDULED: [ShipmentStatus.IN_TRANSIT, ShipmentStatus.CANCELLED],
+            ShipmentStatus.PENDING: [ShipmentStatus.SCHEDULED, ShipmentStatus.LOADING, ShipmentStatus.CANCELLED],
+            ShipmentStatus.SCHEDULED: [ShipmentStatus.LOADING, ShipmentStatus.IN_TRANSIT, ShipmentStatus.CANCELLED],
+            ShipmentStatus.LOADING: [ShipmentStatus.IN_TRANSIT, ShipmentStatus.CANCELLED],
             ShipmentStatus.IN_TRANSIT: [ShipmentStatus.DELIVERED, ShipmentStatus.CANCELLED],
             ShipmentStatus.DELIVERED: [],
             ShipmentStatus.CANCELLED: []
@@ -502,3 +504,113 @@ class ShipmentService:
                 orders.append(order_doc)
 
         return orders
+
+    async def get_tracking_data(self, shipment_id: UUID) -> ShipmentTrackingData:
+        """
+        Get GPS tracking data for a shipment.
+
+        Builds tracking information from shipment status, route origin/destination
+        coordinates, and calculates estimated current position based on progress.
+
+        Args:
+            shipment_id: Shipment ID
+
+        Returns:
+            ShipmentTrackingData with GPS coordinates and progress
+
+        Raises:
+            HTTPException: If shipment not found
+        """
+        shipment = await self.get_shipment(shipment_id)
+
+        # Get route data for GPS coordinates
+        origin_location = None
+        destination_location = None
+        route_name = None
+        route_distance = None
+
+        try:
+            route = await self.route_repository.get_by_id(shipment.routeId)
+            if route:
+                route_name = route.name
+                route_distance = route.distance
+
+                # Extract origin GPS from route
+                if route.origin:
+                    coords = route.origin.coordinates
+                    origin_location = TrackingLocation(
+                        lat=coords.lat if coords else 24.4539,
+                        lng=coords.lng if coords else 54.3773,
+                        name=route.origin.name,
+                        address=route.origin.address
+                    )
+
+                # Extract destination GPS from route
+                if route.destination:
+                    coords = route.destination.coordinates
+                    destination_location = TrackingLocation(
+                        lat=coords.lat if coords else 24.2075,
+                        lng=coords.lng if coords else 55.7447,
+                        name=route.destination.name,
+                        address=route.destination.address
+                    )
+        except Exception as e:
+            logger.warning(f"Could not fetch route data for shipment {shipment_id}: {e}")
+
+        # Calculate progress and current location based on status
+        progress_percent = 0.0
+        current_location = None
+        estimated_arrival = None
+
+        if shipment.status == ShipmentStatus.DELIVERED:
+            progress_percent = 100.0
+            current_location = destination_location
+        elif shipment.status == ShipmentStatus.IN_TRANSIT:
+            # Estimate progress based on time elapsed since departure
+            if shipment.actualDepartureDate and route_distance:
+                elapsed = (datetime.utcnow() - shipment.actualDepartureDate).total_seconds()
+                # Assume average speed of 60 km/h for estimation
+                estimated_total_seconds = (route_distance / 60.0) * 3600
+                if estimated_total_seconds > 0:
+                    progress_percent = min(95.0, (elapsed / estimated_total_seconds) * 100.0)
+                    # Estimate arrival
+                    remaining_seconds = max(0, estimated_total_seconds - elapsed)
+                    from datetime import timedelta
+                    estimated_arrival = datetime.utcnow() + timedelta(seconds=remaining_seconds)
+                else:
+                    progress_percent = 50.0
+
+                # Interpolate current location between origin and destination
+                if origin_location and destination_location:
+                    fraction = progress_percent / 100.0
+                    current_location = TrackingLocation(
+                        lat=origin_location.lat + (destination_location.lat - origin_location.lat) * fraction,
+                        lng=origin_location.lng + (destination_location.lng - origin_location.lng) * fraction,
+                        name="En Route",
+                        address=f"Estimated {progress_percent:.0f}% of journey"
+                    )
+            else:
+                progress_percent = 10.0
+                current_location = origin_location
+        elif shipment.status == ShipmentStatus.SCHEDULED:
+            progress_percent = 0.0
+            current_location = origin_location
+        elif shipment.status == ShipmentStatus.CANCELLED:
+            progress_percent = 0.0
+
+        return ShipmentTrackingData(
+            shipmentId=shipment.shipmentId,
+            shipmentCode=shipment.shipmentCode,
+            status=shipment.status,
+            origin=origin_location,
+            destination=destination_location,
+            currentLocation=current_location,
+            progressPercent=round(progress_percent, 1),
+            routeName=route_name,
+            routeDistance=route_distance,
+            scheduledDate=shipment.scheduledDate,
+            actualDepartureDate=shipment.actualDepartureDate,
+            actualArrivalDate=shipment.actualArrivalDate,
+            estimatedArrival=estimated_arrival,
+            lastUpdated=datetime.utcnow()
+        )

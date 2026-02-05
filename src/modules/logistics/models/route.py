@@ -29,7 +29,7 @@ class RouteBase(BaseModel):
     origin: LocationInfo = Field(..., description="Origin location")
     destination: LocationInfo = Field(..., description="Destination location")
     distance: float = Field(..., gt=0, description="Distance in kilometers")
-    estimatedDuration: int = Field(..., gt=0, description="Estimated duration in minutes")
+    estimatedDuration: float = Field(..., gt=0, description="Estimated duration in minutes")
     estimatedCost: Optional[float] = Field(None, ge=0, description="Estimated cost")
     isActive: bool = Field(True, description="Is route active")
 

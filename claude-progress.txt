@@ -1,3 +1,89 @@
+== Session: 2026-02-05 (Agent 17) ==
+Agent: Features #62, #66, #67 (Logistics CRUD & Dashboard)
+
+COMPLETED:
+- Feature #62: Logistics - Delete route [PASSING]
+  - Created test route DELETE_TEST_ROUTE_62 via UI
+  - Clicked Delete button, confirmed dialog, route removed from table
+  - Refreshed page, verified route still gone (persistent deletion)
+  - Zero console errors, no mock data patterns
+  - Fixed route form: duration hours-to-minutes conversion, model float type
+
+- Feature #66: Logistics - Shipment GPS tracking [PASSING]
+  - Created GET /api/v1/logistics/shipments/{id}/track endpoint
+  - Added ShipmentTrackingData model with GPS coordinates
+  - Returns: origin/destination GPS, current interpolated location, progress %
+  - Tested with scheduled shipment (0% progress, at origin)
+  - Tested with in_transit shipment (interpolated position, estimated arrival)
+  - Tested with delivered shipment (100% progress, at destination)
+  - Route coordinates pulled from real MongoDB route data
+
+- Feature #67: Logistics dashboard stats [PASSING]
+  - Created GET /api/v1/logistics/dashboard/stats endpoint
+  - Returns fleet metrics: vehicles (total/available/in-use/maintenance/utilization)
+  - Returns shipment metrics: total/pending/scheduled/active/delivered/cancelled/deliveryRate
+  - Returns route metrics: total/active
+  - All data from real MongoDB, verified via API and frontend proxy
+
+FIXES APPLIED:
+- src/modules/logistics/models/route.py - Changed estimatedDuration from int to float
+- frontend/RouteForm.tsx - Convert hours to minutes on submit, minutes to hours on edit
+- frontend/RouteTable.tsx - Display duration in hours (minutes/60)
+- src/modules/logistics/models/shipment.py - Added ShipmentTrackingData, TrackingLocation models
+- src/modules/logistics/services/logistics/shipment_service.py - Added get_tracking_data method
+- src/modules/logistics/api/v1/shipments.py - Added GET /{id}/track endpoint
+- src/modules/logistics/api/v1/dashboard.py - Added GET /stats endpoint
+
+CURRENT STATUS: 64/310 features passing (20.6%)
+
+NOTES FOR NEXT SESSION:
+- Tracking endpoint interpolates GPS position based on time elapsed since departure
+- Dashboard has two endpoints: /dashboard (UI-friendly) and /dashboard/stats (structured)
+- Route duration stored in minutes in DB, displayed in hours in UI
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
+== Session: 2026-02-05 (Agent 16) ==
+Agent: Features #56, #57, #244 (Vehicle Update, Vehicle Delete, Success Toast Feedback)
+
+COMPLETED:
+- Feature #56: Logistics - Update vehicle (PATCH vehicle updates fields) [PASSING]
+  - Fixed vehicle code counter sync in vehicle_repository.py (counter was behind existing V001-V011)
+  - Created vehicle V012, PATCH updated status/capacity/name/costPerKm successfully
+  - GET confirmed all updated fields persisted correctly
+  - UI displayed updated values in vehicle detail view
+  - Zero console errors
+
+- Feature #57: Logistics - Delete vehicle (DELETE vehicle removes it) [PASSING]
+  - Created test vehicle V013, verified in UI vehicle list
+  - DELETE /api/v1/logistics/vehicles/{id} returned 200
+  - GET returns 404 confirming deletion
+  - Vehicle no longer appears in UI list
+  - Test data cleaned up
+
+- Feature #244: Success feedback for all update operations [PASSING]
+  - Added showSuccessToast/showErrorToast to EditFarmModal.tsx (replaced alert())
+  - Added showSuccessToast/showErrorToast to CustomerDetailPage.tsx (create/update/error)
+  - Added showSuccessToast/showErrorToast to EmployeeDetailPage.tsx (create/update/error)
+  - Verified all three: farm update toast, employee update toast, customer update toast
+  - Toast auto-dismisses after 5s, styled green for success
+  - Zero console errors, no mock data patterns
+
+FILES MODIFIED:
+- src/modules/logistics/services/logistics/vehicle_repository.py - Fixed _get_next_vehicle_sequence counter sync
+- frontend/user-portal/src/components/farm/EditFarmModal.tsx - Added toast notifications for farm updates
+- frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx - Added toast notifications for customer operations
+- frontend/user-portal/src/pages/hr/EmployeeDetailPage.tsx - Added toast notifications for employee operations
+
+CURRENT STATUS: 60/310 features passing (19.4%)
+
+NOTES FOR NEXT SESSION:
+- Vehicle enum values must be lowercase (truck, available, owned - NOT UPPERCASE)
+- Vehicle code counter now syncs with max existing code before incrementing (prevents duplicates)
+- Toast notification system: import showSuccessToast/showErrorToast from '../../stores/toast.store'
+- E2E Test Farm has corrupt block UUID causing 500 on detail page - avoid using it
+- CRM: navigate to /crm/customers/{id} for detail (not /edit suffix)
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+
 == Session: 2026-02-05 (Agent 15) ==
 Agent: Features #22, #23, #234 (User List Pagination, User Details, Widget Refresh)
 

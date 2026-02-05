@@ -106,3 +106,80 @@ async def get_dashboard_stats(
     }
 
     return SuccessResponse(data=dashboard_stats)
+
+
+@router.get(
+    "/stats",
+    response_model=SuccessResponse[dict],
+    summary="Get logistics fleet statistics",
+    description="Get fleet metrics including vehicle counts, active shipments, and delivery statistics."
+)
+async def get_fleet_stats(
+    current_user: CurrentUser = Depends(require_permission("logistics.view")),
+    vehicle_service: VehicleService = Depends(),
+    route_service: RouteService = Depends(),
+    shipment_service: ShipmentService = Depends()
+):
+    """Get fleet statistics for logistics dashboard"""
+
+    # Get vehicle statistics
+    vehicles_list, total_vehicle_count, _ = await vehicle_service.get_all_vehicles(page=1, per_page=1000)
+
+    total_vehicles = len(vehicles_list)
+    available_vehicles = sum(1 for v in vehicles_list if v.status == "available")
+    in_use_vehicles = sum(1 for v in vehicles_list if v.status == "in_use")
+    maintenance_vehicles = sum(1 for v in vehicles_list if v.status == "maintenance")
+
+    # Get route statistics
+    routes_list, total_route_count, _ = await route_service.get_all_routes(page=1, per_page=1000)
+
+    total_routes = len(routes_list)
+    active_routes = sum(1 for r in routes_list if hasattr(r, 'isActive') and r.isActive)
+
+    # Get shipment statistics
+    shipments_list, total_shipment_count, _ = await shipment_service.get_all_shipments(page=1, per_page=1000)
+
+    total_shipments = len(shipments_list)
+    scheduled_shipments = sum(1 for s in shipments_list if s.status == "scheduled")
+    in_transit_shipments = sum(1 for s in shipments_list if s.status == "in_transit")
+    delivered_shipments = sum(1 for s in shipments_list if s.status == "delivered")
+    cancelled_shipments = sum(1 for s in shipments_list if s.status == "cancelled")
+    pending_shipments = sum(1 for s in shipments_list if s.status == "pending")
+
+    # Calculate delivery rate
+    delivery_rate = 0.0
+    if total_shipments > 0:
+        delivery_rate = round((delivered_shipments / total_shipments) * 100, 1)
+
+    # Calculate total cargo weight from all shipments
+    total_cargo_weight = 0.0
+    for s in shipments_list:
+        if hasattr(s, 'cargo') and s.cargo:
+            for item in s.cargo:
+                total_cargo_weight += item.weight * item.quantity
+
+    fleet_stats = {
+        "fleet": {
+            "totalVehicles": total_vehicles,
+            "availableVehicles": available_vehicles,
+            "inUseVehicles": in_use_vehicles,
+            "maintenanceVehicles": maintenance_vehicles,
+            "utilizationRate": round((in_use_vehicles / total_vehicles * 100) if total_vehicles > 0 else 0, 1)
+        },
+        "shipments": {
+            "totalShipments": total_shipments,
+            "pendingShipments": pending_shipments,
+            "scheduledShipments": scheduled_shipments,
+            "activeShipments": in_transit_shipments,
+            "deliveredShipments": delivered_shipments,
+            "cancelledShipments": cancelled_shipments,
+            "deliveryRate": delivery_rate,
+            "totalCargoWeight": round(total_cargo_weight, 2)
+        },
+        "routes": {
+            "totalRoutes": total_routes,
+            "activeRoutes": active_routes
+        }
+    }
+
+    return SuccessResponse(data=fleet_stats)

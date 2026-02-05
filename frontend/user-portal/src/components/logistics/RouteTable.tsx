@@ -255,7 +255,7 @@ export function RouteTable({ routes, onView, onEdit, onDelete }: RouteTableProps
                 <LocationText>{formatLocation(route.destination)}</LocationText>
               </TableCell>
               <TableCell>{route.distance ? route.distance.toFixed(1) : '-'}</TableCell>
-              <TableCell>{route.estimatedDuration ? route.estimatedDuration.toFixed(1) : '-'}</TableCell>
+              <TableCell>{route.estimatedDuration ? (route.estimatedDuration / 60).toFixed(1) : '-'}</TableCell>
               <TableCell>
                 <StatusBadge $isActive={route.isActive}>{route.isActive ? 'Active' : 'Inactive'}</StatusBadge>
               </TableCell>
