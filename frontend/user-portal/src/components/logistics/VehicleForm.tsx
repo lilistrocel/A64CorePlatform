@@ -143,7 +143,7 @@ const Actions = styled.div`
   margin-top: 24px;
 `;
 
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
+const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
   padding: 12px 24px;
   border-radius: 8px;
   font-size: 14px;
@@ -160,6 +160,16 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
         border: 1px solid #e0e0e0;
         &:hover {
           background: #f5f5f5;
+        }
+      `;
+    }
+    if ($variant === 'reset') {
+      return `
+        background: transparent;
+        color: #F59E0B;
+        border: 1px solid #F59E0B;
+        &:hover:not(:disabled) {
+          background: #FEF3C7;
         }
       `;
     }
@@ -185,6 +195,7 @@ export function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting = false 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isDirty },
   } = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
@@ -386,6 +397,9 @@ export function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting = false 
       </FormGroup>
 
       <Actions>
+        <Button type="button" $variant="reset" onClick={() => reset()} disabled={isSubmitting}>
+          Reset
+        </Button>
         {onCancel && (
           <Button type="button" $variant="secondary" onClick={onCancel} disabled={isSubmitting}>
             Cancel

@@ -207,7 +207,7 @@ const Actions = styled.div`
   border-top: 1px solid #e0e0e0;
 `;
 
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
+const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -223,6 +223,16 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
         color: white;
         &:hover:not(:disabled) {
           background: #1976d2;
+        }
+      `;
+    }
+    if ($variant === 'reset') {
+      return `
+        background: transparent;
+        color: #F59E0B;
+        border: 1px solid #F59E0B;
+        &:hover:not(:disabled) {
+          background: #FEF3C7;
         }
       `;
     }
@@ -409,6 +419,16 @@ export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false, onD
     }
   };
 
+  const handleReset = () => {
+    // Reset form to initial values
+    setFormData(initialFormData.current);
+    setTags(initialTags.current);
+    setTagInput('');
+    setErrors({});
+    // Reset collapsed sections
+    setAddressCollapsed(true);
+  };
+
   return (
     <Form onSubmit={handleSubmit}>
       <Section>
@@ -585,6 +605,9 @@ export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false, onD
       {errors.submit && <ErrorText>{errors.submit}</ErrorText>}
 
       <Actions>
+        <Button type="button" $variant="reset" onClick={handleReset} disabled={isSubmitting}>
+          Reset
+        </Button>
         <Button type="button" $variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
