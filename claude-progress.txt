@@ -1763,3 +1763,45 @@ NOTES FOR NEXT SESSION:
 - AI schema endpoint: GET /api/v1/ai/schema (returns 53 collections)
 - Module status requires super_admin role
 - Module management features may need Docker registry setup for actual installation tests
+
+== Session: 2026-02-05 (Agent - Features #87, #88, #89) ==
+Agent: Features #87, #88, #89 (Form Validation - Registration)
+
+COMPLETED:
+- Feature #87: Registration with duplicate email rejected [PASSING]
+  - Registered user with email duplicate_test_87@example.com → success (auto-login to dashboard)
+  - Attempted registration again with same email → 409 Conflict
+  - UI shows clear error message "Email already registered"
+  - Backend validates at auth_service.py lines 71-77, with race condition handling via DuplicateKeyError
+  - Zero console errors
+  - Screenshot verification taken
+
+- Feature #88: Password validation on registration [PASSING]
+  - Password < 8 chars ("Short1!") → error "Password must be at least 8 characters"
+  - Password no uppercase ("lowercase1!") → error "Password must contain at least one uppercase letter"
+  - Password no number ("NoNumber!") → error "Password must contain at least one number"
+  - Password no special char ("NoSpecial1") → error "Password must contain at least one special character (!@#$%^&*)"
+  - Valid password ("ValidPass1!") → registration succeeds
+  - FIXED: Added special character regex to frontend Zod schema (was missing)
+  - Zero console errors
+
+- Feature #89: Email format validation [PASSING]
+  - Invalid email "notanemail" → error "Invalid email address"
+  - Invalid email "missing@domain" → error "Invalid email address"
+  - Valid email "valid_test89@example.com" → registration succeeds
+  - Both Zod validation (frontend) and Pydantic EmailStr validation (backend) enforce this
+  - Zero console errors
+
+FIXES APPLIED:
+- frontend/user-portal/src/pages/auth/Register.tsx - Added special character regex validation to Zod schema
+  - Before: only validated min length, uppercase, lowercase, number
+  - After: also validates special character requirement (!@#$%^&*(),.?":{}|<>)
+
+CURRENT STATUS: 147/310 features passing (47.4%)
+
+NOTES FOR NEXT SESSION:
+- Registration form validation now fully matches backend requirements
+- Password validation catches all complexity requirements client-side before API call
+- Email validation uses both HTML5 type="email" and Zod z.string().email()
+- Test users cleaned up after verification
+- All features verified with browser screenshots and zero console errors
