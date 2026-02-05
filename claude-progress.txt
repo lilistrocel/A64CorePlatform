@@ -1,3 +1,43 @@
+== Session: 2026-02-05 (Agent Batch #212, #213, #214) ==
+Agent: Features #212, #213, #214 (Search & Filter Edge Cases)
+
+COMPLETED:
+- Feature #212: Block category filter (physical/virtual/all) [PASSING]
+  - API endpoint GET /api/v1/farm/farms/{farmId}/blocks?blockCategory=physical|virtual|all
+  - Tested on FEAT44_FILTER_TEST_FARM (4 blocks: 3 physical, 1 virtual)
+  - blockCategory=physical → returns 3 blocks (all physical)
+  - blockCategory=virtual → returns 1 block (the virtual one)
+  - blockCategory=all → returns all 4 blocks
+  - Frontend uses useFarmBlocks hook with 'physical' and 'virtual' parameters
+  - Screenshot: feature212-block-category-filter-working.png
+
+- Feature #213: Target crop filter on blocks [PASSING]
+  - API endpoint GET /api/v1/farm/farms/{farmId}/blocks?targetCrop={cropId}
+  - Two blocks with different crops: d52b7f3d... (virtual) and 01dfdea2... (FEAT44_BLOCK_TO_PLANNED)
+  - Filter by first crop ID → returns 1 block
+  - Filter by second crop ID → returns 1 block (FEAT44_BLOCK_TO_PLANNED)
+  - No filter → returns all 4 blocks including 2 without crops
+  - Screenshot: feature213-target-crop-filter.png
+
+- Feature #214: Date range filter on entities [PASSING]
+  - API endpoint GET /api/v1/farm/farms/{farmId}/harvests?startDate=...&endDate=...
+  - Tested on Liwa farm (2600 harvests, 13 unique dates from Jan 9-21)
+  - No filter: 2600 harvests
+  - startDate=2026-01-15: 57 harvests (on/after Jan 15)
+  - endDate=2026-01-15: 2546 harvests (on/before Jan 15)
+  - Both dates (Jan 12-14): 22 harvests
+  - Boundary dates are INCLUSIVE ($gte and $lte in MongoDB query)
+  - Screenshot: feature214-date-range-filter.png
+
+CURRENT STATUS: 256/310 features passing (82.6%)
+
+NOTES FOR NEXT SESSION:
+- Block category filter uses blockCategory query param: 'physical', 'virtual', or 'all' (default)
+- Target crop filter uses targetCrop query param with UUID
+- Date range filter uses startDate and endDate query params (ISO 8601 format)
+- All filters can be combined
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
+
 == Session: 2026-02-05 (Agent - Feature #206) ==
 Agent: Feature #206 (Navigation Integrity - Post-logout redirect)
 
