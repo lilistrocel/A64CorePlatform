@@ -228,7 +228,22 @@ class VehicleRepository:
         if status:
             query["status"] = status.value
         if type:
-            query["type"] = type
+            # Build query that matches both new 'type' field and legacy 'vehicleType' field
+            # Legacy vehicleType values: CANTER, TRUCK -> truck; VAN, HIACE, VOLVO -> van; PICKUP -> pickup; REFRIG -> refrigerated
+            legacy_patterns = {
+                "truck": {"$regex": "TRUCK|CANTER", "$options": "i"},
+                "van": {"$regex": "VAN|HIACE|VOLVO|HINO|OTHER", "$options": "i"},
+                "pickup": {"$regex": "PICKUP", "$options": "i"},
+                "refrigerated": {"$regex": "REFRIG", "$options": "i"},
+            }
+            legacy_match = legacy_patterns.get(type)
+            if legacy_match:
+                query["$or"] = [
+                    {"type": type},
+                    {"vehicleType": legacy_match},
+                ]
+            else:
+                query["type"] = type
 
         # Get total count
         total = await collection.count_documents(query)
