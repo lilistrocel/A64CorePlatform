@@ -1,3 +1,53 @@
+== Session: 2026-02-05 (Agent 11) ==
+Agent: Features #49, #301, #208 (Plant Data CRUD, CSV Template, Real DB Verification)
+
+COMPLETED:
+- Feature #49: Plant data library CRUD [PASSING]
+  - Full CRUD tested via /api/v1/farm/plant-data endpoints
+  - CREATE: POST with plantName, scientificName, plantType, growthCycleDays, yieldUnit etc → 201
+  - READ (List): GET with search parameter → returns matching plants with pagination
+  - READ (By ID): GET /{plantDataId} → returns full plant data
+  - UPDATE (PATCH): Updates fields, increments dataVersion (v1→v2)
+  - DELETE: Soft delete (sets isActive=false), removed from list results
+  - Fixed: Default list query now excludes soft-deleted plants (isActive != false)
+  - UI verified: Plant Data Library page at /farm/plants shows 48 real plants
+  - Zero console errors, no mock data patterns
+
+- Feature #301: CSV template download returns valid template [PASSING]
+  - GET /api/v1/farm/plant-data/template/csv returns HTTP 200
+  - Content-Type: text/csv; charset=utf-8
+  - Content-Disposition: attachment; filename=plant_data_template.csv
+  - Headers include required fields: plantName, scientificName, plantType
+  - 14 columns total, properly formatted CSV with header + example row
+  - UI "Download CSV Template" button present on Plant Data Library page
+  - Zero console errors
+
+- Feature #208: CRUD operations reflect real database changes [PASSING]
+  - Created unique farm via API, verified in MongoDB directly (exists, correct fields)
+  - Updated farm via API, verified MongoDB document changed (name, description, totalArea)
+  - Deleted farm via API, verified removed from farms collection
+  - Deleted farm archived in deleted_farms collection (cascade deletion service)
+  - Farm list UI shows 9 real farms, test farm properly removed
+  - Zero mock data patterns in src/ and frontend/ (grep verified)
+  - Zero console errors
+
+FIXES APPLIED:
+- src/modules/farm_manager/services/plant_data/plant_data_repository.py:
+  - get_all() now defaults to exclude isActive=False records (soft-deleted plants)
+  - Previously, default list showed all plants including soft-deleted ones
+
+CURRENT STATUS: 43/310 features passing (13.9%)
+
+NOTES FOR NEXT SESSION:
+- Plant Data CRUD uses basic model (/api/v1/farm/plant-data)
+- Enhanced Plant Data uses advanced model (/api/v1/farm/plant-data-enhanced) - UI uses this
+- Plant data soft delete: sets isActive=false, does NOT remove from MongoDB
+- Farm delete: hard deletes from farms collection, archives to deleted_farms
+- CSV template endpoint: /api/v1/farm/plant-data/template/csv (not /template)
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+- MongoDB auth: use mongosh without auth from within container, or check docker-compose for creds
+- Spacing categories: xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree
+
 == Session: 2026-02-05 (Agent 10) ==
 Agent: Features #61, #257, #68 (Logistics Routes, Insurance Dates, Marketing Campaigns)
 
