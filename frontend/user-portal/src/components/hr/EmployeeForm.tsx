@@ -297,29 +297,33 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
         <SectionTitle>Basic Information</SectionTitle>
         <Row>
           <FormField>
-            <Label>
+            <Label htmlFor="emp-firstName">
               First Name <Required>*</Required>
             </Label>
             <Input
+              id="emp-firstName"
               type="text"
               value={formData.firstName}
               onChange={(e) => handleChange('firstName', e.target.value)}
               $hasError={!!errors.firstName}
               placeholder="Enter first name"
+              aria-invalid={!!errors.firstName}
             />
             {errors.firstName && <ErrorText>{errors.firstName}</ErrorText>}
           </FormField>
 
           <FormField>
-            <Label>
+            <Label htmlFor="emp-lastName">
               Last Name <Required>*</Required>
             </Label>
             <Input
+              id="emp-lastName"
               type="text"
               value={formData.lastName}
               onChange={(e) => handleChange('lastName', e.target.value)}
               $hasError={!!errors.lastName}
               placeholder="Enter last name"
+              aria-invalid={!!errors.lastName}
             />
             {errors.lastName && <ErrorText>{errors.lastName}</ErrorText>}
           </FormField>
@@ -327,22 +331,25 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
         <Row>
           <FormField>
-            <Label>
+            <Label htmlFor="emp-email">
               Email <Required>*</Required>
             </Label>
             <Input
+              id="emp-email"
               type="email"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
               $hasError={!!errors.email}
               placeholder="email@example.com"
+              aria-invalid={!!errors.email}
             />
             {errors.email && <ErrorText>{errors.email}</ErrorText>}
           </FormField>
 
           <FormField>
-            <Label>Phone</Label>
+            <Label htmlFor="emp-phone">Phone</Label>
             <Input
+              id="emp-phone"
               type="tel"
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
@@ -353,29 +360,33 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
         <Row>
           <FormField>
-            <Label>
+            <Label htmlFor="emp-department">
               Department <Required>*</Required>
             </Label>
             <Input
+              id="emp-department"
               type="text"
               value={formData.department}
               onChange={(e) => handleChange('department', e.target.value)}
               $hasError={!!errors.department}
               placeholder="Engineering, Sales, etc."
+              aria-invalid={!!errors.department}
             />
             {errors.department && <ErrorText>{errors.department}</ErrorText>}
           </FormField>
 
           <FormField>
-            <Label>
+            <Label htmlFor="emp-position">
               Position <Required>*</Required>
             </Label>
             <Input
+              id="emp-position"
               type="text"
               value={formData.position}
               onChange={(e) => handleChange('position', e.target.value)}
               $hasError={!!errors.position}
               placeholder="Software Engineer, Manager, etc."
+              aria-invalid={!!errors.position}
             />
             {errors.position && <ErrorText>{errors.position}</ErrorText>}
           </FormField>
@@ -383,21 +394,23 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
         <Row>
           <FormField>
-            <Label>
+            <Label htmlFor="emp-hireDate">
               Hire Date <Required>*</Required>
             </Label>
             <Input
+              id="emp-hireDate"
               type="date"
               value={formData.hireDate}
               onChange={(e) => handleChange('hireDate', e.target.value)}
               $hasError={!!errors.hireDate}
+              aria-invalid={!!errors.hireDate}
             />
             {errors.hireDate && <ErrorText>{errors.hireDate}</ErrorText>}
           </FormField>
 
           <FormField>
-            <Label>Status</Label>
-            <Select value={formData.status} onChange={(e) => handleChange('status', e.target.value as EmployeeStatus)}>
+            <Label htmlFor="emp-status">Status</Label>
+            <Select id="emp-status" value={formData.status} onChange={(e) => handleChange('status', e.target.value as EmployeeStatus)}>
               <option value="active">Active</option>
               <option value="on_leave">On Leave</option>
               <option value="terminated">Terminated</option>
@@ -413,8 +426,9 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
         </SectionTitle>
         <CollapsibleContent $collapsed={emergencyContactCollapsed}>
           <FormField>
-            <Label>Name</Label>
+            <Label htmlFor="emp-ec-name">Name</Label>
             <Input
+              id="emp-ec-name"
               type="text"
               value={formData.emergencyContact.name}
               onChange={(e) => handleEmergencyContactChange('name', e.target.value)}
@@ -424,8 +438,9 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
           <Row>
             <FormField>
-              <Label>Phone</Label>
+              <Label htmlFor="emp-ec-phone">Phone</Label>
               <Input
+                id="emp-ec-phone"
                 type="tel"
                 value={formData.emergencyContact.phone}
                 onChange={(e) => handleEmergencyContactChange('phone', e.target.value)}
@@ -434,8 +449,9 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
             </FormField>
 
             <FormField>
-              <Label>Relationship</Label>
+              <Label htmlFor="emp-ec-relationship">Relationship</Label>
               <Input
+                id="emp-ec-relationship"
                 type="text"
                 value={formData.emergencyContact.relationship}
                 onChange={(e) => handleEmergencyContactChange('relationship', e.target.value)}

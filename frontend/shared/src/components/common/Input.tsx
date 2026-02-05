@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -8,12 +8,15 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, fullWidth = false, ...props }, ref) => {
+  ({ label, error, fullWidth = false, id, ...props }, ref) => {
+    const generatedId = useId();
+    const inputId = id || generatedId;
+
     return (
       <InputWrapper $fullWidth={fullWidth}>
-        {label && <Label>{label}</Label>}
-        <StyledInput ref={ref} $hasError={!!error} {...props} />
-        {error && <ErrorText>{error}</ErrorText>}
+        {label && <Label htmlFor={inputId}>{label}</Label>}
+        <StyledInput ref={ref} id={inputId} $hasError={!!error} aria-invalid={!!error} aria-describedby={error ? `${inputId}-error` : undefined} {...props} />
+        {error && <ErrorText id={`${inputId}-error`} role="alert">{error}</ErrorText>}
       </InputWrapper>
     );
   }
