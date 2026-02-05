@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "@playwright/test": "^1.56.1"
+    "@playwright/test": "^1.56.1",
+    "mongodb": "^7.1.0"
   },
   "devDependencies": {
     "playwright": "^1.57.0"
