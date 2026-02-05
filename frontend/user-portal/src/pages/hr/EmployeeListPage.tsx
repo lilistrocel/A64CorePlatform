@@ -223,6 +223,53 @@ const PageInfo = styled.span`
   color: #616161;
 `;
 
+const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+`;
+
+const EmptyStateIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 16px;
+`;
+
+const EmptyStateTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: #424242;
+  margin: 0 0 8px 0;
+`;
+
+const EmptyStateMessage = styled.p`
+  font-size: 14px;
+  color: #9e9e9e;
+  margin: 0 0 24px 0;
+  text-align: center;
+  max-width: 400px;
+`;
+
+const ClearSearchButton = styled.button`
+  padding: 10px 24px;
+  background: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #1976d2;
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -350,6 +397,17 @@ export function EmployeeListPage() {
 
       {loading ? (
         <LoadingContainer>Loading employees...</LoadingContainer>
+      ) : !loading && employees.length === 0 && searchQuery ? (
+        <EmptyStateContainer>
+          <EmptyStateIcon>🔍</EmptyStateIcon>
+          <EmptyStateTitle>No results found</EmptyStateTitle>
+          <EmptyStateMessage>
+            No employees match your search for &ldquo;{searchQuery.length > 50 ? searchQuery.slice(0, 50) + '...' : searchQuery}&rdquo;. Try adjusting your search or filters.
+          </EmptyStateMessage>
+          <ClearSearchButton onClick={() => { setSearchQuery(''); setPage(1); }}>
+            Clear Search
+          </ClearSearchButton>
+        </EmptyStateContainer>
       ) : viewMode === 'table' ? (
         <EmployeeTable
           employees={employees}
