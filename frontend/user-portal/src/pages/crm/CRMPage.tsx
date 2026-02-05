@@ -303,6 +303,27 @@ const ClearSearchButton = styled.button`
   }
 `;
 
+const ClearFiltersButton = styled.button`
+  padding: 8px 16px;
+  background: transparent;
+  color: #EF4444;
+  border: 1px solid #EF4444;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  margin-left: auto;
+
+  &:hover {
+    background: #FEE2E2;
+  }
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -386,6 +407,17 @@ export function CRMPage() {
     }
   };
 
+  // Reset all filters to default state
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setTypeFilter('all');
+    setStatusFilter('all');
+    setPage(1);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = searchQuery !== '' || typeFilter !== 'all' || statusFilter !== 'all';
+
   return (
     <Container>
       <Header>
@@ -445,6 +477,12 @@ export function CRMPage() {
             Grid
           </ViewButton>
         </ViewToggle>
+
+        {hasActiveFilters && (
+          <ClearFiltersButton onClick={handleClearFilters}>
+            Clear Filters
+          </ClearFiltersButton>
+        )}
       </FilterBar>
 
       {error && <ErrorContainer>{error}</ErrorContainer>}

@@ -131,6 +131,32 @@ const FilterButton = styled.button<{ $active: boolean }>`
   }
 `;
 
+const ResetFiltersButton = styled.button`
+  padding: 8px 16px;
+  background: transparent;
+  color: #EF4444;
+  border: 1px solid #EF4444;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  margin-left: auto;
+
+  &:hover {
+    background: #FEE2E2;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+`;
+
 const GridContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -272,6 +298,14 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const setSearchTerm = (value: string) => updateParams({ search: value });
   const setFilterType = (value: FilterType) => updateParams({ filter: value, page: '1' });
   const setPage = (value: number) => updateParams({ page: value.toString() });
+
+  // Reset all filters to default state
+  const resetFilters = () => {
+    setSearchParams(new URLSearchParams(), { replace: true });
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = searchTerm !== '' || filterType !== 'all' || page !== 1;
 
   // Load farms
   useEffect(() => {
@@ -419,6 +453,11 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
         >
           Inactive ({farms.filter((f) => !f.isActive).length})
         </FilterButton>
+        {hasActiveFilters && (
+          <ResetFiltersButton onClick={resetFilters}>
+            Clear Filters
+          </ResetFiltersButton>
+        )}
       </FilterBar>
 
       {filteredFarms.length === 0 ? (
