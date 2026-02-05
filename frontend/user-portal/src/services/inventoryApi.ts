@@ -89,6 +89,31 @@ export async function deleteHarvestInventory(inventoryId: string): Promise<void>
   await apiClient.delete(`${BASE_URL}/harvest/${inventoryId}`);
 }
 
+export async function exportHarvestInventoryCSV(params: {
+  farmId?: string;
+  qualityGrade?: QualityGrade;
+  search?: string;
+}): Promise<void> {
+  const response = await apiClient.get(`${BASE_URL}/harvest/export/csv`, {
+    params: {
+      farm_id: params.farmId,
+      quality_grade: params.qualityGrade,
+      search: params.search,
+    },
+    responseType: 'blob',
+  });
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'harvest_inventory_export.csv');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // ============================================================================
 // INPUT INVENTORY
 // ============================================================================
@@ -147,6 +172,33 @@ export async function useInputInventory(
   return response.data;
 }
 
+export async function exportInputInventoryCSV(params: {
+  farmId?: string;
+  category?: InputCategory;
+  lowStockOnly?: boolean;
+  search?: string;
+}): Promise<void> {
+  const response = await apiClient.get(`${BASE_URL}/input/export/csv`, {
+    params: {
+      farm_id: params.farmId,
+      category: params.category,
+      low_stock_only: params.lowStockOnly,
+      search: params.search,
+    },
+    responseType: 'blob',
+  });
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'input_inventory_export.csv');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // ============================================================================
 // ASSET INVENTORY
 // ============================================================================
@@ -196,6 +248,35 @@ export async function deleteAssetInventory(inventoryId: string): Promise<void> {
   await apiClient.delete(`${BASE_URL}/asset/${inventoryId}`);
 }
 
+export async function exportAssetInventoryCSV(params: {
+  farmId?: string;
+  category?: AssetCategory;
+  status?: AssetStatus;
+  maintenanceOverdue?: boolean;
+  search?: string;
+}): Promise<void> {
+  const response = await apiClient.get(`${BASE_URL}/asset/export/csv`, {
+    params: {
+      farm_id: params.farmId,
+      category: params.category,
+      status: params.status,
+      maintenance_overdue: params.maintenanceOverdue,
+      search: params.search,
+    },
+    responseType: 'blob',
+  });
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'asset_inventory_export.csv');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // ============================================================================
 // INVENTORY MOVEMENTS
 // ============================================================================
@@ -241,4 +322,37 @@ export async function getAssetStatuses(): Promise<CategoryOption[]> {
 export async function getQualityGrades(): Promise<CategoryOption[]> {
   const response = await apiClient.get(`${BASE_URL}/grades/quality`);
   return response.data;
+}
+
+// ============================================================================
+// WASTE INVENTORY EXPORTS
+// ============================================================================
+
+export async function exportWasteInventoryCSV(params: {
+  farmId?: string;
+  sourceType?: string;
+  disposalMethod?: string;
+  pendingOnly?: boolean;
+  search?: string;
+}): Promise<void> {
+  const response = await apiClient.get(`${BASE_URL}/waste/export/csv`, {
+    params: {
+      farm_id: params.farmId,
+      source_type: params.sourceType,
+      disposal_method: params.disposalMethod,
+      pending_only: params.pendingOnly,
+      search: params.search,
+    },
+    responseType: 'blob',
+  });
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'waste_inventory_export.csv');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 }

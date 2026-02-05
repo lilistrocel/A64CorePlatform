@@ -12,6 +12,7 @@ import {
   updateInputInventory,
   deleteInputInventory,
   useInputInventory,
+  exportInputInventoryCSV,
 } from '../../services/inventoryApi';
 import { getFarms } from '../../services/farmApi';
 import type {
@@ -101,6 +102,24 @@ export function InputInventoryList({ onUpdate }: Props) {
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
   };
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await exportInputInventoryCSV({
+        search,
+        category: categoryFilter || undefined,
+        lowStockOnly,
+      });
+    } catch (error) {
+      console.error('Failed to export:', error);
+      alert('Failed to export inventory');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Container>
       <Toolbar>
@@ -129,7 +148,12 @@ export function InputInventoryList({ onUpdate }: Props) {
             Low Stock Only
           </CheckboxLabel>
         </FilterGroup>
-        <AddButton onClick={() => setShowAddModal(true)}>+ Add Input</AddButton>
+        <ToolbarButtons>
+          <ExportButton onClick={handleExport} disabled={exporting}>
+            {exporting ? 'Exporting...' : '📥 Export CSV'}
+          </ExportButton>
+          <AddButton onClick={() => setShowAddModal(true)}>+ Add Input</AddButton>
+        </ToolbarButtons>
       </Toolbar>
 
       {loading ? (
@@ -712,6 +736,33 @@ const CheckboxLabel = styled.label`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
+`;
+
+const ToolbarButtons = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+  align-items: center;
+`;
+
+const ExportButton = styled.button`
+  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.neutral[200]};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const AddButton = styled.button`

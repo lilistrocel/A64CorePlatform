@@ -11,6 +11,7 @@ import {
   createAssetInventory,
   updateAssetInventory,
   deleteAssetInventory,
+  exportAssetInventoryCSV,
 } from '../../services/inventoryApi';
 import { getFarms } from '../../services/farmApi';
 import type {
@@ -144,6 +145,25 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
     return `${currency || 'AED'} ${value.toLocaleString()}`;
   };
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await exportAssetInventoryCSV({
+        search,
+        category: categoryFilter || undefined,
+        status: statusFilter || undefined,
+        maintenanceOverdue: maintenanceOverdue || undefined,
+      });
+    } catch (error) {
+      console.error('Failed to export:', error);
+      alert('Failed to export inventory');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Container>
       {/* Filters */}
@@ -196,7 +216,12 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
           />
           Maintenance Overdue
         </CheckboxLabel>
-        <AddButton onClick={() => setShowAddModal(true)}>+ Add Asset</AddButton>
+        <ToolbarButtons>
+          <ExportButton onClick={handleExport} disabled={exporting}>
+            {exporting ? 'Exporting...' : '📥 Export CSV'}
+          </ExportButton>
+          <AddButton onClick={() => setShowAddModal(true)}>+ Add Asset</AddButton>
+        </ToolbarButtons>
       </FiltersRow>
 
       {/* Table */}
@@ -887,6 +912,34 @@ const CheckboxLabel = styled.label`
   }
 `;
 
+const ToolbarButtons = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+  align-items: center;
+  margin-left: auto;
+`;
+
+const ExportButton = styled.button`
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.neutral[200]};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
 const AddButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
   background: ${({ theme }) => theme.colors.primary[500]};
@@ -896,7 +949,6 @@ const AddButton = styled.button`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   cursor: pointer;
-  margin-left: auto;
 
   &:hover {
     background: ${({ theme }) => theme.colors.primary[600]};

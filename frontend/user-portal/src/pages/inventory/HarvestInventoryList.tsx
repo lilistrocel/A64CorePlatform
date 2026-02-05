@@ -11,6 +11,7 @@ import {
   createHarvestInventory,
   updateHarvestInventory,
   deleteHarvestInventory,
+  exportHarvestInventoryCSV,
 } from '../../services/inventoryApi';
 import { getFarms } from '../../services/farmApi';
 import { getPlantDataEnhancedList } from '../../services/plantDataEnhancedApi';
@@ -118,6 +119,20 @@ export function HarvestInventoryList({ onUpdate }: Props) {
     return new Date(expiryDate) < new Date();
   };
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await exportHarvestInventoryCSV({ search });
+    } catch (error) {
+      console.error('Failed to export:', error);
+      alert('Failed to export inventory');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Container>
       <Toolbar>
@@ -127,7 +142,12 @@ export function HarvestInventoryList({ onUpdate }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <AddButton onClick={() => setShowAddModal(true)}>+ Add Harvest</AddButton>
+        <ToolbarButtons>
+          <ExportButton onClick={handleExport} disabled={exporting}>
+            {exporting ? 'Exporting...' : '📥 Export CSV'}
+          </ExportButton>
+          <AddButton onClick={() => setShowAddModal(true)}>+ Add Harvest</AddButton>
+        </ToolbarButtons>
       </Toolbar>
 
       {loading ? (
@@ -616,6 +636,33 @@ const SearchInput = styled.input`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+`;
+
+const ToolbarButtons = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+  align-items: center;
+`;
+
+const ExportButton = styled.button`
+  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.neutral[200]};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 

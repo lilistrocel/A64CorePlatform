@@ -11,7 +11,10 @@ from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
+import csv
+from io import StringIO
 
 from ...services.database import farm_db
 from ...middleware.auth import get_current_active_user, CurrentUser
@@ -402,6 +405,102 @@ async def list_harvest_inventory(
     }
 
 
+@router.get(
+    "/harvest/export/csv",
+    summary="Export harvest inventory to CSV",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "description": "CSV file with filtered harvest inventory"
+        }
+    }
+)
+async def export_harvest_inventory_csv(
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    quality_grade: Optional[QualityGrade] = Query(None),
+    search: Optional[str] = Query(None, max_length=100),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Export harvest inventory to CSV format.
+
+    Supports the same filters as the list endpoint:
+    - farm_id: Filter by specific farm
+    - scope: Filter by organization or farm scope
+    - quality_grade: Filter by quality grade
+    - search: Text search on plant name or variety
+
+    The export respects all active filters and only exports matching items.
+    """
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+
+    if scope == InventoryScope.ORGANIZATION:
+        query["farmId"] = None
+    elif scope == InventoryScope.FARM:
+        if farm_id:
+            query["farmId"] = str(farm_id)
+        else:
+            query["farmId"] = {"$ne": None}
+    elif farm_id:
+        query["farmId"] = str(farm_id)
+
+    if quality_grade:
+        query["qualityGrade"] = quality_grade.value
+    if search:
+        query["$or"] = [
+            {"plantName": {"$regex": search, "$options": "i"}},
+            {"variety": {"$regex": search, "$options": "i"}}
+        ]
+
+    items = await db.inventory_harvest.find(query).sort("harvestDate", -1).to_list(10000)
+
+    # Generate CSV
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Header row
+    writer.writerow([
+        "Plant Name", "Variety", "Quality Grade", "Product Type",
+        "Quantity", "Unit", "Available Quantity",
+        "Harvest Date", "Expiry Date", "Farm ID", "Block ID",
+        "Unit Price", "Currency", "Storage Location", "Notes"
+    ])
+
+    # Data rows
+    for item in items:
+        writer.writerow([
+            item.get("plantName", ""),
+            item.get("variety", ""),
+            item.get("qualityGrade", ""),
+            item.get("productType", ""),
+            item.get("quantity", ""),
+            item.get("unit", ""),
+            item.get("availableQuantity", ""),
+            item.get("harvestDate", ""),
+            item.get("expiryDate", ""),
+            item.get("farmId", ""),
+            item.get("blockId", ""),
+            item.get("unitPrice", ""),
+            item.get("currency", ""),
+            item.get("storageLocation", ""),
+            item.get("notes", "")
+        ])
+
+    csv_content = output.getvalue()
+
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=harvest_inventory_export.csv"
+        }
+    )
+
+
 @router.post("/harvest", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_harvest_inventory(
     data: HarvestInventoryCreate,
@@ -589,6 +688,105 @@ async def list_input_inventory(
         "perPage": per_page,
         "totalPages": (total + per_page - 1) // per_page
     }
+
+
+@router.get(
+    "/input/export/csv",
+    summary="Export input inventory to CSV",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "description": "CSV file with filtered input inventory"
+        }
+    }
+)
+async def export_input_inventory_csv(
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    category: Optional[InputCategory] = Query(None),
+    low_stock_only: bool = Query(False),
+    search: Optional[str] = Query(None, max_length=100),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Export input inventory to CSV format.
+
+    Supports the same filters as the list endpoint:
+    - farm_id: Filter by specific farm
+    - scope: Filter by organization or farm scope
+    - category: Filter by input category
+    - low_stock_only: Only show low stock items
+    - search: Text search on item name, brand, or SKU
+
+    The export respects all active filters and only exports matching items.
+    """
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+
+    if scope == InventoryScope.ORGANIZATION:
+        query["farmId"] = None
+    elif scope == InventoryScope.FARM:
+        if farm_id:
+            query["farmId"] = str(farm_id)
+        else:
+            query["farmId"] = {"$ne": None}
+    elif farm_id:
+        query["farmId"] = str(farm_id)
+
+    if category:
+        query["category"] = category.value
+    if low_stock_only:
+        query["isLowStock"] = True
+    if search:
+        query["$or"] = [
+            {"itemName": {"$regex": search, "$options": "i"}},
+            {"brand": {"$regex": search, "$options": "i"}},
+            {"sku": {"$regex": search, "$options": "i"}}
+        ]
+
+    items = await db.inventory_input.find(query).sort("createdAt", -1).to_list(10000)
+
+    # Generate CSV
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Header row
+    writer.writerow([
+        "Item Name", "Category", "Brand", "SKU",
+        "Quantity", "Unit", "Minimum Stock", "Low Stock",
+        "Unit Cost", "Expiry Date", "Farm ID",
+        "Supplier", "Notes"
+    ])
+
+    # Data rows
+    for item in items:
+        writer.writerow([
+            item.get("itemName", ""),
+            item.get("category", ""),
+            item.get("brand", ""),
+            item.get("sku", ""),
+            item.get("quantity", ""),
+            item.get("unit", ""),
+            item.get("minimumStock", ""),
+            item.get("isLowStock", ""),
+            item.get("unitCost", ""),
+            item.get("expiryDate", ""),
+            item.get("farmId", ""),
+            item.get("supplier", ""),
+            item.get("notes", "")
+        ])
+
+    csv_content = output.getvalue()
+
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=input_inventory_export.csv"
+        }
+    )
 
 
 @router.post("/input", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -1101,6 +1299,112 @@ async def list_asset_inventory(
         "perPage": per_page,
         "totalPages": (total + per_page - 1) // per_page
     }
+
+
+@router.get(
+    "/asset/export/csv",
+    summary="Export asset inventory to CSV",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "description": "CSV file with filtered asset inventory"
+        }
+    }
+)
+async def export_asset_inventory_csv(
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
+    category: Optional[AssetCategory] = Query(None),
+    status_filter: Optional[AssetStatus] = Query(None, alias="status"),
+    maintenance_overdue: bool = Query(False),
+    search: Optional[str] = Query(None, max_length=100),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Export asset inventory to CSV format.
+
+    Supports the same filters as the list endpoint:
+    - farm_id: Filter by specific farm
+    - scope: Filter by organization or farm scope
+    - category: Filter by asset category
+    - status: Filter by asset status
+    - maintenance_overdue: Only show maintenance overdue items
+    - search: Text search on asset name, brand, model, or asset tag
+
+    The export respects all active filters and only exports matching items.
+    """
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+
+    if scope == InventoryScope.ORGANIZATION:
+        query["farmId"] = None
+    elif scope == InventoryScope.FARM:
+        if farm_id:
+            query["farmId"] = str(farm_id)
+        else:
+            query["farmId"] = {"$ne": None}
+    elif farm_id:
+        query["farmId"] = str(farm_id)
+
+    if category:
+        query["category"] = category.value
+    if status_filter:
+        query["status"] = status_filter.value
+    if maintenance_overdue:
+        query["maintenanceOverdue"] = True
+    if search:
+        query["$or"] = [
+            {"assetName": {"$regex": search, "$options": "i"}},
+            {"brand": {"$regex": search, "$options": "i"}},
+            {"model": {"$regex": search, "$options": "i"}},
+            {"assetTag": {"$regex": search, "$options": "i"}}
+        ]
+
+    items = await db.inventory_asset.find(query).sort("createdAt", -1).to_list(10000)
+
+    # Generate CSV
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Header row
+    writer.writerow([
+        "Asset Name", "Category", "Status", "Brand", "Model",
+        "Asset Tag", "Serial Number", "Purchase Date", "Purchase Cost",
+        "Current Value", "Next Maintenance Date", "Maintenance Overdue",
+        "Farm ID", "Location", "Notes"
+    ])
+
+    # Data rows
+    for item in items:
+        writer.writerow([
+            item.get("assetName", ""),
+            item.get("category", ""),
+            item.get("status", ""),
+            item.get("brand", ""),
+            item.get("model", ""),
+            item.get("assetTag", ""),
+            item.get("serialNumber", ""),
+            item.get("purchaseDate", ""),
+            item.get("purchaseCost", ""),
+            item.get("currentValue", ""),
+            item.get("nextMaintenanceDate", ""),
+            item.get("maintenanceOverdue", ""),
+            item.get("farmId", ""),
+            item.get("location", ""),
+            item.get("notes", "")
+        ])
+
+    csv_content = output.getvalue()
+
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=asset_inventory_export.csv"
+        }
+    )
 
 
 @router.post("/asset", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -1671,6 +1975,100 @@ async def list_waste_inventory(
         "perPage": per_page,
         "totalPages": (total + per_page - 1) // per_page
     }
+
+
+@router.get(
+    "/waste/export/csv",
+    summary="Export waste inventory to CSV",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "description": "CSV file with filtered waste inventory"
+        }
+    }
+)
+async def export_waste_inventory_csv(
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    source_type: Optional[WasteSourceType] = Query(None, description="Filter by source type"),
+    disposal_method: Optional[DisposalMethod] = Query(None, description="Filter by disposal method"),
+    pending_only: bool = Query(False, description="Show only pending disposal"),
+    search: Optional[str] = Query(None, max_length=100),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user)
+):
+    """
+    Export waste inventory to CSV format.
+
+    Supports the same filters as the list endpoint:
+    - farm_id: Filter by specific farm
+    - source_type: Filter by waste source type
+    - disposal_method: Filter by disposal method
+    - pending_only: Only show pending disposal items
+    - search: Text search on plant name, variety, or waste reason
+
+    The export respects all active filters and only exports matching items.
+    """
+    org_id = await get_organization_id(current_user)
+
+    query = {"organizationId": str(org_id)}
+
+    if farm_id:
+        query["farmId"] = str(farm_id)
+    if source_type:
+        query["sourceType"] = source_type.value
+    if disposal_method:
+        query["disposalMethod"] = disposal_method.value
+    if pending_only:
+        query["disposalMethod"] = DisposalMethod.PENDING.value
+    if search:
+        query["$or"] = [
+            {"plantName": {"$regex": search, "$options": "i"}},
+            {"variety": {"$regex": search, "$options": "i"}},
+            {"wasteReason": {"$regex": search, "$options": "i"}}
+        ]
+
+    items = await db.inventory_waste.find(query).sort("wasteDate", -1).to_list(10000)
+
+    # Generate CSV
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Header row
+    writer.writerow([
+        "Plant Name", "Variety", "Source Type", "Waste Reason",
+        "Quantity", "Unit", "Waste Date", "Disposal Method",
+        "Disposal Date", "Original Grade", "Estimated Value",
+        "Currency", "Farm ID", "Notes"
+    ])
+
+    # Data rows
+    for item in items:
+        writer.writerow([
+            item.get("plantName", ""),
+            item.get("variety", ""),
+            item.get("sourceType", ""),
+            item.get("wasteReason", ""),
+            item.get("quantity", ""),
+            item.get("unit", ""),
+            item.get("wasteDate", ""),
+            item.get("disposalMethod", ""),
+            item.get("disposalDate", ""),
+            item.get("originalGrade", ""),
+            item.get("estimatedValue", ""),
+            item.get("currency", ""),
+            item.get("farmId", ""),
+            item.get("notes", "")
+        ])
+
+    csv_content = output.getvalue()
+
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=waste_inventory_export.csv"
+        }
+    )
 
 
 @router.post("/waste", response_model=dict, status_code=status.HTTP_201_CREATED)

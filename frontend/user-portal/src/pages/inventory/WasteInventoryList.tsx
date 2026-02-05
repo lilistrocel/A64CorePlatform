@@ -190,6 +190,27 @@ const SearchInput = styled.input`
   }
 `;
 
+const ExportButton = styled.button`
+  padding: 10px 20px;
+  background: #f8f9fa;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #e9ecef;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
 const TableContainer = styled.div`
   overflow-x: auto;
 `;
@@ -461,7 +482,38 @@ const WasteInventoryList: React.FC = () => {
     disposalMethod: 'pending' as DisposalMethod,
     disposalNotes: '',
   });
+  const [exporting, setExporting] = useState(false);
   const perPage = 20;
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const params = new URLSearchParams();
+      if (sourceFilter) params.append('source_type', sourceFilter);
+      if (disposalFilter) params.append('disposal_method', disposalFilter);
+      if (searchTerm) params.append('search', searchTerm);
+
+      const response = await api.get(`/v1/farm/inventory/waste/export/csv?${params.toString()}`, {
+        responseType: 'blob',
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'waste_inventory_export.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Export completed successfully');
+    } catch (error) {
+      console.error('Failed to export:', error);
+      toast.error('Failed to export inventory');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchWasteItems = useCallback(async () => {
     try {
@@ -632,6 +684,9 @@ const WasteInventoryList: React.FC = () => {
           <option value="sold_discount">Sold at Discount</option>
           <option value="donated">Donated</option>
         </FilterSelect>
+        <ExportButton onClick={handleExport} disabled={exporting}>
+          {exporting ? 'Exporting...' : '📥 Export CSV'}
+        </ExportButton>
       </FiltersRow>
 
       <Card>
