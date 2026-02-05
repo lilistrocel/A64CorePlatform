@@ -65,13 +65,19 @@ async def get_employees(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     status: Optional[EmployeeStatus] = Query(None, description="Filter by employee status"),
     department: Optional[str] = Query(None, description="Filter by department"),
+    search: Optional[str] = Query(None, description="Search by name, email, or department"),
     current_user: CurrentUser = Depends(require_permission("hr.view")),
     service: EmployeeService = Depends()
 ):
-    """Get all employees with pagination"""
-    employees, total, total_pages = await service.get_all_employees(
-        page, perPage, status, department
-    )
+    """Get all employees with pagination and optional search"""
+    if search and search.strip():
+        employees, total, total_pages = await service.search_employees(
+            search.strip(), page, perPage
+        )
+    else:
+        employees, total, total_pages = await service.get_all_employees(
+            page, perPage, status, department
+        )
 
     return PaginatedResponse(
         data=employees,
