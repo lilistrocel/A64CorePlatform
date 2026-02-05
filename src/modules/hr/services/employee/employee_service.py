@@ -12,6 +12,7 @@ import logging
 
 from src.modules.hr.models.employee import Employee, EmployeeCreate, EmployeeUpdate, EmployeeStatus
 from src.modules.hr.services.employee.employee_repository import EmployeeRepository
+from src.modules.hr.services.database import hr_db
 
 logger = logging.getLogger(__name__)
 
@@ -194,13 +195,16 @@ class EmployeeService:
 
     async def delete_employee(self, employee_id: UUID) -> dict:
         """
-        Delete an employee
+        Delete an employee and cascade delete all related records.
+
+        Deletes contracts, visas, insurance policies, and performance reviews
+        associated with the employee before deleting the employee record itself.
 
         Args:
             employee_id: Employee ID
 
         Returns:
-            Success message
+            Dict with deletion summary including counts of removed related records
 
         Raises:
             HTTPException: If employee not found
@@ -208,6 +212,35 @@ class EmployeeService:
         # Check employee exists
         await self.get_employee(employee_id)
 
+        employee_id_str = str(employee_id)
+        db = hr_db.get_database()
+
+        # Cascade delete all related records
+        contracts_result = await db.employee_contracts.delete_many(
+            {"employeeId": employee_id_str}
+        )
+        visas_result = await db.employee_visas.delete_many(
+            {"employeeId": employee_id_str}
+        )
+        insurance_result = await db.employee_insurance.delete_many(
+            {"employeeId": employee_id_str}
+        )
+        performance_result = await db.employee_performance.delete_many(
+            {"employeeId": employee_id_str}
+        )
+
+        contracts_deleted = contracts_result.deleted_count
+        visas_deleted = visas_result.deleted_count
+        insurance_deleted = insurance_result.deleted_count
+        performance_deleted = performance_result.deleted_count
+
+        logger.info(
+            f"Cascade delete for employee {employee_id}: "
+            f"contracts={contracts_deleted}, visas={visas_deleted}, "
+            f"insurance={insurance_deleted}, performance={performance_deleted}"
+        )
+
+        # Delete the employee record itself
         success = await self.repository.delete(employee_id)
         if not success:
             raise HTTPException(
@@ -216,4 +249,13 @@ class EmployeeService:
             )
 
         logger.info(f"Employee deleted: {employee_id}")
-        return {"message": "Employee deleted successfully"}
+        return {
+            "message": "Employee deleted successfully",
+            "employeeId": employee_id_str,
+            "relatedRecordsDeleted": {
+                "contracts": contracts_deleted,
+                "visas": visas_deleted,
+                "insurance": insurance_deleted,
+                "performanceReviews": performance_deleted
+            }
+        }
