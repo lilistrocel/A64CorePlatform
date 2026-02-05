@@ -11,6 +11,7 @@ import logging
 from src.modules.hr.services.employee import EmployeeService, VisaService, PerformanceService
 from src.modules.hr.middleware.auth import require_permission, CurrentUser
 from src.modules.hr.utils.responses import SuccessResponse
+from src.modules.hr.models.employee import EmployeeStatus
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +34,13 @@ async def get_dashboard_stats(
 
     # Get employee counts by status
     # Service returns tuple: (employees_list, total_count, total_pages)
-    employees_list, _, _ = await employee_service.get_all_employees(page=1, per_page=1000)
+    # Use the total_count from the database, not len(employees_list) which is limited by pagination
+    employees_list, total_employees, _ = await employee_service.get_all_employees(page=1, per_page=100)
 
-    total_employees = len(employees_list)
-    active_employees = sum(1 for e in employees_list if e.status == "active")
-    on_leave_employees = sum(1 for e in employees_list if e.status == "on_leave")
-    terminated_employees = sum(1 for e in employees_list if e.status == "terminated")
+    # Get counts by status directly from the database for accuracy
+    active_list, active_employees, _ = await employee_service.get_all_employees(page=1, per_page=1, status=EmployeeStatus.ACTIVE)
+    on_leave_list, on_leave_employees, _ = await employee_service.get_all_employees(page=1, per_page=1, status=EmployeeStatus.ON_LEAVE)
+    terminated_list, terminated_employees, _ = await employee_service.get_all_employees(page=1, per_page=1, status=EmployeeStatus.TERMINATED)
 
     # Get recent hires (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -66,6 +68,18 @@ async def get_dashboard_stats(
                 continue
     except Exception as e:
         logger.warning(f"Error fetching visa expirations: {e}")
+
+    # Get department distribution from the employees list
+    department_counts = {}
+    for e in employees_list:
+        dept = e.department or "Unassigned"
+        department_counts[dept] = department_counts.get(dept, 0) + 1
+
+    # Convert to list format for frontend
+    department_distribution = [
+        {"department": dept, "count": count}
+        for dept, count in sorted(department_counts.items(), key=lambda x: -x[1])
+    ]
 
     # Get average performance rating
     avg_performance_rating = 0.0
@@ -105,7 +119,8 @@ async def get_dashboard_stats(
             }
             for v in upcoming_visa_expirations[:5]
         ],
-        "averagePerformanceRating": avg_performance_rating
+        "averagePerformanceRating": avg_performance_rating,
+        "departmentDistribution": department_distribution
     }
 
     return SuccessResponse(data=dashboard_stats)
