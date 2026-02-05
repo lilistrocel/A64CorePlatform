@@ -1,3 +1,55 @@
+== Session: 2026-02-05 (Agent Batch #58, #117, #118) ==
+Agent: Features #58, #117, #118 (Search & Filter Edge Cases)
+
+COMPLETED:
+- Feature #58: Logistics - Available vehicles filter [PASSING]
+  - Fixed GET /api/v1/logistics/vehicles/available returning 0 results for legacy data
+  - Legacy MongoDB documents use isActive:true instead of status:"available"
+  - Updated vehicle_repository.py get_all() to match both new and legacy status fields
+  - Query: status=available OR (no status AND isActive=true) OR (no status AND no isActive)
+  - Fixed $or/$and conflict when combining status + type filters
+  - Created test vehicle, changed status to in_use, verified it disappeared from /available
+  - Changed back to available, verified it reappeared in list
+  - All status values tested: available (in list), in_use/maintenance/retired (not in list)
+  - Zero console errors, no mock data patterns
+  - Screenshot: feature-58-available-vehicles-filter.png
+
+- Feature #117: Search with special characters handled safely [PASSING]
+  - Tested XSS attempt: <script>alert(1)</script> -> empty results (safely escaped)
+  - Tested SQL injection: '; DROP TABLE users; -- -> empty results (no injection)
+  - Tested Unicode: eee -> handled gracefully
+  - Tested regex chars: {}$[]()*+?^|\ -> handled gracefully
+  - Tested NoSQL injection: {{constructor.constructor("return this")()}} -> safe
+  - All endpoints tested: /crm/customers, /hr/employees, /logistics/vehicles
+  - UI search box displays special characters as plain text (no execution)
+  - Zero console errors
+  - Screenshot: feature-117-xss-search-handled.png
+
+- Feature #118: Search with whitespace-only returns all or empty gracefully [PASSING]
+  - Search with "   " (spaces only) treated as empty search
+  - Returns all results: customers (20), employees (156), vehicles (14)
+  - No error displayed - gracefully handled
+  - All API endpoints return success
+  - Zero console errors
+  - Screenshot: feature-118-whitespace-search.png
+
+FIXES APPLIED:
+- src/modules/logistics/services/logistics/vehicle_repository.py:
+  - Added legacy isActive field support in status filter
+  - Used $and array to combine status and type $or conditions
+  - Available: status=available OR (no status AND isActive=true)
+  - Retired: status=retired OR (no status AND isActive=false)
+
+CURRENT STATUS: 129/310 features passing (41.6%)
+
+NOTES FOR NEXT SESSION:
+- Vehicle status filter now handles legacy isActive field from MongoDB
+- Search endpoints safely handle XSS, SQL injection, NoSQL injection, special chars
+- Whitespace-only search treated as empty (returns all results)
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: admin)
+- MongoDB vehicles collection has legacy docs without 'status' field
+- Use $and when combining multiple $or conditions in MongoDB queries
+
 == Session: 2026-02-05 (Agent Batch #59, #65, #72) ==
 Agent: Features #59, #65, #72 (Logistics Routes, Shipment Workflow, Marketing Budget CRUD)
 
