@@ -32,8 +32,8 @@ import type {
  * Get pending task count for current user
  */
 export async function getPendingTaskCount(): Promise<number> {
-  const response = await apiClient.get<PendingCountResponse>('/v1/farm/tasks/pending-count');
-  return response.data.count;
+  const response = await apiClient.get<{ data: number; message: string }>('/v1/farm/tasks/pending-count');
+  return response.data.data;
 }
 
 /**
