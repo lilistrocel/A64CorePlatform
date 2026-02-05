@@ -2078,3 +2078,51 @@ NOTES FOR NEXT SESSION:
 - Error (#F44336), Warning (#FF9800), Success (#4CAF50) colors fail WCAG AA on white but weren't in feature scope
 - Form tab navigation works out of the box with standard HTML inputs
 - Button focus-visible ring uses primary.700 for consistent accessibility
+
+== Session: 2026-02-05 (Agent Batch #124, #309, #310) ==
+Agent: Features #124, #309, #310 (URL & Direct Access)
+
+COMPLETED:
+- Feature #124: Deep link to deleted entity shows 404 [PASSING]
+  - Created test farm FEATURE124_DEEPLINK_TEST
+  - Noted URL: /farm/farms/733c09b0-e103-46d4-88c4-f75055109fbb
+  - Deleted farm via UI (confirmation dialog)
+  - Verified API returns 404: {"detail":"Farm ... not found"}
+  - Navigated directly to deleted farm's URL
+  - Error notification displayed: "Farm ... not found"
+  - Inline error banner: "Request failed with status..."
+  - No crash or blank page - sidebar and navigation remain functional
+  - "Back to Farms" button visible for navigation
+  - Screenshot: feature124-deeplink-deleted-farm.png
+
+- Feature #309: Shareable filter URLs [PASSING]
+  - Navigated to /farm/farms
+  - Applied Active status filter → URL: ?filter=active
+  - Applied search term "FEAT" → URL: ?filter=active&search=FEAT
+  - URL includes both filter params correctly
+  - Opened URL in new tab
+  - Filters properly restored: search box shows "FEAT", Active filter selected
+  - Same 4 filtered farms displayed (FEAT44, FEAT39_A, FEAT39_B, FEAT39_C)
+  - Clear Filters button visible indicating active filters
+  - Screenshots: feature309-shareable-filter-url.png, feature309-filter-restored-from-url.png
+
+- Feature #310: Direct access to nested entity routes [PASSING]
+  - Navigated directly to /farm/farms/{farmId}/blocks/{blockId}
+  - Block detail page loaded: F083-004/001 Virtual, status "growing", crop "Ash Gourd"
+  - All block details displayed: capacity, current plants, KPIs, planting info
+  - "← Back to Farm" navigation button present
+  - Navigated directly to /hr/employees/{employeeId}
+  - Employee detail page loaded: Md Belal Hasan Md Ummor Ali (AST-0193)
+  - Clicked Contracts tab - content loaded showing "No contracts found" + "+ Add Contract"
+  - "← Back to Employees" navigation button present for hierarchy
+  - Screenshots: feature310-direct-block-access.png, feature310-employee-contracts-tab.png
+
+CURRENT STATUS: 173/310 features passing (55.8%)
+
+NOTES FOR NEXT SESSION:
+- Farm filter URL params: ?filter=active|inactive&search=term
+- Block detail route: /farm/farms/:farmId/blocks/:blockId
+- Employee detail route: /hr/employees/:employeeId
+- Employee tabs (Overview, Contracts, Visas, Insurance, Performance) use internal state, not URL
+- Delete confirmation uses window.confirm() dialog
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
