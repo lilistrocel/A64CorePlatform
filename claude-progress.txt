@@ -1,3 +1,44 @@
+== Session: 2026-02-05 (Agent Batch #16, #18, #26) ==
+Agent: Features #16, #18, #26 (Security & Access Control)
+
+COMPLETED:
+- Feature #16: Protected routes block unauthenticated access [PASSING]
+  - Cleared all auth tokens (localStorage.clear())
+  - Navigate to /dashboard directly → redirected to /login
+  - Navigate to /farm/farms directly → redirected to /login
+  - Navigate to /hr/employees directly → redirected to /login
+  - ProtectedRoute component checks isAuthenticated, redirects via <Navigate to="/login">
+  - Zero console errors
+  - Screenshot verification taken
+
+- Feature #18: Rate limiting on login endpoint [PASSING]
+  - Registered test user ratetest18@test.com
+  - 5 wrong password attempts all return 401 (Invalid credentials)
+  - 6th attempt returns 429 "Too many failed login attempts. Try again in 14 minutes."
+  - Retry-After header present (840 seconds)
+  - Correct credentials also blocked during lockout (429)
+  - LoginRateLimiter uses Redis with in-memory fallback
+  - UI shows error banner on rate limit
+  - Screenshot verification taken
+
+- Feature #26: Admin can change user role [PASSING]
+  - Logged in as farmtest_admin@a64core.com (role: admin)
+  - Registered target user roleuser26@test.com (role: user)
+  - PATCH /api/v1/users/{userId}/role with {role: "moderator"} → 200 OK
+  - Response shows role changed to "moderator"
+  - GET user confirms role: "moderator"
+  - User re-login confirms role: "moderator" in JWT and /me endpoint
+  - Both /api/v1/users/{id}/role and /api/v1/admin/users/{id}/role endpoints exist
+  - Zero console errors
+
+CURRENT STATUS: 109/310 features passing (35.2%)
+
+NOTES FOR NEXT SESSION:
+- Test users created: roleadmin26@test.com, roleuser26@test.com, ratetest18@test.com
+- Rate limiter: 5 attempts max, 15-min lockout, Redis-backed with in-memory fallback
+- Role change: Admin can assign moderator/user/guest; Super Admin can assign any role
+- API container may go down occasionally - restart with: docker compose up -d api
+
 == Session: 2026-02-05 (Agent Batch #99, #221, #34) ==
 Agent: Features #99, #221, #34 (Pagination, Filters, Dashboard Reset)
 
