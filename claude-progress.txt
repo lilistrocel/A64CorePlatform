@@ -2225,3 +2225,48 @@ NOTES FOR NEXT SESSION:
 - Spacing standards API prefix: /api/v1/farm/config/spacing-standards
 - Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
 - Test user: testadmin@a64core.com / TestPass123@ (role: user)
+
+== Session: 2026-02-05 (Agent Batch #141, #142, #143) ==
+Agent: Features #141, #142, #143 (CORS, Security Headers, Password Hash Protection)
+
+COMPLETED:
+- Feature #141: CORS configuration allows frontend requests [PASSING]
+  - Frontend on port 5173 can make API calls to port 8000
+  - Verified CORS headers via curl OPTIONS preflight request
+  - Headers confirmed: allow-origin, allow-credentials, allow-methods, allow-headers
+  - Backend CORS middleware configured in src/main.py lines 43-44
+  - ALLOWED_ORIGINS includes localhost:5173 in src/config/settings.py line 32
+  - Tested login from localhost:5173 - API calls succeeded - Dashboard loaded
+  - Zero CORS errors in browser console
+  - Screenshot: feature141-cors-login-success.png
+
+- Feature #142: Security headers present in responses [PASSING]
+  - All security headers configured via Nginx (nginx/nginx.dev.conf lines 14-20)
+  - Verified headers via curl on port 80:
+    - X-Content-Type-Options: nosniff
+    - X-Frame-Options: SAMEORIGIN
+    - X-XSS-Protection: 1; mode=block
+    - Content-Security-Policy (comprehensive policy)
+    - Permissions-Policy: camera=(), microphone=(), geolocation=()
+    - X-Permitted-Cross-Domain-Policies: none
+  - Production config (nginx/nginx.prod.conf) also includes HSTS with max-age 31536000
+  - Screenshot: feature142-security-headers-nginx.png
+
+- Feature #143: No password hash exposed in API responses [PASSING]
+  - Tested all user-related endpoints for passwordHash exposure:
+    - GET /api/v1/users: No passwordHash in list response
+    - GET /api/v1/users/{id}: No passwordHash in single user response
+    - GET /api/v1/auth/me: No passwordHash in current user response
+  - Security design verified in src/models/user.py:
+    - UserResponse (lines 79-95): Public model, NEVER includes passwordHash
+    - UserInDB (lines 98-104): Internal model with passwordHash for DB operations only
+  - All API endpoints use UserResponse for external data
+  - Screenshot: feature143-no-password-hash-exposed.png
+
+CURRENT STATUS: 188/310 features passing (60.6%)
+
+NOTES FOR NEXT SESSION:
+- CORS configuration: src/main.py + src/config/settings.py ALLOWED_ORIGINS
+- Security headers: nginx/nginx.dev.conf (HTTP) and nginx/nginx.prod.conf (HTTPS with HSTS)
+- Password protection: UserResponse vs UserInDB pattern ensures no hash leakage
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
