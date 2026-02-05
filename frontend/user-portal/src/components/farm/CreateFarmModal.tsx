@@ -4,7 +4,7 @@
  * Modal dialog for creating a new farm with optional geo-fencing boundary.
  */
 
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -305,6 +305,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 
 export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [managers, setManagers] = useState<Manager[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
   const [managersError, setManagersError] = useState<string | null>(null);
@@ -367,6 +368,10 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
   };
 
   const onSubmit = async (data: CreateFarmFormData) => {
+    // Synchronous ref guard prevents concurrent submissions
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       setSubmitting(true);
 
@@ -398,12 +403,14 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
       console.error('Error creating farm:', error);
       alert('Failed to create farm. Please try again.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleClose = () => {
     if (!submitting) {
+      submittingRef.current = false;
       reset();
       clearPolygon();
       setShowMap(false);
