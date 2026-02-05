@@ -240,7 +240,7 @@ export function UserManagementPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge active={user.isActive}>
+                      <StatusBadge $active={user.isActive}>
                         {user.isActive ? 'Active' : 'Inactive'}
                       </StatusBadge>
                     </TableCell>
@@ -512,14 +512,14 @@ const RoleBadge = styled.span<{ role: string }>`
   }};
 `;
 
-const StatusBadge = styled.span<{ active: boolean }>`
+const StatusBadge = styled.span<{ $active: boolean }>`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ active, theme }) => active ? theme.colors.success[100] : theme.colors.neutral[100]};
-  color: ${({ active, theme }) => active ? theme.colors.success[700] : theme.colors.neutral[600]};
+  background: ${({ $active, theme }) => $active ? theme.colors.success[100] : theme.colors.neutral[100]};
+  color: ${({ $active, theme }) => $active ? theme.colors.success[700] : theme.colors.neutral[600]};
 `;
 
 const RoleEditRow = styled.div`
