@@ -4,7 +4,7 @@
  * Form for creating and editing customers with validation.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import type { Customer, CustomerCreate, CustomerUpdate, CustomerType, CustomerStatus } from '../../types/crm';
 
@@ -17,6 +17,7 @@ export interface CustomerFormProps {
   onSubmit: (data: CustomerCreate | CustomerUpdate) => Promise<void>;
   onCancel: () => void;
   isEdit?: boolean;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 // ============================================================================
@@ -244,7 +245,24 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 // COMPONENT
 // ============================================================================
 
-export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false }: CustomerFormProps) {
+export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false, onDirtyChange }: CustomerFormProps) {
+  const initialFormData = useRef({
+    name: customer?.name || '',
+    email: customer?.email || '',
+    phone: customer?.phone || '',
+    company: customer?.company || '',
+    type: customer?.type || ('individual' as CustomerType),
+    status: customer?.status || ('lead' as CustomerStatus),
+    notes: customer?.notes || '',
+    address: {
+      street: customer?.address?.street || '',
+      city: customer?.address?.city || '',
+      state: customer?.address?.state || '',
+      country: customer?.address?.country || '',
+      postalCode: customer?.address?.postalCode || '',
+    },
+  });
+
   const [formData, setFormData] = useState({
     name: customer?.name || '',
     email: customer?.email || '',
@@ -263,10 +281,34 @@ export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false }: C
   });
 
   const [tags, setTags] = useState<string[]>(customer?.tags || []);
+  const initialTags = useRef<string[]>(customer?.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [addressCollapsed, setAddressCollapsed] = useState(true);
+
+  // Track dirty state by comparing current form data with initial values
+  useEffect(() => {
+    if (!onDirtyChange) return;
+
+    const initial = initialFormData.current;
+    const isDirty =
+      formData.name !== initial.name ||
+      formData.email !== initial.email ||
+      formData.phone !== initial.phone ||
+      formData.company !== initial.company ||
+      formData.type !== initial.type ||
+      formData.status !== initial.status ||
+      formData.notes !== initial.notes ||
+      formData.address.street !== initial.address.street ||
+      formData.address.city !== initial.address.city ||
+      formData.address.state !== initial.address.state ||
+      formData.address.country !== initial.address.country ||
+      formData.address.postalCode !== initial.address.postalCode ||
+      JSON.stringify(tags) !== JSON.stringify(initialTags.current);
+
+    onDirtyChange(isDirty);
+  }, [formData, tags, onDirtyChange]);
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({

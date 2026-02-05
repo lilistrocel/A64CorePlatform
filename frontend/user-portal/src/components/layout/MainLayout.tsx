@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useContext, useCallback } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { getPendingTaskCount } from '../../services/tasksApi';
 import { Button } from '@a64core/shared';
+import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
 
 export function MainLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const unsavedChanges = useContext(UnsavedChangesContext);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pendingTaskCount, setPendingTaskCount] = useState(0);
 
@@ -17,6 +20,19 @@ export function MainLayout() {
     const interval = setInterval(loadPendingTaskCount, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Intercept sidebar navigation clicks when form has unsaved changes
+  const handleNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, to: string) => {
+    if (unsavedChanges?.isDirty) {
+      // Don't navigate if clicking the same page
+      if (location.pathname === to) return;
+      e.preventDefault();
+      unsavedChanges.checkNavigationAllowed(to, () => {
+        navigate(to);
+      });
+    }
+    closeMobileMenu();
+  }, [unsavedChanges, location.pathname, navigate]);
 
   const loadPendingTaskCount = async () => {
     try {
@@ -57,58 +73,58 @@ export function MainLayout() {
         </SidebarHeader>
 
         <Nav>
-          <NavItem to="/dashboard" onClick={closeMobileMenu}>
+          <NavItem to="/dashboard" onClick={(e) => handleNavClick(e, '/dashboard')}>
             <NavIcon>📊</NavIcon>
             <span>Dashboard</span>
           </NavItem>
-          <NavItem to="/farm/dashboard" onClick={closeMobileMenu}>
+          <NavItem to="/farm/dashboard" onClick={(e) => handleNavClick(e, '/farm/dashboard')}>
             <NavIcon>🏞️</NavIcon>
             <span>Farm Manager</span>
           </NavItem>
-          <NavItem to="/farm/block-monitor" onClick={closeMobileMenu}>
+          <NavItem to="/farm/block-monitor" onClick={(e) => handleNavClick(e, '/farm/block-monitor')}>
             <NavIcon>🌾</NavIcon>
             <span>Block Monitor</span>
           </NavItem>
-          <NavItem to="/operations" onClick={closeMobileMenu}>
+          <NavItem to="/operations" onClick={(e) => handleNavClick(e, '/operations')}>
             <NavIcon>📋</NavIcon>
             <NavContent>
               <span>Operations</span>
               {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
             </NavContent>
           </NavItem>
-          <NavItem to="/inventory" onClick={closeMobileMenu}>
+          <NavItem to="/inventory" onClick={(e) => handleNavClick(e, '/inventory')}>
             <NavIcon>📦</NavIcon>
             <span>Inventory</span>
           </NavItem>
-          <NavItem to="/crm/customers" onClick={closeMobileMenu}>
+          <NavItem to="/crm/customers" onClick={(e) => handleNavClick(e, '/crm/customers')}>
             <NavIcon>👥</NavIcon>
             <span>CRM</span>
           </NavItem>
-          <NavItem to="/hr" onClick={closeMobileMenu}>
+          <NavItem to="/hr" onClick={(e) => handleNavClick(e, '/hr')}>
             <NavIcon>👔</NavIcon>
             <span>HR</span>
           </NavItem>
-          <NavItem to="/logistics" onClick={closeMobileMenu}>
+          <NavItem to="/logistics" onClick={(e) => handleNavClick(e, '/logistics')}>
             <NavIcon>🚚</NavIcon>
             <span>Logistics</span>
           </NavItem>
-          <NavItem to="/sales" onClick={closeMobileMenu}>
+          <NavItem to="/sales" onClick={(e) => handleNavClick(e, '/sales')}>
             <NavIcon>💰</NavIcon>
             <span>Sales</span>
           </NavItem>
-          <NavItem to="/marketing" onClick={closeMobileMenu}>
+          <NavItem to="/marketing" onClick={(e) => handleNavClick(e, '/marketing')}>
             <NavIcon>📢</NavIcon>
             <span>Marketing</span>
           </NavItem>
-          <NavItem to="/ai-analytics" onClick={closeMobileMenu}>
+          <NavItem to="/ai-analytics" onClick={(e) => handleNavClick(e, '/ai-analytics')}>
             <NavIcon>🤖</NavIcon>
             <span>AI Analytics</span>
           </NavItem>
-          <NavItem to="/profile" onClick={closeMobileMenu}>
+          <NavItem to="/profile" onClick={(e) => handleNavClick(e, '/profile')}>
             <NavIcon>👤</NavIcon>
             <span>Profile</span>
           </NavItem>
-          <NavItem to="/settings" onClick={closeMobileMenu}>
+          <NavItem to="/settings" onClick={(e) => handleNavClick(e, '/settings')}>
             <NavIcon>⚙️</NavIcon>
             <span>Settings</span>
           </NavItem>

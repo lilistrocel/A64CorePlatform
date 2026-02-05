@@ -6,6 +6,8 @@ import { theme, GlobalStyles } from '@a64core/shared';
 import { queryClient } from './config/react-query.config';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
+import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
+import { UnsavedChangesDialog } from './components/common/UnsavedChangesDialog';
 
 // Loading component for suspense fallback
 const PageLoader = () => (
@@ -91,6 +93,8 @@ function App() {
             v7_relativeSplatPath: true,
           }}
         >
+        <UnsavedChangesProvider>
+        <UnsavedChangesDialog />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes */}
@@ -140,6 +144,7 @@ function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>
+        </UnsavedChangesProvider>
       </BrowserRouter>
     </ThemeProvider>
     </QueryClientProvider>

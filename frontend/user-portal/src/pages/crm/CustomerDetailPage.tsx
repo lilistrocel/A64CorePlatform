@@ -4,11 +4,12 @@
  * Customer detail/edit view with view and edit modes.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { CustomerForm } from '../../components/crm/CustomerForm';
 import { crmApi, formatCustomerAddress, getCustomerStatusColor, getCustomerTypeLabel } from '../../services/crmService';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import type { Customer, CustomerUpdate } from '../../types/crm';
 
 // ============================================================================
@@ -267,6 +268,14 @@ export function CustomerDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [isNew, setIsNew] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
+
+  // Track unsaved changes for navigation warning
+  useUnsavedChanges(editMode && formDirty);
+
+  const handleDirtyChange = useCallback((dirty: boolean) => {
+    setFormDirty(dirty);
+  }, []);
 
   useEffect(() => {
     if (customerId === 'new') {
@@ -307,6 +316,7 @@ export function CustomerDetailPage() {
   };
 
   const handleCancelEdit = () => {
+    setFormDirty(false);
     if (isNew) {
       navigate('/crm/customers');
     } else {
@@ -316,6 +326,7 @@ export function CustomerDetailPage() {
 
   const handleSave = async (data: CustomerUpdate) => {
     try {
+      setFormDirty(false);
       if (isNew) {
         const newCustomer = await crmApi.createCustomer(data);
         navigate(`/crm/customers/${newCustomer.customerId}`);
@@ -382,6 +393,7 @@ export function CustomerDetailPage() {
             onSubmit={handleSave}
             onCancel={handleCancelEdit}
             isEdit={!isNew}
+            onDirtyChange={handleDirtyChange}
           />
         ) : customer ? (
           <>
