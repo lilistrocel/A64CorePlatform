@@ -345,6 +345,11 @@ class BlockService:
 
         new_status = status_update.newStatus
 
+        # Idempotent check: if already in the requested state, return success without changes
+        if current_block.state == new_status:
+            logger.info(f"[Block Service] Block {block_id} already in state {new_status.value}, no-op (idempotent)")
+            return current_block
+
         # Validate status transition
         if not BlockService.validate_status_transition(current_block.state, new_status):
             raise HTTPException(

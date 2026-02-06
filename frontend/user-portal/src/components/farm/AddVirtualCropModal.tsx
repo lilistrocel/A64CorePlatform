@@ -632,6 +632,10 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
   const handleSubmit = async () => {
     if (!validateForm() || !preview) return;
 
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       setSubmitting(true);
 
@@ -672,6 +676,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
       }
       alert(errorMsg);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

@@ -228,6 +228,10 @@ export function EmptyVirtualBlockModal({
   };
 
   const handleConfirm = async () => {
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       setSubmitting(true);
       const result = await farmApi.emptyVirtualBlock(block.farmId, block.blockId);
@@ -247,6 +251,7 @@ export function EmptyVirtualBlockModal({
       const errorMsg = error.response?.data?.detail || 'Failed to empty virtual block. Please try again.';
       alert(errorMsg);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
