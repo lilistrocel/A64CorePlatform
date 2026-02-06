@@ -215,6 +215,12 @@ export function PurchaseOrderTable({ purchaseOrders, onEdit, onDelete, onUpdateS
     return sortDirection === 'asc' ? '↑' : '↓';
   };
 
+  // Helper to get aria-sort value for sortable columns
+  const getAriaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+  };
+
   if (purchaseOrders.length === 0) {
     return (
       <TableContainer>
@@ -227,27 +233,52 @@ export function PurchaseOrderTable({ purchaseOrders, onEdit, onDelete, onUpdateS
 
   return (
     <TableContainer>
-      <Table>
+      <Table aria-label="Purchase orders table">
         <TableHead>
           <tr>
-            <TableHeaderCell $sortable onClick={() => handleSort('poCode')}>
-              PO Code <SortIndicator>{getSortIndicator('poCode')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('poCode')}
+              aria-sort={getAriaSort('poCode')}
+            >
+              PO Code <SortIndicator aria-hidden="true">{getSortIndicator('poCode')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('supplierName')}>
-              Supplier <SortIndicator>{getSortIndicator('supplierName')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('supplierName')}
+              aria-sort={getAriaSort('supplierName')}
+            >
+              Supplier <SortIndicator aria-hidden="true">{getSortIndicator('supplierName')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('status')}>
-              Status <SortIndicator>{getSortIndicator('status')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('status')}
+              aria-sort={getAriaSort('status')}
+            >
+              Status <SortIndicator aria-hidden="true">{getSortIndicator('status')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('orderDate')}>
-              Order Date <SortIndicator>{getSortIndicator('orderDate')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('orderDate')}
+              aria-sort={getAriaSort('orderDate')}
+            >
+              Order Date <SortIndicator aria-hidden="true">{getSortIndicator('orderDate')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Expected Delivery</TableHeaderCell>
-            <TableHeaderCell>Items</TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('total')}>
-              Total <SortIndicator>{getSortIndicator('total')}</SortIndicator>
+            <TableHeaderCell scope="col">Expected Delivery</TableHeaderCell>
+            <TableHeaderCell scope="col">Items</TableHeaderCell>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('total')}
+              aria-sort={getAriaSort('total')}
+            >
+              Total <SortIndicator aria-hidden="true">{getSortIndicator('total')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Actions</TableHeaderCell>
+            <TableHeaderCell scope="col">Actions</TableHeaderCell>
           </tr>
         </TableHead>
         <TableBody>

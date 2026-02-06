@@ -166,17 +166,17 @@ export function InputInventoryList({ onUpdate }: Props) {
         </EmptyMessage>
       ) : (
         <>
-          <Table>
+          <Table aria-label="Input inventory table">
             <thead>
               <tr>
-                <Th>Item</Th>
-                <Th>Category</Th>
-                <Th>Farm</Th>
-                <Th>Quantity</Th>
-                <Th>Status</Th>
-                <Th>Supplier</Th>
-                <Th>Expiry</Th>
-                <Th>Actions</Th>
+                <Th scope="col">Item</Th>
+                <Th scope="col">Category</Th>
+                <Th scope="col">Farm</Th>
+                <Th scope="col">Quantity</Th>
+                <Th scope="col">Status</Th>
+                <Th scope="col">Supplier</Th>
+                <Th scope="col">Expiry</Th>
+                <Th scope="col">Actions</Th>
               </tr>
             </thead>
             <tbody>

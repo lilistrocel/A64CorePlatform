@@ -160,37 +160,45 @@ export function HarvestInventoryList({ onUpdate }: Props) {
         </EmptyMessage>
       ) : (
         <>
-          <Table>
+          <Table aria-label="Harvest inventory table">
             <thead>
               <tr>
                 <ThSortable
+                  scope="col"
                   $active={sortBy === 'plantName'}
                   onClick={() => handleSort('plantName')}
+                  aria-sort={sortBy === 'plantName' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
-                  Product{getSortIndicator('plantName')}
+                  Product<span aria-hidden="true">{getSortIndicator('plantName')}</span>
                 </ThSortable>
-                <Th>Farm</Th>
+                <Th scope="col">Farm</Th>
                 <ThSortable
+                  scope="col"
                   $active={sortBy === 'quantity'}
                   onClick={() => handleSort('quantity')}
+                  aria-sort={sortBy === 'quantity' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
-                  Quantity{getSortIndicator('quantity')}
+                  Quantity<span aria-hidden="true">{getSortIndicator('quantity')}</span>
                 </ThSortable>
                 <ThSortable
+                  scope="col"
                   $active={sortBy === 'qualityGrade'}
                   onClick={() => handleSort('qualityGrade')}
+                  aria-sort={sortBy === 'qualityGrade' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
-                  Grade{getSortIndicator('qualityGrade')}
+                  Grade<span aria-hidden="true">{getSortIndicator('qualityGrade')}</span>
                 </ThSortable>
                 <ThSortable
+                  scope="col"
                   $active={sortBy === 'harvestDate'}
                   onClick={() => handleSort('harvestDate')}
+                  aria-sort={sortBy === 'harvestDate' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
-                  Harvest Date{getSortIndicator('harvestDate')}
+                  Harvest Date<span aria-hidden="true">{getSortIndicator('harvestDate')}</span>
                 </ThSortable>
-                <Th>Expiry</Th>
-                <Th>Price</Th>
-                <Th>Actions</Th>
+                <Th scope="col">Expiry</Th>
+                <Th scope="col">Price</Th>
+                <Th scope="col">Actions</Th>
               </tr>
             </thead>
             <tbody>

@@ -218,6 +218,12 @@ export function InventoryTable({ inventory, onEdit, onDelete }: InventoryTablePr
     return sortDirection === 'asc' ? '↑' : '↓';
   };
 
+  // Helper to get aria-sort value for sortable columns
+  const getAriaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+  };
+
   if (inventory.length === 0) {
     return (
       <TableContainer>
@@ -230,27 +236,52 @@ export function InventoryTable({ inventory, onEdit, onDelete }: InventoryTablePr
 
   return (
     <TableContainer>
-      <Table>
+      <Table aria-label="Harvest inventory table">
         <TableHead>
           <tr>
-            <TableHeaderCell $sortable onClick={() => handleSort('productName')}>
-              Product Name <SortIndicator>{getSortIndicator('productName')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('productName')}
+              aria-sort={getAriaSort('productName')}
+            >
+              Product Name <SortIndicator aria-hidden="true">{getSortIndicator('productName')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Category</TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('quantity')}>
-              Quantity <SortIndicator>{getSortIndicator('quantity')}</SortIndicator>
+            <TableHeaderCell scope="col">Category</TableHeaderCell>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('quantity')}
+              aria-sort={getAriaSort('quantity')}
+            >
+              Quantity <SortIndicator aria-hidden="true">{getSortIndicator('quantity')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('quality')}>
-              Quality <SortIndicator>{getSortIndicator('quality')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('quality')}
+              aria-sort={getAriaSort('quality')}
+            >
+              Quality <SortIndicator aria-hidden="true">{getSortIndicator('quality')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('status')}>
-              Status <SortIndicator>{getSortIndicator('status')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('status')}
+              aria-sort={getAriaSort('status')}
+            >
+              Status <SortIndicator aria-hidden="true">{getSortIndicator('status')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('harvestDate')}>
-              Harvest Date <SortIndicator>{getSortIndicator('harvestDate')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('harvestDate')}
+              aria-sort={getAriaSort('harvestDate')}
+            >
+              Harvest Date <SortIndicator aria-hidden="true">{getSortIndicator('harvestDate')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Storage</TableHeaderCell>
-            <TableHeaderCell>Actions</TableHeaderCell>
+            <TableHeaderCell scope="col">Storage</TableHeaderCell>
+            <TableHeaderCell scope="col">Actions</TableHeaderCell>
           </tr>
         </TableHead>
         <TableBody>

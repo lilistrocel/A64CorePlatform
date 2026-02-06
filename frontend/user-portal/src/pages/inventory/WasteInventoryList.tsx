@@ -697,17 +697,17 @@ const WasteInventoryList: React.FC = () => {
         ) : (
           <>
             <TableContainer>
-              <Table>
+              <Table aria-label="Waste inventory table">
                 <thead>
                   <tr>
-                    <TableHeader>Product</TableHeader>
-                    <TableHeader>Quantity</TableHeader>
-                    <TableHeader>Source</TableHeader>
-                    <TableHeader>Reason</TableHeader>
-                    <TableHeader>Date</TableHeader>
-                    <TableHeader>Disposal</TableHeader>
-                    <TableHeader>Value Lost</TableHeader>
-                    <TableHeader>Actions</TableHeader>
+                    <TableHeader scope="col">Product</TableHeader>
+                    <TableHeader scope="col">Quantity</TableHeader>
+                    <TableHeader scope="col">Source</TableHeader>
+                    <TableHeader scope="col">Reason</TableHeader>
+                    <TableHeader scope="col">Date</TableHeader>
+                    <TableHeader scope="col">Disposal</TableHeader>
+                    <TableHeader scope="col">Value Lost</TableHeader>
+                    <TableHeader scope="col">Actions</TableHeader>
                   </tr>
                 </thead>
                 <tbody>

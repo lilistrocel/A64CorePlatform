@@ -493,17 +493,17 @@ export function ReturnsPage() {
       ) : (
         <>
           <TableContainer>
-            <Table>
+            <Table aria-label="Return orders table">
               <TableHead>
                 <TableRow>
-                  <TableHeader>Return Code</TableHeader>
-                  <TableHeader>Order Code</TableHeader>
-                  <TableHeader>Customer</TableHeader>
-                  <TableHeader>Status</TableHeader>
-                  <TableHeader>Return Date</TableHeader>
-                  <TableHeader>Qty Returned</TableHeader>
-                  <TableHeader>Refund Amount</TableHeader>
-                  <TableHeader>Actions</TableHeader>
+                  <TableHeader scope="col">Return Code</TableHeader>
+                  <TableHeader scope="col">Order Code</TableHeader>
+                  <TableHeader scope="col">Customer</TableHeader>
+                  <TableHeader scope="col">Status</TableHeader>
+                  <TableHeader scope="col">Return Date</TableHeader>
+                  <TableHeader scope="col">Qty Returned</TableHeader>
+                  <TableHeader scope="col">Refund Amount</TableHeader>
+                  <TableHeader scope="col">Actions</TableHeader>
                 </TableRow>
               </TableHead>
               <tbody>

@@ -235,16 +235,16 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
         </EmptyState>
       ) : (
         <>
-          <Table>
+          <Table aria-label="Asset inventory table">
             <thead>
               <tr>
-                <Th>Asset</Th>
-                <Th>Category</Th>
-                <Th>Status</Th>
-                <Th>Location</Th>
-                <Th>Value</Th>
-                <Th>Next Maintenance</Th>
-                <Th>Actions</Th>
+                <Th scope="col">Asset</Th>
+                <Th scope="col">Category</Th>
+                <Th scope="col">Status</Th>
+                <Th scope="col">Location</Th>
+                <Th scope="col">Value</Th>
+                <Th scope="col">Next Maintenance</Th>
+                <Th scope="col">Actions</Th>
               </tr>
             </thead>
             <tbody>

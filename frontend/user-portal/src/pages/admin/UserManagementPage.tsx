@@ -196,16 +196,16 @@ export function UserManagementPage() {
           <EmptyText>No users found</EmptyText>
         ) : (
           <>
-            <Table>
+            <Table aria-label="User management table">
               <thead>
                 <tr>
-                  <TableHeader>User</TableHeader>
-                  <TableHeader>Email</TableHeader>
-                  <TableHeader>Role</TableHeader>
-                  <TableHeader>Status</TableHeader>
-                  <TableHeader>Joined</TableHeader>
-                  <TableHeader>Last Login</TableHeader>
-                  <TableHeader>Actions</TableHeader>
+                  <TableHeader scope="col">User</TableHeader>
+                  <TableHeader scope="col">Email</TableHeader>
+                  <TableHeader scope="col">Role</TableHeader>
+                  <TableHeader scope="col">Status</TableHeader>
+                  <TableHeader scope="col">Joined</TableHeader>
+                  <TableHeader scope="col">Last Login</TableHeader>
+                  <TableHeader scope="col">Actions</TableHeader>
                 </tr>
               </thead>
               <tbody>
