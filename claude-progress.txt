@@ -1,3 +1,21 @@
+== Session: 2026-02-06 (Inventory Expiry Tracking) ==
+Agent: Feature #271 (Inventory Management Category)
+
+COMPLETED:
+- Feature #271: Inventory expiry date tracking [PASSING]
+  - InputInventoryList.tsx: Added isExpired() function, updated ExpiryDate styled component
+    with $expired prop, displays "(Expired)" in red for past dates and "(Soon)" in
+    warning/orange color for items expiring within 30 days
+  - HarvestInventoryList.tsx: Already had complete expiry tracking (isExpired, isExpiringSoon)
+    with visual indicators - verified working with test items
+  - Backend fix: Made organizationId optional in InputInventoryCreate and HarvestInventoryCreate
+    Pydantic models, updated API endpoints to auto-populate from auth context
+  - Verified with test data:
+    - Input Inventory: Items showing "(Expired)" in red and "(Soon)" in warning color
+    - Harvest Inventory: Items showing "(Expired)" in red and "(Soon)" in warning color
+    - Alerts section showing "X items expiring soon" count
+  - Screenshots: feature271-harvest-expiry-all-indicators.png, feature271-input-inventory-final.png
+
 == Session: 2026-02-06 (Concurrent/Race Condition Features) ==
 Agent: Features #264, #265, #306 (Concurrency & Race Conditions Category)
 
