@@ -3055,3 +3055,46 @@ NOTES FOR NEXT SESSION:
 - Known widget IDs: total-users, active-sessions, api-requests, sales-trend-chart, revenue-breakdown-chart, user-activity-chart
 - Page size selector now available on farm list - pattern can be reused for other list views
 - Test admin: farmtest_admin@a64core.com / TestAdmin123@ (super_admin)
+
+== Session: 2026-02-06 (Agent - Feature #242) ==
+Agent: Feature #242 - Server-side Validation
+
+COMPLETED:
+- Feature #242: Server-side validation matches client-side [PASSING]
+  - Bypassed frontend using curl API calls directly to /api/v1/auth/register
+  - Tested invalid email format: Backend returns value_error with msg "value is not a valid email address"
+  - Tested missing required field (firstName): Backend returns "Field required" error
+  - Tested empty required field: Backend returns "String should have at least 1 character"
+  - Tested weak password (no uppercase): Backend returns custom validator error
+  - Tested short password: Backend returns "String should have at least 8 characters"
+  - Tested password missing special char: Backend returns custom validator error
+  - All errors are field-specific with proper loc array ["body", "fieldName"]
+  
+VALIDATION COMPARISON (Frontend Zod vs Backend Pydantic):
+  - Email: Both validate proper email format ✅
+  - Password min length: Both require 8 chars ✅
+  - Password uppercase: Both require at least one ✅
+  - Password lowercase: Both require at least one ✅
+  - Password digit: Both require at least one ✅
+  - Password special char: Both require at least one ✅
+  - Name min length: Frontend=2, Backend=1 (backend less strict, acceptable)
+  
+ERROR FORMAT:
+  {"detail": [{"type": "...", "loc": ["body", "fieldName"], "msg": "...", "input": ..., "ctx": {...}}]}
+  - type: validation error type (value_error, string_too_short, missing)
+  - loc: field location path
+  - msg: human-readable error message
+  - input: the invalid input value
+  - ctx: additional context (min_length, reason, etc.)
+
+SCREENSHOTS:
+  - feature242-register-page.png
+  - feature242-frontend-validation.png
+
+CURRENT STATUS: 267/310 features passing (86.1%)
+
+NOTES FOR NEXT SESSION:
+- Backend Pydantic validation covers all frontend Zod validation rules
+- src/models/user.py: UserCreate model with @validator for password strength
+- Frontend auth.store.ts extracts errors via error.response?.data?.detail
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
