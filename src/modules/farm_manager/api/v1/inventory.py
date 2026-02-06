@@ -1441,8 +1441,12 @@ async def create_asset_inventory(
     if data.nextMaintenanceDate:
         maintenance_overdue = data.nextMaintenanceDate < datetime.utcnow()
 
+    # Prepare inventory data with org_id from auth context
+    inventory_data = data.model_dump()
+    inventory_data["organizationId"] = org_id  # Override with auth context
+
     inventory = AssetInventory(
-        **data.model_dump(),
+        **inventory_data,
         inventoryScope=inventory_scope,
         maintenanceOverdue=maintenance_overdue,
         createdBy=UUID(current_user.userId)

@@ -613,7 +613,8 @@ class AssetInventoryBase(BaseModel):
 
 class AssetInventoryCreate(AssetInventoryBase):
     """Schema for creating asset inventory item"""
-    pass
+    # Override: organizationId is optional (set automatically from auth context)
+    organizationId: Optional[UUID] = Field(None, description="Organization ID (set automatically from auth)")
 
 
 class AssetInventoryUpdate(BaseModel):
