@@ -59,9 +59,51 @@ class BlockRepository:
         return farm["farmCode"]
 
     @staticmethod
+    async def check_name_unique_in_farm(farm_id: UUID, name: str, exclude_block_id: UUID = None) -> bool:
+        """
+        Check if a block name is unique within a farm.
+
+        Args:
+            farm_id: Farm UUID
+            name: Block name to check
+            exclude_block_id: Block ID to exclude from check (for updates)
+
+        Returns:
+            True if name is unique (or doesn't exist), False if duplicate found
+        """
+        if not name:
+            return True  # Empty/None names don't need uniqueness check
+
+        db = farm_db.get_database()
+
+        query = {
+            "farmId": str(farm_id),
+            "name": name,
+            "isActive": True
+        }
+
+        # Exclude current block when checking for updates
+        if exclude_block_id:
+            query["blockId"] = {"$ne": str(exclude_block_id)}
+
+        existing = await db.blocks.find_one(query)
+        return existing is None
+
+    @staticmethod
     async def create(block_data: BlockCreate, farm_id: UUID, farm_code: str, user_id: UUID, user_email: str) -> Block:
         """Create a new block with auto-generated block code"""
+        from fastapi import HTTPException
+
         db = farm_db.get_database()
+
+        # Check if block name is unique within the farm
+        if block_data.name:
+            is_unique = await BlockRepository.check_name_unique_in_farm(farm_id, block_data.name)
+            if not is_unique:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Block name '{block_data.name}' already exists in this farm. Block names must be unique within a farm."
+                )
 
         # Get next sequence number
         sequence = await BlockRepository.get_next_sequence_number(farm_id)
@@ -222,6 +264,8 @@ class BlockRepository:
     @staticmethod
     async def update(block_id: UUID, update_data: BlockUpdate) -> Optional[Block]:
         """Update block basic information"""
+        from fastapi import HTTPException
+
         db = farm_db.get_database()
 
         # Only update fields that are provided
@@ -233,6 +277,22 @@ class BlockRepository:
         if not update_dict:
             # No updates provided
             return await BlockRepository.get_by_id(block_id)
+
+        # If name is being updated, check for uniqueness within the farm
+        if "name" in update_dict:
+            # Get the current block to find its farm
+            current_block = await BlockRepository.get_by_id(block_id)
+            if current_block:
+                is_unique = await BlockRepository.check_name_unique_in_farm(
+                    current_block.farmId,
+                    update_dict["name"],
+                    exclude_block_id=block_id
+                )
+                if not is_unique:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Block name '{update_dict['name']}' already exists in this farm. Block names must be unique within a farm."
+                    )
 
         # Convert location if provided
         if "location" in update_dict and update_dict["location"]:
