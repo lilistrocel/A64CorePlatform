@@ -3016,3 +3016,42 @@ NOTES FOR NEXT SESSION:
 - Employee list has full CRUD capabilities (View, Edit, Delete)
 - Sales orders has robust filtering and pagination (3304 orders)
 - Test admin: farmtest_admin@a64core.com / TestAdmin123@ (role: super_admin)
+
+== Session: 2026-02-06 (Agent Batch 228 and 287) ==
+Agent: Features 228, 287 - Widget API and Page Size
+
+COMPLETED:
+- Feature 228: Widget data API endpoint [PASSING]
+  - Verified GET /api/v1/dashboard/widgets/widget_id/data endpoint exists
+  - Tested stat card widget total-users: Returns value, label, trend, trendLabel
+  - Tested chart widget sales-trend-chart: Returns chartType, data array, xKey, yKey, series
+  - Dashboard displays stat cards and charts using this API
+  - Zero console errors
+  - Screenshot: feature228-dashboard-widgets.png
+
+- Feature 287: Configurable page size on pagination [PASSING]
+  - Added PageSizeSelect dropdown to FarmList.tsx pagination controls
+  - Options: 10, 25, 50, 100 items per page
+  - Default: 10 items per page
+  - Page size persists in URL params via perPage param
+  - Resets to page 1 when page size changes
+  - Tested flow: Default 10 items Page 1 of 5, Changed to 25 Page 1 of 2, Changed to 50 Page 1 of 1
+  - Clear Filters button shows when non-default page size selected
+  - Zero console errors
+  - Screenshots: feature287-default-page-size-10.png, feature287-page-size-25.png, feature287-page-size-50.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/components/farm/FarmList.tsx
+  - Added PageSizeContainer, PageSizeLabel, PageSizeSelect styled components
+  - Added PAGE_SIZE_OPTIONS and DEFAULT_PAGE_SIZE constants
+  - Made perPage a URL param state variable
+  - Added setPerPage function that resets to page 1
+  - Added PageSizeSelect dropdown to pagination section
+
+CURRENT STATUS: 266/310 features passing (85.8%)
+
+NOTES FOR NEXT SESSION:
+- Widget API endpoint: GET /api/v1/dashboard/widgets/widget_id/data
+- Known widget IDs: total-users, active-sessions, api-requests, sales-trend-chart, revenue-breakdown-chart, user-activity-chart
+- Page size selector now available on farm list - pattern can be reused for other list views
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (super_admin)
