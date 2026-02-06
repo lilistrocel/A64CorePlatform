@@ -96,15 +96,30 @@ const TableCell = styled.td`
   color: #212121;
 `;
 
+const TruncatedCell = styled.td`
+  padding: 16px;
+  font-size: 14px;
+  color: #212121;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
 const EmployeeNameCell = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-width: 200px;
 `;
 
 const EmployeeName = styled.span`
   font-weight: 500;
   color: #212121;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 `;
 
 const EmployeeCode = styled.span`
@@ -233,41 +248,67 @@ export function EmployeeTable({ employees, onView, onEdit, onDelete }: EmployeeT
     );
   }
 
+  // Helper to get aria-sort value for sortable columns
+  const getAriaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+  };
+
   return (
     <TableContainer>
-      <Table>
+      <Table aria-label="Employee list table">
         <TableHead>
           <tr>
-            <TableHeaderCell $sortable onClick={() => handleSort('firstName')}>
-              Employee <SortIndicator>{getSortIndicator('firstName')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('firstName')}
+              aria-sort={getAriaSort('firstName')}
+            >
+              Employee <SortIndicator aria-hidden="true">{getSortIndicator('firstName')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('email')}>
-              Email <SortIndicator>{getSortIndicator('email')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('email')}
+              aria-sort={getAriaSort('email')}
+            >
+              Email <SortIndicator aria-hidden="true">{getSortIndicator('email')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Phone</TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('department')}>
-              Department <SortIndicator>{getSortIndicator('department')}</SortIndicator>
+            <TableHeaderCell scope="col">Phone</TableHeaderCell>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('department')}
+              aria-sort={getAriaSort('department')}
+            >
+              Department <SortIndicator aria-hidden="true">{getSortIndicator('department')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Position</TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('status')}>
-              Status <SortIndicator>{getSortIndicator('status')}</SortIndicator>
+            <TableHeaderCell scope="col">Position</TableHeaderCell>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('status')}
+              aria-sort={getAriaSort('status')}
+            >
+              Status <SortIndicator aria-hidden="true">{getSortIndicator('status')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Actions</TableHeaderCell>
+            <TableHeaderCell scope="col">Actions</TableHeaderCell>
           </tr>
         </TableHead>
         <TableBody>
           {sortedEmployees.map((employee) => (
             <TableRow key={employee.employeeId}>
-              <TableCell>
+              <TruncatedCell title={getEmployeeFullName(employee)}>
                 <EmployeeNameCell>
-                  <EmployeeName>{getEmployeeFullName(employee)}</EmployeeName>
+                  <EmployeeName title={getEmployeeFullName(employee)}>{getEmployeeFullName(employee)}</EmployeeName>
                   <EmployeeCode>{employee.employeeCode}</EmployeeCode>
                 </EmployeeNameCell>
-              </TableCell>
-              <TableCell>{employee.email}</TableCell>
-              <TableCell>{employee.phone || '-'}</TableCell>
-              <TableCell>{employee.department || '-'}</TableCell>
-              <TableCell>{employee.position || '-'}</TableCell>
+              </TruncatedCell>
+              <TruncatedCell title={employee.email}>{employee.email}</TruncatedCell>
+              <TruncatedCell title={employee.phone || '-'}>{employee.phone || '-'}</TruncatedCell>
+              <TruncatedCell title={employee.department || '-'}>{employee.department || '-'}</TruncatedCell>
+              <TruncatedCell title={employee.position || '-'}>{employee.position || '-'}</TruncatedCell>
               <TableCell>
                 <StatusBadge $color={getEmployeeStatusColor(employee.status)}>
                   {getEmployeeStatusLabel(employee.status)}

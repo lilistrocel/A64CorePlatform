@@ -96,6 +96,16 @@ const TableCell = styled.td`
   color: #212121;
 `;
 
+const TruncatedCell = styled.td`
+  padding: 16px;
+  font-size: 14px;
+  color: #212121;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
 const OrderCodeCell = styled.div`
   font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
@@ -281,7 +291,7 @@ export function OrderTable({ orders, onView, onEdit, onDelete, onUpdateStatus }:
               <TableCell>
                 <OrderCodeCell>{order.orderCode}</OrderCodeCell>
               </TableCell>
-              <TableCell>{order.customerName || order.customerId}</TableCell>
+              <TruncatedCell title={order.customerName || order.customerId}>{order.customerName || order.customerId}</TruncatedCell>
               <TableCell>
                 <StatusBadge $status={order.status}>{order.status}</StatusBadge>
               </TableCell>

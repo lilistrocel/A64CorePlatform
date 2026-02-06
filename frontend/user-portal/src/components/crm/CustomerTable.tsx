@@ -94,23 +94,64 @@ const TableCell = styled.td`
   padding: 16px;
   font-size: 14px;
   color: #212121;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const CustomerNameCell = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-width: 200px;
 `;
 
 const CustomerName = styled.span`
   font-weight: 500;
   color: #212121;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 `;
 
 const CustomerCode = styled.span`
   font-size: 12px;
   color: #9e9e9e;
   font-family: 'JetBrains Mono', monospace;
+`;
+
+const TruncatedCell = styled.td`
+  padding: 16px;
+  font-size: 14px;
+  color: #212121;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+
+  &:hover {
+    position: relative;
+  }
+
+  &[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    z-index: 1000;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    max-width: 400px;
+    white-space: normal;
+    word-wrap: break-word;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
 `;
 
 const StatusBadge = styled.span<{ $color: string }>`
@@ -246,37 +287,63 @@ export function CustomerTable({ customers, onView, onEdit, onDelete }: CustomerT
     );
   }
 
+  // Helper to get aria-sort value for sortable columns
+  const getAriaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+  };
+
   return (
     <TableContainer>
-      <Table>
+      <Table aria-label="Customer list table">
         <TableHead>
           <tr>
-            <TableHeaderCell $sortable onClick={() => handleSort('name')}>
-              Customer <SortIndicator>{getSortIndicator('name')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('name')}
+              aria-sort={getAriaSort('name')}
+            >
+              Customer <SortIndicator aria-hidden="true">{getSortIndicator('name')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('email')}>
-              Email <SortIndicator>{getSortIndicator('email')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('email')}
+              aria-sort={getAriaSort('email')}
+            >
+              Email <SortIndicator aria-hidden="true">{getSortIndicator('email')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Phone</TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('type')}>
-              Type <SortIndicator>{getSortIndicator('type')}</SortIndicator>
+            <TableHeaderCell scope="col">Phone</TableHeaderCell>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('type')}
+              aria-sort={getAriaSort('type')}
+            >
+              Type <SortIndicator aria-hidden="true">{getSortIndicator('type')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('status')}>
-              Status <SortIndicator>{getSortIndicator('status')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('status')}
+              aria-sort={getAriaSort('status')}
+            >
+              Status <SortIndicator aria-hidden="true">{getSortIndicator('status')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Actions</TableHeaderCell>
+            <TableHeaderCell scope="col">Actions</TableHeaderCell>
           </tr>
         </TableHead>
         <TableBody>
           {sortedCustomers.map((customer) => (
             <TableRow key={customer.customerId}>
-              <TableCell>
+              <TruncatedCell title={customer.name}>
                 <CustomerNameCell>
-                  <CustomerName>{customer.name}</CustomerName>
+                  <CustomerName title={customer.name}>{customer.name}</CustomerName>
                   <CustomerCode>{customer.customerCode}</CustomerCode>
                 </CustomerNameCell>
-              </TableCell>
-              <TableCell>{customer.email}</TableCell>
+              </TruncatedCell>
+              <TruncatedCell title={customer.email}>{customer.email}</TruncatedCell>
               <TableCell>{customer.phone || '-'}</TableCell>
               <TableCell>
                 <TypeBadge>{getCustomerTypeLabel(customer.type)}</TypeBadge>
