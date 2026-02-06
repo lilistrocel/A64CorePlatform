@@ -5,7 +5,7 @@
  * Pre-populates form with existing data and shows current version.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -571,6 +571,7 @@ const ScheduleItemFields = styled.div`
 
 export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: EditPlantDataModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -648,6 +649,10 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
       return;
     }
 
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       setSubmitting(true);
       setSuccessMessage(null);
@@ -702,6 +707,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
           : error.response?.data?.message || 'Failed to update plant data. Please try again.';
       setErrorMessage(errorMsg);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

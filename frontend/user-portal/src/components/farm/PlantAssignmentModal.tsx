@@ -5,7 +5,7 @@
  * Shows predicted yield, revenue, harvest timeline, and cycle duration before confirming.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { farmApi, calculatePlantCount } from '../../services/farmApi';
@@ -393,6 +393,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
   const [plants, setPlants] = useState<PlantDataEnhanced[]>([]);
   const [loadingPlants, setLoadingPlants] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [showPreview, setShowPreview] = useState(false);
 
   // Form state
@@ -605,6 +606,10 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
   const handleSubmit = async (force: boolean = false) => {
     if (!validateForm() || !preview) return;
 
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       setSubmitting(true);
 
@@ -633,6 +638,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
         alert('Failed to assign plant. Please try again.');
       }
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

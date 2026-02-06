@@ -5,7 +5,7 @@
  * Focuses on location fields needed for weather data integration.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -283,6 +283,7 @@ export interface EditFarmModalProps {
 
 export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [managers, setManagers] = useState<Manager[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
   const [managersError, setManagersError] = useState<string | null>(null);
@@ -362,6 +363,10 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
   };
 
   const onSubmit = async (data: FormData) => {
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       setSubmitting(true);
 
@@ -390,6 +395,7 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
       console.error('Error updating farm:', error);
       showErrorToast('Failed to update farm. Please try again.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

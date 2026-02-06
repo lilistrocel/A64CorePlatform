@@ -207,6 +207,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [emergencyContactCollapsed, setEmergencyContactCollapsed] = useState(true);
 
   // Track initial form values for dirty state detection
@@ -286,6 +287,10 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
 
     if (!validate()) return;
 
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
     setIsSubmitting(true);
     try {
       // Only include emergencyContact if at least one field is filled
@@ -317,6 +322,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isEdit = false }: E
       console.error('Form submission error:', error);
       setErrors({ submit: error.message || 'Failed to save employee' });
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

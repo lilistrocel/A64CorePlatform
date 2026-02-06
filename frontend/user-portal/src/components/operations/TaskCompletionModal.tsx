@@ -5,7 +5,7 @@
  * Mobile-optimized for farmer use.
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { completeTask } from '../../services/tasksApi';
 import type { TaskWithDetails } from '../../types/tasks';
@@ -20,12 +20,17 @@ interface TaskCompletionModalProps {
 export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskCompletionModalProps) {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent, triggerTransition: boolean = false) => {
     e.preventDefault();
+
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     try {
       setSubmitting(true);
@@ -42,6 +47,7 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
       console.error('Failed to complete task:', err);
       setError('Failed to complete task. Please try again.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

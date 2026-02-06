@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
 import type { MarketingChannel, MarketingChannelCreate, MarketingChannelUpdate } from '../../types/marketing';
@@ -26,6 +26,7 @@ export function ChannelForm({ channel, onClose }: ChannelFormProps) {
     costPerImpression: channel?.costPerImpression || 0, isActive: channel?.isActive !== undefined ? channel.isActive : true,
   });
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -35,6 +36,11 @@ export function ChannelForm({ channel, onClose }: ChannelFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     setSubmitting(true);
     setError(null);
 
@@ -54,6 +60,7 @@ export function ChannelForm({ channel, onClose }: ChannelFormProps) {
       console.error('Failed to save channel:', err);
       setError(err.response?.data?.message || 'Failed to save channel');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

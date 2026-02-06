@@ -382,7 +382,8 @@ async def list_harvest_inventory(
     if search:
         query["$or"] = [
             {"plantName": {"$regex": search, "$options": "i"}},
-            {"variety": {"$regex": search, "$options": "i"}}
+            {"variety": {"$regex": search, "$options": "i"}},
+            {"storageLocation": {"$regex": search, "$options": "i"}}
         ]
 
     skip = (page - 1) * per_page
@@ -453,7 +454,8 @@ async def export_harvest_inventory_csv(
     if search:
         query["$or"] = [
             {"plantName": {"$regex": search, "$options": "i"}},
-            {"variety": {"$regex": search, "$options": "i"}}
+            {"variety": {"$regex": search, "$options": "i"}},
+            {"storageLocation": {"$regex": search, "$options": "i"}}
         ]
 
     items = await db.inventory_harvest.find(query).sort("harvestDate", -1).to_list(10000)
@@ -523,8 +525,12 @@ async def create_harvest_inventory(
     # Validate scope rules
     validate_scope_rules(data.farmId, data.blockId, inventory_scope)
 
+    # Build inventory item with organization ID from auth context
+    inventory_data = data.model_dump()
+    inventory_data["organizationId"] = org_id  # Override with auth context
+
     inventory = HarvestInventory(
-        **data.model_dump(),
+        **inventory_data,
         inventoryScope=inventory_scope,
         availableQuantity=data.quantity,
         createdBy=UUID(current_user.userId)
@@ -819,7 +825,8 @@ async def create_input_inventory(
     base_minimum_stock = convert_to_base_unit(data.minimumStock, data.unit, data.category)
 
     inventory = InputInventory(
-        **data.model_dump(),
+        **data.model_dump(exclude={"organizationId"}),
+        organizationId=org_id,
         inventoryScope=inventory_scope,
         baseUnit=base_unit,
         baseQuantity=base_quantity,

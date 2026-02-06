@@ -296,6 +296,7 @@ export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false, onD
   const [tagInput, setTagInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [addressCollapsed, setAddressCollapsed] = useState(true);
 
   // Track dirty state by comparing current form data with initial values
@@ -390,6 +391,10 @@ export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false, onD
 
     if (!validate()) return;
 
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
     setIsSubmitting(true);
     try {
       const submitData: CustomerCreate | CustomerUpdate = {
@@ -415,6 +420,7 @@ export function CustomerForm({ customer, onSubmit, onCancel, isEdit = false, onD
       console.error('Form submission error:', error);
       setErrors({ submit: error.message || 'Failed to save customer' });
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

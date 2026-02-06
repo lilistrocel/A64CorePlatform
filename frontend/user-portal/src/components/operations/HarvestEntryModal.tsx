@@ -5,7 +5,7 @@
  * Allows farmers to record quantity, grade, and notes for each harvest entry.
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { addHarvestEntry } from '../../services/tasksApi';
 import type { TaskWithDetails, HarvestGrade } from '../../types/tasks';
@@ -25,6 +25,7 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
   const [grade, setGrade] = useState<HarvestGrade>('A');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -38,6 +39,10 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
       setError('Please enter a valid quantity (kg)');
       return;
     }
+
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     try {
       setSubmitting(true);
@@ -59,6 +64,7 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
       console.error('Failed to add harvest entry:', err);
       setError('Failed to add harvest entry. Please try again.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

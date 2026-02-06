@@ -2,7 +2,7 @@
  * CampaignForm Component - Create/Edit campaign modal form
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
 import type { MarketingCampaign, MarketingCampaignCreate, MarketingCampaignUpdate } from '../../types/marketing';
@@ -39,6 +39,7 @@ export function CampaignForm({ campaign, onClose }: CampaignFormProps) {
   const [goals, setGoals] = useState<string[]>(campaign?.goals || []);
   const [goalInput, setGoalInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -58,6 +59,11 @@ export function CampaignForm({ campaign, onClose }: CampaignFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     setSubmitting(true);
     setError(null);
 
@@ -80,6 +86,7 @@ export function CampaignForm({ campaign, onClose }: CampaignFormProps) {
       console.error('Failed to save campaign:', err);
       setError(err.response?.data?.message || 'Failed to save campaign');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

@@ -6,7 +6,7 @@
  * Only supports quality grades A, B, C (no D or Waste).
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { recordBlockHarvest } from '../../services/farmApi';
 
@@ -49,6 +49,7 @@ export function BlockHarvestEntryModal({
   const [qualityGrade, setQualityGrade] = useState<QualityGrade>('A');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -62,6 +63,10 @@ export function BlockHarvestEntryModal({
       setError('Please enter a valid quantity (kg)');
       return;
     }
+
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     try {
       setSubmitting(true);
@@ -89,6 +94,7 @@ export function BlockHarvestEntryModal({
         'Failed to record harvest. Please try again.';
       setError(errorMessage);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

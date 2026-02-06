@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
 import type { MarketingEvent, MarketingEventCreate, MarketingEventUpdate } from '../../types/marketing';
@@ -25,6 +25,7 @@ export function EventForm({ event, onClose }: EventFormProps) {
     budget: event?.budget || 0, expectedAttendees: event?.expectedAttendees || 0, status: event?.status || 'planned', notes: event?.notes || '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -33,6 +34,11 @@ export function EventForm({ event, onClose }: EventFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     setSubmitting(true);
     setError(null);
 
@@ -57,6 +63,7 @@ export function EventForm({ event, onClose }: EventFormProps) {
       console.error('Failed to save event:', err);
       setError(err.response?.data?.message || 'Failed to save event');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

@@ -5,7 +5,7 @@
  * Supports basic and advanced field groups for comprehensive plant data.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -425,6 +425,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 
 export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -450,6 +451,10 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
   const selectedFarmTypes = watch('farmTypeCompatibility') || [];
 
   const onSubmit = async (data: PlantDataFormData) => {
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       setSubmitting(true);
       setSuccessMessage(null);
@@ -531,6 +536,7 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
       console.error('Error creating plant data:', error);
       setErrorMessage(error.response?.data?.message || 'Failed to create plant data. Please try again.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

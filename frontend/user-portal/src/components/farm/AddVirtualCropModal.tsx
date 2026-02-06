@@ -5,7 +5,7 @@
  * Shows area budget, plant selection, and preview of predicted outcomes.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { farmApi, calculatePlantCount } from '../../services/farmApi';
@@ -432,6 +432,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
   const [plants, setPlants] = useState<PlantDataEnhanced[]>([]);
   const [loadingPlants, setLoadingPlants] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [showPreview, setShowPreview] = useState(false);
 
   // Form state

@@ -5,7 +5,7 @@
  * Shows preview of what will happen: task transfers, deletions, harvest transfers, and area return.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
@@ -203,6 +203,7 @@ export function EmptyVirtualBlockModal({
 }: EmptyVirtualBlockModalProps) {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<EmptyVirtualBlockPreview | null>(null);
 

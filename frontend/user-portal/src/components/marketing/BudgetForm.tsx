@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
 import type { MarketingBudget, MarketingBudgetCreate, MarketingBudgetUpdate } from '../../types/marketing';
@@ -24,6 +24,7 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
     currency: budget?.currency || 'AED', status: budget?.status || 'draft',
   });
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -32,6 +33,11 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     setSubmitting(true);
     setError(null);
 
@@ -53,6 +59,7 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
       console.error('Failed to save budget:', err);
       setError(err.response?.data?.message || 'Failed to save budget');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

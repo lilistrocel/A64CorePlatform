@@ -94,6 +94,11 @@ export function InputInventoryList({ onUpdate }: Props) {
     return new Date(dateStr).toLocaleDateString();
   };
 
+  const isExpired = (expiryDate?: string) => {
+    if (!expiryDate) return false;
+    return new Date(expiryDate) < new Date();
+  };
+
   const isExpiringSoon = (expiryDate?: string) => {
     if (!expiryDate) return false;
     const expiry = new Date(expiryDate);
@@ -211,8 +216,13 @@ export function InputInventoryList({ onUpdate }: Props) {
                   <Td>{item.supplier || '-'}</Td>
                   <Td>
                     {item.expiryDate ? (
-                      <ExpiryDate $expiringSoon={isExpiringSoon(item.expiryDate)}>
+                      <ExpiryDate
+                        $expired={isExpired(item.expiryDate)}
+                        $expiringSoon={isExpiringSoon(item.expiryDate)}
+                      >
                         {formatDate(item.expiryDate)}
+                        {isExpired(item.expiryDate) && ' (Expired)'}
+                        {isExpiringSoon(item.expiryDate) && ' (Soon)'}
                       </ExpiryDate>
                     ) : (
                       '-'
@@ -458,12 +468,31 @@ function AddInputModal({
                 />
               </FormGroup>
               <FormGroup>
+                <Label>Expiry Date</Label>
+                <Input
+                  type="date"
+                  value={formData.expiryDate || ''}
+                  onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                />
+              </FormGroup>
+            </FormRow>
+
+            <FormRow>
+              <FormGroup>
                 <Label>Storage Location</Label>
                 <Input
                   type="text"
                   placeholder="e.g., Warehouse B"
                   value={formData.storageLocation || ''}
                   onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })}
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Purchase Date</Label>
+                <Input
+                  type="date"
+                  value={formData.purchaseDate || ''}
+                  onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
                 />
               </FormGroup>
             </FormRow>
@@ -893,13 +922,15 @@ const StatusBadge = styled.span<StatusBadgeProps>`
 `;
 
 interface ExpiryDateProps {
+  $expired: boolean;
   $expiringSoon: boolean;
 }
 
 const ExpiryDate = styled.span<ExpiryDateProps>`
-  color: ${({ theme, $expiringSoon }) =>
-    $expiringSoon ? theme.colors.warning : 'inherit'};
-  font-weight: ${({ $expiringSoon }) => ($expiringSoon ? '500' : 'normal')};
+  color: ${({ theme, $expired, $expiringSoon }) =>
+    $expired ? theme.colors.error : $expiringSoon ? theme.colors.warning : 'inherit'};
+  font-weight: ${({ $expired, $expiringSoon }) =>
+    $expired || $expiringSoon ? '500' : 'normal'};
 `;
 
 const ActionButtons = styled.div`
