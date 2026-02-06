@@ -257,6 +257,43 @@ const PageInfo = styled.span`
   color: #616161;
 `;
 
+const PageSizeContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+`;
+
+const PageSizeLabel = styled.span`
+  font-size: 14px;
+  color: #616161;
+`;
+
+const PageSizeSelect = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #212121;
+  background: white;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:hover {
+    border-color: #bdbdbd;
+  }
+`;
+
+// Page size options
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -274,6 +311,7 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const searchTerm = searchParams.get('search') || '';
   const filterType = (searchParams.get('filter') as FilterType) || 'all';
   const page = parseInt(searchParams.get('page') || '1', 10);
+  const perPage = parseInt(searchParams.get('perPage') || String(DEFAULT_PAGE_SIZE), 10);
 
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -281,7 +319,7 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [selectedFarmName, setSelectedFarmName] = useState<string>('');
-  const perPage = 12;
+
 
   // Helper function to update URL params
   const updateParams = (updates: Record<string, string | null>) => {
@@ -299,6 +337,7 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const setSearchTerm = (value: string) => updateParams({ search: value });
   const setFilterType = (value: FilterType) => updateParams({ filter: value, page: '1' });
   const setPage = (value: number) => updateParams({ page: value.toString() });
+  const setPerPage = (value: number) => updateParams({ perPage: value === DEFAULT_PAGE_SIZE ? null : value.toString(), page: '1' });
 
   // Reset all filters to default state
   const resetFilters = () => {
@@ -306,12 +345,12 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchTerm !== '' || filterType !== 'all' || page !== 1;
+  const hasActiveFilters = searchTerm !== '' || filterType !== 'all' || page !== 1 || perPage !== DEFAULT_PAGE_SIZE;
 
   // Load farms
   useEffect(() => {
     loadFarms();
-  }, [page]);
+  }, [page, perPage]);
 
   const loadFarms = async () => {
     try {
@@ -493,19 +532,31 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
             ))}
           </GridContainer>
 
-          {totalPages > 1 && (
-            <Pagination>
-              <PageButton onClick={() => setPage(page - 1)} disabled={page === 1}>
-                Previous
-              </PageButton>
-              <PageInfo>
-                Page {page} of {totalPages}
-              </PageInfo>
-              <PageButton onClick={() => setPage(page + 1)} disabled={page === totalPages}>
-                Next
-              </PageButton>
-            </Pagination>
-          )}
+          <Pagination>
+            <PageButton onClick={() => setPage(page - 1)} disabled={page === 1}>
+              Previous
+            </PageButton>
+            <PageInfo>
+              Page {page} of {totalPages}
+            </PageInfo>
+            <PageButton onClick={() => setPage(page + 1)} disabled={page === totalPages}>
+              Next
+            </PageButton>
+            <PageSizeContainer>
+              <PageSizeLabel>Items per page:</PageSizeLabel>
+              <PageSizeSelect
+                value={perPage}
+                onChange={(e) => setPerPage(parseInt(e.target.value, 10))}
+                aria-label="Items per page"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </PageSizeSelect>
+            </PageSizeContainer>
+          </Pagination>
         </>
       )}
     </Container>
