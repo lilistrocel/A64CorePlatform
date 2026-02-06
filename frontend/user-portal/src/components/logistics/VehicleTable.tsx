@@ -221,6 +221,12 @@ export function VehicleTable({ vehicles, onView, onEdit, onDelete }: VehicleTabl
     return sortDirection === 'asc' ? '↑' : '↓';
   };
 
+  // Helper to get aria-sort value for sortable columns
+  const getAriaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+  };
+
   if (vehicles.length === 0) {
     return (
       <TableContainer>
@@ -233,26 +239,51 @@ export function VehicleTable({ vehicles, onView, onEdit, onDelete }: VehicleTabl
 
   return (
     <TableContainer>
-      <Table>
+      <Table aria-label="Fleet vehicles table">
         <TableHead>
           <tr>
-            <TableHeaderCell $sortable onClick={() => handleSort('name')}>
-              Vehicle <SortIndicator>{getSortIndicator('name')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('name')}
+              aria-sort={getAriaSort('name')}
+            >
+              Vehicle <SortIndicator aria-hidden="true">{getSortIndicator('name')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('licensePlate')}>
-              License Plate <SortIndicator>{getSortIndicator('licensePlate')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('licensePlate')}
+              aria-sort={getAriaSort('licensePlate')}
+            >
+              License Plate <SortIndicator aria-hidden="true">{getSortIndicator('licensePlate')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('type')}>
-              Type <SortIndicator>{getSortIndicator('type')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('type')}
+              aria-sort={getAriaSort('type')}
+            >
+              Type <SortIndicator aria-hidden="true">{getSortIndicator('type')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Capacity</TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('ownership')}>
-              Ownership <SortIndicator>{getSortIndicator('ownership')}</SortIndicator>
+            <TableHeaderCell scope="col">Capacity</TableHeaderCell>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('ownership')}
+              aria-sort={getAriaSort('ownership')}
+            >
+              Ownership <SortIndicator aria-hidden="true">{getSortIndicator('ownership')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('status')}>
-              Status <SortIndicator>{getSortIndicator('status')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('status')}
+              aria-sort={getAriaSort('status')}
+            >
+              Status <SortIndicator aria-hidden="true">{getSortIndicator('status')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Actions</TableHeaderCell>
+            <TableHeaderCell scope="col">Actions</TableHeaderCell>
           </tr>
         </TableHead>
         <TableBody>

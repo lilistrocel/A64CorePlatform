@@ -207,6 +207,12 @@ export function ShipmentTable({ shipments, onView, onEdit, onDelete, onUpdateSta
     return sortDirection === 'asc' ? '↑' : '↓';
   };
 
+  // Helper to get aria-sort value for sortable columns
+  const getAriaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+  };
+
   if (shipments.length === 0) {
     return (
       <TableContainer>
@@ -219,21 +225,36 @@ export function ShipmentTable({ shipments, onView, onEdit, onDelete, onUpdateSta
 
   return (
     <TableContainer>
-      <Table>
+      <Table aria-label="Shipment tracking table">
         <TableHead>
           <tr>
-            <TableHeaderCell $sortable onClick={() => handleSort('shipmentCode')}>
-              Shipment Code <SortIndicator>{getSortIndicator('shipmentCode')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('shipmentCode')}
+              aria-sort={getAriaSort('shipmentCode')}
+            >
+              Shipment Code <SortIndicator aria-hidden="true">{getSortIndicator('shipmentCode')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('status')}>
-              Status <SortIndicator>{getSortIndicator('status')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('status')}
+              aria-sort={getAriaSort('status')}
+            >
+              Status <SortIndicator aria-hidden="true">{getSortIndicator('status')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('scheduledDate')}>
-              Scheduled Date <SortIndicator>{getSortIndicator('scheduledDate')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('scheduledDate')}
+              aria-sort={getAriaSort('scheduledDate')}
+            >
+              Scheduled Date <SortIndicator aria-hidden="true">{getSortIndicator('scheduledDate')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Cargo</TableHeaderCell>
-            <TableHeaderCell>Total Cost</TableHeaderCell>
-            <TableHeaderCell>Actions</TableHeaderCell>
+            <TableHeaderCell scope="col">Cargo</TableHeaderCell>
+            <TableHeaderCell scope="col">Total Cost</TableHeaderCell>
+            <TableHeaderCell scope="col">Actions</TableHeaderCell>
           </tr>
         </TableHead>
         <TableBody>

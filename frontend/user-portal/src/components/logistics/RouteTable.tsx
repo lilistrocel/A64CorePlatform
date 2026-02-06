@@ -216,6 +216,12 @@ export function RouteTable({ routes, onView, onEdit, onDelete }: RouteTableProps
     return sortDirection === 'asc' ? '↑' : '↓';
   };
 
+  // Helper to get aria-sort value for sortable columns
+  const getAriaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+  };
+
   if (routes.length === 0) {
     return (
       <TableContainer>
@@ -228,24 +234,44 @@ export function RouteTable({ routes, onView, onEdit, onDelete }: RouteTableProps
 
   return (
     <TableContainer>
-      <Table>
+      <Table aria-label="Delivery routes table">
         <TableHead>
           <tr>
-            <TableHeaderCell $sortable onClick={() => handleSort('name')}>
-              Route <SortIndicator>{getSortIndicator('name')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('name')}
+              aria-sort={getAriaSort('name')}
+            >
+              Route <SortIndicator aria-hidden="true">{getSortIndicator('name')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Origin</TableHeaderCell>
-            <TableHeaderCell>Destination</TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('distance')}>
-              Distance (km) <SortIndicator>{getSortIndicator('distance')}</SortIndicator>
+            <TableHeaderCell scope="col">Origin</TableHeaderCell>
+            <TableHeaderCell scope="col">Destination</TableHeaderCell>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('distance')}
+              aria-sort={getAriaSort('distance')}
+            >
+              Distance (km) <SortIndicator aria-hidden="true">{getSortIndicator('distance')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('estimatedDuration')}>
-              Duration (hrs) <SortIndicator>{getSortIndicator('estimatedDuration')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('estimatedDuration')}
+              aria-sort={getAriaSort('estimatedDuration')}
+            >
+              Duration (hrs) <SortIndicator aria-hidden="true">{getSortIndicator('estimatedDuration')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell $sortable onClick={() => handleSort('isActive')}>
-              Status <SortIndicator>{getSortIndicator('isActive')}</SortIndicator>
+            <TableHeaderCell
+              scope="col"
+              $sortable
+              onClick={() => handleSort('isActive')}
+              aria-sort={getAriaSort('isActive')}
+            >
+              Status <SortIndicator aria-hidden="true">{getSortIndicator('isActive')}</SortIndicator>
             </TableHeaderCell>
-            <TableHeaderCell>Actions</TableHeaderCell>
+            <TableHeaderCell scope="col">Actions</TableHeaderCell>
           </tr>
         </TableHead>
         <TableBody>

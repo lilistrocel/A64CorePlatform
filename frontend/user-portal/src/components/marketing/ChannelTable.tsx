@@ -22,9 +22,9 @@ export function ChannelTable({ channels, onEdit, onDelete, loading }: ChannelTab
   if (channels.length === 0) return <EmptyText>No channels found</EmptyText>;
 
   return (
-    <Table>
+    <Table aria-label="Marketing channels table">
       <Thead>
-        <Tr><Th>Name</Th><Th>Type</Th><Th>Platform</Th><Th>Cost/Impression</Th><Th>Status</Th><Th>Actions</Th></Tr>
+        <Tr><Th scope="col">Name</Th><Th scope="col">Type</Th><Th scope="col">Platform</Th><Th scope="col">Cost/Impression</Th><Th scope="col">Status</Th><Th scope="col">Actions</Th></Tr>
       </Thead>
       <Tbody>
         {channels.map((channel) => (

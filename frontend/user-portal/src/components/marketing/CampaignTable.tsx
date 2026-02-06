@@ -33,17 +33,17 @@ export function CampaignTable({ campaigns, onEdit, onDelete, loading }: Campaign
   if (campaigns.length === 0) return <EmptyText>No campaigns found</EmptyText>;
 
   return (
-    <Table>
+    <Table aria-label="Marketing campaigns table">
       <Thead>
         <Tr>
-          <Th>Code</Th>
-          <Th>Name</Th>
-          <Th>Status</Th>
-          <Th>Budget</Th>
-          <Th>Spent</Th>
-          <Th>Goals</Th>
-          <Th>Impressions</Th>
-          <Th>Actions</Th>
+          <Th scope="col">Code</Th>
+          <Th scope="col">Name</Th>
+          <Th scope="col">Status</Th>
+          <Th scope="col">Budget</Th>
+          <Th scope="col">Spent</Th>
+          <Th scope="col">Goals</Th>
+          <Th scope="col">Impressions</Th>
+          <Th scope="col">Actions</Th>
         </Tr>
       </Thead>
       <Tbody>

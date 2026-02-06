@@ -22,9 +22,9 @@ export function EventTable({ events, onEdit, onDelete, loading }: EventTableProp
   if (events.length === 0) return <EmptyText>No events found</EmptyText>;
 
   return (
-    <Table>
+    <Table aria-label="Marketing events table">
       <Thead>
-        <Tr><Th>Code</Th><Th>Name</Th><Th>Type</Th><Th>Date</Th><Th>Location</Th><Th>Attendees</Th><Th>Status</Th><Th>Actions</Th></Tr>
+        <Tr><Th scope="col">Code</Th><Th scope="col">Name</Th><Th scope="col">Type</Th><Th scope="col">Date</Th><Th scope="col">Location</Th><Th scope="col">Attendees</Th><Th scope="col">Status</Th><Th scope="col">Actions</Th></Tr>
       </Thead>
       <Tbody>
         {events.map((event) => (

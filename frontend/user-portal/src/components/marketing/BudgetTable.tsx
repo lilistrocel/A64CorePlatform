@@ -24,9 +24,9 @@ export function BudgetTable({ budgets, onEdit, onDelete, loading }: BudgetTableP
   if (budgets.length === 0) return <EmptyText>No budgets found</EmptyText>;
 
   return (
-    <Table>
+    <Table aria-label="Marketing budgets table">
       <Thead>
-        <Tr><Th>Name</Th><Th>Year</Th><Th>Quarter</Th><Th>Total Amount</Th><Th>Spent</Th><Th>Utilization</Th><Th>Status</Th><Th>Actions</Th></Tr>
+        <Tr><Th scope="col">Name</Th><Th scope="col">Year</Th><Th scope="col">Quarter</Th><Th scope="col">Total Amount</Th><Th scope="col">Spent</Th><Th scope="col">Utilization</Th><Th scope="col">Status</Th><Th scope="col">Actions</Th></Tr>
       </Thead>
       <Tbody>
         {budgets.map((budget) => {
