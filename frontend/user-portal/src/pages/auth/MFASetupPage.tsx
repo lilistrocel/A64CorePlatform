@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import { useState, useEffect, useRef } from 'react';
+import styled, { keyframes, css } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card } from '@a64core/shared';
 import { apiClient } from '../../services/api';
@@ -26,9 +26,11 @@ export function MFASetupPage() {
   const [step, setStep] = useState<'loading' | 'scan' | 'verify' | 'backup' | 'error'>('loading');
   const [setupData, setSetupData] = useState<MFASetupResponse | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [totpCode, setTotpCode] = useState('');
+  const [totpCode, setTotpCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const digitRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Initialize MFA setup from /api/v1/auth/mfa/setup on mount (POST request)
   useEffect(() => {
