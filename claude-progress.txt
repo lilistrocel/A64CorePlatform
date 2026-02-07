@@ -3743,3 +3743,37 @@ NOTES FOR NEXT SESSION:
 - Test users:
   - farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
   - admin_f24_test@example.com / TestPass123@ (admin, can toggle mfaSetupRequired for testing)
+
+== Session: 2026-02-07 (Agent - Feature #336) ==
+Agent: Feature #336 - MFA Database Schema and Indexes
+
+COMPLETED:
+- Feature #336: MFA database schema and indexes [PASSING]
+  - Created Pydantic models for MFA collections in src/models/mfa.py:
+    - UserMFA: stores TOTP secrets and MFA configuration per user
+    - MFABackupCode: stores hashed backup codes with TTL support
+    - MFAAuditLog: security audit trail for MFA actions
+    - MFAAuditAction enum: defines all MFA action types
+  - Added indexes to src/services/database.py:
+    - user_mfa: mfaId (unique), userId (unique), isEnabled, createdAt, updatedAt
+    - mfa_backup_codes: codeId (unique), userId, userId+codeHash, isUsed, userId+isUsed, expiresAt (TTL)
+    - mfa_audit_log: logId (unique), userId, action, timestamp, userId+timestamp, userId+action, performedBy
+    - admin_audit_log: action, performedBy, targetUserId, timestamp
+  - TTL index on mfa_backup_codes.expiresAt automatically cleans up used codes after 90 days
+  - Verified indexes created successfully via MongoDB shell
+  - MFA status API endpoint working correctly
+  - Zero console errors
+  - Screenshots: feature336-mfa-schema-settings-page.png, feature336-mfa-schema-security-section.png
+
+FILES MODIFIED:
+- src/models/mfa.py: Added UserMFA, MFABackupCode, MFAAuditLog, MFAAuditAction models
+- src/services/database.py: Added MFA collection indexes in _create_indexes()
+
+CURRENT STATUS: 334/336 features passing (99.4%)
+
+NOTES FOR NEXT SESSION:
+- MFA schema uses separate collections for better query performance and TTL support
+- Backup codes auto-expire 90 days after being used (via TTL index on expiresAt)
+- Audit log captures all MFA actions for compliance/security monitoring
+- Test admin: admin_f24_test@example.com / TestPass123@ (admin, MFA disabled)
+- Test admin with MFA: farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
