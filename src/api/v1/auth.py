@@ -8,6 +8,7 @@ Following User-Structure.md and API-Structure.md specifications
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from typing import Dict, Any
 
+from typing import Union
 from ...models.user import (
     UserCreate,
     UserLogin,
@@ -17,10 +18,19 @@ from ...models.user import (
     EmailVerificationRequest,
     VerifyEmailRequest,
     PasswordResetRequest,
-    PasswordResetConfirm
+    PasswordResetConfirm,
+    MFASetupResponse,
+    MFAEnableRequest,
+    MFAEnableResponse,
+    MFADisableRequest,
+    MFAStatusResponse,
+    MFALoginResponse,
+    MFAVerifyLoginRequest
 )
+from ...models.mfa import MFALoginRequired
 from ...services.auth_service import auth_service
 from ...services.user_service import user_service
+from ...services.mfa_service import mfa_service
 from ...middleware.auth import get_current_user
 from ...middleware.rate_limit import login_rate_limiter
 
@@ -74,10 +84,10 @@ async def register(user_data: UserCreate) -> TokenResponse:
     return token_response
 
 
-@router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLogin) -> TokenResponse:
+@router.post("/login", response_model=None)
+async def login(credentials: UserLogin) -> Union[TokenResponse, MFALoginResponse]:
     """
-    Authenticate user and return JWT tokens
+    Authenticate user and return JWT tokens (or MFA challenge if MFA enabled)
 
     **Authentication:** None required
 
@@ -87,16 +97,23 @@ async def login(credentials: UserLogin) -> TokenResponse:
 
     **Returns:**
     - 200: Login successful, returns access token, refresh token, and user info
+    - 200 (MFA): If MFA enabled, returns mfaRequired=true with temporary mfaToken
     - 401: Invalid credentials
     - 403: Account is inactive
     - 429: Too many failed login attempts (5 max, 15 minute lockout)
 
-    **Response includes:**
+    **Response (if MFA NOT enabled):**
     - accessToken: JWT token (1 hour expiry)
     - refreshToken: JWT refresh token (7 days expiry)
     - tokenType: "bearer"
     - expiresIn: Token expiry in seconds (3600)
     - user: User information
+
+    **Response (if MFA IS enabled):**
+    - mfaRequired: true
+    - mfaToken: Temporary token for MFA verification (5 min expiry)
+    - userId: Masked user ID
+    - message: "MFA verification required"
 
     **Example:**
     ```json
@@ -110,12 +127,12 @@ async def login(credentials: UserLogin) -> TokenResponse:
     await login_rate_limiter.check_login_attempts(credentials.email)
 
     try:
-        token_response = await auth_service.login_user(credentials)
+        result = await auth_service.login_user_with_mfa_check(credentials)
 
-        # Clear failed attempts on successful login
+        # Clear failed attempts on successful password validation
         await login_rate_limiter.clear_attempts(credentials.email)
 
-        return token_response
+        return result
     except HTTPException as e:
         # Record failed attempt if credentials were invalid
         if e.status_code == status.HTTP_401_UNAUTHORIZED:
@@ -336,3 +353,153 @@ async def reset_password(request: PasswordResetConfirm) -> Dict[str, str]:
     """
     await auth_service.reset_password(request.token, request.newPassword)
     return {"message": "Password reset successfully"}
+
+
+# ============= MFA (Multi-Factor Authentication) Endpoints =============
+
+
+@router.post("/mfa/verify", response_model=TokenResponse)
+async def verify_mfa_login(request: MFAVerifyLoginRequest) -> TokenResponse:
+    """
+    Complete MFA login verification (second factor)
+
+    **Authentication:** None required (uses mfaToken from login step)
+
+    **Request Body:**
+    - mfaToken: Temporary MFA token from login response
+    - code: 6-digit TOTP code from authenticator OR 8-char backup code
+
+    **Returns:**
+    - 200: MFA verification successful, returns full JWT tokens
+    - 401: Invalid or expired MFA token
+    - 400: Invalid TOTP/backup code
+
+    **Flow:**
+    1. User calls POST /login with email/password
+    2. If MFA enabled, receives mfaRequired=true with mfaToken
+    3. User calls POST /mfa/verify with mfaToken + TOTP code
+    4. Receives full access token + refresh token
+
+    **Example:**
+    ```json
+    {
+      "mfaToken": "eyJhbGciOiJIUzI1NiIs...",
+      "code": "123456"
+    }
+    ```
+    """
+    token_response = await auth_service.verify_mfa_and_login(
+        mfa_token=request.mfaToken,
+        code=request.code
+    )
+    return token_response
+
+
+@router.get("/mfa/status", response_model=MFAStatusResponse)
+async def get_mfa_status(
+    current_user: UserResponse = Depends(get_current_user)
+) -> MFAStatusResponse:
+    """
+    Get current MFA status for authenticated user
+
+    **Authentication:** Required (Bearer token)
+
+    **Returns:**
+    - 200: MFA status (enabled/disabled, pending setup, has backup codes)
+    - 401: Not authenticated
+    """
+    return await mfa_service.get_mfa_status(current_user.userId)
+
+
+@router.post("/mfa/setup", response_model=MFASetupResponse)
+async def setup_mfa(
+    current_user: UserResponse = Depends(get_current_user)
+) -> MFASetupResponse:
+    """
+    Initialize MFA setup for current user
+
+    **Authentication:** Required (Bearer token)
+
+    **Returns:**
+    - 200: TOTP secret and QR code URI
+    - 400: MFA already enabled
+    - 401: Not authenticated
+
+    **Flow:**
+    1. Call this endpoint to get TOTP secret and QR URI
+    2. Scan QR code with authenticator app (Google Authenticator, Authy, etc.)
+    3. Call POST /mfa/enable with a valid TOTP code to activate MFA
+    """
+    return await mfa_service.setup_mfa(current_user.userId)
+
+
+@router.post("/mfa/enable", response_model=MFAEnableResponse)
+async def enable_mfa(
+    request: MFAEnableRequest,
+    current_user: UserResponse = Depends(get_current_user)
+) -> MFAEnableResponse:
+    """
+    Enable MFA by verifying TOTP code from authenticator app
+
+    **Authentication:** Required (Bearer token)
+
+    **Request Body:**
+    - totpCode: 6-digit TOTP code from authenticator app
+
+    **Returns:**
+    - 200: MFA enabled with backup codes (SAVE THESE!)
+    - 400: No pending setup or invalid TOTP code
+    - 401: Not authenticated
+
+    **Important:** Backup codes are shown ONLY ONCE. Store them securely.
+    """
+    return await mfa_service.enable_mfa(current_user.userId, request.totpCode)
+
+
+@router.post("/mfa/disable")
+async def disable_mfa(
+    request: MFADisableRequest,
+    current_user: UserResponse = Depends(get_current_user)
+) -> Dict[str, str]:
+    """
+    Disable MFA for current user
+
+    **Authentication:** Required (Bearer token)
+
+    **Request Body:**
+    - totpCode: 6-digit TOTP code OR backup code
+    - password: Current password for additional verification
+
+    **Returns:**
+    - 200: MFA disabled successfully
+    - 400: MFA not enabled or invalid credentials
+    - 401: Not authenticated or invalid password
+    """
+    return await mfa_service.disable_mfa(
+        user_id=current_user.userId,
+        totp_code=request.totpCode,
+        password=request.password
+    )
+
+
+@router.post("/mfa/backup-codes", response_model=MFAEnableResponse)
+async def regenerate_backup_codes(
+    request: MFAEnableRequest,
+    current_user: UserResponse = Depends(get_current_user)
+) -> MFAEnableResponse:
+    """
+    Regenerate MFA backup codes (invalidates old ones)
+
+    **Authentication:** Required (Bearer token)
+
+    **Request Body:**
+    - totpCode: 6-digit TOTP code to verify identity
+
+    **Returns:**
+    - 200: New backup codes (old codes invalidated)
+    - 400: MFA not enabled or invalid TOTP code
+    - 401: Not authenticated
+
+    **Important:** New backup codes are shown ONLY ONCE. Store them securely.
+    """
+    return await mfa_service.regenerate_backup_codes(current_user.userId, request.totpCode)

@@ -13,13 +13,15 @@ import logging
 from fastapi import HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
+from typing import Union
 from ..models.user import (
     UserCreate,
     UserLogin,
     UserResponse,
     UserRole,
     TokenResponse,
-    RefreshTokenCreate
+    RefreshTokenCreate,
+    MFALoginResponse
 )
 from ..utils.security import (
     hash_password,
@@ -28,7 +30,9 @@ from ..utils.security import (
     create_refresh_token,
     verify_refresh_token,
     create_verification_token,
-    verify_verification_token
+    verify_verification_token,
+    create_mfa_token,
+    verify_mfa_token
 )
 from ..utils.email import (
     send_email_verification,
@@ -786,6 +790,308 @@ class AuthService:
 
         logger.info(f"Password reset successfully for user: {user_id}")
         return True
+
+    # ============= MFA Login Flow Methods =============
+
+    @staticmethod
+    async def login_user_with_mfa_check(credentials: UserLogin) -> Union[TokenResponse, MFALoginResponse]:
+        """
+        Authenticate user with MFA check
+
+        If MFA is enabled, returns MFALoginResponse with temporary token.
+        If MFA is not enabled, returns full TokenResponse.
+
+        Args:
+            credentials: User login credentials (email, password)
+
+        Returns:
+            TokenResponse if no MFA, MFALoginResponse if MFA required
+
+        Raises:
+            HTTPException: 401 if credentials invalid, 403 if account inactive
+        """
+        db = mongodb.get_database()
+
+        # Find user by email
+        user_doc = await db.users.find_one({"email": credentials.email})
+
+        if not user_doc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
+
+        # Check if user is active
+        if not user_doc.get("isActive", False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is inactive"
+            )
+
+        # Verify password
+        if not verify_password(credentials.password, user_doc["passwordHash"]):
+            logger.warning(f"Failed login attempt for: {credentials.email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
+
+        user_id = user_doc["userId"]
+        email = user_doc["email"]
+
+        # Check if MFA is enabled
+        if user_doc.get("mfaEnabled", False):
+            # MFA is enabled - return partial auth response with temporary token
+            mfa_token, token_id = create_mfa_token(
+                user_id=user_id,
+                email=email
+            )
+
+            # Store MFA token in database for validation
+            mfa_token_doc = {
+                "tokenId": token_id,
+                "userId": user_id,
+                "email": email,
+                "type": "mfa_pending",
+                "expiresAt": datetime.utcnow() + timedelta(minutes=5),
+                "isUsed": False,
+                "failedAttempts": 0,
+                "createdAt": datetime.utcnow()
+            }
+
+            await db.mfa_pending_tokens.insert_one(mfa_token_doc)
+
+            logger.info(f"MFA required for user: {email}")
+
+            # Return masked userId (first 4 and last 4 chars only)
+            masked_user_id = f"{user_id[:4]}...{user_id[-4:]}"
+
+            return MFALoginResponse(
+                mfaRequired=True,
+                mfaToken=mfa_token,
+                userId=masked_user_id,
+                message="MFA verification required. Please enter your authenticator code."
+            )
+
+        # No MFA - proceed with normal login
+        role = UserRole(user_doc["role"])
+
+        # Create access token (1 hour expiry)
+        access_token = create_access_token(
+            user_id=user_id,
+            email=email,
+            role=role
+        )
+
+        # Create refresh token (7 days expiry)
+        refresh_token, token_id = create_refresh_token(user_id=user_id)
+
+        # Store refresh token in database
+        refresh_token_doc = {
+            "tokenId": token_id,
+            "userId": user_id,
+            "token": refresh_token,
+            "expiresAt": datetime.utcnow() + timedelta(days=7),
+            "isRevoked": False,
+            "createdAt": datetime.utcnow(),
+            "lastUsedAt": None
+        }
+
+        await db.refresh_tokens.insert_one(refresh_token_doc)
+
+        # Update user's lastLoginAt
+        await db.users.update_one(
+            {"userId": user_id},
+            {"$set": {"lastLoginAt": datetime.utcnow()}}
+        )
+
+        logger.info(f"User logged in successfully (no MFA): {email}")
+
+        # Return token response
+        user_response = UserResponse(
+            userId=user_id,
+            email=email,
+            firstName=user_doc["firstName"],
+            lastName=user_doc["lastName"],
+            role=role,
+            isActive=user_doc["isActive"],
+            isEmailVerified=user_doc["isEmailVerified"],
+            phone=user_doc.get("phone"),
+            avatar=user_doc.get("avatar"),
+            timezone=user_doc.get("timezone"),
+            locale=user_doc.get("locale"),
+            lastLoginAt=datetime.utcnow(),
+            createdAt=user_doc["createdAt"],
+            updatedAt=user_doc["updatedAt"]
+        )
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=3600,
+            user=user_response
+        )
+
+    @staticmethod
+    async def verify_mfa_and_login(mfa_token: str, code: str) -> TokenResponse:
+        """
+        Verify MFA code and complete login
+
+        Args:
+            mfa_token: Temporary MFA token from login step
+            code: 6-digit TOTP code or backup code
+
+        Returns:
+            TokenResponse with full access tokens
+
+        Raises:
+            HTTPException: 401 if token invalid/expired, 400 if code invalid
+        """
+        from .mfa_service import mfa_service
+
+        db = mongodb.get_database()
+
+        # Verify MFA token
+        token_payload = verify_mfa_token(mfa_token)
+
+        if not token_payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired MFA token. Please login again."
+            )
+
+        user_id = token_payload["userId"]
+        token_id = token_payload["tokenId"]
+
+        # Check token in database
+        token_doc = await db.mfa_pending_tokens.find_one({"tokenId": token_id})
+
+        if not token_doc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="MFA token not found. Please login again."
+            )
+
+        # Check if token is already used
+        if token_doc.get("isUsed", False):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="MFA token already used. Please login again."
+            )
+
+        # Check if token is expired
+        if token_doc["expiresAt"] < datetime.utcnow():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="MFA token has expired. Please login again."
+            )
+
+        # Check failed attempts (limit to 5)
+        failed_attempts = token_doc.get("failedAttempts", 0)
+        if failed_attempts >= 5:
+            # Mark token as used to prevent further attempts
+            await db.mfa_pending_tokens.update_one(
+                {"tokenId": token_id},
+                {"$set": {"isUsed": True}}
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Too many failed MFA attempts. Please login again."
+            )
+
+        # Verify MFA code using MFA service
+        is_valid, used_backup_code = await mfa_service.verify_mfa_code(user_id, code)
+
+        if not is_valid:
+            # Increment failed attempts
+            await db.mfa_pending_tokens.update_one(
+                {"tokenId": token_id},
+                {"$inc": {"failedAttempts": 1}}
+            )
+
+            remaining_attempts = 5 - (failed_attempts + 1)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid code. {remaining_attempts} attempts remaining."
+            )
+
+        # Mark MFA token as used
+        await db.mfa_pending_tokens.update_one(
+            {"tokenId": token_id},
+            {"$set": {"isUsed": True, "usedAt": datetime.utcnow()}}
+        )
+
+        # Fetch user for token generation
+        user_doc = await db.users.find_one({"userId": user_id})
+
+        if not user_doc or not user_doc.get("isActive", False):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive"
+            )
+
+        # Generate full tokens
+        email = user_doc["email"]
+        role = UserRole(user_doc["role"])
+
+        access_token = create_access_token(
+            user_id=user_id,
+            email=email,
+            role=role
+        )
+
+        refresh_token, new_token_id = create_refresh_token(user_id=user_id)
+
+        # Store refresh token
+        refresh_token_doc = {
+            "tokenId": new_token_id,
+            "userId": user_id,
+            "token": refresh_token,
+            "expiresAt": datetime.utcnow() + timedelta(days=7),
+            "isRevoked": False,
+            "createdAt": datetime.utcnow(),
+            "lastUsedAt": None
+        }
+
+        await db.refresh_tokens.insert_one(refresh_token_doc)
+
+        # Update user's lastLoginAt
+        await db.users.update_one(
+            {"userId": user_id},
+            {"$set": {"lastLoginAt": datetime.utcnow()}}
+        )
+
+        if used_backup_code:
+            logger.info(f"User logged in with MFA backup code: {email}")
+        else:
+            logger.info(f"User logged in with MFA TOTP code: {email}")
+
+        # Return token response
+        user_response = UserResponse(
+            userId=user_id,
+            email=email,
+            firstName=user_doc["firstName"],
+            lastName=user_doc["lastName"],
+            role=role,
+            isActive=user_doc["isActive"],
+            isEmailVerified=user_doc["isEmailVerified"],
+            phone=user_doc.get("phone"),
+            avatar=user_doc.get("avatar"),
+            timezone=user_doc.get("timezone"),
+            locale=user_doc.get("locale"),
+            lastLoginAt=datetime.utcnow(),
+            createdAt=user_doc["createdAt"],
+            updatedAt=user_doc["updatedAt"]
+        )
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=3600,
+            user=user_response
+        )
 
 
 # Service instance

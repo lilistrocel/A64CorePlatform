@@ -308,3 +308,77 @@ def verify_verification_token(token: str, expected_type: str) -> Optional[Dict[s
 
     except Exception:
         return None
+
+
+# ============= MFA Token Functions =============
+
+def create_mfa_token(
+    user_id: str,
+    email: str,
+    expires_delta: Optional[timedelta] = None
+) -> tuple[str, str]:
+    """
+    Create a temporary MFA token for the second step of MFA login
+
+    Args:
+        user_id: User's UUID
+        email: User's email
+        expires_delta: Optional custom expiration time (default: 5 minutes)
+
+    Returns:
+        Tuple of (token, token_id)
+
+    Token Configuration:
+    - Algorithm: HS256
+    - Default Expiry: 5 minutes (short-lived for security)
+    - Type: 'mfa_pending'
+    """
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        # Default: 5 minutes expiry for MFA token
+        expire = datetime.utcnow() + timedelta(minutes=5)
+
+    token_id = str(uuid.uuid4())
+
+    to_encode = {
+        "userId": user_id,
+        "email": email,
+        "tokenId": token_id,
+        "type": "mfa_pending",
+        "exp": expire
+    }
+
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm="HS256"
+    )
+
+    return encoded_jwt, token_id
+
+
+def verify_mfa_token(token: str) -> Optional[Dict[str, str]]:
+    """
+    Verify and decode MFA pending token
+
+    Args:
+        token: JWT MFA token
+
+    Returns:
+        Dict with userId, email, and tokenId if valid, None otherwise
+    """
+    try:
+        payload = decode_token(token)
+
+        if not payload or payload.get("type") != "mfa_pending":
+            return None
+
+        return {
+            "userId": payload.get("userId"),
+            "email": payload.get("email"),
+            "tokenId": payload.get("tokenId")
+        }
+
+    except Exception:
+        return None

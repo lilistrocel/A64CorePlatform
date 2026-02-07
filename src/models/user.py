@@ -222,3 +222,62 @@ class UserListFilters(BaseModel):
     isActive: Optional[bool] = None
     isEmailVerified: Optional[bool] = None
     search: Optional[str] = Field(None, max_length=200, description="Search in email, firstName, lastName")
+
+
+# MFA Models
+
+class MFASetupResponse(BaseModel):
+    """Response when initiating MFA setup"""
+    secret: str = Field(..., description="Base32-encoded TOTP secret for manual entry")
+    qrCodeUri: str = Field(..., description="otpauth:// URI for QR code generation")
+    qrCodeDataUrl: Optional[str] = Field(None, description="Base64-encoded QR code image (data:image/png;base64,...)")
+    message: str = Field(default="Scan the QR code with your authenticator app")
+
+
+class MFAEnableRequest(BaseModel):
+    """Request to enable MFA by verifying TOTP code"""
+    totpCode: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code from authenticator app")
+
+
+class MFAEnableResponse(BaseModel):
+    """Response after successfully enabling MFA"""
+    enabled: bool = True
+    backupCodes: list[str] = Field(..., description="One-time backup codes for account recovery")
+    message: str = Field(default="MFA has been enabled successfully")
+
+
+class MFADisableRequest(BaseModel):
+    """Request to disable MFA"""
+    totpCode: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code to verify identity")
+    password: str = Field(..., min_length=1, description="Current password for additional verification")
+
+
+class MFAVerifyRequest(BaseModel):
+    """Request to verify MFA during login"""
+    totpCode: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code or backup code")
+
+
+class MFAStatusResponse(BaseModel):
+    """Response for MFA status check"""
+    mfaEnabled: bool
+    mfaSetupPending: bool = False
+    hasBackupCodes: bool = False
+
+
+class MFALoginResponse(BaseModel):
+    """
+    Response when MFA is required during login.
+
+    Returned instead of TokenResponse when user has MFA enabled.
+    Client must then call /api/v1/auth/mfa/verify with the mfaToken and TOTP code.
+    """
+    mfaRequired: bool = True
+    mfaToken: str = Field(..., description="Temporary token for MFA verification (5 min expiry)")
+    userId: str = Field(..., description="User ID (masked for security)")
+    message: str = Field(default="MFA verification required")
+
+
+class MFAVerifyLoginRequest(BaseModel):
+    """Request to complete login with MFA verification"""
+    mfaToken: str = Field(..., description="Temporary MFA token from login response")
+    code: str = Field(..., min_length=6, max_length=9, description="6-digit TOTP code or backup code (XXXX-XXXX format)")
