@@ -4117,3 +4117,42 @@ NOTES FOR NEXT SESSION:
 - Number formatting utilities complete and functional
 - Dashboard stat cards now display properly formatted numbers
 - Test admin: admin_f24_test@example.com / TestPass123@ (admin)
+
+== Session: 2026-02-07 (Agent Batch #357, #358) ==
+Agent: Features #357, #358 - Number Formatting for CRM and Data Tables
+
+COMPLETED:
+- Feature #357: Apply number formatting to CRM module [PASSING]
+  - Added formatNumber import to CRMPage.tsx
+  - Applied formatNumber to pagination display (page, totalPages, total)
+  - Dashboard total-customers widget already uses formatNumber
+  - Zero console errors
+  - Screenshots: feature357-crm-pagination.png
+
+- Feature #358: Apply number formatting to data tables throughout app [PASSING]
+  - OrderTable.tsx: replaced $order.total.toFixed(2) with formatCurrency(order.total, 'USD')
+  - OrderTable.tsx: added formatNumber(order.items.length) for item count
+  - InventoryTable.tsx: added formatNumber(item.quantity) for quantity display
+  - ReturnsPage.tsx: replaced inline formatCurrency with utility function
+  - ReturnsPage.tsx: replaced toFixed(2) with formatNumber(qty, {decimals: 2})
+  - PurchaseOrderTable.tsx already updated by parallel agent (Feature #353)
+  - Verified sorting still works correctly on underlying numeric values
+  - All monetary values now show proper comma separators (e.g., $11,961.52, AED 15,000.00)
+  - Zero console errors
+  - Screenshots: feature358-order-table-formatted.png, feature358-campaign-table-formatted.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/pages/crm/CRMPage.tsx (import + pagination formatting)
+- frontend/user-portal/src/components/sales/OrderTable.tsx (formatCurrency, formatNumber)
+- frontend/user-portal/src/components/sales/InventoryTable.tsx (formatNumber)
+- frontend/user-portal/src/pages/sales/ReturnsPage.tsx (replaced local formatCurrency, added formatNumber)
+
+CURRENT STATUS: 358/358 features passing (100.0%) 🎉
+
+ALL FEATURES COMPLETE! Project ready for final review and deployment.
+
+NOTES:
+- formatNumber utility correctly handles numbers < 1000 (no commas needed)
+- formatCurrency defaults to AED but supports USD, EUR via currency parameter
+- Table sorting uses underlying numeric values, not formatted strings
+- Logistics and Marketing tables already had proper formatting in place
