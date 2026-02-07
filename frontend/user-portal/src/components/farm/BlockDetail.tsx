@@ -692,7 +692,7 @@ export function BlockDetail() {
                   <InfoTitle>Current Planting</InfoTitle>
                   <InfoItem>
                     <InfoLabel>Plant Count</InfoLabel>
-                    <InfoValue>{summary.currentPlanting.plantCount}</InfoValue>
+                    <InfoValue>{formatNumber(summary.currentPlanting.plantCount)}</InfoValue>
                   </InfoItem>
                   {summary.currentPlanting.plantedDate && (
                     <InfoItem>
@@ -716,23 +716,23 @@ export function BlockDetail() {
                   <InfoTitle>KPI Metrics</InfoTitle>
                   <InfoItem>
                     <InfoLabel>Predicted Yield</InfoLabel>
-                    <InfoValue>{(summary.predictedYieldKg ?? 0).toFixed(1)} kg</InfoValue>
+                    <InfoValue>{formatNumber(summary.predictedYieldKg ?? 0, { decimals: 1 })} kg</InfoValue>
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>Actual Yield</InfoLabel>
-                    <InfoValue>{(summary.actualYieldKg ?? 0).toFixed(1)} kg</InfoValue>
+                    <InfoValue>{formatNumber(summary.actualYieldKg ?? 0, { decimals: 1 })} kg</InfoValue>
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>Yield Efficiency</InfoLabel>
                     <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? '#4CAF50' : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? '#FF9800' : '#F44336' }}>
-                      {(summary.yieldEfficiencyPercent ?? 0).toFixed(1)}%
+                      {formatPercentage(summary.yieldEfficiencyPercent ?? 0, 1)}
                     </InfoValue>
                   </InfoItem>
                   {block.plantedDate && (
                     <InfoItem>
                       <InfoLabel>Days Since Planting</InfoLabel>
                       <InfoValue>
-                        {Math.floor((new Date().getTime() - new Date(block.plantedDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                        {formatNumber(Math.floor((new Date().getTime() - new Date(block.plantedDate).getTime()) / (1000 * 60 * 60 * 24)))} days
                       </InfoValue>
                     </InfoItem>
                   )}

@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
 import type { BlockHarvest, BlockHarvestCreate, BlockHarvestSummary, QualityGrade } from '../../types/farm';
+import { formatNumber } from '../../utils';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -527,13 +528,13 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
         <SummaryGrid>
           <SummaryCard>
             <SummaryLabel>Total Harvests</SummaryLabel>
-            <SummaryValue>{summary.totalHarvests}</SummaryValue>
+            <SummaryValue>{formatNumber(summary.totalHarvests)}</SummaryValue>
             <SummarySubtext>recorded events</SummarySubtext>
           </SummaryCard>
 
           <SummaryCard>
             <SummaryLabel>Total Yield</SummaryLabel>
-            <SummaryValue>{summary.totalQuantityKg.toFixed(1)}</SummaryValue>
+            <SummaryValue>{formatNumber(summary.totalQuantityKg, { decimals: 1 })}</SummaryValue>
             <SummarySubtext>kg harvested</SummarySubtext>
           </SummaryCard>
 
@@ -574,7 +575,7 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
                   {harvest.metadata?.crop && <span style={{ fontWeight: 400, marginLeft: 8, color: '#4caf50' }}>({harvest.metadata.crop})</span>}
                 </HarvestDate>
                 <HarvestMeta>
-                  <span>{harvest.quantityKg} kg</span>
+                  <span>{formatNumber(harvest.quantityKg, { decimals: 1 })} kg</span>
                   <span>•</span>
                   <span>
                     <QualityBadge $grade={harvest.qualityGrade}>Grade {harvest.qualityGrade}</QualityBadge>
@@ -614,7 +615,7 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
                 <strong>{farmApi.formatDateForDisplay(harvestToDelete.harvestDate)}</strong>
                 {harvestToDelete.metadata?.crop && ` (${harvestToDelete.metadata.crop})`}
                 <br />
-                {harvestToDelete.quantityKg} kg - Grade {harvestToDelete.qualityGrade}
+                {formatNumber(harvestToDelete.quantityKg, { decimals: 1 })} kg - Grade {harvestToDelete.qualityGrade}
               </ConfirmHighlight>
               <ButtonGroup>
                 <Button type="button" onClick={() => setHarvestToDelete(null)} disabled={deleting}>

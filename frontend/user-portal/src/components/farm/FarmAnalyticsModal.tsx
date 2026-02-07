@@ -28,6 +28,7 @@ import {
 import { useFarmAnalytics } from '../../hooks/farm/useFarmAnalytics';
 import type { TimePeriod, BlockComparisonItem } from '../../types/farm-analytics';
 import { TIME_PERIOD_OPTIONS } from '../../types/farm-analytics';
+import { formatNumber, formatPercentage } from '../../utils';
 
 type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvesting' | 'cleaning' | 'alert';
 
@@ -248,37 +249,37 @@ function OverviewTab({ analytics }: { analytics: any }) {
         <MetricsGrid>
           <MetricCard>
             <MetricIcon>🏗️</MetricIcon>
-            <MetricValue>{analytics.aggregatedMetrics.totalBlocks}</MetricValue>
+            <MetricValue>{formatNumber(analytics.aggregatedMetrics.totalBlocks)}</MetricValue>
             <MetricLabel>Total Blocks</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>🌱</MetricIcon>
-            <MetricValue>{analytics.aggregatedMetrics.activePlantings}</MetricValue>
+            <MetricValue>{formatNumber(analytics.aggregatedMetrics.activePlantings)}</MetricValue>
             <MetricLabel>Active Plantings</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>🌾</MetricIcon>
-            <MetricValue>{analytics.aggregatedMetrics.totalYieldKg.toFixed(1)} kg</MetricValue>
+            <MetricValue>{formatNumber(analytics.aggregatedMetrics.totalYieldKg, { decimals: 1 })} kg</MetricValue>
             <MetricLabel>Total Yield</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>📊</MetricIcon>
-            <MetricValue>{analytics.aggregatedMetrics.avgYieldEfficiency.toFixed(1)}%</MetricValue>
+            <MetricValue>{formatPercentage(analytics.aggregatedMetrics.avgYieldEfficiency, 1)}</MetricValue>
             <MetricLabel>Avg Yield Efficiency</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>⭐</MetricIcon>
-            <MetricValue $color={performanceColor}>{performanceScore.toFixed(0)}</MetricValue>
+            <MetricValue $color={performanceColor}>{formatNumber(performanceScore, { decimals: 0 })}</MetricValue>
             <MetricLabel>Overall Performance</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>📦</MetricIcon>
-            <MetricValue>{analytics.aggregatedMetrics.currentUtilization.toFixed(0)}%</MetricValue>
+            <MetricValue>{formatPercentage(analytics.aggregatedMetrics.currentUtilization, 0)}</MetricValue>
             <MetricLabel>Capacity Utilization</MetricLabel>
           </MetricCard>
           <MetricCard>
             <MetricIcon>🔮</MetricIcon>
-            <MetricValue>{analytics.aggregatedMetrics.predictedYieldKg.toFixed(1)} kg</MetricValue>
+            <MetricValue>{formatNumber(analytics.aggregatedMetrics.predictedYieldKg, { decimals: 1 })} kg</MetricValue>
             <MetricLabel>Predicted Yield</MetricLabel>
           </MetricCard>
         </MetricsGrid>
@@ -298,7 +299,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={(entry) => `${entry.name}: ${entry.value} (${((entry.value / analytics.aggregatedMetrics.totalBlocks) * 100).toFixed(0)}%)`}
+                  label={(entry) => `${entry.name}: ${formatNumber(entry.value)} (${formatNumber(((entry.value / analytics.aggregatedMetrics.totalBlocks) * 100), { decimals: 0 })}%)`}
                 >
                   {stateData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -326,7 +327,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
                   </PerformerName>
                   <PerformerDetails>
                     {block.currentCrop && <span>🌿 {block.currentCrop}</span>}
-                    <span>Performance: {block.performanceScore.toFixed(0)}/100</span>
+                    <span>Performance: {formatNumber(block.performanceScore, { decimals: 0 })}/100</span>
                   </PerformerDetails>
                 </PerformerInfo>
               </PerformerItem>
@@ -347,10 +348,10 @@ function OverviewTab({ analytics }: { analytics: any }) {
                     {block.blockCode} {block.name && `- ${block.name}`}
                   </AttentionName>
                   <AttentionIssue>
-                    {block.activeAlerts > 0 && <AlertBadge>{block.activeAlerts} Active Alert{block.activeAlerts > 1 ? 's' : ''}</AlertBadge>}
+                    {block.activeAlerts > 0 && <AlertBadge>{formatNumber(block.activeAlerts)} Active Alert{block.activeAlerts > 1 ? 's' : ''}</AlertBadge>}
                     {block.performanceScore < 60 && (
                       <PerformanceBadge $score={block.performanceScore}>
-                        Low Performance: {block.performanceScore.toFixed(0)}%
+                        Low Performance: {formatPercentage(block.performanceScore, 0)}
                       </PerformanceBadge>
                     )}
                   </AttentionIssue>
@@ -460,18 +461,18 @@ function ComparisonTab({ analytics }: { analytics: any }) {
                     </StateBadge>
                   </TableCell>
                   <TableCell>{block.currentCrop || '-'}</TableCell>
-                  <TableCell>{block.yieldKg.toFixed(1)}</TableCell>
-                  <TableCell>{block.yieldEfficiency.toFixed(1)}</TableCell>
+                  <TableCell>{formatNumber(block.yieldKg, { decimals: 1 })}</TableCell>
+                  <TableCell>{formatNumber(block.yieldEfficiency, { decimals: 1 })}</TableCell>
                   <TableCell>
                     <PerformanceScore $color={getPerformanceColor(block.performanceScore)}>
-                      {block.performanceScore.toFixed(0)}
+                      {formatNumber(block.performanceScore, { decimals: 0 })}
                     </PerformanceScore>
                   </TableCell>
-                  <TableCell>{block.daysInCycle}</TableCell>
-                  <TableCell>{block.taskCompletionRate.toFixed(0)}</TableCell>
+                  <TableCell>{formatNumber(block.daysInCycle)}</TableCell>
+                  <TableCell>{formatNumber(block.taskCompletionRate, { decimals: 0 })}</TableCell>
                   <TableCell>
                     {block.activeAlerts > 0 ? (
-                      <AlertCount>{block.activeAlerts}</AlertCount>
+                      <AlertCount>{formatNumber(block.activeAlerts)}</AlertCount>
                     ) : (
                       <span style={{ color: '#9e9e9e' }}>0</span>
                     )}
@@ -545,7 +546,7 @@ function TrendsTab({ analytics }: { analytics: any }) {
         <SectionTitle>Harvest Frequency</SectionTitle>
         <FrequencyCard>
           <FrequencyIcon>📅</FrequencyIcon>
-          <FrequencyValue>{analytics.historicalTrends.avgHarvestsPerWeek.toFixed(1)}</FrequencyValue>
+          <FrequencyValue>{formatNumber(analytics.historicalTrends.avgHarvestsPerWeek, { decimals: 1 })}</FrequencyValue>
           <FrequencyLabel>Average Harvests Per Week</FrequencyLabel>
         </FrequencyCard>
       </Section>
@@ -632,7 +633,7 @@ function StatesTab({ analytics }: { analytics: any }) {
                 <StateCount $color={stateColor}>{stateInfo.count}</StateCount>
               </StateTitle>
               {stateInfo.avgDaysInState > 0 && (
-                <StateMetric>Avg. {stateInfo.avgDaysInState.toFixed(0)} days in this state</StateMetric>
+                <StateMetric>Avg. {formatNumber(stateInfo.avgDaysInState, { decimals: 0 })} days in this state</StateMetric>
               )}
             </StateHeader>
 
