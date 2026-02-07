@@ -4,6 +4,7 @@ import type { CCMWidget, StatWidgetData } from '@a64core/shared';
 import { queryClient } from '../config/react-query.config';
 import { queryKeys } from '../config/react-query.config';
 import type { Layout } from 'react-grid-layout';
+import { formatNumber } from '../utils';
 
 interface WidgetState {
   data: StatWidgetData | any;
@@ -263,10 +264,10 @@ export const useDashboardStore = create<DashboardState>()(
       switch (widgetId) {
         case 'total-farms': {
           data = {
-            value: summary.overview.totalFarms.toString(),
+            value: formatNumber(summary.overview.totalFarms),
             label: 'Total Farms',
             secondaryMetrics: [
-              { value: summary.overview.activePlantings.toString(), label: 'Active Plantings' },
+              { value: formatNumber(summary.overview.activePlantings), label: 'Active Plantings' },
             ],
           };
           break;
@@ -274,11 +275,11 @@ export const useDashboardStore = create<DashboardState>()(
 
         case 'total-blocks': {
           data = {
-            value: summary.overview.totalBlocks.toString(),
+            value: formatNumber(summary.overview.totalBlocks),
             label: 'Total Blocks',
             secondaryMetrics: [
-              { value: summary.overview.activePlantings.toString(), label: 'Active' },
-              { value: summary.blocksByState.empty.toString(), label: 'Empty' },
+              { value: formatNumber(summary.overview.activePlantings), label: 'Active' },
+              { value: formatNumber(summary.blocksByState.empty), label: 'Empty' },
             ],
           };
           break;
@@ -286,10 +287,10 @@ export const useDashboardStore = create<DashboardState>()(
 
         case 'total-harvests': {
           data = {
-            value: summary.harvestSummary.totalHarvestsKg.toFixed(2),
+            value: formatNumber(summary.harvestSummary.totalHarvestsKg, { decimals: 2 }),
             label: 'Total Harvests (kg)',
             secondaryMetrics: [
-              { value: summary.blocksByState.harvesting.toString(), label: 'Harvesting Now' },
+              { value: formatNumber(summary.blocksByState.harvesting), label: 'Harvesting Now' },
             ],
           };
           break;
@@ -305,11 +306,11 @@ export const useDashboardStore = create<DashboardState>()(
             },
           });
           data = {
-            value: stats.totalOrders.toString(),
+            value: formatNumber(stats.totalOrders),
             label: 'Total Orders',
             secondaryMetrics: [
-              { value: stats.deliveredOrders.toString(), label: 'Delivered' },
-              { value: stats.processingOrders.toString(), label: 'Processing' },
+              { value: formatNumber(stats.deliveredOrders), label: 'Delivered' },
+              { value: formatNumber(stats.processingOrders), label: 'Processing' },
             ],
           };
           break;
@@ -361,7 +362,7 @@ export const useDashboardStore = create<DashboardState>()(
             const result = await resp.json();
             const total = result?.meta?.total ?? result?.total ?? 0;
             data = {
-              value: total.toString(),
+              value: formatNumber(total),
               label: 'Total Employees',
             };
           } catch {
@@ -378,7 +379,7 @@ export const useDashboardStore = create<DashboardState>()(
             const result = await resp.json();
             const total = result?.meta?.total ?? result?.total ?? 0;
             data = {
-              value: total.toString(),
+              value: formatNumber(total),
               label: 'Total Customers',
             };
           } catch {
@@ -395,7 +396,7 @@ export const useDashboardStore = create<DashboardState>()(
             const result = await resp.json();
             const total = result?.meta?.total ?? result?.total ?? 0;
             data = {
-              value: total.toString(),
+              value: formatNumber(total),
               label: 'Total Vehicles',
             };
           } catch {
@@ -412,7 +413,7 @@ export const useDashboardStore = create<DashboardState>()(
             const result = await resp.json();
             const total = result?.meta?.total ?? result?.total ?? 0;
             data = {
-              value: total.toString(),
+              value: formatNumber(total),
               label: 'Active Campaigns',
             };
           } catch {
