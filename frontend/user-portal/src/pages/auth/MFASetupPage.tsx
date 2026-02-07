@@ -19,6 +19,58 @@ interface MFAEnableResponse {
   message: string;
 }
 
+// Cache key for sessionStorage
+const MFA_SETUP_CACHE_KEY = 'mfa_setup_pending';
+const MFA_SETUP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+interface CachedMFASetup {
+  data: MFASetupResponse;
+  timestamp: number;
+}
+
+// Helper functions for sessionStorage caching
+function getCachedSetupData(): MFASetupResponse | null {
+  try {
+    const cached = sessionStorage.getItem(MFA_SETUP_CACHE_KEY);
+    if (!cached) return null;
+
+    const parsed: CachedMFASetup = JSON.parse(cached);
+    const age = Date.now() - parsed.timestamp;
+
+    // Check if cached data has expired (10 minutes)
+    if (age > MFA_SETUP_EXPIRY_MS) {
+      sessionStorage.removeItem(MFA_SETUP_CACHE_KEY);
+      return null;
+    }
+
+    return parsed.data;
+  } catch {
+    // If parsing fails, clear invalid cache
+    sessionStorage.removeItem(MFA_SETUP_CACHE_KEY);
+    return null;
+  }
+}
+
+function setCachedSetupData(data: MFASetupResponse): void {
+  try {
+    const cacheEntry: CachedMFASetup = {
+      data,
+      timestamp: Date.now(),
+    };
+    sessionStorage.setItem(MFA_SETUP_CACHE_KEY, JSON.stringify(cacheEntry));
+  } catch {
+    // Ignore storage errors (e.g., quota exceeded)
+  }
+}
+
+function clearCachedSetupData(): void {
+  try {
+    sessionStorage.removeItem(MFA_SETUP_CACHE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function MFASetupPage() {
   const navigate = useNavigate();
   const { user, loadUser } = useAuthStore();
@@ -32,13 +84,24 @@ export function MFASetupPage() {
   const [copied, setCopied] = useState(false);
   const digitRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Initialize MFA setup from /api/v1/auth/mfa/setup on mount (POST request)
+  // Initialize MFA setup - check cache first, then fetch if needed
   useEffect(() => {
-    const fetchSetupData = async () => {
+    const initializeSetup = async () => {
+      // Check for cached setup data first
+      const cachedData = getCachedSetupData();
+      if (cachedData) {
+        setSetupData(cachedData);
+        setStep('scan');
+        return;
+      }
+
+      // No valid cache, fetch new setup data
       try {
         setStep('loading');
         const response = await apiClient.post<MFASetupResponse>('/v1/auth/mfa/setup');
         setSetupData(response.data);
+        // Cache the setup data with timestamp
+        setCachedSetupData(response.data);
         setStep('scan');
       } catch (err: any) {
         const message = err.response?.data?.detail || 'Failed to initialize MFA setup';
@@ -47,7 +110,7 @@ export function MFASetupPage() {
       }
     };
 
-    fetchSetupData();
+    initializeSetup();
   }, []);
 
   const getCodeString = () => totpCode.join('');
@@ -120,6 +183,8 @@ export function MFASetupPage() {
       });
 
       if (response.data.enabled) {
+        // Clear cached setup data after successful MFA enable
+        clearCachedSetupData();
         setBackupCodes(response.data.backupCodes);
         setStep('backup');
         // Reload user to update MFA status
@@ -134,10 +199,14 @@ export function MFASetupPage() {
   };
 
   const handleFinish = () => {
+    // Clear cached setup data - MFA is now enabled
+    clearCachedSetupData();
     navigate('/settings');
   };
 
   const handleRetry = () => {
+    // Clear cached data to force fetch of new secret on retry
+    clearCachedSetupData();
     setError(null);
     setStep('loading');
     window.location.reload();
@@ -324,7 +393,15 @@ const SetupContainer = styled.div`
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
-  padding: 1rem;
+  padding: 0.5rem;
+
+  @media (min-width: 360px) {
+    padding: 0.75rem;
+  }
+
+  @media (min-width: 480px) {
+    padding: 1rem;
+  }
 
   @media (min-width: 640px) {
     padding: 2rem;
@@ -335,9 +412,17 @@ const SetupCard = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  padding: 1.5rem;
+  padding: 1rem;
   width: 100%;
   max-width: 480px;
+
+  @media (min-width: 360px) {
+    padding: 1.25rem;
+  }
+
+  @media (min-width: 480px) {
+    padding: 1.5rem;
+  }
 
   @media (min-width: 640px) {
     padding: 2rem;
@@ -367,11 +452,19 @@ const LogoImg = styled.img`
 `;
 
 const Title = styled.h1`
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
   text-align: center;
   margin: 0 0 0.5rem 0;
+
+  @media (min-width: 360px) {
+    font-size: 1.375rem;
+  }
+
+  @media (min-width: 480px) {
+    font-size: 1.5rem;
+  }
 
   @media (min-width: 640px) {
     font-size: 1.75rem;
@@ -379,11 +472,20 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: ${({ theme }) => theme.colors.textSecondary};
   text-align: center;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
   line-height: 1.5;
+
+  @media (min-width: 360px) {
+    font-size: 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  @media (min-width: 480px) {
+    margin-bottom: 1.5rem;
+  }
 
   @media (min-width: 640px) {
     font-size: 1rem;
