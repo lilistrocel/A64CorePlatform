@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
+import { authService } from '../../services/auth.service';
 
 type InputMode = 'totp' | 'backup';
 
@@ -14,7 +15,7 @@ interface LocationState {
 export function MFAVerifyPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { verifyMfa, mfaPendingToken, mfaRequired, clearMfaState, isLoading, error: storeError } = useAuthStore();
+  const { verifyMfa, mfaPendingToken, mfaRequired, clearMfaState, isLoading, error: storeError, loadUser } = useAuthStore();
 
   // Get MFA token from location state (legacy) OR from auth store (new approach)
   const state = location.state as LocationState | null;
