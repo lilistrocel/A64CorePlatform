@@ -206,24 +206,115 @@ class MFAService:
             return ""
 
     @staticmethod
-    def verify_totp_code(secret: str, code: str) -> bool:
+    def verify_totp_code(secret: str, code: str, user_id: str = None) -> bool:
         """
-        Verify a TOTP code against a secret
+        Verify a TOTP code against a secret.
 
         Args:
             secret: Base32-encoded TOTP secret
             code: 6-digit TOTP code
+            user_id: Optional user ID for logging purposes
 
         Returns:
             True if code is valid, False otherwise
+
+        Security Notes:
+            - Uses valid_window=1 to allow 30 seconds clock drift tolerance
+            - Failed attempts are logged for security monitoring
+            - Caller should implement rate limiting to prevent brute force
         """
         try:
             totp = pyotp.TOTP(secret)
             # valid_window=1 allows codes from 30 seconds before/after
-            return totp.verify(code, valid_window=1)
+            is_valid = totp.verify(code, valid_window=1)
+
+            if is_valid:
+                logger.info(f"TOTP verification successful for user: {user_id or 'unknown'}")
+            else:
+                logger.warning(f"TOTP verification failed for user: {user_id or 'unknown'}")
+
+            return is_valid
         except Exception as e:
-            logger.error(f"Error verifying TOTP code: {e}")
+            logger.error(f"Error verifying TOTP code for user {user_id or 'unknown'}: {e}")
             return False
+
+    @staticmethod
+    async def verify_totp_with_replay_protection(
+        user_id: str,
+        code: str,
+        secret: str
+    ) -> Tuple[bool, str]:
+        """
+        Verify TOTP code with replay attack prevention.
+
+        Tracks the last used code timestamp to prevent the same code
+        from being used twice within the same time window.
+
+        Args:
+            user_id: User's UUID
+            code: 6-digit TOTP code
+            secret: Decrypted TOTP secret
+
+        Returns:
+            Tuple of (is_valid, error_message)
+            - is_valid: True if code is valid and not a replay
+            - error_message: Empty if valid, error description if invalid
+
+        Security Notes:
+            - Prevents replay attacks by tracking last used counter
+            - Each code can only be used once per 30-second window
+            - Failed attempts are logged with user ID for audit trail
+        """
+        db = mongodb.get_database()
+
+        try:
+            totp = pyotp.TOTP(secret)
+
+            # Get current time counter (30-second window)
+            current_counter = totp.timecode(datetime.utcnow())
+
+            # Check if code is valid
+            if not totp.verify(code, valid_window=1):
+                logger.warning(
+                    f"TOTP verification failed for user {user_id}: Invalid code"
+                )
+                return False, "Invalid verification code"
+
+            # Get user's last used counter
+            user = await db.users.find_one(
+                {"userId": user_id},
+                {"mfaLastUsedCounter": 1}
+            )
+            last_used_counter = user.get("mfaLastUsedCounter", 0) if user else 0
+
+            # Check for replay attack
+            if current_counter <= last_used_counter:
+                logger.warning(
+                    f"TOTP replay attack detected for user {user_id}: "
+                    f"counter {current_counter} <= last used {last_used_counter}"
+                )
+                return False, "Code already used. Please wait for a new code."
+
+            # Update last used counter
+            await db.users.update_one(
+                {"userId": user_id},
+                {
+                    "$set": {
+                        "mfaLastUsedCounter": current_counter,
+                        "mfaLastUsedAt": datetime.utcnow()
+                    }
+                }
+            )
+
+            logger.info(
+                f"TOTP verification successful for user {user_id} "
+                f"(counter: {current_counter})"
+            )
+            return True, ""
+
+        except Exception as e:
+            logger.error(f"Error during TOTP verification for user {user_id}: {e}")
+            return False, "Verification failed. Please try again."
 
     @staticmethod
     def generate_backup_codes() -> Tuple[List[str], List[str]]:
@@ -574,9 +665,17 @@ class MFAService:
             # Can't verify TOTP, fall through to backup code check
             mfa_secret = None
 
-        # Try TOTP code first
-        if mfa_secret and self.verify_totp_code(mfa_secret, code):
-            return True, False
+        # Try TOTP code first with replay protection
+        if mfa_secret:
+            is_valid, error_msg = await self.verify_totp_with_replay_protection(
+                user_id, code, mfa_secret
+            )
+            if is_valid:
+                return True, False
+            elif error_msg and "already used" in error_msg.lower():
+                # Replay attack detected, don't fall through to backup codes
+                logger.warning(f"TOTP replay detected for user {user_id}, not checking backup codes")
+                return False, False
 
         # Try backup code
         is_valid, code_index = self.verify_backup_code(code, backup_codes)
