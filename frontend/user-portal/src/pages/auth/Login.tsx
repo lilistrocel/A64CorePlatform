@@ -6,6 +6,7 @@ import styled, { keyframes, css } from 'styled-components';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button, Input } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
+import { usePageVisibility } from '../../hooks/usePageVisibility';
 
 // Login form sessionStorage caching constants
 const LOGIN_EMAIL_CACHE_KEY = 'a64_login_email_cache';
@@ -197,6 +198,30 @@ export function Login() {
       }
     };
   }, [emailValue, debouncedCacheEmail]);
+
+  // Feature #345: Handle page visibility changes for mobile app switching
+  // Immediately persist state when user switches apps (no debounce delay)
+  usePageVisibility({
+    onHidden: useCallback(() => {
+      // User is switching away (to authenticator app, etc.)
+      // Immediately save email to sessionStorage (bypass debounce)
+      if (emailValue && emailValue.trim()) {
+        setLoginEmailCache(emailValue.trim());
+      }
+    }, [emailValue]),
+    onVisible: useCallback(() => {
+      // User returned - state was already restored from sessionStorage on mount
+      // Nothing additional needed here since the form's defaultValues handles restoration
+    }, []),
+    onBfcacheRestore: useCallback(() => {
+      // Page restored from Safari's bfcache - reload state from sessionStorage
+      // This handles Safari iOS aggressive page unloading
+      const freshCachedEmail = getLoginEmailCache();
+      if (freshCachedEmail && freshCachedEmail !== emailValue) {
+        setValue('email', freshCachedEmail);
+      }
+    }, [emailValue, setValue]),
+  });
 
   // Redirect to MFA verification if required (after login detected MFA)
   useEffect(() => {

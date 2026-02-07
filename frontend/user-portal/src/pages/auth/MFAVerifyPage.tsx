@@ -60,11 +60,13 @@ export function MFAVerifyPage() {
   }, []);
 
   // Cache the MFA verify state to sessionStorage on mount and when token changes
+  // Only create new cache if one doesn't already exist (to preserve timestamp for expiry)
   useEffect(() => {
-    if (mfaToken && !isSessionExpired) {
+    if (mfaToken && !isSessionExpired && !cachedState) {
+      // Only cache if there's no existing cache (don't overwrite timestamp)
       setCachedVerifyState(mfaToken, email, userId, totpDigits);
     }
-  }, [mfaToken, email, userId]); // Don't include totpDigits here - we update separately
+  }, [mfaToken, email, userId, isSessionExpired]); // Don't include totpDigits or cachedState
 
   // Check session expiry timer
   useEffect(() => {
