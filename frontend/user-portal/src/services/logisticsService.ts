@@ -6,6 +6,7 @@
  */
 
 import { apiClient } from './api';
+import { formatNumber } from '../utils/formatNumber';
 import type {
   Vehicle,
   VehicleCreate,
@@ -298,13 +299,38 @@ export function formatCapacity(capacity?: { weight?: number; volume?: number; un
 
   const parts: string[] = [];
   if (capacity.weight) {
-    parts.push(`${capacity.weight} kg`);
+    parts.push(`${formatNumber(capacity.weight)} kg`);
   }
   if (capacity.volume) {
-    parts.push(`${capacity.volume} ${capacity.unit || 'm³'}`);
+    parts.push(`${formatNumber(capacity.volume)} ${capacity.unit || 'm³'}`);
   }
 
   return parts.length > 0 ? parts.join(', ') : 'N/A';
+}
+
+/**
+ * Format distance with unit
+ */
+export function formatDistance(distance?: number): string {
+  if (distance === undefined || distance === null) return '-';
+  return `${formatNumber(distance, { decimals: 1 })} km`;
+}
+
+/**
+ * Format duration (minutes to hours/minutes)
+ */
+export function formatDuration(minutes?: number): string {
+  if (minutes === undefined || minutes === null) return '-';
+  const hours = minutes / 60;
+  return `${formatNumber(hours, { decimals: 1 })} hrs`;
+}
+
+/**
+ * Format weight with unit
+ */
+export function formatWeight(weight?: number): string {
+  if (weight === undefined || weight === null) return '-';
+  return `${formatNumber(weight)} kg`;
 }
 
 /**
@@ -355,6 +381,9 @@ export const logisticsApi = {
   getVehicleTypeLabel,
   formatCapacity,
   formatLocation,
+  formatDistance,
+  formatDuration,
+  formatWeight,
   calculateTotalCargoWeight,
 };
 

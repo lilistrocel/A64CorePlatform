@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import type { Route } from '../../types/logistics';
-import { formatLocation } from '../../services/logisticsService';
+import { formatLocation, formatDistance, formatDuration } from '../../services/logisticsService';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -289,8 +289,8 @@ export function RouteTable({ routes, onView, onEdit, onDelete }: RouteTableProps
               <TableCell>
                 <LocationText>{formatLocation(route.destination)}</LocationText>
               </TableCell>
-              <TableCell>{route.distance ? route.distance.toFixed(1) : '-'}</TableCell>
-              <TableCell>{route.estimatedDuration ? (route.estimatedDuration / 60).toFixed(1) : '-'}</TableCell>
+              <TableCell>{formatDistance(route.distance)}</TableCell>
+              <TableCell>{formatDuration(route.estimatedDuration)}</TableCell>
               <TableCell>
                 <StatusBadge $isActive={route.isActive}>{route.isActive ? 'Active' : 'Inactive'}</StatusBadge>
               </TableCell>

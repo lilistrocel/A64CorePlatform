@@ -7,7 +7,8 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import type { Shipment } from '../../types/logistics';
-import { getShipmentStatusColor, calculateTotalCargoWeight } from '../../services/logisticsService';
+import { getShipmentStatusColor, calculateTotalCargoWeight, formatWeight } from '../../services/logisticsService';
+import { formatNumber, formatCurrency } from '../../utils/formatNumber';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -271,10 +272,10 @@ export function ShipmentTable({ shipments, onView, onEdit, onDelete, onUpdateSta
               <TableCell>{new Date(shipment.scheduledDate).toLocaleDateString()}</TableCell>
               <TableCell>
                 <CargoInfo>
-                  {shipment.cargo.length} items ({calculateTotalCargoWeight(shipment.cargo)} kg)
+                  {formatNumber(shipment.cargo.length)} items ({formatWeight(calculateTotalCargoWeight(shipment.cargo))})
                 </CargoInfo>
               </TableCell>
-              <TableCell>{shipment.totalCost ? `$${shipment.totalCost.toFixed(2)}` : '-'}</TableCell>
+              <TableCell>{shipment.totalCost ? formatCurrency(shipment.totalCost, 'USD') : '-'}</TableCell>
               <TableCell>
                 <Actions>
                   {onView && (

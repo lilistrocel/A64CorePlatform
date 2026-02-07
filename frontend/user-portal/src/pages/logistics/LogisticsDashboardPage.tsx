@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { logisticsApi } from '../../services/logisticsService';
+import { formatNumber } from '../../utils/formatNumber';
 import type { LogisticsDashboardStats } from '../../types/logistics';
 
 // ============================================================================
@@ -231,44 +232,44 @@ export function LogisticsDashboardPage() {
       <StatsGrid>
         <StatCard>
           <StatLabel>Total Vehicles</StatLabel>
-          <StatValue>{stats.totalVehicles}</StatValue>
+          <StatValue>{formatNumber(stats.totalVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Available</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{stats.availableVehicles}</StatValue>
+          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.availableVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Use</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{stats.inUseVehicles}</StatValue>
+          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.inUseVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Maintenance</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{stats.maintenanceVehicles}</StatValue>
+          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.maintenanceVehicles)}</StatValue>
         </StatCard>
       </StatsGrid>
 
       <StatsGrid>
         <StatCard>
           <StatLabel>Total Shipments</StatLabel>
-          <StatValue>{stats.totalShipments}</StatValue>
+          <StatValue>{formatNumber(stats.totalShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Scheduled</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{stats.scheduledShipments}</StatValue>
+          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.scheduledShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Transit</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{stats.inTransitShipments}</StatValue>
+          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.inTransitShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Delivered</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{stats.deliveredShipments}</StatValue>
+          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.deliveredShipments)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -295,7 +296,7 @@ export function LogisticsDashboardPage() {
         <Widget>
           <WidgetTitle>Active Routes</WidgetTitle>
           <StatValue style={{ fontSize: '48px', textAlign: 'center', padding: '32px 0' }}>
-            {stats.activeRoutes} / {stats.totalRoutes}
+            {formatNumber(stats.activeRoutes)} / {formatNumber(stats.totalRoutes)}
           </StatValue>
         </Widget>
       </WidgetsRow>
