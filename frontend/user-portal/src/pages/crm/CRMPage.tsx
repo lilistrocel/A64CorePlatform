@@ -11,6 +11,7 @@ import { CustomerTable } from '../../components/crm/CustomerTable';
 import { CustomerCard } from '../../components/crm/CustomerCard';
 import { crmApi } from '../../services/crmService';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
+import { formatNumber } from '../../utils/formatNumber';
 import type { Customer, CustomerType, CustomerStatus } from '../../types/crm';
 
 // Mobile breakpoint for responsive view switching
@@ -576,7 +577,7 @@ export function CRMPage() {
             Previous
           </PageButton>
           <PageInfo>
-            Page {page} of {totalPages} ({total} total)
+            Page {formatNumber(page)} of {formatNumber(totalPages)} ({formatNumber(total)} total)
           </PageInfo>
           <PageButton onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
             Next
