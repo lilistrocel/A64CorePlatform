@@ -4073,3 +4073,47 @@ NOTES FOR NEXT SESSION:
 - usePageVisibility hook can be reused in other forms needing mobile state preservation
 - Test admin: admin_f24_test@example.com / TestPass123@ (admin, MFA disabled)
 - Test admin with MFA: farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
+
+== Session: 2026-02-07 (Agent Batch #348, #349, #350) ==
+Agent: Features #348, #349, #350 - Number Formatting Utilities
+
+COMPLETED:
+- Feature #348: Number formatting utility with locale support [PASSING]
+  - Utility already exists at frontend/user-portal/src/utils/formatNumber.ts
+  - Uses Intl.NumberFormat for locale-aware formatting
+  - Defaults to en-US locale (1,234.56 format)
+  - Supports optional decimal places and locale parameters
+  - Handles edge cases: null, undefined, NaN return '0'
+  - Exported as named export for tree-shaking
+  - Used in 8+ components (FarmCard, BlockCard, etc.)
+  - Screenshot: feature348-formatNumber-farms.png
+
+- Feature #349: Currency formatting utility [PASSING]
+  - formatCurrency function in same file
+  - Uses Intl.NumberFormat with style: 'currency'
+  - Defaults to AED (UAE Dirham)
+  - Supports USD, EUR via currency parameter
+  - Always shows 2 decimal places
+  - Used in 14 files (Sales, Marketing, HR, etc.)
+  - Screenshot: feature349-formatCurrency-sales.png
+
+- Feature #350: Apply number formatting to Dashboard stat cards [PASSING]
+  - Updated dashboard.store.ts to import formatNumber utility
+  - Applied formatNumber to all stat widget values:
+    - Total Farms, Total Blocks, Active Plantings
+    - Total Harvests (with 2 decimals), Harvesting Now
+    - Total Orders, Delivered, Processing
+    - Total Employees, Customers, Vehicles, Campaigns
+  - Large numbers now display with thousand separators (e.g., 6,257,216.74)
+  - Zero console errors
+  - Screenshot: feature350-dashboard-formatted-numbers.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/stores/dashboard.store.ts (import formatNumber, apply to all widget values)
+
+CURRENT STATUS: 351/358 features passing (98.0%)
+
+NOTES FOR NEXT SESSION:
+- Number formatting utilities complete and functional
+- Dashboard stat cards now display properly formatted numbers
+- Test admin: admin_f24_test@example.com / TestPass123@ (admin)
