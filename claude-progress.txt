@@ -3911,3 +3911,61 @@ NOTES FOR NEXT SESSION:
 - Session timeout indicator shows countdown timer
 - Expired sessions prompt user to regenerate QR code
 - Test admin: admin_f24_test@example.com / TestPass123@ (admin, MFA disabled)
+
+== Session: 2026-02-07 (Agent - Feature #347) ==
+Agent: Feature #347 - Login page mobile state preservation UX
+
+COMPLETED:
+- Feature #347: Login page mobile state preservation UX [PASSING]
+  - Added session preserved indicator on login page
+    - Green banner "✓ Session restored — your email was remembered" appears when email is restored from cache
+    - Displays for 3 seconds then fades out
+    - Screenshot: feature347-session-preserved-indicator.png
+  - Added mobile helper text on login page
+    - Shows on mobile devices when email is entered
+    - Text: "📱 You can safely switch to your authenticator app after signing in"
+    - Hidden on desktop (via CSS media query)
+    - Screenshot: feature347-login-mobile-helper.png
+  - Enhanced email display on MFA verify page
+    - Read-only confirmation box with user icon, email address, and checkmark
+    - Shows "SIGNING IN AS" label with email value
+    - Light blue gradient background with subtle animation
+    - Screenshot: feature347-mfa-verify-enhanced.png
+  - Added session timer on MFA verify page
+    - Shows "⏱️ Session expires in: X:XX" countdown
+    - Timer turns amber when under 1 minute remaining
+    - Already implemented in previous session
+  - Added mobile reassurance text on MFA verify page
+    - Shows on mobile: "💡 Your session is saved — you can safely switch to your authenticator app and return here"
+    - Green background with slide-in animation
+    - Hidden on desktop
+    - Screenshot: feature347-mfa-mobile-helper.png
+  - Smooth transitions when restoring from cache
+    - Form fades in smoothly to prevent flash
+    - isRestoring state controls opacity transition
+  - Zero console errors verified
+
+FILES MODIFIED:
+- frontend/user-portal/src/pages/auth/Login.tsx
+  - Added session preservation state (showSessionPreserved, isMobile, isRestoring)
+  - Added SessionPreservedBanner with checkmark icon and text
+  - Added MobileHelperText that shows on mobile when email is entered
+  - Added fade-in animation for smooth restore
+- frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx
+  - Added EmailConfirmationBox with icon, label, email value, and checkmark
+  - Added MobileReassuranceText for mobile users
+  - Added isMobile state with detection useEffect
+  - Styled components for enhanced email display
+- frontend/user-portal/src/hooks/usePageVisibility.ts (new)
+  - Created hook for page visibility handling
+  - Supports onHidden, onVisible, onBfcacheRestore callbacks
+  - Handles Safari iOS bfcache restoration
+
+CURRENT STATUS: 343/347 features passing (98.8%)
+
+NOTES FOR NEXT SESSION:
+- Mobile UX improvements complete for login/MFA flow
+- Session caching already implemented in previous sessions
+- Test admin with MFA: farmtest_admin@a64core.com / TestAdmin123@ (super_admin)
+- Test admin without MFA: admin_f24_test@example.com / TestPass123@ (admin)
+

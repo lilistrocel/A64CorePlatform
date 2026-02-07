@@ -12,6 +12,7 @@ import {
   getMFAVerifyCacheTimestamp,
   MFA_VERIFY_EXPIRY_MS,
 } from '../../hooks/queries/useMFA';
+import { usePageVisibility } from '../../hooks/usePageVisibility';
 
 type InputMode = 'totp' | 'backup';
 
@@ -121,6 +122,29 @@ export function MFAVerifyPage() {
       digitRefs.current[0]?.focus();
     }
   }, [inputMode]);
+
+  // Feature #345: Handle page visibility changes for mobile app switching
+  // Ensures state is preserved when user switches to authenticator app
+  usePageVisibility({
+    onHidden: useCallback(() => {
+      // User switching to authenticator app - ensure digits are saved
+      if (mfaToken && !isSessionExpired) {
+        updateCachedVerifyDigits(totpDigits);
+      }
+    }, [mfaToken, isSessionExpired, totpDigits]),
+    onVisible: useCallback(() => {
+      // User returned from authenticator app
+      // State was already restored from sessionStorage, nothing additional needed
+    }, []),
+    onBfcacheRestore: useCallback(() => {
+      // Page restored from Safari's bfcache
+      // Reload state from sessionStorage in case it was updated
+      const freshState = getCachedVerifyState();
+      if (freshState && freshState.digits) {
+        setTotpDigits(freshState.digits);
+      }
+    }, []),
+  });
 
   const getTotpCode = () => totpDigits.join('');
 
