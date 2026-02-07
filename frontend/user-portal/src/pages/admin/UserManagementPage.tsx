@@ -13,6 +13,8 @@ interface User {
   role: string;
   isActive: boolean;
   isEmailVerified: boolean;
+  mfaEnabled?: boolean;
+  mfaSetupRequired?: boolean;
   createdAt: string;
   lastLoginAt?: string;
 }
@@ -124,6 +126,24 @@ export function UserManagementPage() {
     }
   };
 
+  const handleResetMfa = async (userId: string, email: string) => {
+    if (!window.confirm(
+      `Are you sure you want to reset MFA for ${email}?\n\n` +
+      `This will remove Multi-Factor Authentication from the user's account. ` +
+      `They will need to set up MFA again on their next login.`
+    )) {
+      return;
+    }
+    try {
+      await apiClient.put(`/v1/admin/users/${userId}/mfa/reset`);
+      addToast('success', `MFA reset successfully for ${email}`);
+      fetchUsers();
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || 'Failed to reset MFA';
+      addToast('error', msg);
+    }
+  };
+
   const clearFilters = () => {
     setSearch('');
     setRoleFilter('');
@@ -143,6 +163,12 @@ export function UserManagementPage() {
   };
 
   const isCurrentUser = (userId: string) => currentUser?.userId === userId;
+
+  // Only admin or super_admin can reset MFA
+  const canResetMfa = () => {
+    const role = (currentUser as any)?.role;
+    return role === 'admin' || role === 'super_admin';
+  };
 
   return (
     <Container>
@@ -203,6 +229,7 @@ export function UserManagementPage() {
                   <TableHeader scope="col">Email</TableHeader>
                   <TableHeader scope="col">Role</TableHeader>
                   <TableHeader scope="col">Status</TableHeader>
+                  <TableHeader scope="col">MFA</TableHeader>
                   <TableHeader scope="col">Joined</TableHeader>
                   <TableHeader scope="col">Last Login</TableHeader>
                   <TableHeader scope="col">Actions</TableHeader>
@@ -244,6 +271,15 @@ export function UserManagementPage() {
                         {user.isActive ? 'Active' : 'Inactive'}
                       </StatusBadge>
                     </TableCell>
+                    <TableCell>
+                      {user.mfaEnabled ? (
+                        <MfaEnabledBadge>Enabled</MfaEnabledBadge>
+                      ) : user.mfaSetupRequired ? (
+                        <MfaPendingBadge>Pending</MfaPendingBadge>
+                      ) : (
+                        <MfaDisabledBadge>Off</MfaDisabledBadge>
+                      )}
+                    </TableCell>
                     <TableCell>{formatDate(user.createdAt)}</TableCell>
                     <TableCell>{formatDate(user.lastLoginAt)}</TableCell>
                     <TableCell>
@@ -280,6 +316,14 @@ export function UserManagementPage() {
                             >
                               Delete
                             </DeleteButton>
+                            {user.mfaEnabled && canResetMfa() && (
+                              <ResetMfaButton
+                                onClick={() => handleResetMfa(user.userId, user.email)}
+                                title="Reset MFA - removes 2FA from this account"
+                              >
+                                Reset MFA
+                              </ResetMfaButton>
+                            )}
                           </>
                         )}
                       </ActionsRow>
@@ -585,6 +629,46 @@ const DeleteButton = styled(ActionButton)`
     background: ${({ theme }) => theme.colors.error[50]};
     color: ${({ theme }) => theme.colors.error[700]};
   }
+`;
+
+const ResetMfaButton = styled(ActionButton)`
+  border-color: ${({ theme }) => theme.colors.warning[300]};
+  color: ${({ theme }) => theme.colors.warning[700]};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.warning[50]};
+    color: ${({ theme }) => theme.colors.warning[800]};
+  }
+`;
+
+const MfaEnabledBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  background: ${({ theme }) => theme.colors.success[100]};
+  color: ${({ theme }) => theme.colors.success[700]};
+`;
+
+const MfaPendingBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  background: ${({ theme }) => theme.colors.warning[100]};
+  color: ${({ theme }) => theme.colors.warning[700]};
+`;
+
+const MfaDisabledBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.neutral[600]};
 `;
 
 const Pagination = styled.div`

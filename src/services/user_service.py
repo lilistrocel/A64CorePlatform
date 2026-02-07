@@ -157,6 +157,8 @@ class UserService:
                 role=UserRole(user_doc["role"]),
                 isActive=user_doc["isActive"],
                 isEmailVerified=user_doc["isEmailVerified"],
+                mfaEnabled=user_doc.get("mfaEnabled", False),
+                mfaSetupRequired=user_doc.get("mfaSetupRequired", False),
                 phone=user_doc.get("phone"),
                 avatar=user_doc.get("avatar"),
                 timezone=user_doc.get("timezone"),
