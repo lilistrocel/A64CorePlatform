@@ -15,6 +15,7 @@ import {
 } from '../../services/inventoryApi';
 import { getFarms } from '../../services/farmApi';
 import { getPlantDataEnhancedList } from '../../services/plantDataEnhancedApi';
+import { formatNumber, formatCurrency } from '../../utils';
 import type {
   HarvestInventory,
   HarvestInventoryCreate,
@@ -214,9 +215,9 @@ export function HarvestInventoryList({ onUpdate }: Props) {
                   <Td>{getFarmName(item.farmId)}</Td>
                   <Td>
                     <QuantityInfo>
-                      <QuantityValue>{item.availableQuantity} {item.unit}</QuantityValue>
+                      <QuantityValue>{formatNumber(item.availableQuantity, { decimals: 2 })} {item.unit}</QuantityValue>
                       {item.reservedQuantity > 0 && (
-                        <ReservedBadge>{item.reservedQuantity} reserved</ReservedBadge>
+                        <ReservedBadge>{formatNumber(item.reservedQuantity, { decimals: 2 })} reserved</ReservedBadge>
                       )}
                     </QuantityInfo>
                   </Td>
@@ -242,7 +243,7 @@ export function HarvestInventoryList({ onUpdate }: Props) {
                   </Td>
                   <Td>
                     {item.unitPrice
-                      ? `${item.currency} ${item.unitPrice.toFixed(2)}/${item.unit}`
+                      ? `${formatCurrency(item.unitPrice, item.currency)}/${item.unit}`
                       : '-'}
                   </Td>
                   <Td>

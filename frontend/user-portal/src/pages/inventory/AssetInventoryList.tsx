@@ -14,6 +14,7 @@ import {
   exportAssetInventoryCSV,
 } from '../../services/inventoryApi';
 import { getFarms } from '../../services/farmApi';
+import { formatCurrency as formatCurrencyUtil } from '../../utils';
 import type {
   AssetInventory,
   AssetInventoryCreate,
@@ -142,7 +143,7 @@ export function AssetInventoryList({ onUpdate }: AssetInventoryListProps) {
 
   const formatCurrency = (value?: number, currency?: string) => {
     if (value === undefined || value === null) return '-';
-    return `${currency || 'AED'} ${value.toLocaleString()}`;
+    return formatCurrencyUtil(value, currency || 'AED');
   };
 
   const [exporting, setExporting] = useState(false);

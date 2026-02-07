@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import type { WasteInventory, WasteSummary, WasteSourceType, DisposalMethod, PaginatedWaste } from '../../types/sales';
 import api from '../../services/api';
+import { formatNumber, formatCurrency } from '../../utils';
 
 // Simple toast replacement
 const toast = {
@@ -626,19 +627,19 @@ const WasteInventoryList: React.FC = () => {
       {summary && (
         <SummaryGrid>
           <SummaryCard $color="#DC2626">
-            <SummaryValue>{summary.totalWasteRecords}</SummaryValue>
+            <SummaryValue>{formatNumber(summary.totalWasteRecords)}</SummaryValue>
             <SummaryLabel>Total Waste Records</SummaryLabel>
           </SummaryCard>
           <SummaryCard $color="#D97706">
-            <SummaryValue>{summary.totalQuantity.toFixed(2)}</SummaryValue>
+            <SummaryValue>{formatNumber(summary.totalQuantity, { decimals: 2 })}</SummaryValue>
             <SummaryLabel>Total Quantity</SummaryLabel>
           </SummaryCard>
           <SummaryCard $color="#7C3AED">
-            <SummaryValue>AED {summary.totalEstimatedValue.toFixed(2)}</SummaryValue>
+            <SummaryValue>{formatCurrency(summary.totalEstimatedValue, 'AED')}</SummaryValue>
             <SummaryLabel>Estimated Value Lost</SummaryLabel>
           </SummaryCard>
           <SummaryCard $color="#EF4444">
-            <SummaryValue>{summary.pendingDisposal}</SummaryValue>
+            <SummaryValue>{formatNumber(summary.pendingDisposal)}</SummaryValue>
             <SummaryLabel>Pending Disposal</SummaryLabel>
           </SummaryCard>
         </SummaryGrid>
@@ -718,7 +719,7 @@ const WasteInventoryList: React.FC = () => {
                         {item.variety && <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>{item.variety}</div>}
                       </TableCell>
                       <TableCell>
-                        {item.quantity.toFixed(2)} {item.unit}
+                        {formatNumber(item.quantity, { decimals: 2 })} {item.unit}
                       </TableCell>
                       <TableCell>
                         <SourceBadge $type={item.sourceType}>
@@ -735,7 +736,7 @@ const WasteInventoryList: React.FC = () => {
                         </DisposalBadge>
                       </TableCell>
                       <TableCell>
-                        {item.estimatedValue ? `AED ${item.estimatedValue.toFixed(2)}` : '-'}
+                        {item.estimatedValue ? formatCurrency(item.estimatedValue, 'AED') : '-'}
                       </TableCell>
                       <TableCell>
                         <ActionsCell>
@@ -797,7 +798,7 @@ const WasteInventoryList: React.FC = () => {
 
             <FormGroup>
               <FormLabel>Product: {selectedItem.plantName}</FormLabel>
-              <FormLabel>Quantity: {selectedItem.quantity} {selectedItem.unit}</FormLabel>
+              <FormLabel>Quantity: {formatNumber(selectedItem.quantity, { decimals: 2 })} {selectedItem.unit}</FormLabel>
             </FormGroup>
 
             <FormGroup>

@@ -12,6 +12,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { getInventorySummary } from '../../services/inventoryApi';
+import { formatNumber, formatCurrency } from '../../utils';
 import type { InventorySummary } from '../../types/inventory';
 import { HarvestInventoryList } from './HarvestInventoryList';
 import { InputInventoryList } from './InputInventoryList';
@@ -61,9 +62,9 @@ export function InventoryDashboard() {
           <CardIcon>📦</CardIcon>
           <CardContent>
             <CardLabel>Harvest Inventory</CardLabel>
-            <CardValue>{loading ? '...' : summary?.harvestInventory.totalItems || 0}</CardValue>
+            <CardValue>{loading ? '...' : formatNumber(summary?.harvestInventory.totalItems || 0)}</CardValue>
             <CardSubtext>
-              Value: {loading ? '...' : `AED ${(summary?.totalHarvestValue || 0).toLocaleString()}`}
+              Value: {loading ? '...' : formatCurrency(summary?.totalHarvestValue || 0, 'AED')}
             </CardSubtext>
           </CardContent>
         </SummaryCard>
@@ -72,10 +73,10 @@ export function InventoryDashboard() {
           <CardIcon>🧪</CardIcon>
           <CardContent>
             <CardLabel>Input Inventory</CardLabel>
-            <CardValue>{loading ? '...' : summary?.inputInventory.totalItems || 0}</CardValue>
+            <CardValue>{loading ? '...' : formatNumber(summary?.inputInventory.totalItems || 0)}</CardValue>
             <CardSubtext>
               {summary?.lowStockAlerts ? (
-                <AlertText>{summary.lowStockAlerts} low stock alerts</AlertText>
+                <AlertText>{formatNumber(summary.lowStockAlerts)} low stock alerts</AlertText>
               ) : (
                 'All stock levels OK'
               )}
@@ -87,12 +88,12 @@ export function InventoryDashboard() {
           <CardIcon>🚜</CardIcon>
           <CardContent>
             <CardLabel>Farm Assets</CardLabel>
-            <CardValue>{loading ? '...' : summary?.assetInventory.totalItems || 0}</CardValue>
+            <CardValue>{loading ? '...' : formatNumber(summary?.assetInventory.totalItems || 0)}</CardValue>
             <CardSubtext>
               {summary?.maintenanceOverdue ? (
-                <AlertText>{summary.maintenanceOverdue} maintenance overdue</AlertText>
+                <AlertText>{formatNumber(summary.maintenanceOverdue)} maintenance overdue</AlertText>
               ) : (
-                `${summary?.assetInventory.operationalCount || 0} operational`
+                `${formatNumber(summary?.assetInventory.operationalCount || 0)} operational`
               )}
             </CardSubtext>
           </CardContent>
@@ -102,12 +103,12 @@ export function InventoryDashboard() {
           <CardIcon>🗑️</CardIcon>
           <CardContent>
             <CardLabel>Waste Inventory</CardLabel>
-            <CardValue>{loading ? '...' : summary?.wasteInventory?.totalItems || 0}</CardValue>
+            <CardValue>{loading ? '...' : formatNumber(summary?.wasteInventory?.totalItems || 0)}</CardValue>
             <CardSubtext>
               {summary?.wasteInventory?.pendingDisposal ? (
-                <AlertText>{summary.wasteInventory.pendingDisposal} pending disposal</AlertText>
+                <AlertText>{formatNumber(summary.wasteInventory.pendingDisposal)} pending disposal</AlertText>
               ) : (
-                `Value: AED ${(summary?.totalWasteValue || 0).toLocaleString()}`
+                `Value: ${formatCurrency(summary?.totalWasteValue || 0, 'AED')}`
               )}
             </CardSubtext>
           </CardContent>
@@ -118,10 +119,10 @@ export function InventoryDashboard() {
           <CardContent>
             <CardLabel>Alerts</CardLabel>
             <CardValue>
-              {loading ? '...' : (summary?.lowStockAlerts || 0) + (summary?.expiringItems || 0) + (summary?.maintenanceOverdue || 0)}
+              {loading ? '...' : formatNumber((summary?.lowStockAlerts || 0) + (summary?.expiringItems || 0) + (summary?.maintenanceOverdue || 0))}
             </CardValue>
             <CardSubtext>
-              {summary?.expiringItems ? `${summary.expiringItems} items expiring soon` : 'No urgent alerts'}
+              {summary?.expiringItems ? `${formatNumber(summary.expiringItems)} items expiring soon` : 'No urgent alerts'}
             </CardSubtext>
           </CardContent>
         </SummaryCard>

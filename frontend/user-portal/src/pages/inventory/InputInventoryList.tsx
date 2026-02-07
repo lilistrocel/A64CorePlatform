@@ -15,6 +15,7 @@ import {
   exportInputInventoryCSV,
 } from '../../services/inventoryApi';
 import { getFarms } from '../../services/farmApi';
+import { formatNumber } from '../../utils';
 import type {
   InputInventory,
   InputInventoryCreate,
@@ -202,8 +203,8 @@ export function InputInventoryList({ onUpdate }: Props) {
                   <Td>{getFarmName(item.farmId)}</Td>
                   <Td>
                     <QuantityInfo>
-                      <QuantityValue>{item.quantity} {item.unit}</QuantityValue>
-                      <MinStock>Min: {item.minimumStock} {item.unit}</MinStock>
+                      <QuantityValue>{formatNumber(item.quantity, { decimals: 2 })} {item.unit}</QuantityValue>
+                      <MinStock>Min: {formatNumber(item.minimumStock, { decimals: 2 })} {item.unit}</MinStock>
                     </QuantityInfo>
                   </Td>
                   <Td>
@@ -666,7 +667,7 @@ function UseInputModal({
         </ModalHeader>
         <ModalBody>
           <CurrentStock>
-            Available: <strong>{item.quantity} {item.unit}</strong>
+            Available: <strong>{formatNumber(item.quantity, { decimals: 2 })} {item.unit}</strong>
           </CurrentStock>
           <Form onSubmit={handleSubmit}>
             <FormGroup>
