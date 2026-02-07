@@ -3777,3 +3777,84 @@ NOTES FOR NEXT SESSION:
 - Audit log captures all MFA actions for compliance/security monitoring
 - Test admin: admin_f24_test@example.com / TestPass123@ (admin, MFA disabled)
 - Test admin with MFA: farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
+
+== Session: 2026-02-07 (Agent - Feature #335) ==
+Agent: Feature #335 - MFA error messages and states
+
+COMPLETED:
+- Feature #335: MFA error messages and states [PASSING]
+  - Verified all 6 error/success message types:
+    1. Invalid code: "Invalid verification code. Please try again. (X attempts remaining)" ✅
+    2. Expired code: "Code expired. Please enter the current code from your app." ✅
+    3. Rate limited: "Too many attempts. Please wait X seconds." with countdown ✅
+    4. Backup code accepted: "Backup code accepted. You have X codes remaining." ✅
+    5. No backup codes: "No backup codes remaining. Contact admin for help." ✅
+    6. MFA not set up: "Please complete MFA setup first." ✅
+  - Enhanced MFA verify page UI with:
+    - Lockout countdown timer
+    - Digit-by-digit input with auto-advance
+    - Visual states (locked, error, success)
+    - Authenticator app illustration
+  - Zero console errors
+  - Screenshots:
+    - feature335-invalid-code-error.png
+    - feature335-rate-limited-lockout.png
+
+FILES MODIFIED:
+- src/services/auth_service.py: Updated invalid code message with attempts remaining
+- src/services/mfa_service.py: Added expired code detection, MFA not setup check
+- frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx: Enhanced UI with lockout, error states
+
+CURRENT STATUS: 333/336 features passing (99.1%)
+
+NOTES FOR NEXT SESSION:
+- MFA error handling complete with clear, user-friendly messages
+- Rate limiting includes countdown timer showing seconds remaining
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
+
+== Session: 2026-02-07 (Agent Batch #333, #334) ==
+Agent: Features #333, #334 - MFA Page Styling
+
+COMPLETED:
+- Feature #333: MFA setup page styling [PASSING]
+  - Styled verification code input as 6 separate digit boxes with auto-focus
+  - Added copy button feedback (checkmark icon + green background when copied)
+  - Added visual loading state with spinner during verification
+  - Polished QR code container with decorative corner accents
+  - Improved secret key display with monospace font and better letter-spacing
+  - Matched A64 design system colors (primary blue, success green)
+  - Zero console errors
+  - Screenshots: feature333-mfa-setup-styled.png, feature333-mfa-digits-filled.png
+
+- Feature #334: MFA verify page styling [PASSING]
+  - Added authenticator app illustration (📱 phone icon with 🔐 shield badge)
+  - Styled 6-digit input as separate digit boxes with auto-focus between digits
+  - Styled 'Use backup code' link subtly with 🔑 icon
+  - Added error states with red border styling on digit inputs
+  - Implemented lockout state with countdown timer display (⏱️ icon)
+  - Disabled inputs and button during lockout, showing 🔒 Locked state
+  - Zero console errors
+  - Screenshots: feature334-mfa-verify-styled.png, feature334-mfa-verify-filled.png, feature334-mfa-verify-lockout.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/pages/auth/MFASetupPage.tsx
+  - Added digit box inputs with handleDigitChange, handleDigitKeyDown, handlePaste
+  - Added copy feedback state and handleCopySecret function
+  - Added VerifyButton with spinner and loading state
+  - Added styled components: DigitInput, DigitInputContainer, CopyIcon, etc.
+
+- frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx
+  - Added AuthenticatorIllustration with PhoneIcon and ShieldBadge
+  - Added LockoutBanner with countdown timer
+  - Added StyledDigitInput with $filled, $error, $locked props
+  - Added VerifyButton, ButtonSpinner, StyledToggleModeLink
+  - Implemented lockout countdown timer useEffect
+
+CURRENT STATUS: 336/336 features passing (100.0%) 🎉
+
+NOTES FOR NEXT SESSION:
+- All features complete! Project ready for final review.
+- MFA setup page: /mfa/setup (6 digit boxes, QR code, copy button)
+- MFA verify page: /mfa/verify (6 digit boxes, lockout timer, backup code toggle)
+- Test admin with MFA: farmtest_admin@a64core.com / TestAdmin123@ (super_admin)
+
