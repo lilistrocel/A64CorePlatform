@@ -33,10 +33,15 @@ const Card = styled.div`
   border: 1px solid #e0e0e0;
   transition: all 150ms ease-in-out;
   cursor: pointer;
+  overflow: hidden; /* Prevent content overflow */
 
   &:hover {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
+  }
+
+  @media (max-width: 480px) {
+    padding: 16px;
   }
 `;
 
@@ -57,6 +62,11 @@ const FarmTitle = styled.h3`
   font-weight: 600;
   color: #212121;
   margin: 0 0 8px 0;
+  word-break: break-word; /* Handle long farm names */
+
+  @media (max-width: 480px) {
+    font-size: 18px;
+  }
 `;
 
 const StatusBadge = styled.span<{ $isActive: boolean }>`
@@ -134,6 +144,15 @@ const Actions = styled.div`
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  flex-wrap: wrap;
+
+  @media (max-width: 480px) {
+    justify-content: stretch;
+    gap: 8px;
+
+    /* Make buttons stack and fill width on mobile */
+    flex-direction: column;
+  }
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
@@ -144,6 +163,11 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   border: none;
   cursor: pointer;
   transition: all 150ms ease-in-out;
+  white-space: nowrap;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   ${({ $variant }) => {
     if ($variant === 'primary') {
@@ -178,6 +202,16 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    min-height: 44px; /* Touch-friendly height */
+    padding: 12px 16px;
   }
 `;
 

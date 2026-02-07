@@ -2,11 +2,12 @@
  * FarmList Component
  *
  * Displays a paginated grid of farm cards with search and filter capabilities.
+ * Mobile-responsive with collapsible filter section.
  */
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import { FarmCard } from './FarmCard';
 import { CreateFarmModal } from './CreateFarmModal';
 import { FarmAnalyticsModal } from './FarmAnalyticsModal';
@@ -31,6 +32,15 @@ const Container = styled.div`
   padding: 32px;
   max-width: 1440px;
   margin: 0 auto;
+  overflow-x: hidden; /* Prevent horizontal scroll from card content */
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 16px;
+  }
 `;
 
 const Header = styled.div`
@@ -67,9 +77,10 @@ const SearchInput = styled.input`
   padding: 12px 16px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
   width: 300px;
   transition: all 150ms ease-in-out;
+  min-height: 44px; /* Touch-friendly height */
 
   &:focus {
     outline: none;
@@ -77,8 +88,13 @@ const SearchInput = styled.input`
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
+  &::placeholder {
+    color: #9e9e9e;
+  }
+
   @media (max-width: 768px) {
     width: 100%;
+    font-size: 16px;
   }
 `;
 
@@ -94,30 +110,116 @@ const CreateButton = styled.button`
   transition: all 150ms ease-in-out;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  min-height: 44px; /* Touch-friendly height */
+  white-space: nowrap;
 
   &:hover {
     background: #1976d2;
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
-const FilterBar = styled.div`
+// Animation for collapsible filter section
+const slideDown = keyframes`
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+`;
+
+// Mobile filter toggle button
+const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
+  display: none;
+  padding: 12px 16px;
+  background: ${({ $hasActiveFilters }) => ($hasActiveFilters ? '#EBF5FF' : '#f5f5f5')};
+  color: ${({ $hasActiveFilters }) => ($hasActiveFilters ? '#3B82F6' : '#616161')};
+  border: 1px solid ${({ $hasActiveFilters }) => ($hasActiveFilters ? '#3B82F6' : '#e0e0e0')};
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
+const FilterToggleIcon = styled.span<{ $isOpen: boolean }>`
+  transition: transform 200ms ease-in-out;
+  transform: ${({ $isOpen }) => ($isOpen ? 'rotate(180deg)' : 'rotate(0deg)')};
+  font-size: 12px;
+`;
+
+const FilterToggleText = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const ActiveFilterBadge = styled.span`
+  background: #3B82F6;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+`;
+
+const FilterBar = styled.div<{ $isCollapsed?: boolean }>`
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
 
   @media (max-width: 768px) {
     flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+
+    ${({ $isCollapsed }) =>
+      $isCollapsed
+        ? css`
+            display: none;
+          `
+        : css`
+            display: flex;
+            animation: ${slideDown} 200ms ease-out forwards;
+          `}
   }
 `;
 
 const FilterButton = styled.button<{ $active: boolean }>`
-  padding: 8px 16px;
+  padding: 12px 16px;
   background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
   color: ${({ $active }) => ($active ? 'white' : '#616161')};
   border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
@@ -126,14 +228,27 @@ const FilterButton = styled.button<{ $active: boolean }>`
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
+  min-height: 44px; /* Touch-friendly height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
   }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
 `;
 
 const ResetFiltersButton = styled.button`
-  padding: 8px 16px;
+  padding: 12px 16px;
   background: transparent;
   color: #EF4444;
   border: 1px solid #EF4444;
@@ -143,9 +258,18 @@ const ResetFiltersButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   margin-left: auto;
+  min-height: 44px; /* Touch-friendly height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 
   &:hover {
     background: #FEE2E2;
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -155,6 +279,8 @@ const ResetFiltersButton = styled.button`
 
   @media (max-width: 768px) {
     margin-left: 0;
+    width: 100%;
+    margin-top: 4px;
   }
 `;
 
@@ -166,6 +292,12 @@ const GridContainer = styled.div`
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 `;
 
@@ -230,10 +362,15 @@ const Pagination = styled.div`
   align-items: center;
   gap: 16px;
   margin-top: 32px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 12px;
+  }
 `;
 
 const PageButton = styled.button<{ $active?: boolean }>`
-  padding: 8px 16px;
+  padding: 12px 16px;
   background: ${({ $active }) => ($active ? '#3B82F6' : 'white')};
   color: ${({ $active }) => ($active ? 'white' : '#616161')};
   border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
@@ -241,9 +378,17 @@ const PageButton = styled.button<{ $active?: boolean }>`
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
+  min-height: 44px; /* Touch-friendly height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover:not(:disabled) {
     background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -262,6 +407,13 @@ const PageSizeContainer = styled.div`
   align-items: center;
   gap: 8px;
   margin-left: auto;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+    margin-top: 12px;
+  }
 `;
 
 const PageSizeLabel = styled.span`
@@ -273,11 +425,12 @@ const PageSizeSelect = styled.select`
   padding: 8px 12px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px; /* Prevents iOS zoom */
   color: #212121;
   background: white;
   cursor: pointer;
   transition: all 150ms ease-in-out;
+  min-height: 44px; /* Touch-friendly height */
 
   &:focus {
     outline: none;
@@ -319,6 +472,14 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [selectedFarmName, setSelectedFarmName] = useState<string>('');
+
+  // Mobile filter collapse state
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Count active filters for badge
+  const activeFilterCount =
+    (filterType !== 'all' ? 1 : 0) +
+    (perPage !== DEFAULT_PAGE_SIZE ? 1 : 0);
 
 
   // Helper function to update URL params
@@ -486,7 +647,25 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
         </Actions>
       </Header>
 
-      <FilterBar>
+      {/* Mobile filter toggle button */}
+      <FilterToggleButton
+        $isOpen={isFilterOpen}
+        $hasActiveFilters={hasActiveFilters}
+        onClick={() => setIsFilterOpen(!isFilterOpen)}
+        aria-expanded={isFilterOpen}
+        aria-controls="filter-bar"
+      >
+        <FilterToggleText>
+          <span>🔍</span>
+          <span>Filters</span>
+          {activeFilterCount > 0 && (
+            <ActiveFilterBadge>{activeFilterCount}</ActiveFilterBadge>
+          )}
+        </FilterToggleText>
+        <FilterToggleIcon $isOpen={isFilterOpen}>▼</FilterToggleIcon>
+      </FilterToggleButton>
+
+      <FilterBar $isCollapsed={!isFilterOpen} id="filter-bar">
         <FilterButton $active={filterType === 'all'} onClick={() => setFilterType('all')}>
           All Farms ({total})
         </FilterButton>
@@ -504,7 +683,8 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
         </FilterButton>
         {hasActiveFilters && (
           <ResetFiltersButton onClick={resetFilters}>
-            Clear Filters
+            <span>✕</span>
+            <span>Clear Filters</span>
           </ResetFiltersButton>
         )}
       </FilterBar>
