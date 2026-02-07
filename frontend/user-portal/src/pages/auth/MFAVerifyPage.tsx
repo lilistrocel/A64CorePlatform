@@ -345,7 +345,15 @@ const VerifyContainer = styled.div`
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
-  padding: 1rem;
+  padding: 0.5rem;
+
+  @media (min-width: 360px) {
+    padding: 0.75rem;
+  }
+
+  @media (min-width: 480px) {
+    padding: 1rem;
+  }
 
   @media (min-width: 640px) {
     padding: 2rem;
@@ -356,9 +364,17 @@ const VerifyCard = styled.div`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  padding: 1.5rem;
+  padding: 1rem;
   width: 100%;
   max-width: 420px;
+
+  @media (min-width: 360px) {
+    padding: 1.25rem;
+  }
+
+  @media (min-width: 480px) {
+    padding: 1.5rem;
+  }
 
   @media (min-width: 640px) {
     padding: 2rem;
@@ -369,7 +385,11 @@ const VerifyCard = styled.div`
 
 const Logo = styled.div`
   text-align: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+
+  @media (min-width: 360px) {
+    margin-bottom: 0.75rem;
+  }
 
   @media (min-width: 640px) {
     margin-bottom: 1rem;
@@ -377,10 +397,14 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 48px;
+  height: 40px;
   width: auto;
   display: block;
   margin: 0 auto;
+
+  @media (min-width: 360px) {
+    height: 48px;
+  }
 
   @media (min-width: 640px) {
     height: 60px;
@@ -388,11 +412,19 @@ const LogoImg = styled.img`
 `;
 
 const Title = styled.h1`
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
   text-align: center;
   margin: 0 0 0.5rem 0;
+
+  @media (min-width: 360px) {
+    font-size: 1.375rem;
+  }
+
+  @media (min-width: 480px) {
+    font-size: 1.5rem;
+  }
 
   @media (min-width: 640px) {
     font-size: 1.75rem;
@@ -400,11 +432,20 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: ${({ theme }) => theme.colors.textSecondary};
   text-align: center;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
   line-height: 1.5;
+
+  @media (min-width: 360px) {
+    font-size: 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  @media (min-width: 480px) {
+    margin-bottom: 1.5rem;
+  }
 
   @media (min-width: 640px) {
     font-size: 1rem;
@@ -511,7 +552,15 @@ const CodeLabel = styled.label`
 const DigitInputContainer = styled.div`
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
+
+  @media (min-width: 360px) {
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 480px) {
+    gap: 0.625rem;
+  }
 
   @media (min-width: 640px) {
     gap: 0.75rem;
@@ -623,12 +672,19 @@ const ToggleModeLink = styled.button`
 const Divider = styled.hr`
   border: none;
   border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  margin: 1.5rem 0;
+  margin: 1rem 0;
+
+  @media (min-width: 480px) {
+    margin: 1.5rem 0;
+  }
 `;
 
 const BackToLogin = styled(Link)`
-  display: block;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Touch-friendly: min 44px height */
+  min-height: 44px;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.875rem;
   text-decoration: none;
@@ -645,18 +701,31 @@ const AuthenticatorIllustration = styled.div`
   justify-content: center;
   align-items: center;
   position: relative;
-  margin: 1rem 0;
+  margin: 0.75rem 0;
+
+  @media (min-width: 480px) {
+    margin: 1rem 0;
+  }
 `;
 
 const PhoneIcon = styled.span`
-  font-size: 3rem;
+  font-size: 2.5rem;
+
+  @media (min-width: 360px) {
+    font-size: 3rem;
+  }
 `;
 
 const ShieldBadge = styled.span`
   position: absolute;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   bottom: -0.25rem;
-  right: calc(50% - 2rem);
+  right: calc(50% - 1.75rem);
+
+  @media (min-width: 360px) {
+    font-size: 1.5rem;
+    right: calc(50% - 2rem);
+  }
 `;
 
 const LockoutBanner = styled.div`
@@ -686,9 +755,10 @@ const LockoutTimer = styled.span`
 `;
 
 const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $locked?: boolean }>`
+  /* Touch-friendly: min 48px x 48px on mobile (larger than standard 44px for fat-finger prevention) */
   width: 40px;
-  height: 52px;
-  font-size: 1.5rem;
+  height: 48px;
+  font-size: 1.375rem;
   font-family: 'Courier New', monospace;
   text-align: center;
   border: 2px solid ${({ $error, $filled, $locked, theme }) =>
@@ -702,9 +772,21 @@ const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $lo
   transition: all 0.2s ease;
   opacity: ${({ $locked }) => $locked ? 0.6 : 1};
 
-  @media (min-width: 640px) {
+  @media (min-width: 360px) {
+    width: 44px;
+    height: 52px;
+    font-size: 1.5rem;
+  }
+
+  @media (min-width: 480px) {
     width: 48px;
-    height: 58px;
+    height: 56px;
+    font-size: 1.625rem;
+  }
+
+  @media (min-width: 640px) {
+    width: 52px;
+    height: 60px;
     font-size: 1.75rem;
   }
 
@@ -758,8 +840,10 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.875rem 1.5rem;
-  font-size: 1rem;
+  /* Touch-friendly: min 48px height */
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: white;
   background: ${({ disabled, theme }) =>
@@ -768,6 +852,15 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   border-radius: ${({ theme }) => theme.borderRadius.md};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   transition: all 0.2s ease;
+
+  @media (min-width: 360px) {
+    font-size: 1rem;
+    padding: 0.875rem 1.25rem;
+  }
+
+  @media (min-width: 480px) {
+    padding: 0.875rem 1.5rem;
+  }
 
   &:hover:not(:disabled) {
     background: ${({ theme }) => theme.colors.primary[600]};
@@ -794,14 +887,20 @@ const StyledToggleModeLink = styled.button`
   gap: 0.5rem;
   width: 100%;
   text-align: center;
-  margin-top: 1rem;
-  padding: 0.5rem;
+  margin-top: 0.75rem;
+  /* Touch-friendly: min 44px height for accessibility */
+  min-height: 44px;
+  padding: 0.625rem 0.5rem;
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.primary[700]};
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s;
+
+  @media (min-width: 480px) {
+    margin-top: 1rem;
+  }
 
   &:hover {
     color: ${({ theme }) => theme.colors.primary[500]};

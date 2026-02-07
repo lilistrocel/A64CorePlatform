@@ -9,6 +9,8 @@ import {
   useMFASetup,
   useEnableMFA,
   clearMFASetupCache,
+  getMFASetupCacheTimestamp,
+  MFA_SETUP_EXPIRY_MS,
   type MFASetupResponse,
 } from '../../hooks/queries/useMFA';
 import { queryKeys } from '../../config/react-query.config';
@@ -35,11 +37,12 @@ export function MFASetupPage() {
   // Use mutation for enabling MFA (clears cache on success)
   const enableMFAMutation = useEnableMFA();
 
-  const [step, setStep] = useState<'scan' | 'backup' | 'error'>('scan');
+  const [step, setStep] = useState<'scan' | 'backup' | 'error' | 'expired'>('scan');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [totpCode, setTotpCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number>(MFA_SETUP_EXPIRY_MS);
   const digitRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Sync query error state with component state
@@ -50,6 +53,55 @@ export function MFASetupPage() {
       setStep('error');
     }
   }, [isError, queryError]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!setupData || step === 'backup' || step === 'error' || step === 'expired') {
+      return;
+    }
+
+    const cacheTimestamp = getMFASetupCacheTimestamp();
+    if (!cacheTimestamp) {
+      return;
+    }
+
+    const updateTimer = () => {
+      const elapsed = Date.now() - cacheTimestamp;
+      const remaining = Math.max(0, MFA_SETUP_EXPIRY_MS - elapsed);
+      setTimeRemaining(remaining);
+
+      if (remaining === 0) {
+        setStep('expired');
+      }
+    };
+
+    // Update immediately
+    updateTimer();
+
+    // Update every second
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [setupData, step]);
+
+  // Format time remaining as MM:SS
+  const formatTimeRemaining = (ms: number): string => {
+    const totalSeconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Handle regenerating QR code after expiry
+  const handleRegenerateCode = () => {
+    clearMFASetupCache();
+    queryClient.removeQueries({ queryKey: queryKeys.mfa.setup() });
+    setError(null);
+    setStep('scan');
+    setTimeRemaining(MFA_SETUP_EXPIRY_MS);
+    setTotpCode(['', '', '', '', '', '']);
+    refetch();
+  };
 
   const getCodeString = () => totpCode.join('');
 
@@ -185,6 +237,32 @@ export function MFASetupPage() {
     );
   }
 
+  if (step === 'expired') {
+    return (
+      <PageWrapper>
+        <SetupContainer>
+          <SetupCard>
+            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <ExpiredIcon>⏱️</ExpiredIcon>
+            <Title>Session Expired</Title>
+            <Subtitle>
+              Your MFA setup session has expired for security reasons.
+              Please generate a new QR code to continue.
+            </Subtitle>
+            <ButtonGroup>
+              <Button variant="primary" onClick={handleRegenerateCode}>
+                Generate New Code
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/settings')}>
+                Back to Settings
+              </Button>
+            </ButtonGroup>
+          </SetupCard>
+        </SetupContainer>
+      </PageWrapper>
+    );
+  }
+
   if (step === 'backup') {
     return (
       <PageWrapper>
@@ -212,6 +290,14 @@ export function MFASetupPage() {
           <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
           <Title>Set Up Two-Factor Authentication</Title>
           <Subtitle>Scan the QR code with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)</Subtitle>
+
+          {/* Session timeout indicator */}
+          <SessionTimer $warning={timeRemaining < 2 * 60 * 1000}>
+            <TimerIcon>⏱️</TimerIcon>
+            <TimerText>
+              Session expires in <TimerValue>{formatTimeRemaining(timeRemaining)}</TimerValue>
+            </TimerText>
+          </SessionTimer>
 
           {/* Step 1: QR Code Display */}
           <StepSection $active={step === 'scan'}>
@@ -501,6 +587,54 @@ const SuccessIcon = styled.div`
   justify-content: center;
   font-size: 2rem;
   font-weight: bold;
+`;
+
+const ExpiredIcon = styled.div`
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 1rem;
+  background: ${({ theme }) => theme.colors.warning || '#F59E0B'};
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+`;
+
+const SessionTimer = styled.div<{ $warning: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  background: ${({ $warning, theme }) =>
+    $warning ? 'rgba(245, 158, 11, 0.1)' : theme.colors.neutral[50]};
+  border: 1px solid ${({ $warning, theme }) =>
+    $warning ? 'rgba(245, 158, 11, 0.3)' : theme.colors.neutral[200]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: 0.8125rem;
+  color: ${({ $warning, theme }) =>
+    $warning ? '#92400e' : theme.colors.textSecondary};
+  transition: all 0.3s ease;
+
+  @media (min-width: 640px) {
+    font-size: 0.875rem;
+  }
+`;
+
+const TimerIcon = styled.span`
+  font-size: 1rem;
+`;
+
+const TimerText = styled.span`
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+`;
+
+const TimerValue = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
 `;
 
 const ButtonGroup = styled.div`

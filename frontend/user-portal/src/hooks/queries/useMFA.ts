@@ -43,7 +43,7 @@ export interface MFAStatusResponse {
 
 // Cache key for sessionStorage persistence across browser sessions
 const MFA_SETUP_CACHE_KEY = 'mfa_setup_pending';
-const MFA_SETUP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+export const MFA_SETUP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 
 interface CachedMFASetup {
   data: MFASetupResponse;
@@ -97,6 +97,22 @@ export function clearMFASetupCache(): void {
     sessionStorage.removeItem(MFA_SETUP_CACHE_KEY);
   } catch {
     // Ignore storage errors
+  }
+}
+
+/**
+ * Get the timestamp when MFA setup data was cached
+ * Returns null if no cached data exists
+ */
+export function getMFASetupCacheTimestamp(): number | null {
+  try {
+    const cached = sessionStorage.getItem(MFA_SETUP_CACHE_KEY);
+    if (!cached) return null;
+
+    const parsed: CachedMFASetup = JSON.parse(cached);
+    return parsed.timestamp;
+  } catch {
+    return null;
   }
 }
 
