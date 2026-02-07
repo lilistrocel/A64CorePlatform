@@ -6,6 +6,7 @@
  */
 
 import { apiClient } from './api';
+import { formatNumber, formatCurrency as formatCurrencyUtil } from '../utils/formatNumber';
 import type {
   MarketingCampaign,
   MarketingCampaignCreate,
@@ -416,15 +417,10 @@ export function getChannelTypeColor(type: string): string {
 }
 
 /**
- * Format currency for display
+ * Format currency for display (uses centralized formatNumber utility)
  */
 export function formatCurrency(amount: number, currency: string = 'AED'): string {
-  return new Intl.NumberFormat('en-AE', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatCurrencyUtil(amount, currency);
 }
 
 /**

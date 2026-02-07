@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
+import { formatNumber } from '../../utils/formatNumber';
 import type { MarketingEvent } from '../../types/marketing';
 
 interface EventTableProps { events: MarketingEvent[]; onEdit: (event: MarketingEvent) => void; onDelete: (eventId: string) => void; loading?: boolean; }
@@ -34,7 +35,7 @@ export function EventTable({ events, onEdit, onDelete, loading }: EventTableProp
             <Td><Badge $color={marketingApi.getChannelTypeColor('event')}>{marketingApi.getEventTypeLabel(event.type)}</Badge></Td>
             <Td>{event.date ? marketingApi.formatDate(event.date) : 'TBD'}</Td>
             <Td>{event.location || '-'}</Td>
-            <Td>{event.actualAttendees !== undefined ? `${event.actualAttendees}` : event.expectedAttendees || '-'}</Td>
+            <Td>{event.actualAttendees !== undefined ? formatNumber(event.actualAttendees) : event.expectedAttendees ? formatNumber(event.expectedAttendees) : '-'}</Td>
             <Td><Badge $color={marketingApi.getEventStatusColor(event.status)}>{event.status}</Badge></Td>
             <Td>
               <ActionButton onClick={() => onEdit(event)}>Edit</ActionButton>

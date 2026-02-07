@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
+import { formatNumber } from '../../utils/formatNumber';
 import type { MarketingDashboardStats } from '../../types/marketing';
 
 // ============================================================================
@@ -346,27 +347,27 @@ export function MarketingDashboardPage() {
       <StatsGrid>
         <StatCard>
           <StatLabel>Active Campaigns</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{stats.activeCampaigns}</StatValue>
+          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.activeCampaigns)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Total Impressions</StatLabel>
           <StatValue style={{ color: '#3B82F6' }}>
-            {stats.totalImpressions.toLocaleString()}
+            {formatNumber(stats.totalImpressions)}
           </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Total Clicks</StatLabel>
           <StatValue style={{ color: '#8B5CF6' }}>
-            {stats.totalClicks.toLocaleString()}
+            {formatNumber(stats.totalClicks)}
           </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Conversions</StatLabel>
           <StatValue style={{ color: '#10B981' }}>
-            {stats.totalConversions.toLocaleString()}
+            {formatNumber(stats.totalConversions)}
           </StatValue>
         </StatCard>
       </StatsGrid>
@@ -383,7 +384,7 @@ export function MarketingDashboardPage() {
                 >
                   <CampaignName>{campaign.name}</CampaignName>
                   <CampaignMetrics>
-                    {campaign.metrics?.impressions?.toLocaleString() || 0} impressions
+                    {formatNumber(campaign.metrics?.impressions || 0)} impressions
                   </CampaignMetrics>
                 </CampaignItem>
               ))}

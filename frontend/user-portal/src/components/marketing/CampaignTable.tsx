@@ -4,6 +4,7 @@
 
 import styled from 'styled-components';
 import { marketingApi } from '../../services/marketingService';
+import { formatNumber } from '../../utils/formatNumber';
 import type { MarketingCampaign } from '../../types/marketing';
 
 interface CampaignTableProps {
@@ -60,7 +61,7 @@ export function CampaignTable({ campaigns, onEdit, onDelete, loading }: Campaign
                 {campaign.goals && campaign.goals.length > 2 && <Tag>+{campaign.goals.length - 2}</Tag>}
               </TagsContainer>
             </Td>
-            <Td>{campaign.metrics?.impressions?.toLocaleString() || '0'}</Td>
+            <Td>{formatNumber(campaign.metrics?.impressions || 0)}</Td>
             <Td>
               <ActionButton onClick={() => onEdit(campaign)}>Edit</ActionButton>
               <DeleteButton onClick={() => onDelete(campaign.campaignId)}>Delete</DeleteButton>
