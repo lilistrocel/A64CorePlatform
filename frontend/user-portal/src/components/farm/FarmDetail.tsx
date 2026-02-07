@@ -5,7 +5,7 @@
  * Uses React Query for efficient data fetching and caching.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useFarm, useFarmSummary, useFarmBlocks } from '../../hooks/queries';
@@ -23,6 +23,9 @@ import { Breadcrumb } from '@a64core/shared';
 import type { BreadcrumbItem } from '@a64core/shared';
 import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate, FarmUpdate } from '../../types/farm';
 import { formatNumber } from '../../utils';
+
+// LocalStorage key for mobile view preference
+const MOBILE_VIEW_PREF_KEY = 'farm-detail-mobile-view';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -282,11 +285,137 @@ const InfoValue = styled.span`
   color: #212121;
 `;
 
+// Mobile Map/List Toggle Components
+const MobileViewToggle = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 0 16px;
+  }
+`;
+
+const MobileToggleButton = styled.button<{ $active: boolean }>`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: ${({ $active }) => ($active ? '#3B82F6' : 'white')};
+  color: ${({ $active }) => ($active ? 'white' : '#616161')};
+  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  min-height: 44px;
+
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
+const MobileToggleIcon = styled.span`
+  font-size: 18px;
+`;
+
+const MobileMapContainer = styled.div<{ $isFullScreen: boolean }>`
+  @media (max-width: 768px) {
+    ${({ $isFullScreen }) => $isFullScreen && `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      background: white;
+    `}
+  }
+`;
+
+const MobileMapHeader = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+  }
+`;
+
+const MobileMapTitle = styled.span`
+  font-size: 16px;
+  font-weight: 600;
+  color: #212121;
+`;
+
+const MobileCloseButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #e0e0e0;
+  }
+`;
+
+const MobileListContainer = styled.div`
+  @media (max-width: 768px) {
+    padding: 0;
+  }
+`;
+
+// Floating Map Toggle Button (for when in list view on mobile)
+const FloatingMapButton = styled.button`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 14px 20px;
+    background: #3B82F6;
+    color: white;
+    border: none;
+    border-radius: 28px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    cursor: pointer;
+    z-index: 100;
+    transition: all 150ms ease-in-out;
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
 type TabType = 'overview' | 'blocks' | 'map' | 'plantings' | 'statistics' | 'history' | 'agridata' | 'sensors';
+type MobileViewType = 'list' | 'map';
 
 export function FarmDetail() {
   const { farmId } = useParams<{ farmId: string }>();
@@ -333,6 +462,40 @@ export function FarmDetail() {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
   const [showBoundaryModal, setShowBoundaryModal] = useState(false);
   const [showEditFarmModal, setShowEditFarmModal] = useState(false);
+
+  // Mobile view state - persisted to localStorage
+  const [mobileView, setMobileView] = useState<MobileViewType>(() => {
+    const saved = localStorage.getItem(MOBILE_VIEW_PREF_KEY);
+    return (saved as MobileViewType) || 'list';
+  });
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMapFullScreen, setIsMapFullScreen] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Persist mobile view preference
+  const handleMobileViewChange = (view: MobileViewType) => {
+    setMobileView(view);
+    localStorage.setItem(MOBILE_VIEW_PREF_KEY, view);
+    if (view === 'map') {
+      setIsMapFullScreen(true);
+    }
+  };
+
+  // Close full-screen map
+  const handleCloseMapFullScreen = () => {
+    setIsMapFullScreen(false);
+    setMobileView('list');
+    localStorage.setItem(MOBILE_VIEW_PREF_KEY, 'list');
+  };
 
   // Refetch all data (used after mutations)
   const loadFarmData = async () => {
@@ -582,13 +745,68 @@ export function FarmDetail() {
           )}
 
           {activeTab === 'blocks' && (
-            <PhysicalBlockGrid
-              physicalBlocks={physicalBlocks}
-              virtualBlocks={virtualBlocks}
-              farmId={farmId!}
-              onRefresh={loadFarmData}
-              onCreateBlock={() => setShowCreateModal(true)}
-            />
+            <>
+              {/* Mobile View Toggle */}
+              <MobileViewToggle>
+                <MobileToggleButton
+                  $active={mobileView === 'list'}
+                  onClick={() => handleMobileViewChange('list')}
+                >
+                  <MobileToggleIcon>📋</MobileToggleIcon>
+                  List View
+                </MobileToggleButton>
+                <MobileToggleButton
+                  $active={mobileView === 'map'}
+                  onClick={() => handleMobileViewChange('map')}
+                >
+                  <MobileToggleIcon>🗺️</MobileToggleIcon>
+                  Map View
+                </MobileToggleButton>
+              </MobileViewToggle>
+
+              {/* Mobile Full-Screen Map */}
+              {isMobile && isMapFullScreen && (
+                <MobileMapContainer $isFullScreen={true}>
+                  <MobileMapHeader>
+                    <MobileMapTitle>🗺️ Farm Map</MobileMapTitle>
+                    <MobileCloseButton onClick={handleCloseMapFullScreen}>
+                      ✕
+                    </MobileCloseButton>
+                  </MobileMapHeader>
+                  <FarmMapView
+                    farm={farm}
+                    blocks={blocks}
+                    onBlockClick={(block) => {
+                      handleCloseMapFullScreen();
+                      setEditingBlock(block);
+                    }}
+                    onEditFarmBoundary={() => setShowBoundaryModal(true)}
+                    height="calc(100vh - 60px)"
+                  />
+                </MobileMapContainer>
+              )}
+
+              {/* List View (or desktop) */}
+              {(!isMobile || !isMapFullScreen) && (
+                <MobileListContainer>
+                  <PhysicalBlockGrid
+                    physicalBlocks={physicalBlocks}
+                    virtualBlocks={virtualBlocks}
+                    farmId={farmId!}
+                    onRefresh={loadFarmData}
+                    onCreateBlock={() => setShowCreateModal(true)}
+                  />
+                </MobileListContainer>
+              )}
+
+              {/* Floating Map Button (visible on mobile in list view) */}
+              {isMobile && !isMapFullScreen && (
+                <FloatingMapButton onClick={() => handleMobileViewChange('map')}>
+                  <span>🗺️</span>
+                  <span>View Map</span>
+                </FloatingMapButton>
+              )}
+            </>
           )}
 
           {activeTab === 'map' && (
