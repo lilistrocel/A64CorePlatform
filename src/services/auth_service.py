@@ -958,9 +958,10 @@ class AuthService:
             TokenResponse with full access tokens
 
         Raises:
-            HTTPException: 401 if token invalid/expired, 400 if code invalid
+            HTTPException: 401 if token invalid/expired, 400 if code invalid, 429 if rate limited
         """
         from .mfa_service import mfa_service
+        from ..middleware.rate_limit import mfa_rate_limiter
 
         db = mongodb.get_database()
 
@@ -975,6 +976,10 @@ class AuthService:
 
         user_id = token_payload["userId"]
         token_id = token_payload["tokenId"]
+
+        # Check Redis-backed MFA rate limit (Feature #319)
+        # This prevents brute force attacks across multiple sessions
+        await mfa_rate_limiter.check_mfa_attempts(user_id)
 
         # Check token in database
         token_doc = await db.mfa_pending_tokens.find_one({"tokenId": token_id})
@@ -1016,17 +1021,23 @@ class AuthService:
         is_valid, used_backup_code, remaining_backup_codes = await mfa_service.verify_mfa_code(user_id, code)
 
         if not is_valid:
-            # Increment failed attempts
+            # Record failed attempt in Redis-backed rate limiter (Feature #319)
+            attempt_count = await mfa_rate_limiter.record_failed_attempt(user_id)
+
+            # Also increment per-token attempts
             await db.mfa_pending_tokens.update_one(
                 {"tokenId": token_id},
                 {"$inc": {"failedAttempts": 1}}
             )
 
-            remaining_attempts = 5 - (failed_attempts + 1)
+            remaining_attempts = mfa_rate_limiter.get_remaining_attempts(attempt_count)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid code. {remaining_attempts} attempts remaining."
             )
+
+        # Clear MFA rate limit attempts on success (Feature #319)
+        await mfa_rate_limiter.clear_attempts(user_id)
 
         # Mark MFA token as used
         await db.mfa_pending_tokens.update_one(
