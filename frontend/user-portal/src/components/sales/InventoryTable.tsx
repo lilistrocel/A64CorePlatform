@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import type { HarvestInventory } from '../../types/sales';
+import { formatNumber } from '../../utils/formatNumber';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -292,7 +293,7 @@ export function InventoryTable({ inventory, onEdit, onDelete }: InventoryTablePr
               </TableCell>
               <TableCell>{item.category || '-'}</TableCell>
               <TableCell>
-                {item.quantity} {item.unit}
+                {formatNumber(item.quantity)} {item.unit}
               </TableCell>
               <TableCell>{item.quality ? <QualityBadge $quality={item.quality}>Grade {item.quality}</QualityBadge> : '-'}</TableCell>
               <TableCell>

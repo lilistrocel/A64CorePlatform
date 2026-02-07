@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import type { SalesOrder } from '../../types/sales';
+import { formatCurrency, formatNumber } from '../../utils/formatNumber';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -330,8 +331,8 @@ export function OrderTable({ orders, onView, onEdit, onDelete, onUpdateStatus }:
                 <PaymentBadge $status={order.paymentStatus}>{order.paymentStatus}</PaymentBadge>
               </TableCell>
               <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
-              <TableCell>{order.items.length} items</TableCell>
-              <TableCell>${order.total.toFixed(2)}</TableCell>
+              <TableCell>{formatNumber(order.items.length)} items</TableCell>
+              <TableCell>{formatCurrency(order.total, 'USD')}</TableCell>
               <TableCell>
                 <Actions>
                   {onView && (

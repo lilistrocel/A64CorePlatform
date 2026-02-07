@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { salesApi } from '../../services/salesService';
+import { formatNumber, formatCurrency as formatCurrencyUtil } from '../../utils/formatNumber';
 import type { ReturnOrder, ReturnStatus, PaginatedReturns } from '../../types/sales';
 
 // ============================================================================
@@ -415,14 +416,6 @@ export function ReturnsPage() {
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
   // Calculate stats from current data
   const pendingCount = returns.filter((r) => r.status === 'pending').length;
   const processingCount = returns.filter((r) => r.status === 'processing').length;
@@ -518,9 +511,9 @@ export function ReturnsPage() {
                       <StatusBadge $status={returnOrder.status}>{returnOrder.status}</StatusBadge>
                     </TableCell>
                     <TableCell>{formatDate(returnOrder.returnDate)}</TableCell>
-                    <TableCell>{returnOrder.totalReturnedQuantity.toFixed(2)}</TableCell>
+                    <TableCell>{formatNumber(returnOrder.totalReturnedQuantity, { decimals: 2 })}</TableCell>
                     <TableCell>
-                      {returnOrder.totalRefundAmount ? formatCurrency(returnOrder.totalRefundAmount) : '-'}
+                      {returnOrder.totalRefundAmount ? formatCurrencyUtil(returnOrder.totalRefundAmount, 'AED') : '-'}
                     </TableCell>
                     <TableCell>
                       <ActionsCell>
