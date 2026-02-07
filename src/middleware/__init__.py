@@ -2,7 +2,9 @@
 from .auth import (
     get_current_user,
     get_current_active_user,
-    get_optional_user
+    get_optional_user,
+    require_mfa_setup_complete,
+    get_user_mfa_complete
 )
 from .permissions import (
     RoleChecker,
@@ -23,6 +25,8 @@ __all__ = [
     "get_current_user",
     "get_current_active_user",
     "get_optional_user",
+    "require_mfa_setup_complete",
+    "get_user_mfa_complete",
     "RoleChecker",
     "require_super_admin",
     "require_admin",

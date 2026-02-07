@@ -181,7 +181,7 @@ async def update_farm(
     "/{farm_id}",
     response_model=SuccessResponse[dict],
     summary="Delete farm",
-    description="Delete a farm (soft delete). Only the farm manager can delete their farm."
+    description="Delete a farm (soft delete). Super admins, admins, or the farm manager can delete."
 )
 async def delete_farm(
     farm_id: UUID,
@@ -198,11 +198,13 @@ async def delete_farm(
 
     farm = await service.get_farm(farm_id)
 
-    if str(farm.managerId) != str(current_user.userId):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the farm manager can delete this farm"
-        )
+    # Super admins and admins can delete any farm, managers can only delete their own
+    if current_user.role not in ["super_admin", "admin"]:
+        if str(farm.managerId) != str(current_user.userId):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the farm manager can delete this farm"
+            )
 
     result = await CascadeDeletionService.delete_farm_with_cascade(
         farm_id=farm_id,

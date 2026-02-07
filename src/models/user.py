@@ -262,10 +262,15 @@ class MFAVerifyRequest(BaseModel):
 
 
 class MFAStatusResponse(BaseModel):
-    """Response for MFA status check"""
-    mfaEnabled: bool
-    mfaSetupPending: bool = False
-    hasBackupCodes: bool = False
+    """Response for MFA status check - GET /api/v1/auth/mfa/status"""
+    isEnabled: bool = Field(..., description="Whether MFA is currently enabled")
+    setupRequired: bool = Field(default=False, description="Whether MFA setup is required or pending")
+    backupCodesRemaining: int = Field(default=0, description="Number of unused backup codes remaining")
+    lastUsed: Optional[datetime] = Field(default=None, description="Last time MFA was used for authentication")
+    # Legacy fields for backward compatibility
+    mfaEnabled: bool = Field(default=False, description="Alias for isEnabled (deprecated)")
+    mfaSetupPending: bool = Field(default=False, description="Alias for setupRequired (deprecated)")
+    hasBackupCodes: bool = Field(default=False, description="Whether any backup codes exist (deprecated)")
 
 
 class MFALoginResponse(BaseModel):

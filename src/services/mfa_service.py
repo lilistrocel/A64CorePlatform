@@ -511,6 +511,7 @@ class MFAService:
             {
                 "$set": {
                     "mfaEnabled": True,
+                    "mfaSetupRequired": False,  # Clear the MFA setup requirement
                     "mfaSecret": encrypted_secret,
                     "mfaSecretEncrypted": True,  # Flag indicating encryption
                     "mfaBackupCodes": hashed_codes,

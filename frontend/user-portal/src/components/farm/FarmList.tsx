@@ -386,7 +386,15 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
     try {
       await farmApi.deleteFarm(farmId);
       showSuccessToast('Farm deleted successfully');
-      loadFarms(); // Reload list
+      // Remove deleted farm from state immediately to prevent stale data errors
+      setFarms((prev) => prev.filter((f) => f.farmId !== farmId));
+      setSummaries((prev) => {
+        const newSummaries = { ...prev };
+        delete newSummaries[farmId];
+        return newSummaries;
+      });
+      // Then reload the full list
+      loadFarms();
     } catch (err) {
       showErrorToast('Failed to delete farm. Please try again.');
       console.error('Error deleting farm:', err);

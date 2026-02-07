@@ -11,6 +11,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import Optional
 from datetime import datetime
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 
 from ...models.user import (
     UserResponse,
@@ -424,4 +427,127 @@ async def delete_user(
         "message": "User deleted successfully",
         "userId": user_id,
         "deletedAt": datetime.utcnow().isoformat()
+    }
+
+
+@router.put("/users/{user_id}/mfa/reset")
+async def reset_user_mfa(
+    user_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Reset MFA for a user (admin action)
+
+    Allows admin/super_admin to reset MFA for users who are locked out
+    (lost phone, no backup codes remaining).
+
+    **Authentication:** Required (admin or super_admin)
+
+    **Security:**
+    - Deletes user's TOTP secret and backup codes
+    - Sets mfaSetupRequired=true to force new MFA setup on next login
+    - Logs the action in admin audit trail
+    - Sends email notification to the user
+
+    **Returns:**
+    - 200: MFA reset successfully
+    - 401: Unauthorized
+    - 403: Forbidden (insufficient permissions)
+    - 404: User not found
+    - 400: MFA is not enabled for this user
+    """
+    # Check permissions - require admin or super_admin
+    require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN], current_user)
+
+    db = mongodb.get_database()
+
+    # Find target user
+    user = await db.users.find_one({"userId": user_id, "deletedAt": None})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Check if MFA is enabled for this user
+    if not user.get("mfaEnabled", False):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="MFA is not enabled for this user"
+        )
+
+    # Prevent admins from resetting super_admin MFA (only super_admins can)
+    if user.get("role") == UserRole.SUPER_ADMIN.value and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super admins can reset MFA for other super admin accounts"
+        )
+
+    # Reset MFA - remove TOTP secret, backup codes, and set mfaSetupRequired
+    reset_time = datetime.utcnow()
+    result = await db.users.update_one(
+        {"userId": user_id},
+        {
+            "$set": {
+                "mfaEnabled": False,
+                "mfaSetupRequired": True,  # Force new MFA setup on next login
+                "mfaResetAt": reset_time,
+                "mfaResetBy": current_user.userId,
+                "mfaResetByEmail": current_user.email,
+                "updatedAt": reset_time
+            },
+            "$unset": {
+                "mfaSecret": "",
+                "mfaSecretEncrypted": "",
+                "mfaBackupCodes": "",
+                "mfaEnabledAt": "",
+                "mfaPendingSecret": "",
+                "mfaPendingSecretEncrypted": "",
+                "mfaPendingSetupAt": "",
+                "mfaLastUsedCounter": "",
+                "mfaLastUsedAt": ""
+            }
+        }
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to reset MFA"
+        )
+
+    # Log admin action in audit trail
+    audit_entry = {
+        "action": "mfa_reset",
+        "targetUserId": user_id,
+        "targetUserEmail": user.get("email"),
+        "performedBy": current_user.userId,
+        "performedByEmail": current_user.email,
+        "performedByRole": current_user.role.value if hasattr(current_user.role, 'value') else current_user.role,
+        "timestamp": reset_time,
+        "details": {
+            "reason": "Admin MFA reset for locked out user"
+        }
+    }
+    await db.admin_audit_log.insert_one(audit_entry)
+
+    # Log to console (email notification in dev mode)
+    logger.info(
+        f"[EMAIL NOTIFICATION - DEV MODE] "
+        f"MFA Reset Notification for {user.get('email')}: "
+        f"Your Multi-Factor Authentication has been reset by an administrator ({current_user.email}). "
+        f"You will be required to set up MFA again on your next login. "
+        f"If you did not request this, please contact support immediately."
+    )
+
+    logger.info(
+        f"Admin MFA reset: {current_user.email} reset MFA for user {user.get('email')} (userId: {user_id})"
+    )
+
+    return {
+        "message": "MFA has been reset successfully. User will be required to set up MFA on next login.",
+        "userId": user_id,
+        "userEmail": user.get("email"),
+        "resetAt": reset_time.isoformat(),
+        "resetBy": current_user.email
     }
