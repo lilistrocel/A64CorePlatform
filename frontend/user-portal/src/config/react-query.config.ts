@@ -98,4 +98,11 @@ export const queryKeys = {
     ordersByStatus: () => [...queryKeys.dashboard.all, 'ordersByStatus'] as const,
     blocksByFarm: () => [...queryKeys.dashboard.all, 'blocksByFarm'] as const,
   },
+
+  // MFA/Auth queries
+  mfa: {
+    all: ['mfa'] as const,
+    setup: () => [...queryKeys.mfa.all, 'setup'] as const,
+    status: () => [...queryKeys.mfa.all, 'status'] as const,
+  },
 } as const;

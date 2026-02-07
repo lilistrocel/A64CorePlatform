@@ -1,117 +1,55 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card } from '@a64core/shared';
-import { apiClient } from '../../services/api';
 import { useAuthStore } from '../../stores/auth.store';
 import { BackupCodesModal } from '../../components/auth/BackupCodesModal';
-
-interface MFASetupResponse {
-  secret: string;
-  qrCodeUri: string;
-  qrCodeDataUrl: string | null;
-  message: string;
-}
-
-interface MFAEnableResponse {
-  enabled: boolean;
-  backupCodes: string[];
-  message: string;
-}
-
-// Cache key for sessionStorage
-const MFA_SETUP_CACHE_KEY = 'mfa_setup_pending';
-const MFA_SETUP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-
-interface CachedMFASetup {
-  data: MFASetupResponse;
-  timestamp: number;
-}
-
-// Helper functions for sessionStorage caching
-function getCachedSetupData(): MFASetupResponse | null {
-  try {
-    const cached = sessionStorage.getItem(MFA_SETUP_CACHE_KEY);
-    if (!cached) return null;
-
-    const parsed: CachedMFASetup = JSON.parse(cached);
-    const age = Date.now() - parsed.timestamp;
-
-    // Check if cached data has expired (10 minutes)
-    if (age > MFA_SETUP_EXPIRY_MS) {
-      sessionStorage.removeItem(MFA_SETUP_CACHE_KEY);
-      return null;
-    }
-
-    return parsed.data;
-  } catch {
-    // If parsing fails, clear invalid cache
-    sessionStorage.removeItem(MFA_SETUP_CACHE_KEY);
-    return null;
-  }
-}
-
-function setCachedSetupData(data: MFASetupResponse): void {
-  try {
-    const cacheEntry: CachedMFASetup = {
-      data,
-      timestamp: Date.now(),
-    };
-    sessionStorage.setItem(MFA_SETUP_CACHE_KEY, JSON.stringify(cacheEntry));
-  } catch {
-    // Ignore storage errors (e.g., quota exceeded)
-  }
-}
-
-function clearCachedSetupData(): void {
-  try {
-    sessionStorage.removeItem(MFA_SETUP_CACHE_KEY);
-  } catch {
-    // Ignore storage errors
-  }
-}
+import {
+  useMFASetup,
+  useEnableMFA,
+  clearMFASetupCache,
+  type MFASetupResponse,
+} from '../../hooks/queries/useMFA';
+import { queryKeys } from '../../config/react-query.config';
 
 export function MFASetupPage() {
   const navigate = useNavigate();
-  const { user, loadUser } = useAuthStore();
+  const { loadUser } = useAuthStore();
+  const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<'loading' | 'scan' | 'verify' | 'backup' | 'error'>('loading');
-  const [setupData, setSetupData] = useState<MFASetupResponse | null>(null);
+  // Use React Query for MFA setup data
+  // - 10-minute stale time (data is considered fresh, no refetches)
+  // - refetchOnWindowFocus: false (no refetch when user tabs back)
+  // - refetchOnMount: false (no refetch when component remounts)
+  // - refetchOnReconnect: false (no refetch on network reconnect)
+  // - Backed by sessionStorage for persistence across page visibility changes
+  const {
+    data: setupData,
+    isLoading,
+    isError,
+    error: queryError,
+    refetch,
+  } = useMFASetup();
+
+  // Use mutation for enabling MFA (clears cache on success)
+  const enableMFAMutation = useEnableMFA();
+
+  const [step, setStep] = useState<'scan' | 'backup' | 'error'>('scan');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [totpCode, setTotpCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
   const digitRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Initialize MFA setup - check cache first, then fetch if needed
+  // Sync query error state with component state
   useEffect(() => {
-    const initializeSetup = async () => {
-      // Check for cached setup data first
-      const cachedData = getCachedSetupData();
-      if (cachedData) {
-        setSetupData(cachedData);
-        setStep('scan');
-        return;
-      }
-
-      // No valid cache, fetch new setup data
-      try {
-        setStep('loading');
-        const response = await apiClient.post<MFASetupResponse>('/v1/auth/mfa/setup');
-        setSetupData(response.data);
-        // Cache the setup data with timestamp
-        setCachedSetupData(response.data);
-        setStep('scan');
-      } catch (err: any) {
-        const message = err.response?.data?.detail || 'Failed to initialize MFA setup';
-        setError(message);
-        setStep('error');
-      }
-    };
-
-    initializeSetup();
-  }, []);
+    if (isError && queryError) {
+      const message = (queryError as any)?.response?.data?.detail || 'Failed to initialize MFA setup';
+      setError(message);
+      setStep('error');
+    }
+  }, [isError, queryError]);
 
   const getCodeString = () => totpCode.join('');
 
@@ -174,18 +112,14 @@ export function MFASetupPage() {
       return;
     }
 
-    setIsSubmitting(true);
     setError(null);
 
     try {
-      const response = await apiClient.post<MFAEnableResponse>('/v1/auth/mfa/enable', {
-        totpCode: codeString,
-      });
+      // Use the mutation which handles cache clearing automatically
+      const result = await enableMFAMutation.mutateAsync(codeString);
 
-      if (response.data.enabled) {
-        // Clear cached setup data after successful MFA enable
-        clearCachedSetupData();
-        setBackupCodes(response.data.backupCodes);
+      if (result.enabled) {
+        setBackupCodes(result.backupCodes);
         setStep('backup');
         // Reload user to update MFA status
         await loadUser();
@@ -193,26 +127,26 @@ export function MFASetupPage() {
     } catch (err: any) {
       const message = err.response?.data?.detail || 'Invalid verification code. Please try again.';
       setError(message);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleFinish = () => {
-    // Clear cached setup data - MFA is now enabled
-    clearCachedSetupData();
+    // Cache already cleared by mutation, just navigate
     navigate('/settings');
   };
 
   const handleRetry = () => {
-    // Clear cached data to force fetch of new secret on retry
-    clearCachedSetupData();
+    // Clear both sessionStorage and React Query cache
+    clearMFASetupCache();
+    queryClient.removeQueries({ queryKey: queryKeys.mfa.setup() });
     setError(null);
-    setStep('loading');
-    window.location.reload();
+    setStep('scan');
+    // Refetch fresh data
+    refetch();
   };
 
-  if (step === 'loading') {
+  // Show loading state for initial fetch only
+  if (isLoading) {
     return (
       <PageWrapper>
         <SetupContainer>
@@ -320,7 +254,7 @@ export function MFASetupPage() {
           </StepSection>
 
           {/* Step 2: Verification */}
-          <StepSection $active={step === 'scan' || step === 'verify'}>
+          <StepSection $active={step === 'scan'}>
             <StepNumber>2</StepNumber>
             <StepContent>
               <StepTitle>Enter Verification Code</StepTitle>
@@ -349,10 +283,10 @@ export function MFASetupPage() {
                 </DigitInputContainer>
                 <VerifyButton
                   type="submit"
-                  disabled={getCodeString().length !== 6 || isSubmitting}
-                  $loading={isSubmitting}
+                  disabled={getCodeString().length !== 6 || enableMFAMutation.isPending}
+                  $loading={enableMFAMutation.isPending}
                 >
-                  {isSubmitting ? (
+                  {enableMFAMutation.isPending ? (
                     <>
                       <ButtonSpinner />
                       Verifying...
@@ -433,7 +367,11 @@ const SetupCard = styled.div`
 
 const Logo = styled.div`
   text-align: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+
+  @media (min-width: 360px) {
+    margin-bottom: 0.75rem;
+  }
 
   @media (min-width: 640px) {
     margin-bottom: 1rem;
@@ -441,10 +379,14 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 48px;
+  height: 40px;
   width: auto;
   display: block;
   margin: 0 auto;
+
+  @media (min-width: 360px) {
+    height: 48px;
+  }
 
   @media (min-width: 640px) {
     height: 60px;
@@ -570,14 +512,25 @@ const ButtonGroup = styled.div`
 
 const StepSection = styled.div<{ $active: boolean }>`
   display: flex;
-  gap: 1rem;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  margin-bottom: 0.75rem;
   background: ${({ $active, theme }) => $active ? theme.colors.neutral[50] : 'transparent'};
   border: 1px solid ${({ $active, theme }) => $active ? theme.colors.neutral[200] : 'transparent'};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   opacity: ${({ $active }) => $active ? 1 : 0.6};
   transition: all 0.3s ease;
+
+  @media (min-width: 360px) {
+    padding: 1rem;
+    gap: 0.875rem;
+  }
+
+  @media (min-width: 480px) {
+    padding: 1.25rem;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
 
   @media (min-width: 640px) {
     padding: 1.5rem;
@@ -585,9 +538,9 @@ const StepSection = styled.div<{ $active: boolean }>`
 `;
 
 const StepNumber = styled.div`
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[600]} 100%);
   color: white;
   border-radius: 50%;
@@ -595,46 +548,80 @@ const StepNumber = styled.div`
   align-items: center;
   justify-content: center;
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+
+  @media (min-width: 360px) {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    font-size: 0.875rem;
+  }
 `;
 
 const StepContent = styled.div`
   flex: 1;
+  min-width: 0; /* Allow flex shrinking */
 `;
 
 const StepTitle = styled.h3`
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.375rem 0;
+
+  @media (min-width: 360px) {
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+  }
 `;
 
 const StepDescription = styled.p`
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+
+  @media (min-width: 360px) {
+    font-size: 0.875rem;
+    margin: 0 0 1rem 0;
+  }
 `;
 
 const QRCodeContainer = styled.div`
   display: flex;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 1rem;
   background: white;
   border-radius: ${({ theme }) => theme.borderRadius.lg};
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   border: 2px solid ${({ theme }) => theme.colors.neutral[200]};
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   position: relative;
+
+  @media (min-width: 360px) {
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (min-width: 480px) {
+    padding: 1.5rem;
+  }
 
   /* Decorative corner accents */
   &::before,
   &::after {
     content: '';
     position: absolute;
-    width: 20px;
-    height: 20px;
-    border: 3px solid ${({ theme }) => theme.colors.primary[500]};
+    width: 16px;
+    height: 16px;
+    border: 2px solid ${({ theme }) => theme.colors.primary[500]};
+
+    @media (min-width: 360px) {
+      width: 20px;
+      height: 20px;
+      border-width: 3px;
+    }
   }
 
   &::before {
@@ -655,9 +642,20 @@ const QRCodeContainer = styled.div`
 `;
 
 const QRCodeImage = styled.img`
-  width: 180px;
-  height: 180px;
+  width: 140px;
+  height: 140px;
+  max-width: 200px;
   border-radius: ${({ theme }) => theme.borderRadius.md};
+
+  @media (min-width: 360px) {
+    width: 160px;
+    height: 160px;
+  }
+
+  @media (min-width: 480px) {
+    width: 180px;
+    height: 180px;
+  }
 
   @media (min-width: 640px) {
     width: 200px;
@@ -682,35 +680,67 @@ const QRCodeFallback = styled.p`
 `;
 
 const ManualEntrySection = styled.div`
-  margin-top: 1rem;
+  margin-top: 0.75rem;
+
+  @media (min-width: 360px) {
+    margin-top: 1rem;
+  }
 `;
 
 const ManualEntryLabel = styled.p`
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 0.5rem 0;
+
+  @media (min-width: 360px) {
+    font-size: 0.75rem;
+  }
 `;
 
 const SecretKeyBox = styled.div`
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.5rem;
   background: ${({ theme }) => theme.colors.neutral[50]};
   border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 0.75rem;
+
+  @media (min-width: 360px) {
+    padding: 0.75rem;
+    gap: 0.625rem;
+  }
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
 `;
 
 const SecretKey = styled.code`
   flex: 1;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   color: ${({ theme }) => theme.colors.textPrimary};
   word-break: break-all;
-  letter-spacing: 2px;
-  line-height: 1.5;
+  letter-spacing: 1px;
+  line-height: 1.6;
   user-select: all;
+  text-align: center;
+
+  @media (min-width: 360px) {
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+  }
+
+  @media (min-width: 480px) {
+    font-size: 0.8125rem;
+    letter-spacing: 2px;
+    text-align: left;
+  }
 
   @media (min-width: 640px) {
     font-size: 0.875rem;
@@ -721,18 +751,30 @@ const SecretKey = styled.code`
 const CopySecretButton = styled.button<{ $copied?: boolean }>`
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: center;
+  gap: 0.375rem;
   background: ${({ $copied, theme }) =>
     $copied ? theme.colors.success : theme.colors.primary[500]};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  padding: 0.375rem 0.75rem;
-  font-size: 0.75rem;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  /* Touch-friendly: min 44px height for accessibility */
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  width: 100%;
+
+  @media (min-width: 480px) {
+    width: auto;
+    min-height: 36px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    border-radius: ${({ theme }) => theme.borderRadius.sm};
+  }
 
   &:hover {
     background: ${({ $copied, theme }) =>
@@ -758,7 +800,15 @@ const VerificationForm = styled.form`
 const DigitInputContainer = styled.div`
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
+
+  @media (min-width: 360px) {
+    gap: 0.375rem;
+  }
+
+  @media (min-width: 480px) {
+    gap: 0.5rem;
+  }
 
   @media (min-width: 640px) {
     gap: 0.75rem;
@@ -772,9 +822,10 @@ const pulse = keyframes`
 `;
 
 const DigitInput = styled.input<{ $filled: boolean; $error: boolean }>`
-  width: 40px;
-  height: 52px;
-  font-size: 1.5rem;
+  /* Touch-friendly: min 44px for both dimensions */
+  width: 36px;
+  height: 44px;
+  font-size: 1.25rem;
   font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: center;
   border: 2px solid ${({ $error, $filled, theme }) =>
@@ -786,6 +837,18 @@ const DigitInput = styled.input<{ $filled: boolean; $error: boolean }>`
   transition: all 0.2s ease;
   color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+
+  @media (min-width: 360px) {
+    width: 40px;
+    height: 48px;
+    font-size: 1.375rem;
+  }
+
+  @media (min-width: 480px) {
+    width: 44px;
+    height: 52px;
+    font-size: 1.5rem;
+  }
 
   @media (min-width: 640px) {
     width: 52px;
@@ -825,8 +888,10 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.875rem 1.5rem;
-  font-size: 1rem;
+  /* Touch-friendly: min 44px height */
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: white;
   background: ${({ disabled, theme }) =>
@@ -837,6 +902,20 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   transition: all 0.2s ease;
   box-shadow: ${({ disabled }) => disabled ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'};
 
+  @media (min-width: 360px) {
+    font-size: 0.9375rem;
+    padding: 0.875rem 1.25rem;
+  }
+
+  @media (min-width: 480px) {
+    font-size: 1rem;
+    padding: 0.875rem 1.5rem;
+  }
+
+  @media (min-width: 640px) {
+    padding: 1rem 1.5rem;
+  }
+
   &:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15), 0 3px 5px -1px rgba(0, 0, 0, 0.08);
@@ -844,10 +923,6 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
 
   &:active:not(:disabled) {
     transform: translateY(0);
-  }
-
-  @media (min-width: 640px) {
-    padding: 1rem 1.5rem;
   }
 `;
 
@@ -868,14 +943,20 @@ const CancelLink = styled.button`
   display: block;
   width: 100%;
   text-align: center;
-  margin-top: 1rem;
-  padding: 0.5rem;
+  margin-top: 0.75rem;
+  /* Touch-friendly: min 44px height */
+  min-height: 44px;
+  padding: 0.75rem 0.5rem;
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s;
+
+  @media (min-width: 480px) {
+    margin-top: 1rem;
+  }
 
   &:hover {
     color: ${({ theme }) => theme.colors.textPrimary};
