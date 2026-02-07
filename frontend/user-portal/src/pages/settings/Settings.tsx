@@ -5,7 +5,7 @@ import { getSpacingCategories, updateSpacingStandards, resetSpacingStandards } f
 import type { SpacingCategoryInfo, SpacingCategory } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
 import { useAuthStore } from '../../stores/auth.store';
-import { authService } from '../../services/auth.service';
+import { authService, type MfaStatusResponse } from '../../services/auth.service';
 import { useToastStore } from '../../stores/toast.store';
 
 // Common timezone options (IANA timezone names)
@@ -63,6 +63,10 @@ export function Settings() {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [prefsChanged, setPrefsChanged] = useState(false);
 
+  // MFA status state
+  const [mfaStatus, setMfaStatus] = useState<MfaStatusResponse | null>(null);
+  const [loadingMfa, setLoadingMfa] = useState(false);
+
   // Initialize preferences from user data
   useEffect(() => {
     if (user) {
@@ -102,7 +106,21 @@ export function Settings() {
 
   useEffect(() => {
     loadSpacingCategories();
+    loadMfaStatus();
   }, []);
+
+  const loadMfaStatus = async () => {
+    try {
+      setLoadingMfa(true);
+      const status = await authService.getMfaStatus();
+      setMfaStatus(status);
+    } catch (error) {
+      console.error('Error loading MFA status:', error);
+      // Don't show error - MFA status is not critical
+    } finally {
+      setLoadingMfa(false);
+    }
+  };
 
   const loadSpacingCategories = async () => {
     try {
@@ -401,8 +419,42 @@ export function Settings() {
         <SettingsContent>
           <SettingItem>
             <SettingLabel>Two-Factor Authentication</SettingLabel>
-            <SettingValue>Not Configured</SettingValue>
-            <SettingDescription>Add an extra layer of security to your account</SettingDescription>
+            {loadingMfa ? (
+              <SettingValue>Loading...</SettingValue>
+            ) : mfaStatus?.isEnabled ? (
+              <>
+                <MfaEnabledBadge>Enabled</MfaEnabledBadge>
+                {mfaStatus.backupCodesRemaining > 0 && (
+                  <SettingDescription>
+                    {mfaStatus.backupCodesRemaining} backup code{mfaStatus.backupCodesRemaining !== 1 ? 's' : ''} remaining
+                  </SettingDescription>
+                )}
+                {mfaStatus.backupCodesRemaining === 0 && (
+                  <MfaWarning>No backup codes remaining - generate new codes for account recovery</MfaWarning>
+                )}
+                {mfaStatus.lastUsed && (
+                  <SettingDescription>
+                    Last used: {new Date(mfaStatus.lastUsed).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </SettingDescription>
+                )}
+              </>
+            ) : mfaStatus?.setupRequired ? (
+              <>
+                <MfaPendingBadge>Setup Pending</MfaPendingBadge>
+                <SettingDescription>Complete MFA setup to secure your account</SettingDescription>
+              </>
+            ) : (
+              <>
+                <SettingValue>Not Configured</SettingValue>
+                <SettingDescription>Add an extra layer of security to your account</SettingDescription>
+              </>
+            )}
           </SettingItem>
 
           <SettingItem>
@@ -750,4 +802,31 @@ const PrefsButtonRow = styled.div`
   display: flex;
   gap: ${({ theme }: any) => theme.spacing.md};
   margin-top: ${({ theme }: any) => theme.spacing.md};
+`;
+
+// MFA Status styled components
+const MfaEnabledBadge = styled.span`
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  color: #059669;
+  background: #d1fae5;
+  border-radius: 4px;
+`;
+
+const MfaPendingBadge = styled.span`
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: 4px;
+`;
+
+const MfaWarning = styled.div`
+  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
+  color: ${({ theme }: any) => theme.colors.error[600]};
+  margin-top: ${({ theme }: any) => theme.spacing.xs};
 `;

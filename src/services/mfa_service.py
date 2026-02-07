@@ -710,14 +710,18 @@ class MFAService:
             user_id: User's UUID
 
         Returns:
-            MFAStatusResponse with current MFA state
+            MFAStatusResponse with current MFA state including:
+            - isEnabled: Whether MFA is currently enabled
+            - setupRequired: Whether MFA setup is pending
+            - backupCodesRemaining: Number of unused backup codes
+            - lastUsed: Last time MFA was used for authentication
 
         Raises:
             HTTPException: 404 if user not found
         """
         db = mongodb.get_database()
 
-        # Fetch user
+        # Fetch user with MFA-related fields
         user_doc = await db.users.find_one({"userId": user_id})
 
         if not user_doc:
@@ -728,28 +732,42 @@ class MFAService:
 
         mfa_enabled = user_doc.get("mfaEnabled", False)
         mfa_pending = bool(user_doc.get("mfaPendingSecret"))
-        has_backup_codes = len(user_doc.get("mfaBackupCodes", [])) > 0
+        backup_codes = user_doc.get("mfaBackupCodes", [])
+        backup_codes_remaining = len(backup_codes)
+        last_used = user_doc.get("mfaLastUsedAt")
 
         return MFAStatusResponse(
+            # New fields per feature #323
+            isEnabled=mfa_enabled,
+            setupRequired=mfa_pending,
+            backupCodesRemaining=backup_codes_remaining,
+            lastUsed=last_used,
+            # Legacy fields for backward compatibility
             mfaEnabled=mfa_enabled,
             mfaSetupPending=mfa_pending,
-            hasBackupCodes=has_backup_codes
+            hasBackupCodes=backup_codes_remaining > 0
         )
 
-    async def regenerate_backup_codes(self, user_id: str, totp_code: str) -> MFAEnableResponse:
+    async def regenerate_backup_codes(self, user_id: str, totp_code: str, password: str = None) -> MFAEnableResponse:
         """
         Regenerate backup codes (invalidates old ones)
 
+        Requires full authentication (password + TOTP code) for security.
+
         Args:
             user_id: User's UUID
-            totp_code: 6-digit TOTP code to verify identity
+            totp_code: 6-digit TOTP code to verify MFA ownership
+            password: User's password for additional security verification
 
         Returns:
             MFAEnableResponse with new backup codes
 
         Raises:
             HTTPException: 400 if MFA not enabled or invalid code
+            HTTPException: 401 if password is invalid
         """
+        from ..utils.security import verify_password
+
         db = mongodb.get_database()
 
         # Fetch user
@@ -766,6 +784,14 @@ class MFAService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="MFA is not enabled for this account"
             )
+
+        # Verify password (required for full authentication)
+        if password:
+            if not verify_password(password, user_doc["passwordHash"]):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid password"
+                )
 
         # Decrypt and verify TOTP code
         mfa_secret_encrypted = user_doc.get("mfaSecret")
@@ -790,18 +816,19 @@ class MFAService:
         # Generate new backup codes
         plain_codes, hashed_codes = self.generate_backup_codes()
 
-        # Update backup codes
+        # Update backup codes and log regeneration event
         await db.users.update_one(
             {"userId": user_id},
             {
                 "$set": {
                     "mfaBackupCodes": hashed_codes,
+                    "mfaBackupCodesRegeneratedAt": datetime.utcnow(),
                     "updatedAt": datetime.utcnow()
                 }
             }
         )
 
-        logger.info(f"Backup codes regenerated for user: {user_id}")
+        logger.info(f"Backup codes regenerated for user: {user_id} (all previous codes invalidated)")
 
         return MFAEnableResponse(
             enabled=True,

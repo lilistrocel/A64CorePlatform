@@ -25,7 +25,8 @@ from ...models.user import (
     MFADisableRequest,
     MFAStatusResponse,
     MFALoginResponse,
-    MFAVerifyLoginRequest
+    MFAVerifyLoginRequest,
+    MFARegenerateBackupCodesRequest
 )
 from ...models.mfa import MFALoginRequired
 from ...services.auth_service import auth_service
@@ -405,8 +406,22 @@ async def get_mfa_status(
     **Authentication:** Required (Bearer token)
 
     **Returns:**
-    - 200: MFA status (enabled/disabled, pending setup, has backup codes)
+    - 200: MFA status object with:
+        - isEnabled: Whether MFA is currently enabled
+        - setupRequired: Whether MFA setup is pending/required
+        - backupCodesRemaining: Number of unused backup codes
+        - lastUsed: Timestamp of last MFA use (null if never used)
     - 401: Not authenticated
+
+    **Example Response:**
+    ```json
+    {
+      "isEnabled": true,
+      "setupRequired": false,
+      "backupCodesRemaining": 8,
+      "lastUsed": "2026-02-07T10:30:00Z"
+    }
+    ```
     """
     return await mfa_service.get_mfa_status(current_user.userId)
 
@@ -484,22 +499,47 @@ async def disable_mfa(
 
 @router.post("/mfa/backup-codes", response_model=MFAEnableResponse)
 async def regenerate_backup_codes(
-    request: MFAEnableRequest,
+    request: MFARegenerateBackupCodesRequest,
     current_user: UserResponse = Depends(get_current_user)
 ) -> MFAEnableResponse:
     """
     Regenerate MFA backup codes (invalidates old ones)
 
-    **Authentication:** Required (Bearer token)
+    **Authentication:** Required (Bearer token + password + MFA code)
 
     **Request Body:**
-    - totpCode: 6-digit TOTP code to verify identity
+    - totpCode: 6-digit TOTP code to verify MFA ownership
+    - password: Current password for additional security verification
 
     **Returns:**
     - 200: New backup codes (old codes invalidated)
     - 400: MFA not enabled or invalid TOTP code
-    - 401: Not authenticated
+    - 401: Not authenticated or invalid password
+
+    **Security:** Requires full authentication (password + MFA code) to prevent
+    unauthorized backup code regeneration if session is compromised.
 
     **Important:** New backup codes are shown ONLY ONCE. Store them securely.
     """
-    return await mfa_service.regenerate_backup_codes(current_user.userId, request.totpCode)
+    return await mfa_service.regenerate_backup_codes(
+        user_id=current_user.userId,
+        totp_code=request.totpCode,
+        password=request.password
+    )
+
+
+@router.post("/mfa/backup-codes/regenerate", response_model=MFAEnableResponse)
+async def regenerate_backup_codes_alt(
+    request: MFARegenerateBackupCodesRequest,
+    current_user: UserResponse = Depends(get_current_user)
+) -> MFAEnableResponse:
+    """
+    Regenerate MFA backup codes (alternative path)
+
+    Same as POST /mfa/backup-codes - see that endpoint for documentation.
+    """
+    return await mfa_service.regenerate_backup_codes(
+        user_id=current_user.userId,
+        totp_code=request.totpCode,
+        password=request.password
+    )

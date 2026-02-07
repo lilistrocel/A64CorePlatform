@@ -290,3 +290,9 @@ class MFAVerifyLoginRequest(BaseModel):
     """Request to complete login with MFA verification"""
     mfaToken: str = Field(..., description="Temporary MFA token from login response")
     code: str = Field(..., min_length=6, max_length=9, description="6-digit TOTP code or backup code (XXXX-XXXX format)")
+
+
+class MFARegenerateBackupCodesRequest(BaseModel):
+    """Request to regenerate MFA backup codes (requires full authentication)"""
+    totpCode: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code to verify MFA ownership")
+    password: str = Field(..., min_length=1, description="Current password for additional security verification")

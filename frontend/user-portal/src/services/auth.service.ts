@@ -188,6 +188,26 @@ class AuthService {
     const token = localStorage.getItem('accessToken');
     return !!token;
   }
+
+  /**
+   * Get MFA status for the authenticated user
+   * Returns: isEnabled, setupRequired, backupCodesRemaining, lastUsed
+   */
+  async getMfaStatus(): Promise<MfaStatusResponse> {
+    const response = await apiClient.get<MfaStatusResponse>('/v1/auth/mfa/status');
+    return response.data;
+  }
+}
+
+export interface MfaStatusResponse {
+  isEnabled: boolean;
+  setupRequired: boolean;
+  backupCodesRemaining: number;
+  lastUsed: string | null;
+  // Legacy fields for backward compatibility
+  mfaEnabled?: boolean;
+  mfaSetupPending?: boolean;
+  hasBackupCodes?: boolean;
 }
 
 // Export singleton instance
