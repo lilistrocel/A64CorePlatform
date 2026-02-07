@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,12 +20,15 @@ export function Login() {
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get('expired') === 'true';
   const redirectTo = searchParams.get('redirect');
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, mfaRequired, mfaPendingToken, isAuthenticated } = useAuthStore();
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [loginEmail, setLoginEmail] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
@@ -32,14 +36,41 @@ export function Login() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       clearError();
+      setLocalError(null);
+      setLocalLoading(true);
+
+      // First, check if MFA is required using direct axios call
+      const response = await axios.post<any>('/api/v1/auth/login', data);
+
+      // Check if MFA is required
+      if (response.data.mfaRequired === true) {
+        const mfaResponse = response.data as MFALoginResponse;
+        // Redirect to MFA verification page with token
+        navigate('/mfa/verify', {
+          state: {
+            mfaToken: mfaResponse.mfaToken,
+            email: data.email,
+          },
+          replace: true,
+        });
+        return;
+      }
+
+      // No MFA required - use normal login flow
       await login(data);
       // Redirect to intended page if provided, otherwise dashboard
       const destination = redirectTo ? decodeURIComponent(redirectTo) : '/dashboard';
       navigate(destination);
-    } catch (err) {
-      // Error is handled by the store
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Invalid email or password. Please try again.';
+      setLocalError(typeof errorMessage === 'string' ? errorMessage : 'Invalid email or password. Please try again.');
+    } finally {
+      setLocalLoading(false);
     }
   };
+
+  const displayError = localError || error;
+  const displayLoading = localLoading || isLoading;
 
   return (
     <PageWrapper>
@@ -53,7 +84,7 @@ export function Login() {
             <SessionExpiredBanner role="alert" aria-live="assertive">Your session has expired. Please sign in again.</SessionExpiredBanner>
           )}
 
-          {error && <ErrorBanner role="alert" aria-live="assertive">{error}</ErrorBanner>}
+          {displayError && <ErrorBanner role="alert" aria-live="assertive">{displayError}</ErrorBanner>}
 
           <LoginForm onSubmit={handleSubmit(onSubmit)}>
             <Input
@@ -82,9 +113,9 @@ export function Login() {
               type="submit"
               variant="primary"
               fullWidth
-              disabled={isLoading}
+              disabled={displayLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {displayLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </LoginForm>
 

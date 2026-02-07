@@ -1,0 +1,638 @@
+import { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
+import { Button, Card } from '@a64core/shared';
+import { apiClient } from '../../services/api';
+import { useAuthStore } from '../../stores/auth.store';
+
+interface MFASetupResponse {
+  secret: string;
+  qrCodeUri: string;
+  qrCodeDataUrl: string | null;
+  message: string;
+}
+
+interface MFAEnableResponse {
+  enabled: boolean;
+  backupCodes: string[];
+  message: string;
+}
+
+export function MFASetupPage() {
+  const navigate = useNavigate();
+  const { user, loadUser } = useAuthStore();
+
+  const [step, setStep] = useState<'loading' | 'scan' | 'verify' | 'backup' | 'error'>('loading');
+  const [setupData, setSetupData] = useState<MFASetupResponse | null>(null);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [totpCode, setTotpCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [backupCodesCopied, setBackupCodesCopied] = useState(false);
+
+  // Initialize MFA setup from /api/v1/auth/mfa/setup on mount (POST request)
+  useEffect(() => {
+    const fetchSetupData = async () => {
+      try {
+        setStep('loading');
+        const response = await apiClient.post<MFASetupResponse>('/v1/auth/mfa/setup');
+        setSetupData(response.data);
+        setStep('scan');
+      } catch (err: any) {
+        const message = err.response?.data?.detail || 'Failed to initialize MFA setup';
+        setError(message);
+        setStep('error');
+      }
+    };
+
+    fetchSetupData();
+  }, []);
+
+  const handleVerify = async () => {
+    if (totpCode.length !== 6) {
+      setError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.post<MFAEnableResponse>('/v1/auth/mfa/enable', {
+        totpCode,
+      });
+
+      if (response.data.enabled) {
+        setBackupCodes(response.data.backupCodes);
+        setStep('backup');
+        // Reload user to update MFA status
+        await loadUser();
+      }
+    } catch (err: any) {
+      const message = err.response?.data?.detail || 'Invalid verification code. Please try again.';
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyBackupCodes = async () => {
+    const codesText = backupCodes.join('\n');
+    try {
+      await navigator.clipboard.writeText(codesText);
+      setBackupCodesCopied(true);
+      setTimeout(() => setBackupCodesCopied(false), 2000);
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textarea = document.createElement('textarea');
+      textarea.value = codesText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setBackupCodesCopied(true);
+      setTimeout(() => setBackupCodesCopied(false), 2000);
+    }
+  };
+
+  const handleFinish = () => {
+    navigate('/settings');
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setStep('loading');
+    window.location.reload();
+  };
+
+  if (step === 'loading') {
+    return (
+      <PageWrapper>
+        <SetupContainer>
+          <SetupCard>
+            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <Title>Setting Up Two-Factor Authentication</Title>
+            <LoadingSpinner>
+              <SpinnerIcon />
+              <LoadingText>Generating your secure key...</LoadingText>
+            </LoadingSpinner>
+          </SetupCard>
+        </SetupContainer>
+      </PageWrapper>
+    );
+  }
+
+  if (step === 'error') {
+    return (
+      <PageWrapper>
+        <SetupContainer>
+          <SetupCard>
+            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <Title>Setup Failed</Title>
+            <ErrorBanner>{error}</ErrorBanner>
+            <ButtonGroup>
+              <Button variant="primary" onClick={handleRetry}>
+                Try Again
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/settings')}>
+                Back to Settings
+              </Button>
+            </ButtonGroup>
+          </SetupCard>
+        </SetupContainer>
+      </PageWrapper>
+    );
+  }
+
+  if (step === 'backup') {
+    return (
+      <PageWrapper>
+        <SetupContainer>
+          <SetupCard>
+            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <SuccessIcon>&#10003;</SuccessIcon>
+            <Title>MFA Enabled Successfully!</Title>
+            <Subtitle>Save your backup codes in a secure location. You'll need them if you lose access to your authenticator app.</Subtitle>
+
+            <WarningBanner>
+              <WarningIcon>&#9888;</WarningIcon>
+              <strong>Important:</strong> These codes are shown only once. Store them safely!
+            </WarningBanner>
+
+            <BackupCodesContainer>
+              <BackupCodesGrid>
+                {backupCodes.map((code, index) => (
+                  <BackupCode key={index}>{code}</BackupCode>
+                ))}
+              </BackupCodesGrid>
+              <CopyButton onClick={handleCopyBackupCodes}>
+                {backupCodesCopied ? '&#10003; Copied!' : 'Copy All Codes'}
+              </CopyButton>
+            </BackupCodesContainer>
+
+            <FinishButton variant="primary" onClick={handleFinish} fullWidth>
+              I've Saved My Backup Codes
+            </FinishButton>
+          </SetupCard>
+        </SetupContainer>
+      </PageWrapper>
+    );
+  }
+
+  return (
+    <PageWrapper>
+      <SetupContainer>
+        <SetupCard>
+          <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+          <Title>Set Up Two-Factor Authentication</Title>
+          <Subtitle>Scan the QR code with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)</Subtitle>
+
+          {/* Step 1: QR Code Display */}
+          <StepSection $active={step === 'scan'}>
+            <StepNumber>1</StepNumber>
+            <StepContent>
+              <StepTitle>Scan QR Code</StepTitle>
+
+              {setupData?.qrCodeDataUrl ? (
+                <QRCodeContainer>
+                  <QRCodeImage src={setupData.qrCodeDataUrl} alt="MFA QR Code" />
+                </QRCodeContainer>
+              ) : (
+                <QRCodePlaceholder>
+                  <QRCodeFallback>
+                    Unable to display QR code. Please use manual entry below.
+                  </QRCodeFallback>
+                </QRCodePlaceholder>
+              )}
+
+              <ManualEntrySection>
+                <ManualEntryLabel>Can't scan? Enter this key manually:</ManualEntryLabel>
+                <SecretKeyBox>
+                  <SecretKey>{setupData?.secret}</SecretKey>
+                  <CopySecretButton onClick={() => {
+                    if (setupData?.secret) {
+                      navigator.clipboard.writeText(setupData.secret);
+                    }
+                  }}>
+                    Copy
+                  </CopySecretButton>
+                </SecretKeyBox>
+              </ManualEntrySection>
+            </StepContent>
+          </StepSection>
+
+          {/* Step 2: Verification */}
+          <StepSection $active={step === 'scan' || step === 'verify'}>
+            <StepNumber>2</StepNumber>
+            <StepContent>
+              <StepTitle>Enter Verification Code</StepTitle>
+              <StepDescription>Enter the 6-digit code from your authenticator app to verify setup.</StepDescription>
+
+              {error && <ErrorBanner>{error}</ErrorBanner>}
+
+              <VerificationForm onSubmit={(e) => { e.preventDefault(); handleVerify(); }}>
+                <CodeInput
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={totpCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setTotpCode(value);
+                    setError(null);
+                  }}
+                  autoFocus={step === 'verify'}
+                  aria-label="6-digit verification code"
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={totpCode.length !== 6 || isSubmitting}
+                  fullWidth
+                >
+                  {isSubmitting ? 'Verifying...' : 'Verify & Enable MFA'}
+                </Button>
+              </VerificationForm>
+            </StepContent>
+          </StepSection>
+
+          <CancelLink onClick={() => navigate('/settings')}>
+            Cancel Setup
+          </CancelLink>
+        </SetupCard>
+      </SetupContainer>
+    </PageWrapper>
+  );
+}
+
+// Styled Components
+const PageWrapper = styled.div`
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+`;
+
+const SetupContainer = styled.div`
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  padding: 1rem;
+
+  @media (min-width: 640px) {
+    padding: 2rem;
+  }
+`;
+
+const SetupCard = styled.div`
+  background: ${({ theme }) => theme.colors.background};
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+
+  @media (min-width: 640px) {
+    padding: 2rem;
+    max-width: 520px;
+    border-radius: ${({ theme }) => theme.borderRadius.xl};
+  }
+`;
+
+const Logo = styled.div`
+  text-align: center;
+  margin-bottom: 0.75rem;
+
+  @media (min-width: 640px) {
+    margin-bottom: 1rem;
+  }
+`;
+
+const LogoImg = styled.img`
+  height: 48px;
+  width: auto;
+  display: block;
+  margin: 0 auto;
+
+  @media (min-width: 640px) {
+    height: 60px;
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 1.5rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  text-align: center;
+  margin: 0 0 0.5rem 0;
+
+  @media (min-width: 640px) {
+    font-size: 1.75rem;
+  }
+`;
+
+const Subtitle = styled.p`
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-align: center;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+
+  @media (min-width: 640px) {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+`;
+
+const LoadingSpinner = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 0;
+`;
+
+const SpinnerIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+const LoadingText = styled.p`
+  margin-top: 1rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.875rem;
+`;
+
+const ErrorBanner = styled.div`
+  background: ${({ theme }) => `${theme.colors.error}10`};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  color: ${({ theme }) => theme.colors.error};
+  font-size: 0.875rem;
+  text-align: center;
+`;
+
+const WarningBanner = styled.div`
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  color: #92400e;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const WarningIcon = styled.span`
+  font-size: 1.25rem;
+`;
+
+const SuccessIcon = styled.div`
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 1rem;
+  background: ${({ theme }) => theme.colors.success};
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: bold;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+`;
+
+const StepSection = styled.div<{ $active: boolean }>`
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: ${({ $active, theme }) => $active ? theme.colors.neutral[50] : 'transparent'};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  opacity: ${({ $active }) => $active ? 1 : 0.6};
+  transition: all 0.3s ease;
+`;
+
+const StepNumber = styled.div`
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-size: 0.875rem;
+`;
+
+const StepContent = styled.div`
+  flex: 1;
+`;
+
+const StepTitle = styled.h3`
+  font-size: 1rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  margin: 0 0 0.5rem 0;
+`;
+
+const StepDescription = styled.p`
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin: 0 0 1rem 0;
+`;
+
+const QRCodeContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  background: white;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  margin-bottom: 1rem;
+`;
+
+const QRCodeImage = styled.img`
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+`;
+
+const QRCodePlaceholder = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  margin-bottom: 1rem;
+`;
+
+const QRCodeFallback = styled.p`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.875rem;
+  text-align: center;
+`;
+
+const ManualEntrySection = styled.div`
+  margin-top: 1rem;
+`;
+
+const ManualEntryLabel = styled.p`
+  font-size: 0.75rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin: 0 0 0.5rem 0;
+`;
+
+const SecretKeyBox = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 0.5rem 0.75rem;
+`;
+
+const SecretKey = styled.code`
+  flex: 1;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  word-break: break-all;
+  letter-spacing: 1px;
+`;
+
+const CopySecretButton = styled.button`
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary[600]};
+  }
+`;
+
+const VerificationForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const CodeInput = styled.input`
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.5rem;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+  }
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.neutral[300]};
+    letter-spacing: 0.5rem;
+  }
+`;
+
+const BackupCodesContainer = styled.div`
+  background: ${({ theme }) => theme.colors.neutral[50]};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+`;
+
+const BackupCodesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+`;
+
+const BackupCode = styled.div`
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  text-align: center;
+`;
+
+const CopyButton = styled.button`
+  width: 100%;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 4px;
+  color: ${({ theme }) => theme.colors.primary[600]};
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[50]};
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+`;
+
+const FinishButton = styled(Button)`
+  margin-top: 0.5rem;
+`;
+
+const CancelLink = styled.button`
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
+    text-decoration: underline;
+  }
+`;

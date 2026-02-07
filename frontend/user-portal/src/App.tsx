@@ -28,6 +28,8 @@ const PageLoader = () => (
 // Auth pages (small, load immediately for login)
 const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
 const Register = lazy(() => import('./pages/auth/Register').then(m => ({ default: m.Register })));
+const MFASetupPage = lazy(() => import('./pages/auth/MFASetupPage').then(m => ({ default: m.MFASetupPage })));
+const MFAVerifyPage = lazy(() => import('./pages/auth/MFAVerifyPage').then(m => ({ default: m.MFAVerifyPage })));
 
 // Core pages
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -108,9 +110,15 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/mfa/verify" element={<MFAVerifyPage />} />
 
             {/* Debug routes (development only) */}
             <Route path="/debug/clear-cache" element={<ClearCache />} />
+
+            {/* MFA Setup - Protected but no main layout */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/mfa/setup" element={<MFASetupPage />} />
+            </Route>
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>

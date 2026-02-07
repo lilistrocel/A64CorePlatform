@@ -1,12 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authService, type User, type LoginCredentials, type RegisterData } from '../services/auth.service';
+import { authService, isMfaRequired, type User, type LoginCredentials, type RegisterData } from '../services/auth.service';
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+
+  // MFA state for two-step login flow
+  mfaRequired: boolean;
+  mfaPendingToken: string | null;
+  mfaPendingUserId: string | null;
 
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -15,15 +20,22 @@ interface AuthState {
   loadUser: () => Promise<void>;
   clearError: () => void;
   initializeAuth: () => void;
+  verifyMfa: (code: string) => Promise<void>;
+  clearMfaState: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
+
+      // MFA state
+      mfaRequired: false,
+      mfaPendingToken: null,
+      mfaPendingUserId: null,
 
       initializeAuth: () => {
         // Check if tokens exist in localStorage
@@ -35,20 +47,42 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: async (credentials) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, mfaRequired: false, mfaPendingToken: null, mfaPendingUserId: null });
         try {
           const response = await authService.login(credentials);
+
+          // Check if MFA verification is required
+          if (isMfaRequired(response)) {
+            // Store temporary MFA token and redirect to MFA verification
+            set({
+              isLoading: false,
+              mfaRequired: true,
+              mfaPendingToken: response.mfaToken,
+              mfaPendingUserId: response.userId,
+              error: null,
+            });
+            // Don't throw - login page should check mfaRequired and redirect
+            return;
+          }
+
+          // Normal login - no MFA required
           set({
             user: response.user,
             isAuthenticated: true,
             isLoading: false,
             error: null,
+            mfaRequired: false,
+            mfaPendingToken: null,
+            mfaPendingUserId: null,
           });
         } catch (error: any) {
           const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Invalid email or password. Please try again.';
           set({
             isLoading: false,
             error: typeof errorMessage === 'string' ? errorMessage : 'Invalid email or password. Please try again.',
+            mfaRequired: false,
+            mfaPendingToken: null,
+            mfaPendingUserId: null,
           });
           throw error;
         }
@@ -83,6 +117,9 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
             error: null,
+            mfaRequired: false,
+            mfaPendingToken: null,
+            mfaPendingUserId: null,
           });
         } catch (error: any) {
           set({ isLoading: false });
@@ -91,6 +128,9 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             error: null,
+            mfaRequired: false,
+            mfaPendingToken: null,
+            mfaPendingUserId: null,
           });
         }
       },
@@ -122,6 +162,43 @@ export const useAuthStore = create<AuthState>()(
 
       clearError: () => {
         set({ error: null });
+      },
+
+      verifyMfa: async (code: string) => {
+        const { mfaPendingToken } = get();
+        if (!mfaPendingToken) {
+          set({ error: 'No MFA session pending. Please login again.' });
+          throw new Error('No MFA session pending');
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authService.verifyMfa(mfaPendingToken, code);
+          set({
+            user: response.user,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+            mfaRequired: false,
+            mfaPendingToken: null,
+            mfaPendingUserId: null,
+          });
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Invalid verification code. Please try again.';
+          set({
+            isLoading: false,
+            error: typeof errorMessage === 'string' ? errorMessage : 'Invalid verification code. Please try again.',
+          });
+          throw error;
+        }
+      },
+
+      clearMfaState: () => {
+        set({
+          mfaRequired: false,
+          mfaPendingToken: null,
+          mfaPendingUserId: null,
+        });
       },
     }),
     {
