@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
 import styled from 'styled-components';
 import { Spinner } from '@a64core/shared';
+import { getCachedVerifyState } from '../../hooks/queries/useMFA';
 
 /**
  * MFAVerifyGuard - Route guard for /mfa/verify
@@ -12,10 +13,18 @@ import { Spinner } from '@a64core/shared';
  *
  * If no MFA token exists, redirect to login.
  * If user is already authenticated, redirect to dashboard.
+ *
+ * Feature #346: Also checks sessionStorage for cached MFA verify state
+ * to support state restoration after app switch or page refresh.
  */
 export function MFAVerifyGuard() {
   const { isAuthenticated, mfaPendingToken, mfaRequired, isLoading } = useAuthStore();
   const location = useLocation();
+
+  // Feature #346: Check sessionStorage for cached verify state
+  // This allows users to return to the MFA verify page after app switch
+  const cachedVerifyState = getCachedVerifyState();
+  const hasValidMfaSession = mfaPendingToken || mfaRequired || cachedVerifyState?.token;
 
   // Show loading spinner while checking auth state
   if (isLoading) {
@@ -32,9 +41,9 @@ export function MFAVerifyGuard() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // If no MFA token pending, redirect to login
+  // If no MFA token pending (in store or sessionStorage), redirect to login
   // The user needs to go through login flow first to get the MFA token
-  if (!mfaPendingToken && !mfaRequired) {
+  if (!hasValidMfaSession) {
     return <Navigate to="/login" replace />;
   }
 

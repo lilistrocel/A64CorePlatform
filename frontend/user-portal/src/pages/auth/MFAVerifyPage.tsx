@@ -1198,3 +1198,40 @@ const SessionTimerValue = styled.span`
   font-family: 'Courier New', monospace;
   color: ${({ theme }) => theme.colors.textPrimary};
 `;
+
+// Feature #347: Mobile reassurance text for app switching
+const MobileReassuranceText = styled.p`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin: 0 0 1rem 0;
+  padding: 0.625rem 0.75rem;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #10b981;
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  line-height: 1.4;
+  animation: slideInFade 0.3s ease-out;
+
+  @keyframes slideInFade {
+    from {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Only show on mobile devices */
+  @media (min-width: 768px) {
+    display: none;
+  }
+`;
+
+const MobileReassuranceIcon = styled.span`
+  font-size: 1rem;
+  flex-shrink: 0;
+`;
