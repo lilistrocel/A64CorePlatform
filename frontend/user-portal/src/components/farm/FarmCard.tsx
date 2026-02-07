@@ -55,6 +55,10 @@ const CardHeader = styled.div`
 const FarmIcon = styled.div`
   font-size: 32px;
   margin-bottom: 8px;
+
+  @media (max-width: 480px) {
+    font-size: 28px;
+  }
 `;
 
 const FarmTitle = styled.h3`
@@ -86,6 +90,11 @@ const Location = styled.div`
   font-size: 14px;
   color: #616161;
   margin-bottom: 16px;
+  word-break: break-word; /* Handle long location text */
+
+  @media (max-width: 480px) {
+    font-size: 13px;
+  }
 `;
 
 const LocationIcon = styled.span`
@@ -111,12 +120,20 @@ const StatLabel = styled.span`
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
+
+  @media (max-width: 480px) {
+    font-size: 11px; /* Slightly smaller on mobile for labels */
+  }
 `;
 
 const StatValue = styled.span`
   font-size: 18px;
   font-weight: 600;
   color: #212121;
+
+  @media (max-width: 480px) {
+    font-size: 16px;
+  }
 `;
 
 const BlockStats = styled.div`
