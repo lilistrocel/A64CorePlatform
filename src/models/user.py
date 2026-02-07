@@ -117,6 +117,8 @@ class TokenResponse(BaseModel):
     tokenType: str = Field(default="bearer", alias="token_type")
     expiresIn: int = Field(..., alias="expires_in")
     user: UserResponse
+    warning: Optional[str] = Field(None, description="Security warning message (e.g., low backup codes)")
+    backupCodesRemaining: Optional[int] = Field(None, alias="backup_codes_remaining", description="Remaining MFA backup codes (only when backup code used)")
 
     class Config:
         """Pydantic config"""

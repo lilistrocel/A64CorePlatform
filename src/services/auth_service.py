@@ -1001,7 +1001,7 @@ class AuthService:
             )
 
         # Verify MFA code using MFA service
-        is_valid, used_backup_code = await mfa_service.verify_mfa_code(user_id, code)
+        is_valid, used_backup_code, remaining_backup_codes = await mfa_service.verify_mfa_code(user_id, code)
 
         if not is_valid:
             # Increment failed attempts
@@ -1085,12 +1085,24 @@ class AuthService:
             updatedAt=user_doc["updatedAt"]
         )
 
+        # Prepare warning message if backup code was used
+        warning_message = None
+        backup_codes_remaining = None
+        if used_backup_code and remaining_backup_codes >= 0:
+            backup_codes_remaining = remaining_backup_codes
+            if remaining_backup_codes == 0:
+                warning_message = "This was your last backup code! Please regenerate backup codes immediately."
+            elif remaining_backup_codes <= 3:
+                warning_message = f"Warning: Only {remaining_backup_codes} backup codes remaining. Consider regenerating them."
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
             expires_in=3600,
-            user=user_response
+            user=user_response,
+            warning=warning_message,
+            backup_codes_remaining=backup_codes_remaining
         )
 
 

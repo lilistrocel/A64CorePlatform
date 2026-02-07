@@ -625,7 +625,7 @@ class MFAService:
 
         return {"message": "MFA has been disabled successfully"}
 
-    async def verify_mfa_code(self, user_id: str, code: str) -> Tuple[bool, bool]:
+    async def verify_mfa_code(self, user_id: str, code: str) -> Tuple[bool, bool, int]:
         """
         Verify an MFA code (TOTP or backup code) during login
 
@@ -634,7 +634,10 @@ class MFAService:
             code: TOTP code or backup code
 
         Returns:
-            Tuple of (is_valid, used_backup_code)
+            Tuple of (is_valid, used_backup_code, remaining_backup_codes)
+            - is_valid: True if code verification succeeded
+            - used_backup_code: True if a backup code was used
+            - remaining_backup_codes: Number of backup codes remaining (or -1 if not applicable)
 
         Raises:
             HTTPException: 404 if user not found
@@ -671,11 +674,11 @@ class MFAService:
                 user_id, code, mfa_secret
             )
             if is_valid:
-                return True, False
+                return True, False, -1  # TOTP used, backup codes not relevant
             elif error_msg and "already used" in error_msg.lower():
                 # Replay attack detected, don't fall through to backup codes
                 logger.warning(f"TOTP replay detected for user {user_id}, not checking backup codes")
-                return False, False
+                return False, False, -1
 
         # Try backup code
         is_valid, code_index = self.verify_backup_code(code, backup_codes)
@@ -683,6 +686,7 @@ class MFAService:
         if is_valid:
             # Remove used backup code
             backup_codes.pop(code_index)
+            remaining_codes = len(backup_codes)
             await db.users.update_one(
                 {"userId": user_id},
                 {
@@ -692,10 +696,10 @@ class MFAService:
                     }
                 }
             )
-            logger.info(f"Backup code used for user: {user_id}. {len(backup_codes)} codes remaining.")
-            return True, True
+            logger.info(f"Backup code used for user: {user_id}. {remaining_codes} codes remaining.")
+            return True, True, remaining_codes
 
-        return False, False
+        return False, False, -1
 
     async def get_mfa_status(self, user_id: str) -> MFAStatusResponse:
         """
