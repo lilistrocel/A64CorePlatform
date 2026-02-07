@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import type { PurchaseOrder } from '../../types/sales';
+import { formatCurrency, formatNumber } from '../../utils/formatNumber';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -295,8 +296,8 @@ export function PurchaseOrderTable({ purchaseOrders, onEdit, onDelete, onUpdateS
               <TableCell>
                 {po.expectedDeliveryDate ? new Date(po.expectedDeliveryDate).toLocaleDateString() : '-'}
               </TableCell>
-              <TableCell>{po.items.length} items</TableCell>
-              <TableCell>{po.total ? `$${po.total.toFixed(2)}` : '-'}</TableCell>
+              <TableCell>{formatNumber(po.items.length)} items</TableCell>
+              <TableCell>{po.total ? formatCurrency(po.total, 'USD') : '-'}</TableCell>
               <TableCell>
                 <Actions>
                   {onEdit && po.status === 'draft' && (

@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { salesApi } from '../../services/salesService';
+import { formatNumber, formatCurrency } from '../../utils';
 import type { SalesDashboardStats } from '../../types/sales';
 
 // ============================================================================
@@ -270,22 +271,22 @@ export function SalesDashboardPage() {
       <StatsGrid>
         <StatCard>
           <StatLabel>Total Orders</StatLabel>
-          <StatValue>{stats.totalOrders}</StatValue>
+          <StatValue>{formatNumber(stats.totalOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Confirmed</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{stats.confirmedOrders}</StatValue>
+          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.confirmedOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Shipped</StatLabel>
-          <StatValue style={{ color: '#8B5CF6' }}>{stats.shippedOrders}</StatValue>
+          <StatValue style={{ color: '#8B5CF6' }}>{formatNumber(stats.shippedOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Delivered</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{stats.deliveredOrders}</StatValue>
+          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.deliveredOrders)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -293,25 +294,25 @@ export function SalesDashboardPage() {
         <StatCard>
           <StatLabel>Total Revenue</StatLabel>
           <CurrencyValue style={{ color: '#10B981' }}>
-            {salesApi.formatCurrency(stats.totalRevenue)}
+            {formatCurrency(stats.totalRevenue, 'AED')}
           </CurrencyValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Pending Payments</StatLabel>
           <CurrencyValue style={{ color: '#F59E0B' }}>
-            {salesApi.formatCurrency(stats.pendingPayments)}
+            {formatCurrency(stats.pendingPayments, 'AED')}
           </CurrencyValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Available Stock</StatLabel>
-          <StatValue>{stats.availableInventory}</StatValue>
+          <StatValue>{formatNumber(stats.availableInventory)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Reserved Stock</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{stats.reservedInventory}</StatValue>
+          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.reservedInventory)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -326,7 +327,7 @@ export function SalesDashboardPage() {
                   onClick={() => navigate(`/sales/orders/${order.orderId}`)}
                 >
                   <OrderCode>{order.orderCode}</OrderCode>
-                  <OrderAmount>{salesApi.formatCurrency(order.total)}</OrderAmount>
+                  <OrderAmount>{formatCurrency(order.total, 'AED')}</OrderAmount>
                 </OrderItem>
               ))}
             </OrderList>
