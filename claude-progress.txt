@@ -3651,3 +3651,51 @@ NOTES FOR NEXT SESSION:
 - Frontend Settings page displays real MFA status from API
 - Test admin: farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
 - Test user: testadmin@a64core.com / TestPass123@ (user, MFA disabled)
+
+== Session: 2026-02-07 (Agent Batch #330, #331) ==
+Agent: Features #330, #331 - MFA Flow State Management
+
+COMPLETED:
+- Feature #330: Auth store MFA state management [PASSING]
+  - Added mfaRequired state to auth store
+  - Added mfaPendingToken for temporary token between password and MFA verification
+  - Added mfaPendingUserId to track user during MFA flow
+  - Updated login action to detect mfaRequired response from backend
+  - If mfaRequired, store temp token and redirect to /mfa/verify
+  - Added verifyMfa action to complete MFA verification with code
+  - Added clearMfaState action to reset MFA state
+  - Login page updated to use store's login action and check mfaRequired
+  - MFAVerifyPage updated to read token from auth store as fallback
+  - Verified: User with MFA enabled is redirected to /mfa/verify after password entry
+  - Verified: User without MFA goes directly to dashboard
+  - Zero console errors
+  - Screenshots: feature330-mfa-verify-redirect.png, feature330-normal-login-success.png
+
+- Feature #331: Protected route MFA enforcement [PASSING]
+  - Updated ProtectedRoute component to check user.mfaSetupRequired
+  - If MFA setup required and not enabled, redirect to /mfa/setup
+  - Added MFA_SETUP_ALLOWED_ROUTES: ['/mfa/setup', '/logout']
+  - Implemented MFA setup banner: "🔐 Please set up two-factor authentication to continue using the platform."
+  - Banner shows at top of page with amber gradient background
+  - After MFA setup complete (mfaSetupRequired=false), allow access to all protected routes
+  - Verified: User with mfaSetupRequired=true redirected to /mfa/setup
+  - Verified: Navigation to /dashboard redirects back to /mfa/setup
+  - Verified: User with mfaSetupRequired=false accesses dashboard normally
+  - Zero console errors
+  - Screenshots: feature331-mfa-setup-redirect-with-banner.png, feature331-normal-access-after-mfa-complete.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/stores/auth.store.ts: Added MFA state, verifyMfa, clearMfaState
+- frontend/user-portal/src/services/auth.service.ts: Added MfaLoginRequiredResponse, isMfaRequired, updated login return type
+- frontend/user-portal/src/pages/auth/Login.tsx: Use store's login action, redirect on mfaRequired
+- frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx: Read token from auth store as fallback
+- frontend/user-portal/src/components/common/ProtectedRoute.tsx: Added MFA setup enforcement and banner
+
+CURRENT STATUS: 329/336 features passing (97.9%)
+
+NOTES FOR NEXT SESSION:
+- MFA flow: login -> mfaRequired -> /mfa/verify -> verifyMfa -> dashboard
+- MFA setup enforcement: mfaSetupRequired=true -> /mfa/setup -> complete setup -> normal access
+- Test users:
+  - farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
+  - admin_f24_test@example.com / TestPass123@ (admin, can toggle mfaSetupRequired for testing)
