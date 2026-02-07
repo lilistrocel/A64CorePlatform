@@ -661,3 +661,333 @@ class LoginRateLimiter:
 
 # Global login rate limiter instance
 login_rate_limiter = LoginRateLimiter()
+
+
+class MFARateLimiter:
+    """
+    Specialized rate limiter for MFA verification attempts
+
+    Prevents brute force attacks on 6-digit TOTP codes:
+    - Max 5 failed attempts per 15 minutes (same as login)
+    - Temporary lockout after limit reached
+    - Uses Redis with in-memory fallback
+
+    Feature #319: MFA rate limiting
+    """
+
+    def __init__(self):
+        # Redis connection (lazily initialized)
+        self.redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
+        self._redis: Optional[Redis] = None
+        self._pool: Optional[ConnectionPool] = None
+        self._redis_available = False
+        self._fallback_warning_logged = False
+
+        # In-memory fallback storage
+        self.failed_attempts: Dict[str, list] = {}
+
+        self.max_attempts = 5
+        self.lockout_duration = timedelta(minutes=15)
+        self.lockout_seconds = int(self.lockout_duration.total_seconds())
+
+    async def _ensure_redis_connection(self) -> bool:
+        """
+        Lazily initialize Redis connection with connection pooling.
+
+        Returns:
+            True if Redis is available, False otherwise
+        """
+        if self._redis is not None:
+            return self._redis_available
+
+        try:
+            # Create connection pool
+            self._pool = ConnectionPool.from_url(
+                self.redis_url,
+                max_connections=10,
+                decode_responses=True,
+                socket_timeout=5,
+                socket_connect_timeout=5
+            )
+
+            self._redis = Redis(connection_pool=self._pool)
+
+            # Test connection
+            await self._redis.ping()
+            self._redis_available = True
+
+            logger.info(f"[MFA Rate Limiter] Connected to Redis at {self.redis_url}")
+            return True
+
+        except (RedisError, RedisConnectionError) as e:
+            self._redis_available = False
+            if not self._fallback_warning_logged:
+                logger.warning(
+                    f"[MFA Rate Limiter] Redis connection failed: {str(e)}. "
+                    "Falling back to in-memory MFA rate limiting."
+                )
+                self._fallback_warning_logged = True
+            return False
+
+    async def _get_attempts_redis(self, user_id: str) -> list:
+        """
+        Get failed MFA attempts from Redis.
+
+        Key pattern: mfa_attempts:{user_id}
+        Value: List of timestamp strings
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            List of attempt timestamps (as floats)
+        """
+        try:
+            redis_key = f"mfa_attempts:{user_id}"
+
+            # Get all attempts (LRANGE 0 -1 gets entire list)
+            attempts_str = await self._redis.lrange(redis_key, 0, -1)
+
+            if not attempts_str:
+                return []
+
+            # Convert string timestamps to floats
+            attempts = [float(ts) for ts in attempts_str]
+
+            # Filter out attempts older than lockout window
+            now = time.time()
+            cutoff = now - self.lockout_seconds
+            recent_attempts = [ts for ts in attempts if ts > cutoff]
+
+            # If we filtered out old attempts, clean up Redis
+            if len(recent_attempts) < len(attempts):
+                await self._redis.delete(redis_key)
+                if recent_attempts:
+                    # Re-add only recent attempts
+                    await self._redis.rpush(redis_key, *[str(ts) for ts in recent_attempts])
+                    await self._redis.expire(redis_key, self.lockout_seconds)
+
+            return recent_attempts
+
+        except (RedisError, RedisConnectionError, ValueError) as e:
+            logger.warning(f"[MFA Rate Limiter] Redis get error for {user_id}: {str(e)}")
+            self._redis_available = False
+            raise
+
+    async def _record_attempt_redis(self, user_id: str) -> int:
+        """
+        Record a failed MFA attempt in Redis.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Current attempt count
+        """
+        try:
+            redis_key = f"mfa_attempts:{user_id}"
+            current_time = time.time()
+
+            # Add attempt to list (LPUSH adds to head)
+            await self._redis.lpush(redis_key, str(current_time))
+
+            # Trim list to max_attempts (keep most recent)
+            await self._redis.ltrim(redis_key, 0, self.max_attempts - 1)
+
+            # Set TTL (15 minutes)
+            await self._redis.expire(redis_key, self.lockout_seconds)
+
+            # Get current count
+            count = await self._redis.llen(redis_key)
+            return count
+
+        except (RedisError, RedisConnectionError) as e:
+            logger.warning(f"[MFA Rate Limiter] Redis record error for {user_id}: {str(e)}")
+            self._redis_available = False
+            raise
+
+    async def _clear_attempts_redis(self, user_id: str) -> None:
+        """
+        Clear failed MFA attempts in Redis.
+
+        Args:
+            user_id: User UUID
+        """
+        try:
+            redis_key = f"mfa_attempts:{user_id}"
+            await self._redis.delete(redis_key)
+
+        except (RedisError, RedisConnectionError) as e:
+            logger.warning(f"[MFA Rate Limiter] Redis clear error for {user_id}: {str(e)}")
+            self._redis_available = False
+            raise
+
+    def _get_attempts_memory(self, user_id: str) -> list:
+        """
+        Get failed MFA attempts from in-memory storage (fallback).
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            List of recent attempt timestamps
+        """
+        now = datetime.utcnow()
+        window_start = now - self.lockout_duration
+
+        # Clean old attempts
+        if user_id in self.failed_attempts:
+            self.failed_attempts[user_id] = [
+                attempt_time for attempt_time in self.failed_attempts[user_id]
+                if attempt_time > window_start
+            ]
+        else:
+            self.failed_attempts[user_id] = []
+
+        return self.failed_attempts[user_id]
+
+    def _record_attempt_memory(self, user_id: str) -> int:
+        """
+        Record a failed MFA attempt in memory (fallback).
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Current attempt count
+        """
+        if user_id not in self.failed_attempts:
+            self.failed_attempts[user_id] = []
+
+        self.failed_attempts[user_id].append(datetime.utcnow())
+        return len(self.failed_attempts[user_id])
+
+    def _clear_attempts_memory(self, user_id: str) -> None:
+        """
+        Clear failed MFA attempts in memory (fallback).
+
+        Args:
+            user_id: User UUID
+        """
+        if user_id in self.failed_attempts:
+            del self.failed_attempts[user_id]
+
+    async def check_mfa_attempts(self, user_id: str) -> None:
+        """
+        Check if user is locked out due to failed MFA attempts
+
+        Args:
+            user_id: User UUID
+
+        Raises:
+            HTTPException: 429 if account is temporarily locked
+        """
+        redis_connected = await self._ensure_redis_connection()
+
+        # Get attempts from Redis or memory
+        if redis_connected:
+            try:
+                attempts = await self._get_attempts_redis(user_id)
+            except (RedisError, RedisConnectionError):
+                # Fallback to memory
+                attempts = self._get_attempts_memory(user_id)
+        else:
+            attempts = self._get_attempts_memory(user_id)
+
+        attempt_count = len(attempts)
+
+        # Check if locked out
+        if attempt_count >= self.max_attempts:
+            # Calculate remaining lockout time
+            if redis_connected:
+                # Attempts are timestamps (floats)
+                oldest_attempt = min(attempts)
+                unlock_time = oldest_attempt + self.lockout_seconds
+                remaining = int((unlock_time - time.time()) / 60)
+            else:
+                # Attempts are datetime objects
+                oldest_attempt = min(attempts)
+                unlock_time = oldest_attempt + self.lockout_duration
+                remaining = int((unlock_time - datetime.utcnow()).total_seconds() / 60)
+
+            # Ensure remaining is at least 1 minute
+            remaining = max(1, remaining)
+
+            logger.warning(
+                f"[MFA Rate Limiter] SECURITY: User {user_id} locked out "
+                f"after {attempt_count} failed MFA attempts. "
+                f"Lockout expires in {remaining} minutes."
+            )
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed MFA verification attempts. Try again in {remaining} minutes.",
+                headers={
+                    "Retry-After": str(remaining * 60),
+                    "X-MFA-Lockout": "true"
+                }
+            )
+
+    async def record_failed_attempt(self, user_id: str) -> int:
+        """
+        Record a failed MFA attempt
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Current attempt count (for remaining attempts message)
+        """
+        redis_connected = await self._ensure_redis_connection()
+
+        if redis_connected:
+            try:
+                count = await self._record_attempt_redis(user_id)
+                logger.warning(
+                    f"[MFA Rate Limiter] Failed MFA attempt for user {user_id}. "
+                    f"Attempt {count}/{self.max_attempts} (Redis)"
+                )
+                return count
+            except (RedisError, RedisConnectionError):
+                # Fallback to memory
+                pass
+
+        # Use memory storage
+        count = self._record_attempt_memory(user_id)
+        logger.warning(
+            f"[MFA Rate Limiter] Failed MFA attempt for user {user_id}. "
+            f"Attempt {count}/{self.max_attempts} (in-memory)"
+        )
+        return count
+
+    async def clear_attempts(self, user_id: str) -> None:
+        """Clear failed attempts after successful MFA verification"""
+        redis_connected = await self._ensure_redis_connection()
+
+        if redis_connected:
+            try:
+                await self._clear_attempts_redis(user_id)
+                logger.info(f"[MFA Rate Limiter] MFA attempts cleared for user: {user_id} (Redis)")
+                return
+            except (RedisError, RedisConnectionError):
+                # Fallback to memory
+                pass
+
+        # Use memory storage
+        self._clear_attempts_memory(user_id)
+        logger.info(f"[MFA Rate Limiter] MFA attempts cleared for user: {user_id} (in-memory)")
+
+    def get_remaining_attempts(self, attempt_count: int) -> int:
+        """
+        Get remaining attempts before lockout
+
+        Args:
+            attempt_count: Current number of failed attempts
+
+        Returns:
+            Number of remaining attempts
+        """
+        return max(0, self.max_attempts - attempt_count)
+
+
+# Global MFA rate limiter instance
+mfa_rate_limiter = MFARateLimiter()

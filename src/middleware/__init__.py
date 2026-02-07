@@ -18,6 +18,7 @@ from .rate_limit import (
     rate_limiter,
     rate_limit_dependency,
     login_rate_limiter,
+    mfa_rate_limiter,
     RateLimitMiddleware
 )
 
@@ -36,5 +37,6 @@ __all__ = [
     "rate_limiter",
     "rate_limit_dependency",
     "login_rate_limiter",
+    "mfa_rate_limiter",
     "RateLimitMiddleware"
 ]

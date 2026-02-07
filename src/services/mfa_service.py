@@ -604,27 +604,37 @@ class MFAService:
                     detail="Invalid TOTP or backup code"
                 )
 
-        # Disable MFA
+        # Disable MFA and set mfaSetupRequired=true
+        # Note: mfaSetupRequired forces re-setup on next login if MFA is required for all users
+        disable_time = datetime.utcnow()
         await db.users.update_one(
             {"userId": user_id},
             {
                 "$set": {
                     "mfaEnabled": False,
-                    "mfaDisabledAt": datetime.utcnow(),
-                    "updatedAt": datetime.utcnow()
+                    "mfaSetupRequired": True,  # Force re-setup on next login
+                    "mfaDisabledAt": disable_time,
+                    "mfaDisabledByUserId": user_id,  # Self-disabled
+                    "updatedAt": disable_time
                 },
                 "$unset": {
                     "mfaSecret": "",
                     "mfaSecretEncrypted": "",
                     "mfaBackupCodes": "",
-                    "mfaEnabledAt": ""
+                    "mfaEnabledAt": "",
+                    "mfaLastUsedCounter": "",
+                    "mfaLastUsedAt": "",
+                    "mfaBackupCodesRegeneratedAt": ""
                 }
             }
         )
 
-        logger.info(f"MFA disabled for user: {user_id}")
+        logger.info(f"MFA disabled for user: {user_id} (setup required on next login)")
 
-        return {"message": "MFA has been disabled successfully"}
+        return {
+            "message": "MFA has been disabled successfully. You will be required to set up MFA again on your next login.",
+            "mfaSetupRequired": True
+        }
 
     async def verify_mfa_code(self, user_id: str, code: str) -> Tuple[bool, bool, int]:
         """
