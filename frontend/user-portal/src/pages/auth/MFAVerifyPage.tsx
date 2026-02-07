@@ -1,9 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@a64core/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { authService } from '../../services/auth.service';
+import {
+  getCachedVerifyState,
+  setCachedVerifyState,
+  updateCachedVerifyDigits,
+  clearMFAVerifyCache,
+  getMFAVerifyCacheTimestamp,
+  MFA_VERIFY_EXPIRY_MS,
+} from '../../hooks/queries/useMFA';
 
 type InputMode = 'totp' | 'backup';
 
@@ -15,29 +23,82 @@ interface LocationState {
 export function MFAVerifyPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { verifyMfa, mfaPendingToken, mfaRequired, clearMfaState, isLoading, error: storeError, loadUser } = useAuthStore();
+  const { verifyMfa, mfaPendingToken, mfaPendingUserId, mfaRequired, clearMfaState, isLoading, error: storeError, loadUser } = useAuthStore();
 
-  // Get MFA token from location state (legacy) OR from auth store (new approach)
+  // Get MFA token from location state (legacy) OR from auth store OR from sessionStorage cache
   const state = location.state as LocationState | null;
-  const mfaToken = state?.mfaToken || mfaPendingToken;
-  const email = state?.email;
+  const cachedState = getCachedVerifyState();
+
+  // Priority: location state > auth store > sessionStorage cache
+  const mfaToken = state?.mfaToken || mfaPendingToken || cachedState?.token || null;
+  const email = state?.email || cachedState?.email || null;
+  const userId = mfaPendingUserId || cachedState?.userId || null;
 
   const [inputMode, setInputMode] = useState<InputMode>('totp');
-  const [totpDigits, setTotpDigits] = useState(['', '', '', '', '', '']);
+  // Initialize digits from cache if available
+  const [totpDigits, setTotpDigits] = useState<string[]>(
+    cachedState?.digits?.length === 6 ? cachedState.digits : ['', '', '', '', '', '']
+  );
   const [backupCode, setBackupCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [backupCodesRemaining, setBackupCodesRemaining] = useState<number | null>(null);
   const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const digitRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Redirect to login if no MFA token
+  // Feature #347: Detect mobile device for helper text
   useEffect(() => {
-    if (!mfaToken) {
+    const checkMobile = () => {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.innerWidth < 768;
+    };
+    setIsMobile(checkMobile());
+  }, []);
+
+  // Cache the MFA verify state to sessionStorage on mount and when token changes
+  useEffect(() => {
+    if (mfaToken && !isSessionExpired) {
+      setCachedVerifyState(mfaToken, email, userId, totpDigits);
+    }
+  }, [mfaToken, email, userId]); // Don't include totpDigits here - we update separately
+
+  // Check session expiry timer
+  useEffect(() => {
+    const cachedTimestamp = getMFAVerifyCacheTimestamp();
+    if (!cachedTimestamp && !mfaToken) {
+      // No cached state and no token from store - expired
+      setIsSessionExpired(true);
+      return;
+    }
+
+    if (cachedTimestamp) {
+      const updateTimer = () => {
+        const elapsed = Date.now() - cachedTimestamp;
+        const remaining = Math.max(0, MFA_VERIFY_EXPIRY_MS - elapsed);
+        setTimeRemaining(remaining);
+
+        if (remaining === 0) {
+          setIsSessionExpired(true);
+          clearMFAVerifyCache();
+        }
+      };
+
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [mfaToken]);
+
+  // Redirect to login if no MFA token and not showing expired state
+  useEffect(() => {
+    if (!mfaToken && !isSessionExpired && !cachedState) {
       navigate('/login', { replace: true });
     }
-  }, [mfaToken, navigate]);
+  }, [mfaToken, navigate, isSessionExpired, cachedState]);
 
   // Lockout countdown timer
   useEffect(() => {
@@ -68,6 +129,9 @@ export function MFAVerifyPage() {
     setTotpDigits(newDigits);
     setError(null);
 
+    // Save digits to sessionStorage for restoration across app switches
+    updateCachedVerifyDigits(newDigits);
+
     // Auto-focus next input when digit entered
     if (digit && index < 5) {
       digitRefs.current[index + 1]?.focus();
@@ -95,6 +159,7 @@ export function MFAVerifyPage() {
         newDigits[i] = pastedData[i] || '';
       }
       setTotpDigits(newDigits);
+      updateCachedVerifyDigits(newDigits);
       const lastFilledIndex = Math.min(pastedData.length - 1, 5);
       digitRefs.current[lastFilledIndex]?.focus();
     }
@@ -109,6 +174,10 @@ export function MFAVerifyPage() {
     try {
       const code = inputMode === 'totp' ? getTotpCode() : backupCode;
       const response = await authService.verifyMfa(mfaToken!, code);
+
+      // Clear cached verify state on success
+      clearMFAVerifyCache();
+      clearMfaState();
 
       // Check for backup code warning
       if (response.warning) {
@@ -141,8 +210,25 @@ export function MFAVerifyPage() {
   const handleToggleMode = () => {
     setInputMode(mode => mode === 'totp' ? 'backup' : 'totp');
     setError(null);
-    setTotpDigits(['', '', '', '', '', '']);
+    const emptyDigits = ['', '', '', '', '', ''];
+    setTotpDigits(emptyDigits);
+    updateCachedVerifyDigits(emptyDigits);
     setBackupCode('');
+  };
+
+  // Handle "Start over" - clear cache and return to login
+  const handleStartOver = useCallback(() => {
+    clearMFAVerifyCache();
+    clearMfaState();
+    navigate('/login', { replace: true });
+  }, [clearMfaState, navigate]);
+
+  // Format time remaining for display
+  const formatTimeRemaining = (ms: number): string => {
+    const seconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const handleBackupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,8 +240,30 @@ export function MFAVerifyPage() {
 
   const isCodeValid = inputMode === 'totp' ? getTotpCode().length === 6 : backupCode.length >= 8;
 
-  if (!mfaToken) {
-    return null; // Will redirect
+  // Show session expired UI with "Start over" button
+  if (isSessionExpired || !mfaToken) {
+    return (
+      <PageWrapper>
+        <VerifyContainer>
+          <VerifyCard>
+            <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+            <ExpiredIcon>⏱️</ExpiredIcon>
+            <Title>Session Expired</Title>
+            <Subtitle>
+              Your verification session has expired for security reasons.
+              Please log in again to continue.
+            </Subtitle>
+            <StartOverButton onClick={handleStartOver}>
+              <StartOverIcon>🔄</StartOverIcon>
+              Start Over
+            </StartOverButton>
+            <BackToLogin to="/login">
+              ← Back to login
+            </BackToLogin>
+          </VerifyCard>
+        </VerifyContainer>
+      </PageWrapper>
+    );
   }
 
   // Feature #335: Show message after successful login with backup code
@@ -222,7 +330,35 @@ export function MFAVerifyPage() {
               : 'Enter one of your backup codes'}
           </Subtitle>
 
-          {email && <EmailHint>Logging in as: {email}</EmailHint>}
+          {/* Feature #347: Mobile helper text - reassure users they can switch apps */}
+          {isMobile && inputMode === 'totp' && (
+            <MobileReassuranceText>
+              <MobileReassuranceIcon>💡</MobileReassuranceIcon>
+              Your session is saved — you can safely switch to your authenticator app and return here
+            </MobileReassuranceText>
+          )}
+
+          {/* Feature #347: Enhanced read-only email confirmation box */}
+          {email && (
+            <EmailConfirmationBox>
+              <EmailConfirmIcon>👤</EmailConfirmIcon>
+              <EmailConfirmDetails>
+                <EmailConfirmLabel>Signing in as</EmailConfirmLabel>
+                <EmailConfirmValue>{email}</EmailConfirmValue>
+              </EmailConfirmDetails>
+              <EmailConfirmCheck>✓</EmailConfirmCheck>
+            </EmailConfirmationBox>
+          )}
+
+          {/* Session timer - show time remaining before expiry */}
+          {timeRemaining !== null && timeRemaining > 0 && (
+            <SessionTimer $warning={timeRemaining < 60000}>
+              <SessionTimerIcon>{timeRemaining < 60000 ? '⚠️' : '⏱️'}</SessionTimerIcon>
+              <SessionTimerText>
+                Session expires in: <SessionTimerValue>{formatTimeRemaining(timeRemaining)}</SessionTimerValue>
+              </SessionTimerText>
+            </SessionTimer>
+          )}
 
           {/* Lockout Timer Display */}
           {lockoutSeconds && (
@@ -461,6 +597,80 @@ const EmailHint = styled.p`
   padding: 0.5rem;
   background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
+`;
+
+// Feature #347: Enhanced email confirmation box (read-only display)
+const EmailConfirmationBox = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1rem 0;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  animation: fadeInSlide 0.3s ease-out;
+
+  @keyframes fadeInSlide {
+    from {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const EmailConfirmIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: ${({ theme }) => theme.colors.primary[100]};
+  border-radius: 50%;
+  font-size: 1rem;
+  flex-shrink: 0;
+`;
+
+const EmailConfirmDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+`;
+
+const EmailConfirmLabel = styled.span`
+  font-size: 0.6875rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+`;
+
+const EmailConfirmValue = styled.span`
+  font-size: 0.875rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const EmailConfirmCheck = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: bold;
+  flex-shrink: 0;
 `;
 
 const ErrorBanner = styled.div`
@@ -909,4 +1119,82 @@ const StyledToggleModeLink = styled.button`
 
 const ToggleIcon = styled.span`
   font-size: 1rem;
+`;
+
+// Feature #346: Session state restoration styled components
+const ExpiredIcon = styled.div`
+  width: 70px;
+  height: 70px;
+  margin: 0.5rem auto 1rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+`;
+
+const StartOverButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  border: none;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary[600]};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const StartOverIcon = styled.span`
+  font-size: 1.125rem;
+`;
+
+const SessionTimer = styled.div<{ $warning?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  background: ${({ $warning }) => $warning ? '#fef3c7' : '#f0f9ff'};
+  border: 1px solid ${({ $warning }) => $warning ? '#f59e0b' : '#3b82f6'};
+  font-size: 0.75rem;
+
+  @media (min-width: 480px) {
+    font-size: 0.8125rem;
+  }
+`;
+
+const SessionTimerIcon = styled.span`
+  font-size: 1rem;
+`;
+
+const SessionTimerText = styled.span`
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const SessionTimerValue = styled.span`
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;

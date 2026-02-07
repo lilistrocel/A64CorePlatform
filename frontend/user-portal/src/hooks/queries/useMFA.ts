@@ -43,10 +43,23 @@ export interface MFAStatusResponse {
 
 // Cache key for sessionStorage persistence across browser sessions
 const MFA_SETUP_CACHE_KEY = 'mfa_setup_pending';
+const MFA_VERIFY_CACHE_KEY = 'mfa_verify_pending';
 export const MFA_SETUP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+export const MFA_VERIFY_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes for verify flow
 
 interface CachedMFASetup {
   data: MFASetupResponse;
+  timestamp: number;
+}
+
+/**
+ * MFA Verify Cache - stores pending MFA verification state
+ */
+export interface CachedMFAVerify {
+  token: string;
+  email: string | null;
+  userId: string | null;
+  digits: string[];
   timestamp: number;
 }
 
@@ -213,6 +226,110 @@ export function useClearMFACache() {
 
   return () => {
     clearMFASetupCache();
+    clearMFAVerifyCache();
     queryClient.removeQueries({ queryKey: queryKeys.mfa.setup() });
   };
+}
+
+// ============================================================================
+// MFA VERIFY CACHE FUNCTIONS (Feature #346)
+// ============================================================================
+
+/**
+ * Get cached verify state from sessionStorage
+ * Returns null if expired or not found
+ */
+export function getCachedVerifyState(): CachedMFAVerify | null {
+  try {
+    const cached = sessionStorage.getItem(MFA_VERIFY_CACHE_KEY);
+    if (!cached) return null;
+
+    const parsed: CachedMFAVerify = JSON.parse(cached);
+    const age = Date.now() - parsed.timestamp;
+
+    // Check if cached data has expired (5 minutes)
+    if (age > MFA_VERIFY_EXPIRY_MS) {
+      sessionStorage.removeItem(MFA_VERIFY_CACHE_KEY);
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    sessionStorage.removeItem(MFA_VERIFY_CACHE_KEY);
+    return null;
+  }
+}
+
+/**
+ * Save verify state to sessionStorage
+ */
+export function setCachedVerifyState(
+  token: string,
+  email: string | null,
+  userId: string | null,
+  digits: string[]
+): void {
+  try {
+    const cacheEntry: CachedMFAVerify = {
+      token,
+      email,
+      userId,
+      digits,
+      timestamp: Date.now(),
+    };
+    sessionStorage.setItem(MFA_VERIFY_CACHE_KEY, JSON.stringify(cacheEntry));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Update only the digits in the cached verify state (for partial input preservation)
+ */
+export function updateCachedVerifyDigits(digits: string[]): void {
+  try {
+    const cached = getCachedVerifyState();
+    if (cached) {
+      cached.digits = digits;
+      sessionStorage.setItem(MFA_VERIFY_CACHE_KEY, JSON.stringify(cached));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Clear cached verify state from sessionStorage
+ */
+export function clearMFAVerifyCache(): void {
+  try {
+    sessionStorage.removeItem(MFA_VERIFY_CACHE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Get the timestamp when MFA verify state was cached
+ * Returns null if no cached data exists
+ */
+export function getMFAVerifyCacheTimestamp(): number | null {
+  try {
+    const cached = sessionStorage.getItem(MFA_VERIFY_CACHE_KEY);
+    if (!cached) return null;
+
+    const parsed: CachedMFAVerify = JSON.parse(cached);
+    return parsed.timestamp;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if the MFA verify session has expired
+ * Returns true if expired or no session exists
+ */
+export function isMFAVerifySessionExpired(): boolean {
+  const cached = getCachedVerifyState();
+  return cached === null;
 }
