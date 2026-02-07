@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Card } from '@a64core/shared';
 import { apiClient } from '../../services/api';
 import { useAuthStore } from '../../stores/auth.store';
+import { BackupCodesModal } from '../../components/auth/BackupCodesModal';
 
 interface MFASetupResponse {
   secret: string;
@@ -28,7 +29,6 @@ export function MFASetupPage() {
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [backupCodesCopied, setBackupCodesCopied] = useState(false);
 
   // Initialize MFA setup from /api/v1/auth/mfa/setup on mount (POST request)
   useEffect(() => {
@@ -73,25 +73,6 @@ export function MFASetupPage() {
       setError(message);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleCopyBackupCodes = async () => {
-    const codesText = backupCodes.join('\n');
-    try {
-      await navigator.clipboard.writeText(codesText);
-      setBackupCodesCopied(true);
-      setTimeout(() => setBackupCodesCopied(false), 2000);
-    } catch (err) {
-      // Fallback for browsers that don't support clipboard API
-      const textarea = document.createElement('textarea');
-      textarea.value = codesText;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setBackupCodesCopied(true);
-      setTimeout(() => setBackupCodesCopied(false), 2000);
     }
   };
 
@@ -152,29 +133,14 @@ export function MFASetupPage() {
             <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
             <SuccessIcon>&#10003;</SuccessIcon>
             <Title>MFA Enabled Successfully!</Title>
-            <Subtitle>Save your backup codes in a secure location. You'll need them if you lose access to your authenticator app.</Subtitle>
-
-            <WarningBanner>
-              <WarningIcon>&#9888;</WarningIcon>
-              <strong>Important:</strong> These codes are shown only once. Store them safely!
-            </WarningBanner>
-
-            <BackupCodesContainer>
-              <BackupCodesGrid>
-                {backupCodes.map((code, index) => (
-                  <BackupCode key={index}>{code}</BackupCode>
-                ))}
-              </BackupCodesGrid>
-              <CopyButton onClick={handleCopyBackupCodes}>
-                {backupCodesCopied ? '&#10003; Copied!' : 'Copy All Codes'}
-              </CopyButton>
-            </BackupCodesContainer>
-
-            <FinishButton variant="primary" onClick={handleFinish} fullWidth>
-              I've Saved My Backup Codes
-            </FinishButton>
+            <Subtitle>Your account is now protected with two-factor authentication.</Subtitle>
           </SetupCard>
         </SetupContainer>
+        <BackupCodesModal
+          isOpen={true}
+          onClose={handleFinish}
+          backupCodes={backupCodes}
+        />
       </PageWrapper>
     );
   }
@@ -568,54 +534,6 @@ const CodeInput = styled.input`
     color: ${({ theme }) => theme.colors.neutral[300]};
     letter-spacing: 0.5rem;
   }
-`;
-
-const BackupCodesContainer = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-`;
-
-const BackupCodesGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-`;
-
-const BackupCode = styled.div`
-  font-family: 'Courier New', monospace;
-  font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  text-align: center;
-`;
-
-const CopyButton = styled.button`
-  width: 100%;
-  padding: 0.5rem;
-  background: white;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 4px;
-  color: ${({ theme }) => theme.colors.primary[600]};
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-  }
-`;
-
-const FinishButton = styled(Button)`
-  margin-top: 0.5rem;
 `;
 
 const CancelLink = styled.button`

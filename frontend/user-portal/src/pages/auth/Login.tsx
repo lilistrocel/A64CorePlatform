@@ -33,44 +33,50 @@ export function Login() {
     resolver: zodResolver(loginSchema),
   });
 
+  // Redirect to MFA verification if required (after login detected MFA)
+  useEffect(() => {
+    if (mfaRequired && mfaPendingToken) {
+      navigate('/mfa/verify', {
+        state: {
+          mfaToken: mfaPendingToken,
+          email: loginEmail,
+        },
+        replace: true,
+      });
+    }
+  }, [mfaRequired, mfaPendingToken, loginEmail, navigate]);
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !mfaRequired) {
+      const destination = redirectTo ? decodeURIComponent(redirectTo) : '/dashboard';
+      navigate(destination, { replace: true });
+    }
+  }, [isAuthenticated, mfaRequired, redirectTo, navigate]);
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       clearError();
       setLocalError(null);
-      setLocalLoading(true);
+      setLoginEmail(data.email);
 
-      // First, check if MFA is required using direct axios call
-      const response = await axios.post<any>('/api/v1/auth/login', data);
-
-      // Check if MFA is required
-      if (response.data.mfaRequired === true) {
-        const mfaResponse = response.data as MFALoginResponse;
-        // Redirect to MFA verification page with token
-        navigate('/mfa/verify', {
-          state: {
-            mfaToken: mfaResponse.mfaToken,
-            email: data.email,
-          },
-          replace: true,
-        });
-        return;
-      }
-
-      // No MFA required - use normal login flow
+      // Use auth store's login action which handles MFA detection
       await login(data);
-      // Redirect to intended page if provided, otherwise dashboard
-      const destination = redirectTo ? decodeURIComponent(redirectTo) : '/dashboard';
-      navigate(destination);
+
+      // If no MFA required and authenticated, useEffect will handle redirect
+      // If MFA required, the store sets mfaRequired=true and useEffect redirects to /mfa/verify
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Invalid email or password. Please try again.';
-      setLocalError(typeof errorMessage === 'string' ? errorMessage : 'Invalid email or password. Please try again.');
-    } finally {
-      setLocalLoading(false);
+      // Store already sets error for login failures
+      // Only set local error if store didn't catch it
+      if (!error) {
+        const errorMessage = err.response?.data?.detail || 'Invalid email or password. Please try again.';
+        setLocalError(typeof errorMessage === 'string' ? errorMessage : 'Invalid email or password. Please try again.');
+      }
     }
   };
 
   const displayError = localError || error;
-  const displayLoading = localLoading || isLoading;
+  const displayLoading = isLoading;
 
   return (
     <PageWrapper>

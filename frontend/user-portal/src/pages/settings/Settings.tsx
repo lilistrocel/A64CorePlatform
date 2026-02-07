@@ -67,6 +67,15 @@ export function Settings() {
   const [mfaStatus, setMfaStatus] = useState<MfaStatusResponse | null>(null);
   const [loadingMfa, setLoadingMfa] = useState(false);
 
+  // MFA regenerate backup codes modal state
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+  const [regenerateTotpCode, setRegenerateTotpCode] = useState('');
+  const [regeneratePassword, setRegeneratePassword] = useState('');
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [newBackupCodes, setNewBackupCodes] = useState<string[] | null>(null);
+  const [backupCodesCopied, setBackupCodesCopied] = useState(false);
+
   // Initialize preferences from user data
   useEffect(() => {
     if (user) {
@@ -119,6 +128,72 @@ export function Settings() {
       // Don't show error - MFA status is not critical
     } finally {
       setLoadingMfa(false);
+    }
+  };
+
+  const handleOpenRegenerateModal = () => {
+    setShowRegenerateModal(true);
+    setRegenerateTotpCode('');
+    setRegeneratePassword('');
+    setRegenerateError(null);
+    setNewBackupCodes(null);
+    setBackupCodesCopied(false);
+  };
+
+  const handleCloseRegenerateModal = () => {
+    setShowRegenerateModal(false);
+    setRegenerateTotpCode('');
+    setRegeneratePassword('');
+    setRegenerateError(null);
+    // If new codes were generated, reload MFA status
+    if (newBackupCodes) {
+      setNewBackupCodes(null);
+      loadMfaStatus();
+    }
+  };
+
+  const handleRegenerateBackupCodes = async () => {
+    if (regenerateTotpCode.length !== 6) {
+      setRegenerateError('Please enter a valid 6-digit TOTP code');
+      return;
+    }
+    if (!regeneratePassword) {
+      setRegenerateError('Please enter your password');
+      return;
+    }
+
+    setRegenerating(true);
+    setRegenerateError(null);
+
+    try {
+      const response = await authService.regenerateBackupCodes(regenerateTotpCode, regeneratePassword);
+      setNewBackupCodes(response.backupCodes);
+      addToast('success', 'Backup codes regenerated successfully');
+    } catch (error: any) {
+      const msg = error.response?.data?.detail || 'Failed to regenerate backup codes';
+      setRegenerateError(typeof msg === 'string' ? msg : 'Failed to regenerate backup codes');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const handleCopyBackupCodes = async () => {
+    if (!newBackupCodes) return;
+    const codesText = newBackupCodes.join('\n');
+    try {
+      await navigator.clipboard.writeText(codesText);
+      setBackupCodesCopied(true);
+      setTimeout(() => setBackupCodesCopied(false), 2000);
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textarea = document.createElement('textarea');
+      textarea.value = codesText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setBackupCodesCopied(true);
+      setTimeout(() => setBackupCodesCopied(false), 2000);
     }
   };
 
@@ -448,12 +523,30 @@ export function Settings() {
               <>
                 <MfaPendingBadge>Setup Pending</MfaPendingBadge>
                 <SettingDescription>Complete MFA setup to secure your account</SettingDescription>
+                <MfaActionsRow>
+                  <PrimaryButton onClick={() => window.location.href = '/mfa/setup'}>
+                    Complete Setup
+                  </PrimaryButton>
+                </MfaActionsRow>
               </>
             ) : (
               <>
                 <SettingValue>Not Configured</SettingValue>
                 <SettingDescription>Add an extra layer of security to your account</SettingDescription>
+                <MfaActionsRow>
+                  <PrimaryButton onClick={() => window.location.href = '/mfa/setup'}>
+                    Set Up MFA
+                  </PrimaryButton>
+                </MfaActionsRow>
               </>
+            )}
+
+            {mfaStatus?.isEnabled && (
+              <MfaActionsRow>
+                <SecondaryButton onClick={handleOpenRegenerateModal}>
+                  Regenerate Backup Codes
+                </SecondaryButton>
+              </MfaActionsRow>
             )}
           </SettingItem>
 
@@ -464,6 +557,99 @@ export function Settings() {
           </SettingItem>
         </SettingsContent>
       </Card>
+
+      {/* Regenerate Backup Codes Modal */}
+      {showRegenerateModal && (
+        <ModalOverlay onClick={handleCloseRegenerateModal}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>
+              {newBackupCodes ? 'New Backup Codes' : 'Regenerate Backup Codes'}
+            </ModalTitle>
+
+            {newBackupCodes ? (
+              <>
+                <ModalWarning>
+                  <strong>Important:</strong> These codes are shown only once. Store them safely!
+                </ModalWarning>
+                <BackupCodesContainer>
+                  <BackupCodesGrid>
+                    {newBackupCodes.map((code, index) => (
+                      <BackupCodeItem key={index}>{code}</BackupCodeItem>
+                    ))}
+                  </BackupCodesGrid>
+                  <CopyCodesButton onClick={handleCopyBackupCodes}>
+                    {backupCodesCopied ? 'Copied!' : 'Copy All Codes'}
+                  </CopyCodesButton>
+                </BackupCodesContainer>
+                <ModalButtonRow>
+                  <PrimaryButton onClick={handleCloseRegenerateModal}>
+                    I've Saved My Codes
+                  </PrimaryButton>
+                </ModalButtonRow>
+              </>
+            ) : (
+              <>
+                <ModalDescription>
+                  To regenerate your backup codes, please verify your identity by entering your current TOTP code from your authenticator app and your password.
+                </ModalDescription>
+
+                {regenerateError && (
+                  <ModalError>{regenerateError}</ModalError>
+                )}
+
+                <ModalForm onSubmit={(e) => { e.preventDefault(); handleRegenerateBackupCodes(); }}>
+                  <ModalFormGroup>
+                    <ModalLabel htmlFor="totp-code">TOTP Code (from authenticator app)</ModalLabel>
+                    <TotpCodeInput
+                      id="totp-code"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={regenerateTotpCode}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setRegenerateTotpCode(value);
+                        setRegenerateError(null);
+                      }}
+                      autoFocus
+                      aria-label="6-digit TOTP code"
+                    />
+                  </ModalFormGroup>
+
+                  <ModalFormGroup>
+                    <ModalLabel htmlFor="password">Password</ModalLabel>
+                    <PasswordInput
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={regeneratePassword}
+                      onChange={(e) => {
+                        setRegeneratePassword(e.target.value);
+                        setRegenerateError(null);
+                      }}
+                      aria-label="Password"
+                    />
+                  </ModalFormGroup>
+
+                  <ModalButtonRow>
+                    <SecondaryButton type="button" onClick={handleCloseRegenerateModal} disabled={regenerating}>
+                      Cancel
+                    </SecondaryButton>
+                    <PrimaryButton
+                      type="submit"
+                      disabled={regenerating || regenerateTotpCode.length !== 6 || !regeneratePassword}
+                    >
+                      {regenerating ? 'Regenerating...' : 'Regenerate Codes'}
+                    </PrimaryButton>
+                  </ModalButtonRow>
+                </ModalForm>
+              </>
+            )}
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </SettingsContainer>
   );
 }
@@ -829,4 +1015,175 @@ const MfaWarning = styled.div`
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   color: ${({ theme }: any) => theme.colors.error[600]};
   margin-top: ${({ theme }: any) => theme.spacing.xs};
+`;
+
+const MfaActionsRow = styled.div`
+  margin-top: ${({ theme }: any) => theme.spacing.md};
+  display: flex;
+  gap: ${({ theme }: any) => theme.spacing.sm};
+`;
+
+// Modal styled components
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: ${({ theme }: any) => theme.spacing.md};
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: ${({ theme }: any) => theme.borderRadius.lg};
+  padding: ${({ theme }: any) => theme.spacing.xl};
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+`;
+
+const ModalTitle = styled.h2`
+  font-size: ${({ theme }: any) => theme.typography.fontSize.xl};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
+  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
+`;
+
+const ModalDescription = styled.p`
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  color: ${({ theme }: any) => theme.colors.textSecondary};
+  margin: 0 0 ${({ theme }: any) => theme.spacing.lg} 0;
+  line-height: 1.6;
+`;
+
+const ModalWarning = styled.div`
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  padding: ${({ theme }: any) => theme.spacing.md};
+  margin-bottom: ${({ theme }: any) => theme.spacing.lg};
+  color: #92400e;
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+`;
+
+const ModalError = styled.div`
+  background: ${({ theme }: any) => theme.colors.error[50]};
+  border: 1px solid ${({ theme }: any) => theme.colors.error[300]};
+  border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  padding: ${({ theme }: any) => theme.spacing.md};
+  margin-bottom: ${({ theme }: any) => theme.spacing.lg};
+  color: ${({ theme }: any) => theme.colors.error[600]};
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+`;
+
+const ModalForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }: any) => theme.spacing.lg};
+`;
+
+const ModalFormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }: any) => theme.spacing.xs};
+`;
+
+const ModalLabel = styled.label`
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
+`;
+
+const TotpCodeInput = styled.input`
+  padding: ${({ theme }: any) => theme.spacing.md};
+  font-size: 1.5rem;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  border: 2px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }: any) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+  }
+
+  &::placeholder {
+    color: ${({ theme }: any) => theme.colors.neutral[300]};
+    letter-spacing: 0.5rem;
+  }
+`;
+
+const PasswordInput = styled.input`
+  padding: ${({ theme }: any) => theme.spacing.md};
+  font-size: ${({ theme }: any) => theme.typography.fontSize.base};
+  border: 2px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }: any) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+  }
+`;
+
+const ModalButtonRow = styled.div`
+  display: flex;
+  gap: ${({ theme }: any) => theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${({ theme }: any) => theme.spacing.md};
+`;
+
+const BackupCodesContainer = styled.div`
+  background: ${({ theme }: any) => theme.colors.neutral[50]};
+  border: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  padding: ${({ theme }: any) => theme.spacing.md};
+  margin-bottom: ${({ theme }: any) => theme.spacing.lg};
+`;
+
+const BackupCodesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: ${({ theme }: any) => theme.spacing.sm};
+  margin-bottom: ${({ theme }: any) => theme.spacing.md};
+`;
+
+const BackupCodeItem = styled.div`
+  font-family: 'Courier New', monospace;
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
+  background: white;
+  padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
+  border-radius: 4px;
+  border: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  text-align: center;
+`;
+
+const CopyCodesButton = styled.button`
+  width: 100%;
+  padding: ${({ theme }: any) => theme.spacing.sm};
+  background: white;
+  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  border-radius: 4px;
+  color: ${({ theme }: any) => theme.colors.primary[600]};
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ theme }: any) => theme.colors.neutral[50]};
+    border-color: ${({ theme }: any) => theme.colors.primary[500]};
+  }
 `;

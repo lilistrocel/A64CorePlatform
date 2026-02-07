@@ -262,6 +262,26 @@ class AuthService {
       backupCodesRemaining: response.data.backup_codes_remaining ?? null,
     };
   }
+
+  /**
+   * Regenerate MFA backup codes
+   * Requires verification with current TOTP code and password
+   * @param totpCode 6-digit TOTP code from authenticator app
+   * @param password Current password for additional security
+   */
+  async regenerateBackupCodes(totpCode: string, password: string): Promise<RegenerateBackupCodesResponse> {
+    const response = await apiClient.post<RegenerateBackupCodesResponse>('/v1/auth/mfa/backup-codes', {
+      totpCode,
+      password,
+    });
+    return response.data;
+  }
+}
+
+export interface RegenerateBackupCodesResponse {
+  enabled: boolean;
+  backupCodes: string[];
+  message: string;
 }
 
 export interface MfaStatusResponse {
