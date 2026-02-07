@@ -96,6 +96,8 @@ class AuthService:
             "role": UserRole.USER.value,  # Default role per User-Structure.md
             "isActive": True,
             "isEmailVerified": False,  # Requires email verification
+            "mfaEnabled": False,
+            "mfaSetupRequired": True,  # Require MFA setup on first login
             "phone": user_data.phone,
             "avatar": user_data.avatar,
             "timezone": user_data.timezone,
@@ -121,6 +123,8 @@ class AuthService:
                 role=UserRole.USER,
                 isActive=True,
                 isEmailVerified=False,
+                mfaEnabled=False,
+                mfaSetupRequired=True,
                 phone=user_data.phone,
                 avatar=user_data.avatar,
                 timezone=user_data.timezone,
@@ -290,6 +294,8 @@ class AuthService:
             role=role,
             isActive=user_doc["isActive"],
             isEmailVerified=user_doc["isEmailVerified"],
+            mfaEnabled=user_doc.get("mfaEnabled", False),
+            mfaSetupRequired=user_doc.get("mfaSetupRequired", False),
             phone=user_doc.get("phone"),
             avatar=user_doc.get("avatar"),
             timezone=user_doc.get("timezone"),

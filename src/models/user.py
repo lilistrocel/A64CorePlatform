@@ -86,6 +86,8 @@ class UserResponse(UserBase):
     role: UserRole
     isActive: bool
     isEmailVerified: bool
+    mfaEnabled: bool = False
+    mfaSetupRequired: bool = False
     lastLoginAt: Optional[datetime]
     createdAt: datetime
     updatedAt: datetime
