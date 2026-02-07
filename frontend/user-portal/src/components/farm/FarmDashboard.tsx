@@ -10,6 +10,7 @@ import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
 import type { DashboardMetrics } from '../../types/farm';
 import { GlobalFarmAnalyticsModal } from './GlobalFarmAnalyticsModal';
+import { formatNumber } from '../../utils';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -343,26 +344,26 @@ export function FarmDashboard() {
         <MetricCard $color="#3B82F6">
           <MetricIcon>🏞️</MetricIcon>
           <MetricLabel>Total Farms</MetricLabel>
-          <MetricValue>{metrics.totalFarms}</MetricValue>
+          <MetricValue>{formatNumber(metrics.totalFarms)}</MetricValue>
           <MetricSubtext>Active farming locations</MetricSubtext>
         </MetricCard>
 
         <MetricCard $color="#10B981">
           <MetricIcon>🏗️</MetricIcon>
           <MetricLabel>Total Blocks</MetricLabel>
-          <MetricValue>{metrics.totalBlocks}</MetricValue>
+          <MetricValue>{formatNumber(metrics.totalBlocks)}</MetricValue>
           <BlockStatsContainer>
             {metrics.blocksByState.empty > 0 && (
-              <BlockStatBadge $color="#6B7280">{metrics.blocksByState.empty} Empty</BlockStatBadge>
+              <BlockStatBadge $color="#6B7280">{formatNumber(metrics.blocksByState.empty)} Empty</BlockStatBadge>
             )}
             {metrics.blocksByState.planned > 0 && (
-              <BlockStatBadge $color="#3B82F6">{metrics.blocksByState.planned} Planned</BlockStatBadge>
+              <BlockStatBadge $color="#3B82F6">{formatNumber(metrics.blocksByState.planned)} Planned</BlockStatBadge>
             )}
             {metrics.blocksByState.planted > 0 && (
-              <BlockStatBadge $color="#10B981">{metrics.blocksByState.planted} Planted</BlockStatBadge>
+              <BlockStatBadge $color="#10B981">{formatNumber(metrics.blocksByState.planted)} Planted</BlockStatBadge>
             )}
             {metrics.blocksByState.harvesting > 0 && (
-              <BlockStatBadge $color="#F59E0B">{metrics.blocksByState.harvesting} Harvesting</BlockStatBadge>
+              <BlockStatBadge $color="#F59E0B">{formatNumber(metrics.blocksByState.harvesting)} Harvesting</BlockStatBadge>
             )}
           </BlockStatsContainer>
         </MetricCard>
@@ -370,14 +371,14 @@ export function FarmDashboard() {
         <MetricCard $color="#F59E0B">
           <MetricIcon>🌱</MetricIcon>
           <MetricLabel>Active Plantings</MetricLabel>
-          <MetricValue>{metrics.activePlantings}</MetricValue>
+          <MetricValue>{formatNumber(metrics.activePlantings)}</MetricValue>
           <MetricSubtext>Currently growing</MetricSubtext>
         </MetricCard>
 
         <MetricCard $color="#EF4444">
           <MetricIcon>🌾</MetricIcon>
           <MetricLabel>Upcoming Harvests</MetricLabel>
-          <MetricValue>{metrics.upcomingHarvests}</MetricValue>
+          <MetricValue>{formatNumber(metrics.upcomingHarvests)}</MetricValue>
           <MetricSubtext>Blocks ready for harvest</MetricSubtext>
         </MetricCard>
       </MetricsGrid>

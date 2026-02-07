@@ -22,6 +22,7 @@ import { farmApi } from '../../services/farmApi';
 import { Breadcrumb } from '@a64core/shared';
 import type { BreadcrumbItem } from '@a64core/shared';
 import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate, FarmUpdate } from '../../types/farm';
+import { formatNumber } from '../../utils';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -477,25 +478,25 @@ export function FarmDetail() {
         <StatsGrid>
           <StatCard>
             <StatLabel>Total Area</StatLabel>
-            <StatValue>{(farm.totalArea ?? 0).toFixed(1)}</StatValue>
+            <StatValue>{formatNumber(farm.totalArea ?? 0, { decimals: 2 })}</StatValue>
             <StatSubtext>hectares</StatSubtext>
           </StatCard>
 
           <StatCard>
             <StatLabel>Total Blocks</StatLabel>
-            <StatValue>{summary.totalBlocks ?? 0}</StatValue>
-            <StatSubtext>{(summary.totalBlockArea ?? 0).toFixed(1)} ha total</StatSubtext>
+            <StatValue>{formatNumber(summary.totalBlocks ?? 0)}</StatValue>
+            <StatSubtext>{formatNumber(summary.totalBlockArea ?? 0, { decimals: 2 })} ha total</StatSubtext>
           </StatCard>
 
           <StatCard>
             <StatLabel>Active Plantings</StatLabel>
-            <StatValue>{summary.activePlantings ?? 0}</StatValue>
-            <StatSubtext>{summary.totalPlantedPlants ?? 0} plants</StatSubtext>
+            <StatValue>{formatNumber(summary.activePlantings ?? 0)}</StatValue>
+            <StatSubtext>{formatNumber(summary.totalPlantedPlants ?? 0)} plants</StatSubtext>
           </StatCard>
 
           <StatCard>
             <StatLabel>Predicted Yield</StatLabel>
-            <StatValue>{(summary.predictedYield ?? 0).toFixed(0)}</StatValue>
+            <StatValue>{formatNumber(summary.predictedYield ?? 0)}</StatValue>
             <StatSubtext>units expected</StatSubtext>
           </StatCard>
         </StatsGrid>
@@ -556,24 +557,24 @@ export function FarmDetail() {
                 <InfoTitle>Block Distribution</InfoTitle>
                 <InfoItem>
                   <InfoLabel>🏗️ Empty</InfoLabel>
-                  <InfoValue>{summary.blocksByState.empty}</InfoValue>
+                  <InfoValue>{formatNumber(summary.blocksByState.empty)}</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>📋 Planned</InfoLabel>
-                  <InfoValue>{summary.blocksByState.planned}</InfoValue>
+                  <InfoValue>{formatNumber(summary.blocksByState.planned)}</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>🌱 Planted</InfoLabel>
-                  <InfoValue>{summary.blocksByState.planted}</InfoValue>
+                  <InfoValue>{formatNumber(summary.blocksByState.planted)}</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>🌾 Harvesting</InfoLabel>
-                  <InfoValue>{summary.blocksByState.harvesting}</InfoValue>
+                  <InfoValue>{formatNumber(summary.blocksByState.harvesting)}</InfoValue>
                 </InfoItem>
                 {summary.blocksByState.alert > 0 && (
                   <InfoItem>
                     <InfoLabel>⚠️ Alert</InfoLabel>
-                    <InfoValue>{summary.blocksByState.alert}</InfoValue>
+                    <InfoValue>{formatNumber(summary.blocksByState.alert)}</InfoValue>
                   </InfoItem>
                 )}
               </InfoCard>

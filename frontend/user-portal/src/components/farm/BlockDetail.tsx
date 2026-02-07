@@ -11,6 +11,7 @@ import { farmApi } from '../../services/farmApi';
 import { Breadcrumb } from '@a64core/shared';
 import type { BreadcrumbItem } from '@a64core/shared';
 import type { Block, BlockSummary } from '../../types/farm';
+import { formatNumber, formatPercentage } from '../../utils';
 
 // Import tab components
 import { BlockAlertsTab } from './BlockAlertsTab';
@@ -541,7 +542,7 @@ export function BlockDetail() {
             <BlockMeta>
               <span>Block ID: {block.blockId.substring(0, 8)}...</span>
               <span>•</span>
-              <span>{(block.area ?? 0).toFixed(1)} m²</span>
+              <span>{formatNumber(block.area ?? 0, { decimals: 2 })} m²</span>
               {block.targetCropName && (
                 <>
                   <span>•</span>
@@ -556,15 +557,15 @@ export function BlockDetail() {
         <StatsGrid>
           <StatCard>
             <StatLabel>Capacity</StatLabel>
-            <StatValue>{block.maxPlants}</StatValue>
+            <StatValue>{formatNumber(block.maxPlants)}</StatValue>
             <StatSubtext>max plants</StatSubtext>
           </StatCard>
 
           <StatCard>
             <StatLabel>Current Plants</StatLabel>
-            <StatValue>{summary.currentPlantCount ?? 0}</StatValue>
+            <StatValue>{formatNumber(summary.currentPlantCount ?? 0)}</StatValue>
             <StatSubtext>
-              {summary.utilizationPercent ? `${summary.utilizationPercent.toFixed(0)}% utilized` : '0% utilized'}
+              {formatPercentage(summary.utilizationPercent ?? 0, 0)} utilized
             </StatSubtext>
           </StatCard>
 
@@ -577,7 +578,7 @@ export function BlockDetail() {
           {summary.currentPlanting && (
             <StatCard>
               <StatLabel>Current Planting</StatLabel>
-              <StatValue style={{ fontSize: '20px' }}>{summary.currentPlanting.plantCount}</StatValue>
+              <StatValue style={{ fontSize: '20px' }}>{formatNumber(summary.currentPlanting.plantCount)}</StatValue>
               <StatSubtext>plants</StatSubtext>
             </StatCard>
           )}
@@ -612,7 +613,7 @@ export function BlockDetail() {
                     $total={block.area ?? 0}
                   />
                   <AreaBudgetText>
-                    {block.availableArea?.toFixed(2)} m² available of {block.area?.toFixed(2)} m² total
+                    {formatNumber(block.availableArea ?? 0, { decimals: 2 })} m² available of {formatNumber(block.area ?? 0, { decimals: 2 })} m² total
                   </AreaBudgetText>
                   <AddCropButton onClick={() => setShowAddVirtualCropModal(true)}>
                     + Add Additional Crop
@@ -631,7 +632,7 @@ export function BlockDetail() {
                     >
                       <span>{child.blockCode || child.name}</span>
                       <span>{child.targetCropName || 'No crop'}</span>
-                      <span>{child.allocatedArea ? `${child.allocatedArea} m²` : 'N/A'}</span>
+                      <span>{child.allocatedArea ? `${formatNumber(child.allocatedArea, { decimals: 2 })} m²` : 'N/A'}</span>
                       <span>{child.state}</span>
                     </VirtualChildCard>
                   ))}
@@ -653,7 +654,7 @@ export function BlockDetail() {
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>Allocated Area</InfoLabel>
-                    <InfoValue>{block.allocatedArea ? `${block.allocatedArea} m²` : 'N/A'}</InfoValue>
+                    <InfoValue>{block.allocatedArea ? `${formatNumber(block.allocatedArea, { decimals: 2 })} m²` : 'N/A'}</InfoValue>
                   </InfoItem>
                   <EmptyVirtualButton onClick={() => setShowEmptyVirtualModal(true)}>
                     🗑️ Empty & Delete Virtual Block
@@ -674,11 +675,11 @@ export function BlockDetail() {
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Area</InfoLabel>
-                  <InfoValue>{(block.area ?? 0).toFixed(1)} hectares</InfoValue>
+                  <InfoValue>{formatNumber(block.area ?? 0, { decimals: 2 })} hectares</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Max Plants</InfoLabel>
-                  <InfoValue>{block.maxPlants}</InfoValue>
+                  <InfoValue>{formatNumber(block.maxPlants)}</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Created</InfoLabel>

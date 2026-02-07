@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { hrApi } from '../../services/hrService';
+import { formatNumber } from '../../utils/formatNumber';
 import type { HRDashboardStats } from '../../types/hr';
 
 // ============================================================================
@@ -286,22 +287,22 @@ export function HRDashboardPage() {
       <StatsGrid>
         <StatCard>
           <StatLabel>Total Employees</StatLabel>
-          <StatValue>{stats.totalEmployees}</StatValue>
+          <StatValue>{formatNumber(stats.totalEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Active</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{stats.activeEmployees}</StatValue>
+          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.activeEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>On Leave</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{stats.onLeaveEmployees}</StatValue>
+          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.onLeaveEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Average Performance</StatLabel>
-          <StatValue>{stats.averagePerformanceRating.toFixed(1)}/5</StatValue>
+          <StatValue>{formatNumber(stats.averagePerformanceRating, { decimals: 1 })}/5</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -353,7 +354,7 @@ export function HRDashboardPage() {
             stats.departmentDistribution.map((dept) => (
               <DepartmentItem key={dept.department}>
                 <DepartmentName>{dept.department}</DepartmentName>
-                <DepartmentCount>{dept.count}</DepartmentCount>
+                <DepartmentCount>{formatNumber(dept.count)}</DepartmentCount>
               </DepartmentItem>
             ))
           ) : (
