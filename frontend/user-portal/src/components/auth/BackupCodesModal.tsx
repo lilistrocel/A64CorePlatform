@@ -140,7 +140,11 @@ const Overlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 0.5rem;
+
+  @media (min-width: 480px) {
+    padding: 1rem;
+  }
 `;
 
 const Modal = styled.div`
@@ -149,89 +153,155 @@ const Modal = styled.div`
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: 100vh;
   overflow-y: auto;
+
+  /* Full-screen on mobile */
+  @media (max-width: 479px) {
+    max-height: 100vh;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  @media (min-width: 480px) {
+    max-height: 90vh;
+  }
 `;
 
 const ModalHeader = styled.div`
-  padding: 1.5rem 1.5rem 0;
+  padding: 1rem 1rem 0;
   text-align: center;
+
+  @media (min-width: 480px) {
+    padding: 1.5rem 1.5rem 0;
+  }
 `;
 
 const ModalTitle = styled.h2`
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
+
+  @media (min-width: 480px) {
+    font-size: 1.5rem;
+  }
 `;
 
 const ModalBody = styled.div`
-  padding: 1.5rem;
+  padding: 1rem;
+
+  @media (min-width: 480px) {
+    padding: 1.5rem;
+  }
 `;
 
 const ModalFooter = styled.div`
-  padding: 0 1.5rem 1.5rem;
+  padding: 0 1rem 1rem;
+
+  @media (min-width: 480px) {
+    padding: 0 1.5rem 1.5rem;
+  }
 `;
 
 const WarningBanner = styled.div`
   background: #fef3c7;
   border: 1px solid #f59e0b;
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: 1rem;
-  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: flex-start;
+
+  @media (min-width: 480px) {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    gap: 0.75rem;
+  }
 `;
 
 const WarningIcon = styled.span`
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: #b45309;
   flex-shrink: 0;
+
+  @media (min-width: 480px) {
+    font-size: 1.5rem;
+  }
 `;
 
 const WarningText = styled.div`
   color: #92400e;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+
+  @media (min-width: 480px) {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
 `;
 
 const BackupCodesContainer = styled.div`
   background: ${({ theme }) => theme.colors.neutral[50]};
   border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  @media (min-width: 480px) {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
 `;
 
 const BackupCodesGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: 1fr;
+  gap: 0.375rem;
+
+  @media (min-width: 360px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
 `;
 
 const BackupCode = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
   font-family: 'Courier New', monospace;
   background: white;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.625rem;
   border-radius: 4px;
   border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+
+  @media (min-width: 480px) {
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
 `;
 
 const CodeNumber = styled.span`
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.75rem;
-  min-width: 1.5rem;
+  min-width: 1.25rem;
+
+  @media (min-width: 480px) {
+    min-width: 1.5rem;
+  }
 `;
 
 const CodeValue = styled.span`
   color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: 0.875rem;
+  font-size: 1rem; /* Min 16px for readability on mobile */
   font-weight: 500;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.25px;
+
+  @media (min-width: 480px) {
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+  }
 `;
 
 const ButtonRow = styled.div`

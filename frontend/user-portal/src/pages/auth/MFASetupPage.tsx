@@ -60,12 +60,15 @@ export function MFASetupPage() {
       return;
     }
 
-    const cacheTimestamp = getMFASetupCacheTimestamp();
-    if (!cacheTimestamp) {
-      return;
-    }
-
     const updateTimer = () => {
+      // Re-read the cache timestamp on each tick to detect changes
+      const cacheTimestamp = getMFASetupCacheTimestamp();
+      if (!cacheTimestamp) {
+        // Cache was cleared, reset to full time
+        setTimeRemaining(MFA_SETUP_EXPIRY_MS);
+        return;
+      }
+
       const elapsed = Date.now() - cacheTimestamp;
       const remaining = Math.max(0, MFA_SETUP_EXPIRY_MS - elapsed);
       setTimeRemaining(remaining);
