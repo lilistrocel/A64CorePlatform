@@ -4023,3 +4023,53 @@ NOTES FOR NEXT SESSION:
 - Test admin with MFA: farmtest_admin@a64core.com / TestAdmin123@ (super_admin)
 - Test admin without MFA: admin_f24_test@example.com / TestPass123@ (admin)
 
+
+== Session: 2026-02-07 (Agent Batch #343, #344, #345) ==
+Agent: Features #343, #344, #345 - Session Preservation on Mobile
+
+COMPLETED:
+- Feature #343: Persist login form state across page visibility changes [PASSING]
+  - Fixed bug where form was invisible when cached email existed
+  - Email saved to sessionStorage with 500ms debounce
+  - Email restored from sessionStorage on page load
+  - Password never stored (security)
+  - Cache cleared after successful login
+  - 30-minute expiry with timestamp
+  - "Session restored" banner shown for 3 seconds
+  - Screenshots: feature343-email-restored-from-session.png, feature343-login-form-visible.png
+
+- Feature #344: Persist MFA pending state across page refresh [PASSING]
+  - MFA pending token cached in sessionStorage after password verification
+  - Email and userId associated with pending state
+  - 5-minute expiry with countdown timer displayed
+  - State restored on page refresh or app switch
+  - Session expired UI shown when token expires
+  - Screenshots: feature344-mfa-state-restored.png
+
+- Feature #345: Prevent page reload on mobile app switch [PASSING]
+  - Created usePageVisibility hook for Page Visibility API
+  - onHidden: Immediately persists state to sessionStorage (bypass debounce)
+  - onVisible: State already restored from sessionStorage
+  - onBfcacheRestore: Handles Safari iOS page restoration
+  - pageshow event with persisted flag for bfcache
+  - No full page re-renders on visibility change
+  - Screenshots: feature345-visibility-state-preserved.png
+
+FILES CREATED:
+- frontend/user-portal/src/hooks/usePageVisibility.ts
+
+FILES MODIFIED:
+- frontend/user-portal/src/pages/auth/Login.tsx
+  - Added usePageVisibility import and usage
+  - Fixed isRestoring state not transitioning when cached email exists
+- frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx
+  - Added usePageVisibility import and usage
+  - Digits saved on visibility change
+
+CURRENT STATUS: 347/347 features passing (100.0%) 🎉
+
+NOTES FOR NEXT SESSION:
+- All features complete!
+- usePageVisibility hook can be reused in other forms needing mobile state preservation
+- Test admin: admin_f24_test@example.com / TestPass123@ (admin, MFA disabled)
+- Test admin with MFA: farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
