@@ -306,12 +306,20 @@ const CodeValue = styled.span`
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  @media (min-width: 360px) {
+    flex-direction: row;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const ActionButton = styled.button`
   flex: 1;
+  min-height: 44px; /* Touch-friendly */
   padding: 0.625rem 1rem;
   background: white;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
@@ -321,6 +329,12 @@ const ActionButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  width: 100%;
+
+  @media (min-width: 360px) {
+    width: auto;
+    min-height: 36px;
+  }
 
   &:hover {
     background: ${({ theme }) => theme.colors.neutral[50]};
@@ -331,39 +345,56 @@ const ActionButton = styled.button`
 const AcknowledgmentSection = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
   background: ${({ theme }) => theme.colors.neutral[100]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
+
+  @media (min-width: 480px) {
+    gap: 0.75rem;
+    padding: 1rem;
+  }
 `;
 
 const Checkbox = styled.input`
   width: 1.25rem;
   height: 1.25rem;
+  min-width: 1.25rem; /* Prevent shrinking */
   margin-top: 0.125rem;
   cursor: pointer;
   accent-color: ${({ theme }) => theme.colors.primary[500]};
 `;
 
 const CheckboxLabel = styled.label`
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
-  line-height: 1.5;
+  line-height: 1.4;
+
+  @media (min-width: 480px) {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
 `;
 
 const CloseButton = styled.button<{ $acknowledged: boolean }>`
   width: 100%;
-  padding: 0.875rem;
+  min-height: 44px; /* Touch-friendly */
+  padding: 0.75rem;
   background: ${({ $acknowledged, theme }) =>
     $acknowledged ? theme.colors.primary[500] : theme.colors.neutral[300]};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   color: ${({ $acknowledged }) => $acknowledged ? 'white' : '#666'};
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: ${({ $acknowledged }) => $acknowledged ? 'pointer' : 'not-allowed'};
   transition: all 0.2s;
+
+  @media (min-width: 480px) {
+    padding: 0.875rem;
+    font-size: 1rem;
+  }
 
   &:hover:not(:disabled) {
     background: ${({ $acknowledged, theme }) =>
