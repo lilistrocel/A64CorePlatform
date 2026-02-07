@@ -3858,3 +3858,56 @@ NOTES FOR NEXT SESSION:
 - MFA verify page: /mfa/verify (6 digit boxes, lockout timer, backup code toggle)
 - Test admin with MFA: farmtest_admin@a64core.com / TestAdmin123@ (super_admin)
 
+
+== Session: 2026-02-07 (Agent Batch #340, #341, #342) ==
+Agent: Features #340, #341, #342 - MFA Setup UX Improvements
+
+COMPLETED:
+- Feature #340: Persist MFA setup secret across page visibility changes [PASSING]
+  - Added sessionStorage caching for MFA setup data with 10-minute expiry
+  - Check sessionStorage cache before fetching new secret from API
+  - Clear cache on successful MFA enable, retry, and finish
+  - Prevents QR code regeneration when user tabs away and returns
+  - Verified: Secret key persists across page navigation (dashboard -> /mfa/setup)
+  - Screenshot: feature340-mfa-setup-initial.png, feature340-mfa-setup-persisted.png
+
+- Feature #341: QR code and manual key caching in component state [PASSING]
+  - Created useMFA.ts hook with useMFASetup, useEnableMFA, useMFAStatus
+  - 10-minute stale time to prevent unnecessary refetches
+  - Disabled refetchOnWindowFocus, refetchOnMount, refetchOnReconnect
+  - Updated MFASetupPage to use React Query hooks
+  - Added MFA query keys to react-query.config.ts
+  - Screenshot: feature341-react-query-caching.png
+
+- Feature #342: MFA setup session timeout indicator [PASSING]
+  - Display countdown timer showing time remaining (10 minutes)
+  - Timer updates every second
+  - Timer turns amber when under 2 minutes remaining
+  - Show 'Session Expired' screen when timer reaches 0
+  - Added 'Generate New Code' button to regenerate QR code
+  - Clears old cached secret and fetches fresh one on regenerate
+  - Exported getMFASetupCacheTimestamp and MFA_SETUP_EXPIRY_MS from useMFA hook
+  - Screenshots: feature342-session-timer.png, feature342-session-expired.png, feature342-regenerated-code.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/hooks/queries/useMFA.ts (new)
+  - useMFASetup hook with sessionStorage backing
+  - useEnableMFA mutation
+  - useMFAStatus hook
+  - clearMFASetupCache, getMFASetupCacheTimestamp exports
+  - MFA_SETUP_EXPIRY_MS constant (10 minutes)
+- frontend/user-portal/src/pages/auth/MFASetupPage.tsx
+  - Refactored to use React Query hooks
+  - Added countdown timer with formatTimeRemaining
+  - Added expired state UI
+  - Added SessionTimer, TimerIcon, TimerText, TimerValue, ExpiredIcon styled components
+- frontend/user-portal/src/config/react-query.config.ts
+  - Added MFA query keys (mfa.setup, mfa.status)
+
+CURRENT STATUS: 341/342 features passing (99.7%)
+
+NOTES FOR NEXT SESSION:
+- MFA setup now persists QR code/secret across page visibility changes
+- Session timeout indicator shows countdown timer
+- Expired sessions prompt user to regenerate QR code
+- Test admin: admin_f24_test@example.com / TestPass123@ (admin, MFA disabled)
