@@ -102,3 +102,117 @@ class MFALoginRequired(BaseModel):
     mfaRequired: bool = True
     mfaMethod: MFAMethod
     tempToken: str = Field(..., description="Temporary token for MFA verification step")
+
+
+# =============================================================================
+# Database Schema Models for MFA Collections
+# =============================================================================
+
+
+class MFAAuditAction(str, Enum):
+    """MFA audit log action types"""
+    SETUP_INITIATED = "setup_initiated"
+    SETUP_COMPLETED = "setup_completed"
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+    DISABLED_BY_ADMIN = "disabled_by_admin"
+    VERIFICATION_SUCCESS = "verification_success"
+    VERIFICATION_FAILED = "verification_failed"
+    BACKUP_CODE_USED = "backup_code_used"
+    BACKUP_CODES_REGENERATED = "backup_codes_regenerated"
+    LOCKOUT_TRIGGERED = "lockout_triggered"
+    LOCKOUT_CLEARED = "lockout_cleared"
+    ADMIN_RESET = "admin_reset"
+
+
+class UserMFA(BaseModel):
+    """
+    User MFA record - stored in 'user_mfa' collection
+
+    This is the primary MFA data store for each user.
+    One record per user (userId is unique).
+
+    SECURITY: totpSecretEncrypted is AES-encrypted using Fernet
+    """
+    mfaId: str = Field(..., description="Unique MFA record ID (UUID)")
+    userId: str = Field(..., description="User ID (references users collection)")
+    totpSecretEncrypted: str = Field(..., description="Fernet-encrypted TOTP secret")
+    isEnabled: bool = Field(default=False, description="Whether MFA is currently enabled")
+    method: MFAMethod = Field(default=MFAMethod.TOTP, description="MFA method (currently only TOTP)")
+
+    # Timestamps
+    createdAt: datetime = Field(..., description="When MFA was first set up")
+    updatedAt: datetime = Field(..., description="Last update timestamp")
+    enabledAt: Optional[datetime] = Field(None, description="When MFA was enabled")
+    disabledAt: Optional[datetime] = Field(None, description="When MFA was last disabled")
+
+    # Usage tracking
+    lastUsedAt: Optional[datetime] = Field(None, description="Last successful MFA verification")
+    lastUsedCounter: int = Field(default=0, description="Last TOTP counter for replay protection")
+
+    # Security features
+    failedAttempts: int = Field(default=0, description="Consecutive failed verification attempts")
+    lockedUntil: Optional[datetime] = Field(None, description="Lockout expiry time")
+
+    class Config:
+        from_attributes = True
+
+
+class MFABackupCode(BaseModel):
+    """
+    MFA backup code record - stored in 'mfa_backup_codes' collection
+
+    Each backup code is stored as a separate document for efficient
+    lookup and atomic deletion when used.
+
+    SECURITY: codeHash is SHA-256 hash of the backup code
+    """
+    codeId: str = Field(..., description="Unique backup code ID (UUID)")
+    userId: str = Field(..., description="User ID this code belongs to")
+    codeHash: str = Field(..., description="SHA-256 hash of the backup code")
+    isUsed: bool = Field(default=False, description="Whether this code has been used")
+    usedAt: Optional[datetime] = Field(None, description="When the code was used")
+    createdAt: datetime = Field(..., description="When the code was generated")
+
+    # TTL field - used codes are automatically deleted after 90 days
+    expiresAt: Optional[datetime] = Field(None, description="TTL expiry for used codes (90 days after use)")
+
+    class Config:
+        from_attributes = True
+
+
+class MFAAuditLog(BaseModel):
+    """
+    MFA audit log record - stored in 'mfa_audit_log' collection
+
+    Tracks all MFA-related actions for security monitoring and compliance.
+    """
+    logId: str = Field(..., description="Unique log entry ID (UUID)")
+    userId: str = Field(..., description="User ID who performed/was affected by the action")
+    action: MFAAuditAction = Field(..., description="Type of MFA action")
+    ipAddress: Optional[str] = Field(None, description="Client IP address")
+    userAgent: Optional[str] = Field(None, description="Client user agent string")
+    timestamp: datetime = Field(..., description="When the action occurred")
+
+    # Additional context
+    details: Optional[dict] = Field(None, description="Additional action-specific details")
+    performedBy: Optional[str] = Field(None, description="Admin user ID if action was performed by admin")
+
+    class Config:
+        from_attributes = True
+
+
+class MFABackupCodeCreate(BaseModel):
+    """Model for creating a backup code record"""
+    userId: str
+    codeHash: str
+
+
+class MFAAuditLogCreate(BaseModel):
+    """Model for creating an audit log entry"""
+    userId: str
+    action: MFAAuditAction
+    ipAddress: Optional[str] = None
+    userAgent: Optional[str] = None
+    details: Optional[dict] = None
+    performedBy: Optional[str] = None

@@ -50,8 +50,63 @@ export function MFASetupPage() {
     fetchSetupData();
   }, []);
 
+  const getCodeString = () => totpCode.join('');
+
+  const handleDigitChange = (index: number, value: string) => {
+    // Only accept single digit
+    const digit = value.replace(/\D/g, '').slice(-1);
+
+    const newCode = [...totpCode];
+    newCode[index] = digit;
+    setTotpCode(newCode);
+    setError(null);
+
+    // Auto-focus next input when digit entered
+    if (digit && index < 5) {
+      digitRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleDigitKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Handle backspace to go to previous input
+    if (e.key === 'Backspace' && !totpCode[index] && index > 0) {
+      digitRefs.current[index - 1]?.focus();
+    }
+    // Handle arrow keys
+    if (e.key === 'ArrowLeft' && index > 0) {
+      digitRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowRight' && index < 5) {
+      digitRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pastedData.length > 0) {
+      const newCode = [...totpCode];
+      for (let i = 0; i < 6; i++) {
+        newCode[i] = pastedData[i] || '';
+      }
+      setTotpCode(newCode);
+      // Focus last filled digit or first empty
+      const lastFilledIndex = Math.min(pastedData.length - 1, 5);
+      digitRefs.current[lastFilledIndex]?.focus();
+    }
+  };
+
+  const handleCopySecret = async () => {
+    if (setupData?.secret) {
+      await navigator.clipboard.writeText(setupData.secret);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const handleVerify = async () => {
-    if (totpCode.length !== 6) {
+    const codeString = getCodeString();
+    if (codeString.length !== 6) {
       setError('Please enter a valid 6-digit code');
       return;
     }
@@ -61,7 +116,7 @@ export function MFASetupPage() {
 
     try {
       const response = await apiClient.post<MFAEnableResponse>('/v1/auth/mfa/enable', {
-        totpCode,
+        totpCode: codeString,
       });
 
       if (response.data.enabled) {
@@ -177,12 +232,18 @@ export function MFASetupPage() {
                 <ManualEntryLabel>Can't scan? Enter this key manually:</ManualEntryLabel>
                 <SecretKeyBox>
                   <SecretKey>{setupData?.secret}</SecretKey>
-                  <CopySecretButton onClick={() => {
-                    if (setupData?.secret) {
-                      navigator.clipboard.writeText(setupData.secret);
-                    }
-                  }}>
-                    Copy
+                  <CopySecretButton onClick={handleCopySecret} $copied={copied}>
+                    {copied ? (
+                      <>
+                        <CopyIcon>✓</CopyIcon>
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <CopyIcon>📋</CopyIcon>
+                        Copy
+                      </>
+                    )}
                   </CopySecretButton>
                 </SecretKeyBox>
               </ManualEntrySection>
@@ -199,29 +260,41 @@ export function MFASetupPage() {
               {error && <ErrorBanner>{error}</ErrorBanner>}
 
               <VerificationForm onSubmit={(e) => { e.preventDefault(); handleVerify(); }}>
-                <CodeInput
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  placeholder="000000"
-                  value={totpCode}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    setTotpCode(value);
-                    setError(null);
-                  }}
-                  autoFocus={step === 'verify'}
-                  aria-label="6-digit verification code"
-                />
-                <Button
+                <DigitInputContainer onPaste={handlePaste}>
+                  {totpCode.map((digit, index) => (
+                    <DigitInput
+                      key={index}
+                      ref={(el) => { digitRefs.current[index] = el; }}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleDigitChange(index, e.target.value)}
+                      onKeyDown={(e) => handleDigitKeyDown(index, e)}
+                      aria-label={`Digit ${index + 1} of 6`}
+                      $filled={!!digit}
+                      $error={!!error}
+                    />
+                  ))}
+                </DigitInputContainer>
+                <VerifyButton
                   type="submit"
-                  variant="primary"
-                  disabled={totpCode.length !== 6 || isSubmitting}
-                  fullWidth
+                  disabled={getCodeString().length !== 6 || isSubmitting}
+                  $loading={isSubmitting}
                 >
-                  {isSubmitting ? 'Verifying...' : 'Verify & Enable MFA'}
-                </Button>
+                  {isSubmitting ? (
+                    <>
+                      <ButtonSpinner />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <LockIcon>🔐</LockIcon>
+                      Verify & Enable MFA
+                    </>
+                  )}
+                </VerifyButton>
               </VerificationForm>
             </StepContent>
           </StepSection>
@@ -396,26 +469,32 @@ const ButtonGroup = styled.div`
 const StepSection = styled.div<{ $active: boolean }>`
   display: flex;
   gap: 1rem;
-  padding: 1rem;
+  padding: 1.25rem;
   margin-bottom: 1rem;
   background: ${({ $active, theme }) => $active ? theme.colors.neutral[50] : 'transparent'};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.neutral[200] : 'transparent'};
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
   opacity: ${({ $active }) => $active ? 1 : 0.6};
   transition: all 0.3s ease;
+
+  @media (min-width: 640px) {
+    padding: 1.5rem;
+  }
 `;
 
 const StepNumber = styled.div`
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[600]} 100%);
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   font-size: 0.875rem;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
 `;
 
 const StepContent = styled.div`
@@ -438,16 +517,50 @@ const StepDescription = styled.p`
 const QRCodeContainer = styled.div`
   display: flex;
   justify-content: center;
-  padding: 1rem;
+  padding: 1.5rem;
   background: white;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
   margin-bottom: 1rem;
+  border: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  position: relative;
+
+  /* Decorative corner accents */
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 3px solid ${({ theme }) => theme.colors.primary[500]};
+  }
+
+  &::before {
+    top: -2px;
+    left: -2px;
+    border-right: none;
+    border-bottom: none;
+    border-radius: ${({ theme }) => theme.borderRadius.lg} 0 0 0;
+  }
+
+  &::after {
+    bottom: -2px;
+    right: -2px;
+    border-left: none;
+    border-top: none;
+    border-radius: 0 0 ${({ theme }) => theme.borderRadius.lg} 0;
+  }
 `;
 
 const QRCodeImage = styled.img`
-  width: 200px;
-  height: 200px;
-  border-radius: 8px;
+  width: 180px;
+  height: 180px;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+
+  @media (min-width: 640px) {
+    width: 200px;
+    height: 200px;
+  }
 `;
 
 const QRCodePlaceholder = styled.div`
@@ -479,63 +592,174 @@ const ManualEntryLabel = styled.p`
 const SecretKeyBox = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  gap: 0.75rem;
+  background: ${({ theme }) => theme.colors.neutral[50]};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
 `;
 
 const SecretKey = styled.code`
   flex: 1;
-  font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 0.8125rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   color: ${({ theme }) => theme.colors.textPrimary};
   word-break: break-all;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  line-height: 1.5;
+  user-select: all;
+
+  @media (min-width: 640px) {
+    font-size: 0.875rem;
+    letter-spacing: 2.5px;
+  }
 `;
 
-const CopySecretButton = styled.button`
-  background: ${({ theme }) => theme.colors.primary[500]};
+const CopySecretButton = styled.button<{ $copied?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: ${({ $copied, theme }) =>
+    $copied ? theme.colors.success : theme.colors.primary[500]};
   color: white;
   border: none;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ $copied, theme }) =>
+      $copied ? theme.colors.success : theme.colors.primary[600]};
+    transform: translateY(-1px);
   }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const CopyIcon = styled.span`
+  font-size: 0.875rem;
 `;
 
 const VerificationForm = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 `;
 
-const CodeInput = styled.input`
-  width: 100%;
-  padding: 1rem;
+const DigitInputContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+
+  @media (min-width: 640px) {
+    gap: 0.75rem;
+  }
+`;
+
+const pulse = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+`;
+
+const DigitInput = styled.input<{ $filled: boolean; $error: boolean }>`
+  width: 40px;
+  height: 52px;
   font-size: 1.5rem;
-  font-family: 'Courier New', monospace;
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
   text-align: center;
-  letter-spacing: 0.5rem;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ $error, $filled, theme }) =>
+    $error ? theme.colors.error :
+    $filled ? theme.colors.primary[500] : theme.colors.neutral[300]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  transition: border-color 0.2s, box-shadow 0.2s;
+  background: ${({ $filled, theme }) =>
+    $filled ? theme.colors.primary[50] : theme.colors.background};
+  transition: all 0.2s ease;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+
+  @media (min-width: 640px) {
+    width: 52px;
+    height: 64px;
+    font-size: 1.75rem;
+  }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ $error, theme }) =>
+      $error ? theme.colors.error : theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ $error, theme }) =>
+      $error ? `${theme.colors.error}20` : theme.colors.primary[100]};
+    animation: ${pulse} 0.3s ease;
   }
 
   &::placeholder {
     color: ${({ theme }) => theme.colors.neutral[300]};
-    letter-spacing: 0.5rem;
   }
+
+  /* Hide spinner controls in number inputs */
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  -moz-appearance: textfield;
+`;
+
+const spin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+const VerifyButton = styled.button<{ $loading?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: white;
+  background: ${({ disabled, theme }) =>
+    disabled ? theme.colors.neutral[300] : `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[600]} 100%)`};
+  border: none;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
+  transition: all 0.2s ease;
+  box-shadow: ${({ disabled }) => disabled ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'};
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15), 0 3px 5px -1px rgba(0, 0, 0, 0.08);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  @media (min-width: 640px) {
+    padding: 1rem 1.5rem;
+  }
+`;
+
+const ButtonSpinner = styled.span`
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: ${spin} 0.8s linear infinite;
+`;
+
+const LockIcon = styled.span`
+  font-size: 1.125rem;
 `;
 
 const CancelLink = styled.button`

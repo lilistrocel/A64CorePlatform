@@ -1031,9 +1031,10 @@ class AuthService:
             )
 
             remaining_attempts = mfa_rate_limiter.get_remaining_attempts(attempt_count)
+            # Feature #335: Clear error message for invalid code
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid code. {remaining_attempts} attempts remaining."
+                detail=f"Invalid verification code. Please try again. ({remaining_attempts} attempts remaining)"
             )
 
         # Clear MFA rate limit attempts on success (Feature #319)
@@ -1110,15 +1111,17 @@ class AuthService:
             updatedAt=user_doc["updatedAt"]
         )
 
-        # Prepare warning message if backup code was used
+        # Feature #335: Prepare success/warning message if backup code was used
         warning_message = None
         backup_codes_remaining = None
         if used_backup_code and remaining_backup_codes >= 0:
             backup_codes_remaining = remaining_backup_codes
             if remaining_backup_codes == 0:
-                warning_message = "This was your last backup code! Please regenerate backup codes immediately."
-            elif remaining_backup_codes <= 3:
-                warning_message = f"Warning: Only {remaining_backup_codes} backup codes remaining. Consider regenerating them."
+                # Feature #335: No backup codes remaining message
+                warning_message = "No backup codes remaining. Contact admin for help."
+            else:
+                # Feature #335: Backup code accepted success message
+                warning_message = f"Backup code accepted. You have {remaining_backup_codes} code{'s' if remaining_backup_codes != 1 else ''} remaining."
 
         return TokenResponse(
             access_token=access_token,

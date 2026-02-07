@@ -111,6 +111,56 @@ class MongoDBManager:
             await cls.db.ai_query_log.create_index([("timestamp", -1)])
             await cls.db.ai_query_log.create_index([("user_id", 1), ("timestamp", -1)])
 
+            # =================================================================
+            # MFA (Multi-Factor Authentication) Collection Indexes
+            # =================================================================
+
+            # user_mfa collection - stores TOTP secrets and MFA configuration per user
+            # One MFA record per user (userId is unique index)
+            await cls.db.user_mfa.create_index("mfaId", unique=True)
+            await cls.db.user_mfa.create_index("userId", unique=True)
+            await cls.db.user_mfa.create_index("isEnabled")
+            await cls.db.user_mfa.create_index([("createdAt", -1)])
+            await cls.db.user_mfa.create_index([("updatedAt", -1)])
+            logger.info("MFA user_mfa collection indexes created")
+
+            # mfa_backup_codes collection - stores hashed backup codes
+            # Multiple codes per user, lookup by userId + codeHash
+            await cls.db.mfa_backup_codes.create_index("codeId", unique=True)
+            await cls.db.mfa_backup_codes.create_index("userId")
+            await cls.db.mfa_backup_codes.create_index([("userId", 1), ("codeHash", 1)])
+            await cls.db.mfa_backup_codes.create_index("isUsed")
+            await cls.db.mfa_backup_codes.create_index([("userId", 1), ("isUsed", 1)])
+            # TTL index: automatically delete used backup codes after 90 days
+            await cls.db.mfa_backup_codes.create_index(
+                "expiresAt",
+                expireAfterSeconds=0  # TTL uses expiresAt field value directly
+            )
+            logger.info("MFA mfa_backup_codes collection indexes created")
+
+            # mfa_audit_log collection - security audit trail for MFA actions
+            await cls.db.mfa_audit_log.create_index("logId", unique=True)
+            await cls.db.mfa_audit_log.create_index("userId")
+            await cls.db.mfa_audit_log.create_index("action")
+            await cls.db.mfa_audit_log.create_index([("timestamp", -1)])
+            await cls.db.mfa_audit_log.create_index([("userId", 1), ("timestamp", -1)])
+            await cls.db.mfa_audit_log.create_index([("userId", 1), ("action", 1)])
+            await cls.db.mfa_audit_log.create_index("performedBy")  # For admin action lookups
+            # Optional: TTL index for log retention (keep 1 year = 31536000 seconds)
+            # Uncomment if you want automatic log cleanup:
+            # await cls.db.mfa_audit_log.create_index(
+            #     "timestamp",
+            #     expireAfterSeconds=31536000  # 1 year retention
+            # )
+            logger.info("MFA mfa_audit_log collection indexes created")
+
+            # Admin audit log collection indexes (admin actions including MFA reset)
+            await cls.db.admin_audit_log.create_index("action")
+            await cls.db.admin_audit_log.create_index("performedBy")
+            await cls.db.admin_audit_log.create_index("targetUserId")
+            await cls.db.admin_audit_log.create_index([("timestamp", -1)])
+            logger.info("Admin audit log collection indexes created")
+
             logger.info("MongoDB indexes created successfully")
         except Exception as e:
             logger.error(f"Error creating MongoDB indexes: {e}")

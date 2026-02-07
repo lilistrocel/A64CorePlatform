@@ -273,12 +273,20 @@ class MFAService:
             # Get current time counter (30-second window)
             current_counter = totp.timecode(datetime.utcnow())
 
-            # Check if code is valid
+            # Check if code is valid (valid_window=1 allows ±30 seconds)
             if not totp.verify(code, valid_window=1):
+                # Feature #335: Check if code matches older windows (expired code)
+                # Check up to 3 windows back (90 seconds old)
+                if totp.verify(code, valid_window=3):
+                    logger.warning(
+                        f"TOTP verification failed for user {user_id}: Expired code"
+                    )
+                    return False, "Code expired. Please enter the current code from your app."
+
                 logger.warning(
                     f"TOTP verification failed for user {user_id}: Invalid code"
                 )
-                return False, "Invalid verification code"
+                return False, "Invalid verification code. Please try again."
 
             # Get user's last used counter
             user = await db.users.find_one(
@@ -651,7 +659,7 @@ class MFAService:
             - remaining_backup_codes: Number of backup codes remaining (or -1 if not applicable)
 
         Raises:
-            HTTPException: 404 if user not found
+            HTTPException: 404 if user not found, 400 if MFA not enabled
         """
         db = mongodb.get_database()
 
@@ -662,6 +670,13 @@ class MFAService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
+            )
+
+        # Feature #335: Check if MFA is enabled
+        if not user_doc.get("mfaEnabled", False):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please complete MFA setup first."
             )
 
         mfa_secret_encrypted = user_doc.get("mfaSecret")

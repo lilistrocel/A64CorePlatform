@@ -92,25 +92,34 @@ export function MFAVerifyPage() {
     return null; // Will redirect
   }
 
-  // Show warning message after successful login with backup code
+  // Feature #335: Show message after successful login with backup code
+  // Differentiate between success (codes remaining) and warning (no codes remaining)
   if (warningMessage) {
+    const isNoCodesRemaining = backupCodesRemaining === 0;
     return (
       <PageWrapper>
         <VerifyContainer>
           <VerifyCard>
             <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
-            <WarningIcon>&#9888;</WarningIcon>
-            <Title>Backup Code Warning</Title>
-            <WarningBanner>
-              {warningMessage}
-            </WarningBanner>
-            {backupCodesRemaining !== null && backupCodesRemaining <= 3 && (
-              <BackupCodesInfo>
-                You have <strong>{backupCodesRemaining}</strong> backup code{backupCodesRemaining !== 1 ? 's' : ''} remaining.
-              </BackupCodesInfo>
+            {isNoCodesRemaining ? (
+              <WarningIcon>&#9888;</WarningIcon>
+            ) : (
+              <SuccessIcon>&#10003;</SuccessIcon>
+            )}
+            <Title>{isNoCodesRemaining ? 'No Backup Codes Remaining' : 'Backup Code Accepted'}</Title>
+            {isNoCodesRemaining ? (
+              <WarningBanner>
+                {warningMessage}
+              </WarningBanner>
+            ) : (
+              <SuccessBanner>
+                {warningMessage}
+              </SuccessBanner>
             )}
             <Subtitle>
-              Redirecting to dashboard... You can regenerate backup codes in Settings &gt; Security.
+              Redirecting to dashboard... {isNoCodesRemaining
+                ? 'Contact your admin or regenerate backup codes in Settings > Security.'
+                : 'You can regenerate backup codes in Settings > Security.'}
             </Subtitle>
             <Button
               variant="primary"
@@ -333,6 +342,31 @@ const WarningIcon = styled.div`
   align-items: center;
   justify-content: center;
   font-size: 2rem;
+`;
+
+const SuccessIcon = styled.div`
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 1rem;
+  background: ${({ theme }) => theme.colors.success || '#10b981'};
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+`;
+
+const SuccessBanner = styled.div`
+  background: ${({ theme }) => `${theme.colors.success || '#10b981'}10`};
+  border: 1px solid ${({ theme }) => theme.colors.success || '#10b981'};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: 1rem;
+  margin-bottom: 1rem;
+  color: ${({ theme }) => theme.colors.success || '#059669'};
+  font-size: 0.875rem;
+  text-align: center;
+  font-weight: 500;
 `;
 
 const BackupCodesInfo = styled.p`
