@@ -5,6 +5,7 @@ import { Suspense, lazy } from 'react';
 import { theme, GlobalStyles } from '@a64core/shared';
 import { queryClient } from './config/react-query.config';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { MFAVerifyGuard, MFASetupGuard } from './components/common/MFARouteGuards';
 import { MainLayout } from './components/layout/MainLayout';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { UnsavedChangesDialog } from './components/common/UnsavedChangesDialog';
@@ -110,13 +111,17 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/mfa/verify" element={<MFAVerifyPage />} />
+
+            {/* MFA Verify - Semi-public route with guard (requires MFA token from login) */}
+            <Route element={<MFAVerifyGuard />}>
+              <Route path="/mfa/verify" element={<MFAVerifyPage />} />
+            </Route>
 
             {/* Debug routes (development only) */}
             <Route path="/debug/clear-cache" element={<ClearCache />} />
 
-            {/* MFA Setup - Protected but no main layout */}
-            <Route element={<ProtectedRoute />}>
+            {/* MFA Setup - Protected with special guard (allows mfaSetupRequired users, blocks if MFA already enabled) */}
+            <Route element={<MFASetupGuard />}>
               <Route path="/mfa/setup" element={<MFASetupPage />} />
             </Route>
 
