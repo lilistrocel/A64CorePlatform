@@ -3555,3 +3555,99 @@ NOTES FOR NEXT SESSION:
 - Route CRUD via /logistics/routes with origin/destination/distance/duration
 - Budget tracking via /marketing/budgets with totalAmount/allocatedAmount/spentAmount
 - Test admin: farmtest_admin@a64core.com / TestAdmin123@ (super_admin)
+
+== Session: 2026-02-07 (Agent Batch #320, #321, #322) ==
+Agent: Features #320, #321, #322 (MFA Security Enhancements)
+
+COMPLETED:
+- Feature #320: Admin MFA reset capability [PASSING]
+  - Created PUT /api/v1/admin/users/{user_id}/mfa/reset endpoint
+  - Requires admin or super_admin role
+  - Deletes user's TOTP secret and backup codes
+  - Sets mfaSetupRequired=true to force new MFA setup on next login
+  - Logs admin action in admin_audit_log collection
+  - Logs email notification to console (dev mode)
+  - Permission checks: regular users blocked (403), admins can't reset super_admin MFA
+
+- Feature #321: Regenerate backup codes endpoint [PASSING]
+  - POST /api/v1/auth/mfa/backup-codes endpoint (also /backup-codes/regenerate)
+  - Updated to require full authentication (password + TOTP code)
+  - Deletes all existing backup codes before generating new ones
+  - Generates 10 new hashed backup codes, returns plain-text
+  - Added MFARegenerateBackupCodesRequest model with both password and totpCode
+  - Logs regeneration timestamp to mfaBackupCodesRegeneratedAt
+
+- Feature #322: Disable MFA endpoint (with re-verification) [PASSING]
+  - POST /api/v1/auth/mfa/disable endpoint already existed
+  - Updated disable_mfa to set mfaSetupRequired=true after disable
+  - Added mfaDisabledByUserId tracking for audit trail
+  - Clears all MFA-related fields (secret, backup codes, counters, timestamps)
+  - Returns message indicating user needs to re-setup MFA on next login
+  - Requires both password and TOTP code (or backup code) for security
+
+FILES MODIFIED:
+- src/api/v1/admin.py: Added reset_user_mfa endpoint
+- src/api/v1/auth.py: Updated regenerate_backup_codes endpoint, added MFARegenerateBackupCodesRequest import
+- src/models/user.py: Added MFARegenerateBackupCodesRequest model
+- src/services/mfa_service.py: Updated regenerate_backup_codes and disable_mfa methods
+
+CURRENT STATUS: 321/336 features passing (95.5%)
+
+NOTES FOR NEXT SESSION:
+- MFA admin reset: PUT /api/v1/admin/users/{user_id}/mfa/reset
+- Backup codes regenerate: POST /api/v1/auth/mfa/backup-codes (requires password + TOTP)
+- MFA disable: POST /api/v1/auth/mfa/disable (requires password + TOTP)
+- Test admin without MFA: admin_f24_test@example.com / TestPass123@ (role: admin)
+- Test user testadmin@a64core.com now has MFA enabled
+
+== Session: 2026-02-07 (Agent - Feature #323) ==
+Agent: Feature #323 - MFA Status Endpoint
+
+COMPLETED:
+- Feature #323: MFA status endpoint [PASSING]
+  - GET /api/v1/auth/mfa/status endpoint returns MFA status for authenticated user
+  - Returns fields: isEnabled, setupRequired, backupCodesRemaining, lastUsed
+  - Updated MFAStatusResponse model in src/models/user.py with new fields
+  - Updated get_mfa_status() in src/services/mfa_service.py to return all fields
+  - Updated API docstring in src/api/v1/auth.py with example response
+  - Added getMfaStatus() method to frontend auth.service.ts
+  - Updated Settings.tsx to display MFA status dynamically:
+    - Shows "Enabled" badge (green) when MFA is enabled
+    - Shows backup codes remaining count
+    - Shows last used timestamp
+    - Shows warning when no backup codes remaining
+    - Shows "Not Configured" when MFA disabled
+    - Shows "Setup Pending" when MFA setup in progress
+  - Requires authentication (401 for unauthenticated requests)
+  - Zero console errors
+  - Screenshots:
+    - feature323-mfa-status-disabled.png
+    - feature323-mfa-status-security-section.png
+    - feature323-mfa-status-enabled.png
+    - feature323-mfa-status-no-backup-codes-warning.png
+
+FILES MODIFIED:
+- src/models/user.py: Updated MFAStatusResponse with isEnabled, setupRequired, backupCodesRemaining, lastUsed
+- src/services/mfa_service.py: Updated get_mfa_status() to return new fields
+- src/api/v1/auth.py: Updated endpoint docstring with example response
+- frontend/user-portal/src/services/auth.service.ts: Added getMfaStatus() method and MfaStatusResponse interface
+- frontend/user-portal/src/pages/settings/Settings.tsx: Added MFA status display with styled badges and warning
+
+API RESPONSE FORMAT:
+{
+  "isEnabled": true,
+  "setupRequired": false,
+  "backupCodesRemaining": 8,
+  "lastUsed": "2026-02-07T10:00:00Z",
+  "mfaEnabled": true,
+  "mfaSetupPending": false,
+  "hasBackupCodes": true
+}
+
+CURRENT STATUS: 318/336 features passing (94.6%)
+
+NOTES FOR NEXT SESSION:
+- MFA status endpoint: GET /api/v1/auth/mfa/status
+- Frontend Settings page displays real MFA status from API
+- Test admin: farmtest_admin@a64core.com / TestAdmin123@ (super_admin, MFA enabled)
+- Test user: testadmin@a64core.com / TestPass123@ (user, MFA disabled)
