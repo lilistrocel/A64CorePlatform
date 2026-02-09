@@ -292,14 +292,15 @@ class BlockService:
         status: Optional[BlockStatus] = None,
         block_type: Optional[str] = None,
         target_crop: Optional[UUID] = None,
-        block_category: Optional[str] = 'all'
+        block_category: Optional[str] = 'all',
+        farming_year: Optional[int] = None
     ) -> Tuple[List[Block], int, int]:
         """List blocks with pagination and filters"""
         skip = (page - 1) * per_page
 
         if farm_id:
             blocks, total = await BlockRepository.get_by_farm(
-                farm_id, skip, per_page, status, block_type, target_crop, block_category
+                farm_id, skip, per_page, status, block_type, target_crop, block_category, farming_year
             )
         else:
             blocks, total = await BlockRepository.get_all(skip, per_page, status, block_category)

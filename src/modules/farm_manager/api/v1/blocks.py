@@ -69,6 +69,7 @@ async def list_blocks(
     blockType: Optional[str] = Query(None, description="Filter by block type"),
     targetCrop: Optional[UUID] = Query(None, description="Filter by target crop"),
     blockCategory: Optional[Literal['physical', 'virtual', 'all']] = Query('all', description="Filter by block category"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year planted (e.g., 2025 for Aug 2025 - Jul 2026)"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -81,6 +82,7 @@ async def list_blocks(
     - `blockType`: Filter by block type (optional)
     - `targetCrop`: Filter by target crop ID (optional)
     - `blockCategory`: Filter by category - 'physical', 'virtual', or 'all' (default: 'all')
+    - `farmingYear`: Filter by farming year planted (optional, e.g., 2025 for Aug 2025 - Jul 2026)
     """
     blocks, total, total_pages = await BlockService.list_blocks(
         farm_id=farm_id,
@@ -89,7 +91,8 @@ async def list_blocks(
         status=status_filter,
         block_type=blockType,
         target_crop=targetCrop,
-        block_category=blockCategory
+        block_category=blockCategory,
+        farming_year=farmingYear
     )
 
     return PaginatedResponse(

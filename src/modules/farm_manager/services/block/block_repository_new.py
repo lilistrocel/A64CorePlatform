@@ -198,7 +198,8 @@ class BlockRepository:
         status: Optional[BlockStatus] = None,
         block_type: Optional[str] = None,
         target_crop: Optional[UUID] = None,
-        block_category: Optional[str] = 'all'
+        block_category: Optional[str] = 'all',
+        farming_year: Optional[int] = None
     ) -> tuple[List[Block], int]:
         """Get blocks by farm with filters and pagination"""
         db = farm_db.get_database()
@@ -218,6 +219,10 @@ class BlockRepository:
         # Filter by block category
         if block_category and block_category != 'all':
             query["blockCategory"] = block_category
+
+        # Filter by farming year (blocks planted in a specific farming year)
+        if farming_year is not None:
+            query["farmingYearPlanted"] = farming_year
 
         # Get total count
         total = await db.blocks.count_documents(query)
