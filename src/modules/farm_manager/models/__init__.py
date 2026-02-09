@@ -68,6 +68,15 @@ from .spacing_standards import (
     convert_area_to_sqm,
     suggest_spacing_category,
 )
+from .farming_year_config import (
+    FarmingYearConfig,
+    FarmingYearConfigUpdate,
+    FarmingYearConfigResponse,
+    DEFAULT_FARMING_YEAR_START_MONTH,
+    get_farming_year,
+    get_farming_year_date_range,
+    MONTH_NAMES,
+)
 
 __all__ = [
     # Farm
@@ -172,4 +181,12 @@ __all__ = [
     "calculate_plant_count",
     "convert_area_to_sqm",
     "suggest_spacing_category",
+    # Farming Year Config
+    "FarmingYearConfig",
+    "FarmingYearConfigUpdate",
+    "FarmingYearConfigResponse",
+    "DEFAULT_FARMING_YEAR_START_MONTH",
+    "get_farming_year",
+    "get_farming_year_date_range",
+    "MONTH_NAMES",
 ]
