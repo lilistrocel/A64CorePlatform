@@ -262,6 +262,7 @@ class Block(BlockBase):
 
     # Cycle Tracking
     plantedDate: Optional[datetime] = Field(None, description="When planting started")
+    farmingYearPlanted: Optional[int] = Field(None, description="Farming year when current cycle started (e.g., 2025 for Aug 2025 - Jul 2026)")
     expectedHarvestDate: Optional[datetime] = Field(None, description="Expected harvest date")
     expectedStatusChanges: Optional[dict] = Field(None, description="Expected dates for each status")
 

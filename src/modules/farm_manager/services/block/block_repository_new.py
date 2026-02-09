@@ -382,9 +382,18 @@ class BlockRepository:
             if expected_status_changes:
                 update_dict["expectedStatusChanges"] = expected_status_changes
 
-            # Only set plantedDate when actually planting (not for planned)
+            # Only set plantedDate and farmingYearPlanted when actually planting (not for planned)
             if new_status == BlockStatus.GROWING:
-                update_dict["plantedDate"] = datetime.utcnow()
+                planted_date = datetime.utcnow()
+                update_dict["plantedDate"] = planted_date
+                # Calculate farming year for the planted date
+                from ..farming_year_service import get_farming_year_service
+                farming_year_service = get_farming_year_service()
+                config = await farming_year_service.get_farming_year_config()
+                update_dict["farmingYearPlanted"] = farming_year_service.get_farming_year_for_date(
+                    planted_date,
+                    config.farmingYearStartMonth
+                )
 
         # Handle emptying (status = empty)
         if new_status == BlockStatus.EMPTY:
@@ -394,6 +403,7 @@ class BlockRepository:
                 "targetCropName": None,
                 "actualPlantCount": None,
                 "plantedDate": None,
+                "farmingYearPlanted": None,  # Clear farming year when cycle ends
                 "expectedHarvestDate": None,
                 "expectedStatusChanges": None,
                 "kpi": {

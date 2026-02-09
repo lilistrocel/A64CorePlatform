@@ -77,6 +77,7 @@ class FarmDatabaseManager:
             await db.blocks.create_index("currentCycleId")
             await db.blocks.create_index("estimatedHarvestDate")
             await db.blocks.create_index([("createdAt", -1)])
+            await db.blocks.create_index([("farmId", 1), ("farmingYearPlanted", 1)])  # For farming year queries
 
             # Plant data collection
             await db.plant_data.create_index("plantDataId", unique=True)
