@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Card } from '@a64core/shared';
-import { getSpacingCategories, updateSpacingStandards, resetSpacingStandards } from '../../services/farmApi';
+import { getSpacingCategories, updateSpacingStandards, resetSpacingStandards, getFarmingYearConfig, updateFarmingYearConfig, type FarmingYearConfig } from '../../services/farmApi';
 import type { SpacingCategoryInfo, SpacingCategory } from '../../types/farm';
 import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
 import { useAuthStore } from '../../stores/auth.store';
 import { authService, type MfaStatusResponse } from '../../services/auth.service';
 import { useToastStore } from '../../stores/toast.store';
+
+// Month names for farming year configuration
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
 // Common timezone options (IANA timezone names)
 const TIMEZONE_OPTIONS = [
@@ -76,6 +82,16 @@ export function Settings() {
   const [newBackupCodes, setNewBackupCodes] = useState<string[] | null>(null);
   const [backupCodesCopied, setBackupCodesCopied] = useState(false);
 
+  // Farming year configuration state
+  const [farmingYearConfig, setFarmingYearConfig] = useState<FarmingYearConfig | null>(null);
+  const [loadingFarmingYear, setLoadingFarmingYear] = useState(false);
+  const [farmingYearError, setFarmingYearError] = useState<string | null>(null);
+  const [farmingYearSuccess, setFarmingYearSuccess] = useState<string | null>(null);
+  const [selectedStartMonth, setSelectedStartMonth] = useState<number>(8); // Default: August
+  const [savingFarmingYear, setSavingFarmingYear] = useState(false);
+  const [farmingYearChanged, setFarmingYearChanged] = useState(false);
+  const [showFarmingYearConfirm, setShowFarmingYearConfirm] = useState(false);
+
   // Initialize preferences from user data
   useEffect(() => {
     if (user) {
@@ -116,7 +132,97 @@ export function Settings() {
   useEffect(() => {
     loadSpacingCategories();
     loadMfaStatus();
+    loadFarmingYearConfig();
   }, []);
+
+  // Helper to check if user is admin
+  const isAdmin = user && (user.role === 'admin' || user.role === 'super_admin');
+
+  // Load farming year configuration
+  const loadFarmingYearConfig = async () => {
+    try {
+      setLoadingFarmingYear(true);
+      setFarmingYearError(null);
+      const config = await getFarmingYearConfig();
+      setFarmingYearConfig(config);
+      setSelectedStartMonth(config.farmingYearStartMonth);
+    } catch (error: any) {
+      console.error('Error loading farming year config:', error);
+      setFarmingYearError('Failed to load farming year configuration');
+    } finally {
+      setLoadingFarmingYear(false);
+    }
+  };
+
+  // Track farming year changes
+  useEffect(() => {
+    if (farmingYearConfig) {
+      setFarmingYearChanged(selectedStartMonth !== farmingYearConfig.farmingYearStartMonth);
+    }
+  }, [selectedStartMonth, farmingYearConfig]);
+
+  // Calculate farming year preview based on start month
+  const getFarmingYearPreview = (startMonth: number) => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-indexed
+
+    // Determine which farming year we're currently in
+    const farmingYear = currentMonth >= startMonth ? currentYear : currentYear - 1;
+
+    // Calculate the end month (month before start month)
+    const endMonth = startMonth === 1 ? 12 : startMonth - 1;
+    const endYear = startMonth === 1 ? farmingYear : farmingYear + 1;
+
+    const startMonthName = MONTH_NAMES[startMonth - 1];
+    const endMonthName = MONTH_NAMES[endMonth - 1];
+
+    return {
+      farmingYear,
+      startMonth: startMonthName,
+      endMonth: endMonthName,
+      startYear: farmingYear,
+      endYear: endYear,
+      displayString: `${startMonthName.slice(0, 3)} ${farmingYear} - ${endMonthName.slice(0, 3)} ${endYear}`,
+    };
+  };
+
+  // Handle farming year save
+  const handleSaveFarmingYear = async () => {
+    if (!isAdmin) {
+      setFarmingYearError('Admin privileges required to modify farming year configuration');
+      return;
+    }
+
+    setSavingFarmingYear(true);
+    setFarmingYearError(null);
+    setFarmingYearSuccess(null);
+
+    try {
+      const updatedConfig = await updateFarmingYearConfig(selectedStartMonth);
+      setFarmingYearConfig(updatedConfig);
+      setFarmingYearSuccess('Farming year configuration updated successfully!');
+      setShowFarmingYearConfirm(false);
+      setFarmingYearChanged(false);
+      addToast('success', 'Farming year configuration saved');
+    } catch (error: any) {
+      const message = error.response?.data?.detail || 'Failed to update farming year configuration';
+      setFarmingYearError(typeof message === 'string' ? message : 'Failed to save configuration');
+      addToast('error', 'Failed to save farming year configuration');
+    } finally {
+      setSavingFarmingYear(false);
+    }
+  };
+
+  // Cancel farming year changes
+  const handleCancelFarmingYear = () => {
+    if (farmingYearConfig) {
+      setSelectedStartMonth(farmingYearConfig.farmingYearStartMonth);
+    }
+    setShowFarmingYearConfirm(false);
+    setFarmingYearError(null);
+    setFarmingYearSuccess(null);
+  };
 
   const loadMfaStatus = async () => {
     try {
@@ -408,6 +514,110 @@ export function Settings() {
                 Admin privileges required to modify spacing standards.
                 Higher values = more plants per 100m² (denser planting).
               </SpacingNote>
+            </>
+          )}
+        </SettingsContent>
+      </Card>
+
+      <Card title="Farming Year Configuration">
+        <SettingsContent>
+          <SpacingIntro>
+            Configure when the farming year starts. This affects how harvests and crop cycles are
+            grouped for reporting and analysis. Common choices include August (UAE) or January (calendar year).
+          </SpacingIntro>
+
+          {loadingFarmingYear && <LoadingText>Loading farming year configuration...</LoadingText>}
+          {farmingYearError && <ErrorText>{farmingYearError}</ErrorText>}
+          {farmingYearSuccess && <SuccessText>{farmingYearSuccess}</SuccessText>}
+
+          {!loadingFarmingYear && !farmingYearError && (
+            <>
+              <SettingItem>
+                <SettingLabel htmlFor="farming-year-month">Farming Year Start Month</SettingLabel>
+                <PreferenceSelect
+                  id="farming-year-month"
+                  value={selectedStartMonth}
+                  onChange={(e) => setSelectedStartMonth(parseInt(e.target.value))}
+                  disabled={!isAdmin || savingFarmingYear}
+                  aria-label="Farming year start month"
+                >
+                  {MONTH_NAMES.map((month, index) => (
+                    <option key={index + 1} value={index + 1}>
+                      {month}
+                    </option>
+                  ))}
+                </PreferenceSelect>
+                <SettingDescription>
+                  Select the month when your farming year begins
+                </SettingDescription>
+              </SettingItem>
+
+              <FarmingYearPreviewBox>
+                <FarmingYearPreviewTitle>Farming Year Preview</FarmingYearPreviewTitle>
+                <FarmingYearPreviewContent>
+                  <FarmingYearPreviewRow>
+                    <span>Current Farming Year:</span>
+                    <FarmingYearValue>{getFarmingYearPreview(selectedStartMonth).farmingYear}</FarmingYearValue>
+                  </FarmingYearPreviewRow>
+                  <FarmingYearPreviewRow>
+                    <span>Date Range:</span>
+                    <FarmingYearValue>{getFarmingYearPreview(selectedStartMonth).displayString}</FarmingYearValue>
+                  </FarmingYearPreviewRow>
+                </FarmingYearPreviewContent>
+                <FarmingYearExample>
+                  Example: If {MONTH_NAMES[selectedStartMonth - 1]}, farming year 2025 = {MONTH_NAMES[selectedStartMonth - 1].slice(0, 3)} 2025 - {MONTH_NAMES[selectedStartMonth === 1 ? 11 : selectedStartMonth - 2].slice(0, 3)} {selectedStartMonth === 1 ? 2025 : 2026}
+                </FarmingYearExample>
+              </FarmingYearPreviewBox>
+
+              {farmingYearChanged && isAdmin && (
+                <>
+                  {!showFarmingYearConfirm ? (
+                    <PrefsButtonRow>
+                      <PrimaryButton onClick={() => setShowFarmingYearConfirm(true)} disabled={savingFarmingYear}>
+                        Save Changes
+                      </PrimaryButton>
+                      <SecondaryButton onClick={handleCancelFarmingYear} disabled={savingFarmingYear}>
+                        Cancel
+                      </SecondaryButton>
+                    </PrefsButtonRow>
+                  ) : (
+                    <ConfirmationBox>
+                      <ConfirmationTitle>Confirm Change</ConfirmationTitle>
+                      <ConfirmationText>
+                        Changing the farming year start month will affect how all harvests and crop cycles
+                        are grouped. This change applies system-wide. Are you sure you want to continue?
+                      </ConfirmationText>
+                      <PrefsButtonRow>
+                        <PrimaryButton onClick={handleSaveFarmingYear} disabled={savingFarmingYear}>
+                          {savingFarmingYear ? 'Saving...' : 'Confirm & Save'}
+                        </PrimaryButton>
+                        <SecondaryButton onClick={() => setShowFarmingYearConfirm(false)} disabled={savingFarmingYear}>
+                          Cancel
+                        </SecondaryButton>
+                      </PrefsButtonRow>
+                    </ConfirmationBox>
+                  )}
+                </>
+              )}
+
+              {farmingYearConfig?.updatedAt && (
+                <LastUpdatedInfo>
+                  Last updated: {new Date(farmingYearConfig.updatedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  {farmingYearConfig.updatedByEmail && ` by ${farmingYearConfig.updatedByEmail}`}
+                </LastUpdatedInfo>
+              )}
+
+              {!isAdmin && (
+                <SpacingNote>
+                  Admin privileges required to modify farming year configuration.
+                </SpacingNote>
+              )}
             </>
           )}
         </SettingsContent>
@@ -988,6 +1198,72 @@ const PrefsButtonRow = styled.div`
   display: flex;
   gap: ${({ theme }: any) => theme.spacing.md};
   margin-top: ${({ theme }: any) => theme.spacing.md};
+`;
+
+// Farming Year Configuration styled components
+const FarmingYearPreviewBox = styled.div`
+  background: ${({ theme }: any) => theme.colors.primary[50]};
+  border: 1px solid ${({ theme }: any) => theme.colors.primary[200]};
+  border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  padding: ${({ theme }: any) => theme.spacing.lg};
+  margin-top: ${({ theme }: any) => theme.spacing.md};
+`;
+
+const FarmingYearPreviewTitle = styled.h4`
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }: any) => theme.colors.primary[700]};
+  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
+`;
+
+const FarmingYearPreviewContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }: any) => theme.spacing.sm};
+`;
+
+const FarmingYearPreviewRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  color: ${({ theme }: any) => theme.colors.textSecondary};
+`;
+
+const FarmingYearValue = styled.span`
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }: any) => theme.colors.primary[600]};
+`;
+
+const FarmingYearExample = styled.div`
+  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
+  color: ${({ theme }: any) => theme.colors.textSecondary};
+  margin-top: ${({ theme }: any) => theme.spacing.md};
+  padding-top: ${({ theme }: any) => theme.spacing.md};
+  border-top: 1px solid ${({ theme }: any) => theme.colors.primary[200]};
+  font-style: italic;
+`;
+
+const ConfirmationBox = styled.div`
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  padding: ${({ theme }: any) => theme.spacing.lg};
+  margin-top: ${({ theme }: any) => theme.spacing.md};
+`;
+
+const ConfirmationTitle = styled.h4`
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  color: #92400e;
+  margin: 0 0 ${({ theme }: any) => theme.spacing.sm} 0;
+`;
+
+const ConfirmationText = styled.p`
+  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  color: #92400e;
+  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
+  line-height: 1.5;
 `;
 
 // MFA Status styled components
