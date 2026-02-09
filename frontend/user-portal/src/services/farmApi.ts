@@ -415,15 +415,26 @@ export async function dismissBlockAlert(farmId: string, blockId: string, alertId
 
 /**
  * Get harvests for a block
+ *
+ * @param farmId - Farm ID
+ * @param blockId - Block ID
+ * @param page - Page number (default 1)
+ * @param perPage - Items per page (default 20)
+ * @param farmingYear - Optional farming year filter
  */
 export async function getBlockHarvests(
   farmId: string,
   blockId: string,
   page: number = 1,
-  perPage: number = 20
+  perPage: number = 20,
+  farmingYear?: number | null
 ) {
+  const params: Record<string, any> = { page, perPage };
+  if (farmingYear !== null && farmingYear !== undefined) {
+    params.farmingYear = farmingYear;
+  }
   const response = await apiClient.get<any>(`/v1/farm/farms/${farmId}/blocks/${blockId}/harvests`, {
-    params: { page, perPage },
+    params,
   });
   return {
     items: response.data.data || [],
@@ -436,10 +447,23 @@ export async function getBlockHarvests(
 
 /**
  * Get harvest summary for a block
+ *
+ * @param farmId - Farm ID
+ * @param blockId - Block ID
+ * @param farmingYear - Optional farming year filter
  */
-export async function getBlockHarvestSummary(farmId: string, blockId: string) {
+export async function getBlockHarvestSummary(
+  farmId: string,
+  blockId: string,
+  farmingYear?: number | null
+) {
+  const params: Record<string, any> = {};
+  if (farmingYear !== null && farmingYear !== undefined) {
+    params.farmingYear = farmingYear;
+  }
   const response = await apiClient.get<{ data: any }>(
-    `/v1/farm/farms/${farmId}/blocks/${blockId}/harvests/summary`
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/harvests/summary`,
+    { params }
   );
   return response.data.data;
 }

@@ -2,11 +2,13 @@
  * BlockHarvestsTab Component
  *
  * Displays and manages harvest records for a block.
+ * Includes farming year filtering to view harvest history by farming year.
  */
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { farmApi } from '../../services/farmApi';
+import { farmApi, getAvailableFarmingYears, type FarmingYearItem } from '../../services/farmApi';
+import { FarmingYearSelector } from './FarmingYearSelector';
 import type { BlockHarvest, BlockHarvestCreate, BlockHarvestSummary, QualityGrade } from '../../types/farm';
 import { formatNumber } from '../../utils';
 
@@ -24,6 +26,14 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `;
 
 const Title = styled.h2`
@@ -31,6 +41,25 @@ const Title = styled.h2`
   font-weight: 600;
   color: #212121;
   margin: 0;
+`;
+
+const FarmingYearContext = styled.span`
+  font-size: 13px;
+  color: #3b82f6;
+  font-weight: 500;
+`;
+
+const HeaderControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
 `;
 
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
@@ -426,16 +455,47 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
   const [harvestToDelete, setHarvestToDelete] = useState<BlockHarvest | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Farming year filter state
+  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(null);
+  const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
+  const [loadingFarmingYears, setLoadingFarmingYears] = useState(false);
+
+  // Load available farming years when farmId changes
+  useEffect(() => {
+    const loadFarmingYears = async () => {
+      if (!farmId) {
+        setAvailableFarmingYears([]);
+        return;
+      }
+      try {
+        setLoadingFarmingYears(true);
+        const response = await getAvailableFarmingYears(farmId);
+        setAvailableFarmingYears(response.years || []);
+        // Default to current year if available and no year selected
+        if (selectedFarmingYear === null && response.currentFarmingYear) {
+          setSelectedFarmingYear(response.currentFarmingYear);
+        }
+      } catch (error) {
+        console.error('Error loading farming years:', error);
+        setAvailableFarmingYears([]);
+      } finally {
+        setLoadingFarmingYears(false);
+      }
+    };
+    loadFarmingYears();
+  }, [farmId]);
+
+  // Load harvests when farmId, blockId, or farmingYear changes
   useEffect(() => {
     loadHarvests();
-  }, [farmId, blockId]);
+  }, [farmId, blockId, selectedFarmingYear]);
 
   const loadHarvests = async () => {
     try {
       setLoading(true);
       const [harvestsResponse, summaryData] = await Promise.all([
-        farmApi.getBlockHarvests(farmId, blockId, 1, 100),
-        farmApi.getBlockHarvestSummary(farmId, blockId).catch(() => null),
+        farmApi.getBlockHarvests(farmId, blockId, 1, 100, selectedFarmingYear),
+        farmApi.getBlockHarvestSummary(farmId, blockId, selectedFarmingYear).catch(() => null),
       ]);
       setHarvests(harvestsResponse.items);
       setSummary(summaryData);
@@ -444,6 +504,17 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Get display string for selected farming year context
+   */
+  const getYearContextDisplay = (): string | null => {
+    if (selectedFarmingYear === null) {
+      return null;
+    }
+    const yearItem = availableFarmingYears.find((y) => y.year === selectedFarmingYear);
+    return yearItem?.display || `Year ${selectedFarmingYear}`;
   };
 
   const handleRecordHarvest = async (data: BlockHarvestCreate) => {
@@ -518,10 +589,28 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
       )}
 
       <Header>
-        <Title>{harvests.length} Total Harvests</Title>
-        <Button $variant="primary" onClick={() => setShowRecordModal(true)}>
-          + Record Harvest
-        </Button>
+        <HeaderLeft>
+          <Title>{harvests.length} Total Harvests</Title>
+          {getYearContextDisplay() && (
+            <FarmingYearContext>
+              Showing: {getYearContextDisplay()}
+            </FarmingYearContext>
+          )}
+        </HeaderLeft>
+        <HeaderControls>
+          <FarmingYearSelector
+            selectedYear={selectedFarmingYear}
+            availableYears={availableFarmingYears}
+            onYearChange={setSelectedFarmingYear}
+            showAllOption={true}
+            label=""
+            isLoading={loadingFarmingYears}
+            compact={true}
+          />
+          <Button $variant="primary" onClick={() => setShowRecordModal(true)}>
+            + Record Harvest
+          </Button>
+        </HeaderControls>
       </Header>
 
       {summary && (
