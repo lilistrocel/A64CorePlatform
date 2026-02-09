@@ -160,6 +160,8 @@ export interface TaskListParams {
 export interface FarmTasksParams {
   page?: number;
   perPage?: number;
+  /** Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026) */
+  farmingYear?: number;
 }
 
 export interface BlockTasksParams {

@@ -3,13 +3,18 @@
  *
  * Mobile-first farm selection view showing pending task counts for each farm.
  * Farmers can select a farm to view blocks and their tasks.
+ *
+ * Features:
+ * - Farming year filter for consistent filtering across operations
+ * - Task counts filtered by selected farming year
  */
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { getFarms } from '../../services/farmApi';
+import { getFarms, getFarmingYearsList, type FarmingYearItem } from '../../services/farmApi';
 import { getFarmTasks } from '../../services/tasksApi';
+import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
 import type { Farm } from '../../types/farm';
 import type { TaskWithDetails } from '../../types/tasks';
 
@@ -18,15 +23,76 @@ interface FarmWithTasks extends Farm {
   inProgressTaskCount: number;
 }
 
+// Storage key for persisting farming year selection
+const FARMING_YEAR_STORAGE_KEY = 'operations_farming_year_filter';
+
+function getPersistedFarmingYear(): number | null {
+  try {
+    const stored = sessionStorage.getItem(FARMING_YEAR_STORAGE_KEY);
+    if (stored === null) return null;
+    const parsed = JSON.parse(stored);
+    return typeof parsed === 'number' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistFarmingYear(year: number | null): void {
+  try {
+    if (year === null) {
+      sessionStorage.removeItem(FARMING_YEAR_STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(FARMING_YEAR_STORAGE_KEY, JSON.stringify(year));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function OperationsDashboard() {
   const navigate = useNavigate();
   const [farms, setFarms] = useState<FarmWithTasks[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Farming year filter state
+  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(getPersistedFarmingYear());
+  const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
+  const [loadingFarmingYears, setLoadingFarmingYears] = useState(false);
+
+  // Load available farming years on mount
+  useEffect(() => {
+    const loadFarmingYears = async () => {
+      try {
+        setLoadingFarmingYears(true);
+        const response = await getFarmingYearsList(5, true);
+        setAvailableFarmingYears(response.years || []);
+        // If no persisted year, default to current year
+        if (selectedFarmingYear === null && response.years.length > 0) {
+          const currentYear = response.years.find((y) => y.isCurrent);
+          if (currentYear) {
+            setSelectedFarmingYear(currentYear.year);
+            persistFarmingYear(currentYear.year);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading farming years:', error);
+      } finally {
+        setLoadingFarmingYears(false);
+      }
+    };
+    loadFarmingYears();
+  }, []);
+
+  // Handle farming year change
+  const handleFarmingYearChange = (year: number | null) => {
+    setSelectedFarmingYear(year);
+    persistFarmingYear(year);
+  };
+
   useEffect(() => {
     loadFarmsWithTaskCounts();
-  }, []);
+  }, [selectedFarmingYear]);
 
   const loadFarmsWithTaskCounts = async () => {
     try {
@@ -37,12 +103,16 @@ export function OperationsDashboard() {
       const farmsResponse = await getFarms(1, 100);
       const farmsData = farmsResponse.items;
 
-      // Load tasks for each farm and count by status
+      // Load tasks for each farm and count by status (filtered by farming year if selected)
       const farmsWithTasks: FarmWithTasks[] = await Promise.all(
         farmsData.map(async (farm) => {
           try {
             // Get all tasks for this farm (not just user's tasks)
-            const tasksResponse = await getFarmTasks(farm.farmId, { page: 1, perPage: 100 });
+            const tasksResponse = await getFarmTasks(farm.farmId, {
+              page: 1,
+              perPage: 100,
+              farmingYear: selectedFarmingYear ?? undefined,
+            });
             const farmTasks = tasksResponse.items;
 
             const pendingCount = farmTasks.filter((task) => task.status === 'pending').length;
@@ -78,12 +148,32 @@ export function OperationsDashboard() {
     navigate(`/operations/${farmId}`);
   };
 
+  // Loading/Error/Empty header with farming year selector
+  const renderHeaderWithSelector = () => (
+    <Header>
+      <HeaderTop>
+        <HeaderTitles>
+          <Title>Operations</Title>
+          <Subtitle>Select a farm to view tasks</Subtitle>
+        </HeaderTitles>
+        <FarmingYearSelectorWrapper>
+          <FarmingYearSelector
+            selectedYear={selectedFarmingYear}
+            availableYears={availableFarmingYears}
+            onYearChange={handleFarmingYearChange}
+            showAllOption={true}
+            label="Farming Year"
+            isLoading={loadingFarmingYears}
+          />
+        </FarmingYearSelectorWrapper>
+      </HeaderTop>
+    </Header>
+  );
+
   if (loading) {
     return (
       <Container>
-        <Header>
-          <Title>Operations</Title>
-        </Header>
+        {renderHeaderWithSelector()}
         <LoadingContainer>
           <LoadingSpinner />
           <LoadingText>Loading farms...</LoadingText>
@@ -95,9 +185,7 @@ export function OperationsDashboard() {
   if (error) {
     return (
       <Container>
-        <Header>
-          <Title>Operations</Title>
-        </Header>
+        {renderHeaderWithSelector()}
         <ErrorContainer>
           <ErrorIcon>❌</ErrorIcon>
           <ErrorText>{error}</ErrorText>
@@ -110,9 +198,7 @@ export function OperationsDashboard() {
   if (farms.length === 0) {
     return (
       <Container>
-        <Header>
-          <Title>Operations</Title>
-        </Header>
+        {renderHeaderWithSelector()}
         <EmptyContainer>
           <EmptyIcon>🏞️</EmptyIcon>
           <EmptyText>No farms available</EmptyText>
@@ -125,11 +211,39 @@ export function OperationsDashboard() {
   const totalPending = farms.reduce((sum, farm) => sum + farm.pendingTaskCount, 0);
   const totalInProgress = farms.reduce((sum, farm) => sum + farm.inProgressTaskCount, 0);
 
+  // Get farming year display string
+  const getFarmingYearDisplay = () => {
+    if (selectedFarmingYear === null) {
+      return 'All Years';
+    }
+    const yearItem = availableFarmingYears.find((y) => y.year === selectedFarmingYear);
+    return yearItem?.display || `Farming Year ${selectedFarmingYear}`;
+  };
+
   return (
     <Container>
       <Header>
-        <Title>Operations</Title>
-        <Subtitle>Select a farm to view tasks</Subtitle>
+        <HeaderTop>
+          <HeaderTitles>
+            <Title>Operations</Title>
+            <Subtitle>
+              Select a farm to view tasks
+              {selectedFarmingYear !== null && (
+                <FarmingYearBadge>{getFarmingYearDisplay()}</FarmingYearBadge>
+              )}
+            </Subtitle>
+          </HeaderTitles>
+          <FarmingYearSelectorWrapper>
+            <FarmingYearSelector
+              selectedYear={selectedFarmingYear}
+              availableYears={availableFarmingYears}
+              onYearChange={handleFarmingYearChange}
+              showAllOption={true}
+              label="Farming Year"
+              isLoading={loadingFarmingYears}
+            />
+          </FarmingYearSelectorWrapper>
+        </HeaderTop>
       </Header>
 
       {/* Summary */}
@@ -213,6 +327,33 @@ const Header = styled.div`
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
 
+const HeaderTop = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: ${({ theme }) => theme.spacing.md};
+  flex-wrap: wrap;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const HeaderTitles = styled.div`
+  flex: 1;
+  min-width: 200px;
+`;
+
+const FarmingYearSelectorWrapper = styled.div`
+  min-width: 200px;
+
+  @media (max-width: 640px) {
+    width: 100%;
+    margin-top: ${({ theme }) => theme.spacing.md};
+  }
+`;
+
 const Title = styled.h1`
   font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
@@ -224,6 +365,22 @@ const Subtitle = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  flex-wrap: wrap;
+`;
+
+const FarmingYearBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[700]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
 `;
 
 const Summary = styled.div`

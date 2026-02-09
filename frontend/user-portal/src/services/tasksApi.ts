@@ -70,6 +70,7 @@ export async function getFarmTasks(
     params: {
       page: params?.page || 1,
       perPage: params?.perPage || 20,
+      farmingYear: params?.farmingYear,
     },
   });
 
