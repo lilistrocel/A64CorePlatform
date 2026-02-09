@@ -20,7 +20,14 @@ from ...models.spacing_standards import (
     calculate_plant_count,
     convert_area_to_sqm,
 )
+from ...models.farming_year_config import (
+    FarmingYearConfig,
+    FarmingYearConfigUpdate,
+    FarmingYearConfigResponse,
+    MONTH_NAMES,
+)
 from ...services.config_service import ConfigService
+from ...services.farming_year_service import get_farming_year_service
 
 router = APIRouter(prefix="/config")
 
@@ -226,4 +233,158 @@ async def get_spacing_categories(
         "categories": categories,
         "lastUpdated": config.updatedAt.isoformat() if config.updatedAt else None,
         "updatedBy": config.updatedByEmail
+    }
+
+
+# ==================== Farming Year Configuration Endpoints ====================
+
+@router.get(
+    "/farming-year",
+    response_model=FarmingYearConfigResponse,
+    summary="Get farming year configuration",
+    description="Retrieve the current farming year configuration including start month."
+)
+async def get_farming_year_config(
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """
+    Get the current farming year configuration.
+
+    Returns the start month (1-12) and metadata about when it was last updated.
+    """
+    service = get_farming_year_service()
+    config = await service.get_farming_year_config()
+
+    # Add display information
+    start_month_name = MONTH_NAMES.get(config.farmingYearStartMonth, "Unknown")
+
+    return FarmingYearConfigResponse(
+        data=config,
+        message=f"Farming year starts in {start_month_name}"
+    )
+
+
+@router.put(
+    "/farming-year",
+    response_model=FarmingYearConfigResponse,
+    summary="Update farming year configuration",
+    description="Update the farming year start month. Requires admin privileges."
+)
+async def update_farming_year_config(
+    update_data: FarmingYearConfigUpdate,
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """
+    Update the farming year start month.
+
+    Only users with admin or super_admin role can update this configuration.
+    The start month must be between 1 (January) and 12 (December).
+    """
+    # Check for admin privileges
+    if current_user.role not in ("admin", "super_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can update farming year configuration"
+        )
+
+    service = get_farming_year_service()
+
+    try:
+        config = await service.update_farming_year_config(
+            start_month=update_data.farmingYearStartMonth,
+            user_id=UUID(current_user.userId),
+            user_email=current_user.email
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+    start_month_name = MONTH_NAMES.get(config.farmingYearStartMonth, "Unknown")
+
+    return FarmingYearConfigResponse(
+        data=config,
+        message=f"Farming year start month updated to {start_month_name}"
+    )
+
+
+@router.get(
+    "/current-farming-year",
+    summary="Get current farming year information",
+    description="Get detailed information about the current farming year based on configured start month."
+)
+async def get_current_farming_year(
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """
+    Get the current farming year with formatted display string.
+
+    Returns:
+        - currentYear: The current farming year number (e.g., 2025)
+        - startMonth: The start month number (1-12)
+        - startMonthName: The full name of the start month
+        - displayString: Formatted string like "Aug 2025 - Jul 2026"
+        - startDate: First day of the farming year
+        - endDate: Last day of the farming year
+    """
+    service = get_farming_year_service()
+    config = await service.get_farming_year_config()
+    current_year = await service.get_current_farming_year()
+
+    start_date, end_date = service.get_farming_year_date_range(
+        current_year,
+        config.farmingYearStartMonth
+    )
+    display_string = service.format_farming_year_display(
+        current_year,
+        config.farmingYearStartMonth
+    )
+
+    start_month_name = MONTH_NAMES.get(config.farmingYearStartMonth, "Unknown")
+
+    return {
+        "currentYear": current_year,
+        "startMonth": config.farmingYearStartMonth,
+        "startMonthName": start_month_name,
+        "displayString": display_string,
+        "startDate": start_date.isoformat(),
+        "endDate": end_date.isoformat(),
+        "config": {
+            "configId": str(config.configId),
+            "updatedAt": config.updatedAt.isoformat() if config.updatedAt else None,
+            "updatedByEmail": config.updatedByEmail
+        }
+    }
+
+
+@router.get(
+    "/farming-years-list",
+    summary="Get list of farming years for selection",
+    description="Get a list of farming years for dropdown/filter selection, including current and past years."
+)
+async def get_farming_years_list(
+    count: int = 5,
+    include_next: bool = True,
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """
+    Get a list of farming years for UI selection components.
+
+    Args:
+        count: Number of past years to include (default 5)
+        include_next: Whether to include the next farming year (default True)
+
+    Returns list of farming years with:
+        - year: The farming year number
+        - display: Formatted string like "Aug 2025 - Jul 2026"
+        - isCurrent: True if this is the current farming year
+        - isNext: True if this is the next farming year
+    """
+    service = get_farming_year_service()
+    years = await service.get_farming_years_list(count=count, include_next=include_next)
+
+    return {
+        "years": years,
+        "count": len(years)
     }
