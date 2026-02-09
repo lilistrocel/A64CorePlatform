@@ -4206,3 +4206,121 @@ NOTES:
 - formatCurrency defaults to AED but supports USD, EUR via currency parameter
 - Table sorting uses underlying numeric values, not formatted strings
 - Logistics and Marketing tables already had proper formatting in place
+
+== Session: 2026-02-09 (Agent - Feature #368) ==
+Agent: Feature #368 - Profile slow list endpoints with pagination
+
+COMPLETED:
+- Feature #368: Profile slow list endpoints with pagination [PASSING]
+
+PROFILING RESULTS:
+
+1. Sales Orders (3303 total documents)
+   - Page 1, perPage=10: 8.4ms
+   - Page 1, perPage=20: 6.4ms
+   - Page 1, perPage=50: 6.4ms
+   - Page 1, perPage=100: 10ms
+   - Deep pagination (page 100, skip 1980): 6.8ms
+   - Deep pagination (page 150, skip 2980): 5.9ms
+   - Deep pagination (page 165, skip 3280): 6.7ms
+   - RESULT: EXCELLENT - Fast pagination even with deep offsets
+
+2. Blocks (549 total documents)
+   - Farm with 154 blocks tested
+   - Page 1, perPage=20: 7.4ms
+   - Page 5, perPage=20 (skip 80): 5.9ms
+   - Page 8, perPage=20 (skip 140): 5.6ms
+   - With blockCategory=physical filter: 5.6ms
+   - RESULT: EXCELLENT - All queries under 10ms
+
+3. Employees (155 total documents)
+   - Page 1, perPage=10: 5.4ms
+   - Page 1, perPage=50: 8.1ms
+   - Page 5, perPage=20 (skip 80): 4.7ms
+   - Search by name: 6.0ms
+   - Filter by department: 3.8ms
+   - Filter by status: 4.7ms
+   - RESULT: EXCELLENT - All queries under 10ms
+
+INDEXES VERIFICATION:
+
+1. sales_orders collection:
+   - orderId (unique)
+   - orderCode (unique)
+   - customerId
+   - customerName
+   - status
+   - paymentStatus
+   - orderDate
+   - createdBy
+   - createdAt (descending - used for sort)
+   - Text index on customerName, orderCode
+   - RESULT: Well-indexed for all filter/sort operations
+
+2. blocks collection:
+   - blockId (unique)
+   - farmId (critical for farm-scoped queries)
+   - state
+   - currentPlanting
+   - currentCycleId
+   - estimatedHarvestDate
+   - createdAt (descending)
+   - RESULT: Well-indexed
+
+3. employees collection:
+   - employeeId (unique)
+   - employeeCode (unique)
+   - email
+   - department (used for filter)
+   - position
+   - status (used for filter)
+   - createdBy
+   - createdAt (descending - used for sort)
+   - Text index on firstName, lastName, email, department
+   - RESULT: Well-indexed, includes full-text search
+
+QUERY PATTERN ANALYSIS:
+
+All repositories follow this pattern:
+1. count_documents(query) - for total count
+2. find(query).sort().skip().limit() - for paginated data
+
+MongoDB execution stats for sales_orders:
+- First page (skip=0): Examines exactly 20 docs (limit)
+- Deep pagination (skip=3000): Examines 3020 index keys but only 20 docs
+- Uses createdAt_-1 index for sort (IXSCAN, not COLLSCAN)
+- COUNT queries with empty filter use COLLSCAN (expected for full count)
+- COUNT queries with status filter use status_1 index
+
+RECOMMENDATIONS:
+
+1. NO IMMEDIATE CHANGES NEEDED
+   - All endpoints perform well (<10ms response times)
+   - Proper indexes are in place for common query patterns
+   - skip/limit pagination works efficiently with indexes
+
+2. FUTURE CONSIDERATIONS (when data grows to 100k+ records):
+   - Consider cursor-based pagination for very deep pages
+   - Add composite indexes if filter+sort combinations become slow
+   - Use estimatedDocumentCount() for approximate counts (faster)
+   - Consider index on {status: 1, createdAt: -1} for filtered sorted queries
+
+3. ALREADY OPTIMIZED:
+   - Sort uses indexed field (createdAt)
+   - Filters use indexed fields (status, department, etc.)
+   - Text search uses text indexes
+   - Pagination uses standard MongoDB skip/limit pattern
+
+FILES ANALYZED:
+- src/modules/sales/services/sales/order_repository.py
+- src/modules/farm_manager/services/block/block_repository_new.py
+- src/modules/hr/services/employee/employee_repository.py
+- Multiple other repositories follow same pattern
+
+CURRENT STATUS: 364/372 features passing (97.8%)
+
+NOTES FOR NEXT SESSION:
+- All list endpoints are well-optimized for current data sizes
+- No code changes needed - endpoints already perform well
+- Feature verified via profiling, indexes, and query analysis
+
