@@ -12,9 +12,11 @@ import logging
 from ...models.farm import Farm, FarmCreate, FarmUpdate
 from ...models.farm_analytics import FarmAnalyticsResponse
 from ...models.global_analytics import GlobalAnalyticsResponse
+from ...models.farming_year_config import MONTH_NAMES
 from ...services.farm import FarmService
 from ...services.farm.farm_analytics_service import FarmAnalyticsService
 from ...services.global_analytics_service import GlobalAnalyticsService
+from ...services.farming_year_service import get_farming_year_service
 from ...middleware.auth import get_current_active_user, require_permission, CurrentUser
 from ...utils.responses import SuccessResponse, PaginatedResponse, PaginationMeta
 from src.core.cache import cache_response
@@ -455,4 +457,110 @@ async def get_global_analytics(
     return SuccessResponse(
         data=analytics,
         message="Global analytics retrieved successfully"
+    )
+
+
+@router.get(
+    "/{farm_id}/farming-years",
+    response_model=SuccessResponse[dict],
+    summary="Get available farming years for a farm",
+    description="Get a list of all farming years that have data for this farm, used for year selector dropdown."
+)
+async def get_farm_farming_years(
+    farm_id: UUID,
+    current_user: CurrentUser = Depends(get_current_active_user),
+    service: FarmService = Depends()
+):
+    """
+    Get all farming years that have data for a specific farm.
+
+    Returns a list of farming years found in block_harvests and blocks for this farm,
+    combined, sorted newest first. Includes the current farming year even if no data exists.
+
+    Args:
+        farm_id: Farm UUID
+
+    Returns:
+        years: List of available farming years with:
+            - year: The farming year number (e.g., 2025)
+            - display: Formatted string like "Aug 2025 - Jul 2026"
+            - isCurrent: True if this is the current farming year
+            - hasHarvests: True if the farm has harvest records for this year
+            - hasBlocks: True if the farm has blocks planted in this year
+    """
+    from ...services.database import farm_db
+
+    # Get farm to verify access and existence
+    farm = await service.get_farm(farm_id)
+
+    # Check access (admins can access all farms)
+    if current_user.role not in ["super_admin", "admin"]:
+        if str(farm.managerId) != current_user.userId:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Not assigned to this farm"
+            )
+
+    db = farm_db.get_database()
+
+    # Get farming year service for config and formatting
+    fy_service = get_farming_year_service()
+    config = await fy_service.get_farming_year_config()
+    current_year = await fy_service.get_current_farming_year()
+
+    # Query distinct farmingYear values from block_harvests for this farm
+    harvest_years_cursor = db.block_harvests.aggregate([
+        {"$match": {"farmId": str(farm_id)}},
+        {"$group": {"_id": "$farmingYear"}},
+        {"$match": {"_id": {"$ne": None}}}
+    ])
+    harvest_years = set()
+    async for doc in harvest_years_cursor:
+        if doc["_id"] is not None:
+            harvest_years.add(doc["_id"])
+
+    # Query distinct farmingYearPlanted values from blocks for this farm
+    block_years_cursor = db.blocks.aggregate([
+        {"$match": {"farmId": str(farm_id)}},
+        {"$group": {"_id": "$farmingYearPlanted"}},
+        {"$match": {"_id": {"$ne": None}}}
+    ])
+    block_years = set()
+    async for doc in block_years_cursor:
+        if doc["_id"] is not None:
+            block_years.add(doc["_id"])
+
+    # Combine all years
+    all_years = harvest_years | block_years
+
+    # Include current year even if no data
+    all_years.add(current_year)
+
+    # Sort descending (newest first)
+    sorted_years = sorted(all_years, reverse=True)
+
+    # Build response with formatted display strings
+    years_list = []
+    for year in sorted_years:
+        display = fy_service.format_farming_year_display(year, config.farmingYearStartMonth)
+        years_list.append({
+            "year": year,
+            "display": display,
+            "isCurrent": year == current_year,
+            "hasHarvests": year in harvest_years,
+            "hasBlocks": year in block_years
+        })
+
+    return SuccessResponse(
+        data={
+            "farmId": str(farm_id),
+            "years": years_list,
+            "count": len(years_list),
+            "currentFarmingYear": current_year,
+            "config": {
+                "startMonth": config.farmingYearStartMonth,
+                "startMonthName": MONTH_NAMES.get(config.farmingYearStartMonth, "Unknown")
+            }
+        },
+        message=f"Found {len(years_list)} farming years with data"
     )
