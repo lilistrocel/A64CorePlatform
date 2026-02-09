@@ -96,7 +96,8 @@ class TaskRepository:
         farm_id: UUID,
         status: Optional[TaskStatus] = None,
         page: int = 1,
-        per_page: int = 50
+        per_page: int = 50,
+        farming_year: Optional[int] = None
     ) -> Tuple[List[FarmTask], int]:
         """
         Get tasks for a farm
@@ -106,6 +107,7 @@ class TaskRepository:
             status: Optional status filter
             page: Page number
             per_page: Results per page
+            farming_year: Optional farming year filter (filters by block's farmingYearPlanted)
 
         Returns:
             Tuple of (tasks list, total count)
@@ -116,6 +118,21 @@ class TaskRepository:
         query: Dict = {"farmId": str(farm_id)}
         if status:
             query["status"] = status.value
+
+        # Filter by farming year - find blocks planted in this farming year
+        if farming_year is not None:
+            # Get all blockIds that have the specified farmingYearPlanted
+            blocks_cursor = db.blocks.find(
+                {"farmId": str(farm_id), "farmingYearPlanted": farming_year, "isActive": True},
+                {"blockId": 1}
+            )
+            block_ids = [doc["blockId"] async for doc in blocks_cursor]
+
+            if block_ids:
+                query["blockId"] = {"$in": block_ids}
+            else:
+                # No blocks with this farming year, return empty result
+                return [], 0
 
         # Get total count
         total = await db.farm_tasks.count_documents(query)

@@ -88,6 +88,7 @@ async def list_farm_tasks(
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(50, ge=1, le=100, description="Items per page"),
     status_filter: Optional[TaskStatus] = Query(None, alias="status", description="Filter by status"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -97,6 +98,9 @@ async def list_farm_tasks(
     - `page`: Page number (default: 1)
     - `perPage`: Items per page (default: 50, max: 100)
     - `status`: Filter by task status (optional)
+    - `farmingYear`: Filter by farming year (optional, e.g., 2025 for Aug 2025 - Jul 2026)
+
+    **Note**: The farming year filter returns tasks for blocks planted in that farming year.
 
     **Response**: Paginated list of tasks
     """
@@ -104,7 +108,8 @@ async def list_farm_tasks(
         farm_id=farm_id,
         status=status_filter,
         page=page,
-        per_page=perPage
+        per_page=perPage,
+        farming_year=farmingYear
     )
 
     return response

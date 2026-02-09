@@ -105,7 +105,8 @@ class TaskService:
         farm_id: UUID,
         status: Optional[TaskStatus] = None,
         page: int = 1,
-        per_page: int = 50
+        per_page: int = 50,
+        farming_year: Optional[int] = None
     ) -> PaginatedResponse[FarmTask]:
         """
         Get tasks for a farm
@@ -115,11 +116,12 @@ class TaskService:
             status: Optional status filter
             page: Page number
             per_page: Results per page
+            farming_year: Optional farming year filter (filters by block's farmingYearPlanted)
 
         Returns:
             PaginatedResponse with paginated tasks
         """
-        tasks, total = await TaskRepository.get_by_farm(farm_id, status, page, per_page)
+        tasks, total = await TaskRepository.get_by_farm(farm_id, status, page, per_page, farming_year)
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
         return PaginatedResponse(
