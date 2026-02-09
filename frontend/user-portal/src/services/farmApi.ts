@@ -630,6 +630,113 @@ export async function resetSpacingStandards() {
 }
 
 // ============================================================================
+// FARMING YEAR CONFIGURATION ENDPOINTS
+// ============================================================================
+
+/**
+ * Farming year configuration response type
+ */
+export interface FarmingYearConfig {
+  configId: string;
+  configType: string;
+  farmingYearStartMonth: number;
+  updatedAt: string;
+  updatedBy: string | null;
+  updatedByEmail: string | null;
+}
+
+/**
+ * Farming year item type for year list responses
+ */
+export interface FarmingYearItem {
+  year: number;
+  display: string;
+  isCurrent: boolean;
+  isNext?: boolean;
+  hasHarvests?: boolean;
+  hasBlocks?: boolean;
+}
+
+/**
+ * Get the farming year configuration (start month)
+ */
+export async function getFarmingYearConfig(): Promise<FarmingYearConfig> {
+  const response = await apiClient.get<{ data: FarmingYearConfig; message?: string }>(
+    '/v1/farm/config/farming-year'
+  );
+  return response.data.data;
+}
+
+/**
+ * Update the farming year configuration (admin only)
+ * @param startMonth - The month when the farming year starts (1-12)
+ */
+export async function updateFarmingYearConfig(startMonth: number): Promise<FarmingYearConfig> {
+  const response = await apiClient.put<{ data: FarmingYearConfig; message?: string }>(
+    '/v1/farm/config/farming-year',
+    { farmingYearStartMonth: startMonth }
+  );
+  return response.data.data;
+}
+
+/**
+ * Get the current farming year information
+ */
+export async function getCurrentFarmingYear(): Promise<{
+  currentYear: number;
+  startMonth: number;
+  startMonthName: string;
+  displayString: string;
+  startDate: string;
+  endDate: string;
+  config: {
+    configId: string;
+    updatedAt: string | null;
+    updatedByEmail: string | null;
+  };
+}> {
+  const response = await apiClient.get<any>('/v1/farm/config/current-farming-year');
+  return response.data;
+}
+
+/**
+ * Get a list of farming years for selection (dropdown)
+ * @param count - Number of past years to include (default 5)
+ * @param includeNext - Whether to include the next farming year (default true)
+ */
+export async function getFarmingYearsList(
+  count: number = 5,
+  includeNext: boolean = true
+): Promise<{ years: FarmingYearItem[]; count: number }> {
+  const response = await apiClient.get<{ years: FarmingYearItem[]; count: number }>(
+    '/v1/farm/config/farming-years-list',
+    { params: { count, include_next: includeNext } }
+  );
+  return response.data;
+}
+
+/**
+ * Get available farming years for a specific farm
+ * Returns farming years that have data (harvests or blocks) for the farm
+ * @param farmId - The farm ID to get available years for
+ */
+export async function getAvailableFarmingYears(farmId: string): Promise<{
+  farmId: string;
+  years: FarmingYearItem[];
+  count: number;
+  currentFarmingYear: number;
+  config: {
+    startMonth: number;
+    startMonthName: string;
+  };
+}> {
+  const response = await apiClient.get<{ data: any; message?: string }>(
+    `/v1/farm/farms/${farmId}/farming-years`
+  );
+  return response.data.data;
+}
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
@@ -825,6 +932,13 @@ export const farmApi = {
   calculatePlantCount,
   updateSpacingStandards,
   resetSpacingStandards,
+
+  // Farming Year Config
+  getFarmingYearConfig,
+  updateFarmingYearConfig,
+  getCurrentFarmingYear,
+  getFarmingYearsList,
+  getAvailableFarmingYears,
 
   // IoT Controller
   getBlockIoTController,
