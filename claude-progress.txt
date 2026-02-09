@@ -4596,3 +4596,107 @@ RECOMMENDATIONS:
 3. Rate limiting is working as designed
 
 CURRENT STATUS: 366/372 features passing (98.4%)
+
+== Session: 2026-02-09 (Agent Batch #373, #374, #377) ==
+Agent: Features #373, #374, #377 - Farming Year Configuration
+
+COMPLETED:
+- Feature #373: Create FarmingYearConfig model [PASSING]
+  - Created src/modules/farm_manager/models/farming_year_config.py
+  - FarmingYearConfig Pydantic model with farmingYearStartMonth field (1-12, default 8 for August)
+  - configType field set to 'farming_year_config'
+  - Metadata fields: configId (UUID), updatedAt, updatedBy, updatedByEmail
+  - Update and Response schemas included
+  - Helper functions: get_farming_year, get_farming_year_date_range, MONTH_NAMES
+  - Exported from models __init__.py
+
+- Feature #374: Create FarmingYearService for date calculations [PASSING]
+  - Created src/modules/farm_manager/services/farming_year_service.py
+  - get_farming_year_config(): Fetches config from system_config collection
+  - get_farming_year_for_date(date, start_month): Returns farming year integer
+  - get_current_farming_year(): Gets current farming year from config
+  - get_farming_year_date_range(year, start_month): Returns (start_date, end_date) tuple
+  - format_farming_year_display(year, start_month): Returns 'Aug 2025 - Jul 2026' format
+  - get_farming_years_list(): Returns list for dropdown selection
+  - is_date_in_farming_year(): Checks if date falls within farming year
+  - Singleton pattern with get_farming_year_service()
+  - Exported from services __init__.py
+
+- Feature #377: Add farming year tracking to blocks collection [PASSING]
+  - Added farmingYearPlanted: Optional[int] field to Block model
+  - Updated block_repository_new.py update_status() to set farmingYearPlanted when transitioning to GROWING
+  - Clears farmingYearPlanted when transitioning to EMPTY
+  - Added compound index on (farmId, farmingYearPlanted) for farming year queries
+  - Index verified in MongoDB: farmId_1_farmingYearPlanted_1
+
+FILES CREATED:
+- src/modules/farm_manager/models/farming_year_config.py
+- src/modules/farm_manager/services/farming_year_service.py
+
+FILES MODIFIED:
+- src/modules/farm_manager/models/__init__.py (exports for FarmingYearConfig)
+- src/modules/farm_manager/services/__init__.py (exports for FarmingYearService)
+- src/modules/farm_manager/models/block.py (added farmingYearPlanted field)
+- src/modules/farm_manager/services/block/block_repository_new.py (set/clear farmingYearPlanted)
+- src/modules/farm_manager/services/database.py (added compound index)
+
+CURRENT STATUS: 375/394 features passing (95.2%)
+
+NOTES FOR NEXT SESSION:
+- Farming year configuration is stored in system_config collection
+- Default start month is August (8) - common for UAE agricultural calendar
+- farmingYearPlanted tracks which farming year a block's crop cycle belongs to
+- Test admin: admin_f24_test@example.com / TestPass123@
+
+
+== Session: 2026-02-09 (Agent Batch #376, #375, #378) ==
+Agent: Features #376, #375, #378 - Farming Year Integration
+
+COMPLETED:
+- Feature #376: Add farmingYear field to block_harvests collection [PASSING]
+  - Added farmingYear: Optional[int] field to BlockHarvest model (via BlockHarvestBase)
+  - BlockHarvestCreate schema inherits farmingYear (optional)
+  - HarvestRepository.create() auto-calculates farmingYear from harvestDate
+  - Uses get_farming_year() function with configurable start month
+  - Added database indexes: farmingYear_1, (blockId, farmingYear), (farmId, farmingYear)
+  - Screenshot: feature376-api-health-farmingYear.png
+
+- Feature #375: Create farming year configuration API endpoints [PASSING]
+  - GET /api/v1/farm/config/farming-year: retrieve current config
+  - PUT /api/v1/farm/config/farming-year: update start month (admin only)
+  - GET /api/v1/farm/config/current-farming-year: get current year info with display string
+  - GET /api/v1/farm/config/farming-years-list: get list for dropdown selection
+  - All endpoints require authentication
+  - PUT endpoint validates admin/super_admin role
+  - Proper validation (month 1-12) and error handling
+  - Screenshot: feature375-farming-year-api-endpoints.png
+
+- Feature #378: Add farming year tracking to block_archives collection [PASSING]
+  - Added farmingYearPlanted: Optional[int] to BlockArchive model
+  - Added farmingYearHarvested: Optional[int] to BlockArchive model
+  - Updated archive_block_cycle() to auto-calculate both farming years
+  - Uses plantedDate for farmingYearPlanted
+  - Uses harvestCompletedDate for farmingYearHarvested
+  - Added database indexes for farming year queries on archives:
+    - farmingYearPlanted_1, farmingYearHarvested_1
+    - (farmId, farmingYearPlanted), (farmId, farmingYearHarvested)
+    - (blockId, farmingYearPlanted)
+  - Screenshot: feature378-block-archives-farming-year.png
+
+FILES MODIFIED:
+- src/modules/farm_manager/models/block_harvest.py (farmingYear field)
+- src/modules/farm_manager/services/block/harvest_repository.py (auto-calculate farmingYear)
+- src/modules/farm_manager/api/v1/config.py (4 new API endpoints)
+- src/modules/farm_manager/models/block_archive.py (farmingYearPlanted, farmingYearHarvested)
+- src/modules/farm_manager/services/block/archive_repository.py (calculate farming years)
+- src/modules/farm_manager/services/database.py (indexes for block_harvests, block_archives)
+
+CURRENT STATUS: 378/394 features passing (95.9%)
+
+NOTES FOR NEXT SESSION:
+- Farming year configuration: Default start month is August (8) per UAE agricultural calendar
+- All farming year calculations use get_farming_year(date, start_month) function
+- Config stored in system_config collection with configType="farming_year_config"
+- Existing harvests and archives without farmingYear will have null values
+  (could add migration script if needed to backfill)
+- API endpoints follow RESTful patterns with proper auth and validation
