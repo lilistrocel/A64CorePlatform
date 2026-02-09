@@ -11,6 +11,7 @@ import type { DashboardData } from '../../types/farm';
 
 interface UseDashboardDataOptions {
   farmId: string | null;
+  farmingYear?: number | null;
   autoRefresh?: boolean;
   refreshInterval?: number; // in milliseconds, default 30s
 }
@@ -39,6 +40,7 @@ interface UseDashboardDataReturn {
  */
 export function useDashboardData({
   farmId,
+  farmingYear,
   autoRefresh = false,
   refreshInterval = 30000,
 }: UseDashboardDataOptions): UseDashboardDataReturn {
@@ -61,8 +63,15 @@ export function useDashboardData({
       setLoading(true);
       setError(null);
 
+      // Build params with optional farmingYear filter
+      const params: Record<string, any> = {};
+      if (farmingYear !== null && farmingYear !== undefined) {
+        params.farmingYear = farmingYear;
+      }
+
       const response = await apiClient.get<DashboardData>(
-        `/v1/farm/dashboard/farms/${farmId}`
+        `/v1/farm/dashboard/farms/${farmId}`,
+        { params }
       );
 
       setData(response.data);
@@ -83,7 +92,7 @@ export function useDashboardData({
     } finally {
       setLoading(false);
     }
-  }, [farmId]);
+  }, [farmId, farmingYear]);
 
   /**
    * Manual refetch function

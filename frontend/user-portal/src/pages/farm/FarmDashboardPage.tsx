@@ -66,6 +66,7 @@ export function FarmDashboardPage() {
     refetch,
   } = useDashboardData({
     farmId: selectedFarmId,
+    farmingYear: selectedFarmingYear,
     autoRefresh: true,
     refreshInterval: 30000, // 30 seconds
   });
@@ -120,7 +121,15 @@ export function FarmDashboardPage() {
       <TopBar>
         <TitleSection>
           <Title>🌾 Farm Dashboard</Title>
-          <Subtitle>Real-time block monitoring and management</Subtitle>
+          <Subtitle>
+            Real-time block monitoring and management
+            {selectedFarmingYear && availableFarmingYears.length > 0 && (
+              <FarmingYearContext>
+                {' • Showing: '}
+                {availableFarmingYears.find(y => y.year === selectedFarmingYear)?.display || `Year ${selectedFarmingYear}`}
+              </FarmingYearContext>
+            )}
+          </Subtitle>
         </TitleSection>
 
         <Controls>
@@ -269,6 +278,11 @@ const Subtitle = styled.p`
   font-size: 14px;
   color: #757575;
   margin: 0;
+`;
+
+const FarmingYearContext = styled.span`
+  color: #3b82f6;
+  font-weight: 500;
 `;
 
 const Controls = styled.div`
