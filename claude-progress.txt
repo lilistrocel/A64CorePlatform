@@ -4746,3 +4746,39 @@ NOTES FOR NEXT SESSION:
 - Farming year calculation: Months 8-12 = current year, Months 1-7 = previous year
 - Test user: test_feature383@a64core.com / Test123! (super_admin)
 - Migration verified with 12,624 records backfilled across 3 collections
+
+
+== Session: 2026-02-09 (Agent Batch #382, #385) ==
+Agent: Features #382, #385 - Farming Year Filters for Archive and Dashboard
+
+COMPLETED:
+- Feature #382: Extend block archives endpoint with farmingYear filter [PASSING]
+  - Added farmingYear query parameter to GET /api/v1/farm/farms/{farm_id}/blocks/{block_id}/archives
+  - Added farmingYearFilter parameter: 'planted', 'harvested', or 'both'
+  - Filter by farmingYearPlanted or farmingYearHarvested depending on filter type
+  - Updated archive repository with farming year filtering logic
+  - Also added farming year filter to farm-level archives endpoint
+  - Screenshots: feature382-block-archives-endpoint.png, feature382-farming-year-params.png
+
+- Feature #385: Update dashboard summary endpoint with farmingYear filter [PASSING]
+  - Added farmingYear query parameter to GET /api/v1/farm/dashboard/summary
+  - When farmingYear specified: blocks filtered by farmingYearPlanted, harvests by farmingYear
+  - Added FarmingYearContext model to response (farmingYear, isFiltered)
+  - Updated MongoDB aggregation pipelines to apply farming year filter
+  - Default (no filter): Returns all data regardless of farming year
+  - Screenshots: feature385-dashboard-summary.png, feature385-dashboard-params.png
+
+FILES MODIFIED:
+- src/modules/farm_manager/api/v1/block_archives.py (farmingYear, farmingYearFilter params)
+- src/modules/farm_manager/services/block/archive_repository.py (get_by_block, get_by_farm)
+- src/modules/farm_manager/services/block/archive_service.py (list_archives_by_block, list_archives_by_farm)
+- src/modules/farm_manager/api/v1/dashboard.py (farmingYear param, filter logic)
+- src/modules/farm_manager/models/dashboard.py (FarmingYearContext model)
+
+CURRENT STATUS: 386/394 features passing (98.0%)
+
+NOTES FOR NEXT SESSION:
+- Both block archives and dashboard summary endpoints now support farmingYear filtering
+- FarmingYearFilter options: 'planted' (default), 'harvested', 'both'
+- Dashboard summary uses farmingYearContext in response to indicate filter state
+- These features complete the farming year integration for historical analysis
