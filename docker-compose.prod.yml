@@ -11,7 +11,17 @@ services:
       - ENVIRONMENT=production
       - DEBUG=False
       - MONGODB_URL=mongodb://${MONGO_APP_USER:-a64core_app}:${MONGO_APP_PASSWORD}@mongodb:27017/${MONGODB_DB_NAME:-a64core_db}?authSource=${MONGODB_DB_NAME:-a64core_db}
+      # Production: 2 * CPU cores + 1 (adjust based on actual server specs)
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-9}
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 1G
 
   # MongoDB - Production (auth enabled, no external ports)
   mongodb:
@@ -25,13 +35,32 @@ services:
       - mongodb_config:/data/configdb
       - ./logs/mongodb:/var/log/mongodb
       - ./mongo-init:/docker-entrypoint-initdb.d:ro
-    command: ["mongod", "--auth"]
+    # Production: auth + optimized wiredTiger cache (4GB of 8GB limit)
+    command: ["mongod", "--auth", "--wiredTigerCacheSizeGB", "4"]
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 2G
 
   # Redis - Production (no external ports)
   redis:
     ports: []  # Remove external port exposure in production
+    # Production: 1GB maxmemory with LRU eviction
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 1gb --maxmemory-policy allkeys-lru --appendonly yes
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   # User Portal - Production Build (Static Nginx)
   user-portal:
@@ -53,6 +82,14 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro  # Let's Encrypt SSL certificates
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
 
   # Adminer - Disabled in production
   adminer:

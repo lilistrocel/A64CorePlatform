@@ -29,6 +29,8 @@ services:
       # WeatherBit API Settings (Agricultural Weather Data)
       - WEATHERBIT_API_KEY=${WEATHERBIT_API_KEY:-}
       - WEATHERBIT_ENABLED=true
+      # Uvicorn worker configuration (production: 2 * CPU cores + 1)
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-4}
     volumes:
       - ./src:/app/src
       - ./modules:/app/modules  # Farm management and other modules
@@ -57,6 +59,15 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # Resource limits for development (can be overridden in prod)
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
 
   # MongoDB Database
   mongodb:
@@ -68,6 +79,9 @@ services:
       - MONGO_INITDB_DATABASE=a64core_db
       - MONGO_APP_USER=${MONGO_APP_USER:-a64core_app}
       - MONGO_APP_PASSWORD=${MONGO_APP_PASSWORD:-changeme_in_production}
+    # MongoDB wiredTiger cache: 50% of memory limit (1.5GB of 3GB = ~1.5GB cache)
+    # Default is (RAM - 1GB) / 2, but we explicitly set for container environment
+    command: ["mongod", "--wiredTigerCacheSizeGB", "1.5"]
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
@@ -86,6 +100,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 3G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   # Redis - Caching and Rate Limiting
   redis:
@@ -95,7 +117,9 @@ services:
       - "6379:6379"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redispassword}
-    command: redis-server --requirepass ${REDIS_PASSWORD:-redispassword}
+    # Redis maxmemory: 256MB with allkeys-lru eviction policy
+    # Prevents unbounded memory growth and evicts least-recently-used keys when full
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redispassword} --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
@@ -112,6 +136,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   # NGINX - Reverse Proxy
   nginx:
@@ -141,6 +173,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
 
   # Adminer - Database Management UI
   adminer:
