@@ -237,7 +237,8 @@ class HarvestService:
         page: int = 1,
         per_page: int = 20,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        farming_year: Optional[int] = None
     ) -> Tuple[List[BlockHarvest], int, int]:
         """
         List harvests for a block with pagination and date filters.
@@ -245,6 +246,8 @@ class HarvestService:
         Behavior depends on block category:
         - Physical blocks: Returns ALL harvests from this block + all child virtual blocks (complete history)
         - Virtual blocks: Returns ONLY harvests from this block that occurred since the block's plantedDate (current cycle)
+
+        Optional farmingYear filter can be combined with date range filters for precise filtering.
         """
         skip = (page - 1) * per_page
 
@@ -263,7 +266,7 @@ class HarvestService:
             logger.info(f"[Harvest Service] Physical block {block_id}: fetching harvests from {len(block_ids)} blocks (including children)")
 
             harvests, total = await HarvestRepository.get_harvests_for_multiple_blocks(
-                block_ids, skip, per_page, start_date, end_date
+                block_ids, skip, per_page, start_date, end_date, farming_year
             )
         else:
             # Virtual block: get only harvests since plantedDate (current cycle)
@@ -278,7 +281,7 @@ class HarvestService:
                 effective_start_date = max(start_date, block.plantedDate)
 
             harvests, total = await HarvestRepository.get_by_block(
-                block_id, skip, per_page, effective_start_date, end_date
+                block_id, skip, per_page, effective_start_date, end_date, farming_year
             )
 
         total_pages = (total + per_page - 1) // per_page
@@ -291,13 +294,14 @@ class HarvestService:
         page: int = 1,
         per_page: int = 20,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        farming_year: Optional[int] = None
     ) -> Tuple[List[BlockHarvest], int, int]:
-        """List all harvests for a farm with pagination and date filters"""
+        """List all harvests for a farm with pagination, date filters, and farming year filter"""
         skip = (page - 1) * per_page
 
         harvests, total = await HarvestRepository.get_by_farm(
-            farm_id, skip, per_page, start_date, end_date
+            farm_id, skip, per_page, start_date, end_date, farming_year
         )
 
         total_pages = (total + per_page - 1) // per_page

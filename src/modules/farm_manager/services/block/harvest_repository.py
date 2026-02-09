@@ -82,9 +82,10 @@ class HarvestRepository:
         skip: int = 0,
         limit: int = 100,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        farming_year: Optional[int] = None
     ) -> Tuple[List[BlockHarvest], int]:
-        """Get harvests for a block with optional date range filter"""
+        """Get harvests for a block with optional date range and farming year filters"""
         db = farm_db.get_database()
 
         # Build query
@@ -96,6 +97,10 @@ class HarvestRepository:
                 query["harvestDate"]["$gte"] = start_date
             if end_date:
                 query["harvestDate"]["$lte"] = end_date
+
+        # Filter by farming year
+        if farming_year is not None:
+            query["farmingYear"] = farming_year
 
         # Get total count
         total = await db.block_harvests.count_documents(query)
@@ -114,9 +119,10 @@ class HarvestRepository:
         skip: int = 0,
         limit: int = 100,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        farming_year: Optional[int] = None
     ) -> Tuple[List[BlockHarvest], int]:
-        """Get all harvests for a farm with optional date range filter"""
+        """Get all harvests for a farm with optional date range and farming year filters"""
         db = farm_db.get_database()
 
         # Build query
@@ -128,6 +134,10 @@ class HarvestRepository:
                 query["harvestDate"]["$gte"] = start_date
             if end_date:
                 query["harvestDate"]["$lte"] = end_date
+
+        # Filter by farming year
+        if farming_year is not None:
+            query["farmingYear"] = farming_year
 
         # Get total count
         total = await db.block_harvests.count_documents(query)
@@ -284,7 +294,8 @@ class HarvestRepository:
         skip: int = 0,
         limit: int = 100,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        farming_year: Optional[int] = None
     ) -> Tuple[List[BlockHarvest], int]:
         """
         Get harvests for multiple blocks (used for physical block + all children).
@@ -304,6 +315,10 @@ class HarvestRepository:
                 query["harvestDate"]["$gte"] = start_date
             if end_date:
                 query["harvestDate"]["$lte"] = end_date
+
+        # Filter by farming year
+        if farming_year is not None:
+            query["farmingYear"] = farming_year
 
         # Get total count
         total = await db.block_harvests.count_documents(query)

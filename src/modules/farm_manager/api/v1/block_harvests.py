@@ -79,6 +79,7 @@ async def list_block_harvests(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     startDate: Optional[datetime] = Query(None, description="Filter by start date"),
     endDate: Optional[datetime] = Query(None, description="Filter by end date"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -89,13 +90,18 @@ async def list_block_harvests(
     - `perPage`: Items per page (default: 20, max: 100)
     - `startDate`: Filter harvests from this date (optional)
     - `endDate`: Filter harvests until this date (optional)
+    - `farmingYear`: Filter by farming year (optional, e.g., 2025 for Aug 2025 - Jul 2026)
+
+    **Note**: Date range filters (startDate, endDate) can be used together with farmingYear
+    for more precise filtering within a specific farming year.
     """
     harvests, total, total_pages = await HarvestService.list_harvests_by_block(
         block_id,
         page=page,
         per_page=perPage,
         start_date=startDate,
-        end_date=endDate
+        end_date=endDate,
+        farming_year=farmingYear
     )
 
     return PaginatedResponse(
@@ -252,6 +258,7 @@ async def list_farm_harvests(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     startDate: Optional[datetime] = Query(None, description="Filter by start date"),
     endDate: Optional[datetime] = Query(None, description="Filter by end date"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025 for Aug 2025 - Jul 2026)"),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -262,13 +269,18 @@ async def list_farm_harvests(
     - `perPage`: Items per page (default: 20, max: 100)
     - `startDate`: Filter harvests from this date (optional)
     - `endDate`: Filter harvests until this date (optional)
+    - `farmingYear`: Filter by farming year (optional, e.g., 2025 for Aug 2025 - Jul 2026)
+
+    **Note**: Date range filters (startDate, endDate) can be used together with farmingYear
+    for more precise filtering within a specific farming year.
     """
     harvests, total, total_pages = await HarvestService.list_harvests_by_farm(
         farm_id,
         page=page,
         per_page=perPage,
         start_date=startDate,
-        end_date=endDate
+        end_date=endDate,
+        farming_year=farmingYear
     )
 
     return PaginatedResponse(
