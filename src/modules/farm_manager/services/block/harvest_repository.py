@@ -13,6 +13,7 @@ from ...models.block_harvest import (
     BlockHarvest, BlockHarvestCreate, BlockHarvestUpdate,
     BlockHarvestSummary, QualityGrade
 )
+from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
 from ..database import farm_db
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,17 @@ class HarvestRepository:
 
         farm_id = block["farmId"]
 
+        # Auto-calculate farmingYear if not provided
+        harvest_data_dict = harvest_data.model_dump()
+        if harvest_data_dict.get("farmingYear") is None:
+            # Get farming year start month from config (if available in DB)
+            config_doc = await db.system_config.find_one({"configType": "farming_year_config"})
+            start_month = config_doc.get("farmingYearStartMonth", DEFAULT_FARMING_YEAR_START_MONTH) if config_doc else DEFAULT_FARMING_YEAR_START_MONTH
+            harvest_data_dict["farmingYear"] = get_farming_year(harvest_data.harvestDate, start_month)
+
         # Create harvest document
         harvest = BlockHarvest(
-            **harvest_data.model_dump(),
+            **harvest_data_dict,
             farmId=UUID(farm_id),
             recordedBy=user_id,
             recordedByEmail=user_email
@@ -52,7 +61,7 @@ class HarvestRepository:
         if not result.inserted_id:
             raise Exception("Failed to create harvest record")
 
-        logger.info(f"[Harvest Repository] Created harvest: {harvest.harvestId} for block {harvest.blockId}")
+        logger.info(f"[Harvest Repository] Created harvest: {harvest.harvestId} for block {harvest.blockId} (farmingYear={harvest.farmingYear})")
         return harvest
 
     @staticmethod

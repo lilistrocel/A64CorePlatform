@@ -230,6 +230,17 @@ class FarmDatabaseManager:
             await db.inventory_movements.create_index([("fromFarmId", 1), ("movementType", 1), ("performedAt", -1)])
             await db.inventory_movements.create_index([("toFarmId", 1), ("movementType", 1), ("performedAt", -1)])
 
+            # Block harvests collection
+            await db.block_harvests.create_index("harvestId", unique=True)
+            await db.block_harvests.create_index("blockId")
+            await db.block_harvests.create_index("farmId")
+            await db.block_harvests.create_index("harvestDate")
+            await db.block_harvests.create_index("farmingYear")
+            await db.block_harvests.create_index([("createdAt", -1)])
+            # Compound indexes for farming year queries (Feature #376)
+            await db.block_harvests.create_index([("blockId", 1), ("farmingYear", 1)])
+            await db.block_harvests.create_index([("farmId", 1), ("farmingYear", 1)])
+
             logger.info("[Farm Module] MongoDB indexes created successfully")
         except Exception as e:
             logger.error(f"[Farm Module] Error creating MongoDB indexes: {e}")

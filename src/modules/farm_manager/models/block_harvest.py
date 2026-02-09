@@ -25,6 +25,7 @@ class BlockHarvestBase(BaseModel):
     quantityKg: float = Field(..., gt=0, description="Quantity harvested in kilograms")
     qualityGrade: QualityGrade = Field(..., description="Quality grade (A/B/C)")
     notes: Optional[str] = Field(None, description="Optional harvest notes")
+    farmingYear: Optional[int] = Field(None, description="Farming year (auto-calculated from harvestDate if not provided)")
 
 
 class BlockHarvestCreate(BlockHarvestBase):
@@ -82,6 +83,7 @@ class BlockHarvest(BlockHarvestBase):
                 "harvestDate": "2025-11-12T08:00:00Z",
                 "quantityKg": 45.5,
                 "qualityGrade": "A",
+                "farmingYear": 2025,
                 "notes": "Excellent quality tomatoes, perfect ripeness",
                 "recordedBy": "user-uuid-here",
                 "recordedByEmail": "farmer@example.com",
