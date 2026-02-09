@@ -3,9 +3,14 @@
  *
  * Provides filtering and sorting logic for dashboard blocks.
  * Follows the implementation plan structure.
+ *
+ * Features:
+ * - State, search, performance, and farming year filters
+ * - Persistent farming year selection across page navigation
+ * - Filter summary display support
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { DashboardBlock, DashboardBlockStatus, PerformanceCategory } from '../../types/farm';
 
 export type SortOption =
@@ -19,15 +24,49 @@ export type SortOption =
 
 export type SortDirection = 'asc' | 'desc';
 
-interface FilterState {
+// Storage key for persisting farming year selection
+const FARMING_YEAR_STORAGE_KEY = 'dashboard_farming_year_filter';
+
+/**
+ * Get persisted farming year from sessionStorage
+ */
+function getPersistedFarmingYear(): number | null {
+  try {
+    const stored = sessionStorage.getItem(FARMING_YEAR_STORAGE_KEY);
+    if (stored === null) return null;
+    const parsed = JSON.parse(stored);
+    return typeof parsed === 'number' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist farming year to sessionStorage
+ */
+function persistFarmingYear(year: number | null): void {
+  try {
+    if (year === null) {
+      sessionStorage.removeItem(FARMING_YEAR_STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(FARMING_YEAR_STORAGE_KEY, JSON.stringify(year));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export interface FilterState {
   states: Set<DashboardBlockStatus>;
   searchQuery: string;
   performanceCategories: Set<PerformanceCategory>;
   showDelayedOnly: boolean;
   showAlertsOnly: boolean;
+  /** Selected farming year filter (null = all years) */
+  farmingYear: number | null;
 }
 
-interface UseDashboardFiltersReturn {
+export interface UseDashboardFiltersReturn {
   // Filtered and sorted blocks
   filteredBlocks: DashboardBlock[];
 
@@ -40,6 +79,10 @@ interface UseDashboardFiltersReturn {
   setShowAlertsOnly: (show: boolean) => void;
   clearFilters: () => void;
 
+  // Farming year filter
+  setFarmingYearFilter: (year: number | null) => void;
+  resetFarmingYearFilter: () => void;
+
   // Sort state
   sortBy: SortOption;
   sortDirection: SortDirection;
@@ -50,6 +93,10 @@ interface UseDashboardFiltersReturn {
   // Metrics
   totalBlocks: number;
   filteredCount: number;
+
+  // Filter summary
+  filterSummary: string;
+  hasActiveFilters: boolean;
 }
 
 const initialFilterState: FilterState = {
@@ -58,6 +105,7 @@ const initialFilterState: FilterState = {
   performanceCategories: new Set(),
   showDelayedOnly: false,
   showAlertsOnly: false,
+  farmingYear: getPersistedFarmingYear(),
 };
 
 /**
@@ -203,8 +251,29 @@ export function useDashboardFilters(
     setFilters((prev) => ({ ...prev, showAlertsOnly }));
   };
 
+  /**
+   * Set farming year filter (persisted to sessionStorage)
+   */
+  const setFarmingYearFilter = useCallback((farmingYear: number | null) => {
+    persistFarmingYear(farmingYear);
+    setFilters((prev) => ({ ...prev, farmingYear }));
+  }, []);
+
+  /**
+   * Reset farming year filter to null (all years)
+   */
+  const resetFarmingYearFilter = useCallback(() => {
+    persistFarmingYear(null);
+    setFilters((prev) => ({ ...prev, farmingYear: null }));
+  }, []);
+
   const clearFilters = () => {
-    setFilters(initialFilterState);
+    // When clearing all filters, also reset farming year but keep it persisted as null
+    persistFarmingYear(null);
+    setFilters({
+      ...initialFilterState,
+      farmingYear: null,
+    });
   };
 
   /**
@@ -213,6 +282,60 @@ export function useDashboardFilters(
   const toggleSortDirection = () => {
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
   };
+
+  /**
+   * Check if any filters are active
+   */
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.states.size > 0 ||
+      filters.searchQuery.trim() !== '' ||
+      filters.performanceCategories.size > 0 ||
+      filters.showDelayedOnly ||
+      filters.showAlertsOnly ||
+      filters.farmingYear !== null
+    );
+  }, [filters]);
+
+  /**
+   * Generate human-readable filter summary
+   */
+  const filterSummary = useMemo(() => {
+    const parts: string[] = [];
+
+    if (filters.farmingYear !== null) {
+      // Format farming year display (e.g., "FY 2025" or year range if available)
+      parts.push(`Farming Year: ${filters.farmingYear}`);
+    }
+
+    if (filters.states.size > 0) {
+      const statesList = Array.from(filters.states).join(', ');
+      parts.push(`States: ${statesList}`);
+    }
+
+    if (filters.searchQuery.trim()) {
+      parts.push(`Search: "${filters.searchQuery.trim()}"`);
+    }
+
+    if (filters.performanceCategories.size > 0) {
+      const perfList = Array.from(filters.performanceCategories).join(', ');
+      parts.push(`Performance: ${perfList}`);
+    }
+
+    if (filters.showDelayedOnly) {
+      parts.push('Delayed Only');
+    }
+
+    if (filters.showAlertsOnly) {
+      parts.push('With Alerts');
+    }
+
+    if (parts.length === 0) {
+      return 'No filters applied';
+    }
+
+    return parts.join(' | ');
+  }, [filters]);
 
   return {
     filteredBlocks,
@@ -223,6 +346,8 @@ export function useDashboardFilters(
     setShowDelayedOnly,
     setShowAlertsOnly,
     clearFilters,
+    setFarmingYearFilter,
+    resetFarmingYearFilter,
     sortBy,
     sortDirection,
     setSortBy,
@@ -230,5 +355,7 @@ export function useDashboardFilters(
     toggleSortDirection,
     totalBlocks: blocks.length,
     filteredCount: filteredBlocks.length,
+    filterSummary,
+    hasActiveFilters,
   };
 }
