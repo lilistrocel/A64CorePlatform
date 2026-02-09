@@ -4433,3 +4433,166 @@ NOTES FOR NEXT SESSION:
 - All cache, bundle, and connection pool configs are healthy
 - Recommendations documented for production optimization
 
+
+== Session: 2026-02-09 (Agent Batch #371, #372) ==
+Agent: Features #371, #372 - Docker Optimization and API Response Time Monitoring
+
+COMPLETED:
+- Feature #371: Optimize Docker container resource allocation [PASSING]
+  - Added deploy resource limits (CPU/memory) for all core services:
+    - API: 4 CPU, 2GB (prod: 8 CPU, 4GB) with UVICORN_WORKERS env var support
+    - MongoDB: 2 CPU, 3GB (prod: 4 CPU, 8GB) with wiredTiger cache=1.5GB (prod: 4GB)
+    - Redis: 1 CPU, 512MB (prod: 2 CPU, 2GB) with maxmemory=256mb (prod: 1gb) and allkeys-lru eviction
+    - Nginx: 1 CPU, 256MB (prod: 2 CPU, 512MB)
+  - Updated Dockerfile CMD to support configurable uvicorn workers via env var
+  - Optimized nginx configs with worker_processes=auto, epoll, multi_accept
+  - Production overrides with increased limits in docker-compose.prod.yml
+  - Screenshots: feature371-docker-optimization-login.png
+
+- Feature #372: Implement API response time monitoring [PASSING]
+  - Created src/middleware/timing.py with TimingMiddlewareWithCollector
+  - Request timing with time.perf_counter() for sub-ms precision
+  - X-Response-Time header added to all API responses (e.g., "45.23ms")
+  - Logging: "INFO - POST /api/v1/auth/login 401 - 2.93ms"
+  - SLOW REQUEST warning log when duration > 1000ms threshold
+  - ResponseTimeCollector provides:
+    - Total requests/errors count
+    - Avg, min, max response times
+    - Percentiles (p50, p95, p99)
+    - Recent request window (last 1000 requests)
+  - New API endpoints:
+    - GET /api/metrics - Overall stats with percentiles
+    - GET /api/metrics/slow-requests - Recent slow requests (> 1s)
+    - GET /api/metrics/endpoints - Per-endpoint statistics
+  - Health check endpoints excluded from logging (configurable)
+  - Screenshots: feature372-api-metrics-endpoint.png, feature372-endpoint-metrics.png
+
+FILES MODIFIED:
+- docker-compose.yml: Added deploy.resources, MongoDB wiredTiger cache, Redis maxmemory, UVICORN_WORKERS
+- docker-compose.prod.yml: Production resource limits and overrides
+- nginx/nginx.dev.conf: worker_processes auto, epoll, multi_accept
+- nginx/nginx.prod.conf: Same nginx optimizations for production
+- Dockerfile: UVICORN_WORKERS env var support in CMD
+- src/main.py: Added TimingMiddlewareWithCollector
+- src/middleware/__init__.py: Export timing middleware
+- src/middleware/timing.py: New file with timing middleware and metrics collector
+- src/api/health.py: Added /metrics, /metrics/slow-requests, /metrics/endpoints
+
+CURRENT STATUS: 366/372 features passing (98.4%)
+
+NOTES FOR NEXT SESSION:
+- Response time monitoring: GET /api/metrics for stats
+- Slow request tracking: GET /api/metrics/slow-requests
+- Per-endpoint analysis: GET /api/metrics/endpoints
+- Docker resource limits applied, will take effect on container recreation
+- Redis maxmemory and MongoDB wiredTiger cache require container restart
+== Session: 2026-02-09 (Agent - Feature #370) ==
+Agent: Feature #370 - Test API under concurrent load
+
+COMPLETED:
+- Feature #370: Test API under concurrent load [PASSING]
+
+LOAD TESTING RESULTS:
+
+Test Environment:
+- Docker container (a64core-api-dev)
+- Python ThreadPoolExecutor for concurrent requests
+- MongoDB with connection pool (maxPoolSize=50)
+- Redis for rate limiting
+
+=== BASELINE: 10 Concurrent Users (100 requests) ===
+
+Health Check (no auth):
+  Avg: 7.0ms, P95: 10.5ms, P99: 11.72ms
+  Errors: 0, Req/sec: 1263
+
+Auth Me (JWT validation):
+  Avg: 10.8ms, P95: 14.9ms, P99: 19.7ms
+  Errors: 0, Req/sec: 884
+
+Sales Orders List (DB query):
+  Avg: 26.9ms, P95: 36.1ms, P99: 40.0ms
+  Errors: 0, Req/sec: 362
+
+Employees List (DB query):
+  Avg: 32.1ms, P95: 47.7ms, P99: 55.1ms
+  Errors: 0, Req/sec: 302
+
+=== 50 CONCURRENT USERS (500 requests) ===
+
+Health Check:
+  Avg: 31.1ms, P95: 38.9ms, P99: 41.2ms
+  Errors: 0, Req/sec: 1475
+
+Auth Me:
+  Avg: 66.3ms, P95: 169.6ms, P99: 191.1ms
+  Errors: 0, Req/sec: 725
+
+Sales Orders List:
+  Avg: 134.5ms, P95: 160.2ms, P99: 172.6ms
+  Errors: 2, Req/sec: 360
+
+=== 100 CONCURRENT USERS (500 requests) ===
+
+Health Check:
+  Avg: 86.6ms, P95: 179.8ms, P99: 192.7ms
+  Errors: 0, Req/sec: 1037
+
+Auth Me:
+  Avg: 94.0ms, P95: 106.4ms, P99: 120.9ms
+  Errors: 0, Req/sec: 946
+
+Sales Orders List:
+  Avg: 238.8ms, P95: 288.0ms, P99: 304.3ms
+  Errors: 0, Req/sec: 384
+
+Dashboard Summary:
+  429 Rate Limit errors (expected - 1000 req/min limit for super_admin)
+
+FINDINGS:
+
+1. EXCELLENT BASELINE PERFORMANCE
+   - Health check: 7ms avg at 10 concurrent
+   - Auth validation: 11ms avg
+   - DB queries: 27-32ms avg
+
+2. GOOD SCALABILITY TO 50 CONCURRENT
+   - Response times increase ~3-5x (acceptable)
+   - Throughput remains stable (300-1400 req/sec)
+   - Error rate: <1%
+
+3. STABLE AT 100 CONCURRENT
+   - Response times increase to ~100-240ms
+   - No connection exhaustion
+   - Rate limiting kicks in as designed (429s)
+
+4. RATE LIMITING WORKING CORRECTLY
+   - Super admin limit: 1000 req/min enforced
+   - Prevents abuse under high load
+   - Dashboard summary endpoint correctly rate limited
+
+5. NO RESOURCE EXHAUSTION
+   - MongoDB connection pool (50) handles load
+   - Redis rate limiting working
+   - No timeout errors at reasonable concurrency
+
+BOTTLENECKS IDENTIFIED:
+
+1. Database queries scale linearly with concurrency
+   - Sales orders: 27ms -> 135ms -> 239ms
+   - Consider caching for frequently accessed data
+
+2. P99 latency spikes under high load
+   - Auth Me P99 jumps to 191ms at 50 concurrent
+   - Likely GC pauses or connection contention
+
+RECOMMENDATIONS:
+
+1. Current setup handles 100 concurrent users well
+2. For higher load (500+ concurrent):
+   - Increase MongoDB connection pool
+   - Add Redis caching for dashboard summary
+   - Consider horizontal scaling with load balancer
+3. Rate limiting is working as designed
+
+CURRENT STATUS: 366/372 features passing (98.4%)
