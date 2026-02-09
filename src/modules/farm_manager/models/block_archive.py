@@ -50,6 +50,10 @@ class BlockArchive(BaseModel):
     harvestCompletedDate: datetime = Field(..., description="When status changed to empty")
     cycleDurationDays: int = Field(..., gt=0, description="Actual cycle duration in days")
 
+    # Farming Year (for historical analysis - Feature #378)
+    farmingYearPlanted: Optional[int] = Field(None, description="Farming year when planting started")
+    farmingYearHarvested: Optional[int] = Field(None, description="Farming year when harvest completed")
+
     # Yield KPIs
     predictedYieldKg: float = Field(0.0, ge=0, description="Expected total yield")
     actualYieldKg: float = Field(0.0, ge=0, description="Actual total yield")
@@ -92,6 +96,8 @@ class BlockArchive(BaseModel):
                 "plantedDate": "2025-09-01T00:00:00Z",
                 "harvestCompletedDate": "2025-11-30T00:00:00Z",
                 "cycleDurationDays": 90,
+                "farmingYearPlanted": 2025,
+                "farmingYearHarvested": 2025,
                 "predictedYieldKg": 475.0,
                 "actualYieldKg": 450.2,
                 "yieldEfficiencyPercent": 94.8,

@@ -241,6 +241,20 @@ class FarmDatabaseManager:
             await db.block_harvests.create_index([("blockId", 1), ("farmingYear", 1)])
             await db.block_harvests.create_index([("farmId", 1), ("farmingYear", 1)])
 
+            # Block archives collection (Feature #378)
+            await db.block_archives.create_index("archiveId", unique=True)
+            await db.block_archives.create_index("blockId")
+            await db.block_archives.create_index("farmId")
+            await db.block_archives.create_index("targetCrop")
+            await db.block_archives.create_index("farmingYearPlanted")
+            await db.block_archives.create_index("farmingYearHarvested")
+            await db.block_archives.create_index([("plantedDate", -1)])
+            await db.block_archives.create_index([("archivedAt", -1)])
+            # Compound indexes for farming year queries on archives
+            await db.block_archives.create_index([("farmId", 1), ("farmingYearPlanted", 1)])
+            await db.block_archives.create_index([("farmId", 1), ("farmingYearHarvested", 1)])
+            await db.block_archives.create_index([("blockId", 1), ("farmingYearPlanted", 1)])
+
             logger.info("[Farm Module] MongoDB indexes created successfully")
         except Exception as e:
             logger.error(f"[Farm Module] Error creating MongoDB indexes: {e}")

@@ -13,6 +13,7 @@ from ...models.block_archive import (
     BlockArchive, BlockArchiveAnalytics,
     CropPerformanceComparison
 )
+from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
 from ..database import farm_db
 
 logger = logging.getLogger(__name__)
@@ -381,6 +382,17 @@ class ArchiveRepository:
         if block.kpi and block.kpi.predictedYieldKg and block.kpi.predictedYieldKg > 0:
             yield_efficiency = (block.kpi.actualYieldKg / block.kpi.predictedYieldKg) * 100
 
+        # Calculate farming years (Feature #378)
+        # Get farming year start month from config
+        config_doc = await db.system_config.find_one({"configType": "farming_year_config"})
+        start_month = config_doc.get("farmingYearStartMonth", DEFAULT_FARMING_YEAR_START_MONTH) if config_doc else DEFAULT_FARMING_YEAR_START_MONTH
+
+        planted_date = block.plantedDate or datetime.utcnow()
+        harvest_completed_date = datetime.utcnow()
+
+        farming_year_planted = get_farming_year(planted_date, start_month)
+        farming_year_harvested = get_farming_year(harvest_completed_date, start_month)
+
         # Create archive record
         archive = BlockArchive(
             blockId=block.blockId,
@@ -395,9 +407,11 @@ class ArchiveRepository:
             areaUnit=block.areaUnit,
             targetCrop=block.targetCrop,
             targetCropName=block.targetCropName or "Unknown",
-            plantedDate=block.plantedDate or datetime.utcnow(),
-            harvestCompletedDate=datetime.utcnow(),
+            plantedDate=planted_date,
+            harvestCompletedDate=harvest_completed_date,
             cycleDurationDays=cycle_duration_days,
+            farmingYearPlanted=farming_year_planted,
+            farmingYearHarvested=farming_year_harvested,
             predictedYieldKg=block.kpi.predictedYieldKg if block.kpi else 0.0,
             actualYieldKg=block.kpi.actualYieldKg if block.kpi else 0.0,
             yieldEfficiencyPercent=round(yield_efficiency, 2),
