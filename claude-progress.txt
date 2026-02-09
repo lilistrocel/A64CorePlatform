@@ -4324,3 +4324,74 @@ NOTES FOR NEXT SESSION:
 - No code changes needed - endpoints already perform well
 - Feature verified via profiling, indexes, and query analysis
 
+== Session: 2026-02-09 (Agent - Feature #369) ==
+Agent: Feature #369 - Review async patterns for bottlenecks
+
+COMPLETED:
+- Feature #369: Review async patterns for bottlenecks [PASSING]
+
+FINDINGS:
+
+1. GOOD PATTERNS (Already Implemented):
+
+a) Dashboard Summary Endpoint (src/api/v1/dashboard.py):
+   - Uses asyncio.gather() to parallelize 9 independent database queries
+   - Each stat collection (farms, blocks, employees, etc.) runs concurrently
+   - RESULT: Optimal parallelization
+
+b) Rate Limiting (src/middleware/rate_limit.py):
+   - Uses async Redis operations (redis.asyncio)
+   - Connection pooling with max_connections=10
+   - Lazy initialization to avoid blocking startup
+   - Fallback to in-memory if Redis unavailable
+   - RESULT: Properly async
+
+c) MongoDB Driver:
+   - Consistently uses Motor (motor.motor_asyncio)
+   - AsyncIOMotorClient for all database operations
+   - Proper async throughout repositories
+   - RESULT: Correct async driver usage
+
+d) Middleware Chain:
+   - RateLimitMiddleware uses async dispatch()
+   - TimingMiddleware uses async dispatch()
+   - Authentication uses async token validation
+   - RESULT: Non-blocking middleware
+
+2. POTENTIAL OPTIMIZATIONS (Minor):
+
+a) Sales Dashboard (src/modules/sales/api/v1/dashboard.py):
+   - Lines 38-59 execute sequential queries that could be parallelized
+   - Impact: Low (cached with 30s TTL, fast queries anyway)
+
+b) DashboardService.get_bulk_widget_data (src/services/dashboard_service.py):
+   - Lines 263-272 use sequential loop instead of asyncio.gather()
+   - Impact: Low (widget data is mock data, no I/O)
+
+3. BLOCKING I/O FOUND:
+
+a) AI Analytics retry backoff (src/modules/ai_analytics/services/gemini_service.py):
+   - Line 240: time.sleep() instead of asyncio.sleep()
+   - Impact: Low (only triggers on Gemini API errors)
+   - RECOMMENDATION: Replace with asyncio.sleep()
+
+4. NO ISSUES FOUND:
+
+- No synchronous requests library usage
+- No subprocess.call() blocking calls
+- No file I/O without async context
+- No thread-blocking database queries
+- All Redis operations properly async
+
+SUMMARY:
+
+The codebase follows async best practices consistently:
+- Motor for async MongoDB
+- redis.asyncio for Redis
+- asyncio.gather() for parallel DB queries in main dashboard
+- Proper async middleware chain
+- Connection pooling for both MongoDB and Redis
+
+Minor improvements possible but not critical.
+
+CURRENT STATUS: 365/372 features passing (98.1%)
