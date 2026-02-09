@@ -5,9 +5,9 @@ Provides dashboard data with calculated metrics for farm management.
 """
 
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 import logging
 
 from ...models.dashboard import (
@@ -27,7 +27,8 @@ from ...models.dashboard import (
     DashboardHarvestSummary,
     DashboardRecentActivity,
     FarmBlockSummary,
-    FarmHarvestSummary
+    FarmHarvestSummary,
+    FarmingYearContext
 )
 from ...models.block import Block, BlockStatus
 from ...services.farm.farm_repository import FarmRepository
@@ -54,6 +55,10 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 )
 @cache_response(ttl=30, key_prefix="farm")
 async def get_dashboard_summary(
+    farmingYear: Optional[int] = Query(
+        None,
+        description="Filter data by farming year (e.g., 2025). When specified, blocks are filtered by farmingYearPlanted and harvests by farmingYear."
+    ),
     current_user: CurrentUser = Depends(get_current_user)
 ):
     """
@@ -62,12 +67,18 @@ async def get_dashboard_summary(
     Uses MongoDB aggregation pipelines to minimize database calls.
     Replaces 80+ individual API calls with a single optimized query.
 
+    **Farming Year Filter**:
+    - When `farmingYear` is specified, blocks are filtered by `farmingYearPlanted`
+    - Harvests are filtered by `farmingYear` field
+    - Default (no filter): Returns all data regardless of farming year
+
     Returns:
     - Overview metrics (total farms, blocks, active plantings, upcoming harvests)
     - Block counts by state (across all farms)
     - Block counts grouped by farm
     - Harvest totals by farm
     - Recent activity counts
+    - Farming year context (when filter is applied)
     """
     try:
         from ...services.database import farm_db
@@ -90,12 +101,18 @@ async def get_dashboard_summary(
         farm_ids = [farm["farmId"] for farm in farms]
 
         # Step 2: Aggregate blocks by state (all farms)
+        # Build block match criteria
+        block_match_criteria = {
+            "farmId": {"$in": farm_ids},
+            "isActive": True,
+            "blockCategory": "virtual"  # Only count virtual blocks (actual plantings)
+        }
+        # Add farming year filter if specified
+        if farmingYear is not None:
+            block_match_criteria["farmingYearPlanted"] = farmingYear
+
         blocks_by_state_pipeline = [
-            {"$match": {
-                "farmId": {"$in": farm_ids},
-                "isActive": True,
-                "blockCategory": "virtual"  # Only count virtual blocks (actual plantings)
-            }},
+            {"$match": block_match_criteria},
             {"$group": {
                 "_id": "$state",
                 "count": {"$sum": 1}
@@ -106,13 +123,9 @@ async def get_dashboard_summary(
         # Convert to dict
         blocks_by_state_dict = {item["_id"]: item["count"] for item in blocks_by_state_result}
 
-        # Step 3: Aggregate blocks grouped by farm
+        # Step 3: Aggregate blocks grouped by farm (uses same match criteria as step 2)
         blocks_by_farm_pipeline = [
-            {"$match": {
-                "farmId": {"$in": farm_ids},
-                "isActive": True,
-                "blockCategory": "virtual"
-            }},
+            {"$match": block_match_criteria},
             {"$group": {
                 "_id": {
                     "farmId": "$farmId",
@@ -162,10 +175,16 @@ async def get_dashboard_summary(
             ))
 
         # Step 4: Aggregate harvest totals by farm
+        # Build harvest match criteria
+        harvest_match_criteria = {
+            "farmId": {"$in": farm_ids}
+        }
+        # Add farming year filter if specified
+        if farmingYear is not None:
+            harvest_match_criteria["farmingYear"] = farmingYear
+
         harvests_by_farm_pipeline = [
-            {"$match": {
-                "farmId": {"$in": farm_ids}
-            }},
+            {"$match": harvest_match_criteria},
             {"$group": {
                 "_id": "$farmId",
                 "totalKg": {"$sum": "$quantityKg"},
@@ -197,10 +216,15 @@ async def get_dashboard_summary(
 
         # Step 6: Count recent harvests (last 7 days)
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
-        recent_harvests_count = await db.block_harvests.count_documents({
+        recent_harvests_query = {
             "farmId": {"$in": farm_ids},
             "harvestDate": {"$gte": seven_days_ago}
-        })
+        }
+        # Add farming year filter if specified
+        if farmingYear is not None:
+            recent_harvests_query["farmingYear"] = farmingYear
+
+        recent_harvests_count = await db.block_harvests.count_documents(recent_harvests_query)
 
         # Step 7: Count pending tasks (if task system exists)
         pending_tasks_count = 0  # Placeholder - implement when task system is ready
@@ -214,6 +238,12 @@ async def get_dashboard_summary(
             blocks_by_state_dict.get("harvesting", 0)
         ])
         upcoming_harvests = blocks_by_state_dict.get("harvesting", 0)
+
+        # Build farming year context
+        farming_year_context = FarmingYearContext(
+            farmingYear=farmingYear,
+            isFiltered=farmingYear is not None
+        )
 
         # Build response
         summary_data = DashboardSummaryData(
@@ -242,12 +272,14 @@ async def get_dashboard_summary(
                 recentHarvests=recent_harvests_count,
                 pendingTasks=pending_tasks_count,
                 activeAlerts=active_alerts_count
-            )
+            ),
+            farmingYearContext=farming_year_context
         )
 
+        farming_year_str = f" (farmingYear={farmingYear})" if farmingYear else ""
         logger.info(
             f"[Dashboard Summary] User {current_user.email}: {len(farms)} farms, "
-            f"{total_blocks} blocks, {active_plantings} active plantings"
+            f"{total_blocks} blocks, {active_plantings} active plantings{farming_year_str}"
         )
 
         return DashboardSummaryResponse(

@@ -231,6 +231,12 @@ class DashboardRecentActivity(BaseModel):
     activeAlerts: int = 0
 
 
+class FarmingYearContext(BaseModel):
+    """Farming year filter context for dashboard data"""
+    farmingYear: Optional[int] = Field(None, description="Farming year filter applied (null = all data)")
+    isFiltered: bool = Field(False, description="Whether data is filtered by farming year")
+
+
 class DashboardSummaryData(BaseModel):
     """Complete aggregated dashboard data (single API call response)"""
     overview: DashboardOverview
@@ -238,6 +244,7 @@ class DashboardSummaryData(BaseModel):
     blocksByFarm: List[FarmBlockSummary]
     harvestSummary: DashboardHarvestSummary
     recentActivity: DashboardRecentActivity
+    farmingYearContext: Optional[FarmingYearContext] = Field(None, description="Farming year filter context")
 
 
 class DashboardSummaryResponse(BaseModel):
