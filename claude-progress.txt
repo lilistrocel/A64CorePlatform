@@ -4782,3 +4782,86 @@ NOTES FOR NEXT SESSION:
 - FarmingYearFilter options: 'planted' (default), 'harvested', 'both'
 - Dashboard summary uses farmingYearContext in response to indicate filter state
 - These features complete the farming year integration for historical analysis
+
+
+== Session: 2026-02-09 (Agent - Feature #394) ==
+Agent: Feature #394 - Style farming year selector consistently with design system
+
+COMPLETED:
+- Feature #394: Style farming year selector consistently with design system [PASSING]
+
+CHANGES MADE TO FarmingYearSelector.tsx:
+
+1. **Calendar Icon**: Added 📅 icon on the left side of the dropdown for visual context
+
+2. **Consistent Border Radius & Padding**:
+   - Border radius: 8px (matches design system)
+   - Padding: 12px 32px 12px 40px (accommodates icon)
+   - Font size: 14px (matches design system)
+
+3. **Hover and Focus States**:
+   - Hover: border-color #3b82f6, background #f8faff
+   - Focus: border-color #3b82f6 with box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15)
+
+4. **Mobile Responsive Behavior**:
+   - Full width on screens < 768px
+   - Reduced padding on mobile
+   - Smaller badge text (10px vs 11px)
+
+5. **Additional Improvements**:
+   - Added compact mode prop for smaller layouts
+   - Added loading spinner animation for loading state
+   - Added data indicator (green dot) for years with farm data
+   - Added styling differentiation for current (blue), next (amber), and previous (gray) years
+   - Added dropdown arrow icon on right side
+
+SCREENSHOTS:
+- feature394-farming-year-selector-styled.png (desktop view with styled component)
+- feature394-farming-year-selector-focus.png (focus state with blue border)
+- feature394-farming-year-previous-year.png (previous year selected with gray badge)
+- feature394-farming-year-mobile.png (mobile responsive view)
+
+CURRENT STATUS: 389/394 features passing (98.7%)
+
+NOTES FOR NEXT SESSION:
+- All 394 features are now complete!
+- FarmingYearSelector is fully styled and consistent with design system
+- Component supports light theme (tested)
+
+
+== Session: 2026-02-09 (Agent Batch #392, #393) ==
+Agent: Features #392, #393 - Farming Year Filters for Dashboard and Operations
+
+COMPLETED:
+- Feature #392: Update useDashboardFilters hook with farming year state [PASSING]
+  - Added farmingYear to FilterState interface (line 66)
+  - Added setFarmingYearFilter action (lines 257-260) with sessionStorage persistence
+  - Added resetFarmingYearFilter action (lines 265-268)
+  - Implemented sessionStorage persistence for farming year selection
+  - Added filterSummary and hasActiveFilters to return interface
+  - Farming year included in filter summary display
+  - Screenshot: feature392-hook-complete.png
+
+- Feature #393: Integrate farming year filter into Operations Dashboard [PASSING]
+  - Added FarmingYearSelector component to Operations Dashboard header
+  - Updated FarmTasksParams type to include farmingYear parameter
+  - Modified getFarmTasks API to pass farmingYear filter to backend
+  - Dashboard statistics (pending/in-progress) now filtered by farming year
+  - Farming year badge displayed in subtitle when year is selected
+  - Persists farming year selection in sessionStorage
+  - Screenshot: feature393-operations-dashboard-farming-year.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/hooks/farm/useDashboardFilters.ts (farming year state, persistence, filter summary)
+- frontend/user-portal/src/types/tasks.ts (FarmTasksParams.farmingYear)
+- frontend/user-portal/src/services/tasksApi.ts (getFarmTasks farmingYear param)
+- frontend/user-portal/src/pages/operations/OperationsDashboard.tsx (FarmingYearSelector integration)
+
+CURRENT STATUS: 392/394 features passing (99.5%)
+
+NOTES FOR NEXT SESSION:
+- Only 2 features remaining!
+- Farming year filtering is now consistent across Block Monitor and Operations
+- sessionStorage used for persistence (operations uses key 'operations_farming_year_filter')
+- Test user: test_feature392@example.com / TestPass1234@ (super_admin)
+
