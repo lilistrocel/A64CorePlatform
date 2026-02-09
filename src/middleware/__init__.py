@@ -21,6 +21,12 @@ from .rate_limit import (
     mfa_rate_limiter,
     RateLimitMiddleware
 )
+from .timing import (
+    TimingMiddleware,
+    TimingMiddlewareWithCollector,
+    ResponseTimeCollector,
+    response_time_collector
+)
 
 __all__ = [
     "get_current_user",
@@ -38,5 +44,9 @@ __all__ = [
     "rate_limit_dependency",
     "login_rate_limiter",
     "mfa_rate_limiter",
-    "RateLimitMiddleware"
+    "RateLimitMiddleware",
+    "TimingMiddleware",
+    "TimingMiddlewareWithCollector",
+    "ResponseTimeCollector",
+    "response_time_collector"
 ]

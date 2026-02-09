@@ -24,6 +24,7 @@ from .core.plugin_system import get_plugin_manager
 from .core.cache import get_redis_cache, close_redis_cache
 from .core.logging_config import setup_logging
 from .middleware.rate_limit import RateLimitMiddleware
+from .middleware.timing import TimingMiddlewareWithCollector
 
 # Configure structured logging (JSON in production, text in development)
 setup_logging(log_level=settings.LOG_LEVEL, environment=settings.ENVIRONMENT)
@@ -49,6 +50,10 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
+
+# Response Time Monitoring Middleware - Applied first (outermost)
+# Tracks request timing, adds X-Response-Time header, alerts for slow requests (>1s)
+app.add_middleware(TimingMiddlewareWithCollector, slow_threshold_ms=1000, skip_health_logging=True)
 
 # Rate Limiting Middleware - Applied after CORS
 # Limits vary by role: Guest=10, User=100, Moderator=200, Admin=500, Super Admin=1000 req/min

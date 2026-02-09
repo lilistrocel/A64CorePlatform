@@ -10,6 +10,7 @@ from datetime import datetime
 
 from ..services.database import mongodb
 from ..core.cache import get_redis_cache
+from ..middleware.timing import response_time_collector
 
 router = APIRouter()
 
@@ -100,4 +101,64 @@ async def readiness_check() -> Dict[str, Any]:
             "mongodb": mongodb_status,
             "redis": redis_status
         }
+    }
+
+
+@router.get("/metrics", status_code=status.HTTP_200_OK)
+async def get_metrics() -> Dict[str, Any]:
+    """
+    Response time metrics endpoint
+
+    Returns comprehensive API performance metrics including:
+    - Total requests and errors
+    - Average, min, max response times
+    - Percentile statistics (p50, p95, p99)
+    - Slow request count
+
+    Feature #372: API response time monitoring
+    """
+    stats = response_time_collector.get_stats()
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "metrics": stats
+    }
+
+
+@router.get("/metrics/slow-requests", status_code=status.HTTP_200_OK)
+async def get_slow_requests() -> Dict[str, Any]:
+    """
+    Get recent slow requests (> 1s)
+
+    Returns list of recent slow API calls for investigation.
+    Limited to last 100 slow requests.
+
+    Feature #372: API response time monitoring
+    """
+    slow_requests = response_time_collector.get_slow_requests()
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "count": len(slow_requests),
+        "threshold_ms": 1000,
+        "slow_requests": slow_requests
+    }
+
+
+@router.get("/metrics/endpoints", status_code=status.HTTP_200_OK)
+async def get_endpoint_metrics() -> Dict[str, Any]:
+    """
+    Get response time statistics grouped by endpoint
+
+    Returns per-endpoint metrics:
+    - Request count
+    - Average response time
+    - Maximum response time
+
+    Useful for identifying which endpoints need optimization.
+
+    Feature #372: API response time monitoring
+    """
+    endpoint_stats = response_time_collector.get_endpoint_stats()
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "endpoints": endpoint_stats
     }
