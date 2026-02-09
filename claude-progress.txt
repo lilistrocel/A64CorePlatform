@@ -4700,3 +4700,49 @@ NOTES FOR NEXT SESSION:
 - Existing harvests and archives without farmingYear will have null values
   (could add migration script if needed to backfill)
 - API endpoints follow RESTful patterns with proper auth and validation
+
+== Session: 2026-02-09 (Agent Batch #379, #383, #387) ==
+Agent: Features #379, #383, #387 - Farming Year Configuration
+
+COMPLETED:
+- Feature #379: Create migration script to backfill farmingYear on existing data [PASSING]
+  - Created scripts/migrations/backfill_farming_year.py
+  - Backfills farmingYear on block_harvests from harvestDate (11,378 records)
+  - Backfills farmingYearPlanted on blocks from plantedDate (212 records)
+  - Backfills farmingYearPlanted/farmingYearHarvested on block_archives (1,034 records)
+  - Supports legacy timeStart/timeFinish fields in archives
+  - Uses bulk operations for efficiency (500 records per batch)
+  - Idempotent (safe to run multiple times)
+  - Includes dry-run mode and progress logging
+
+- Feature #383: Create endpoint to list available farming years per farm [PASSING]
+  - GET /api/v1/farm/farms/{farm_id}/farming-years endpoint
+  - Queries distinct farmingYear from block_harvests for the farm
+  - Queries distinct farmingYearPlanted from blocks for the farm
+  - Combines and sorts years descending (newest first)
+  - Returns year number, display string ("Aug 2025 - Jul 2026"), and flags
+  - Includes isCurrent, hasHarvests, hasBlocks flags for each year
+  - Always includes current farming year even if no data exists
+
+- Feature #387: Add farming year API functions to farmApi service [PASSING]
+  - getFarmingYearConfig() - Fetch current config with start month
+  - updateFarmingYearConfig(startMonth) - Update config (admin only)
+  - getCurrentFarmingYear() - Get current year info with display string
+  - getFarmingYearsList(count, includeNext) - Get list for dropdowns
+  - getAvailableFarmingYears(farmId) - Get farm-specific years with data flags
+  - TypeScript interfaces: FarmingYearConfig, FarmingYearItem
+
+FILES CREATED:
+- scripts/migrations/backfill_farming_year.py
+
+FILES MODIFIED:
+- src/modules/farm_manager/api/v1/farms.py (farming-years endpoint)
+- frontend/user-portal/src/services/farmApi.ts (farming year API functions)
+
+CURRENT STATUS: 383/394 features passing (97.2%)
+
+NOTES FOR NEXT SESSION:
+- Farming year configuration: Start month is August (8) by default
+- Farming year calculation: Months 8-12 = current year, Months 1-7 = previous year
+- Test user: test_feature383@a64core.com / Test123! (super_admin)
+- Migration verified with 12,624 records backfilled across 3 collections
