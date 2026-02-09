@@ -36,12 +36,29 @@ class ArchiveService:
     async def list_archives_by_block(
         block_id: UUID,
         page: int = 1,
-        per_page: int = 20
+        per_page: int = 20,
+        farming_year: Optional[int] = None,
+        farming_year_filter: str = "planted"
     ) -> Tuple[List[BlockArchive], int, int]:
-        """List all archived cycles for a block"""
+        """
+        List all archived cycles for a block
+
+        Args:
+            block_id: Block UUID
+            page: Page number (1-indexed)
+            per_page: Items per page
+            farming_year: Optional farming year to filter by
+            farming_year_filter: Which field to filter on: 'planted', 'harvested', or 'both'
+        """
         skip = (page - 1) * per_page
 
-        archives, total = await ArchiveRepository.get_by_block(block_id, skip, per_page)
+        archives, total = await ArchiveRepository.get_by_block(
+            block_id,
+            skip,
+            per_page,
+            farming_year=farming_year,
+            farming_year_filter=farming_year_filter
+        )
 
         total_pages = (total + per_page - 1) // per_page
 
@@ -54,13 +71,34 @@ class ArchiveService:
         per_page: int = 20,
         crop_id: Optional[UUID] = None,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        farming_year: Optional[int] = None,
+        farming_year_filter: str = "planted"
     ) -> Tuple[List[BlockArchive], int, int]:
-        """List all archives for a farm with filters"""
+        """
+        List all archives for a farm with filters
+
+        Args:
+            farm_id: Farm UUID
+            page: Page number (1-indexed)
+            per_page: Items per page
+            crop_id: Optional crop UUID to filter by
+            start_date: Optional start date for planting filter
+            end_date: Optional end date for planting filter
+            farming_year: Optional farming year to filter by
+            farming_year_filter: Which field to filter on: 'planted', 'harvested', or 'both'
+        """
         skip = (page - 1) * per_page
 
         archives, total = await ArchiveRepository.get_by_farm(
-            farm_id, skip, per_page, crop_id, start_date, end_date
+            farm_id,
+            skip,
+            per_page,
+            crop_id,
+            start_date,
+            end_date,
+            farming_year=farming_year,
+            farming_year_filter=farming_year_filter
         )
 
         total_pages = (total + per_page - 1) // per_page

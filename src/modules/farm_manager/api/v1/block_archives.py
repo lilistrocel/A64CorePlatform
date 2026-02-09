@@ -5,9 +5,10 @@ Endpoints for viewing archived block cycles and performance analytics.
 """
 
 from fastapi import APIRouter, Depends, Query, status
-from typing import Optional, List
+from typing import Optional, List, Literal
 from uuid import UUID
 from datetime import datetime
+from enum import Enum
 
 from ...models.block_archive import (
     BlockArchive, BlockArchiveAnalytics,
@@ -31,6 +32,11 @@ async def list_block_archives(
     block_id: UUID,
     page: int = Query(1, ge=1, description="Page number"),
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025)"),
+    farmingYearFilter: Literal["planted", "harvested", "both"] = Query(
+        "planted",
+        description="Which farming year field to filter on: 'planted' (when cycle started), 'harvested' (when cycle completed), or 'both' (matches either)"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -38,11 +44,20 @@ async def list_block_archives(
 
     Returns historical data for all completed cycles of this block,
     sorted by completion date (most recent first).
+
+    **Farming Year Filter**:
+    - `farmingYear`: Filter archives by a specific farming year (e.g., 2025)
+    - `farmingYearFilter`: Specifies which field to filter on:
+      - `planted`: Filter by farmingYearPlanted (when crop cycle started)
+      - `harvested`: Filter by farmingYearHarvested (when harvest completed)
+      - `both`: Match archives where either field equals the farming year
     """
     archives, total, total_pages = await ArchiveService.list_archives_by_block(
         block_id,
         page=page,
-        per_page=perPage
+        per_page=perPage,
+        farming_year=farmingYear,
+        farming_year_filter=farmingYearFilter
     )
 
     return PaginatedResponse(
@@ -94,6 +109,11 @@ async def list_farm_archives(
     cropId: Optional[UUID] = Query(None, description="Filter by crop ID"),
     startDate: Optional[datetime] = Query(None, description="Filter by planting start date"),
     endDate: Optional[datetime] = Query(None, description="Filter by planting end date"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025)"),
+    farmingYearFilter: Literal["planted", "harvested", "both"] = Query(
+        "planted",
+        description="Which farming year field to filter on: 'planted', 'harvested', or 'both'"
+    ),
     current_user: CurrentUser = Depends(get_current_active_user)
 ):
     """
@@ -105,6 +125,8 @@ async def list_farm_archives(
     - `cropId`: Filter by specific crop (optional)
     - `startDate`: Filter cycles planted from this date (optional)
     - `endDate`: Filter cycles planted until this date (optional)
+    - `farmingYear`: Filter by farming year (optional)
+    - `farmingYearFilter`: Which farming year field to filter on (default: 'planted')
     """
     archives, total, total_pages = await ArchiveService.list_archives_by_farm(
         farm_id,
@@ -112,7 +134,9 @@ async def list_farm_archives(
         per_page=perPage,
         crop_id=cropId,
         start_date=startDate,
-        end_date=endDate
+        end_date=endDate,
+        farming_year=farmingYear,
+        farming_year_filter=farmingYearFilter
     )
 
     return PaginatedResponse(

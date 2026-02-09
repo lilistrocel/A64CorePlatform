@@ -76,12 +76,47 @@ class ArchiveRepository:
     async def get_by_block(
         block_id: UUID,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
+        farming_year: Optional[int] = None,
+        farming_year_filter: str = "planted"
     ) -> Tuple[List[BlockArchive], int]:
-        """Get all archived cycles for a block"""
+        """
+        Get all archived cycles for a block
+
+        Args:
+            block_id: Block UUID
+            skip: Pagination offset
+            limit: Pagination limit
+            farming_year: Optional farming year to filter by
+            farming_year_filter: Which farming year field to filter on:
+                                 'planted' (farmingYearPlanted),
+                                 'harvested' (farmingYearHarvested),
+                                 'both' (either field matches)
+        """
         db = farm_db.get_database()
 
         query = {"blockId": str(block_id)}
+
+        # Add farming year filter if specified
+        if farming_year is not None:
+            if farming_year_filter == "planted":
+                query["farmingYearPlanted"] = farming_year
+            elif farming_year_filter == "harvested":
+                query["farmingYearHarvested"] = farming_year
+            elif farming_year_filter == "both":
+                # Match if either field equals the farming year
+                query["$or"] = [
+                    {"farmingYearPlanted": farming_year},
+                    {"farmingYearHarvested": farming_year}
+                ]
+                # Need to restructure query for $or
+                query = {
+                    "blockId": str(block_id),
+                    "$or": [
+                        {"farmingYearPlanted": farming_year},
+                        {"farmingYearHarvested": farming_year}
+                    ]
+                }
 
         # Get total count
         total = await db.block_archives.count_documents(query)
@@ -101,9 +136,24 @@ class ArchiveRepository:
         limit: int = 100,
         crop_id: Optional[UUID] = None,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        farming_year: Optional[int] = None,
+        farming_year_filter: str = "planted"
     ) -> Tuple[List[BlockArchive], int]:
-        """Get all archives for a farm with filters"""
+        """
+        Get all archives for a farm with filters
+
+        Args:
+            farm_id: Farm UUID
+            skip: Pagination offset
+            limit: Pagination limit
+            crop_id: Optional crop UUID to filter by
+            start_date: Optional start date for planting filter
+            end_date: Optional end date for planting filter
+            farming_year: Optional farming year to filter by
+            farming_year_filter: Which farming year field to filter on:
+                                 'planted', 'harvested', or 'both'
+        """
         db = farm_db.get_database()
 
         # Build query
@@ -118,6 +168,27 @@ class ArchiveRepository:
                 query["plantedDate"]["$gte"] = start_date
             if end_date:
                 query["plantedDate"]["$lte"] = end_date
+
+        # Add farming year filter if specified
+        if farming_year is not None:
+            if farming_year_filter == "planted":
+                query["farmingYearPlanted"] = farming_year
+            elif farming_year_filter == "harvested":
+                query["farmingYearHarvested"] = farming_year
+            elif farming_year_filter == "both":
+                # For 'both', we need to use $or but need to maintain other filters
+                base_conditions = {k: v for k, v in query.items()}
+                query = {
+                    "$and": [
+                        base_conditions,
+                        {
+                            "$or": [
+                                {"farmingYearPlanted": farming_year},
+                                {"farmingYearHarvested": farming_year}
+                            ]
+                        }
+                    ]
+                }
 
         # Get total count
         total = await db.block_archives.count_documents(query)
