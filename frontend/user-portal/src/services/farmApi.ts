@@ -503,15 +503,29 @@ export async function getBlockCycleHistory(farmId: string, blockId: string) {
 
 /**
  * Get all archived cycles for a farm (across all blocks)
+ * @param farmId - Farm ID
+ * @param page - Page number (default 1)
+ * @param perPage - Items per page (default 20)
+ * @param farmingYear - Optional farming year filter
+ * @param farmingYearFilter - Which field to filter: 'planted', 'harvested', or 'both'
  */
 export async function getFarmArchives(
   farmId: string,
   page: number = 1,
-  perPage: number = 20
+  perPage: number = 20,
+  farmingYear?: number | null,
+  farmingYearFilter?: 'planted' | 'harvested' | 'both'
 ) {
+  const params: Record<string, any> = { page, perPage };
+  if (farmingYear !== null && farmingYear !== undefined) {
+    params.farmingYear = farmingYear;
+    if (farmingYearFilter) {
+      params.farmingYearFilter = farmingYearFilter;
+    }
+  }
   const response = await apiClient.get<any>(
     `/v1/farm/farms/${farmId}/archives`,
-    { params: { page, perPage } }
+    { params }
   );
   return {
     items: response.data.data || [],

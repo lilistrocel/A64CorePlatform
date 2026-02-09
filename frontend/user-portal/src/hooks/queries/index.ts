@@ -16,6 +16,14 @@ export {
   useDeleteFarm,
 } from './useFarms';
 
+// Farming year hooks
+export {
+  useAvailableFarmingYears,
+  useCurrentFarmingYear,
+  useFarmingYearsList,
+  useFarmingYearConfig,
+} from './useFarmingYears';
+
 // Sales hooks
 export {
   useSalesDashboard,

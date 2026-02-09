@@ -812,9 +812,11 @@ const VsDivider = styled.div`
 
 interface FarmHistoryTabProps {
   farmId: string;
+  /** Optional farming year to filter archives */
+  farmingYear?: number | null;
 }
 
-export function FarmHistoryTab({ farmId }: FarmHistoryTabProps) {
+export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
   const [archives, setArchives] = useState<BlockArchive[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -844,13 +846,13 @@ export function FarmHistoryTab({ farmId }: FarmHistoryTabProps) {
 
   useEffect(() => {
     loadArchives();
-  }, [farmId, page]);
+  }, [farmId, page, farmingYear]);
 
   const loadArchives = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await farmApi.getFarmArchives(farmId, page, perPage);
+      const response = await farmApi.getFarmArchives(farmId, page, perPage, farmingYear, 'both');
       setArchives(response.items);
       setTotal(response.total);
       setTotalPages(response.totalPages);

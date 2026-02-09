@@ -63,6 +63,16 @@ export const queryKeys = {
       [...queryKeys.farms.detail(farmId), 'blocks', category] as const,
     harvests: (farmId: string) =>
       [...queryKeys.farms.detail(farmId), 'harvests'] as const,
+    farmingYears: (farmId: string) =>
+      [...queryKeys.farms.detail(farmId), 'farmingYears'] as const,
+  },
+
+  // Farming year configuration queries
+  farmingYearConfig: {
+    all: ['farmingYearConfig'] as const,
+    current: () => [...queryKeys.farmingYearConfig.all, 'current'] as const,
+    list: (count?: number, includeNext?: boolean) =>
+      [...queryKeys.farmingYearConfig.all, 'list', { count, includeNext }] as const,
   },
 
   // Block queries

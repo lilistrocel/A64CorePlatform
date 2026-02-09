@@ -6,9 +6,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useFarm, useFarmSummary, useFarmBlocks } from '../../hooks/queries';
+import { useFarm, useFarmSummary, useFarmBlocks, useAvailableFarmingYears } from '../../hooks/queries';
 import { BlockGrid } from './BlockGrid';
 import { PhysicalBlockGrid } from './PhysicalBlockGrid';
 import { CreateBlockModal } from './CreateBlockModal';
@@ -17,6 +17,7 @@ import { EditFarmModal } from './EditFarmModal';
 import { EditFarmBoundaryModal } from './EditFarmBoundaryModal';
 import { FarmHistoryTab } from './FarmHistoryTab';
 import { FarmMapView } from './FarmMapView';
+import { FarmingYearSelector } from './FarmingYearSelector';
 import { AgriDataTab, SensorFusionTab } from './weather';
 import { farmApi } from '../../services/farmApi';
 import { Breadcrumb } from '@a64core/shared';
@@ -26,6 +27,8 @@ import { formatNumber } from '../../utils';
 
 // LocalStorage key for mobile view preference
 const MOBILE_VIEW_PREF_KEY = 'farm-detail-mobile-view';
+// LocalStorage key for farming year preference (per farm)
+const FARMING_YEAR_PREF_KEY_PREFIX = 'farm-detail-farming-year-';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -420,6 +423,32 @@ type MobileViewType = 'list' | 'map';
 export function FarmDetail() {
   const { farmId } = useParams<{ farmId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Farming year state - persisted to URL params and localStorage
+  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(() => {
+    // First check URL params
+    const urlYear = searchParams.get('farmingYear');
+    if (urlYear) {
+      const parsed = parseInt(urlYear, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    // Then check localStorage for this farm
+    if (farmId) {
+      const saved = localStorage.getItem(`${FARMING_YEAR_PREF_KEY_PREFIX}${farmId}`);
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed)) return parsed;
+      }
+    }
+    return null; // Default to "All Years"
+  });
+
+  // Fetch available farming years for this farm
+  const {
+    data: farmingYearsData,
+    isLoading: farmingYearsLoading,
+  } = useAvailableFarmingYears(farmId);
 
   // Use React Query hooks for data fetching with automatic caching
   const {
@@ -470,6 +499,29 @@ export function FarmDetail() {
   });
   const [isMobile, setIsMobile] = useState(false);
   const [isMapFullScreen, setIsMapFullScreen] = useState(false);
+
+  // Handle farming year change - persist to URL and localStorage
+  const handleFarmingYearChange = (year: number | null) => {
+    setSelectedFarmingYear(year);
+
+    // Update URL params
+    const newParams = new URLSearchParams(searchParams);
+    if (year === null) {
+      newParams.delete('farmingYear');
+    } else {
+      newParams.set('farmingYear', year.toString());
+    }
+    setSearchParams(newParams, { replace: true });
+
+    // Persist to localStorage for this farm
+    if (farmId) {
+      if (year === null) {
+        localStorage.removeItem(`${FARMING_YEAR_PREF_KEY_PREFIX}${farmId}`);
+      } else {
+        localStorage.setItem(`${FARMING_YEAR_PREF_KEY_PREFIX}${farmId}`, year.toString());
+      }
+    }
+  };
 
   // Detect mobile viewport
   useEffect(() => {
@@ -628,6 +680,14 @@ export function FarmDetail() {
             </Location>
           </TitleSection>
           <HeaderActions>
+            <FarmingYearSelector
+              selectedYear={selectedFarmingYear}
+              availableYears={farmingYearsData?.years || []}
+              onYearChange={handleFarmingYearChange}
+              isLoading={farmingYearsLoading}
+              showAllOption={true}
+              label="Farming Year"
+            />
             <EditButton onClick={() => setShowEditFarmModal(true)}>
               <span>✏️</span>
               <span>Edit Farm</span>
@@ -832,7 +892,7 @@ export function FarmDetail() {
           )}
 
           {activeTab === 'history' && farmId && (
-            <FarmHistoryTab farmId={farmId} />
+            <FarmHistoryTab farmId={farmId} farmingYear={selectedFarmingYear} />
           )}
 
           {activeTab === 'agridata' && farm && (
