@@ -69,6 +69,7 @@ async def get_orders(
     perPage: int = Query(20, ge=1, le=100, description="Items per page"),
     status: Optional[SalesOrderStatus] = Query(None, description="Filter by order status"),
     customerId: Optional[UUID] = Query(None, description="Filter by customer ID"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year"),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     service: OrderService = Depends()
 ):
@@ -79,9 +80,10 @@ async def get_orders(
     - **perPage**: Items per page (default: 20, max: 100)
     - **status**: Filter by order status (optional)
     - **customerId**: Filter by customer ID (optional)
+    - **farmingYear**: Filter by farming year (optional)
     """
     orders, total, total_pages = await service.get_all_orders(
-        page, perPage, status, customerId
+        page, perPage, status, customerId, farmingYear
     )
 
     return PaginatedResponse(

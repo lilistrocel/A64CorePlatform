@@ -121,7 +121,8 @@ class OrderRepository:
         skip: int = 0,
         limit: int = 20,
         status: Optional[SalesOrderStatus] = None,
-        customer_id: Optional[UUID] = None
+        customer_id: Optional[UUID] = None,
+        farming_year: Optional[int] = None
     ) -> tuple[List[SalesOrder], int]:
         """
         Get all sales orders with pagination and filters
@@ -131,6 +132,7 @@ class OrderRepository:
             limit: Maximum number of records to return
             status: Filter by order status (optional)
             customer_id: Filter by customer ID (optional)
+            farming_year: Filter by farming year (optional)
 
         Returns:
             Tuple of (list of orders, total count)
@@ -142,6 +144,8 @@ class OrderRepository:
             query["status"] = status.value
         if customer_id:
             query["customerId"] = str(customer_id)
+        if farming_year:
+            query["farmingYear"] = farming_year
 
         # Get total count
         total = await collection.count_documents(query)

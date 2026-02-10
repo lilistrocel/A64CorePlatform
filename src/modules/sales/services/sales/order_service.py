@@ -327,7 +327,8 @@ class OrderService:
         page: int = 1,
         per_page: int = 20,
         status: Optional[SalesOrderStatus] = None,
-        customer_id: Optional[UUID] = None
+        customer_id: Optional[UUID] = None,
+        farming_year: Optional[int] = None
     ) -> tuple[List[SalesOrder], int, int]:
         """
         Get all sales orders with pagination
@@ -337,6 +338,7 @@ class OrderService:
             per_page: Items per page
             status: Filter by order status (optional)
             customer_id: Filter by customer ID (optional)
+            farming_year: Filter by farming year (optional)
 
         Returns:
             Tuple of (orders, total, total_pages)
@@ -347,7 +349,7 @@ class OrderService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        orders, total = await self.repository.get_all(skip, per_page, status, customer_id)
+        orders, total = await self.repository.get_all(skip, per_page, status, customer_id, farming_year)
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 
