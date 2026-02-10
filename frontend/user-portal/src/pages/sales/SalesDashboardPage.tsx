@@ -9,7 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { salesApi } from '../../services/salesService';
 import { formatNumber, formatCurrency } from '../../utils';
-import type { SalesDashboardStats } from '../../types/sales';
+import type { SalesDashboardStats, FarmingYearItem } from '../../types/sales';
+import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -22,7 +23,33 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 32px;
+`;
+
+const HeaderLeft = styled.div`
+  flex: 1;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const FarmingYearBadge = styled.span`
+  display: inline-block;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
 `;
 
 const Title = styled.h1`
@@ -223,15 +250,38 @@ export function SalesDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Farming year filter state
+  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(null);
+  const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
+  const [farmingYearsLoading, setFarmingYearsLoading] = useState(true);
+
+  // Load farming years on mount
+  useEffect(() => {
+    loadFarmingYears();
+  }, []);
+
+  // Reload stats when farming year changes
   useEffect(() => {
     loadDashboardStats();
-  }, []);
+  }, [selectedFarmingYear]);
+
+  const loadFarmingYears = async () => {
+    setFarmingYearsLoading(true);
+    try {
+      const response = await salesApi.getAvailableFarmingYears();
+      setAvailableFarmingYears(response.years);
+    } catch (err) {
+      console.error('Failed to load farming years:', err);
+    } finally {
+      setFarmingYearsLoading(false);
+    }
+  };
 
   const loadDashboardStats = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await salesApi.getDashboardStats();
+      const data = await salesApi.getDashboardStats(selectedFarmingYear);
       setStats(data);
     } catch (err: any) {
       console.error('Failed to load dashboard stats:', err);
@@ -239,6 +289,17 @@ export function SalesDashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFarmingYearChange = (year: number | null) => {
+    setSelectedFarmingYear(year);
+  };
+
+  // Get display string for current filter
+  const getFarmingYearDisplay = () => {
+    if (selectedFarmingYear === null) return null;
+    const yearItem = availableFarmingYears.find((y) => y.year === selectedFarmingYear);
+    return yearItem?.display || `${selectedFarmingYear}`;
   };
 
   if (loading) {
@@ -264,8 +325,29 @@ export function SalesDashboardPage() {
   return (
     <Container>
       <Header>
-        <Title>Sales Management</Title>
-        <Subtitle>Orders, inventory, and purchase order tracking</Subtitle>
+        <HeaderLeft>
+          <Title>
+            Sales Management
+            {selectedFarmingYear && (
+              <FarmingYearBadge>{getFarmingYearDisplay()}</FarmingYearBadge>
+            )}
+          </Title>
+          <Subtitle>
+            {selectedFarmingYear
+              ? `Filtered statistics for farming year ${selectedFarmingYear}`
+              : 'Orders, inventory, and purchase order tracking'}
+          </Subtitle>
+        </HeaderLeft>
+        <HeaderRight>
+          <FarmingYearSelector
+            selectedYear={selectedFarmingYear}
+            availableYears={availableFarmingYears}
+            onYearChange={handleFarmingYearChange}
+            isLoading={farmingYearsLoading}
+            showAllOption={true}
+            compact={true}
+          />
+        </HeaderRight>
       </Header>
 
       <StatsGrid>
