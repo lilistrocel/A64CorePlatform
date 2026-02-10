@@ -8,10 +8,11 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { salesApi } from '../../services/salesService';
 import { crmApi } from '../../services/crmService';
-import type { SalesOrder, OrderStatus, PaymentStatus } from '../../types/sales';
+import type { SalesOrder, OrderStatus, PaymentStatus, FarmingYearItem } from '../../types/sales';
 import type { Customer } from '../../types/crm';
 import { OrderTable } from '../../components/sales/OrderTable';
 import { OrderForm } from '../../components/sales/OrderForm';
+import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 
 // ============================================================================
@@ -237,16 +238,35 @@ export function SalesOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Farming year filter state
+  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(null);
+  const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
+  const [farmingYearsLoading, setFarmingYearsLoading] = useState(true);
+
   const perPage = 20;
 
-  // Load customers for filter dropdown on mount
+  // Load customers and farming years for filter dropdowns on mount
   useEffect(() => {
     loadCustomers();
+    loadFarmingYears();
   }, []);
+
+  const loadFarmingYears = async () => {
+    setFarmingYearsLoading(true);
+    try {
+      const response = await salesApi.getAvailableFarmingYears();
+      // Map the response years to FarmingYearItem format
+      setAvailableFarmingYears(response.years);
+    } catch (err) {
+      console.error('Failed to load farming years:', err);
+    } finally {
+      setFarmingYearsLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadOrders();
-  }, [currentPage, statusFilter, paymentFilter, customerFilter, searchTerm]);
+  }, [currentPage, statusFilter, paymentFilter, customerFilter, searchTerm, selectedFarmingYear]);
 
   const loadCustomers = async () => {
     try {
@@ -268,6 +288,7 @@ export function SalesOrdersPage() {
         status: statusFilter || undefined,
         paymentStatus: paymentFilter || undefined,
         customerId: customerFilter || undefined,
+        farmingYear: selectedFarmingYear || undefined,
       });
       setOrders(response.items);
       setTotal(response.total);
@@ -297,6 +318,11 @@ export function SalesOrdersPage() {
 
   const handleCustomerFilterChange = (value: string) => {
     setCustomerFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleFarmingYearChange = (year: number | null) => {
+    setSelectedFarmingYear(year);
     setCurrentPage(1);
   };
 
@@ -386,6 +412,14 @@ export function SalesOrdersPage() {
             </option>
           ))}
         </Select>
+        <FarmingYearSelector
+          selectedYear={selectedFarmingYear}
+          availableYears={availableFarmingYears}
+          onYearChange={handleFarmingYearChange}
+          isLoading={farmingYearsLoading}
+          showAllOption={true}
+          compact={true}
+        />
       </FiltersRow>
 
       {error && <ErrorContainer>{error}</ErrorContainer>}
