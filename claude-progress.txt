@@ -5009,3 +5009,54 @@ NOTES FOR NEXT SESSION:
 - Inventory dashboard now supports farmingYear filtering
 - API endpoint: GET /api/v1/sales/dashboard?farmingYear=2025
 - Test user: test_feature392@example.com / TestPass1234@ (super_admin)
+
+== Session: 2026-02-10 (Agent Batch #402, #407) ==
+Agent: Features #402, #407 - Sales Module Farming Year Integration
+
+COMPLETED:
+- Feature #402: Extend sales dashboard stats endpoint with farmingYear filter [PASSING]
+  - Added farmingYear parameter to GET /api/v1/sales/dashboard/stats
+  - Filters order counts (total, confirmed, shipped, delivered) by farmingYear
+  - Filters revenue stats (totalRevenue, pendingPayments) by farmingYear
+  - Inventory stats already supported farmingYear filter
+  - farmingYearContext included in response (farmingYear, isFiltered)
+  - Default to all data when no farmingYear specified
+
+- Feature #407: Create endpoint to list available farming years for sales [PASSING]
+  - Created GET /api/v1/sales/farming-years endpoint
+  - Queries distinct farmingYear values from sales_orders collection
+  - Returns years sorted descending (newest first: 2025, 2024)
+  - Each year includes: year, display string, isCurrent, hasOrders, orderCount
+  - Always includes current farming year even if no data exists
+  - Created src/modules/sales/api/v1/config.py for config endpoints
+
+API VERIFICATION:
+- GET /api/v1/sales/dashboard/stats (no filter):
+  - totalOrders: 3303, totalRevenue: 16,461,661.26
+
+- GET /api/v1/sales/dashboard/stats?farmingYear=2025:
+  - totalOrders: 875, totalRevenue: 5,577,872.51
+
+- GET /api/v1/sales/dashboard/stats?farmingYear=2024:
+  - totalOrders: 2428, totalRevenue: 10,883,788.75
+
+- GET /api/v1/sales/farming-years:
+  - years: [2025 (875 orders), 2024 (2428 orders)]
+  - totalOrders: 3303
+
+FILES CREATED:
+- src/modules/sales/api/v1/config.py (farming years endpoint)
+
+FILES MODIFIED:
+- src/modules/sales/api/v1/dashboard.py (farmingYear filter for order counts and revenue)
+- src/modules/sales/api/v1/__init__.py (register config router)
+- src/modules/sales/services/sales/order_service.py (farming_year param for get_revenue_stats)
+- src/modules/sales/services/sales/order_repository.py (farming_year filter in get_revenue_stats)
+
+CURRENT STATUS: 405/417 features passing (97.1%)
+
+NOTES FOR NEXT SESSION:
+- Sales module farming year integration complete
+- Dashboard stats now filter all metrics by farming year
+- Farming years endpoint provides dropdown data for UI
+- Test user: test_feature392@example.com / TestPass1234@ (super_admin)
