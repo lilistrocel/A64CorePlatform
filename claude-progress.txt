@@ -4964,3 +4964,48 @@ NOTES FOR NEXT SESSION:
 - Backfill migration already executed (11,650 records)
 - API endpoint: GET /api/v1/sales/inventory/farming-years
 - Test user: test_feature392@example.com / TestPass1234@ (super_admin)
+
+== Session: 2026-02-10 (Agent - Feature #404) ==
+Agent: Feature #404 - Extend inventory dashboard with farmingYear filter
+
+COMPLETED:
+- Feature #404: Extend inventory dashboard with farmingYear filter [PASSING]
+
+CHANGES MADE:
+
+1. **src/modules/sales/api/v1/dashboard.py**:
+   - Added farmingYear: Optional[int] query parameter to GET /api/v1/sales/dashboard endpoint
+   - Updated endpoint description to mention farmingYear parameter
+   - Added farmingYearContext dict to response (farmingYear, isFiltered)
+   - Also added farmingYear parameter to /stats alias endpoint
+
+2. **src/modules/sales/services/sales/inventory_service.py**:
+   - Added farming_year parameter to get_inventory_stats() method
+   - Passes parameter through to repository
+
+3. **src/modules/sales/services/sales/inventory_repository.py**:
+   - Updated get_inventory_stats() to accept farming_year parameter
+   - Added $match stage to aggregation pipeline when farming_year is specified
+   - Filters inventory by farmingYear field
+
+VERIFICATION RESULTS:
+- Without filter: totalInventory: 11,650, farmingYearContext: { farmingYear: null, isFiltered: false }
+- farmingYear=2025: totalInventory: 3,165, farmingYearContext: { farmingYear: 2025, isFiltered: true }
+- farmingYear=2024: totalInventory: 8,485, farmingYearContext: { farmingYear: 2024, isFiltered: true }
+- Math verification: 3,165 + 8,485 = 11,650 ✓
+
+SCREENSHOTS:
+- feature404-sales-dashboard.png (Sales page showing Available Stock)
+- feature404-api-verification.png (Sales dashboard loaded)
+- feature404-swagger-docs.png (Swagger docs showing sales-dashboard section)
+- feature404-swagger-farmingYear-param.png (farmingYear parameter documentation)
+
+MOCK DATA CHECK:
+- Grep for mock patterns: No matches found in src/modules/sales/
+
+CURRENT STATUS: 402/417 features passing (96.4%)
+
+NOTES FOR NEXT SESSION:
+- Inventory dashboard now supports farmingYear filtering
+- API endpoint: GET /api/v1/sales/dashboard?farmingYear=2025
+- Test user: test_feature392@example.com / TestPass1234@ (super_admin)
