@@ -5060,3 +5060,91 @@ NOTES FOR NEXT SESSION:
 - Dashboard stats now filter all metrics by farming year
 - Farming years endpoint provides dropdown data for UI
 - Test user: test_feature392@example.com / TestPass1234@ (super_admin)
+
+
+== Session: 2026-02-10 (Agent Batch #410, #413, #414) ==
+Agent: Features #410, #413, #414 - Sales Module Farming Year Integration
+
+COMPLETED:
+- Feature #410: Add farming year API functions to salesApi service [PASSING]
+  - Added getAvailableFarmingYears() function to fetch farming years with inventory data
+  - Updated getSalesOrders() to accept optional farmingYear parameter
+  - Updated getDashboardStats() to accept optional farmingYear parameter
+  - Added TypeScript types: FarmingYearItem, FarmingYearContext, SalesInventoryFarmingYearsResponse
+  - Added farmingYear to SalesOrderSearchParams type
+  - Added farmingYearContext to SalesDashboardStats type
+  - Screenshot: feature410-sales-api-functions.png
+
+- Feature #413: Integrate farming year selector into Sales Orders page [PASSING]
+  - Added FarmingYearSelector component to filter orders by farming year
+  - Added state for selectedFarmingYear and availableFarmingYears
+  - Fetches farming years from salesApi.getAvailableFarmingYears()
+  - Passes farmingYear to sales orders query for filtering
+  - Pagination resets when farming year filter changes
+  - Orders filtered from 3,303 (all) to 875 (2025)
+  - Screenshots: feature413-sales-orders-farming-year.png, feature413-sales-orders-filtered-2025.png
+
+- Feature #414: Integrate farming year selector into Sales Dashboard [PASSING]
+  - Added FarmingYearSelector to dashboard header with farming year filtering
+  - Dashboard stats API call now includes farmingYear parameter
+  - All widgets (orders, revenue, inventory) reflect filtered data
+  - Title shows farming year badge when filtered (e.g., "Aug 2025 - Jul 2026")
+  - Subtitle updates to show "Filtered statistics for farming year X"
+  - Stats filtered: Orders 3,303→875, Revenue AED 16M→5.5M, Stock 11,650→3,165
+  - Screenshots: feature414-sales-dashboard-all-years.png, feature414-sales-dashboard-filtered-2025.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/services/salesService.ts (getAvailableFarmingYears, updated getDashboardStats, getSalesOrders)
+- frontend/user-portal/src/types/sales.ts (FarmingYearItem, FarmingYearContext, SalesInventoryFarmingYearsResponse, updated SalesOrderSearchParams, SalesDashboardStats)
+- frontend/user-portal/src/pages/sales/SalesOrdersPage.tsx (FarmingYearSelector integration)
+- frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx (FarmingYearSelector integration)
+
+CURRENT STATUS: 414/417 features passing (99.3%)
+
+NOTES FOR NEXT SESSION:
+- Farming year filtering is now complete for Sales module
+- Both Sales Orders page and Sales Dashboard support year filtering
+- Test user: test_feature392@example.com / TestPass1234@ (super_admin)
+- API endpoint for farming years: GET /api/v1/sales/inventory/farming-years
+
+== Session: 2026-02-10 (Agent Batch #412, #416, #417) ==
+Agent: Features #412, #416, #417 - Logistics Module Farming Year Integration
+
+COMPLETED:
+- Feature #412: Add farming year API functions to logisticsApi service [PASSING]
+  - Added getAvailableFarmingYears() function to fetch farming years from logistics/config/farming-years
+  - Updated getShipments() to accept optional farmingYear parameter
+  - Updated getDashboardStats() to accept optional farmingYear parameter
+  - Added TypeScript types: LogisticsFarmingYearItem, LogisticsFarmingYearsResponse, LogisticsDashboardParams
+  - Added farmingYear to ShipmentSearchParams type
+  - Screenshots: feature412-logistics-dashboard.png, feature412-shipments-list.png
+
+- Feature #416: Integrate farming year selector into Logistics Dashboard [PASSING]
+  - Added FarmingYearSelector component to dashboard header
+  - Dashboard stats API call now includes farmingYear parameter
+  - Title shows farming year badge when filtered (e.g., "📅 Aug 2025 - Jul 2026")
+  - Subtitle updates to show "Filtered by farming year" context
+  - Selection persisted in sessionStorage (key: logistics_farming_year_filter)
+  - Screenshots: feature416-logistics-farming-year-selector.png, feature416-logistics-year-selected.png
+
+- Feature #417: Integrate farming year selector into Shipment Tracking page [PASSING]
+  - Added FarmingYearSelector component to page header next to "+ New Shipment" button
+  - Shipments list API call now includes farmingYear parameter
+  - Title shows farming year badge when year is selected
+  - Subtitle shows shipment count with context ("X shipments found for selected farming year")
+  - Selection persisted in sessionStorage (key: shipments_farming_year_filter)
+  - Screenshots: feature417-shipment-tracking-farming-year.png, feature417-shipment-tracking-year-selected.png
+
+FILES MODIFIED:
+- frontend/user-portal/src/services/logisticsService.ts (getAvailableFarmingYears, updated getDashboardStats, getShipments)
+- frontend/user-portal/src/types/logistics.ts (LogisticsFarmingYearItem, LogisticsFarmingYearsResponse, LogisticsDashboardParams, farmingYear in ShipmentSearchParams)
+- frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx (FarmingYearSelector integration)
+- frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx (FarmingYearSelector integration)
+
+CURRENT STATUS: 415/417 features passing (99.5%)
+
+NOTES FOR NEXT SESSION:
+- Farming year filtering is now complete for Logistics module
+- Both Logistics Dashboard and Shipment Tracking pages support year filtering
+- Test user: test_feature392@example.com / TestPass1234@ (super_admin)
+- API endpoint for farming years: GET /api/v1/logistics/config/farming-years
