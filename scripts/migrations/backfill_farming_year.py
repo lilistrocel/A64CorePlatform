@@ -7,7 +7,8 @@ This migration script calculates and sets farmingYear on all existing:
 - blocks: farmingYearPlanted from plantedDate
 - block_archives: farmingYearPlanted from plantedDate, farmingYearHarvested from harvestCompletedDate
 - shipments: farmingYear from actualDepartureDate or scheduledDate or createdAt
-- harvest_inventory: farmingYear from harvestDate
+- harvest_inventory (sales module): farmingYear from harvestDate
+- inventory_harvest (farm_manager module): farmingYear from harvestDate
 - sales_orders: farmingYear from orderDate
 
 The farming year is determined by the configured start month (default: August).
@@ -513,6 +514,98 @@ async def backfill_harvest_inventory(db, start_month: int, dry_run: bool = False
     return {"total": total, "updated": updated, "errors": errors}
 
 
+async def backfill_inventory_harvest(db, start_month: int, dry_run: bool = False) -> dict:
+    """
+    Backfill farmingYear on inventory_harvest collection (farm_manager module).
+
+    This is different from harvest_inventory (sales module).
+
+    Args:
+        db: MongoDB database instance
+        start_month: Farming year start month
+        dry_run: If True, don't make changes
+
+    Returns:
+        Dict with update statistics
+    """
+    from pymongo import UpdateOne
+
+    collection = db.inventory_harvest
+
+    # Find all inventory items with harvestDate
+    query = {"harvestDate": {"$exists": True, "$ne": None}}
+    total = await collection.count_documents(query)
+
+    if total == 0:
+        return {"total": 0, "updated": 0, "errors": 0}
+
+    print(f"\n[inventory_harvest] Processing {total} records...")
+
+    updated = 0
+    errors = 0
+
+    # Process in batches for efficiency
+    batch_size = 500
+    cursor = collection.find(query)
+
+    bulk_updates = []
+
+    async for doc in cursor:
+        try:
+            harvest_date = doc.get("harvestDate")
+            if not harvest_date:
+                continue
+
+            # Ensure we have a datetime object
+            if isinstance(harvest_date, str):
+                # Handle ISO format date strings (YYYY-MM-DD)
+                if "T" not in harvest_date:
+                    harvest_date = datetime.fromisoformat(harvest_date + "T00:00:00")
+                else:
+                    harvest_date = datetime.fromisoformat(harvest_date.replace("Z", "+00:00"))
+            elif not isinstance(harvest_date, datetime):
+                # Handle date objects (convert to datetime)
+                harvest_date = datetime.combine(harvest_date, datetime.min.time())
+
+            farming_year = get_farming_year_for_date(harvest_date, start_month)
+
+            # Check if already has correct value
+            if doc.get("farmingYear") == farming_year:
+                continue
+
+            bulk_updates.append(UpdateOne(
+                {"_id": doc["_id"]},
+                {"$set": {"farmingYear": farming_year}}
+            ))
+
+            # Execute bulk write when batch is full
+            if len(bulk_updates) >= batch_size:
+                if not dry_run:
+                    result = await collection.bulk_write(bulk_updates, ordered=False)
+                    updated += result.modified_count
+                else:
+                    updated += len(bulk_updates)
+                bulk_updates = []
+
+                # Progress update
+                print(f"    Processed {updated} records...")
+
+        except Exception as e:
+            errors += 1
+            if errors <= 5:  # Only show first 5 errors
+                print(f"    [ERROR] Record {doc.get('_id')}: {e}")
+
+    # Process remaining batch
+    if bulk_updates:
+        if not dry_run:
+            result = await collection.bulk_write(bulk_updates, ordered=False)
+            updated += result.modified_count
+        else:
+            updated += len(bulk_updates)
+
+    return {"total": total, "updated": updated, "errors": errors}
+
+
 async def backfill_sales_orders(db, start_month: int, dry_run: bool = False) -> dict:
     """
     Backfill farmingYear on sales_orders collection.
@@ -729,6 +822,29 @@ async def verify_migration(db, start_month: int):
                 hd_str = "N/A"
             print(f"    - {rec.get('productName')}: harvestDate: {hd_str}, farmingYear: {rec.get('farmingYear')}")
 
+    # Check inventory_harvest (farm_manager module)
+    inv_harvest_total = await db.inventory_harvest.count_documents({})
+    inv_harvest_with_fy = await db.inventory_harvest.count_documents({"farmingYear": {"$exists": True, "$ne": None}})
+    print(f"\n[inventory_harvest] (farm_manager module)")
+    print(f"  Total records: {inv_harvest_total}")
+    print(f"  With farmingYear: {inv_harvest_with_fy}")
+
+    # Sample some inventory_harvest records
+    sample = await db.inventory_harvest.find(
+        {"farmingYear": {"$exists": True}},
+        {"plantName": 1, "harvestDate": 1, "farmingYear": 1}
+    ).limit(3).to_list(length=3)
+
+    if sample:
+        print(f"  Sample records:")
+        for rec in sample:
+            hd = rec.get("harvestDate")
+            if hd:
+                hd_str = hd.strftime("%Y-%m-%d") if isinstance(hd, datetime) else str(hd)[:10]
+            else:
+                hd_str = "N/A"
+            print(f"    - {rec.get('plantName')}: harvestDate: {hd_str}, farmingYear: {rec.get('farmingYear')}")
+
     # Check sales_orders
     orders_total = await db.sales_orders.count_documents({})
     orders_with_fy = await db.sales_orders.count_documents({"farmingYear": {"$exists": True, "$ne": None}})
@@ -806,10 +922,13 @@ async def run_migration(dry_run: bool = False, override_start_month: Optional[in
         # 4. Backfill shipments
         results["shipments"] = await backfill_shipments(db, start_month, dry_run)
 
-        # 5. Backfill harvest_inventory
+        # 5. Backfill harvest_inventory (sales module)
         results["harvest_inventory"] = await backfill_harvest_inventory(db, start_month, dry_run)
 
-        # 6. Backfill sales_orders
+        # 6. Backfill inventory_harvest (farm_manager module)
+        results["inventory_harvest"] = await backfill_inventory_harvest(db, start_month, dry_run)
+
+        # 7. Backfill sales_orders
         results["sales_orders"] = await backfill_sales_orders(db, start_month, dry_run)
 
     except Exception as e:

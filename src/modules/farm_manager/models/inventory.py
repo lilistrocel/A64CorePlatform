@@ -408,6 +408,9 @@ class HarvestInventory(HarvestInventoryBase):
     # Source tracking (links to block harvest if auto-created)
     sourceHarvestId: Optional[UUID] = Field(None, description="Reference to block harvest (if auto-created from harvest)")
 
+    # Farming year (calculated from harvestDate)
+    farmingYear: Optional[int] = Field(None, description="Farming year derived from harvest date")
+
     # Tracking
     createdBy: UUID = Field(..., description="User who created this entry")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

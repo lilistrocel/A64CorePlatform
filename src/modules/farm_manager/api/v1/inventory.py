@@ -18,6 +18,7 @@ from io import StringIO
 
 from ...services.database import farm_db
 from ...middleware.auth import get_current_active_user, CurrentUser
+from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
 
 from src.modules.farm_manager.models.inventory import (
     # Enums
@@ -343,6 +344,7 @@ async def list_harvest_inventory(
     farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
     scope: Optional[InventoryScope] = Query(None, description="Filter by scope (organization or farm)"),
     quality_grade: Optional[QualityGrade] = Query(None),
+    farming_year: Optional[int] = Query(None, alias="farmingYear", description="Filter by farming year (e.g., 2025)"),
     search: Optional[str] = Query(None, max_length=100),
     sort_by: str = Query("harvestDate", description="Field to sort by (harvestDate, createdAt, plantName, quantity)"),
     sort_order: str = Query("desc", description="Sort order (asc or desc)"),
@@ -359,6 +361,7 @@ async def list_harvest_inventory(
     - scope=farm&farmId=xxx: Show only specific farm's inventory
     - scope=farm: Show all farm inventories
     - (no scope): Show all inventory (default + all farms)
+    - farmingYear: Filter by farming year (e.g., 2025)
     """
     # Get organization ID from current user
     org_id = await get_organization_id(current_user)
@@ -379,6 +382,8 @@ async def list_harvest_inventory(
 
     if quality_grade:
         query["qualityGrade"] = quality_grade.value
+    if farming_year is not None:
+        query["farmingYear"] = farming_year
     if search:
         query["$or"] = [
             {"plantName": {"$regex": search, "$options": "i"}},
@@ -529,10 +534,14 @@ async def create_harvest_inventory(
     inventory_data = data.model_dump()
     inventory_data["organizationId"] = org_id  # Override with auth context
 
+    # Calculate farmingYear from harvestDate
+    farming_year = get_farming_year(data.harvestDate, DEFAULT_FARMING_YEAR_START_MONTH)
+
     inventory = HarvestInventory(
         **inventory_data,
         inventoryScope=inventory_scope,
         availableQuantity=data.quantity,
+        farmingYear=farming_year,
         createdBy=UUID(current_user.userId)
     )
 
