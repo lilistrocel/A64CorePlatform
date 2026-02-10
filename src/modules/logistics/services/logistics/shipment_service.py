@@ -115,7 +115,8 @@ class ShipmentService:
         per_page: int = 20,
         status: Optional[ShipmentStatus] = None,
         vehicle_id: Optional[UUID] = None,
-        route_id: Optional[UUID] = None
+        route_id: Optional[UUID] = None,
+        farming_year: Optional[int] = None
     ) -> tuple[List[Shipment], int, int]:
         """
         Get all shipments with pagination
@@ -126,6 +127,7 @@ class ShipmentService:
             status: Filter by shipment status (optional)
             vehicle_id: Filter by vehicle ID (optional)
             route_id: Filter by route ID (optional)
+            farming_year: Filter by farming year (optional)
 
         Returns:
             Tuple of (shipments, total, total_pages)
@@ -136,7 +138,7 @@ class ShipmentService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        shipments, total = await self.repository.get_all(skip, per_page, status, vehicle_id, route_id)
+        shipments, total = await self.repository.get_all(skip, per_page, status, vehicle_id, route_id, farming_year)
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 

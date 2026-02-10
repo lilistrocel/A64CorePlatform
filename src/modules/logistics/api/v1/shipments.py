@@ -58,12 +58,13 @@ async def get_shipments(
     status: Optional[ShipmentStatus] = Query(None, description="Filter by shipment status"),
     vehicleId: Optional[UUID] = Query(None, description="Filter by vehicle ID"),
     routeId: Optional[UUID] = Query(None, description="Filter by route ID"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025)"),
     current_user: CurrentUser = Depends(require_permission("logistics.view")),
     service: ShipmentService = Depends()
 ):
     """Get all shipments with pagination"""
     shipments, total, total_pages = await service.get_all_shipments(
-        page, perPage, status, vehicleId, routeId
+        page, perPage, status, vehicleId, routeId, farmingYear
     )
 
     return PaginatedResponse(

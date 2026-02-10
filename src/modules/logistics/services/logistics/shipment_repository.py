@@ -121,7 +121,8 @@ class ShipmentRepository:
         limit: int = 20,
         status: Optional[ShipmentStatus] = None,
         vehicle_id: Optional[UUID] = None,
-        route_id: Optional[UUID] = None
+        route_id: Optional[UUID] = None,
+        farming_year: Optional[int] = None
     ) -> tuple[List[Shipment], int]:
         """
         Get all shipments with pagination and filters
@@ -132,6 +133,7 @@ class ShipmentRepository:
             status: Filter by shipment status (optional)
             vehicle_id: Filter by vehicle ID (optional)
             route_id: Filter by route ID (optional)
+            farming_year: Filter by farming year (optional)
 
         Returns:
             Tuple of (list of shipments, total count)
@@ -145,6 +147,8 @@ class ShipmentRepository:
             query["vehicleId"] = str(vehicle_id)
         if route_id:
             query["routeId"] = str(route_id)
+        if farming_year is not None:
+            query["farmingYear"] = farming_year
 
         # Get total count
         total = await collection.count_documents(query)
