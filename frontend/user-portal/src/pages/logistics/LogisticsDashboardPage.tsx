@@ -9,7 +9,9 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { logisticsApi } from '../../services/logisticsService';
 import { formatNumber } from '../../utils/formatNumber';
-import type { LogisticsDashboardStats } from '../../types/logistics';
+import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
+import type { LogisticsDashboardStats, LogisticsFarmingYearItem } from '../../types/logistics';
+import type { FarmingYearItem } from '../../services/farmApi';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -22,7 +24,26 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
   margin-bottom: 32px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const HeaderLeft = styled.div`
+  flex: 1;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
 `;
 
 const Title = styled.h1`
@@ -174,9 +195,35 @@ const EmptyText = styled.div`
   color: #9e9e9e;
 `;
 
+const FarmingYearBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1976d2;
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 16px;
+  margin-left: 8px;
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
+
+// Key for persisting farming year selection in sessionStorage
+const FARMING_YEAR_STORAGE_KEY = 'logistics_farming_year_filter';
+
+// Helper to convert LogisticsFarmingYearItem to FarmingYearItem
+const convertToFarmingYearItem = (item: LogisticsFarmingYearItem): FarmingYearItem => ({
+  year: item.year,
+  display: item.display,
+  isCurrent: item.isCurrent,
+  hasHarvests: item.hasShipments,
+  hasBlocks: item.hasShipments,
+});
 
 export function LogisticsDashboardPage() {
   const navigate = useNavigate();
@@ -184,15 +231,55 @@ export function LogisticsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Farming year state
+  const [availableYears, setAvailableYears] = useState<FarmingYearItem[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number | null>(() => {
+    // Restore from sessionStorage on initial load
+    const stored = sessionStorage.getItem(FARMING_YEAR_STORAGE_KEY);
+    return stored ? parseInt(stored, 10) : null;
+  });
+  const [yearsLoading, setYearsLoading] = useState(true);
+
+  // Load available farming years on mount
+  useEffect(() => {
+    loadAvailableFarmingYears();
+  }, []);
+
+  // Load dashboard stats when farming year changes
   useEffect(() => {
     loadDashboardStats();
-  }, []);
+  }, [selectedYear]);
+
+  const loadAvailableFarmingYears = async () => {
+    setYearsLoading(true);
+    try {
+      const response = await logisticsApi.getAvailableFarmingYears();
+      setAvailableYears(response.years.map(convertToFarmingYearItem));
+    } catch (err: any) {
+      console.error('Failed to load farming years:', err);
+      // Continue with empty years - selector will show "No years available"
+    } finally {
+      setYearsLoading(false);
+    }
+  };
+
+  const handleYearChange = (year: number | null) => {
+    setSelectedYear(year);
+    // Persist to sessionStorage
+    if (year === null) {
+      sessionStorage.removeItem(FARMING_YEAR_STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(FARMING_YEAR_STORAGE_KEY, year.toString());
+    }
+  };
 
   const loadDashboardStats = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await logisticsApi.getDashboardStats();
+      const data = await logisticsApi.getDashboardStats({
+        farmingYear: selectedYear ?? undefined,
+      });
       setStats(data);
     } catch (err: any) {
       console.error('Failed to load dashboard stats:', err);
@@ -200,6 +287,13 @@ export function LogisticsDashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Get display string for selected year
+  const getSelectedYearDisplay = (): string | null => {
+    if (selectedYear === null) return null;
+    const yearItem = availableYears.find((y) => y.year === selectedYear);
+    return yearItem?.display || `${selectedYear}`;
   };
 
   if (loading) {
@@ -225,8 +319,30 @@ export function LogisticsDashboardPage() {
   return (
     <Container>
       <Header>
-        <Title>Logistics Management</Title>
-        <Subtitle>Fleet and shipment tracking overview</Subtitle>
+        <HeaderLeft>
+          <Title>
+            Logistics Management
+            {selectedYear !== null && (
+              <FarmingYearBadge>
+                📅 {getSelectedYearDisplay()}
+              </FarmingYearBadge>
+            )}
+          </Title>
+          <Subtitle>
+            Fleet and shipment tracking overview
+            {selectedYear !== null && ' - Filtered by farming year'}
+          </Subtitle>
+        </HeaderLeft>
+        <HeaderRight>
+          <FarmingYearSelector
+            selectedYear={selectedYear}
+            availableYears={availableYears}
+            onYearChange={handleYearChange}
+            showAllOption={true}
+            isLoading={yearsLoading}
+            compact={true}
+          />
+        </HeaderRight>
       </Header>
 
       <StatsGrid>
