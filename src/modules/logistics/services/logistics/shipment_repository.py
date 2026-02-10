@@ -12,6 +12,7 @@ import logging
 
 from src.modules.logistics.models.shipment import Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus
 from src.modules.logistics.services.database import logistics_db
+from src.modules.farm_manager.models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +66,23 @@ class ShipmentRepository:
         shipment_code = f"SH{sequence:03d}"
 
         shipment_dict = shipment_data.model_dump()
+
+        # Calculate farming year from actualDepartureDate, scheduledDate, or createdAt
+        now = datetime.utcnow()
+        date_for_farming_year = (
+            shipment_dict.get("actualDepartureDate") or
+            shipment_dict.get("scheduledDate") or
+            now
+        )
+        farming_year = get_farming_year(date_for_farming_year, DEFAULT_FARMING_YEAR_START_MONTH)
+        shipment_dict["farmingYear"] = farming_year
+
         shipment = Shipment(
             **shipment_dict,
             shipmentCode=shipment_code,
             createdBy=created_by,
-            createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow()
+            createdAt=now,
+            updatedAt=now
         )
 
         shipment_doc = shipment.model_dump(by_alias=True)
@@ -200,16 +212,19 @@ class ShipmentRepository:
         """
         collection = self._get_collection()
 
+        now = datetime.utcnow()
         update_dict = {
             "status": new_status.value,
-            "updatedAt": datetime.utcnow()
+            "updatedAt": now
         }
 
         # Update departure/arrival dates based on status
         if new_status == ShipmentStatus.IN_TRANSIT:
-            update_dict["actualDepartureDate"] = datetime.utcnow()
+            update_dict["actualDepartureDate"] = now
+            # Recalculate farming year based on actual departure date
+            update_dict["farmingYear"] = get_farming_year(now, DEFAULT_FARMING_YEAR_START_MONTH)
         elif new_status == ShipmentStatus.DELIVERED:
-            update_dict["actualArrivalDate"] = datetime.utcnow()
+            update_dict["actualArrivalDate"] = now
 
         result = await collection.update_one(
             {"shipmentId": str(shipment_id)},

@@ -10,6 +10,9 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 from enum import Enum
 
+# Import farming year calculation function
+from src.modules.farm_manager.models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+
 
 class ShipmentStatus(str, Enum):
     """Shipment status enumeration"""
@@ -45,6 +48,9 @@ class ShipmentBase(BaseModel):
     totalCost: Optional[float] = Field(None, ge=0, description="Total shipment cost")
     notes: Optional[str] = Field(None, max_length=1000, description="Additional notes")
 
+    # Farming year tracking
+    farmingYear: Optional[int] = Field(None, description="Farming year this shipment belongs to (calculated from departureTime or scheduledDate)")
+
 
 class ShipmentCreate(ShipmentBase):
     """Schema for creating a new shipment"""
@@ -64,6 +70,7 @@ class ShipmentUpdate(BaseModel):
     orderIds: Optional[List[UUID]] = None
     totalCost: Optional[float] = Field(None, ge=0)
     notes: Optional[str] = Field(None, max_length=1000)
+    farmingYear: Optional[int] = Field(None, description="Farming year (usually auto-calculated)")
 
 
 class Shipment(ShipmentBase):

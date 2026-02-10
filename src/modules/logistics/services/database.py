@@ -91,6 +91,9 @@ class LogisticsDatabaseManager:
             await db.shipments.create_index("status")
             await db.shipments.create_index([("scheduledDate", -1)])
             await db.shipments.create_index([("createdAt", -1)])
+            # Farming year indexes for filtering by year
+            await db.shipments.create_index("farmingYear")
+            await db.shipments.create_index([("status", 1), ("farmingYear", 1)])
 
             logger.info("[Logistics Module] MongoDB indexes created successfully")
         except Exception as e:
