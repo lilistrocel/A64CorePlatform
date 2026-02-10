@@ -6,6 +6,7 @@ This migration script calculates and sets farmingYear on all existing:
 - block_harvests: farmingYear from harvestDate
 - blocks: farmingYearPlanted from plantedDate
 - block_archives: farmingYearPlanted from plantedDate, farmingYearHarvested from harvestCompletedDate
+- shipments: farmingYear from actualDepartureDate or scheduledDate or createdAt
 
 The farming year is determined by the configured start month (default: August).
 For example, if start month is August (8):
@@ -334,6 +335,92 @@ async def backfill_block_archives(db, start_month: int, dry_run: bool = False) -
     return {"total": total, "updated": updated, "errors": errors}
 
 
+async def backfill_shipments(db, start_month: int, dry_run: bool = False) -> dict:
+    """
+    Backfill farmingYear on shipments collection.
+
+    Args:
+        db: MongoDB database instance
+        start_month: Farming year start month
+        dry_run: If True, don't make changes
+
+    Returns:
+        Dict with update statistics
+    """
+    collection = db.shipments
+
+    # Find all shipments
+    total = await collection.count_documents({})
+
+    if total == 0:
+        return {"total": 0, "updated": 0, "errors": 0}
+
+    print(f"\n[shipments] Processing {total} records...")
+
+    updated = 0
+    errors = 0
+
+    from pymongo import UpdateOne
+    bulk_updates = []
+    batch_size = 500
+    cursor = collection.find({})
+
+    async for doc in cursor:
+        try:
+            # Get date for farming year calculation
+            # Priority: actualDepartureDate > scheduledDate > createdAt
+            date_for_fy = (
+                doc.get("actualDepartureDate") or
+                doc.get("scheduledDate") or
+                doc.get("createdAt")
+            )
+
+            if not date_for_fy:
+                continue
+
+            # Ensure we have a datetime object
+            if isinstance(date_for_fy, str):
+                date_for_fy = datetime.fromisoformat(date_for_fy.replace("Z", "+00:00"))
+
+            farming_year = get_farming_year_for_date(date_for_fy, start_month)
+
+            # Check if already has correct value
+            if doc.get("farmingYear") == farming_year:
+                continue
+
+            bulk_updates.append(UpdateOne(
+                {"_id": doc["_id"]},
+                {"$set": {"farmingYear": farming_year}}
+            ))
+
+            # Execute bulk write when batch is full
+            if len(bulk_updates) >= batch_size:
+                if not dry_run:
+                    result = await collection.bulk_write(bulk_updates, ordered=False)
+                    updated += result.modified_count
+                else:
+                    updated += len(bulk_updates)
+                bulk_updates = []
+
+                # Progress update
+                print(f"    Processed {updated} records...")
+
+        except Exception as e:
+            errors += 1
+            if errors <= 5:  # Only show first 5 errors
+                print(f"    [ERROR] Record {doc.get('_id')}: {e}")
+
+    # Process remaining batch
+    if bulk_updates:
+        if not dry_run:
+            result = await collection.bulk_write(bulk_updates, ordered=False)
+            updated += result.modified_count
+        else:
+            updated += len(bulk_updates)
+
+    return {"total": total, "updated": updated, "errors": errors}
+
+
 async def verify_migration(db, start_month: int):
     """
     Verify the migration was successful.
@@ -417,6 +504,26 @@ async def verify_migration(db, start_month: int):
             hd_str = hd.strftime("%Y-%m-%d") if isinstance(hd, datetime) else (str(hd)[:10] if hd else "N/A")
             print(f"    - {rec.get('blockCode')}: planted: {pd_str} (FY{rec.get('farmingYearPlanted')}), harvested: {hd_str} (FY{rec.get('farmingYearHarvested')})")
 
+    # Check shipments
+    shipments_total = await db.shipments.count_documents({})
+    shipments_with_fy = await db.shipments.count_documents({"farmingYear": {"$exists": True, "$ne": None}})
+    print(f"\n[shipments]")
+    print(f"  Total records: {shipments_total}")
+    print(f"  With farmingYear: {shipments_with_fy}")
+
+    # Sample some shipments
+    sample = await db.shipments.find(
+        {"farmingYear": {"$exists": True}},
+        {"shipmentCode": 1, "actualDepartureDate": 1, "scheduledDate": 1, "createdAt": 1, "farmingYear": 1}
+    ).limit(3).to_list(length=3)
+
+    if sample:
+        print(f"  Sample records:")
+        for rec in sample:
+            date_used = rec.get("actualDepartureDate") or rec.get("scheduledDate") or rec.get("createdAt")
+            date_str = date_used.strftime("%Y-%m-%d") if isinstance(date_used, datetime) else (str(date_used)[:10] if date_used else "N/A")
+            print(f"    - {rec.get('shipmentCode')}: date: {date_str}, farmingYear: {rec.get('farmingYear')}")
+
 
 async def run_migration(dry_run: bool = False, override_start_month: Optional[int] = None):
     """
@@ -468,6 +575,9 @@ async def run_migration(dry_run: bool = False, override_start_month: Optional[in
         # 3. Backfill block_archives
         results["block_archives"] = await backfill_block_archives(db, start_month, dry_run)
 
+        # 4. Backfill shipments
+        results["shipments"] = await backfill_shipments(db, start_month, dry_run)
+
     except Exception as e:
         print(f"\n[ERROR] Migration failed: {e}")
         client.close()
@@ -506,7 +616,7 @@ async def run_migration(dry_run: bool = False, override_start_month: Optional[in
 def main():
     """Main entry point with argument parsing."""
     parser = argparse.ArgumentParser(
-        description="Backfill farmingYear on existing data (block_harvests, blocks, block_archives)"
+        description="Backfill farmingYear on existing data (block_harvests, blocks, block_archives, shipments)"
     )
     parser.add_argument(
         "--dry-run",
