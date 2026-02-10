@@ -12,6 +12,7 @@ import logging
 
 from ...models.sales_order import SalesOrder, SalesOrderCreate, SalesOrderUpdate, SalesOrderStatus
 from ..database import sales_db
+from src.modules.farm_manager.models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,12 @@ class OrderRepository:
         order_code = f"SO{sequence:03d}"
 
         order_dict = order_data.model_dump()
+
+        # Calculate farming year from orderDate
+        order_date = order_dict.get("orderDate") or datetime.utcnow()
+        farming_year = get_farming_year(order_date, DEFAULT_FARMING_YEAR_START_MONTH)
+        order_dict["farmingYear"] = farming_year
+
         order = SalesOrder(
             **order_dict,
             orderCode=order_code,

@@ -73,6 +73,9 @@ class SalesOrderBase(BaseModel):
     # Shipment integration field
     shipmentId: Optional[UUID] = Field(None, description="Linked shipment ID (when assigned)")
 
+    # Farming year tracking - calculated from orderDate
+    farmingYear: Optional[int] = Field(None, description="Farming year for the order (calculated from orderDate)")
+
 
 class SalesOrderCreate(SalesOrderBase):
     """Schema for creating a new sales order"""
