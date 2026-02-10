@@ -4,7 +4,8 @@ Logistics Module - Dashboard API Routes
 Comprehensive dashboard endpoint for Logistics statistics.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from typing import Optional
 from datetime import datetime, timedelta
 import logging
 
@@ -112,9 +113,10 @@ async def get_dashboard_stats(
     "/stats",
     response_model=SuccessResponse[dict],
     summary="Get logistics fleet statistics",
-    description="Get fleet metrics including vehicle counts, active shipments, and delivery statistics."
+    description="Get fleet metrics including vehicle counts, active shipments, and delivery statistics. Optionally filter by farming year."
 )
 async def get_fleet_stats(
+    farmingYear: Optional[int] = Query(None, description="Filter shipments by farming year (e.g., 2025)"),
     current_user: CurrentUser = Depends(require_permission("logistics.view")),
     vehicle_service: VehicleService = Depends(),
     route_service: RouteService = Depends(),
@@ -122,7 +124,7 @@ async def get_fleet_stats(
 ):
     """Get fleet statistics for logistics dashboard"""
 
-    # Get vehicle statistics
+    # Get vehicle statistics (not filtered by farming year - vehicles are always current)
     vehicles_list, total_vehicle_count, _ = await vehicle_service.get_all_vehicles(page=1, per_page=1000)
 
     total_vehicles = len(vehicles_list)
@@ -130,14 +132,16 @@ async def get_fleet_stats(
     in_use_vehicles = sum(1 for v in vehicles_list if v.status == "in_use")
     maintenance_vehicles = sum(1 for v in vehicles_list if v.status == "maintenance")
 
-    # Get route statistics
+    # Get route statistics (not filtered by farming year - routes are always current)
     routes_list, total_route_count, _ = await route_service.get_all_routes(page=1, per_page=1000)
 
     total_routes = len(routes_list)
     active_routes = sum(1 for r in routes_list if hasattr(r, 'isActive') and r.isActive)
 
-    # Get shipment statistics
-    shipments_list, total_shipment_count, _ = await shipment_service.get_all_shipments(page=1, per_page=1000)
+    # Get shipment statistics (filtered by farmingYear if provided)
+    shipments_list, total_shipment_count, _ = await shipment_service.get_all_shipments(
+        page=1, per_page=1000, farming_year=farmingYear
+    )
 
     total_shipments = len(shipments_list)
     scheduled_shipments = sum(1 for s in shipments_list if s.status == "scheduled")
@@ -179,6 +183,10 @@ async def get_fleet_stats(
         "routes": {
             "totalRoutes": total_routes,
             "activeRoutes": active_routes
+        },
+        "farmingYearContext": {
+            "farmingYear": farmingYear,
+            "isFiltered": farmingYear is not None
         }
     }
 
