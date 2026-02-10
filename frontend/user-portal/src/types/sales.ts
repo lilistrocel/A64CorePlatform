@@ -88,6 +88,7 @@ export interface SalesOrderSearchParams {
   status?: OrderStatus;
   paymentStatus?: PaymentStatus;
   customerId?: string;
+  farmingYear?: number;
 }
 
 export interface PaginatedSalesOrders {
@@ -259,6 +260,7 @@ export interface SalesDashboardStats {
   recentOrders?: SalesOrder[];
   lowStockItems?: HarvestInventory[];
   expiringItems?: HarvestInventory[];
+  farmingYearContext?: FarmingYearContext;
 }
 
 // ============================================================================
@@ -390,4 +392,43 @@ export interface PaginatedWaste {
   page: number;
   perPage: number;
   totalPages: number;
+}
+
+// ============================================================================
+// FARMING YEAR TYPES
+// ============================================================================
+
+/**
+ * Farming year item for dropdown selection
+ */
+export interface FarmingYearItem {
+  year: number;
+  display: string;
+  isCurrent: boolean;
+  hasInventory?: boolean;
+  itemCount?: number;
+  hasOrders?: boolean;
+  orderCount?: number;
+}
+
+/**
+ * Farming year context in dashboard response
+ */
+export interface FarmingYearContext {
+  farmingYear: number | null;
+  isFiltered: boolean;
+}
+
+/**
+ * Response for sales inventory farming years endpoint
+ */
+export interface SalesInventoryFarmingYearsResponse {
+  years: FarmingYearItem[];
+  count: number;
+  currentFarmingYear: number;
+  totalItems: number;
+  config: {
+    startMonth: number;
+    startMonthName: string;
+  };
 }

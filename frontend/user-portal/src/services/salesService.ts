@@ -27,6 +27,7 @@ import type {
   ReturnOrderCreate,
   ReturnStatus,
   PaginatedReturns,
+  SalesInventoryFarmingYearsResponse,
 } from '../types/sales';
 
 // ============================================================================
@@ -35,17 +36,25 @@ import type {
 
 /**
  * Get all sales orders with search and pagination
+ * @param params - Search parameters including optional farmingYear filter
  */
 export async function getSalesOrders(params?: SalesOrderSearchParams): Promise<PaginatedSalesOrders> {
+  const queryParams: Record<string, any> = {
+    page: params?.page || 1,
+    perPage: params?.perPage || 20,
+  };
+
+  // Add optional filters only if they have values
+  if (params?.search) queryParams.search = params.search;
+  if (params?.status) queryParams.status = params.status;
+  if (params?.paymentStatus) queryParams.paymentStatus = params.paymentStatus;
+  if (params?.customerId) queryParams.customerId = params.customerId;
+  if (params?.farmingYear !== undefined && params?.farmingYear !== null) {
+    queryParams.farmingYear = params.farmingYear;
+  }
+
   const response = await apiClient.get<any>('/v1/sales/orders', {
-    params: {
-      page: params?.page || 1,
-      perPage: params?.perPage || 20,
-      search: params?.search,
-      status: params?.status,
-      paymentStatus: params?.paymentStatus,
-      customerId: params?.customerId,
-    },
+    params: queryParams,
   });
 
   return {
@@ -237,9 +246,41 @@ export async function deletePurchaseOrder(poId: string): Promise<{ message: stri
 
 /**
  * Get sales dashboard statistics
+ * @param farmingYear - Optional farming year to filter statistics by
  */
-export async function getDashboardStats(): Promise<SalesDashboardStats> {
-  const response = await apiClient.get<{ data: SalesDashboardStats }>('/v1/sales/dashboard');
+export async function getDashboardStats(farmingYear?: number | null): Promise<SalesDashboardStats> {
+  const params: Record<string, any> = {};
+  if (farmingYear !== undefined && farmingYear !== null) {
+    params.farmingYear = farmingYear;
+  }
+
+  const response = await apiClient.get<{ data: SalesDashboardStats }>('/v1/sales/dashboard', {
+    params,
+  });
+  return response.data.data;
+}
+
+// ============================================================================
+// FARMING YEAR ENDPOINTS
+// ============================================================================
+
+/**
+ * Get available farming years for sales inventory
+ * Returns list of farming years with inventory data, sorted newest first
+ * @param farmId - Optional farm ID to filter inventory by
+ */
+export async function getAvailableFarmingYears(
+  farmId?: string
+): Promise<SalesInventoryFarmingYearsResponse> {
+  const params: Record<string, any> = {};
+  if (farmId) {
+    params.farmId = farmId;
+  }
+
+  const response = await apiClient.get<{ data: SalesInventoryFarmingYearsResponse }>(
+    '/v1/sales/inventory/farming-years',
+    { params }
+  );
   return response.data.data;
 }
 
@@ -487,6 +528,9 @@ export const salesApi = {
 
   // Dashboard
   getDashboardStats,
+
+  // Farming Year
+  getAvailableFarmingYears,
 
   // Utilities
   getOrderStatusColor,
