@@ -9,8 +9,10 @@ import styled from 'styled-components';
 import { ShipmentTable } from '../../components/logistics/ShipmentTable';
 import { ShipmentCard } from '../../components/logistics/ShipmentCard';
 import { ShipmentForm } from '../../components/logistics/ShipmentForm';
+import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
 import { logisticsApi } from '../../services/logisticsService';
-import type { Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus } from '../../types/logistics';
+import type { Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus, LogisticsFarmingYearItem } from '../../types/logistics';
+import type { FarmingYearItem } from '../../services/farmApi';
 
 const Container = styled.div`
   padding: 32px;
@@ -21,15 +23,52 @@ const Container = styled.div`
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 24px;
   margin-bottom: 32px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const HeaderLeft = styled.div`
+  flex: 1;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 `;
 
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
   color: #212121;
+  margin: 0 0 8px 0;
+`;
+
+const Subtitle = styled.p`
+  font-size: 16px;
+  color: #616161;
   margin: 0;
+`;
+
+const FarmingYearBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1976d2;
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 16px;
+  margin-left: 8px;
 `;
 
 const CreateButton = styled.button`
@@ -182,6 +221,18 @@ const ErrorContainer = styled.div`
   margin-bottom: 24px;
 `;
 
+// Key for persisting farming year selection in sessionStorage
+const SHIPMENTS_FARMING_YEAR_STORAGE_KEY = 'shipments_farming_year_filter';
+
+// Helper to convert LogisticsFarmingYearItem to FarmingYearItem
+const convertToFarmingYearItem = (item: LogisticsFarmingYearItem): FarmingYearItem => ({
+  year: item.year,
+  display: item.display,
+  isCurrent: item.isCurrent,
+  hasHarvests: item.hasShipments,
+  hasBlocks: item.hasShipments,
+});
+
 export function ShipmentTrackingPage() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,9 +243,54 @@ export function ShipmentTrackingPage() {
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Farming year state
+  const [availableYears, setAvailableYears] = useState<FarmingYearItem[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number | null>(() => {
+    // Restore from sessionStorage on initial load
+    const stored = sessionStorage.getItem(SHIPMENTS_FARMING_YEAR_STORAGE_KEY);
+    return stored ? parseInt(stored, 10) : null;
+  });
+  const [yearsLoading, setYearsLoading] = useState(true);
+
+  // Load available farming years on mount
+  useEffect(() => {
+    loadAvailableFarmingYears();
+  }, []);
+
+  // Load shipments when filters change
   useEffect(() => {
     loadShipments();
-  }, [statusFilter]);
+  }, [statusFilter, selectedYear]);
+
+  const loadAvailableFarmingYears = async () => {
+    setYearsLoading(true);
+    try {
+      const response = await logisticsApi.getAvailableFarmingYears();
+      setAvailableYears(response.years.map(convertToFarmingYearItem));
+    } catch (err: any) {
+      console.error('Failed to load farming years:', err);
+      // Continue with empty years - selector will show "No years available"
+    } finally {
+      setYearsLoading(false);
+    }
+  };
+
+  const handleYearChange = (year: number | null) => {
+    setSelectedYear(year);
+    // Persist to sessionStorage
+    if (year === null) {
+      sessionStorage.removeItem(SHIPMENTS_FARMING_YEAR_STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(SHIPMENTS_FARMING_YEAR_STORAGE_KEY, year.toString());
+    }
+  };
+
+  // Get display string for selected year
+  const getSelectedYearDisplay = (): string | null => {
+    if (selectedYear === null) return null;
+    const yearItem = availableYears.find((y) => y.year === selectedYear);
+    return yearItem?.display || `${selectedYear}`;
+  };
 
   const loadShipments = async () => {
     setLoading(true);
@@ -202,6 +298,7 @@ export function ShipmentTrackingPage() {
     try {
       const result = await logisticsApi.getShipments({
         status: statusFilter === 'all' ? undefined : statusFilter,
+        farmingYear: selectedYear ?? undefined,
       });
       setShipments(result.items);
     } catch (err: any) {
@@ -254,10 +351,33 @@ export function ShipmentTrackingPage() {
   return (
     <Container>
       <Header>
-        <Title>Shipment Tracking</Title>
-        <CreateButton onClick={() => setShowCreateModal(true)}>
-          <span>+</span> New Shipment
-        </CreateButton>
+        <HeaderLeft>
+          <Title>
+            Shipment Tracking
+            {selectedYear !== null && (
+              <FarmingYearBadge>
+                📅 {getSelectedYearDisplay()}
+              </FarmingYearBadge>
+            )}
+          </Title>
+          <Subtitle>
+            {shipments.length} shipment{shipments.length !== 1 ? 's' : ''} found
+            {selectedYear !== null && ' for selected farming year'}
+          </Subtitle>
+        </HeaderLeft>
+        <HeaderRight>
+          <FarmingYearSelector
+            selectedYear={selectedYear}
+            availableYears={availableYears}
+            onYearChange={handleYearChange}
+            showAllOption={true}
+            isLoading={yearsLoading}
+            compact={true}
+          />
+          <CreateButton onClick={() => setShowCreateModal(true)}>
+            + New Shipment
+          </CreateButton>
+        </HeaderRight>
       </Header>
 
       <FilterBar>
