@@ -4921,3 +4921,46 @@ NOTES FOR NEXT SESSION:
   - Sales (orders, harvest_inventory)
 - Test user: test_feature409@a64core.com / TestPass123@ (super_admin)
 - Shipments use priority: actualDepartureDate > scheduledDate > createdAt for farming year
+
+== Session: 2026-02-10 (Agent Batch #396, #399, #408) ==
+Agent: Features #396, #399, #408 - Harvest Inventory Farming Year Integration
+
+COMPLETED:
+- Feature #396: Add farmingYear field to harvest_inventory collection [PASSING]
+  - Added farmingYear: Optional[int] field to HarvestInventory model
+  - Added farmingYear field to HarvestInventoryUpdate model
+  - Auto-calculate farmingYear from harvestDate during create and update
+  - Fixed date serialization for MongoDB (convert date to ISO string)
+  - Added database indexes: farmingYear_1, inventory_farm_farming_year, inventory_farming_year_status
+
+- Feature #399: Backfill farmingYear on harvest_inventory collection [PASSING]
+  - Added backfill_harvest_inventory() function to scripts/migrations/backfill_farming_year.py
+  - Processes 11,650 records with bulk operations (batch size 500)
+  - Handles date strings (YYYY-MM-DD) and datetime objects
+  - Added verification for harvest_inventory in migration summary
+  - Migration results: 11,650 records updated, 0 errors
+    - Farming year 2024: 8,485 records
+    - Farming year 2025: 3,165 records
+
+- Feature #408: Create endpoint to list available farming years for inventory [PASSING]
+  - GET /api/v1/sales/inventory/farming-years endpoint
+  - Queries distinct farmingYear values from harvest_inventory
+  - Optional farmId query parameter to filter by farm
+  - Returns: years list with year, display string, isCurrent, hasInventory, itemCount
+  - Includes current farming year even if no data exists
+  - Response includes totalItems count and farming year config
+
+FILES MODIFIED:
+- src/modules/sales/models/inventory.py (farmingYear field in Base and Update models)
+- src/modules/sales/services/database.py (farming year indexes)
+- src/modules/sales/services/sales/inventory_repository.py (auto-calculate farmingYear)
+- scripts/migrations/backfill_farming_year.py (harvest_inventory backfill function)
+- src/modules/sales/api/v1/inventory.py (farming-years endpoint)
+
+CURRENT STATUS: 401/417 features passing (96.2%)
+
+NOTES FOR NEXT SESSION:
+- Harvest inventory farming year integration complete
+- Backfill migration already executed (11,650 records)
+- API endpoint: GET /api/v1/sales/inventory/farming-years
+- Test user: test_feature392@example.com / TestPass1234@ (super_admin)

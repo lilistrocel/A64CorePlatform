@@ -729,6 +729,29 @@ async def verify_migration(db, start_month: int):
                 hd_str = "N/A"
             print(f"    - {rec.get('productName')}: harvestDate: {hd_str}, farmingYear: {rec.get('farmingYear')}")
 
+    # Check sales_orders
+    orders_total = await db.sales_orders.count_documents({})
+    orders_with_fy = await db.sales_orders.count_documents({"farmingYear": {"$exists": True, "$ne": None}})
+    print(f"\n[sales_orders]")
+    print(f"  Total records: {orders_total}")
+    print(f"  With farmingYear: {orders_with_fy}")
+
+    # Sample some sales_orders records
+    sample = await db.sales_orders.find(
+        {"farmingYear": {"$exists": True}},
+        {"orderCode": 1, "customerName": 1, "orderDate": 1, "farmingYear": 1}
+    ).limit(3).to_list(length=3)
+
+    if sample:
+        print(f"  Sample records:")
+        for rec in sample:
+            od = rec.get("orderDate")
+            if od:
+                od_str = od.strftime("%Y-%m-%d") if isinstance(od, datetime) else str(od)[:10]
+            else:
+                od_str = "N/A"
+            print(f"    - {rec.get('orderCode')} ({rec.get('customerName')}): orderDate: {od_str}, farmingYear: {rec.get('farmingYear')}")
+
 
 async def run_migration(dry_run: bool = False, override_start_month: Optional[int] = None):
     """
@@ -786,6 +809,9 @@ async def run_migration(dry_run: bool = False, override_start_month: Optional[in
         # 5. Backfill harvest_inventory
         results["harvest_inventory"] = await backfill_harvest_inventory(db, start_month, dry_run)
 
+        # 6. Backfill sales_orders
+        results["sales_orders"] = await backfill_sales_orders(db, start_month, dry_run)
+
     except Exception as e:
         print(f"\n[ERROR] Migration failed: {e}")
         client.close()
@@ -824,7 +850,7 @@ async def run_migration(dry_run: bool = False, override_start_month: Optional[in
 def main():
     """Main entry point with argument parsing."""
     parser = argparse.ArgumentParser(
-        description="Backfill farmingYear on existing data (block_harvests, blocks, block_archives, shipments, harvest_inventory)"
+        description="Backfill farmingYear on existing data (block_harvests, blocks, block_archives, shipments, harvest_inventory, sales_orders)"
     )
     parser.add_argument(
         "--dry-run",
