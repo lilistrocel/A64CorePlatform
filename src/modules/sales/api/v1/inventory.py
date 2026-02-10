@@ -71,6 +71,7 @@ async def get_inventory(
     status: Optional[InventoryStatus] = Query(None, description="Filter by inventory status"),
     category: Optional[str] = Query(None, description="Filter by category"),
     farmId: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year (e.g., 2025)"),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     service: InventoryService = Depends()
 ):
@@ -82,9 +83,10 @@ async def get_inventory(
     - **status**: Filter by inventory status (optional)
     - **category**: Filter by category (optional)
     - **farmId**: Filter by farm ID (optional)
+    - **farmingYear**: Filter by farming year (optional)
     """
     inventory_items, total, total_pages = await service.get_all_inventory(
-        page, perPage, status, category, farmId
+        page, perPage, status, category, farmId, farmingYear
     )
 
     return PaginatedResponse(

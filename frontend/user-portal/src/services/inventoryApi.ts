@@ -26,6 +26,7 @@ import type {
   AssetCategory,
   AssetStatus,
   QualityGrade,
+  InventoryFarmingYearsResponse,
 } from '../types/inventory';
 
 const BASE_URL = '/v1/farm/inventory';
@@ -34,8 +35,22 @@ const BASE_URL = '/v1/farm/inventory';
 // SUMMARY & DASHBOARD
 // ============================================================================
 
-export async function getInventorySummary(farmId?: string): Promise<InventorySummary> {
-  const params = farmId ? { farm_id: farmId } : {};
+/**
+ * Get inventory summary/dashboard statistics
+ * @param farmId - Optional farm ID to filter by
+ * @param farmingYear - Optional farming year to filter by
+ */
+export async function getInventorySummary(
+  farmId?: string,
+  farmingYear?: number | null
+): Promise<InventorySummary> {
+  const params: Record<string, any> = {};
+  if (farmId) {
+    params.farm_id = farmId;
+  }
+  if (farmingYear !== undefined && farmingYear !== null) {
+    params.farmingYear = farmingYear;
+  }
   const response = await apiClient.get(`${BASE_URL}/summary`, { params });
   return response.data;
 }
@@ -52,17 +67,25 @@ export async function listHarvestInventory(params: {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   perPage?: number;
+  farmingYear?: number | null;
 }): Promise<PaginatedResponse<HarvestInventory>> {
+  const queryParams: Record<string, any> = {
+    farm_id: params.farmId,
+    quality_grade: params.qualityGrade,
+    search: params.search,
+    sort_by: params.sortBy || 'harvestDate',
+    sort_order: params.sortOrder || 'desc',
+    page: params.page || 1,
+    per_page: params.perPage || 20,
+  };
+
+  // Only add farmingYear if it has a value (not null/undefined)
+  if (params.farmingYear !== undefined && params.farmingYear !== null) {
+    queryParams.farmingYear = params.farmingYear;
+  }
+
   const response = await apiClient.get(`${BASE_URL}/harvest`, {
-    params: {
-      farm_id: params.farmId,
-      quality_grade: params.qualityGrade,
-      search: params.search,
-      sort_by: params.sortBy || 'harvestDate',
-      sort_order: params.sortOrder || 'desc',
-      page: params.page || 1,
-      per_page: params.perPage || 20,
-    },
+    params: queryParams,
   });
   return response.data;
 }
@@ -112,6 +135,27 @@ export async function exportHarvestInventoryCSV(params: {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+}
+
+// ============================================================================
+// FARMING YEAR ENDPOINTS
+// ============================================================================
+
+/**
+ * Get available farming years for harvest inventory
+ * Returns list of farming years with inventory data, sorted newest first
+ * @param farmId - Optional farm ID to filter inventory by
+ */
+export async function getAvailableFarmingYears(
+  farmId?: string
+): Promise<InventoryFarmingYearsResponse> {
+  const params: Record<string, any> = {};
+  if (farmId) {
+    params.farmId = farmId;
+  }
+
+  const response = await apiClient.get('/v1/sales/inventory/farming-years', { params });
+  return response.data.data;
 }
 
 // ============================================================================
@@ -356,3 +400,58 @@ export async function exportWasteInventoryCSV(params: {
   link.remove();
   window.URL.revokeObjectURL(url);
 }
+
+// ============================================================================
+// CONVENIENCE EXPORTS
+// ============================================================================
+
+/**
+ * Export all functions as a single object for convenience
+ * Follows the same pattern as salesApi and logisticsApi
+ */
+export const inventoryApi = {
+  // Summary & Dashboard
+  getInventorySummary,
+
+  // Harvest Inventory
+  listHarvestInventory,
+  getHarvestInventory,
+  createHarvestInventory,
+  updateHarvestInventory,
+  deleteHarvestInventory,
+  exportHarvestInventoryCSV,
+
+  // Farming Year
+  getAvailableFarmingYears,
+
+  // Input Inventory
+  listInputInventory,
+  getInputInventory,
+  createInputInventory,
+  updateInputInventory,
+  deleteInputInventory,
+  useInputInventory,
+  exportInputInventoryCSV,
+
+  // Asset Inventory
+  listAssetInventory,
+  getAssetInventory,
+  createAssetInventory,
+  updateAssetInventory,
+  deleteAssetInventory,
+  exportAssetInventoryCSV,
+
+  // Movements
+  listInventoryMovements,
+
+  // Category Lookups
+  getInputCategories,
+  getAssetCategories,
+  getAssetStatuses,
+  getQualityGrades,
+
+  // Waste Exports
+  exportWasteInventoryCSV,
+};
+
+export default inventoryApi;

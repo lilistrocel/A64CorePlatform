@@ -94,7 +94,8 @@ class InventoryService:
         per_page: int = 20,
         status: Optional[InventoryStatus] = None,
         category: Optional[str] = None,
-        farm_id: Optional[UUID] = None
+        farm_id: Optional[UUID] = None,
+        farming_year: Optional[int] = None
     ) -> tuple[List[HarvestInventory], int, int]:
         """
         Get all inventory items with pagination
@@ -105,6 +106,7 @@ class InventoryService:
             status: Filter by inventory status (optional)
             category: Filter by category (optional)
             farm_id: Filter by farm ID (optional)
+            farming_year: Filter by farming year (optional)
 
         Returns:
             Tuple of (inventory items, total, total_pages)
@@ -115,7 +117,7 @@ class InventoryService:
             per_page = 20
 
         skip = (page - 1) * per_page
-        inventory_items, total = await self.repository.get_all(skip, per_page, status, category, farm_id)
+        inventory_items, total = await self.repository.get_all(skip, per_page, status, category, farm_id, farming_year)
 
         total_pages = (total + per_page - 1) // per_page  # Ceiling division
 

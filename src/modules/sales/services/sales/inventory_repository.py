@@ -101,7 +101,8 @@ class InventoryRepository:
         limit: int = 20,
         status: Optional[InventoryStatus] = None,
         category: Optional[str] = None,
-        farm_id: Optional[UUID] = None
+        farm_id: Optional[UUID] = None,
+        farming_year: Optional[int] = None
     ) -> tuple[List[HarvestInventory], int]:
         """
         Get all inventory items with pagination and filters
@@ -112,6 +113,7 @@ class InventoryRepository:
             status: Filter by inventory status (optional)
             category: Filter by category (optional)
             farm_id: Filter by farm ID (optional)
+            farming_year: Filter by farming year (optional)
 
         Returns:
             Tuple of (list of inventory items, total count)
@@ -125,6 +127,8 @@ class InventoryRepository:
             query["category"] = category
         if farm_id:
             query["farmId"] = str(farm_id)
+        if farming_year is not None:
+            query["farmingYear"] = farming_year
 
         # Get total count
         total = await collection.count_documents(query)

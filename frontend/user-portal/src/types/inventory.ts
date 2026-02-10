@@ -405,6 +405,52 @@ export interface CategoryOption {
 }
 
 // ============================================================================
+// FARMING YEAR TYPES
+// ============================================================================
+
+/**
+ * Single farming year item for dropdown selection
+ */
+export interface InventoryFarmingYearItem {
+  /** The farming year number (e.g., 2025) */
+  year: number;
+  /** Display string (e.g., "Aug 2025 - Jul 2026") */
+  display: string;
+  /** True if this is the current farming year */
+  isCurrent: boolean;
+  /** True if there is inventory data for this year */
+  hasInventory: boolean;
+  /** Number of inventory items for this year */
+  itemCount: number;
+}
+
+/**
+ * Farming year configuration
+ */
+export interface InventoryFarmingYearConfig {
+  /** Start month (1-12, default 8 for August) */
+  startMonth: number;
+  /** Start month name (e.g., "August") */
+  startMonthName: string;
+}
+
+/**
+ * Response from GET /api/v1/sales/inventory/farming-years
+ */
+export interface InventoryFarmingYearsResponse {
+  /** List of available farming years */
+  years: InventoryFarmingYearItem[];
+  /** Number of farming years */
+  count: number;
+  /** Current farming year */
+  currentFarmingYear: number;
+  /** Total inventory items across all years */
+  totalItems: number;
+  /** Farming year configuration */
+  config: InventoryFarmingYearConfig;
+}
+
+// ============================================================================
 // DISPLAY HELPERS
 // ============================================================================
 
