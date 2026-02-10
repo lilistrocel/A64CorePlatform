@@ -23,13 +23,13 @@ router = APIRouter()
     "",
     response_model=SuccessResponse[dict],
     summary="Get sales dashboard statistics",
-    description="Get comprehensive sales dashboard statistics including orders, inventory, and purchase orders. Use farmingYear parameter to filter inventory stats by farming year."
+    description="Get comprehensive sales dashboard statistics including orders, inventory, and purchase orders. Use farmingYear parameter to filter order counts, revenue, and inventory stats by farming year."
 )
 @cache_response(ttl=30, key_prefix="sales")
 async def get_dashboard_stats(
     farmingYear: Optional[int] = Query(
         None,
-        description="Filter inventory statistics by farming year (e.g., 2025). When specified, inventory counts are filtered by farmingYear field. Default to all data when not specified."
+        description="Filter order counts, revenue, and inventory by farming year (e.g., 2025). When specified, all statistics are filtered by farmingYear field. Default to all data when not specified."
     ),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     order_service: OrderService = Depends(),
@@ -131,7 +131,7 @@ async def get_dashboard_stats(
 async def get_dashboard_stats_alias(
     farmingYear: Optional[int] = Query(
         None,
-        description="Filter inventory statistics by farming year (e.g., 2025)"
+        description="Filter order counts, revenue, and inventory by farming year (e.g., 2025)"
     ),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     order_service: OrderService = Depends(),

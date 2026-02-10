@@ -517,14 +517,17 @@ class OrderService:
         logger.info(f"Sales order deleted: {order_id}")
         return {"message": "Sales order deleted successfully"}
 
-    async def get_revenue_stats(self) -> dict:
+    async def get_revenue_stats(self, farming_year: Optional[int] = None) -> dict:
         """
-        Get aggregated revenue statistics across ALL orders.
+        Get aggregated revenue statistics.
+
+        Args:
+            farming_year: Filter by farming year (optional)
 
         Returns:
             Dict with totalRevenue and pendingPayments
         """
-        return await self.repository.get_revenue_stats()
+        return await self.repository.get_revenue_stats(farming_year=farming_year)
 
     async def _invalidate_sales_dashboard_cache(self) -> None:
         """

@@ -263,36 +263,44 @@ class OrderRepository:
         count = await collection.count_documents({"orderId": str(order_id)})
         return count > 0
 
-    async def get_revenue_stats(self) -> dict:
+    async def get_revenue_stats(self, farming_year: Optional[int] = None) -> dict:
         """
-        Get aggregated revenue statistics across ALL orders.
+        Get aggregated revenue statistics.
 
         Uses MongoDB aggregation pipeline to calculate:
         - Total revenue from all orders
         - Pending payments (orders with pending/partial payment status)
+
+        Args:
+            farming_year: Filter by farming year (optional). When specified, only orders
+                          with matching farmingYear field are included.
 
         Returns:
             Dict with totalRevenue and pendingPayments
         """
         collection = self._get_collection()
 
-        pipeline = [
-            {
-                "$group": {
-                    "_id": None,
-                    "totalRevenue": {"$sum": {"$ifNull": ["$total", 0]}},
-                    "pendingPayments": {
-                        "$sum": {
-                            "$cond": [
-                                {"$in": ["$paymentStatus", ["pending", "partial"]]},
-                                {"$ifNull": ["$total", 0]},
-                                0
-                            ]
-                        }
+        # Build pipeline with optional farming year match stage
+        pipeline = []
+
+        if farming_year is not None:
+            pipeline.append({"$match": {"farmingYear": farming_year}})
+
+        pipeline.append({
+            "$group": {
+                "_id": None,
+                "totalRevenue": {"$sum": {"$ifNull": ["$total", 0]}},
+                "pendingPayments": {
+                    "$sum": {
+                        "$cond": [
+                            {"$in": ["$paymentStatus", ["pending", "partial"]]},
+                            {"$ifNull": ["$total", 0]},
+                            0
+                        ]
                     }
                 }
             }
-        ]
+        })
 
         results = await collection.aggregate(pipeline).to_list(length=1)
 
