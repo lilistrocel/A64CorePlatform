@@ -218,11 +218,14 @@ class InventoryService:
         logger.info(f"Inventory item deleted: {inventory_id}")
         return {"message": "Inventory item deleted successfully"}
 
-    async def get_inventory_stats(self) -> dict:
+    async def get_inventory_stats(self, farming_year: int = None) -> dict:
         """
-        Get aggregated inventory statistics across ALL items.
+        Get aggregated inventory statistics across items.
+
+        Args:
+            farming_year: Optional farming year to filter by
 
         Returns:
             Dict with total, available, reserved, sold counts
         """
-        return await self.repository.get_inventory_stats()
+        return await self.repository.get_inventory_stats(farming_year)

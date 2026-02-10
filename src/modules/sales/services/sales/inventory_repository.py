@@ -238,25 +238,37 @@ class InventoryRepository:
         count = await collection.count_documents({"inventoryId": str(inventory_id)})
         return count > 0
 
-    async def get_inventory_stats(self) -> dict:
+    async def get_inventory_stats(self, farming_year: Optional[int] = None) -> dict:
         """
-        Get aggregated inventory statistics across ALL items.
+        Get aggregated inventory statistics across items.
 
         Uses MongoDB aggregation pipeline to count items by status.
+
+        Args:
+            farming_year: Optional farming year to filter by
 
         Returns:
             Dict with total, available, reserved, sold counts
         """
         collection = self._get_collection()
 
-        pipeline = [
-            {
-                "$group": {
-                    "_id": "$status",
-                    "count": {"$sum": 1}
-                }
+        # Build match stage
+        match_stage = {}
+        if farming_year is not None:
+            match_stage["farmingYear"] = farming_year
+
+        pipeline = []
+
+        # Add match stage if filtering by farming year
+        if match_stage:
+            pipeline.append({"$match": match_stage})
+
+        pipeline.append({
+            "$group": {
+                "_id": "$status",
+                "count": {"$sum": 1}
             }
-        ]
+        })
 
         results = await collection.aggregate(pipeline).to_list(length=100)
 
