@@ -12,6 +12,7 @@ import logging
 
 from ...models.inventory import HarvestInventory, HarvestInventoryCreate, HarvestInventoryUpdate, InventoryStatus
 from ..database import sales_db
+from src.modules.farm_manager.models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,14 @@ class InventoryRepository:
         collection = self._get_collection()
 
         inventory_dict = inventory_data.model_dump()
+
+        # Auto-calculate farmingYear from harvestDate if not provided
+        if not inventory_dict.get("farmingYear") and inventory_dict.get("harvestDate"):
+            harvest_date = inventory_dict["harvestDate"]
+            # Convert date to datetime for get_farming_year
+            harvest_datetime = datetime.combine(harvest_date, datetime.min.time())
+            inventory_dict["farmingYear"] = get_farming_year(harvest_datetime, DEFAULT_FARMING_YEAR_START_MONTH)
+
         inventory = HarvestInventory(
             **inventory_dict,
             createdBy=created_by,
@@ -56,6 +65,12 @@ class InventoryRepository:
             inventory_doc["farmId"] = str(inventory_doc["farmId"])
         if inventory_doc.get("blockId"):
             inventory_doc["blockId"] = str(inventory_doc["blockId"])
+
+        # Convert date objects to ISO strings for MongoDB
+        if inventory_doc.get("harvestDate"):
+            inventory_doc["harvestDate"] = inventory_doc["harvestDate"].isoformat()
+        if inventory_doc.get("expiryDate"):
+            inventory_doc["expiryDate"] = inventory_doc["expiryDate"].isoformat()
 
         await collection.insert_one(inventory_doc)
 
@@ -163,6 +178,18 @@ class InventoryRepository:
             update_dict["farmId"] = str(update_dict["farmId"])
         if "blockId" in update_dict and update_dict["blockId"]:
             update_dict["blockId"] = str(update_dict["blockId"])
+
+        # Auto-recalculate farmingYear if harvestDate is being updated
+        if "harvestDate" in update_dict and update_dict["harvestDate"]:
+            harvest_date = update_dict["harvestDate"]
+            harvest_datetime = datetime.combine(harvest_date, datetime.min.time())
+            update_dict["farmingYear"] = get_farming_year(harvest_datetime, DEFAULT_FARMING_YEAR_START_MONTH)
+            # Convert date to ISO string for MongoDB
+            update_dict["harvestDate"] = harvest_date.isoformat()
+
+        # Convert expiryDate to ISO string for MongoDB
+        if "expiryDate" in update_dict and update_dict["expiryDate"]:
+            update_dict["expiryDate"] = update_dict["expiryDate"].isoformat()
 
         update_dict["updatedAt"] = datetime.utcnow()
 

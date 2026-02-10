@@ -65,6 +65,9 @@ class SalesDatabaseManager:
             await db.sales_orders.create_index("orderDate")
             await db.sales_orders.create_index("createdBy")
             await db.sales_orders.create_index([("createdAt", -1)])
+            # Farming year indexes for filtering sales by year
+            await db.sales_orders.create_index("farmingYear")
+            await db.sales_orders.create_index([("customerId", 1), ("farmingYear", 1)])
             # Text search index for customer name and order code
             await db.sales_orders.create_index(
                 [("customerName", "text"), ("orderCode", "text")],
@@ -83,6 +86,16 @@ class SalesDatabaseManager:
             await db.harvest_inventory.create_index("expiryDate")
             await db.harvest_inventory.create_index("createdBy")
             await db.harvest_inventory.create_index([("createdAt", -1)])
+            # Farming year indexes for year-based filtering
+            await db.harvest_inventory.create_index("farmingYear")
+            await db.harvest_inventory.create_index(
+                [("farmId", 1), ("farmingYear", 1)],
+                name="inventory_farm_farming_year"
+            )
+            await db.harvest_inventory.create_index(
+                [("farmingYear", 1), ("status", 1)],
+                name="inventory_farming_year_status"
+            )
             # Text search index for product name and category
             await db.harvest_inventory.create_index(
                 [("productName", "text"), ("category", "text")],

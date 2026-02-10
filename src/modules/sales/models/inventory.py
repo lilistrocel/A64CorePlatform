@@ -46,6 +46,7 @@ class HarvestInventoryBase(BaseModel):
     status: InventoryStatus = Field(InventoryStatus.AVAILABLE, description="Inventory status")
     expiryDate: Optional[date] = Field(None, description="Expiry date")
     storageLocation: Optional[str] = Field(None, max_length=200, description="Storage location")
+    farmingYear: Optional[int] = Field(None, description="Farming year calculated from harvest date")
 
 
 class HarvestInventoryCreate(HarvestInventoryBase):
@@ -66,6 +67,7 @@ class HarvestInventoryUpdate(BaseModel):
     status: Optional[InventoryStatus] = None
     expiryDate: Optional[date] = None
     storageLocation: Optional[str] = Field(None, max_length=200)
+    farmingYear: Optional[int] = Field(None, description="Farming year (auto-calculated if harvestDate changes)")
 
 
 class HarvestInventory(HarvestInventoryBase):
@@ -92,6 +94,7 @@ class HarvestInventory(HarvestInventoryBase):
                 "status": "available",
                 "expiryDate": "2025-01-27",
                 "storageLocation": "Cold Storage A - Shelf 3",
+                "farmingYear": 2024,
                 "createdBy": "d4e5f6a7-b8c9-0123-def1-234567890123",
                 "createdAt": "2025-01-20T10:00:00Z",
                 "updatedAt": "2025-01-20T10:00:00Z"
