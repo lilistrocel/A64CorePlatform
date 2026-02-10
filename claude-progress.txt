@@ -4865,3 +4865,59 @@ NOTES FOR NEXT SESSION:
 - sessionStorage used for persistence (operations uses key 'operations_farming_year_filter')
 - Test user: test_feature392@example.com / TestPass1234@ (super_admin)
 
+
+== Session: 2026-02-10 (Agent Batch #397, #400, #409) ==
+Agent: Features #397, #400, #409 - Farming Year Integration for Logistics Module
+
+COMPLETED:
+- Feature #397: Add farmingYear field to shipments collection [PASSING]
+  - Added farmingYear: Optional[int] to Shipment model and ShipmentUpdate
+  - Auto-calculate farmingYear from actualDepartureDate, scheduledDate, or createdAt
+  - Update farmingYear when status transitions to IN_TRANSIT
+  - Added database indexes: farmingYear, (status, farmingYear)
+  - Imported get_farming_year function from farm_manager module
+
+- Feature #400: Backfill farmingYear on shipments collection [PASSING]
+  - Added backfill_shipments() function to scripts/migrations/backfill_farming_year.py
+  - Calculates farmingYear from actualDepartureDate > scheduledDate > createdAt
+  - Added shipments verification section in migration report
+  - Successfully backfilled 2 existing shipments with farmingYear=2025
+  - Script is idempotent and supports dry-run mode
+
+- Feature #409: Create endpoint to list available farming years for logistics [PASSING]
+  - Created GET /api/v1/logistics/config/farming-years endpoint
+  - Returns distinct farmingYear values from shipments collection
+  - Includes current farming year even if no data exists
+  - Returns for each year: year number, display string, isCurrent, hasShipments, shipmentCount
+  - Also returns startMonth, startMonthName, and currentYear in response
+
+FILES CREATED:
+- src/modules/logistics/api/v1/config.py (farming years endpoint)
+
+FILES MODIFIED:
+- src/modules/logistics/models/shipment.py (farmingYear field)
+- src/modules/logistics/services/database.py (farmingYear indexes)
+- src/modules/logistics/services/logistics/shipment_repository.py (auto-calculate farmingYear)
+- src/modules/logistics/api/v1/__init__.py (register config router)
+- scripts/migrations/backfill_farming_year.py (shipments backfill function)
+
+VERIFICATION:
+- API health check: healthy
+- Shipments have farmingYear field (verified in MongoDB)
+- Migration script tested in dry-run and executed successfully
+- New endpoint returns correct data structure
+- Swagger docs show new logistics-config section
+
+SCREENSHOTS:
+- feature409-logistics-farming-years-endpoint.png (Swagger docs showing Health section)
+- feature409-logistics-config-section.png (logistics-config section with farming-years endpoint)
+
+CURRENT STATUS: 400/417 features passing (95.9%)
+
+NOTES FOR NEXT SESSION:
+- Farming year integration now complete for:
+  - Farm Manager (blocks, harvests, archives)
+  - Logistics (shipments)
+  - Sales (orders, harvest_inventory)
+- Test user: test_feature409@a64core.com / TestPass123@ (super_admin)
+- Shipments use priority: actualDepartureDate > scheduledDate > createdAt for farming year
