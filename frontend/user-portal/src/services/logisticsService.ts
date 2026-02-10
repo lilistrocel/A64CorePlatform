@@ -25,6 +25,8 @@ import type {
   ShipmentSearchParams,
   PaginatedShipments,
   LogisticsDashboardStats,
+  LogisticsFarmingYearsResponse,
+  LogisticsDashboardParams,
 } from '../types/logistics';
 
 // ============================================================================
@@ -159,6 +161,7 @@ export async function deleteRoute(routeId: string): Promise<{ message: string }>
 
 /**
  * Get all shipments with search and pagination
+ * @param params - Search parameters including optional farmingYear filter
  */
 export async function getShipments(params?: ShipmentSearchParams): Promise<PaginatedShipments> {
   const response = await apiClient.get<any>('/v1/logistics/shipments', {
@@ -169,6 +172,7 @@ export async function getShipments(params?: ShipmentSearchParams): Promise<Pagin
       status: params?.status,
       vehicleId: params?.vehicleId,
       routeId: params?.routeId,
+      farmingYear: params?.farmingYear,
     },
   });
 
@@ -227,10 +231,28 @@ export async function deleteShipment(shipmentId: string): Promise<{ message: str
 
 /**
  * Get logistics dashboard statistics
+ * @param params - Optional parameters including farmingYear filter
  */
-export async function getDashboardStats(): Promise<LogisticsDashboardStats> {
-  const response = await apiClient.get<{ data: LogisticsDashboardStats }>('/v1/logistics/dashboard');
+export async function getDashboardStats(params?: LogisticsDashboardParams): Promise<LogisticsDashboardStats> {
+  const response = await apiClient.get<{ data: LogisticsDashboardStats }>('/v1/logistics/dashboard', {
+    params: {
+      farmingYear: params?.farmingYear,
+    },
+  });
   return response.data.data;
+}
+
+// ============================================================================
+// FARMING YEAR ENDPOINTS
+// ============================================================================
+
+/**
+ * Get available farming years for logistics module
+ * Returns distinct farming years that have shipment data
+ */
+export async function getAvailableFarmingYears(): Promise<LogisticsFarmingYearsResponse> {
+  const response = await apiClient.get<LogisticsFarmingYearsResponse>('/v1/logistics/config/farming-years');
+  return response.data;
 }
 
 // ============================================================================
@@ -374,6 +396,9 @@ export const logisticsApi = {
 
   // Dashboard
   getDashboardStats,
+
+  // Farming Year
+  getAvailableFarmingYears,
 
   // Utilities
   getVehicleStatusColor,

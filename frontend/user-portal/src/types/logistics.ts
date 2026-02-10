@@ -209,6 +209,7 @@ export interface ShipmentSearchParams {
   status?: ShipmentStatus;
   vehicleId?: string;
   routeId?: string;
+  farmingYear?: number;
 }
 
 export interface PaginatedShipments {
@@ -240,4 +241,37 @@ export interface LogisticsDashboardStats {
     vehicleName: string;
     nextMaintenanceDate: string;
   }[];
+}
+
+// ============================================================================
+// FARMING YEAR TYPES
+// ============================================================================
+
+/**
+ * Farming year item for logistics module
+ */
+export interface LogisticsFarmingYearItem {
+  year: number;
+  display: string;
+  isCurrent: boolean;
+  hasShipments: boolean;
+  shipmentCount: number;
+}
+
+/**
+ * Response from logistics farming years endpoint
+ */
+export interface LogisticsFarmingYearsResponse {
+  years: LogisticsFarmingYearItem[];
+  count: number;
+  currentYear: number;
+  startMonth: number;
+  startMonthName: string;
+}
+
+/**
+ * Parameters for dashboard stats with farming year filter
+ */
+export interface LogisticsDashboardParams {
+  farmingYear?: number;
 }
