@@ -6,6 +6,7 @@
  */
 
 import { QueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 
 /**
  * Create QueryClient with optimized default options
@@ -34,8 +35,15 @@ export const queryClient = new QueryClient({
       // Don't refetch on reconnect (prevents spam when connection fluctuates)
       refetchOnReconnect: false,
 
-      // Only retry failed requests once (prevents retry storms)
-      retry: 1,
+      // Smart retry: skip 429 (Axios handles backoff) and 4xx (won't succeed on retry)
+      // Only retry 5xx server errors once
+      retry: (failureCount, error) => {
+        const status = (error as AxiosError)?.response?.status;
+        if (!status) return failureCount < 1; // network error - retry once
+        if (status === 429) return false; // handled by Axios interceptor
+        if (status >= 400 && status < 500) return false; // client errors won't fix themselves
+        return failureCount < 1; // 5xx - retry once
+      },
 
       // Retry delay: 1 second
       retryDelay: 1000,

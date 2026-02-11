@@ -16,6 +16,7 @@ from redis.asyncio import Redis, ConnectionPool
 from redis.exceptions import RedisError, ConnectionError as RedisConnectionError
 
 from ..models.user import UserRole
+from ..config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +47,13 @@ class RateLimiter:
         # In-memory fallback storage
         self.requests: Dict[str, list] = {}
 
-        # Rate limits per role (requests per minute)
+        # Rate limits per role (requests per minute) - configurable via env vars
         self.limits = {
-            UserRole.GUEST: 10,
-            UserRole.USER: 100,
-            UserRole.MODERATOR: 200,
-            UserRole.ADMIN: 500,
-            UserRole.SUPER_ADMIN: 1000
+            UserRole.GUEST: settings.RATE_LIMIT_GUEST,
+            UserRole.USER: settings.RATE_LIMIT_USER,
+            UserRole.MODERATOR: settings.RATE_LIMIT_MODERATOR,
+            UserRole.ADMIN: settings.RATE_LIMIT_ADMIN,
+            UserRole.SUPER_ADMIN: settings.RATE_LIMIT_SUPER_ADMIN,
         }
 
     async def _ensure_redis_connection(self) -> bool:
@@ -244,18 +245,22 @@ class RateLimiter:
 
         # Check if limit exceeded
         if not is_allowed:
+            # Calculate actual seconds remaining in the current window
+            seconds_into_window = int(time.time()) % 60
+            retry_after = max(1, 60 - seconds_into_window)
+
             logger.warning(
                 f"Rate limit exceeded for {client_id} "
                 f"(role: {user_role.value}, limit: {limit}/min, current: {current_count})"
             )
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Rate limit exceeded. Maximum {limit} requests per minute.",
+                detail=f"Rate limit exceeded. Please retry in {retry_after} seconds.",
                 headers={
-                    "Retry-After": "60",
+                    "Retry-After": str(retry_after),
                     "X-RateLimit-Limit": str(limit),
                     "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": "60"
+                    "X-RateLimit-Reset": str(retry_after)
                 }
             )
 
@@ -317,7 +322,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         try:
             from jose import jwt, JWTError
-            from ..config.settings import settings
 
             token = auth_header[7:]  # Remove "Bearer " prefix
             payload = jwt.decode(
@@ -348,8 +352,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return None
 
     async def dispatch(self, request: Request, call_next):
-        # Skip rate limiting for health check endpoints
-        if request.url.path in ["/api/health", "/api/ready", "/"]:
+        # Skip rate limiting for CORS preflight requests
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        # Skip rate limiting for health check and documentation endpoints
+        skip_paths = ["/api/health", "/api/ready", "/", "/api/docs", "/api/redoc", "/api/openapi.json"]
+        if request.url.path in skip_paths:
             return await call_next(request)
 
         try:
@@ -365,9 +374,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
 
             # Add rate limit headers to response
+            seconds_into_window = int(time.time()) % 60
+            reset_seconds = max(1, 60 - seconds_into_window)
             response.headers["X-RateLimit-Limit"] = str(limit)
             response.headers["X-RateLimit-Remaining"] = str(remaining)
-            response.headers["X-RateLimit-Reset"] = "60"  # Reset window is 60 seconds
+            response.headers["X-RateLimit-Reset"] = str(reset_seconds)
 
             return response
 

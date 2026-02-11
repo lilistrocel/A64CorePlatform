@@ -180,6 +180,18 @@ You: I'll create that feature now.
 [calls feature_create with appropriate parameters]
 You: Done! I've added "S3 Sync Integration" to your backlog. It's now visible on the kanban board.
 
+## Playwright / MCP Browser Usage
+
+When using Playwright MCP tools for browser testing, avoid bloating context with large responses:
+
+- **Never call `browser_snapshot` on pages with many DOM elements** (e.g., block monitor with 60+ cards). The full accessibility tree can be thousands of lines.
+- **Save snapshots to file** instead of returning inline: use `browser_snapshot` with the `filename` parameter (e.g., `filename: "snapshot.md"`), then read only the relevant section.
+- **Save console messages to file** for large outputs: use `browser_console_messages` with the `filename` parameter.
+- **Save network requests to file**: use `browser_network_requests` with the `filename` parameter.
+- **Use `browser_evaluate`** for targeted checks instead of full snapshots (e.g., check element count, read specific text, verify error states).
+- **Use `browser_click` / `browser_type`** directly with known refs rather than re-snapshotting the full page.
+- **Take screenshots** (`browser_take_screenshot` with `filename`) for visual verification instead of accessibility snapshots when you just need to confirm UI state.
+
 ## Guidelines
 
 1. Be concise and helpful

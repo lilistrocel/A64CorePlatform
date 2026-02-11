@@ -62,6 +62,7 @@ export function useDashboardData({
     try {
       setLoading(true);
       setError(null);
+      setData(null); // Clear stale blocks immediately to prevent old blockIds rendering with new farmId
 
       // Build params with optional farmingYear filter
       const params: Record<string, any> = {};

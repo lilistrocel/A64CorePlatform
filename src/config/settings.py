@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # Rate Limiting (requests per minute per role)
+    RATE_LIMIT_GUEST: int = 30
+    RATE_LIMIT_USER: int = 300
+    RATE_LIMIT_MODERATOR: int = 500
+    RATE_LIMIT_ADMIN: int = 1000
+    RATE_LIMIT_SUPER_ADMIN: int = 2000
+
     @model_validator(mode='after')
     def validate_production_settings(self):
         if self.ENVIRONMENT != "development":

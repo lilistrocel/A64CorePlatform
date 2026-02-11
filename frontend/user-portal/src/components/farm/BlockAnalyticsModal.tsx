@@ -80,7 +80,7 @@ const STATE_COLORS: Record<string, string> = {
 export function BlockAnalyticsModal({ isOpen, onClose, blockId, farmId }: BlockAnalyticsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [period, setPeriod] = useState<TimePeriod>('30d');
-  const { analytics, loading, error, refetch } = useBlockAnalytics(farmId, blockId, period);
+  const { analytics, loading, error, refetch } = useBlockAnalytics(farmId, blockId, period, isOpen);
 
   // Reset to overview tab when modal opens
   useEffect(() => {

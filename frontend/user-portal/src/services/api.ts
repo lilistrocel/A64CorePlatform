@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosRequestConfig } from 'axios';
-import { showErrorToast } from '../stores/toast.store';
+import { showErrorToast, showWarningToast } from '../stores/toast.store';
 
 // Use nginx proxy (port 80) instead of direct API (port 8000)
 // This allows nginx to route /api/v1/farm/* to farm-management:8001
@@ -24,6 +24,10 @@ let failedQueue: Array<{
   resolve: (token: string) => void;
   reject: (error: AxiosError) => void;
 }> = [];
+
+// 429 rate limit toast debounce - only show one warning per 5 seconds
+let lastRateLimitToast = 0;
+const RATE_LIMIT_TOAST_DEBOUNCE = 5000;
 
 const processQueue = (error: AxiosError | null, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -67,7 +71,27 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean; headers: Record<string, string> };
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean; _rateLimitRetry?: boolean; headers: Record<string, string> };
+
+    // Handle 429 rate limit - wait and retry once
+    if (error.response?.status === 429 && !originalRequest._rateLimitRetry) {
+      originalRequest._rateLimitRetry = true;
+
+      // Show debounced warning toast (yellow, not red)
+      const now = Date.now();
+      if (now - lastRateLimitToast > RATE_LIMIT_TOAST_DEBOUNCE) {
+        lastRateLimitToast = now;
+        showWarningToast('Slowing down requests. Please wait a moment.');
+      }
+
+      // Parse Retry-After header (seconds), default to 5s, cap at 30s
+      const retryAfter = error.response.headers?.['retry-after'];
+      const waitSeconds = Math.min(retryAfter ? parseInt(retryAfter, 10) : 5, 30);
+
+      // Wait then retry once
+      await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
+      return apiClient(originalRequest);
+    }
 
     // If error is 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -131,11 +155,11 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Show error toast for API errors (except 401 which is handled by token refresh above)
+    // Show error toast for API errors (except 401/429 which are handled above)
     if (error.response) {
       const status = error.response.status;
-      // Don't show toast for 401 (handled by redirect) or if this was a retry request
-      if (status !== 401 || originalRequest?._retry) {
+      // Don't show toast for 401 (handled by redirect), 429 (handled by backoff/warning toast)
+      if (status !== 401 && status !== 429) {
         const message = extractErrorMessage(error.response.data, status);
         showErrorToast(message);
       }

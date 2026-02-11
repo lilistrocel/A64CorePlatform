@@ -21,15 +21,17 @@ interface UseBlockAnalyticsReturn {
 export function useBlockAnalytics(
   farmId: string,
   blockId: string,
-  period: TimePeriod = '30d'
+  period: TimePeriod = '30d',
+  enabled: boolean = true
 ): UseBlockAnalyticsReturn {
   const [analytics, setAnalytics] = useState<BlockAnalytics | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
-    if (!farmId || !blockId) {
-      setError(new Error('Farm ID and Block ID are required'));
+    if (!farmId || !blockId || !enabled) {
+      if (!enabled) setLoading(false);
+      else setError(new Error('Farm ID and Block ID are required'));
       setLoading(false);
       return;
     }
@@ -54,7 +56,7 @@ export function useBlockAnalytics(
     } finally {
       setLoading(false);
     }
-  }, [farmId, blockId, period]);
+  }, [farmId, blockId, period, enabled]);
 
   useEffect(() => {
     fetchAnalytics();
