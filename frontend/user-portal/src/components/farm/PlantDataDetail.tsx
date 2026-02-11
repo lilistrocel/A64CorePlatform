@@ -276,6 +276,91 @@ const EmptyText = styled.div`
   font-size: 14px;
 `;
 
+const RuleCard = styled.div`
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 12px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const RuleHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+`;
+
+const RuleName = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #212121;
+`;
+
+const FrequencyBadge = styled.span`
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #dbeafe;
+  color: #1d4ed8;
+`;
+
+const IngredientRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 13px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const IngredientName = styled.span`
+  color: #374151;
+`;
+
+const IngredientDosage = styled.span`
+  color: #6b7280;
+  font-weight: 500;
+`;
+
+const CardHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+`;
+
+const CardTitle = styled.span`
+  font-size: 15px;
+  font-weight: 600;
+  color: #212121;
+`;
+
+const StageBadge = styled.span`
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #d1fae5;
+  color: #065f46;
+`;
+
+const DayRange = styled.span`
+  font-size: 12px;
+  color: #6b7280;
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -431,8 +516,20 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
                   </FieldValue>
                 </Field>
                 <Field>
+                  <FieldLabel>Seeds Per Planting Point</FieldLabel>
+                  <FieldValue>{plant.yieldInfo.seedsPerPlantingPoint || 1}</FieldValue>
+                </Field>
+                {(plant.yieldInfo.seedsPerPlantingPoint || 1) > 1 && (
+                  <Field>
+                    <FieldLabel>Yield Per Planting Point</FieldLabel>
+                    <FieldValue>
+                      {(plant.yieldInfo.yieldPerPlant * (plant.yieldInfo.seedsPerPlantingPoint || 1)).toFixed(2)} {plant.yieldInfo.yieldUnit}
+                    </FieldValue>
+                  </Field>
+                )}
+                <Field>
                   <FieldLabel>Expected Waste</FieldLabel>
-                  <FieldValue>{plant.yieldInfo.expectedWastePercent || 0}%</FieldValue>
+                  <FieldValue>{plant.yieldInfo.expectedWastePercentage || 0}%</FieldValue>
                 </Field>
               </FieldGrid>
             </SectionContent>
@@ -754,10 +851,95 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
             </SectionContent>
           </Section>
 
-          {/* Section 13: Additional Information */}
+          {/* Section 11: Fertigation Schedule */}
+          {plant.fertigationSchedule?.cards && plant.fertigationSchedule.cards.length > 0 && (
+            <Section>
+              <SectionHeader $isOpen={!!openSections.fertigation} onClick={() => toggleSection('fertigation')}>
+                <SectionTitle>11. Fertigation Schedule</SectionTitle>
+                <SectionIcon $isOpen={!!openSections.fertigation}>›</SectionIcon>
+              </SectionHeader>
+              <SectionContent $isOpen={!!openSections.fertigation}>
+                <FieldGrid>
+                  <Field>
+                    <FieldLabel>Total Fertigation Days</FieldLabel>
+                    <FieldValue>{plant.fertigationSchedule.totalFertilizationDays} days</FieldValue>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Source</FieldLabel>
+                    <FieldValue>{plant.fertigationSchedule.source}</FieldValue>
+                  </Field>
+                </FieldGrid>
+                <Divider />
+                {plant.fertigationSchedule.cards.map((card, cardIdx) => (
+                  <ArrayItem key={cardIdx}>
+                    <CardHeader>
+                      <CardTitle>{card.cardName}</CardTitle>
+                      <StageBadge>{card.growthStage}</StageBadge>
+                      <DayRange>Day {card.dayStart} - {card.dayEnd}</DayRange>
+                      {!card.isActive && <Badge $color="#EF4444">Inactive</Badge>}
+                    </CardHeader>
+                    {card.rules.map((rule, ruleIdx) => (
+                      <RuleCard key={ruleIdx}>
+                        <RuleHeader>
+                          <RuleName>{rule.name}</RuleName>
+                          {rule.type === 'interval' && rule.frequencyDays && (
+                            <FrequencyBadge>Every {rule.frequencyDays} days</FrequencyBadge>
+                          )}
+                          {rule.type === 'custom' && (
+                            <FrequencyBadge>Custom schedule</FrequencyBadge>
+                          )}
+                          {rule.activeDayStart != null && rule.activeDayEnd != null && (
+                            <DayRange>Day {rule.activeDayStart}-{rule.activeDayEnd}</DayRange>
+                          )}
+                        </RuleHeader>
+                        {/* Interval rule ingredients */}
+                        {rule.type === 'interval' && rule.ingredients && rule.ingredients.length > 0 && (
+                          <div>
+                            {rule.ingredients.map((ing, ingIdx) => (
+                              <IngredientRow key={ingIdx}>
+                                <IngredientName>{ing.name}</IngredientName>
+                                <IngredientDosage>{ing.dosagePerPoint} {ing.unit}/point</IngredientDosage>
+                              </IngredientRow>
+                            ))}
+                          </div>
+                        )}
+                        {/* Custom rule applications */}
+                        {rule.type === 'custom' && rule.applications && rule.applications.length > 0 && (
+                          <div>
+                            {rule.applications.map((app, appIdx) => (
+                              <div key={appIdx} style={{ marginBottom: appIdx < rule.applications!.length - 1 ? '8px' : '0' }}>
+                                <FieldLabel>Day {app.day}</FieldLabel>
+                                {app.ingredients.map((ing, ingIdx) => (
+                                  <IngredientRow key={ingIdx}>
+                                    <IngredientName>{ing.name}</IngredientName>
+                                    <IngredientDosage>{ing.dosagePerPoint} {ing.unit}/point</IngredientDosage>
+                                  </IngredientRow>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </RuleCard>
+                    ))}
+                    {card.notes && (
+                      <>
+                        <Divider />
+                        <Field>
+                          <FieldLabel>Notes</FieldLabel>
+                          <FieldValue>{card.notes}</FieldValue>
+                        </Field>
+                      </>
+                    )}
+                  </ArrayItem>
+                ))}
+              </SectionContent>
+            </Section>
+          )}
+
+          {/* Section 12: Additional Information */}
           <Section>
             <SectionHeader $isOpen={!!openSections.additional} onClick={() => toggleSection('additional')}>
-              <SectionTitle>11. Additional Information</SectionTitle>
+              <SectionTitle>{plant.fertigationSchedule?.cards?.length ? '12' : '11'}. Additional Information</SectionTitle>
               <SectionIcon $isOpen={!!openSections.additional}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.additional}>

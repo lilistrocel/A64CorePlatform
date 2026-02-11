@@ -546,6 +546,7 @@ export interface GrowthCycleInfo {
 export interface YieldWasteInfo {
   yieldPerPlant: number;
   yieldUnit: string;
+  seedsPerPlantingPoint?: number;
   expectedWastePercentage?: number;
 }
 
@@ -629,6 +630,47 @@ export interface AdditionalInformation {
   notes?: string;
 }
 
+// Fertigation Types
+export type IngredientCategory = 'macro_npk' | 'potassium' | 'calcium' | 'micronutrient' | 'supplement' | 'other';
+
+export interface FertigationIngredient {
+  name: string;
+  category: IngredientCategory;
+  dosagePerPoint: number;
+  unit: string;
+}
+
+export interface CustomApplication {
+  day: number;
+  ingredients: FertigationIngredient[];
+}
+
+export interface FertigationRule {
+  name: string;
+  type: 'interval' | 'custom';
+  frequencyDays?: number;
+  activeDayStart?: number;
+  activeDayEnd?: number;
+  ingredients?: FertigationIngredient[];
+  applications?: CustomApplication[];
+}
+
+export interface FertigationCard {
+  cardName: string;
+  growthStage: string;
+  dayStart: number;
+  dayEnd: number;
+  rules: FertigationRule[];
+  notes?: string;
+  isActive: boolean;
+}
+
+export interface FertigationSchedule {
+  cards: FertigationCard[];
+  totalFertilizationDays: number;
+  source: string;
+}
+
 // Main Plant Data Enhanced Interface
 export interface PlantDataEnhanced {
   plantDataId: string;
@@ -674,7 +716,10 @@ export interface PlantDataEnhanced {
   // 11. Additional Information
   additionalInfo: AdditionalInformation;
 
-  // 12. Data Attribution
+  // 12. Fertigation Schedule
+  fertigationSchedule?: FertigationSchedule;
+
+  // 13. Data Attribution
   contributor?: string;   // Name of agronomist/contributor who provided this data
   targetRegion?: string;  // Geographic region where data was tested (e.g., 'UAE')
 

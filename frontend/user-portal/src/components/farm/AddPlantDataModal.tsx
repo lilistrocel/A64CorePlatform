@@ -44,6 +44,7 @@ const plantDataSchema = z.object({
   yieldPerPlant: z.number().min(0.01, 'Yield must be greater than 0'),
   yieldUnit: z.string().min(1, 'Yield unit is required'),
   expectedWastePercent: z.number().nonnegative('Cannot be negative').max(100, 'Cannot exceed 100%').optional(),
+  seedsPerPlantingPoint: z.number().int('Must be a whole number').min(1, 'Must be at least 1').optional(),
 
   // Environmental Requirements (Optional)
   temperatureMin: z.number().optional(),
@@ -481,7 +482,8 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
         yieldInfo: {
           yieldPerPlant: data.yieldPerPlant,
           yieldUnit: data.yieldUnit,
-          expectedWastePercent: data.expectedWastePercent,
+          seedsPerPlantingPoint: data.seedsPerPlantingPoint,
+          expectedWastePercentage: data.expectedWastePercent,
         },
 
         environmentalRequirements: (data.temperatureMin !== undefined || data.temperatureOptimal !== undefined || data.temperatureMax !== undefined ||
@@ -799,7 +801,7 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
                 <RequiredBadge>Required</RequiredBadge>
               </SectionHeader>
 
-              <GridRow $columns={3}>
+              <GridRow $columns={4}>
                 <FormGroup>
                   <Label htmlFor="yieldPerPlant">Yield Per Plant *</Label>
                   <Input
@@ -841,6 +843,21 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
                     disabled={submitting}
                     {...register('expectedWastePercent', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
                   />
+                </FormGroup>
+
+                <FormGroup>
+                  <Label htmlFor="seedsPerPlantingPoint">Seeds / Point</Label>
+                  <Input
+                    id="seedsPerPlantingPoint"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="1"
+                    $hasError={!!errors.seedsPerPlantingPoint}
+                    disabled={submitting}
+                    {...register('seedsPerPlantingPoint', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                  />
+                  <HelpText>Seeds per drip/planting point</HelpText>
                 </FormGroup>
               </GridRow>
             </Section>

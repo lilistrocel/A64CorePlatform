@@ -312,8 +312,8 @@ export function PlantDataCard({ plant, onView, onEdit, onClone, onDelete }: Plan
           </StatValue>
         </StatItem>
         <StatItem>
-          <StatLabel>Version</StatLabel>
-          <StatValue>v{plant.dataVersion}</StatValue>
+          <StatLabel>Seeds/Point</StatLabel>
+          <StatValue>{plant.yieldInfo.seedsPerPlantingPoint || 1} per pt</StatValue>
         </StatItem>
       </StatsGrid>
 
