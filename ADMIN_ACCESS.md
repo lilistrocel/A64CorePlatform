@@ -8,26 +8,14 @@
 ## 🔐 Admin Credentials
 
 ### Super Admin Account
-The default super admin account has been created in the system:
+The default super admin account is created during initial setup.
 
 **Email:** `admin@a64platform.com`
-**Password:** `SuperAdmin123!`
+**Password:** Set via `ADMIN_PASSWORD` environment variable (see `docker-compose.yml` or your deployment config)
 **Role:** `super_admin`
 **Status:** Active
 
-### Test Accounts (Created During Testing)
-These accounts were created during API testing:
-
-**Dashboard Test User:**
-- **Email:** `dash@example.com`
-- **Password:** `Password123!`
-- **Role:** `user`
-- **Status:** Active
-
-**Other Test Users:**
-- `test@test.com` - May or may not be active
-- `testdash@test.com` - May or may not be active
-- `dashboard@test.com` - May or may not be active
+> **Note:** Never hardcode credentials. Always use environment variables for password configuration.
 
 ---
 
@@ -198,7 +186,7 @@ DELETE /api/v1/admin/users/{userId}
 2. **Login Screen:** You'll see the admin login interface
 3. **Enter Credentials:**
    - Email: `admin@a64platform.com`
-   - Password: `SuperAdmin123!`
+   - Password: (your configured `ADMIN_PASSWORD`)
 4. **Click Login:** JWT token generated and stored
 
 ### Step 2: Use Admin Dashboard
@@ -238,7 +226,7 @@ Once logged in, you'll see:
 ```bash
 curl -X POST http://localhost/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@a64platform.com","password":"SuperAdmin123!"}'
+  -d '{"email":"admin@a64platform.com","password":"YOUR_ADMIN_PASSWORD"}'
 ```
 
 **List Users (with token):**
@@ -325,7 +313,7 @@ curl -X GET "http://localhost/api/v1/admin/users?page=1&per_page=20" \
 
 **Problem:** Login fails with "Invalid credentials"
 **Solution:**
-1. Verify credentials: `admin@a64platform.com` / `SuperAdmin123!`
+1. Verify credentials: `admin@a64platform.com` / your configured `ADMIN_PASSWORD`
 2. Check user exists in database:
    ```bash
    docker exec a64core-mongodb-dev mongosh a64core_db --quiet --eval \
@@ -394,7 +382,7 @@ curl -X GET "http://localhost/api/v1/admin/users?page=1&per_page=20" \
 |------|-------|
 | **Admin URL** | http://localhost/admin/ |
 | **Admin Email** | admin@a64platform.com |
-| **Admin Password** | SuperAdmin123! |
+| **Admin Password** | Set via `ADMIN_PASSWORD` env var |
 | **Admin Role** | super_admin |
 | **API Docs** | http://localhost:8000/api/docs |
 | **User Portal** | http://localhost:5173 |

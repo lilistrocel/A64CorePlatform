@@ -92,6 +92,9 @@ tmp/
 temp/
 
 # Secrets and Credentials
+superadmin.json
+*admin_password*
+*admin_credentials*
 secrets/
 *.pem
 *.pem.pub

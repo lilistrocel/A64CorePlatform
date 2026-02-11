@@ -782,6 +782,7 @@
                                         ${user.userId !== currentUser.userId ? `
                                             <button class="btn-action btn-edit" onclick="openEditModal('${user.userId}', '${user.firstName} ${user.lastName}', '${user.role}')">Change Role</button>
                                             <button class="btn-action ${user.isActive ? 'btn-deactivate' : 'btn-activate'}" onclick="toggleStatus('${user.userId}', ${!user.isActive})">${user.isActive ? 'Deactivate' : 'Activate'}</button>
+                                            <button class="btn-action btn-deactivate" onclick="deleteUser('${user.userId}', '${user.firstName} ${user.lastName}')">Delete</button>
                                         ` : '<small style="color: #999;">You</small>'}
                                     </div>
                                 </td>
@@ -884,6 +885,30 @@
                     loadUsers(currentPage);
                 } else {
                     showError('adminError', data.detail || `Failed to ${action} user`);
+                }
+            } catch (error) {
+                showError('adminError', 'Network error. Please try again.');
+            }
+        }
+
+        async function deleteUser(userId, userName) {
+            if (!confirm(`Are you sure you want to delete "${userName}"? This is a soft delete (90-day retention).`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess(`User "${userName}" deleted successfully.`);
+                    loadUsers(currentPage);
+                } else {
+                    showError('adminError', data.detail || 'Failed to delete user');
                 }
             } catch (error) {
                 showError('adminError', 'Network error. Please try again.');

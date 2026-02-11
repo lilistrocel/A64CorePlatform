@@ -196,6 +196,10 @@ A64CorePlatform/
 │   │
 │   └── main.py                   # Application entry point
 │
+├── public/                       # Static files served by FastAPI
+│   └── admin/                    # Admin panel (vanilla HTML/JS SPA)
+│       └── index.html            # Admin UI - user management interface
+│
 ├── Docs/                         # Documentation
 │   ├── 1-Main-Documentation/     # Single source of truth
 │   │   ├── System-Architecture.md   # THIS FILE
@@ -380,6 +384,46 @@ if farm.boundary and block_boundary:
         block_boundary["coordinates"][0]
     )
 ```
+
+---
+
+## Admin Panel
+
+The Admin Panel is a lightweight vanilla HTML/JavaScript single-page application served by FastAPI as static files. It provides user management capabilities for administrators.
+
+### Location & Serving
+
+- **Source file:** `public/admin/index.html`
+- **Mounted in:** `src/main.py` via `StaticFiles(directory="public/admin", html=True)`
+- **Access URL:** `/admin/` (proxied through Nginx to the API backend)
+- **Assets:** `public/admin/a64logo_dark.png`, `public/admin/a64logo_white.png`
+
+### Authentication
+
+The admin panel uses the same authentication system as the rest of the platform:
+- Calls `POST /api/v1/auth/login` for authentication
+- Stores JWT tokens in `localStorage`
+- Validates session via `GET /api/v1/auth/me`
+- Requires `admin` or `super_admin` role to access
+
+### Features
+
+| Feature | API Endpoint | Method |
+|---------|-------------|--------|
+| Login | `/api/v1/auth/login` | POST |
+| List users (paginated) | `/api/v1/admin/users` | GET |
+| Change user role | `/api/v1/admin/users/{id}/role` | PATCH |
+| Activate/deactivate user | `/api/v1/admin/users/{id}/status` | PATCH |
+| Delete user (soft delete) | `/api/v1/admin/users/{id}` | DELETE |
+| Create user | `/api/v1/auth/register` + role update | POST + PATCH |
+| Reset user MFA | `/api/v1/admin/users/{id}/mfa/reset` | PUT |
+
+### Important Notes for Developers
+
+- This is **not** a React app — it is a standalone vanilla HTML/JS file
+- API URL is determined dynamically based on `window.location.hostname`
+- The admin API endpoints are defined in `src/api/v1/admin.py`
+- The panel is separate from the User Portal (`frontend/user-portal/`)
 
 ---
 

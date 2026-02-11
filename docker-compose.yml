@@ -33,6 +33,7 @@ services:
       - UVICORN_WORKERS=${UVICORN_WORKERS:-4}
     volumes:
       - ./src:/app/src
+      - ./public:/app/public  # Admin panel static files
       - ./modules:/app/modules  # Farm management and other modules
       - ./config:/app/config
       - ./logs:/app/logs  # Centralized logging
@@ -275,7 +276,7 @@ services:
       - TZ=UTC  # Timezone for cron (11 PM UTC = 11 PM UTC)
       - API_HOST=api:8000
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@a64platform.com}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-SuperAdmin123!}
     volumes:
       - ./logs/cron:/var/log/cron
     networks:
