@@ -304,6 +304,7 @@ async def get_dashboard_summary(
 )
 async def get_farm_dashboard(
     farmId: UUID,
+    farmingYear: Optional[int] = Query(None, description="Filter blocks by farming year planted"),
     current_user: CurrentUser = Depends(get_current_user)
 ):
     """
@@ -338,15 +339,15 @@ async def get_farm_dashboard(
             managerEmail=farm.managerEmail if hasattr(farm, 'managerEmail') else None
         )
 
-        # Get virtual blocks for farm
+        # Get virtual blocks for farm (filtered by farming year if provided)
         virtual_blocks, virtual_total = await BlockRepository.get_by_farm(
-            farmId, skip=0, limit=1000, block_category='virtual'
+            farmId, skip=0, limit=1000, block_category='virtual', farming_year=farmingYear
         )
 
         # Also get physical blocks that have active plantings (not empty or cleaning)
         # This handles the case where a planting is made directly on a physical block
         physical_blocks, _ = await BlockRepository.get_by_farm(
-            farmId, skip=0, limit=1000, block_category='physical'
+            farmId, skip=0, limit=1000, block_category='physical', farming_year=farmingYear
         )
 
         # Filter physical blocks to only include those with active plantings
@@ -360,7 +361,7 @@ async def get_farm_dashboard(
         blocks = list(virtual_blocks) + active_physical_blocks
         total = len(blocks)
 
-        logger.info(f"[Dashboard] Found {total} blocks for farm {farmId} ({virtual_total} virtual, {len(active_physical_blocks)} active physical)")
+        logger.info(f"[Dashboard] Found {total} blocks for farm {farmId} ({virtual_total} virtual, {len(active_physical_blocks)} active physical, farmingYear={farmingYear})")
 
         # Calculate summary statistics
         summary_dict = calculate_farm_summary(blocks)
