@@ -132,8 +132,16 @@ test_*.mjs
 *.png
 clear-browser-cache.html
 
-# Playwright MCP
+# Playwright MCP and reports
 .playwright-mcp/
+playwright-report/
+
+# Swagger/API snapshot artifacts
+*-swagger.txt
+swagger-*.txt
+
+# Database backups (local)
+backups/
 
 # Old Database Data (Supabase exports)
 OldData/json_exports/
