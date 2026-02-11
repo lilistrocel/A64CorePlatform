@@ -27,12 +27,13 @@ import { QUALITY_GRADE_LABELS, PRODUCT_TYPE_LABELS } from '../../types/inventory
 
 interface Props {
   onUpdate?: () => void;
+  farmingYear?: number | null;
 }
 
 type SortField = 'harvestDate' | 'createdAt' | 'plantName' | 'quantity' | 'qualityGrade';
 type SortOrder = 'asc' | 'desc';
 
-export function HarvestInventoryList({ onUpdate }: Props) {
+export function HarvestInventoryList({ onUpdate, farmingYear }: Props) {
   const [inventory, setInventory] = useState<HarvestInventory[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [plantDataList, setPlantDataList] = useState<PlantDataEnhanced[]>([]);
@@ -47,13 +48,18 @@ export function HarvestInventoryList({ onUpdate }: Props) {
 
   useEffect(() => {
     loadData();
-  }, [page, search, sortBy, sortOrder]);
+  }, [page, search, sortBy, sortOrder, farmingYear]);
+
+  // Reset page to 1 when farming year changes
+  useEffect(() => {
+    setPage(1);
+  }, [farmingYear]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [inventoryData, farmsData, plantData] = await Promise.all([
-        listHarvestInventory({ search, sortBy, sortOrder, page, perPage: 20 }),
+        listHarvestInventory({ search, sortBy, sortOrder, page, perPage: 20, farmingYear }),
         getFarms(),
         getPlantDataEnhancedList({ perPage: 100 }), // Load all plant data for dropdown
       ]);

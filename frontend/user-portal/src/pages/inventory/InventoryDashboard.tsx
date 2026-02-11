@@ -220,7 +220,7 @@ export function InventoryDashboard() {
       <ContentArea>
         <Suspense fallback={<LoadingText>Loading...</LoadingText>}>
           <Routes>
-            <Route path="harvest" element={<HarvestInventoryList onUpdate={loadSummary} />} />
+            <Route path="harvest" element={<HarvestInventoryList onUpdate={loadSummary} farmingYear={selectedFarmingYear} />} />
             <Route path="input" element={<InputInventoryList onUpdate={loadSummary} />} />
             <Route path="assets" element={<AssetInventoryList onUpdate={loadSummary} />} />
             <Route path="waste" element={<WasteInventoryList />} />
