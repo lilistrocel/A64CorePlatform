@@ -11,6 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
+import { useUpdateFarm } from '../../hooks/queries/useFarms';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Farm, FarmUpdate, Manager } from '../../types/farm';
 
@@ -288,6 +289,9 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
   const [loadingManagers, setLoadingManagers] = useState(false);
   const [managersError, setManagersError] = useState<string | null>(null);
 
+  // Use mutation hook for proper cache invalidation
+  const updateFarmMutation = useUpdateFarm();
+
   // Get current latitude/longitude from farm location
   const getCurrentLatitude = (): number | null => {
     if (farm.location?.latitude !== undefined) return farm.location.latitude;
@@ -386,7 +390,7 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
         isActive: data.isActive,
       };
 
-      await farmApi.updateFarm(farm.farmId, updateData);
+      await updateFarmMutation.mutateAsync({ farmId: farm.farmId, data: updateData });
 
       showSuccessToast('Farm updated successfully');
       onSuccess?.();

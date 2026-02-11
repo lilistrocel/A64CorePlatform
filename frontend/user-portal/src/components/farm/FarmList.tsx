@@ -12,6 +12,7 @@ import { FarmCard } from './FarmCard';
 import { CreateFarmModal } from './CreateFarmModal';
 import { FarmAnalyticsModal } from './FarmAnalyticsModal';
 import { farmApi } from '../../services/farmApi';
+import { useDeleteFarm } from '../../hooks/queries/useFarms';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Farm, FarmSummary } from '../../types/farm';
 
@@ -460,6 +461,9 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Use mutation hook for proper cache invalidation
+  const deleteFarmMutation = useDeleteFarm();
+
   // Get filter values from URL params with defaults
   const searchTerm = searchParams.get('search') || '';
   const filterType = (searchParams.get('filter') as FilterType) || 'all';
@@ -545,17 +549,16 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
 
   const handleDelete = async (farmId: string) => {
     try {
-      await farmApi.deleteFarm(farmId);
+      await deleteFarmMutation.mutateAsync(farmId);
       showSuccessToast('Farm deleted successfully');
-      // Remove deleted farm from state immediately to prevent stale data errors
+      // Remove deleted farm from local state immediately for instant UI feedback
       setFarms((prev) => prev.filter((f) => f.farmId !== farmId));
       setSummaries((prev) => {
         const newSummaries = { ...prev };
         delete newSummaries[farmId];
         return newSummaries;
       });
-      // Then reload the full list
-      loadFarms();
+      // Note: The mutation hook also invalidates the farms.lists() query cache
     } catch (err) {
       showErrorToast('Failed to delete farm. Please try again.');
       console.error('Error deleting farm:', err);

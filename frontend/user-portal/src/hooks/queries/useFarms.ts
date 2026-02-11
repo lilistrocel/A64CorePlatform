@@ -117,6 +117,8 @@ export function useUpdateFarm() {
       // Invalidate specific farm to refetch updated data
       queryClient.invalidateQueries({ queryKey: queryKeys.farms.detail(variables.farmId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.farms.summary(variables.farmId) });
+      // Also invalidate farm lists so the list view updates immediately
+      queryClient.invalidateQueries({ queryKey: queryKeys.farms.lists() });
     },
   });
 }
