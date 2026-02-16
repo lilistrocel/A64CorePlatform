@@ -44,24 +44,37 @@ class BlockLocation(BaseModel):
     longitude: float = Field(..., ge=-180, le=180, description="Longitude")
 
 
+class SenseHubCredentials(BaseModel):
+    """Credentials for authenticating with a SenseHub instance"""
+    email: str = Field(..., description="Service account email on SenseHub")
+    encryptedPassword: str = Field(..., description="Fernet-encrypted password")
+    token: Optional[str] = Field(None, description="Cached JWT token")
+    tokenExpiresAt: Optional[datetime] = Field(None, description="Token expiry time")
+
+
 class IoTController(BaseModel):
     """IoT Controller configuration for block sensor and relay management"""
     address: str = Field(..., description="IP address or hostname of IoT controller")
-    port: int = Field(..., gt=0, le=65535, description="Port number (use 443 for HTTPS)")
+    port: int = Field(default=3000, gt=0, le=65535, description="Port number (default 3000 for SenseHub)")
     enabled: bool = Field(True, description="Whether to fetch from controller")
-    apiKey: Optional[str] = Field(None, description="API key for authenticated endpoints (relay control)")
+    apiKey: Optional[str] = Field(None, description="API key for legacy controllers (unused by SenseHub)")
+    controllerType: str = Field(default="sensehub", description="Controller type: 'sensehub' or 'generic'")
+    senseHubCredentials: Optional[SenseHubCredentials] = Field(None, description="SenseHub authentication credentials")
     relayLabels: Optional[Dict[str, str]] = Field(default_factory=dict, description="Custom labels for relays (relay_id -> custom_label)")
     lastConnected: Optional[datetime] = Field(None, description="Last successful connection timestamp")
+    lastSyncedAt: Optional[datetime] = Field(None, description="Last successful data sync timestamp")
+    connectionStatus: str = Field(default="unknown", description="Connection status: connected|disconnected|error|unknown")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "address": "192.168.1.100",
-                "port": 8090,
+                "port": 3000,
                 "enabled": True,
-                "apiKey": "your-api-key-here",
+                "controllerType": "sensehub",
                 "relayLabels": {"pump": "Main Irrigation", "fan1": "Exhaust Fan"},
-                "lastConnected": "2026-01-06T16:00:00Z"
+                "lastConnected": "2026-01-06T16:00:00Z",
+                "connectionStatus": "connected"
             }
         }
 

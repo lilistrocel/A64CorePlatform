@@ -844,7 +844,7 @@ export function getRelativeTime(dateString: string): string {
 }
 
 // ============================================================================
-// IOT CONTROLLER ENDPOINTS
+// IOT CONTROLLER ENDPOINTS (LEGACY)
 // ============================================================================
 
 /**
@@ -900,6 +900,152 @@ export async function iotProxyPut(url: string, data: any, apiKey?: string) {
   }
   const response = await apiClient.put<any>('/v1/farm/iot-proxy', data, { params });
   return response.data.data;
+}
+
+// ============================================================================
+// SENSEHUB IOT ENDPOINTS
+// ============================================================================
+
+// Connection
+export async function connectSenseHub(farmId: string, blockId: string, data: {
+  address: string; port: number; email: string; password: string;
+}) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/connect`, data
+  );
+  return response.data;
+}
+
+export async function disconnectSenseHub(farmId: string, blockId: string) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/disconnect`
+  );
+  return response.data;
+}
+
+export async function getSenseHubStatus(farmId: string, blockId: string) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/status`
+  );
+  return response.data;
+}
+
+// Dashboard & Equipment
+export async function getSenseHubDashboard(farmId: string, blockId: string) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/dashboard`
+  );
+  return response.data;
+}
+
+export async function getSenseHubEquipment(farmId: string, blockId: string) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/equipment`
+  );
+  return response.data;
+}
+
+export async function getSenseHubEquipmentHistory(
+  farmId: string, blockId: string, equipmentId: number,
+  params?: { from?: string; to?: string; limit?: number }
+) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/equipment/${equipmentId}/history`,
+    { params }
+  );
+  return response.data;
+}
+
+// Relay Control
+export async function controlSenseHubRelay(
+  farmId: string, blockId: string, equipmentId: number,
+  data: { channel: number; state: boolean }
+) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/equipment/${equipmentId}/relay/control`, data
+  );
+  return response.data;
+}
+
+export async function controlSenseHubRelayAll(
+  farmId: string, blockId: string, equipmentId: number,
+  data: { states: boolean[] }
+) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/equipment/${equipmentId}/relay/all`, data
+  );
+  return response.data;
+}
+
+// Automations
+export async function getSenseHubAutomations(farmId: string, blockId: string) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/automations`
+  );
+  return response.data;
+}
+
+export async function createSenseHubAutomation(farmId: string, blockId: string, data: any) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/automations`, data
+  );
+  return response.data;
+}
+
+export async function updateSenseHubAutomation(
+  farmId: string, blockId: string, automationId: number, data: any
+) {
+  const response = await apiClient.put<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/automations/${automationId}`, data
+  );
+  return response.data;
+}
+
+export async function deleteSenseHubAutomation(
+  farmId: string, blockId: string, automationId: number
+) {
+  const response = await apiClient.delete<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/automations/${automationId}`
+  );
+  return response.data;
+}
+
+export async function toggleSenseHubAutomation(
+  farmId: string, blockId: string, automationId: number
+) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/automations/${automationId}/toggle`
+  );
+  return response.data;
+}
+
+export async function triggerSenseHubAutomation(
+  farmId: string, blockId: string, automationId: number
+) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/automations/${automationId}/trigger`
+  );
+  return response.data;
+}
+
+// Alerts
+export async function getSenseHubAlerts(
+  farmId: string, blockId: string,
+  params?: { severity?: string; acknowledged?: boolean }
+) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/alerts`, { params }
+  );
+  return response.data;
+}
+
+export async function acknowledgeSenseHubAlert(
+  farmId: string, blockId: string, alertId: number
+) {
+  const response = await apiClient.post<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/alerts/${alertId}/acknowledge`
+  );
+  return response.data;
 }
 
 // Export all functions as a single object for convenience
@@ -978,11 +1124,29 @@ export const farmApi = {
   getFarmingYearsList,
   getAvailableFarmingYears,
 
-  // IoT Controller
+  // IoT Controller (Legacy)
   getBlockIoTController,
   updateBlockIoTController,
   iotProxyGet,
   iotProxyPut,
+
+  // SenseHub
+  connectSenseHub,
+  disconnectSenseHub,
+  getSenseHubStatus,
+  getSenseHubDashboard,
+  getSenseHubEquipment,
+  getSenseHubEquipmentHistory,
+  controlSenseHubRelay,
+  controlSenseHubRelayAll,
+  getSenseHubAutomations,
+  createSenseHubAutomation,
+  updateSenseHubAutomation,
+  deleteSenseHubAutomation,
+  toggleSenseHubAutomation,
+  triggerSenseHubAutomation,
+  getSenseHubAlerts,
+  acknowledgeSenseHubAlert,
 
   // Utilities
   calculateTotalPlants,

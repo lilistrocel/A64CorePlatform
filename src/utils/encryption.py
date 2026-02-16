@@ -226,6 +226,84 @@ def decrypt_license_key(encrypted_license_key: str) -> str:
 
 
 # =============================================================================
+# SenseHub Credential Encryption
+# =============================================================================
+
+# Separate salt for SenseHub credentials (isolated from license key encryption)
+SENSEHUB_SALT = b"a64core_sensehub_credentials_v1"
+
+
+def encrypt_sensehub_password(password: str) -> str:
+    """
+    Encrypt a SenseHub service account password for secure storage.
+
+    Uses SECRET_KEY from app settings (always available for JWT).
+
+    Args:
+        password: Plain text SenseHub password
+
+    Returns:
+        Fernet-encrypted password string
+
+    Security Notes:
+        - NEVER log the plain text password
+        - NEVER return decrypted password in API responses
+    """
+    from src.config.settings import settings
+    secret_key = settings.SECRET_KEY
+    if not secret_key or len(secret_key) < 16:
+        raise ValueError(
+            "SECRET_KEY is not set or too short. "
+            "Required for SenseHub credential encryption."
+        )
+
+    try:
+        fernet_key = _derive_fernet_key(secret_key, salt=SENSEHUB_SALT)
+        fernet = Fernet(fernet_key)
+        encrypted_bytes = fernet.encrypt(password.encode())
+        return encrypted_bytes.decode()
+    except Exception as e:
+        raise Exception(f"Failed to encrypt SenseHub password: {str(e)}") from e
+
+
+def decrypt_sensehub_password(encrypted_password: str) -> str:
+    """
+    Decrypt a SenseHub service account password from database.
+
+    Args:
+        encrypted_password: Fernet-encrypted password string
+
+    Returns:
+        Plain text password
+
+    Security Notes:
+        - NEVER log the decrypted password
+        - NEVER return in API responses
+        - Only use for SenseHub authentication
+    """
+    from src.config.settings import settings
+    secret_key = settings.SECRET_KEY
+    if not secret_key or len(secret_key) < 16:
+        raise ValueError(
+            "SECRET_KEY is not set or too short. "
+            "Required for SenseHub credential decryption."
+        )
+
+    try:
+        fernet_key = _derive_fernet_key(secret_key, salt=SENSEHUB_SALT)
+        fernet = Fernet(fernet_key)
+        decrypted_bytes = fernet.decrypt(encrypted_password.encode())
+        return decrypted_bytes.decode()
+    except InvalidToken:
+        raise InvalidToken(
+            "Failed to decrypt SenseHub password. "
+            "This may indicate SECRET_KEY rotation or data corruption."
+        )
+    except Exception as e:
+        raise Exception(f"Failed to decrypt SenseHub password: {str(e)}") from e
+
+
+# =============================================================================
 # Utility Functions
 # =============================================================================
 

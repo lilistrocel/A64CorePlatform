@@ -15,6 +15,7 @@ import { formatNumber, formatPercentage } from '../../utils';
 
 // Import tab components
 import { BlockAlertsTab } from './BlockAlertsTab';
+import { BlockAutomationTab } from './BlockAutomationTab';
 import { BlockHarvestsTab } from './BlockHarvestsTab';
 import { BlockArchivesTab } from './BlockArchivesTab';
 import { AddVirtualCropModal } from './AddVirtualCropModal';
@@ -419,7 +420,7 @@ const EmptyVirtualButton = styled.button`
 // COMPONENT
 // ============================================================================
 
-type TabType = 'overview' | 'alerts' | 'harvests' | 'archives';
+type TabType = 'overview' | 'alerts' | 'automation' | 'harvests' | 'archives';
 
 export function BlockDetail() {
   const { farmId, blockId } = useParams<{ farmId: string; blockId: string }>();
@@ -511,7 +512,7 @@ export function BlockDetail() {
     { label: 'Dashboard', path: '/dashboard', icon: '📊' },
     { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
     { label: block?.farmName || 'Farm', path: `/farm/farms/${farmId}` },
-    { label: block?.blockCode || block?.name || 'Block Details', icon: '🌾' },
+    { label: block?.name || block?.blockCode || 'Block Details', icon: '🌾' },
   ];
 
   if (error || !block || !summary) {
@@ -536,7 +537,7 @@ export function BlockDetail() {
         <TitleRow>
           <TitleSection>
             <BlockTitle>
-              {block.blockCode || block.name}
+              {block.name || block.blockCode}
               {block.blockCategory === 'virtual' && <VirtualBadge>Virtual</VirtualBadge>}
             </BlockTitle>
             <BlockMeta>
@@ -593,6 +594,9 @@ export function BlockDetail() {
           <Tab $active={activeTab === 'alerts'} onClick={() => setActiveTab('alerts')}>
             Alerts
           </Tab>
+          <Tab $active={activeTab === 'automation'} onClick={() => setActiveTab('automation')}>
+            Automation
+          </Tab>
           <Tab $active={activeTab === 'harvests'} onClick={() => setActiveTab('harvests')}>
             Harvests
           </Tab>
@@ -630,7 +634,7 @@ export function BlockDetail() {
                       key={child.blockId}
                       onClick={() => navigate(`/farm/farms/${farmId}/blocks/${child.blockId}`)}
                     >
-                      <span>{child.blockCode || child.name}</span>
+                      <span>{child.name || child.blockCode}</span>
                       <span>{child.targetCropName || 'No crop'}</span>
                       <span>{child.allocatedArea ? `${formatNumber(child.allocatedArea, { decimals: 2 })} m²` : 'N/A'}</span>
                       <span>{child.state}</span>
@@ -750,6 +754,10 @@ export function BlockDetail() {
 
           {activeTab === 'alerts' && farmId && blockId && (
             <BlockAlertsTab farmId={farmId} blockId={blockId} onRefresh={loadBlockData} />
+          )}
+
+          {activeTab === 'automation' && farmId && blockId && (
+            <BlockAutomationTab farmId={farmId} blockId={blockId} />
           )}
 
           {activeTab === 'harvests' && farmId && blockId && (

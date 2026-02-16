@@ -1513,3 +1513,76 @@ export const GROWING_CONDITIONS_LABELS: Record<GrowingConditions, string> = {
   poor: 'Poor',
   unknown: 'Unknown',
 };
+
+// ============================================================================
+// SENSEHUB IOT TYPES
+// ============================================================================
+
+export interface SenseHubConnectionStatus {
+  connected: boolean;
+  connectionStatus: 'connected' | 'disconnected' | 'error' | 'unknown';
+  lastConnected: string | null;
+  lastSyncedAt: string | null;
+  senseHubVersion: string | null;
+  address?: string;
+  port?: number;
+}
+
+export interface SenseHubEquipment {
+  id: number;
+  name: string;
+  description?: string;
+  type: 'sensor' | 'relay';
+  protocol?: string;
+  address?: string;
+  status: 'online' | 'offline' | 'error';
+  enabled: boolean | number;
+  last_reading: string | Record<string, unknown> | null;
+  last_communication: string | null;
+  register_mappings: Array<{
+    name: string;
+    label?: string;
+    register: string | number;
+    type: string;
+    access?: string;
+    unit?: string;
+    dataType?: string;
+    scale?: number;
+    functionCode?: number;
+  }>;
+  write_only: boolean | number;
+}
+
+export interface SenseHubAutomation {
+  id: number;
+  name: string;
+  description: string;
+  enabled: boolean;
+  priority: number;
+  trigger_config: Record<string, unknown>;
+  conditions: unknown[];
+  actions: unknown[];
+  last_run: string | null;
+  run_count: number;
+}
+
+export interface SenseHubAlert {
+  id: number;
+  equipment_id: number;
+  severity: 'critical' | 'warning' | 'info';
+  message: string;
+  acknowledged: boolean;
+  equipment_name: string;
+  zone_name: string;
+  created_at: string;
+}
+
+export interface SenseHubDashboard {
+  equipment: { total: number; online: number; offline: number; error: number };
+  automations: { total: number; active: number };
+  alerts: { unacknowledged: number; critical: number; warning: number; info: number };
+  recent_alerts: SenseHubAlert[];
+  latest_readings: unknown[];
+  active_automations: SenseHubAutomation[];
+  equipment_list: SenseHubEquipment[];
+}

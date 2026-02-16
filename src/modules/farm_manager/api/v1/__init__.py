@@ -18,6 +18,7 @@ from .config import router as config_router
 from .weather import router as weather_router
 from .inventory import router as inventory_router
 from .iot_proxy import router as iot_proxy_router
+from .sensehub import router as sensehub_router
 
 api_router = APIRouter()
 
@@ -39,3 +40,4 @@ api_router.include_router(config_router, tags=["config"])  # System configuratio
 api_router.include_router(weather_router, tags=["weather"])  # Agricultural weather data from WeatherBit
 api_router.include_router(inventory_router, tags=["inventory"])  # Inventory management (harvest, input, assets)
 api_router.include_router(iot_proxy_router, tags=["iot-proxy"])  # IoT controller proxy for CORS handling
+api_router.include_router(sensehub_router, tags=["sensehub"])  # SenseHub edge computing proxy
