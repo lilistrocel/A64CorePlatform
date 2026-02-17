@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # Farm AI Chat (Vertex AI / Gemini)
+    GOOGLE_CLOUD_PROJECT: str = ""
+    VERTEX_AI_LOCATION: str = "us-central1"
+    VERTEX_AI_MODEL: str = "gemini-2.5-flash"
+    VERTEX_AI_MAX_OUTPUT_TOKENS: int = 2048
+    VERTEX_AI_TEMPERATURE: float = 0.1
+    FARM_AI_MAX_TOKENS: int = 2048
+    FARM_AI_DAILY_LIMIT: int = 50
+
     # Rate Limiting (requests per minute per role)
     RATE_LIMIT_GUEST: int = 30
     RATE_LIMIT_USER: int = 300

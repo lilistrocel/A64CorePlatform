@@ -387,18 +387,22 @@ class BlockRepository:
             if expected_status_changes:
                 update_dict["expectedStatusChanges"] = expected_status_changes
 
-            # Only set plantedDate and farmingYearPlanted when actually planting (not for planned)
-            if new_status == BlockStatus.GROWING:
-                planted_date = datetime.utcnow()
-                update_dict["plantedDate"] = planted_date
-                # Calculate farming year for the planted date
+            # Set farmingYearPlanted for both PLANNED and GROWING so blocks
+            # appear in the Block Monitor's farming year filter.
+            # plantedDate is only set when actually planting (GROWING).
+            if new_status in (BlockStatus.GROWING, BlockStatus.PLANNED):
                 from ..farming_year_service import get_farming_year_service
                 farming_year_service = get_farming_year_service()
                 config = await farming_year_service.get_farming_year_config()
+                reference_date = datetime.utcnow()
                 update_dict["farmingYearPlanted"] = farming_year_service.get_farming_year_for_date(
-                    planted_date,
+                    reference_date,
                     config.farmingYearStartMonth
                 )
+
+                # Only set plantedDate when actually planting, not for planned
+                if new_status == BlockStatus.GROWING:
+                    update_dict["plantedDate"] = reference_date
 
         # Handle emptying (status = empty)
         if new_status == BlockStatus.EMPTY:
@@ -487,6 +491,63 @@ class BlockRepository:
 
         logger.info(f"[Block Repository] Updated block KPI: {block_id}")
         return await BlockRepository.get_by_id(block_id)
+
+    @staticmethod
+    async def increment_kpi(
+        block_id: UUID,
+        yield_kg_delta: float = 0.0,
+        harvest_count_delta: int = 0
+    ) -> Optional[Block]:
+        """
+        Atomically increment block KPI using MongoDB $inc.
+
+        This avoids race conditions when multiple harvests are recorded
+        concurrently (e.g. bulk imports). After incrementing, recalculates
+        yieldEfficiencyPercent from the updated values.
+
+        Args:
+            block_id: Block UUID
+            yield_kg_delta: Amount to add to actualYieldKg (negative to subtract)
+            harvest_count_delta: Amount to add to totalHarvests (negative to subtract)
+        """
+        db = farm_db.get_database()
+
+        # Atomic increment
+        inc_dict = {}
+        if yield_kg_delta != 0:
+            inc_dict["kpi.actualYieldKg"] = yield_kg_delta
+        if harvest_count_delta != 0:
+            inc_dict["kpi.totalHarvests"] = harvest_count_delta
+
+        if not inc_dict:
+            return await BlockRepository.get_by_id(block_id)
+
+        result = await db.blocks.update_one(
+            {"blockId": str(block_id), "isActive": True},
+            {
+                "$inc": inc_dict,
+                "$set": {"updatedAt": datetime.utcnow()}
+            }
+        )
+
+        if result.matched_count == 0:
+            return None
+
+        # Recalculate efficiency from the updated values
+        updated_block = await BlockRepository.get_by_id(block_id)
+        if updated_block and updated_block.kpi.predictedYieldKg > 0:
+            efficiency = (updated_block.kpi.actualYieldKg / updated_block.kpi.predictedYieldKg) * 100
+            await db.blocks.update_one(
+                {"blockId": str(block_id), "isActive": True},
+                {"$set": {"kpi.yieldEfficiencyPercent": round(efficiency, 2)}}
+            )
+            updated_block = await BlockRepository.get_by_id(block_id)
+
+        logger.info(
+            f"[Block Repository] Incremented block KPI: {block_id} "
+            f"(yield: {yield_kg_delta:+.2f} kg, harvests: {harvest_count_delta:+d})"
+        )
+        return updated_block
 
     @staticmethod
     async def soft_delete(block_id: UUID) -> bool:

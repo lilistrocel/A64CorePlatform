@@ -19,6 +19,7 @@ from .weather import router as weather_router
 from .inventory import router as inventory_router
 from .iot_proxy import router as iot_proxy_router
 from .sensehub import router as sensehub_router
+from .farm_ai_chat import router as farm_ai_chat_router
 
 api_router = APIRouter()
 
@@ -41,3 +42,4 @@ api_router.include_router(weather_router, tags=["weather"])  # Agricultural weat
 api_router.include_router(inventory_router, tags=["inventory"])  # Inventory management (harvest, input, assets)
 api_router.include_router(iot_proxy_router, tags=["iot-proxy"])  # IoT controller proxy for CORS handling
 api_router.include_router(sensehub_router, tags=["sensehub"])  # SenseHub edge computing proxy
+api_router.include_router(farm_ai_chat_router, tags=["farm-ai-chat"])  # AI chat assistant for farm blocks
