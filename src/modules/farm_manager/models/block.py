@@ -64,6 +64,8 @@ class IoTController(BaseModel):
     lastConnected: Optional[datetime] = Field(None, description="Last successful connection timestamp")
     lastSyncedAt: Optional[datetime] = Field(None, description="Last successful data sync timestamp")
     connectionStatus: str = Field(default="unknown", description="Connection status: connected|disconnected|error|unknown")
+    mcpPort: Optional[int] = Field(None, description="MCP server port (default 3001)")
+    mcpApiKey: Optional[str] = Field(None, description="Static API key for MCP server")
 
     class Config:
         json_schema_extra = {

@@ -111,15 +111,19 @@ class FarmAIChatService:
         if growth_stage_data:
             growth_stage = GrowthStageInfo(**growth_stage_data)
 
-        # Determine whether SenseHub tools are available for this session
+        # Determine whether SenseHub tools are available for this session.
+        # Prefer MCP client (dynamic tool descriptions); fall back to HTTP client.
         sensehub_connected = False
         client = None
         try:
-            client = await SenseHubConnectionService.get_client(farm_id, block_id)
+            client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
             sensehub_connected = True
         except Exception:
-            # SenseHub not reachable - chat continues without tools
-            pass
+            try:
+                client = await SenseHubConnectionService.get_client(farm_id, block_id)
+                sensehub_connected = True
+            except Exception:
+                pass  # Chat continues without SenseHub tools
 
         gemini_tools = get_gemini_tools() if sensehub_connected else None
 
@@ -331,9 +335,12 @@ class FarmAIChatService:
                 message="Action cancelled by user.",
             )
 
-        # Execute the write tool via SenseHub
+        # Execute the write tool via SenseHub (prefer MCP, fall back to HTTP)
         try:
-            client = await SenseHubConnectionService.get_client(farm_id, block_id)
+            try:
+                client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
+            except Exception:
+                client = await SenseHubConnectionService.get_client(farm_id, block_id)
             result = await execute_write_tool(
                 client,
                 action_data["tool_name"],

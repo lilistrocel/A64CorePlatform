@@ -14,6 +14,7 @@ from fastapi import HTTPException
 
 from ..database import farm_db
 from .sensehub_client import SenseHubClient
+from .sensehub_mcp_client import SenseHubMCPClient
 from src.utils.encryption import encrypt_sensehub_password, decrypt_sensehub_password
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,8 @@ class SenseHubConnectionService:
         port: int,
         email: str,
         password: str,
+        mcp_api_key: Optional[str] = None,
+        mcp_port: Optional[int] = None,
     ) -> dict:
         """
         Test connection, authenticate, store encrypted credentials, update block.
@@ -108,6 +111,8 @@ class SenseHubConnectionService:
                     "tokenExpiresAt": client.cached_token_expires,
                 },
                 "connectionStatus": "connected",
+                "mcpApiKey": mcp_api_key,
+                "mcpPort": mcp_port,
                 "lastConnected": now,
                 "lastSyncedAt": now,
             },
@@ -260,6 +265,46 @@ class SenseHubConnectionService:
         )
 
         return client
+
+    @staticmethod
+    async def get_mcp_client(farm_id: UUID, block_id: UUID) -> SenseHubMCPClient:
+        """
+        Get a SenseHubMCPClient for a block if MCP credentials are configured.
+
+        Raises HTTPException 400 if no MCP credentials are stored.
+        """
+        db = farm_db.get_database()
+
+        block = await db.blocks.find_one(
+            {"blockId": str(block_id), "farmId": str(farm_id), "isActive": True}
+        )
+        if not block:
+            raise HTTPException(status_code=404, detail="Block not found")
+
+        iot = block.get("iotController")
+        if not iot:
+            raise HTTPException(
+                status_code=400,
+                detail="No IoT controller configured for this block",
+            )
+
+        mcp_api_key = iot.get("mcpApiKey")
+        if not mcp_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="No MCP credentials configured. Set mcpApiKey when connecting.",
+            )
+
+        address = iot.get("address")
+        if not address:
+            raise HTTPException(
+                status_code=400,
+                detail="No SenseHub address configured",
+            )
+
+        mcp_port = iot.get("mcpPort") or 3001
+
+        return SenseHubMCPClient(address=address, mcp_port=mcp_port, api_key=mcp_api_key)
 
     @staticmethod
     async def _update_token_cache(

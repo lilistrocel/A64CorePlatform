@@ -52,6 +52,7 @@ import type {
   SenseHubAutomation,
   SenseHubAlert,
 } from '../../types/farm';
+import { FarmAIChat } from './FarmAIChat';
 
 // ============================================================================
 // TYPES
@@ -86,6 +87,8 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
     port: 3000,
     email: '',
     password: '',
+    mcpApiKey: '',
+    mcpPort: 3001,
   });
   const [connecting, setConnecting] = useState(false);
 
@@ -218,7 +221,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
       setConnecting(true);
       setError(null);
       await connectSenseHub(farmId, blockId, connectionForm);
-      setConnectionForm({ address: '', port: 3000, email: '', password: '' });
+      setConnectionForm({ address: '', port: 3000, email: '', password: '', mcpApiKey: '', mcpPort: 3001 });
       setShowConnectionForm(false);
       await loadStatus();
     } catch (err: any) {
@@ -421,6 +424,29 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                   onChange={(e) => setConnectionForm({ ...connectionForm, password: e.target.value })}
                 />
               </FormGroup>
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
+                  MCP API Key (optional — for AI chat integration)
+                </label>
+                <input
+                  type="password"
+                  placeholder="Leave blank if not using MCP"
+                  value={connectionForm.mcpApiKey}
+                  onChange={e => setConnectionForm(prev => ({ ...prev, mcpApiKey: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'white', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ marginTop: '8px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
+                  MCP Port (default: 3001)
+                </label>
+                <input
+                  type="number"
+                  value={connectionForm.mcpPort}
+                  onChange={e => setConnectionForm(prev => ({ ...prev, mcpPort: parseInt(e.target.value) || 3001 }))}
+                  style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'white', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
               <ButtonRow>
                 <ConnectButton onClick={handleConnect} disabled={connecting || !connectionForm.address || !connectionForm.email}>
                   {connecting ? 'Connecting...' : 'Connect'}
@@ -798,6 +824,8 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
           )}
         </>
       )}
+      {/* AI Chat Widget (only when SenseHub is connected) */}
+      <FarmAIChat farmId={farmId} blockId={blockId} isConnected={isConnected} />
     </Container>
   );
 }

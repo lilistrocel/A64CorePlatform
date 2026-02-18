@@ -62,6 +62,8 @@ async def connect_sensehub(
     port = body.get("port", 3000)
     email = body.get("email")
     password = body.get("password")
+    mcp_api_key = body.get("mcpApiKey")
+    mcp_port = body.get("mcpPort")
 
     if not address or not email or not password:
         raise HTTPException(400, "address, email, and password are required")
@@ -73,6 +75,8 @@ async def connect_sensehub(
         port=port,
         email=email,
         password=password,
+        mcp_api_key=mcp_api_key,
+        mcp_port=mcp_port,
     )
 
 
@@ -106,12 +110,59 @@ async def get_sensehub_dashboard(
     block_id: UUID,
     current_user: CurrentUser = Depends(get_current_active_user),
 ):
-    """Proxy to GET /api/dashboard/overview on SenseHub."""
+    """
+    Build dashboard from individual fast endpoints instead of
+    /api/dashboard/overview which returns 17MB+ of chart data.
+    """
+    import asyncio
+
     try:
         client = await SenseHubConnectionService.get_client(farm_id, block_id)
-        data = await client.get_dashboard()
+
+        # Fetch equipment, automations, and alerts in parallel (~0.5s total)
+        equip_task = asyncio.create_task(client.get_equipment())
+        auto_task = asyncio.create_task(client.get_automations())
+        alert_task = asyncio.create_task(client.get_alerts())
+
+        equipment_list, automations_list, alerts_list = await asyncio.gather(
+            equip_task, auto_task, alert_task
+        )
+
         await SenseHubConnectionService._update_token_cache(farm_id, block_id, client)
-        return data
+
+        # Build summary counts from the raw lists
+        online = sum(1 for e in equipment_list if e.get("status") == "online")
+        offline = sum(1 for e in equipment_list if e.get("status") == "offline")
+        error_count = sum(1 for e in equipment_list if e.get("status") == "error")
+
+        active_autos = [a for a in automations_list if a.get("enabled")]
+
+        critical = sum(1 for a in alerts_list if a.get("severity") == "critical" and not a.get("acknowledged"))
+        warning = sum(1 for a in alerts_list if a.get("severity") == "warning" and not a.get("acknowledged"))
+        info = sum(1 for a in alerts_list if a.get("severity") == "info" and not a.get("acknowledged"))
+        unack = critical + warning + info
+
+        return {
+            "equipment": {
+                "total": len(equipment_list),
+                "online": online,
+                "offline": offline,
+                "error": error_count,
+            },
+            "automations": {
+                "total": len(automations_list),
+                "active": len(active_autos),
+            },
+            "alerts": {
+                "unacknowledged": unack,
+                "critical": critical,
+                "warning": warning,
+                "info": info,
+            },
+            "recent_alerts": alerts_list[:10],
+            "active_automations": active_autos[:10],
+            "equipment_list": equipment_list,
+        }
     except HTTPException:
         raise
     except Exception as e:

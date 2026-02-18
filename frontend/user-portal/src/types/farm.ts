@@ -1526,6 +1526,8 @@ export interface SenseHubConnectionStatus {
   senseHubVersion: string | null;
   address?: string;
   port?: number;
+  mcpPort?: number;
+  mcpApiKey?: string;
 }
 
 export interface SenseHubEquipment {

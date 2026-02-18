@@ -909,6 +909,7 @@ export async function iotProxyPut(url: string, data: any, apiKey?: string) {
 // Connection
 export async function connectSenseHub(farmId: string, blockId: string, data: {
   address: string; port: number; email: string; password: string;
+  mcpApiKey?: string; mcpPort?: number;
 }) {
   const response = await apiClient.post<any>(
     `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/connect`, data
@@ -1048,6 +1049,35 @@ export async function acknowledgeSenseHubAlert(
   return response.data;
 }
 
+// ============================================================================
+// FARM AI CHAT ENDPOINTS
+// ============================================================================
+
+import type {
+  FarmAIChatRequest,
+  FarmAIChatResponse,
+  ConfirmActionRequest,
+  ConfirmActionResponse,
+} from '../types/farmAI';
+
+export async function sendFarmAIChat(
+  farmId: string, blockId: string, data: FarmAIChatRequest
+) {
+  const response = await apiClient.post<FarmAIChatResponse>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/ai-chat/`, data
+  );
+  return response.data;
+}
+
+export async function confirmFarmAIAction(
+  farmId: string, blockId: string, data: ConfirmActionRequest
+) {
+  const response = await apiClient.post<ConfirmActionResponse>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/ai-chat/confirm`, data
+  );
+  return response.data;
+}
+
 // Export all functions as a single object for convenience
 export const farmApi = {
   // Managers
@@ -1147,6 +1177,10 @@ export const farmApi = {
   triggerSenseHubAutomation,
   getSenseHubAlerts,
   acknowledgeSenseHubAlert,
+
+  // Farm AI Chat
+  sendFarmAIChat,
+  confirmFarmAIAction,
 
   // Utilities
   calculateTotalPlants,
