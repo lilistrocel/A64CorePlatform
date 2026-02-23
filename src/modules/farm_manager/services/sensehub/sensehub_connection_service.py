@@ -304,7 +304,10 @@ class SenseHubConnectionService:
 
         mcp_port = iot.get("mcpPort") or 3001
 
-        return SenseHubMCPClient(address=address, mcp_port=mcp_port, api_key=mcp_api_key)
+        client = SenseHubMCPClient(address=address, mcp_port=mcp_port, api_key=mcp_api_key)
+        # Probe the connection now so callers can fall back to HTTP if port 3001 is down
+        await client._initialize_session()
+        return client
 
     @staticmethod
     async def _update_token_cache(
