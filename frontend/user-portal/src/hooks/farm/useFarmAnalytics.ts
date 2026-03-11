@@ -21,7 +21,8 @@ interface UseFarmAnalyticsReturn {
  */
 export function useFarmAnalytics(
   farmId: string | null,
-  period: TimePeriod = '30d'
+  period: TimePeriod = '30d',
+  farmingYear?: number | null
 ): UseFarmAnalyticsReturn {
   const [analytics, setAnalytics] = useState<FarmAnalyticsData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -39,7 +40,9 @@ export function useFarmAnalytics(
       setError(null);
 
       const url = `/v1/farm/farms/${farmId}/analytics`;
-      const params = period !== 'all' ? { period } : {};
+      const params: Record<string, string | number> = {};
+      if (period !== 'all') params.period = period;
+      if (farmingYear) params.farmingYear = farmingYear;
 
       const response = await apiClient.get<any>(url, { params });
 
@@ -54,7 +57,7 @@ export function useFarmAnalytics(
     } finally {
       setLoading(false);
     }
-  }, [farmId, period]);
+  }, [farmId, period, farmingYear]);
 
   useEffect(() => {
     if (farmId) {

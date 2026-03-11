@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService, isMfaRequired, type User, type LoginCredentials, type RegisterData } from '../services/auth.service';
+import { useDivisionStore } from './division.store';
 
 interface AuthState {
   user: User | null;
@@ -132,6 +133,9 @@ export const useAuthStore = create<AuthState>()(
             mfaPendingToken: null,
             mfaPendingUserId: null,
           });
+        } finally {
+          // Always clear division state on logout so the next user starts fresh
+          useDivisionStore.getState().clearDivisionState();
         }
       },
 

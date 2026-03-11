@@ -284,6 +284,10 @@ class Block(BlockBase):
     # Status History
     statusChanges: List[StatusChange] = Field(default_factory=list, description="Status change history")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Timestamps
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)

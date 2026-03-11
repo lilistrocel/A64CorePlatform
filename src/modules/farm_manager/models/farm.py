@@ -80,6 +80,10 @@ class Farm(FarmBase):
     # Status
     isActive: bool = Field(True, description="Is farm active")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Timestamps
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)

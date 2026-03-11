@@ -58,11 +58,60 @@ const BlockCount = styled.span`
   display: block;
 `;
 
+const ControlsBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+`;
+
 const FilterBar = styled.div`
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
+`;
+
+const SortControl = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const SortLabel = styled.span`
+  font-size: 13px;
+  color: #616161;
+`;
+
+const SortSelect = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #424242;
+  background: white;
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: #3b82f6;
+  }
+`;
+
+const SortDirectionButton = styled.button`
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #616161;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #f5f5f5;
+  }
 `;
 
 const FilterButton = styled.button<{ $active: boolean }>`
@@ -139,6 +188,8 @@ const CreateButton = styled.button`
 // ============================================================================
 
 type FilterType = 'all' | 'with-plantings' | 'empty';
+type SortField = 'name' | 'blockCode';
+type SortDirection = 'asc' | 'desc';
 
 export function PhysicalBlockGrid({
   physicalBlocks,
@@ -148,6 +199,8 @@ export function PhysicalBlockGrid({
   onCreateBlock,
 }: PhysicalBlockGridProps) {
   const [filter, setFilter] = useState<FilterType>('all');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   // Group virtual blocks by parent
   const virtualBlocksByParent = useMemo(() => {
@@ -163,32 +216,23 @@ export function PhysicalBlockGrid({
     return grouped;
   }, [virtualBlocks]);
 
-  // Apply filters
+  // Apply filters and sorting
   const filteredPhysicalBlocks = useMemo(() => {
-    if (filter === 'all') {
-      return physicalBlocks;
-    }
+    let result = physicalBlocks;
 
     if (filter === 'with-plantings') {
-      return physicalBlocks.filter((pb) => {
-        // Check if physical block itself has a planting
-        // Exclude: empty, cleaning, partial (partial = has virtual children, not a direct planting)
+      result = result.filter((pb) => {
         const physicalBlockHasPlanting =
           pb.state !== 'empty' && pb.state !== 'cleaning' && pb.state !== 'partial';
-        // Check virtual block children
         const children = virtualBlocksByParent.get(pb.blockId) || [];
         const activePlantings = children.filter(
           (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
         );
         return physicalBlockHasPlanting || activePlantings.length > 0;
       });
-    }
-
-    if (filter === 'empty') {
-      return physicalBlocks.filter((pb) => {
-        // Physical block must be in 'empty' state (not 'cleaning')
+    } else if (filter === 'empty') {
+      result = result.filter((pb) => {
         const isPhysicalBlockEmpty = pb.state === 'empty';
-        // Check virtual block children
         const children = virtualBlocksByParent.get(pb.blockId) || [];
         const activePlantings = children.filter(
           (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
@@ -197,8 +241,16 @@ export function PhysicalBlockGrid({
       });
     }
 
-    return physicalBlocks;
-  }, [physicalBlocks, virtualBlocksByParent, filter]);
+    // Sort
+    const sorted = [...result].sort((a, b) => {
+      const aVal = sortField === 'name' ? (a.name || a.blockCode) : a.blockCode;
+      const bVal = sortField === 'name' ? (b.name || b.blockCode) : b.blockCode;
+      const comparison = aVal.localeCompare(bVal);
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [physicalBlocks, virtualBlocksByParent, filter, sortField, sortDirection]);
 
   // Calculate counts for filters
   const totalPhysicalBlocks = physicalBlocks.length;
@@ -240,17 +292,29 @@ export function PhysicalBlockGrid({
         )}
       </Header>
 
-      <FilterBar>
-        <FilterButton $active={filter === 'all'} onClick={() => setFilter('all')}>
-          All Blocks ({totalPhysicalBlocks})
-        </FilterButton>
-        <FilterButton $active={filter === 'with-plantings'} onClick={() => setFilter('with-plantings')}>
-          With Plantings ({blocksWithPlantings})
-        </FilterButton>
-        <FilterButton $active={filter === 'empty'} onClick={() => setFilter('empty')}>
-          Empty ({emptyBlocks})
-        </FilterButton>
-      </FilterBar>
+      <ControlsBar>
+        <FilterBar>
+          <FilterButton $active={filter === 'all'} onClick={() => setFilter('all')}>
+            All Blocks ({totalPhysicalBlocks})
+          </FilterButton>
+          <FilterButton $active={filter === 'with-plantings'} onClick={() => setFilter('with-plantings')}>
+            With Plantings ({blocksWithPlantings})
+          </FilterButton>
+          <FilterButton $active={filter === 'empty'} onClick={() => setFilter('empty')}>
+            Empty ({emptyBlocks})
+          </FilterButton>
+        </FilterBar>
+        <SortControl>
+          <SortLabel>Sort by:</SortLabel>
+          <SortSelect value={sortField} onChange={(e) => setSortField(e.target.value as SortField)}>
+            <option value="name">Name</option>
+            <option value="blockCode">Block Code</option>
+          </SortSelect>
+          <SortDirectionButton onClick={() => setSortDirection(d => d === 'asc' ? 'desc' : 'asc')}>
+            {sortDirection === 'asc' ? '↑' : '↓'}
+          </SortDirectionButton>
+        </SortControl>
+      </ControlsBar>
 
       {filteredPhysicalBlocks.length === 0 ? (
         <EmptyState>

@@ -48,7 +48,7 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and division context
 apiClient.interceptors.request.use(
   (config) => {
     // Get token from localStorage
@@ -56,6 +56,21 @@ apiClient.interceptors.request.use(
 
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    // Inject division context header so the backend knows which division
+    // scope to apply for multi-industry data isolation.
+    const divisionStorage = localStorage.getItem('division-storage');
+    if (divisionStorage) {
+      try {
+        const parsed = JSON.parse(divisionStorage);
+        const divisionId = parsed?.state?.currentDivision?.divisionId;
+        if (divisionId) {
+          config.headers['X-Division-Id'] = divisionId;
+        }
+      } catch {
+        // Ignore JSON parse errors — header simply won't be set
+      }
     }
 
     return config;

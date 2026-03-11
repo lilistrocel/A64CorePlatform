@@ -39,7 +39,8 @@ class FarmAnalyticsService:
         farm_id: UUID,
         period: str = "30d",
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        farming_year: Optional[int] = None
     ) -> FarmAnalyticsResponse:
         """
         Get comprehensive analytics for a farm aggregated from all blocks
@@ -49,6 +50,7 @@ class FarmAnalyticsService:
             period: Time period ('30d', '90d', '6m', '1y', 'all')
             start_date: Optional custom start date
             end_date: Optional custom end date
+            farming_year: Optional farming year filter
 
         Returns:
             Complete farm analytics response
@@ -56,7 +58,7 @@ class FarmAnalyticsService:
         Raises:
             ValueError: If farm not found
         """
-        logger.info(f"[Farm Analytics] Generating analytics for farm {farm_id}, period: {period}")
+        logger.info(f"[Farm Analytics] Generating analytics for farm {farm_id}, period: {period}, farming_year: {farming_year}")
 
         # Get farm details
         from .farm_repository import FarmRepository
@@ -74,7 +76,8 @@ class FarmAnalyticsService:
         blocks, total_blocks = await BlockRepository.get_by_farm(
             farm_id,
             skip=0,
-            limit=1000  # Get all blocks
+            limit=1000,
+            farming_year=farming_year
         )
 
         logger.info(f"[Farm Analytics] Found {total_blocks} blocks")

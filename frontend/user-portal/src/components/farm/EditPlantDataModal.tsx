@@ -30,7 +30,10 @@ const plantDataSchema = z.object({
   plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']).optional(),
   farmTypeCompatibility: z.array(z.string()).min(1, 'Select at least one farm type').optional(),
   tags: z.string().optional(),
-  spacingCategory: z.enum(['xs', 's', 'm', 'l', 'xl', 'bush', 'large_bush', 'small_tree', 'medium_tree', 'large_tree']).optional(),
+  spacingCategory: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.enum(['xs', 's', 'm', 'l', 'xl', 'bush', 'large_bush', 'small_tree', 'medium_tree', 'large_tree']).optional(),
+  ),
 
   // Growth Cycle - Using valueAsNumber in register() instead of preprocess
   germinationDays: z.number().nonnegative('Cannot be negative').optional(),

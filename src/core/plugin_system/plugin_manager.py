@@ -30,6 +30,9 @@ class ModuleManifest:
     license_required: bool
     enabled_by_default: bool = True
     core_module: bool = False
+    # Multi-industry support fields
+    industries: Optional[List[str]] = None  # e.g. ["vegetable_fruits"], ["mushroom"], ["all"]
+    industry_mode: str = "shared"  # "exclusive" = only for listed industries, "shared" = all industries
 
 
 class PluginManager:
@@ -247,6 +250,34 @@ class PluginManager:
             Dictionary of loaded module manifests
         """
         return self.loaded_modules.copy()
+
+    def get_modules_for_industry(self, industry_type: str) -> Dict[str, "ModuleManifest"]:
+        """
+        Get all loaded modules that support a given industry type.
+
+        A module matches if:
+        - industries is None or empty (legacy modules, shown everywhere)
+        - industries contains "all" (shared modules like HR, CRM)
+        - industries contains the requested industry_type (exclusive modules)
+
+        Args:
+            industry_type: Industry type string (e.g., "vegetable_fruits", "mushroom")
+
+        Returns:
+            Dictionary of matching module manifests {module_name: manifest}
+        """
+        matching = {}
+        for name, manifest in self.loaded_modules.items():
+            if manifest.industries is None or len(manifest.industries) == 0:
+                # Legacy module without industry config - show everywhere
+                matching[name] = manifest
+            elif "all" in manifest.industries:
+                # Shared module (HR, CRM, etc.)
+                matching[name] = manifest
+            elif industry_type in manifest.industries:
+                # Industry-specific module
+                matching[name] = manifest
+        return matching
 
     def is_module_loaded(self, module_name: str) -> bool:
         """

@@ -411,6 +411,9 @@ class HarvestInventory(HarvestInventoryBase):
     # Farming year (calculated from harvestDate)
     farmingYear: Optional[int] = Field(None, description="Farming year derived from harvest date")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+
     # Tracking
     createdBy: UUID = Field(..., description="User who created this entry")
     createdAt: datetime = Field(default_factory=datetime.utcnow)
@@ -527,6 +530,9 @@ class InputInventory(InputInventoryBase):
 
     # NEW: Transfer history tracking
     transferHistory: List[dict] = Field(default_factory=list, description="History of transfers")
+
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
 
     # Tracking
     createdBy: UUID = Field(..., description="User who created this entry")
@@ -647,6 +653,9 @@ class AssetInventory(AssetInventoryBase):
     # NEW: Asset allocation tracking (for shared assets)
     currentAllocation: Optional[dict] = Field(None, description="Current allocation information")
     allocationHistory: List[dict] = Field(default_factory=list, description="History of allocations")
+
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
 
     # Tracking
     createdBy: UUID = Field(..., description="User who created this entry")
@@ -893,6 +902,9 @@ class WasteInventoryUpdate(BaseModel):
 class WasteInventory(WasteInventoryBase):
     """Complete waste inventory item"""
     wasteId: UUID = Field(default_factory=uuid4, description="Unique identifier")
+
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
 
     # Tracking
     recordedBy: UUID = Field(..., description="User who recorded this waste")

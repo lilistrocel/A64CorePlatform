@@ -48,6 +48,9 @@ const BlockTaskList = lazy(() => import('./pages/operations/BlockTaskList').then
 // AI Analytics (loads Gemini client)
 const AIAnalytics = lazy(() => import('./pages/ai/AIAnalytics').then(m => ({ default: m.AIAnalytics })));
 
+// AI Dashboard (automated farm inspection)
+const AIDashboard = lazy(() => import('./pages/ai/AIDashboard').then(m => ({ default: m.AIDashboard })));
+
 // Inventory module
 const InventoryDashboard = lazy(() => import('./pages/inventory/InventoryDashboard').then(m => ({ default: m.InventoryDashboard })));
 
@@ -83,8 +86,27 @@ const BudgetManagementPage = lazy(() => import('./pages/marketing/BudgetManageme
 const EventManagementPage = lazy(() => import('./pages/marketing/EventManagementPage').then(m => ({ default: m.EventManagementPage })));
 const ChannelManagementPage = lazy(() => import('./pages/marketing/ChannelManagementPage').then(m => ({ default: m.ChannelManagementPage })));
 
+// Mushroom farming module pages
+const MushroomDashboardPage = lazy(() =>
+  import('./pages/mushroom/MushroomDashboardPage').then(m => ({ default: m.MushroomDashboardPage }))
+);
+const MushroomFacilityManager = lazy(() =>
+  import('./pages/mushroom/MushroomFacilityManager').then(m => ({ default: m.MushroomFacilityManager }))
+);
+const MushroomStrainLibrary = lazy(() =>
+  import('./pages/mushroom/MushroomStrainLibrary').then(m => ({ default: m.MushroomStrainLibrary }))
+);
+const MushroomRoomMonitor = lazy(() =>
+  import('./pages/mushroom/MushroomRoomMonitor').then(m => ({ default: m.MushroomRoomMonitor }))
+);
+
 // Admin pages
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
+
+// Division selector (shown after login when user belongs to multiple divisions)
+const DivisionSelector = lazy(() =>
+  import('./pages/division/DivisionSelector').then(m => ({ default: m.DivisionSelector }))
+);
 
 // Debug pages
 const ClearCache = lazy(() => import('./pages/debug/ClearCache').then(m => ({ default: m.ClearCache })));
@@ -127,6 +149,9 @@ function App() {
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
+              {/* Division selector - full-page, outside MainLayout */}
+              <Route path="/select-division" element={<DivisionSelector />} />
+
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/farm/*" element={<FarmManager />} />
@@ -155,6 +180,15 @@ function App() {
                 <Route path="/marketing/events" element={<EventManagementPage />} />
                 <Route path="/marketing/channels" element={<ChannelManagementPage />} />
                 <Route path="/ai-analytics" element={<AIAnalytics />} />
+                <Route path="/ai-dashboard" element={<AIDashboard />} />
+
+                {/* Mushroom farming module */}
+                <Route path="/mushroom/dashboard" element={<MushroomDashboardPage />} />
+                <Route path="/mushroom/facilities" element={<MushroomFacilityManager />} />
+                <Route path="/mushroom/strains" element={<MushroomStrainLibrary />} />
+                <Route path="/mushroom/rooms" element={<MushroomRoomMonitor />} />
+                <Route path="/mushroom" element={<MushroomDashboardPage />} />
+
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/admin/users" element={<UserManagementPage />} />

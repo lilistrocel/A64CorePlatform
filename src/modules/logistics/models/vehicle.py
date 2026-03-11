@@ -81,6 +81,10 @@ class Vehicle(VehicleBase):
     vehicleId: UUID = Field(default_factory=uuid4, description="Unique vehicle identifier")
     vehicleCode: Optional[str] = Field(None, description="Human-readable vehicle code (e.g., V001)")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdBy: UUID = Field(..., description="User ID who created this vehicle")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

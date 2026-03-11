@@ -57,6 +57,7 @@ const PERFORMANCE_OPTIONS: { value: PerformanceCategory; label: string; icon: st
 ];
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'name', label: 'Name' },
   { value: 'blockCode', label: 'Block Code' },
   { value: 'state', label: 'State' },
   { value: 'daysInState', label: 'Days in State' },

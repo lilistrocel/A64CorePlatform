@@ -131,6 +131,10 @@ class ReturnOrder(ReturnOrderBase):
     # Processing
     processedBy: Optional[UUID] = Field(None, description="User ID who processed this return")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking
     createdBy: UUID = Field(..., description="User ID who created this return")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

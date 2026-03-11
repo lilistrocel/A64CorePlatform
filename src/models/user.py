@@ -6,7 +6,7 @@ Following User-Structure.md specifications
 """
 
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
 import re
@@ -91,6 +91,11 @@ class UserResponse(UserBase):
     lastLoginAt: Optional[datetime]
     createdAt: datetime
     updatedAt: datetime
+
+    # Multi-industry fields (optional for backward compatibility)
+    organizationId: Optional[str] = Field(None, description="Organization this user belongs to")
+    divisionAccess: Optional[List[str]] = Field(None, description="Division IDs the user can access")
+    defaultDivisionId: Optional[str] = Field(None, description="Last-used division ID")
 
     class Config:
         """Pydantic config"""

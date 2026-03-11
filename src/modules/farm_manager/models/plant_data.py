@@ -56,6 +56,7 @@ class PlantDataBase(BaseModel):
     # Yield information
     expectedYieldPerPlant: float = Field(..., gt=0, description="Expected yield per plant")
     yieldUnit: str = Field(..., description="Unit of yield (kg, lbs, units)")
+    seedsPerPlantingPoint: int = Field(1, ge=1, description="Number of seeds/plants per planting point (drip). Defaults to 1 for single-plant setups.")
 
     # Spacing category for density calculations
     spacingCategory: Optional[SpacingCategory] = Field(
@@ -90,6 +91,7 @@ class PlantDataUpdate(BaseModel):
     sunlightHoursDaily: Optional[str] = None
     expectedYieldPerPlant: Optional[float] = Field(None, gt=0)
     yieldUnit: Optional[str] = None
+    seedsPerPlantingPoint: Optional[int] = Field(None, ge=1)
     spacingCategory: Optional[SpacingCategory] = None
     notes: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -102,6 +104,10 @@ class PlantData(PlantDataBase):
 
     # Versioning (for frozen data on planting)
     dataVersion: int = Field(1, description="Data version number")
+
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
 
     # Metadata
     createdBy: UUID = Field(..., description="User ID who created this data")
@@ -125,6 +131,7 @@ class PlantData(PlantDataBase):
                 "sunlightHoursDaily": "6-8",
                 "expectedYieldPerPlant": 5.0,
                 "yieldUnit": "kg",
+                "seedsPerPlantingPoint": 1,
                 "spacingCategory": "l",
                 "notes": "Requires staking, prune suckers",
                 "tags": ["vegetable", "fruit", "summer"],

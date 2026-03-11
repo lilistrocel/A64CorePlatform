@@ -52,6 +52,10 @@ class Budget(BudgetBase):
     """Complete budget model with all fields"""
     budgetId: UUID = Field(default_factory=uuid4, description="Unique budget identifier")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdBy: UUID = Field(..., description="User ID who created this budget")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

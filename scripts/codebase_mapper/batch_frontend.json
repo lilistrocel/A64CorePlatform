@@ -1,0 +1,2373 @@
+{
+  "metadata": {
+    "generated_at": "2026-02-24",
+    "scope": "frontend/user-portal/src",
+    "layer": "frontend"
+  },
+  "nodes": [
+    {
+      "node_id": "file::App",
+      "node_type": "file",
+      "name": "App",
+      "file_path": "frontend/user-portal/src/App.tsx",
+      "line_number": 95,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["default: App"],
+      "description": "Root application component with routing, providers (QueryClient, Theme, UnsavedChanges), and lazy-loaded page imports"
+    },
+    {
+      "node_id": "component::ProtectedRoute",
+      "node_type": "component",
+      "name": "ProtectedRoute",
+      "file_path": "frontend/user-portal/src/components/common/ProtectedRoute.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["ProtectedRoute"],
+      "description": "Auth guard component that checks useAuthStore and redirects unauthenticated users to /login"
+    },
+    {
+      "node_id": "component::MFARouteGuards",
+      "node_type": "component",
+      "name": "MFARouteGuards",
+      "file_path": "frontend/user-portal/src/components/common/MFARouteGuards.tsx",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["MFAVerifyGuard", "MFASetupGuard"],
+      "description": "MFA route guards: MFAVerifyGuard requires MFA pending token, MFASetupGuard blocks if MFA already enabled"
+    },
+    {
+      "node_id": "component::ToastContainer",
+      "node_type": "component",
+      "name": "ToastContainer",
+      "file_path": "frontend/user-portal/src/components/common/ToastContainer.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["ToastContainer"],
+      "description": "Global toast notification container consuming useToastStore"
+    },
+    {
+      "node_id": "component::UnsavedChangesDialog",
+      "node_type": "component",
+      "name": "UnsavedChangesDialog",
+      "file_path": "frontend/user-portal/src/components/common/UnsavedChangesDialog.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["UnsavedChangesDialog"],
+      "description": "Dialog prompting user to save or discard unsaved changes before navigation"
+    },
+    {
+      "node_id": "component::MainLayout",
+      "node_type": "component",
+      "name": "MainLayout",
+      "file_path": "frontend/user-portal/src/components/layout/MainLayout.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["MainLayout"],
+      "description": "Main app layout with sidebar navigation, header, and Outlet for nested routes. Uses useAuthStore and tasksApi"
+    },
+    {
+      "node_id": "component::FarmDashboard",
+      "node_type": "component",
+      "name": "FarmDashboard",
+      "file_path": "frontend/user-portal/src/components/farm/FarmDashboard.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmDashboard"],
+      "description": "Main farm module dashboard showing key metrics and quick actions. Uses farmApi and renders GlobalFarmAnalyticsModal"
+    },
+    {
+      "node_id": "component::FarmList",
+      "node_type": "component",
+      "name": "FarmList",
+      "file_path": "frontend/user-portal/src/components/farm/FarmList.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmList", "FarmListProps"],
+      "description": "Paginated farm card grid with search/filter. Renders FarmCard, CreateFarmModal, EditFarmModal, FarmAnalyticsModal"
+    },
+    {
+      "node_id": "component::FarmDetail",
+      "node_type": "component",
+      "name": "FarmDetail",
+      "file_path": "frontend/user-portal/src/components/farm/FarmDetail.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmDetail"],
+      "description": "Farm detail page with tabs (blocks, map, history, weather). Uses useFarm, useFarmBlocks, useAvailableFarmingYears hooks"
+    },
+    {
+      "node_id": "component::BlockDetail",
+      "node_type": "component",
+      "name": "BlockDetail",
+      "file_path": "frontend/user-portal/src/components/farm/BlockDetail.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockDetail"],
+      "description": "Block detail page with tabs for alerts, automation, harvests, archives. Uses farmApi service"
+    },
+    {
+      "node_id": "component::FarmCard",
+      "node_type": "component",
+      "name": "FarmCard",
+      "file_path": "frontend/user-portal/src/components/farm/FarmCard.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmCard"],
+      "description": "Farm summary card displaying farm info, navigates to farm detail on click"
+    },
+    {
+      "node_id": "component::BlockCard",
+      "node_type": "component",
+      "name": "BlockCard",
+      "file_path": "frontend/user-portal/src/components/farm/BlockCard.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockCard"],
+      "description": "Block card with state colors, renders PlantAssignmentModal, PendingTasksWarningModal, BlockAnalyticsModal"
+    },
+    {
+      "node_id": "component::BlockGrid",
+      "node_type": "component",
+      "name": "BlockGrid",
+      "file_path": "frontend/user-portal/src/components/farm/BlockGrid.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockGrid"],
+      "description": "Grid layout of BlockCard components with state filter tabs"
+    },
+    {
+      "node_id": "component::PhysicalBlockGrid",
+      "node_type": "component",
+      "name": "PhysicalBlockGrid",
+      "file_path": "frontend/user-portal/src/components/farm/PhysicalBlockGrid.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PhysicalBlockGrid"],
+      "description": "Physical layout grid rendering PhysicalBlockCard components"
+    },
+    {
+      "node_id": "component::PhysicalBlockCard",
+      "node_type": "component",
+      "name": "PhysicalBlockCard",
+      "file_path": "frontend/user-portal/src/components/farm/PhysicalBlockCard.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PhysicalBlockCard"],
+      "description": "Physical block card showing block in spatial layout view"
+    },
+    {
+      "node_id": "component::BlockDetailsModal",
+      "node_type": "component",
+      "name": "BlockDetailsModal",
+      "file_path": "frontend/user-portal/src/components/farm/BlockDetailsModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockDetailsModal"],
+      "description": "Comprehensive modal: block header, planting details, harvest history, growth timeline. Uses farmApi"
+    },
+    {
+      "node_id": "component::BlockAnalyticsModal",
+      "node_type": "component",
+      "name": "BlockAnalyticsModal",
+      "file_path": "frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockAnalyticsModal"],
+      "description": "Block analytics modal with tabs: overview, yield, timeline, tasks, alerts. Uses useBlockAnalytics hook and recharts"
+    },
+    {
+      "node_id": "component::FarmAnalyticsModal",
+      "node_type": "component",
+      "name": "FarmAnalyticsModal",
+      "file_path": "frontend/user-portal/src/components/farm/FarmAnalyticsModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmAnalyticsModal", "FarmAnalyticsModalProps"],
+      "description": "Farm-level analytics modal with tabs: overview, block comparison, historical trends, state details. Uses useFarmAnalytics and recharts"
+    },
+    {
+      "node_id": "component::GlobalFarmAnalyticsModal",
+      "node_type": "component",
+      "name": "GlobalFarmAnalyticsModal",
+      "file_path": "frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["GlobalFarmAnalyticsModal", "GlobalFarmAnalyticsModalProps"],
+      "description": "System-wide analytics modal: farm comparison, production timeline, performance insights. Uses useGlobalAnalytics and recharts"
+    },
+    {
+      "node_id": "component::FarmMapView",
+      "node_type": "component",
+      "name": "FarmMapView",
+      "file_path": "frontend/user-portal/src/components/farm/FarmMapView.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmMapView"],
+      "description": "MapLibre GL map view showing farm and block boundaries with state colors. Uses mapConfig"
+    },
+    {
+      "node_id": "component::CreateFarmModal",
+      "node_type": "component",
+      "name": "CreateFarmModal",
+      "file_path": "frontend/user-portal/src/components/farm/CreateFarmModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["CreateFarmModal"],
+      "description": "Farm creation modal with form, map boundary drawing. Uses farmApi, useMapDrawing, useUnsavedChanges, toast.store"
+    },
+    {
+      "node_id": "component::EditFarmModal",
+      "node_type": "component",
+      "name": "EditFarmModal",
+      "file_path": "frontend/user-portal/src/components/farm/EditFarmModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["EditFarmModal"],
+      "description": "Farm edit modal for updating farm details"
+    },
+    {
+      "node_id": "component::CreateBlockModal",
+      "node_type": "component",
+      "name": "CreateBlockModal",
+      "file_path": "frontend/user-portal/src/components/farm/CreateBlockModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["CreateBlockModal"],
+      "description": "Block creation modal with map boundary drawing. Uses useMapDrawing hook"
+    },
+    {
+      "node_id": "component::EditBlockModal",
+      "node_type": "component",
+      "name": "EditBlockModal",
+      "file_path": "frontend/user-portal/src/components/farm/EditBlockModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["EditBlockModal"],
+      "description": "Block edit modal for updating block details"
+    },
+    {
+      "node_id": "component::BlockAlertsTab",
+      "node_type": "component",
+      "name": "BlockAlertsTab",
+      "file_path": "frontend/user-portal/src/components/farm/BlockAlertsTab.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockAlertsTab"],
+      "description": "Block detail tab displaying alerts list for a block"
+    },
+    {
+      "node_id": "component::BlockAutomationTab",
+      "node_type": "component",
+      "name": "BlockAutomationTab",
+      "file_path": "frontend/user-portal/src/components/farm/BlockAutomationTab.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockAutomationTab"],
+      "description": "Block detail tab for automation/IoT integration"
+    },
+    {
+      "node_id": "component::BlockHarvestsTab",
+      "node_type": "component",
+      "name": "BlockHarvestsTab",
+      "file_path": "frontend/user-portal/src/components/farm/BlockHarvestsTab.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockHarvestsTab"],
+      "description": "Block detail tab showing harvest records"
+    },
+    {
+      "node_id": "component::BlockArchivesTab",
+      "node_type": "component",
+      "name": "BlockArchivesTab",
+      "file_path": "frontend/user-portal/src/components/farm/BlockArchivesTab.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockArchivesTab"],
+      "description": "Block detail tab showing archived planting data"
+    },
+    {
+      "node_id": "component::BlockHarvestEntryModal",
+      "node_type": "component",
+      "name": "BlockHarvestEntryModal",
+      "file_path": "frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockHarvestEntryModal"],
+      "description": "Modal for entering harvest data for a block"
+    },
+    {
+      "node_id": "component::FarmHistoryTab",
+      "node_type": "component",
+      "name": "FarmHistoryTab",
+      "file_path": "frontend/user-portal/src/components/farm/FarmHistoryTab.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmHistoryTab"],
+      "description": "Farm detail tab showing historical farm activity"
+    },
+    {
+      "node_id": "component::PlantAssignmentModal",
+      "node_type": "component",
+      "name": "PlantAssignmentModal",
+      "file_path": "frontend/user-portal/src/components/farm/PlantAssignmentModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PlantAssignmentModal"],
+      "description": "Modal for assigning plants to blocks"
+    },
+    {
+      "node_id": "component::PendingTasksWarningModal",
+      "node_type": "component",
+      "name": "PendingTasksWarningModal",
+      "file_path": "frontend/user-portal/src/components/farm/PendingTasksWarningModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PendingTasksWarningModal"],
+      "description": "Warning modal shown when block has pending tasks before state transition"
+    },
+    {
+      "node_id": "component::PlantDataCard",
+      "node_type": "component",
+      "name": "PlantDataCard",
+      "file_path": "frontend/user-portal/src/components/farm/PlantDataCard.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PlantDataCard"],
+      "description": "Card displaying plant data summary. Uses plantDataEnhancedApi for formatting"
+    },
+    {
+      "node_id": "component::PlantDataDetail",
+      "node_type": "component",
+      "name": "PlantDataDetail",
+      "file_path": "frontend/user-portal/src/components/farm/PlantDataDetail.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PlantDataDetail"],
+      "description": "Detailed view of a plant data entry"
+    },
+    {
+      "node_id": "component::AddPlantDataModal",
+      "node_type": "component",
+      "name": "AddPlantDataModal",
+      "file_path": "frontend/user-portal/src/components/farm/AddPlantDataModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["AddPlantDataModal"],
+      "description": "Modal for adding new plant data entries"
+    },
+    {
+      "node_id": "component::EditPlantDataModal",
+      "node_type": "component",
+      "name": "EditPlantDataModal",
+      "file_path": "frontend/user-portal/src/components/farm/EditPlantDataModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["EditPlantDataModal"],
+      "description": "Modal for editing existing plant data entries"
+    },
+    {
+      "node_id": "component::AddVirtualCropModal",
+      "node_type": "component",
+      "name": "AddVirtualCropModal",
+      "file_path": "frontend/user-portal/src/components/farm/AddVirtualCropModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["AddVirtualCropModal"],
+      "description": "Modal for adding virtual crops to blocks"
+    },
+    {
+      "node_id": "component::EmptyVirtualBlockModal",
+      "node_type": "component",
+      "name": "EmptyVirtualBlockModal",
+      "file_path": "frontend/user-portal/src/components/farm/EmptyVirtualBlockModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["EmptyVirtualBlockModal"],
+      "description": "Modal for emptying virtual block crops"
+    },
+    {
+      "node_id": "component::FarmingYearSelector",
+      "node_type": "component",
+      "name": "FarmingYearSelector",
+      "file_path": "frontend/user-portal/src/components/farm/FarmingYearSelector.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmingYearSelector"],
+      "description": "Dropdown selector for farming year filter"
+    },
+    {
+      "node_id": "component::FarmAIChat",
+      "node_type": "component",
+      "name": "FarmAIChat",
+      "file_path": "frontend/user-portal/src/components/farm/FarmAIChat.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmAIChat"],
+      "description": "Floating AI chat widget for farm assistant. Uses useFarmAIChat hook for natural language queries and action confirmation"
+    },
+    {
+      "node_id": "component::EditFarmBoundaryModal",
+      "node_type": "component",
+      "name": "EditFarmBoundaryModal",
+      "file_path": "frontend/user-portal/src/components/farm/EditFarmBoundaryModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["EditFarmBoundaryModal"],
+      "description": "Modal for editing farm GeoJSON boundary on map"
+    },
+    {
+      "node_id": "component::DashboardBlockGrid",
+      "node_type": "component",
+      "name": "BlockGrid (dashboard)",
+      "file_path": "frontend/user-portal/src/components/farm/dashboard/BlockGrid.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockGrid"],
+      "description": "Dashboard block grid rendering CompactBlockCard components"
+    },
+    {
+      "node_id": "component::CompactBlockCard",
+      "node_type": "component",
+      "name": "CompactBlockCard",
+      "file_path": "frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["CompactBlockCard"],
+      "description": "Compact block card for dashboard with state-specific layouts. Uses useBlockActions, renders QuickPlanModal, ResolveAlertModal, BlockDetailsModal, BlockHarvestEntryModal, BlockAnalyticsModal"
+    },
+    {
+      "node_id": "component::DashboardFilters",
+      "node_type": "component",
+      "name": "DashboardFilters",
+      "file_path": "frontend/user-portal/src/components/farm/dashboard/DashboardFilters.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["DashboardFilters"],
+      "description": "Filter controls for farm dashboard: state, search, performance, sort. Uses types from useDashboardFilters"
+    },
+    {
+      "node_id": "component::DashboardHeader",
+      "node_type": "component",
+      "name": "DashboardHeader",
+      "file_path": "frontend/user-portal/src/components/farm/dashboard/DashboardHeader.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["DashboardHeader"],
+      "description": "Dashboard header showing farm info and summary metrics"
+    },
+    {
+      "node_id": "component::FarmSelector",
+      "node_type": "component",
+      "name": "FarmSelector",
+      "file_path": "frontend/user-portal/src/components/farm/dashboard/FarmSelector.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmSelector"],
+      "description": "Dropdown to select active farm. Calls getFarms from farmApi"
+    },
+    {
+      "node_id": "component::DashboardSettings",
+      "node_type": "component",
+      "name": "DashboardSettings",
+      "file_path": "frontend/user-portal/src/components/farm/dashboard/DashboardSettings.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["DashboardSettings"],
+      "description": "Dashboard configuration panel for color/icon/layout settings"
+    },
+    {
+      "node_id": "component::QuickPlanModal",
+      "node_type": "component",
+      "name": "QuickPlanModal",
+      "file_path": "frontend/user-portal/src/components/farm/dashboard/QuickPlanModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["QuickPlanModal"],
+      "description": "Quick planning modal for block state transitions"
+    },
+    {
+      "node_id": "component::ResolveAlertModal",
+      "node_type": "component",
+      "name": "ResolveAlertModal",
+      "file_path": "frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["ResolveAlertModal"],
+      "description": "Modal for resolving block alerts"
+    },
+    {
+      "node_id": "component::AIAnalyticsChat",
+      "node_type": "component",
+      "name": "AIAnalyticsChat",
+      "file_path": "frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["AIAnalyticsChat"],
+      "description": "AI analytics chat component using useAIAnalytics hook for conversational data exploration"
+    },
+    {
+      "node_id": "component::AddWidgetModal",
+      "node_type": "component",
+      "name": "AddWidgetModal",
+      "file_path": "frontend/user-portal/src/components/dashboard/AddWidgetModal.tsx",
+      "line_number": 1,
+      "module": "dashboard",
+      "layer": "frontend",
+      "exports": ["AddWidgetModal"],
+      "description": "Modal for adding widgets to the main dashboard"
+    },
+    {
+      "node_id": "component::BackupCodesModal",
+      "node_type": "component",
+      "name": "BackupCodesModal",
+      "file_path": "frontend/user-portal/src/components/auth/BackupCodesModal.tsx",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["BackupCodesModal"],
+      "description": "Modal displaying MFA backup codes"
+    },
+    {
+      "node_id": "page::FarmManager",
+      "node_type": "component",
+      "name": "FarmManager",
+      "file_path": "frontend/user-portal/src/pages/farm/FarmManager.tsx",
+      "line_number": 16,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmManager"],
+      "description": "Farm module router: sub-routes for dashboard, block-monitor, farms, farm detail, block detail, plants"
+    },
+    {
+      "node_id": "page::FarmDashboardPage",
+      "node_type": "component",
+      "name": "FarmDashboardPage",
+      "file_path": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "line_number": 23,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmDashboardPage"],
+      "description": "Block monitor dashboard page. Uses useDashboardData, useDashboardConfig, useDashboardFilters hooks"
+    },
+    {
+      "node_id": "page::PlantDataLibrary",
+      "node_type": "component",
+      "name": "PlantDataLibrary",
+      "file_path": "frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["PlantDataLibrary"],
+      "description": "Plant data library page with card grid, detail view, add/edit modals, CSV import/export. Uses plantDataEnhancedApi"
+    },
+    {
+      "node_id": "page::Login",
+      "node_type": "component",
+      "name": "Login",
+      "file_path": "frontend/user-portal/src/pages/auth/Login.tsx",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["Login"],
+      "description": "Login page with form validation (react-hook-form + zod). Uses useAuthStore and usePageVisibility"
+    },
+    {
+      "node_id": "page::Register",
+      "node_type": "component",
+      "name": "Register",
+      "file_path": "frontend/user-portal/src/pages/auth/Register.tsx",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["Register"],
+      "description": "User registration page"
+    },
+    {
+      "node_id": "page::MFASetupPage",
+      "node_type": "component",
+      "name": "MFASetupPage",
+      "file_path": "frontend/user-portal/src/pages/auth/MFASetupPage.tsx",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["MFASetupPage"],
+      "description": "MFA TOTP setup page with QR code and backup codes"
+    },
+    {
+      "node_id": "page::MFAVerifyPage",
+      "node_type": "component",
+      "name": "MFAVerifyPage",
+      "file_path": "frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["MFAVerifyPage"],
+      "description": "MFA verification page for TOTP code entry"
+    },
+    {
+      "node_id": "page::Dashboard",
+      "node_type": "component",
+      "name": "Dashboard",
+      "file_path": "frontend/user-portal/src/pages/dashboard/Dashboard.tsx",
+      "line_number": 1,
+      "module": "dashboard",
+      "layer": "frontend",
+      "exports": ["Dashboard"],
+      "description": "Main dashboard page with draggable widget grid (react-grid-layout). Uses useDashboardStore"
+    },
+    {
+      "node_id": "page::Profile",
+      "node_type": "component",
+      "name": "Profile",
+      "file_path": "frontend/user-portal/src/pages/profile/Profile.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["Profile"],
+      "description": "User profile page"
+    },
+    {
+      "node_id": "page::Settings",
+      "node_type": "component",
+      "name": "Settings",
+      "file_path": "frontend/user-portal/src/pages/settings/Settings.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["Settings"],
+      "description": "User settings page"
+    },
+    {
+      "node_id": "page::AIAnalytics",
+      "node_type": "component",
+      "name": "AIAnalytics",
+      "file_path": "frontend/user-portal/src/pages/ai/AIAnalytics.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["AIAnalytics"],
+      "description": "AI Analytics page rendering AIAnalyticsChat component"
+    },
+    {
+      "node_id": "page::OperationsDashboard",
+      "node_type": "component",
+      "name": "OperationsDashboard",
+      "file_path": "frontend/user-portal/src/pages/operations/OperationsDashboard.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["OperationsDashboard"],
+      "description": "Operations module dashboard page"
+    },
+    {
+      "node_id": "page::FarmBlocksView",
+      "node_type": "component",
+      "name": "FarmBlocksView",
+      "file_path": "frontend/user-portal/src/pages/operations/FarmBlocksView.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["FarmBlocksView"],
+      "description": "Operations view of blocks within a farm"
+    },
+    {
+      "node_id": "page::BlockTaskList",
+      "node_type": "component",
+      "name": "BlockTaskList",
+      "file_path": "frontend/user-portal/src/pages/operations/BlockTaskList.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockTaskList"],
+      "description": "Task list for a specific block in operations module"
+    },
+    {
+      "node_id": "page::InventoryDashboard",
+      "node_type": "component",
+      "name": "InventoryDashboard",
+      "file_path": "frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["InventoryDashboard"],
+      "description": "Inventory management dashboard"
+    },
+    {
+      "node_id": "page::CRMPage",
+      "node_type": "component",
+      "name": "CRMPage",
+      "file_path": "frontend/user-portal/src/pages/crm/CRMPage.tsx",
+      "line_number": 1,
+      "module": "crm",
+      "layer": "frontend",
+      "exports": ["CRMPage"],
+      "description": "CRM customers list page"
+    },
+    {
+      "node_id": "page::CustomerDetailPage",
+      "node_type": "component",
+      "name": "CustomerDetailPage",
+      "file_path": "frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx",
+      "line_number": 1,
+      "module": "crm",
+      "layer": "frontend",
+      "exports": ["CustomerDetailPage"],
+      "description": "Customer detail view page"
+    },
+    {
+      "node_id": "page::HRDashboardPage",
+      "node_type": "component",
+      "name": "HRDashboardPage",
+      "file_path": "frontend/user-portal/src/pages/hr/HRDashboardPage.tsx",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "frontend",
+      "exports": ["HRDashboardPage"],
+      "description": "HR module dashboard page"
+    },
+    {
+      "node_id": "page::EmployeeListPage",
+      "node_type": "component",
+      "name": "EmployeeListPage",
+      "file_path": "frontend/user-portal/src/pages/hr/EmployeeListPage.tsx",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "frontend",
+      "exports": ["EmployeeListPage"],
+      "description": "Employee list page"
+    },
+    {
+      "node_id": "page::EmployeeDetailPage",
+      "node_type": "component",
+      "name": "EmployeeDetailPage",
+      "file_path": "frontend/user-portal/src/pages/hr/EmployeeDetailPage.tsx",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "frontend",
+      "exports": ["EmployeeDetailPage"],
+      "description": "Employee detail page with contract, visa, insurance, performance tabs"
+    },
+    {
+      "node_id": "page::LogisticsDashboardPage",
+      "node_type": "component",
+      "name": "LogisticsDashboardPage",
+      "file_path": "frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "frontend",
+      "exports": ["LogisticsDashboardPage"],
+      "description": "Logistics module dashboard page"
+    },
+    {
+      "node_id": "page::VehicleManagementPage",
+      "node_type": "component",
+      "name": "VehicleManagementPage",
+      "file_path": "frontend/user-portal/src/pages/logistics/VehicleManagementPage.tsx",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "frontend",
+      "exports": ["VehicleManagementPage"],
+      "description": "Vehicle management page"
+    },
+    {
+      "node_id": "page::RouteManagementPage",
+      "node_type": "component",
+      "name": "RouteManagementPage",
+      "file_path": "frontend/user-portal/src/pages/logistics/RouteManagementPage.tsx",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "frontend",
+      "exports": ["RouteManagementPage"],
+      "description": "Route management page"
+    },
+    {
+      "node_id": "page::ShipmentTrackingPage",
+      "node_type": "component",
+      "name": "ShipmentTrackingPage",
+      "file_path": "frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "frontend",
+      "exports": ["ShipmentTrackingPage"],
+      "description": "Shipment tracking page"
+    },
+    {
+      "node_id": "page::SalesDashboardPage",
+      "node_type": "component",
+      "name": "SalesDashboardPage",
+      "file_path": "frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["SalesDashboardPage"],
+      "description": "Sales module dashboard page"
+    },
+    {
+      "node_id": "page::SalesOrdersPage",
+      "node_type": "component",
+      "name": "SalesOrdersPage",
+      "file_path": "frontend/user-portal/src/pages/sales/SalesOrdersPage.tsx",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["SalesOrdersPage"],
+      "description": "Sales orders list page"
+    },
+    {
+      "node_id": "page::InventoryPage",
+      "node_type": "component",
+      "name": "InventoryPage",
+      "file_path": "frontend/user-portal/src/pages/sales/InventoryPage.tsx",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["InventoryPage"],
+      "description": "Sales inventory page"
+    },
+    {
+      "node_id": "page::PurchaseOrdersPage",
+      "node_type": "component",
+      "name": "PurchaseOrdersPage",
+      "file_path": "frontend/user-portal/src/pages/sales/PurchaseOrdersPage.tsx",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["PurchaseOrdersPage"],
+      "description": "Purchase orders page"
+    },
+    {
+      "node_id": "page::ReturnsPage",
+      "node_type": "component",
+      "name": "ReturnsPage",
+      "file_path": "frontend/user-portal/src/pages/sales/ReturnsPage.tsx",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["ReturnsPage"],
+      "description": "Returns management page"
+    },
+    {
+      "node_id": "page::MarketingDashboardPage",
+      "node_type": "component",
+      "name": "MarketingDashboardPage",
+      "file_path": "frontend/user-portal/src/pages/marketing/MarketingDashboardPage.tsx",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "frontend",
+      "exports": ["MarketingDashboardPage"],
+      "description": "Marketing module dashboard page"
+    },
+    {
+      "node_id": "page::CampaignManagementPage",
+      "node_type": "component",
+      "name": "CampaignManagementPage",
+      "file_path": "frontend/user-portal/src/pages/marketing/CampaignManagementPage.tsx",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "frontend",
+      "exports": ["CampaignManagementPage"],
+      "description": "Campaign management page"
+    },
+    {
+      "node_id": "page::BudgetManagementPage",
+      "node_type": "component",
+      "name": "BudgetManagementPage",
+      "file_path": "frontend/user-portal/src/pages/marketing/BudgetManagementPage.tsx",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "frontend",
+      "exports": ["BudgetManagementPage"],
+      "description": "Marketing budget management page"
+    },
+    {
+      "node_id": "page::EventManagementPage",
+      "node_type": "component",
+      "name": "EventManagementPage",
+      "file_path": "frontend/user-portal/src/pages/marketing/EventManagementPage.tsx",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "frontend",
+      "exports": ["EventManagementPage"],
+      "description": "Marketing event management page"
+    },
+    {
+      "node_id": "page::ChannelManagementPage",
+      "node_type": "component",
+      "name": "ChannelManagementPage",
+      "file_path": "frontend/user-portal/src/pages/marketing/ChannelManagementPage.tsx",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "frontend",
+      "exports": ["ChannelManagementPage"],
+      "description": "Marketing channel management page"
+    },
+    {
+      "node_id": "page::UserManagementPage",
+      "node_type": "component",
+      "name": "UserManagementPage",
+      "file_path": "frontend/user-portal/src/pages/admin/UserManagementPage.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["UserManagementPage"],
+      "description": "Admin user management page"
+    },
+    {
+      "node_id": "page::NotFound",
+      "node_type": "component",
+      "name": "NotFound",
+      "file_path": "frontend/user-portal/src/pages/NotFound.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["NotFound"],
+      "description": "404 Not Found page"
+    },
+    {
+      "node_id": "page::WasteInventoryList",
+      "node_type": "component",
+      "name": "WasteInventoryList",
+      "file_path": "frontend/user-portal/src/pages/inventory/WasteInventoryList.tsx",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["default: WasteInventoryList"],
+      "description": "Waste inventory list page"
+    },
+    {
+      "node_id": "page::ClearCache",
+      "node_type": "component",
+      "name": "ClearCache",
+      "file_path": "frontend/user-portal/src/pages/debug/ClearCache.tsx",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["ClearCache"],
+      "description": "Debug page for clearing browser cache and storage"
+    },
+    {
+      "node_id": "hook::useFarmAnalytics",
+      "node_type": "hook",
+      "name": "useFarmAnalytics",
+      "file_path": "frontend/user-portal/src/hooks/farm/useFarmAnalytics.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useFarmAnalytics"],
+      "description": "Fetches farm analytics from /v1/farm/farms/{farmId}/analytics via apiClient"
+    },
+    {
+      "node_id": "hook::useDashboardFilters",
+      "node_type": "hook",
+      "name": "useDashboardFilters",
+      "file_path": "frontend/user-portal/src/hooks/farm/useDashboardFilters.ts",
+      "line_number": 130,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useDashboardFilters", "SortOption", "SortDirection", "FilterState", "UseDashboardFiltersReturn"],
+      "description": "Client-side filtering/sorting for DashboardBlock[]. Supports state, search, performance, delay, alerts, farming year filters with sessionStorage persistence"
+    },
+    {
+      "node_id": "hook::useDashboardData",
+      "node_type": "hook",
+      "name": "useDashboardData",
+      "file_path": "frontend/user-portal/src/hooks/farm/useDashboardData.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useDashboardData"],
+      "description": "Fetches dashboard data from /v1/farm/dashboard/farms/{farmId} via apiClient with auto-refresh"
+    },
+    {
+      "node_id": "hook::useDashboardConfig",
+      "node_type": "hook",
+      "name": "useDashboardConfig",
+      "file_path": "frontend/user-portal/src/hooks/farm/useDashboardConfig.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useDashboardConfig", "DashboardConfig"],
+      "description": "LocalStorage-persisted dashboard color/icon/layout configuration. No API calls"
+    },
+    {
+      "node_id": "hook::useBlockActions",
+      "node_type": "hook",
+      "name": "useBlockActions",
+      "file_path": "frontend/user-portal/src/hooks/farm/useBlockActions.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useBlockActions"],
+      "description": "Quick transition and harvest actions via apiClient. PATCH quick-transition, POST quick-harvest"
+    },
+    {
+      "node_id": "hook::useBlockAnalytics",
+      "node_type": "hook",
+      "name": "useBlockAnalytics",
+      "file_path": "frontend/user-portal/src/hooks/farm/useBlockAnalytics.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useBlockAnalytics"],
+      "description": "Fetches block analytics from /v1/farm/farms/{farmId}/blocks/{blockId}/analytics via apiClient"
+    },
+    {
+      "node_id": "hook::useAIAnalytics",
+      "node_type": "hook",
+      "name": "useAIAnalytics",
+      "file_path": "frontend/user-portal/src/hooks/farm/useAIAnalytics.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useAIAnalytics"],
+      "description": "Sends AI analytics queries to /v1/ai/chat via apiClient. Manages conversation history"
+    },
+    {
+      "node_id": "hook::useFarmAIChat",
+      "node_type": "hook",
+      "name": "useFarmAIChat",
+      "file_path": "frontend/user-portal/src/hooks/farm/useFarmAIChat.ts",
+      "line_number": 26,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useFarmAIChat"],
+      "description": "Manages Farm AI chat state, message sending via sendFarmAIChat/confirmFarmAIAction from farmApi"
+    },
+    {
+      "node_id": "hook::useGlobalAnalytics",
+      "node_type": "hook",
+      "name": "useGlobalAnalytics",
+      "file_path": "frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useGlobalAnalytics"],
+      "description": "Fetches global farm analytics from /v1/farm/farms/analytics/global via apiClient"
+    },
+    {
+      "node_id": "hook::useWeatherData",
+      "node_type": "hook",
+      "name": "useWeatherData",
+      "file_path": "frontend/user-portal/src/hooks/farm/useWeatherData.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useWeatherData", "useHasWeatherCapability"],
+      "description": "Fetches weather data via weatherApi.getAgriData with auto-refresh"
+    },
+    {
+      "node_id": "hook::useFarms",
+      "node_type": "hook",
+      "name": "useFarms",
+      "file_path": "frontend/user-portal/src/hooks/queries/useFarms.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useFarms", "useFarm", "useFarmSummary", "useFarmBlocks", "useFarmHarvests", "useCreateFarm", "useUpdateFarm", "useDeleteFarm"],
+      "description": "React Query hooks for farm CRUD. Uses farmApi service and queryKeys config"
+    },
+    {
+      "node_id": "hook::useDashboard",
+      "node_type": "hook",
+      "name": "useDashboard",
+      "file_path": "frontend/user-portal/src/hooks/queries/useDashboard.ts",
+      "line_number": 1,
+      "module": "dashboard",
+      "layer": "frontend",
+      "exports": ["useDashboardSummary", "useFarmStats", "useSalesStats", "useOrdersByStatus", "useBlocksByFarm"],
+      "description": "React Query hooks for dashboard data. Uses dashboardDataService and queryKeys"
+    },
+    {
+      "node_id": "hook::useFarmingYears",
+      "node_type": "hook",
+      "name": "useFarmingYears",
+      "file_path": "frontend/user-portal/src/hooks/queries/useFarmingYears.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useAvailableFarmingYears", "useCurrentFarmingYear", "useFarmingYearsList", "useFarmingYearConfig"],
+      "description": "React Query hooks for farming year configuration. Uses farmApi and queryKeys"
+    },
+    {
+      "node_id": "hook::useMFA",
+      "node_type": "hook",
+      "name": "useMFA",
+      "file_path": "frontend/user-portal/src/hooks/queries/useMFA.ts",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["useMFASetup", "useEnableMFA", "useMFAStatus", "getCachedVerifyState"],
+      "description": "React Query hooks for MFA setup/enable/status. Uses apiClient with sessionStorage caching"
+    },
+    {
+      "node_id": "hook::useSales",
+      "node_type": "hook",
+      "name": "useSales",
+      "file_path": "frontend/user-portal/src/hooks/queries/useSales.ts",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["useSalesDashboard", "useSalesOrders", "useSalesOrder", "useInventory", "useAvailableInventory"],
+      "description": "React Query hooks for sales operations. Uses salesApi and queryKeys"
+    },
+    {
+      "node_id": "hook::usePageVisibility",
+      "node_type": "hook",
+      "name": "usePageVisibility",
+      "file_path": "frontend/user-portal/src/hooks/usePageVisibility.ts",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["usePageVisibility", "useIsMobile", "useIsPageVisible"],
+      "description": "Page Visibility API hooks for detecting tab focus and mobile device"
+    },
+    {
+      "node_id": "hook::useUnsavedChanges",
+      "node_type": "hook",
+      "name": "useUnsavedChanges",
+      "file_path": "frontend/user-portal/src/hooks/useUnsavedChanges.ts",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["useUnsavedChanges"],
+      "description": "beforeunload handler and UnsavedChangesContext integration for form dirty state tracking"
+    },
+    {
+      "node_id": "hook::useMapDrawing",
+      "node_type": "hook",
+      "name": "useMapDrawing",
+      "file_path": "frontend/user-portal/src/hooks/map/useMapDrawing.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["useMapDrawing"],
+      "description": "Polygon drawing state management with turf.js area calculations for map boundary editing"
+    },
+    {
+      "node_id": "service::api",
+      "node_type": "function",
+      "name": "apiClient",
+      "file_path": "frontend/user-portal/src/services/api.ts",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["default: apiClient"],
+      "description": "Axios instance with auth interceptors, token refresh queue, rate limit handling, error toast integration"
+    },
+    {
+      "node_id": "service::farmApi",
+      "node_type": "function",
+      "name": "farmApi",
+      "file_path": "frontend/user-portal/src/services/farmApi.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["farmApi", "getFarms", "getFarm", "createFarm", "updateFarm", "deleteFarm", "getBlocks", "getBlock", "createBlock", "updateBlock", "changeBlockStatus", "getBlockHarvests", "getBlockHarvestSummary", "getAvailableFarmingYears", "sendFarmAIChat", "confirmFarmAIAction"],
+      "description": "~80 exported functions for farms, blocks, plant data, plantings, alerts, harvests, archives, virtual blocks, spacing, farming year config, IoT, SenseHub, AI chat via apiClient"
+    },
+    {
+      "node_id": "service::authService",
+      "node_type": "function",
+      "name": "authService",
+      "file_path": "frontend/user-portal/src/services/auth.service.ts",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["authService", "LoginCredentials", "RegisterData", "AuthResponse", "User"],
+      "description": "AuthService singleton: login, register, logout, refresh, MFA. Calls /v1/auth/* via apiClient"
+    },
+    {
+      "node_id": "service::alertsApi",
+      "node_type": "function",
+      "name": "alertsApi",
+      "file_path": "frontend/user-portal/src/services/alertsApi.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["alertsApi"],
+      "description": "Alert CRUD, resolve, dismiss. Calls /v1/farm/farms/{farmId}/blocks/{blockId}/alerts/* via apiClient"
+    },
+    {
+      "node_id": "service::dashboardService",
+      "node_type": "function",
+      "name": "dashboardService",
+      "file_path": "frontend/user-portal/src/services/dashboard.service.ts",
+      "line_number": 1,
+      "module": "dashboard",
+      "layer": "frontend",
+      "exports": ["dashboardService", "DashboardService"],
+      "description": "DashboardService class for widget layout and data. Calls /v1/dashboard/* via apiClient"
+    },
+    {
+      "node_id": "service::dashboardDataService",
+      "node_type": "function",
+      "name": "dashboardDataService",
+      "file_path": "frontend/user-portal/src/services/dashboard-data.service.ts",
+      "line_number": 1,
+      "module": "dashboard",
+      "layer": "frontend",
+      "exports": ["dashboardDataService", "FarmStats", "SalesStats", "DashboardSummaryData"],
+      "description": "Aggregated dashboard data via /v1/farm/dashboard/summary plus legacy individual calls"
+    },
+    {
+      "node_id": "service::crmService",
+      "node_type": "function",
+      "name": "crmService",
+      "file_path": "frontend/user-portal/src/services/crmService.ts",
+      "line_number": 1,
+      "module": "crm",
+      "layer": "frontend",
+      "exports": ["crmService"],
+      "description": "Customer CRUD. Calls /v1/crm/customers/* via apiClient"
+    },
+    {
+      "node_id": "service::hrService",
+      "node_type": "function",
+      "name": "hrService",
+      "file_path": "frontend/user-portal/src/services/hrService.ts",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "frontend",
+      "exports": ["hrService"],
+      "description": "Employee, Contract, Visa, Insurance, Performance CRUD. Calls /v1/hr/* via apiClient"
+    },
+    {
+      "node_id": "service::salesService",
+      "node_type": "function",
+      "name": "salesService",
+      "file_path": "frontend/user-portal/src/services/salesService.ts",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["salesApi", "salesService"],
+      "description": "Orders, Inventory, Purchase Orders, Returns, Dashboard. Calls /v1/sales/* via apiClient"
+    },
+    {
+      "node_id": "service::logisticsService",
+      "node_type": "function",
+      "name": "logisticsService",
+      "file_path": "frontend/user-portal/src/services/logisticsService.ts",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "frontend",
+      "exports": ["logisticsService"],
+      "description": "Vehicles, Routes, Shipments, Dashboard. Calls /v1/logistics/* via apiClient"
+    },
+    {
+      "node_id": "service::marketingService",
+      "node_type": "function",
+      "name": "marketingService",
+      "file_path": "frontend/user-portal/src/services/marketingService.ts",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "frontend",
+      "exports": ["marketingService"],
+      "description": "Campaigns, Budgets, Channels, Events, Dashboard. Calls /v1/marketing/* via apiClient"
+    },
+    {
+      "node_id": "service::plantDataEnhancedApi",
+      "node_type": "function",
+      "name": "plantDataEnhancedApi",
+      "file_path": "frontend/user-portal/src/services/plantDataEnhancedApi.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["plantDataEnhancedApi", "formatFarmType", "getFarmTypeColor", "CSVImportResult", "PlantDataFilterOptions"],
+      "description": "Enhanced plant data CRUD, clone, CSV import/export. Calls /v1/farm/plant-data-enhanced/* via apiClient"
+    },
+    {
+      "node_id": "service::tasksApi",
+      "node_type": "function",
+      "name": "tasksApi",
+      "file_path": "frontend/user-portal/src/services/tasksApi.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["tasksApi", "getPendingTaskCount"],
+      "description": "Task CRUD, harvest entries, completion. Calls /v1/farm/tasks/* via apiClient"
+    },
+    {
+      "node_id": "service::weatherApi",
+      "node_type": "function",
+      "name": "weatherApi",
+      "file_path": "frontend/user-portal/src/services/weatherApi.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["weatherApi"],
+      "description": "Current weather, forecast, agri-data. Calls /v1/farm/farms/{farmId}/weather/* via apiClient"
+    },
+    {
+      "node_id": "service::inventoryApi",
+      "node_type": "function",
+      "name": "inventoryApi",
+      "file_path": "frontend/user-portal/src/services/inventoryApi.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["inventoryApi"],
+      "description": "Harvest/Input/Asset inventory CRUD, movements, categories. Calls /v1/farm/inventory/* via apiClient"
+    },
+    {
+      "node_id": "store::useAuthStore",
+      "node_type": "store",
+      "name": "useAuthStore",
+      "file_path": "frontend/user-portal/src/stores/auth.store.ts",
+      "line_number": 1,
+      "module": "auth",
+      "layer": "frontend",
+      "exports": ["useAuthStore"],
+      "description": "Zustand store with persist: user, isAuthenticated, isLoading, mfaRequired. Actions: login, register, logout, loadUser, verifyMfa. Uses authService"
+    },
+    {
+      "node_id": "store::useDashboardStore",
+      "node_type": "store",
+      "name": "useDashboardStore",
+      "file_path": "frontend/user-portal/src/stores/dashboard.store.ts",
+      "line_number": 1,
+      "module": "dashboard",
+      "layer": "frontend",
+      "exports": ["useDashboardStore", "waitForHydration", "WIDGET_CATALOG"],
+      "description": "Zustand store with persist: widgets, widgetData, layout. Uses dashboardDataService and queryClient"
+    },
+    {
+      "node_id": "store::useToastStore",
+      "node_type": "store",
+      "name": "useToastStore",
+      "file_path": "frontend/user-portal/src/stores/toast.store.ts",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["useToastStore", "showToast", "showErrorToast", "showSuccessToast", "showWarningToast", "showInfoToast", "Toast", "ToastType"],
+      "description": "Zustand toast notification store with convenience functions for success, error, warning, info toasts"
+    },
+    {
+      "node_id": "type::farm",
+      "node_type": "type",
+      "name": "farm types",
+      "file_path": "frontend/user-portal/src/types/farm.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockState", "PlantingStatus", "GeoJSONPolygon", "FarmBoundary", "Farm", "Block", "PlantData", "PlantDataEnhanced", "DashboardBlock", "DashboardBlockStatus", "DashboardData", "FarmSummary", "BlockSummary", "PerformanceCategory", "BLOCK_STATE_COLORS", "BLOCK_STATE_LABELS"],
+      "description": "Core farm type definitions: Farm, Block, PlantData, DashboardBlock, enums, constants for block states/colors"
+    },
+    {
+      "node_id": "type::alerts",
+      "node_type": "type",
+      "name": "alert types",
+      "file_path": "frontend/user-portal/src/types/alerts.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["AlertSeverity", "AlertStatus", "AlertType", "Alert", "CreateAlertRequest", "ResolveAlertRequest", "ListAlertsParams", "PaginatedAlertsResponse", "AlertSummary"],
+      "description": "Alert type definitions: severity, status, type enums and request/response interfaces"
+    },
+    {
+      "node_id": "type::analytics",
+      "node_type": "type",
+      "name": "analytics types",
+      "file_path": "frontend/user-portal/src/types/analytics.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["BlockInfo", "YieldAnalytics", "TimelineAnalytics", "TaskAnalytics", "PerformanceMetrics", "AlertAnalytics", "BlockAnalytics", "TimePeriod", "ChatMessage", "AIAnalyticsResponse", "AIAnalyticsChatRequest", "TIME_PERIOD_OPTIONS"],
+      "description": "Block analytics and AI analytics types: yield, timeline, task, performance, alert analytics and chat interfaces"
+    },
+    {
+      "node_id": "type::farmAI",
+      "node_type": "type",
+      "name": "farmAI types",
+      "file_path": "frontend/user-portal/src/types/farmAI.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["ChatMessage", "FarmAIChatRequest", "PendingAction", "GrowthStageInfo", "FarmAIChatResponse", "ConfirmActionRequest", "ConfirmActionResponse"],
+      "description": "Farm AI chat types: chat messages, pending actions, growth stage info, confirm action request/response"
+    },
+    {
+      "node_id": "type::farmAnalytics",
+      "node_type": "type",
+      "name": "farm-analytics types",
+      "file_path": "frontend/user-portal/src/types/farm-analytics.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["TimePeriod", "AggregatedMetrics", "StateBreakdown", "BlockComparisonItem", "HistoricalTrends", "FarmAnalyticsData", "TIME_PERIOD_OPTIONS"],
+      "description": "Farm-level analytics types: aggregated metrics, state breakdown, block comparison, historical trends"
+    },
+    {
+      "node_id": "type::globalAnalytics",
+      "node_type": "type",
+      "name": "global-analytics types",
+      "file_path": "frontend/user-portal/src/types/global-analytics.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["TimePeriod", "GlobalAggregatedMetrics", "GlobalStateBreakdown", "FarmSummary", "GlobalAnalyticsData", "GlobalPerformanceInsights", "TIME_PERIOD_OPTIONS"],
+      "description": "Global analytics types: system-wide aggregated metrics, farm summaries, performance insights"
+    },
+    {
+      "node_id": "type::tasks",
+      "node_type": "type",
+      "name": "task types",
+      "file_path": "frontend/user-portal/src/types/tasks.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["TaskType", "TaskStatus", "HarvestGrade", "Task", "TaskWithDetails", "CreateTaskRequest", "HarvestEntry", "HarvestSummary"],
+      "description": "Task type definitions: task type/status enums, harvest grade, task and harvest entry interfaces"
+    },
+    {
+      "node_id": "type::inventory",
+      "node_type": "type",
+      "name": "inventory types",
+      "file_path": "frontend/user-portal/src/types/inventory.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["InventoryType", "InputCategory", "AssetCategory", "AssetStatus", "QualityGrade", "HarvestInventory", "InputInventory", "AssetInventory"],
+      "description": "Inventory type definitions: harvest, input, asset inventory interfaces with category enums"
+    },
+    {
+      "node_id": "type::crm",
+      "node_type": "type",
+      "name": "crm types",
+      "file_path": "frontend/user-portal/src/types/crm.ts",
+      "line_number": 1,
+      "module": "crm",
+      "layer": "frontend",
+      "exports": ["CustomerType", "CustomerStatus", "Customer", "CustomerAddress"],
+      "description": "CRM type definitions: customer type/status enums, customer and address interfaces"
+    },
+    {
+      "node_id": "type::hr",
+      "node_type": "type",
+      "name": "hr types",
+      "file_path": "frontend/user-portal/src/types/hr.ts",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "frontend",
+      "exports": ["EmployeeStatus", "Employee", "ContractType"],
+      "description": "HR type definitions: employee status enum, employee and contract type interfaces"
+    },
+    {
+      "node_id": "type::logistics",
+      "node_type": "type",
+      "name": "logistics types",
+      "file_path": "frontend/user-portal/src/types/logistics.ts",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "frontend",
+      "exports": ["VehicleType", "VehicleStatus", "Vehicle"],
+      "description": "Logistics type definitions: vehicle type/status enums and vehicle interface"
+    },
+    {
+      "node_id": "type::marketing",
+      "node_type": "type",
+      "name": "marketing types",
+      "file_path": "frontend/user-portal/src/types/marketing.ts",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "frontend",
+      "exports": ["CampaignStatus", "MarketingCampaign", "CampaignMetrics"],
+      "description": "Marketing type definitions: campaign status enum, campaign and metrics interfaces"
+    },
+    {
+      "node_id": "type::sales",
+      "node_type": "type",
+      "name": "sales types",
+      "file_path": "frontend/user-portal/src/types/sales.ts",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["OrderStatus", "PaymentStatus", "SalesOrder", "OrderItem"],
+      "description": "Sales type definitions: order status/payment status enums, sales order and order item interfaces"
+    },
+    {
+      "node_id": "type::returns",
+      "node_type": "type",
+      "name": "returns types",
+      "file_path": "frontend/user-portal/src/types/returns.ts",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "frontend",
+      "exports": ["re-exports from sales.ts"],
+      "description": "Re-exports return-related types from sales.ts"
+    },
+    {
+      "node_id": "config::reactQuery",
+      "node_type": "file",
+      "name": "react-query.config",
+      "file_path": "frontend/user-portal/src/config/react-query.config.ts",
+      "line_number": 1,
+      "module": "shared",
+      "layer": "frontend",
+      "exports": ["queryClient", "queryKeys"],
+      "description": "QueryClient with optimized defaults (30s staleTime, 5m gcTime). Exports queryKeys factory for farms, blocks, sales, dashboard, mfa"
+    },
+    {
+      "node_id": "config::mapConfig",
+      "node_type": "file",
+      "name": "mapConfig",
+      "file_path": "frontend/user-portal/src/config/mapConfig.ts",
+      "line_number": 1,
+      "module": "farm",
+      "layer": "frontend",
+      "exports": ["MAP_STYLE_SATELLITE", "MAP_STYLE_OSM", "DEFAULT_CENTER", "DEFAULT_ZOOM", "FARM_POLYGON_STYLE", "BLOCK_POLYGON_COLORS", "DRAW_STYLES"],
+      "description": "Map configuration: UAE default center, satellite/OSM styles, polygon colors for block states, drawing styles"
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "file::App",
+      "target_id": "component::ProtectedRoute",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/components/common/ProtectedRoute.tsx",
+      "context": "App renders <ProtectedRoute /> wrapping all protected routes"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "component::MFARouteGuards",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/components/common/MFARouteGuards.tsx",
+      "context": "App renders <MFAVerifyGuard /> and <MFASetupGuard /> for MFA routes"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "component::MainLayout",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/components/layout/MainLayout.tsx",
+      "context": "App renders <MainLayout /> inside ProtectedRoute for all authenticated pages"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "component::ToastContainer",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/components/common/ToastContainer.tsx",
+      "context": "App renders <ToastContainer /> globally for toast notifications"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "component::UnsavedChangesDialog",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/components/common/UnsavedChangesDialog.tsx",
+      "context": "App renders <UnsavedChangesDialog /> globally for navigation warnings"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "config::reactQuery",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/config/react-query.config.ts",
+      "context": "App imports queryClient from react-query.config for QueryClientProvider"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "page::FarmManager",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/farm/FarmManager.tsx",
+      "context": "App lazy-loads and renders <FarmManager /> at /farm/* route"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "page::Dashboard",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/dashboard/Dashboard.tsx",
+      "context": "App lazy-loads and renders <Dashboard /> at /dashboard route"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "page::Login",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/auth/Login.tsx",
+      "context": "App lazy-loads and renders <Login /> at /login route"
+    },
+    {
+      "source_id": "file::App",
+      "target_id": "page::AIAnalytics",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/App.tsx",
+      "target_file": "frontend/user-portal/src/pages/ai/AIAnalytics.tsx",
+      "context": "App lazy-loads and renders <AIAnalytics /> at /ai-analytics route"
+    },
+    {
+      "source_id": "page::FarmManager",
+      "target_id": "component::FarmDashboard",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmManager.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/FarmDashboard.tsx",
+      "context": "FarmManager renders <FarmDashboard /> at /farm/dashboard sub-route"
+    },
+    {
+      "source_id": "page::FarmManager",
+      "target_id": "page::FarmDashboardPage",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmManager.tsx",
+      "target_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "context": "FarmManager renders <FarmDashboardPage /> at /farm/block-monitor sub-route"
+    },
+    {
+      "source_id": "page::FarmManager",
+      "target_id": "component::FarmList",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmManager.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/FarmList.tsx",
+      "context": "FarmManager renders <FarmList /> at /farm/farms sub-route"
+    },
+    {
+      "source_id": "page::FarmManager",
+      "target_id": "component::FarmDetail",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmManager.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/FarmDetail.tsx",
+      "context": "FarmManager renders <FarmDetail /> at /farm/farms/:farmId sub-route"
+    },
+    {
+      "source_id": "page::FarmManager",
+      "target_id": "component::BlockDetail",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmManager.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockDetail.tsx",
+      "context": "FarmManager renders <BlockDetail /> at /farm/farms/:farmId/blocks/:blockId sub-route"
+    },
+    {
+      "source_id": "page::FarmManager",
+      "target_id": "page::PlantDataLibrary",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmManager.tsx",
+      "target_file": "frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx",
+      "context": "FarmManager renders <PlantDataLibrary /> at /farm/plants sub-route"
+    },
+    {
+      "source_id": "page::FarmDashboardPage",
+      "target_id": "hook::useDashboardData",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useDashboardData.ts",
+      "context": "FarmDashboardPage uses useDashboardData hook to fetch block data"
+    },
+    {
+      "source_id": "page::FarmDashboardPage",
+      "target_id": "hook::useDashboardConfig",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useDashboardConfig.ts",
+      "context": "FarmDashboardPage uses useDashboardConfig for dashboard settings"
+    },
+    {
+      "source_id": "page::FarmDashboardPage",
+      "target_id": "hook::useDashboardFilters",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useDashboardFilters.ts",
+      "context": "FarmDashboardPage uses useDashboardFilters for block filtering/sorting"
+    },
+    {
+      "source_id": "page::FarmDashboardPage",
+      "target_id": "component::FarmSelector",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/dashboard/FarmSelector.tsx",
+      "context": "FarmDashboardPage renders <FarmSelector /> for farm selection"
+    },
+    {
+      "source_id": "page::FarmDashboardPage",
+      "target_id": "component::DashboardBlockGrid",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/dashboard/BlockGrid.tsx",
+      "context": "FarmDashboardPage renders dashboard <BlockGrid /> for block cards"
+    },
+    {
+      "source_id": "page::FarmDashboardPage",
+      "target_id": "component::DashboardFilters",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/dashboard/DashboardFilters.tsx",
+      "context": "FarmDashboardPage renders <DashboardFilters /> for filter controls"
+    },
+    {
+      "source_id": "page::FarmDashboardPage",
+      "target_id": "component::FarmAnalyticsModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/FarmAnalyticsModal.tsx",
+      "context": "FarmDashboardPage renders <FarmAnalyticsModal /> for farm analytics"
+    },
+    {
+      "source_id": "page::FarmDashboardPage",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "FarmDashboardPage calls getAvailableFarmingYears from farmApi"
+    },
+    {
+      "source_id": "component::FarmDashboard",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/farm/FarmDashboard.tsx",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "FarmDashboard calls farmApi for dashboard metrics"
+    },
+    {
+      "source_id": "component::FarmDashboard",
+      "target_id": "component::GlobalFarmAnalyticsModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/FarmDashboard.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx",
+      "context": "FarmDashboard renders <GlobalFarmAnalyticsModal />"
+    },
+    {
+      "source_id": "component::FarmList",
+      "target_id": "component::FarmCard",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/FarmList.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/FarmCard.tsx",
+      "context": "FarmList renders <FarmCard /> for each farm"
+    },
+    {
+      "source_id": "component::FarmList",
+      "target_id": "component::CreateFarmModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/FarmList.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/CreateFarmModal.tsx",
+      "context": "FarmList renders <CreateFarmModal />"
+    },
+    {
+      "source_id": "component::FarmList",
+      "target_id": "component::FarmAnalyticsModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/FarmList.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/FarmAnalyticsModal.tsx",
+      "context": "FarmList renders <FarmAnalyticsModal />"
+    },
+    {
+      "source_id": "component::FarmList",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/farm/FarmList.tsx",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "FarmList calls farmApi to fetch farms"
+    },
+    {
+      "source_id": "component::FarmList",
+      "target_id": "hook::useFarms",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/FarmList.tsx",
+      "target_file": "frontend/user-portal/src/hooks/queries/useFarms.ts",
+      "context": "FarmList uses useDeleteFarm mutation hook"
+    },
+    {
+      "source_id": "component::FarmDetail",
+      "target_id": "hook::useFarms",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/FarmDetail.tsx",
+      "target_file": "frontend/user-portal/src/hooks/queries/useFarms.ts",
+      "context": "FarmDetail uses useFarm, useFarmSummary, useFarmBlocks hooks"
+    },
+    {
+      "source_id": "component::FarmDetail",
+      "target_id": "component::BlockGrid",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/FarmDetail.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockGrid.tsx",
+      "context": "FarmDetail renders <BlockGrid />"
+    },
+    {
+      "source_id": "component::FarmDetail",
+      "target_id": "component::PhysicalBlockGrid",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/FarmDetail.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/PhysicalBlockGrid.tsx",
+      "context": "FarmDetail renders <PhysicalBlockGrid />"
+    },
+    {
+      "source_id": "component::FarmDetail",
+      "target_id": "component::FarmMapView",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/FarmDetail.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/FarmMapView.tsx",
+      "context": "FarmDetail renders <FarmMapView />"
+    },
+    {
+      "source_id": "component::FarmDetail",
+      "target_id": "component::CreateBlockModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/FarmDetail.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/CreateBlockModal.tsx",
+      "context": "FarmDetail renders <CreateBlockModal />"
+    },
+    {
+      "source_id": "component::BlockDetail",
+      "target_id": "component::BlockAlertsTab",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/BlockDetail.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockAlertsTab.tsx",
+      "context": "BlockDetail renders <BlockAlertsTab />"
+    },
+    {
+      "source_id": "component::BlockDetail",
+      "target_id": "component::BlockHarvestsTab",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/BlockDetail.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockHarvestsTab.tsx",
+      "context": "BlockDetail renders <BlockHarvestsTab />"
+    },
+    {
+      "source_id": "component::BlockDetail",
+      "target_id": "component::BlockAutomationTab",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/BlockDetail.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockAutomationTab.tsx",
+      "context": "BlockDetail renders <BlockAutomationTab />"
+    },
+    {
+      "source_id": "component::BlockDetail",
+      "target_id": "component::BlockArchivesTab",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/BlockDetail.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockArchivesTab.tsx",
+      "context": "BlockDetail renders <BlockArchivesTab />"
+    },
+    {
+      "source_id": "component::BlockDetail",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/farm/BlockDetail.tsx",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "BlockDetail calls farmApi for block data"
+    },
+    {
+      "source_id": "component::BlockGrid",
+      "target_id": "component::BlockCard",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/BlockGrid.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockCard.tsx",
+      "context": "BlockGrid renders <BlockCard /> for each block"
+    },
+    {
+      "source_id": "component::BlockCard",
+      "target_id": "component::PlantAssignmentModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/BlockCard.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/PlantAssignmentModal.tsx",
+      "context": "BlockCard renders <PlantAssignmentModal />"
+    },
+    {
+      "source_id": "component::BlockCard",
+      "target_id": "component::BlockAnalyticsModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/BlockCard.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx",
+      "context": "BlockCard renders <BlockAnalyticsModal />"
+    },
+    {
+      "source_id": "component::BlockCard",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/farm/BlockCard.tsx",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "BlockCard calls farmApi for block summary"
+    },
+    {
+      "source_id": "component::DashboardBlockGrid",
+      "target_id": "component::CompactBlockCard",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/dashboard/BlockGrid.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx",
+      "context": "Dashboard BlockGrid renders <CompactBlockCard />"
+    },
+    {
+      "source_id": "component::CompactBlockCard",
+      "target_id": "hook::useBlockActions",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useBlockActions.ts",
+      "context": "CompactBlockCard uses useBlockActions for quick transitions"
+    },
+    {
+      "source_id": "component::CompactBlockCard",
+      "target_id": "component::BlockDetailsModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockDetailsModal.tsx",
+      "context": "CompactBlockCard renders <BlockDetailsModal />"
+    },
+    {
+      "source_id": "component::CompactBlockCard",
+      "target_id": "component::BlockAnalyticsModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx",
+      "context": "CompactBlockCard renders <BlockAnalyticsModal />"
+    },
+    {
+      "source_id": "component::FarmAnalyticsModal",
+      "target_id": "hook::useFarmAnalytics",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/FarmAnalyticsModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useFarmAnalytics.ts",
+      "context": "FarmAnalyticsModal uses useFarmAnalytics hook"
+    },
+    {
+      "source_id": "component::BlockAnalyticsModal",
+      "target_id": "hook::useBlockAnalytics",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useBlockAnalytics.ts",
+      "context": "BlockAnalyticsModal uses useBlockAnalytics hook"
+    },
+    {
+      "source_id": "component::GlobalFarmAnalyticsModal",
+      "target_id": "hook::useGlobalAnalytics",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts",
+      "context": "GlobalFarmAnalyticsModal uses useGlobalAnalytics hook"
+    },
+    {
+      "source_id": "component::FarmAIChat",
+      "target_id": "hook::useFarmAIChat",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/FarmAIChat.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useFarmAIChat.ts",
+      "context": "FarmAIChat uses useFarmAIChat hook"
+    },
+    {
+      "source_id": "component::AIAnalyticsChat",
+      "target_id": "hook::useAIAnalytics",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx",
+      "target_file": "frontend/user-portal/src/hooks/farm/useAIAnalytics.ts",
+      "context": "AIAnalyticsChat uses useAIAnalytics hook"
+    },
+    {
+      "source_id": "page::AIAnalytics",
+      "target_id": "component::AIAnalyticsChat",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/ai/AIAnalytics.tsx",
+      "target_file": "frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx",
+      "context": "AIAnalytics page renders <AIAnalyticsChat />"
+    },
+    {
+      "source_id": "component::FarmSelector",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/farm/dashboard/FarmSelector.tsx",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "FarmSelector calls getFarms from farmApi"
+    },
+    {
+      "source_id": "component::BlockDetailsModal",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/farm/BlockDetailsModal.tsx",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "BlockDetailsModal calls getBlockHarvestSummary from farmApi"
+    },
+    {
+      "source_id": "component::CreateFarmModal",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/farm/CreateFarmModal.tsx",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "CreateFarmModal calls farmApi to create farms"
+    },
+    {
+      "source_id": "component::CreateFarmModal",
+      "target_id": "hook::useMapDrawing",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/CreateFarmModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/map/useMapDrawing.ts",
+      "context": "CreateFarmModal uses useMapDrawing for boundary drawing"
+    },
+    {
+      "source_id": "component::CreateFarmModal",
+      "target_id": "hook::useUnsavedChanges",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/CreateFarmModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/useUnsavedChanges.ts",
+      "context": "CreateFarmModal uses useUnsavedChanges for form dirty state"
+    },
+    {
+      "source_id": "component::CreateBlockModal",
+      "target_id": "hook::useMapDrawing",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/farm/CreateBlockModal.tsx",
+      "target_file": "frontend/user-portal/src/hooks/map/useMapDrawing.ts",
+      "context": "CreateBlockModal uses useMapDrawing for boundary drawing"
+    },
+    {
+      "source_id": "component::FarmMapView",
+      "target_id": "config::mapConfig",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/components/farm/FarmMapView.tsx",
+      "target_file": "frontend/user-portal/src/config/mapConfig.ts",
+      "context": "FarmMapView imports DEFAULT_CENTER and DEFAULT_ZOOM from mapConfig"
+    },
+    {
+      "source_id": "component::PlantDataCard",
+      "target_id": "service::plantDataEnhancedApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/farm/PlantDataCard.tsx",
+      "target_file": "frontend/user-portal/src/services/plantDataEnhancedApi.ts",
+      "context": "PlantDataCard calls formatFarmType from plantDataEnhancedApi"
+    },
+    {
+      "source_id": "page::PlantDataLibrary",
+      "target_id": "component::PlantDataCard",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/PlantDataCard.tsx",
+      "context": "PlantDataLibrary renders <PlantDataCard />"
+    },
+    {
+      "source_id": "page::PlantDataLibrary",
+      "target_id": "service::plantDataEnhancedApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx",
+      "target_file": "frontend/user-portal/src/services/plantDataEnhancedApi.ts",
+      "context": "PlantDataLibrary calls plantDataEnhancedApi for CRUD"
+    },
+    {
+      "source_id": "page::PlantDataLibrary",
+      "target_id": "store::useAuthStore",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx",
+      "target_file": "frontend/user-portal/src/stores/auth.store.ts",
+      "context": "PlantDataLibrary uses useAuthStore"
+    },
+    {
+      "source_id": "page::Login",
+      "target_id": "store::useAuthStore",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/pages/auth/Login.tsx",
+      "target_file": "frontend/user-portal/src/stores/auth.store.ts",
+      "context": "Login uses useAuthStore for login action"
+    },
+    {
+      "source_id": "page::Login",
+      "target_id": "hook::usePageVisibility",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/pages/auth/Login.tsx",
+      "target_file": "frontend/user-portal/src/hooks/usePageVisibility.ts",
+      "context": "Login uses usePageVisibility"
+    },
+    {
+      "source_id": "page::Dashboard",
+      "target_id": "store::useDashboardStore",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/pages/dashboard/Dashboard.tsx",
+      "target_file": "frontend/user-portal/src/stores/dashboard.store.ts",
+      "context": "Dashboard uses useDashboardStore"
+    },
+    {
+      "source_id": "page::Dashboard",
+      "target_id": "component::AddWidgetModal",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/pages/dashboard/Dashboard.tsx",
+      "target_file": "frontend/user-portal/src/components/dashboard/AddWidgetModal.tsx",
+      "context": "Dashboard renders <AddWidgetModal />"
+    },
+    {
+      "source_id": "component::ProtectedRoute",
+      "target_id": "store::useAuthStore",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/common/ProtectedRoute.tsx",
+      "target_file": "frontend/user-portal/src/stores/auth.store.ts",
+      "context": "ProtectedRoute uses useAuthStore to check auth"
+    },
+    {
+      "source_id": "component::MFARouteGuards",
+      "target_id": "store::useAuthStore",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/common/MFARouteGuards.tsx",
+      "target_file": "frontend/user-portal/src/stores/auth.store.ts",
+      "context": "MFARouteGuards uses useAuthStore to check MFA state"
+    },
+    {
+      "source_id": "component::MFARouteGuards",
+      "target_id": "hook::useMFA",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/common/MFARouteGuards.tsx",
+      "target_file": "frontend/user-portal/src/hooks/queries/useMFA.ts",
+      "context": "MFARouteGuards imports getCachedVerifyState from useMFA"
+    },
+    {
+      "source_id": "component::ToastContainer",
+      "target_id": "store::useToastStore",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/common/ToastContainer.tsx",
+      "target_file": "frontend/user-portal/src/stores/toast.store.ts",
+      "context": "ToastContainer uses useToastStore"
+    },
+    {
+      "source_id": "component::MainLayout",
+      "target_id": "store::useAuthStore",
+      "edge_type": "uses",
+      "source_file": "frontend/user-portal/src/components/layout/MainLayout.tsx",
+      "target_file": "frontend/user-portal/src/stores/auth.store.ts",
+      "context": "MainLayout uses useAuthStore for user info"
+    },
+    {
+      "source_id": "component::MainLayout",
+      "target_id": "service::tasksApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/components/layout/MainLayout.tsx",
+      "target_file": "frontend/user-portal/src/services/tasksApi.ts",
+      "context": "MainLayout calls getPendingTaskCount from tasksApi"
+    },
+    {
+      "source_id": "hook::useFarmAIChat",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/farm/useFarmAIChat.ts",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "useFarmAIChat calls sendFarmAIChat and confirmFarmAIAction"
+    },
+    {
+      "source_id": "hook::useFarmAnalytics",
+      "target_id": "service::api",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/farm/useFarmAnalytics.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "useFarmAnalytics calls apiClient.get"
+    },
+    {
+      "source_id": "hook::useBlockAnalytics",
+      "target_id": "service::api",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/farm/useBlockAnalytics.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "useBlockAnalytics calls apiClient.get"
+    },
+    {
+      "source_id": "hook::useGlobalAnalytics",
+      "target_id": "service::api",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "useGlobalAnalytics calls apiClient.get"
+    },
+    {
+      "source_id": "hook::useAIAnalytics",
+      "target_id": "service::api",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/farm/useAIAnalytics.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "useAIAnalytics calls apiClient.post"
+    },
+    {
+      "source_id": "hook::useDashboardData",
+      "target_id": "service::api",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/farm/useDashboardData.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "useDashboardData calls apiClient.get"
+    },
+    {
+      "source_id": "hook::useBlockActions",
+      "target_id": "service::api",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/farm/useBlockActions.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "useBlockActions calls apiClient"
+    },
+    {
+      "source_id": "hook::useWeatherData",
+      "target_id": "service::weatherApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/farm/useWeatherData.ts",
+      "target_file": "frontend/user-portal/src/services/weatherApi.ts",
+      "context": "useWeatherData calls weatherApi.getAgriData"
+    },
+    {
+      "source_id": "hook::useFarms",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/queries/useFarms.ts",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "useFarms hooks call farmApi via React Query"
+    },
+    {
+      "source_id": "hook::useFarms",
+      "target_id": "config::reactQuery",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/hooks/queries/useFarms.ts",
+      "target_file": "frontend/user-portal/src/config/react-query.config.ts",
+      "context": "useFarms imports queryKeys from react-query.config"
+    },
+    {
+      "source_id": "hook::useDashboard",
+      "target_id": "service::dashboardDataService",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/queries/useDashboard.ts",
+      "target_file": "frontend/user-portal/src/services/dashboard-data.service.ts",
+      "context": "useDashboard hooks call dashboardDataService"
+    },
+    {
+      "source_id": "hook::useSales",
+      "target_id": "service::salesService",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/queries/useSales.ts",
+      "target_file": "frontend/user-portal/src/services/salesService.ts",
+      "context": "useSales hooks call salesApi"
+    },
+    {
+      "source_id": "hook::useMFA",
+      "target_id": "service::api",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/queries/useMFA.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "useMFA hooks call apiClient"
+    },
+    {
+      "source_id": "hook::useFarmingYears",
+      "target_id": "service::farmApi",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/hooks/queries/useFarmingYears.ts",
+      "target_file": "frontend/user-portal/src/services/farmApi.ts",
+      "context": "useFarmingYears hooks call farmApi"
+    },
+    {
+      "source_id": "store::useAuthStore",
+      "target_id": "service::authService",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/stores/auth.store.ts",
+      "target_file": "frontend/user-portal/src/services/auth.service.ts",
+      "context": "useAuthStore calls authService for auth operations"
+    },
+    {
+      "source_id": "store::useDashboardStore",
+      "target_id": "service::dashboardDataService",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/stores/dashboard.store.ts",
+      "target_file": "frontend/user-portal/src/services/dashboard-data.service.ts",
+      "context": "useDashboardStore calls dashboardDataService"
+    },
+    {
+      "source_id": "service::farmApi",
+      "target_id": "service::api",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "farmApi imports apiClient from api.ts"
+    },
+    {
+      "source_id": "service::authService",
+      "target_id": "service::api",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "authService imports apiClient from api.ts"
+    },
+    {
+      "source_id": "service::alertsApi",
+      "target_id": "service::api",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/services/alertsApi.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "alertsApi imports apiClient from api.ts"
+    },
+    {
+      "source_id": "service::plantDataEnhancedApi",
+      "target_id": "service::api",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/services/plantDataEnhancedApi.ts",
+      "target_file": "frontend/user-portal/src/services/api.ts",
+      "context": "plantDataEnhancedApi imports apiClient from api.ts"
+    },
+    {
+      "source_id": "service::api",
+      "target_id": "store::useToastStore",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/services/api.ts",
+      "target_file": "frontend/user-portal/src/stores/toast.store.ts",
+      "context": "apiClient imports showErrorToast from toast.store"
+    },
+    {
+      "source_id": "component::FarmList",
+      "target_id": "store::useToastStore",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/components/farm/FarmList.tsx",
+      "target_file": "frontend/user-portal/src/stores/toast.store.ts",
+      "context": "FarmList imports showSuccessToast, showErrorToast"
+    },
+    {
+      "source_id": "component::CreateFarmModal",
+      "target_id": "store::useToastStore",
+      "edge_type": "imports",
+      "source_file": "frontend/user-portal/src/components/farm/CreateFarmModal.tsx",
+      "target_file": "frontend/user-portal/src/stores/toast.store.ts",
+      "context": "CreateFarmModal imports showSuccessToast, showErrorToast"
+    },
+    {
+      "source_id": "component::PhysicalBlockGrid",
+      "target_id": "component::PhysicalBlockCard",
+      "edge_type": "renders",
+      "source_file": "frontend/user-portal/src/components/farm/PhysicalBlockGrid.tsx",
+      "target_file": "frontend/user-portal/src/components/farm/PhysicalBlockCard.tsx",
+      "context": "PhysicalBlockGrid renders <PhysicalBlockCard />"
+    }
+  ]
+}

@@ -61,14 +61,11 @@ class HarvestService:
         # Create harvest record
         harvest = await HarvestRepository.create(harvest_data, user_id, user_email)
 
-        # Update block KPI
-        new_total_yield = block.kpi.actualYieldKg + harvest_data.quantityKg
-        new_harvest_count = block.kpi.totalHarvests + 1
-
-        await BlockRepository.update_kpi(
+        # Update block KPI atomically (avoids race conditions during bulk imports)
+        await BlockRepository.increment_kpi(
             harvest_data.blockId,
-            actual_yield_kg=new_total_yield,
-            total_harvests=new_harvest_count
+            yield_kg_delta=harvest_data.quantityKg,
+            harvest_count_delta=1
         )
 
         # Get user's organizationId for inventory
@@ -370,17 +367,12 @@ class HarvestService:
         if not success:
             raise HTTPException(500, "Failed to delete harvest")
 
-        # Update block KPI
-        block = await BlockRepository.get_by_id(block_id)
-        if block:
-            new_total_yield = max(0, block.kpi.actualYieldKg - quantity_to_subtract)
-            new_harvest_count = max(0, block.kpi.totalHarvests - 1)
-
-            await BlockRepository.update_kpi(
-                block_id,
-                actual_yield_kg=new_total_yield,
-                total_harvests=new_harvest_count
-            )
+        # Update block KPI atomically
+        await BlockRepository.increment_kpi(
+            block_id,
+            yield_kg_delta=-quantity_to_subtract,
+            harvest_count_delta=-1
+        )
 
         logger.info(f"[Harvest Service] Deleted harvest {harvest_id} and updated block KPI")
         return success

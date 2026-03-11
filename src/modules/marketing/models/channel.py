@@ -64,6 +64,10 @@ class Channel(ChannelBase):
     """Complete channel model with all fields"""
     channelId: UUID = Field(default_factory=uuid4, description="Unique channel identifier")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdBy: UUID = Field(..., description="User ID who created this channel")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

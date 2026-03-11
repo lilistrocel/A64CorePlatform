@@ -103,11 +103,11 @@ class SupportTypeEnum(str, Enum):
 
 class GrowthCycleDuration(BaseModel):
     """Detailed growth cycle breakdown"""
-    germinationDays: int = Field(..., ge=0, description="Days for seed germination")
-    vegetativeDays: int = Field(..., ge=0, description="Days of vegetative growth")
+    germinationDays: int = Field(0, ge=0, description="Days for seed germination")
+    vegetativeDays: int = Field(0, ge=0, description="Days of vegetative growth")
     floweringDays: int = Field(0, ge=0, description="Days of flowering stage (0 if not applicable)")
     fruitingDays: int = Field(0, ge=0, description="Days of fruiting stage (0 if not applicable)")
-    harvestDurationDays: int = Field(..., ge=0, description="Duration of harvest period in days")
+    harvestDurationDays: int = Field(0, ge=0, description="Duration of harvest period in days")
     totalCycleDays: int = Field(..., gt=0, description="Total growth cycle from seed to harvest")
 
     @field_validator('totalCycleDays')
@@ -132,6 +132,7 @@ class YieldInfo(BaseModel):
     """Yield and waste information"""
     yieldPerPlant: float = Field(..., gt=0, description="Expected yield per plant")
     yieldUnit: str = Field(..., description="Unit of measurement (kg, lbs, units, etc.)")
+    seedsPerPlantingPoint: int = Field(1, ge=1, description="Number of seeds/plants per planting point (drip). Defaults to 1 for single-plant setups.")
     expectedWastePercentage: float = Field(0, ge=0, le=100, description="Expected waste/loss percentage")
 
 
@@ -254,6 +255,87 @@ class AdditionalInformation(BaseModel):
     notes: Optional[str] = Field(None, description="Additional cultivation notes")
 
 
+# ==================== Fertigation Models ====================
+
+class IngredientCategoryEnum(str, Enum):
+    """Fertigation ingredient categories"""
+    MACRO_NPK = "macro_npk"          # Urea, 28.14.14, 20.20.20, 12.61.0, MAP, MKP
+    POTASSIUM = "potassium"          # K-Sulfate, K-Nitrate, 0.0.60
+    CALCIUM = "calcium"              # Cal Nitrate, Calmin Bor
+    MICRONUTRIENT = "micronutrient"  # Chelated Micro, Ferro, MG+Zn
+    SUPPLEMENT = "supplement"        # Amino Acids, Humic, Mg Sulfate, Phosphoric Acid
+    OTHER = "other"
+
+
+class FertigationRuleTypeEnum(str, Enum):
+    """Types of fertigation application rules"""
+    INTERVAL = "interval"  # Regular frequency: every N days
+    CUSTOM = "custom"      # Irregular: explicit day-by-day schedule
+
+
+class FertigationIngredient(BaseModel):
+    """A single ingredient with dosage for a fertigation rule"""
+    name: str = Field(..., description="Ingredient name (e.g., 'Cal Nitrate', 'Urea')")
+    category: IngredientCategoryEnum = Field(IngredientCategoryEnum.OTHER, description="Ingredient category for grouping")
+    dosagePerPoint: float = Field(..., ge=0, description="Dosage per planting point per application")
+    unit: str = Field("g", description="Unit of dosage (g, ml, kg, L)")
+
+
+class CustomApplication(BaseModel):
+    """A single day's application in a custom (day-by-day) schedule"""
+    day: int = Field(..., ge=0, description="Day number relative to card dayStart")
+    ingredients: List[FertigationIngredient] = Field(..., description="Ingredients to apply on this day")
+
+
+class FertigationRule(BaseModel):
+    """
+    A fertigation application rule. Groups ingredients that share the same schedule.
+
+    - type='interval': ingredients applied every N days within a day range
+    - type='custom': ingredients applied on explicit days with potentially varying dosages
+    """
+    name: str = Field(..., description="Human-readable rule name (e.g., 'Weekly Base Feed')")
+    type: FertigationRuleTypeEnum = Field(..., description="Rule type: 'interval' (regular) or 'custom' (day-by-day)")
+
+    # For interval rules
+    frequencyDays: Optional[int] = Field(None, gt=0, description="Apply every N days (interval type only)")
+    activeDayStart: Optional[int] = Field(None, ge=0, description="First application day relative to planting (interval type only)")
+    activeDayEnd: Optional[int] = Field(None, ge=0, description="Last application day relative to planting (interval type only)")
+    ingredients: Optional[List[FertigationIngredient]] = Field(None, description="Ingredients applied per this rule (interval type only)")
+
+    # For custom rules
+    applications: Optional[List[CustomApplication]] = Field(None, description="Explicit day-by-day applications (custom type only)")
+
+
+class FertigationCard(BaseModel):
+    """
+    A fertigation card for a specific growth stage.
+
+    Contains one or more application rules that define what to apply and when.
+    Automation systems load the active card based on the block's growth stage
+    and evaluate each rule to determine the day's recipe.
+    """
+    cardName: str = Field(..., description="Card label (e.g., 'Full Cycle', 'Vegetative Growth')")
+    growthStage: str = Field(..., description="Growth stage this card applies to (general, germination, vegetative, flowering, fruiting, harvest)")
+    dayStart: int = Field(..., ge=0, description="First day this card is active (relative to planting)")
+    dayEnd: int = Field(..., ge=0, description="Last day this card is active (relative to planting)")
+    rules: List[FertigationRule] = Field(default_factory=list, description="Application rules for this card")
+    notes: Optional[str] = Field(None, description="Additional notes about this fertigation card")
+    isActive: bool = Field(True, description="Whether this card is currently active")
+
+
+class FertigationSchedule(BaseModel):
+    """
+    Complete fertigation schedule for a plant, composed of one or more cards.
+
+    Embedded in plant_data_enhanced. Each card covers a growth stage.
+    For legacy migration, a single 'Full Cycle' card is created.
+    """
+    cards: List[FertigationCard] = Field(default_factory=list, description="Fertigation cards by growth stage")
+    totalFertilizationDays: int = Field(0, ge=0, description="Total days requiring fertigation")
+    source: str = Field("manual", description="Data source: 'legacy_migration' or 'manual'")
+
+
 # ==================== Main Plant Data Models ====================
 
 class PlantDataEnhancedBase(BaseModel):
@@ -271,13 +353,13 @@ class PlantDataEnhancedBase(BaseModel):
     yieldInfo: YieldInfo = Field(..., description="Yield and waste information")
 
     # ===== 4. Environmental Requirements =====
-    environmentalRequirements: EnvironmentalRequirements = Field(..., description="Environmental conditions")
+    environmentalRequirements: Optional[EnvironmentalRequirements] = Field(None, description="Environmental conditions")
 
     # ===== 5. Watering Requirements =====
-    wateringRequirements: WateringRequirements = Field(..., description="Watering specifications")
+    wateringRequirements: Optional[WateringRequirements] = Field(None, description="Watering specifications")
 
     # ===== 6. pH & Soil Requirements =====
-    soilRequirements: SoilRequirements = Field(..., description="Soil and pH requirements")
+    soilRequirements: Optional[SoilRequirements] = Field(None, description="Soil and pH requirements")
 
     # ===== 7. Disease & Pest Management =====
     diseasesAndPests: List[DiseaseOrPest] = Field(
@@ -286,7 +368,7 @@ class PlantDataEnhancedBase(BaseModel):
     )
 
     # ===== 8. Light Requirements =====
-    lightRequirements: LightRequirements = Field(..., description="Light and photoperiod requirements")
+    lightRequirements: Optional[LightRequirements] = Field(None, description="Light and photoperiod requirements")
 
     # ===== 9. Grading Standards =====
     gradingStandards: List[QualityGrade] = Field(
@@ -295,12 +377,18 @@ class PlantDataEnhancedBase(BaseModel):
     )
 
     # ===== 10. Economics & Labor =====
-    economicsAndLabor: EconomicsAndLabor = Field(..., description="Economic and labor information")
+    economicsAndLabor: Optional[EconomicsAndLabor] = Field(None, description="Economic and labor information")
 
     # ===== 11. Additional Information =====
-    additionalInfo: AdditionalInformation = Field(..., description="Additional agronomic details")
+    additionalInfo: Optional[AdditionalInformation] = Field(None, description="Additional agronomic details")
 
-    # ===== 12. Spacing Category =====
+    # ===== 12. Fertigation Schedule =====
+    fertigationSchedule: Optional[FertigationSchedule] = Field(
+        None,
+        description="Fertigation schedule with growth-stage cards and application rules. Dosages are per planting point."
+    )
+
+    # ===== 13. Spacing Category =====
     spacingCategory: Optional[SpacingCategory] = Field(
         None,
         description="Spacing category for quick density calculations (xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree). Overrides additionalInfo.spacing.plantsPerSquareMeter if set."
@@ -342,6 +430,7 @@ class PlantDataEnhancedUpdate(BaseModel):
     gradingStandards: Optional[List[QualityGrade]] = None
     economicsAndLabor: Optional[EconomicsAndLabor] = None
     additionalInfo: Optional[AdditionalInformation] = None
+    fertigationSchedule: Optional[FertigationSchedule] = None
     spacingCategory: Optional[SpacingCategory] = None
     contributor: Optional[str] = Field(None, max_length=100)
     targetRegion: Optional[str] = Field(None, max_length=100)
@@ -360,6 +449,10 @@ class PlantDataEnhanced(PlantDataEnhancedBase):
 
     # Active status (only active plants shown in dropdowns for planting)
     isActive: bool = Field(True, description="Whether this plant data is active and available for use in planting")
+
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
 
     # Audit fields
     createdBy: UUID = Field(..., description="User ID who created this data")
@@ -420,6 +513,7 @@ class PlantDataLegacy(BaseModel):
     sunlightHoursDaily: Optional[str] = None
     expectedYieldPerPlant: float
     yieldUnit: str
+    seedsPerPlantingPoint: int = 1
     notes: Optional[str] = None
     tags: Optional[List[str]] = None
     dataVersion: int = 1
@@ -445,6 +539,7 @@ class PlantDataLegacy(BaseModel):
             sunlightHoursDaily=f"{enhanced.lightRequirements.minHoursDaily}-{enhanced.lightRequirements.maxHoursDaily}",
             expectedYieldPerPlant=enhanced.yieldInfo.yieldPerPlant,
             yieldUnit=enhanced.yieldInfo.yieldUnit,
+            seedsPerPlantingPoint=enhanced.yieldInfo.seedsPerPlantingPoint,
             notes=enhanced.additionalInfo.notes,
             tags=enhanced.tags,
             dataVersion=enhanced.dataVersion,

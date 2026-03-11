@@ -41,6 +41,7 @@ export interface FarmAnalyticsModalProps {
   onClose: () => void;
   farmId: string | null;
   farmName?: string;
+  farmingYear?: number | null;
 }
 
 // ============================================================================
@@ -81,10 +82,10 @@ const STATE_ICONS: Record<string, string> = {
 // COMPONENT
 // ============================================================================
 
-export function FarmAnalyticsModal({ isOpen, onClose, farmId, farmName }: FarmAnalyticsModalProps) {
+export function FarmAnalyticsModal({ isOpen, onClose, farmId, farmName, farmingYear }: FarmAnalyticsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [period, setPeriod] = useState<TimePeriod>('30d');
-  const { analytics, loading, error, refetch } = useFarmAnalytics(farmId, period);
+  const { analytics, loading, error, refetch } = useFarmAnalytics(farmId, period, farmingYear);
 
   // Reset to overview tab when modal opens
   useEffect(() => {

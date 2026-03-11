@@ -2,12 +2,63 @@ import { useState, useEffect, useContext, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
+import { useDivisionStore } from '../../stores/division.store';
 import { getPendingTaskCount } from '../../services/tasksApi';
 import { Button } from '@a64core/shared';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
+import { DivisionSwitcher } from './DivisionSwitcher';
+
+// ─── Navigation item definitions ────────────────────────────────────────────
+
+interface NavItemDef {
+  to: string;
+  icon: string;
+  label: string;
+  showBadge?: boolean;
+}
+
+// Navigation shown for every industry type
+const SHARED_NAV_ITEMS: NavItemDef[] = [
+  { to: '/dashboard', icon: '📊', label: 'Dashboard' },
+];
+
+const SHARED_BOTTOM_NAV_ITEMS: NavItemDef[] = [
+  { to: '/crm/customers', icon: '👥', label: 'CRM' },
+  { to: '/hr', icon: '👔', label: 'HR' },
+  { to: '/logistics', icon: '🚚', label: 'Logistics' },
+  { to: '/sales', icon: '💰', label: 'Sales' },
+  { to: '/marketing', icon: '📢', label: 'Marketing' },
+  { to: '/ai-analytics', icon: '🤖', label: 'AI Analytics' },
+  { to: '/ai-dashboard', icon: '📋', label: 'AI Dashboard' },
+  { to: '/profile', icon: '👤', label: 'Profile' },
+  { to: '/settings', icon: '⚙️', label: 'Settings' },
+];
+
+// Industry-specific navigation items
+const VEGETABLE_FRUITS_NAV: NavItemDef[] = [
+  { to: '/farm/dashboard', icon: '🏞️', label: 'Farm Manager' },
+  { to: '/farm/block-monitor', icon: '🌾', label: 'Block Monitor' },
+  { to: '/operations', icon: '📋', label: 'Operations', showBadge: true },
+  { to: '/inventory', icon: '📦', label: 'Inventory' },
+];
+
+const MUSHROOM_NAV: NavItemDef[] = [
+  { to: '/mushroom/dashboard', icon: '🍄', label: 'Mushroom Dashboard' },
+  { to: '/mushroom/rooms', icon: '🏠', label: 'Room Monitor' },
+  { to: '/mushroom/facilities', icon: '🏭', label: 'Facilities' },
+  { to: '/mushroom/strains', icon: '🧬', label: 'Strain Library' },
+];
+
+// Admin-only navigation (super_admin role required)
+const ADMIN_NAV_ITEMS: NavItemDef[] = [
+  { to: '/admin/users', icon: '🛡️', label: 'User Management' },
+];
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function MainLayout() {
   const { user, logout } = useAuthStore();
+  const { currentDivision } = useDivisionStore();
   const navigate = useNavigate();
   const location = useLocation();
   const unsavedChanges = useContext(UnsavedChangesContext);
@@ -22,24 +73,26 @@ export function MainLayout() {
   }, []);
 
   // Intercept sidebar navigation clicks when form has unsaved changes
-  const handleNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, to: string) => {
-    if (unsavedChanges?.isDirty) {
-      // Don't navigate if clicking the same page
-      if (location.pathname === to) return;
-      e.preventDefault();
-      unsavedChanges.checkNavigationAllowed(to, () => {
-        navigate(to);
-      });
-    }
-    closeMobileMenu();
-  }, [unsavedChanges, location.pathname, navigate]);
+  const handleNavClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, to: string) => {
+      if (unsavedChanges?.isDirty) {
+        if (location.pathname === to) return;
+        e.preventDefault();
+        unsavedChanges.checkNavigationAllowed(to, () => {
+          navigate(to);
+        });
+      }
+      closeMobileMenu();
+    },
+    [unsavedChanges, location.pathname, navigate]
+  );
 
   const loadPendingTaskCount = async () => {
     try {
       const count = await getPendingTaskCount();
       setPendingTaskCount(count);
     } catch (error) {
-      console.error('Failed to load pending task count:', error);
+      // Non-critical — fail silently so the layout still renders
     }
   };
 
@@ -50,84 +103,72 @@ export function MainLayout() {
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
+  // Determine which industry-specific nav items to show
+  const industryNavItems: NavItemDef[] =
+    currentDivision?.industryType === 'mushroom' ? MUSHROOM_NAV : VEGETABLE_FRUITS_NAV;
+
+  // Build the full ordered navigation list
+  const navItems: NavItemDef[] = [
+    ...SHARED_NAV_ITEMS,
+    ...industryNavItems,
+    ...SHARED_BOTTOM_NAV_ITEMS,
+    ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
+  ];
+
   return (
     <LayoutContainer>
       {/* Mobile Header */}
       <MobileHeader>
-        <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
-        <MenuButton onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle menu">
+        <Logo>
+          <LogoImg src="/a64logo_dark.png" alt="A64 Core" />
+        </Logo>
+        <MenuButton
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
           <span></span>
           <span></span>
           <span></span>
         </MenuButton>
       </MobileHeader>
 
-      {/* Sidebar - Hidden on mobile, visible on desktop */}
+      {/* Sidebar */}
       <Sidebar $isOpen={isMobileMenuOpen} aria-label="Sidebar">
         <SidebarHeader>
-          <Logo><LogoImg src="/a64logo_dark.png" alt="A64 Core" /></Logo>
+          <Logo>
+            <LogoImg src="/a64logo_dark.png" alt="A64 Core" />
+          </Logo>
           <UserInfo>
-            <UserName>{user?.firstName} {user?.lastName}</UserName>
+            <UserName>
+              {user?.firstName} {user?.lastName}
+            </UserName>
             <UserRole>{user?.role || 'User'}</UserRole>
           </UserInfo>
+
+          {/* Division switcher sits between user info and the main nav */}
+          <DivisionSwitcherWrapper>
+            <DivisionSwitcher />
+          </DivisionSwitcherWrapper>
         </SidebarHeader>
 
         <Nav aria-label="Main navigation">
-          <NavItem to="/dashboard" onClick={(e) => handleNavClick(e, '/dashboard')}>
-            <NavIcon>📊</NavIcon>
-            <span>Dashboard</span>
-          </NavItem>
-          <NavItem to="/farm/dashboard" onClick={(e) => handleNavClick(e, '/farm/dashboard')}>
-            <NavIcon>🏞️</NavIcon>
-            <span>Farm Manager</span>
-          </NavItem>
-          <NavItem to="/farm/block-monitor" onClick={(e) => handleNavClick(e, '/farm/block-monitor')}>
-            <NavIcon>🌾</NavIcon>
-            <span>Block Monitor</span>
-          </NavItem>
-          <NavItem to="/operations" onClick={(e) => handleNavClick(e, '/operations')}>
-            <NavIcon>📋</NavIcon>
-            <NavContent>
-              <span>Operations</span>
-              {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
-            </NavContent>
-          </NavItem>
-          <NavItem to="/inventory" onClick={(e) => handleNavClick(e, '/inventory')}>
-            <NavIcon>📦</NavIcon>
-            <span>Inventory</span>
-          </NavItem>
-          <NavItem to="/crm/customers" onClick={(e) => handleNavClick(e, '/crm/customers')}>
-            <NavIcon>👥</NavIcon>
-            <span>CRM</span>
-          </NavItem>
-          <NavItem to="/hr" onClick={(e) => handleNavClick(e, '/hr')}>
-            <NavIcon>👔</NavIcon>
-            <span>HR</span>
-          </NavItem>
-          <NavItem to="/logistics" onClick={(e) => handleNavClick(e, '/logistics')}>
-            <NavIcon>🚚</NavIcon>
-            <span>Logistics</span>
-          </NavItem>
-          <NavItem to="/sales" onClick={(e) => handleNavClick(e, '/sales')}>
-            <NavIcon>💰</NavIcon>
-            <span>Sales</span>
-          </NavItem>
-          <NavItem to="/marketing" onClick={(e) => handleNavClick(e, '/marketing')}>
-            <NavIcon>📢</NavIcon>
-            <span>Marketing</span>
-          </NavItem>
-          <NavItem to="/ai-analytics" onClick={(e) => handleNavClick(e, '/ai-analytics')}>
-            <NavIcon>🤖</NavIcon>
-            <span>AI Analytics</span>
-          </NavItem>
-          <NavItem to="/profile" onClick={(e) => handleNavClick(e, '/profile')}>
-            <NavIcon>👤</NavIcon>
-            <span>Profile</span>
-          </NavItem>
-          <NavItem to="/settings" onClick={(e) => handleNavClick(e, '/settings')}>
-            <NavIcon>⚙️</NavIcon>
-            <span>Settings</span>
-          </NavItem>
+          {navItems.map((item) => (
+            <NavItem
+              key={item.to}
+              to={item.to}
+              onClick={(e) => handleNavClick(e, item.to)}
+            >
+              <NavIcon>{item.icon}</NavIcon>
+              {item.showBadge ? (
+                <NavContent>
+                  <span>{item.label}</span>
+                  {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
+                </NavContent>
+              ) : (
+                <span>{item.label}</span>
+              )}
+            </NavItem>
+          ))}
         </Nav>
 
         <SidebarFooter>
@@ -147,6 +188,8 @@ export function MainLayout() {
     </LayoutContainer>
   );
 }
+
+// ─── Styled Components ───────────────────────────────────────────────────────
 
 const LayoutContainer = styled.div`
   display: flex;
@@ -245,13 +288,15 @@ const SidebarHeader = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.md};
 `;
 
 const Logo = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.primary[500]};
-  margin-bottom: ${({ theme }) => theme.spacing.md};
 
   @media (min-width: 1024px) {
     font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
@@ -285,6 +330,10 @@ const UserRole = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: capitalize;
+`;
+
+const DivisionSwitcherWrapper = styled.div`
+  /* Provides consistent vertical spacing between user info and the switcher */
 `;
 
 const Nav = styled.nav`

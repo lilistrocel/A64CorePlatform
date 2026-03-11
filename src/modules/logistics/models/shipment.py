@@ -78,6 +78,10 @@ class Shipment(ShipmentBase):
     shipmentId: UUID = Field(default_factory=uuid4, description="Unique shipment identifier")
     shipmentCode: Optional[str] = Field(None, description="Human-readable shipment code (e.g., SH001)")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdBy: UUID = Field(..., description="User ID who created this shipment")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

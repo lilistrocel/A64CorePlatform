@@ -234,6 +234,7 @@ export function FarmDashboardPage() {
         onClose={() => setShowAnalytics(false)}
         farmId={selectedFarmId}
         farmName={dashboardData?.farmInfo.name}
+        farmingYear={selectedFarmingYear}
       />
     </Container>
   );

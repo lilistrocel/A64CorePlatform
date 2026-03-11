@@ -51,6 +51,10 @@ class Insurance(InsuranceBase):
     """Complete insurance model with all fields"""
     insuranceId: UUID = Field(default_factory=uuid4, description="Unique insurance identifier")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)

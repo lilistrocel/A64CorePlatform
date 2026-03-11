@@ -44,3 +44,29 @@ export interface ConfirmActionResponse {
   message: string;
   result: Record<string, any> | null;
 }
+
+// ============================================================================
+// MULTI-LEVEL AI MONITORING TYPES
+// ============================================================================
+
+export type AIScope =
+  | { level: 'global' }
+  | { level: 'farm'; farmId: string; farmName: string };
+
+export interface FarmSummaryInfo {
+  block_count: number;
+  connected_blocks: number;
+  farm_name: string;
+}
+
+export interface FarmLevelAIChatResponse {
+  message: string;
+  pending_action: PendingAction | null;
+  farm_summary: FarmSummaryInfo | null;
+  tools_used: string[];
+}
+
+export interface GlobalAIChatResponse {
+  message: string;
+  tools_used: string[];
+}

@@ -1,12 +1,15 @@
 /**
  * AIAnalytics Page
  *
- * Clean, full-screen AI chat interface for farm analytics.
- * Maximizes chat area with minimal chrome.
+ * Multi-level AI monitoring page with scope selector.
+ * Fetches farm list on mount and passes it down to the chat component.
  */
 
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { AIAnalyticsChat } from '../../components/ai/AIAnalyticsChat';
+import { getFarms } from '../../services/farmApi';
+import type { AIScope } from '../../types/farmAI';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -30,19 +33,33 @@ const ChatWrapper = styled.div`
   min-height: 0;
 `;
 
-const StyledChat = styled(AIAnalyticsChat)`
-  width: 100%;
-`;
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
 export function AIAnalytics() {
+  const [farms, setFarms] = useState<Array<{ farmId: string; name: string }>>([]);
+  const [scope, setScope] = useState<AIScope>({ level: 'global' });
+
+  useEffect(() => {
+    getFarms().then(data => {
+      // getFarms returns { items, total, page, perPage, totalPages }
+      const farmList = (data.items || []).map((f: any) => ({
+        farmId: f.farmId,
+        name: f.name,
+      }));
+      setFarms(farmList);
+    }).catch(console.error);
+  }, []);
+
   return (
     <PageContainer>
       <ChatWrapper>
-        <StyledChat />
+        <AIAnalyticsChat
+          farms={farms}
+          scope={scope}
+          onScopeChange={setScope}
+        />
       </ChatWrapper>
     </PageContainer>
   );

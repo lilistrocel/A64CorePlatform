@@ -1,0 +1,2647 @@
+{
+  "meta": {
+    "generated_at": "2026-02-24T00:00:00Z",
+    "generator": "codebase_mapper/batch_backend",
+    "scope": [
+      "src/modules/farm_manager/",
+      "src/modules/hr/",
+      "src/modules/crm/",
+      "src/modules/sales/",
+      "src/modules/logistics/",
+      "src/modules/marketing/",
+      "src/modules/ai_analytics/",
+      "src/models/",
+      "src/config/",
+      "src/middleware/"
+    ]
+  },
+  "nodes": [
+    {
+      "node_id": "farm_manager.api.farms.create_farm",
+      "node_type": "api_endpoint",
+      "name": "POST /farms",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 29,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "create_farm"
+      ],
+      "description": "Create a new farm with name, location, boundary, and farm type."
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farms",
+      "node_type": "api_endpoint",
+      "name": "GET /farms",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 62,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "get_farms"
+      ],
+      "description": "List all farms with optional pagination and filtering."
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farm",
+      "node_type": "api_endpoint",
+      "name": "GET /farms/{farm_id}",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 117,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "get_farm"
+      ],
+      "description": "Get details for a specific farm by ID."
+    },
+    {
+      "node_id": "farm_manager.api.farms.update_farm",
+      "node_type": "api_endpoint",
+      "name": "PATCH /farms/{farm_id}",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 147,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "update_farm"
+      ],
+      "description": "Partially update a farm's name, location, boundary, or metadata."
+    },
+    {
+      "node_id": "farm_manager.api.farms.delete_farm",
+      "node_type": "api_endpoint",
+      "name": "DELETE /farms/{farm_id}",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 182,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "delete_farm"
+      ],
+      "description": "Delete farm with cascade deletion of blocks, harvests, alerts, archives."
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farm_summary",
+      "node_type": "api_endpoint",
+      "name": "GET /farms/{farm_id}/summary",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 233,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "get_farm_summary"
+      ],
+      "description": "Get a summary of a farm including block counts and status distribution."
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farm_analytics",
+      "node_type": "api_endpoint",
+      "name": "GET /farms/{farm_id}/analytics",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 342,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "get_farm_analytics"
+      ],
+      "description": "Get farm-level analytics: yield metrics, state breakdown, block comparison."
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_global_analytics",
+      "node_type": "api_endpoint",
+      "name": "GET /farms/analytics/global",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 402,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "get_global_analytics"
+      ],
+      "description": "Cross-farm analytics aggregation covering all farms."
+    },
+    {
+      "node_id": "farm_manager.api.farms.get_farm_farming_years",
+      "node_type": "api_endpoint",
+      "name": "GET /farms/{farm_id}/farming-years",
+      "file_path": "src/modules/farm_manager/api/v1/farms.py",
+      "line_number": 465,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "get_farm_farming_years"
+      ],
+      "description": "Get farming year configuration for a specific farm."
+    },
+    {
+      "node_id": "farm_manager.api.blocks.create_block",
+      "node_type": "api_endpoint",
+      "name": "POST /farms/{farm_id}/blocks",
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "create_block"
+      ],
+      "description": "Create a new block within a farm with crop, area, and row configuration."
+    },
+    {
+      "node_id": "farm_manager.api.blocks.list_blocks",
+      "node_type": "api_endpoint",
+      "name": "GET /farms/{farm_id}/blocks",
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "line_number": 59,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "list_blocks"
+      ],
+      "description": "List blocks for a farm with optional status/crop filtering."
+    },
+    {
+      "node_id": "farm_manager.api.blocks.get_block",
+      "node_type": "api_endpoint",
+      "name": "GET /farms/{farm_id}/blocks/{block_id}",
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "line_number": 109,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "get_block"
+      ],
+      "description": "Get full block details including KPI, IoT, and status history."
+    },
+    {
+      "node_id": "farm_manager.api.blocks.change_block_status",
+      "node_type": "api_endpoint",
+      "name": "PATCH /farms/{farm_id}/blocks/{block_id}/status",
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "line_number": 265,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "change_block_status"
+      ],
+      "description": "Transition block between lifecycle states (e.g. planted -> growing -> harvesting)."
+    },
+    {
+      "node_id": "farm_manager.api.blocks.get_block_analytics",
+      "node_type": "api_endpoint",
+      "name": "GET /farms/{farm_id}/blocks/{block_id}/analytics",
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "line_number": 372,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "get_block_analytics"
+      ],
+      "description": "Get block-level analytics: yield trends, timeline, performance metrics."
+    },
+    {
+      "node_id": "farm_manager.api.blocks.add_virtual_crop",
+      "node_type": "api_endpoint",
+      "name": "POST /farms/{farm_id}/blocks/{block_id}/virtual-crops",
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "line_number": 471,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "add_virtual_crop"
+      ],
+      "description": "Add a virtual crop sub-block to a multi-crop parent block."
+    },
+    {
+      "node_id": "farm_manager.api.blocks.update_iot_controller",
+      "node_type": "api_endpoint",
+      "name": "PATCH /farms/{farm_id}/blocks/{block_id}/iot-controller",
+      "file_path": "src/modules/farm_manager/api/v1/blocks.py",
+      "line_number": 750,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "update_iot_controller"
+      ],
+      "description": "Update IoT controller configuration (address, port, credentials) for a block."
+    },
+    {
+      "node_id": "farm_manager.api.block_harvests",
+      "node_type": "api_endpoint",
+      "name": "CRUD /farms/{farm_id}/blocks/{block_id}/harvests",
+      "file_path": "src/modules/farm_manager/api/v1/block_harvests.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "farm_router"
+      ],
+      "description": "CRUD for block harvest records with summary and farm-level aggregation."
+    },
+    {
+      "node_id": "farm_manager.api.block_alerts",
+      "node_type": "api_endpoint",
+      "name": "CRUD /farms/{farm_id}/blocks/{block_id}/alerts",
+      "file_path": "src/modules/farm_manager/api/v1/block_alerts.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router",
+        "farm_router"
+      ],
+      "description": "CRUD for block alerts with resolve/dismiss, active alerts, and farm-level listing."
+    },
+    {
+      "node_id": "farm_manager.api.dashboard",
+      "node_type": "api_endpoint",
+      "name": "GET /dashboard",
+      "file_path": "src/modules/farm_manager/api/v1/dashboard.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Farm dashboard summary, quick transitions, quick harvest, KPI recalculation."
+    },
+    {
+      "node_id": "farm_manager.api.tasks",
+      "node_type": "api_endpoint",
+      "name": "CRUD /tasks",
+      "file_path": "src/modules/farm_manager/api/v1/tasks.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Farm task management: my-tasks, pending-count, CRUD, complete, harvest entry."
+    },
+    {
+      "node_id": "farm_manager.api.block_archives",
+      "node_type": "api_endpoint",
+      "name": "GET /archives",
+      "file_path": "src/modules/farm_manager/api/v1/block_archives.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Block archives: cycle history, performance analytics, crop comparison."
+    },
+    {
+      "node_id": "farm_manager.api.plant_data",
+      "node_type": "api_endpoint",
+      "name": "CRUD /plant-data",
+      "file_path": "src/modules/farm_manager/api/v1/plant_data.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Simple plant data CRUD with CSV import/export."
+    },
+    {
+      "node_id": "farm_manager.api.plant_data_enhanced",
+      "node_type": "api_endpoint",
+      "name": "CRUD /plant-data-enhanced",
+      "file_path": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Enhanced plant data with growth cycles, fertigation schedules, search, clone."
+    },
+    {
+      "node_id": "farm_manager.api.weather",
+      "node_type": "api_endpoint",
+      "name": "GET /weather",
+      "file_path": "src/modules/farm_manager/api/v1/weather.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Weather endpoints: current, forecast, agri-data, cache stats, refresh."
+    },
+    {
+      "node_id": "farm_manager.api.farm_ai_chat",
+      "node_type": "api_endpoint",
+      "name": "POST /farms/{farm_id}/blocks/{block_id}/ai/chat",
+      "file_path": "src/modules/farm_manager/api/v1/farm_ai_chat.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Farm AI chat using Vertex AI Gemini with SenseHub tool execution."
+    },
+    {
+      "node_id": "farm_manager.api.sensehub",
+      "node_type": "api_endpoint",
+      "name": "CRUD /sensehub",
+      "file_path": "src/modules/farm_manager/api/v1/sensehub.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "SenseHub proxy: connect/disconnect, dashboard, equipment, automations, alerts, relay control."
+    },
+    {
+      "node_id": "farm_manager.api.plantings",
+      "node_type": "api_endpoint",
+      "name": "CRUD /plantings",
+      "file_path": "src/modules/farm_manager/api/v1/plantings.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Planting plan management: create, mark planted, get, list."
+    },
+    {
+      "node_id": "farm_manager.api.config",
+      "node_type": "api_endpoint",
+      "name": "CRUD /config",
+      "file_path": "src/modules/farm_manager/api/v1/config.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Spacing standards CRUD, plant calculator, farming year configuration."
+    },
+    {
+      "node_id": "farm_manager.api.inventory",
+      "node_type": "api_endpoint",
+      "name": "CRUD /inventory",
+      "file_path": "src/modules/farm_manager/api/v1/inventory.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Farm inventory: harvest/input/asset CRUD, movements, transfers, waste management."
+    },
+    {
+      "node_id": "farm_manager.api.managers",
+      "node_type": "api_endpoint",
+      "name": "GET /managers",
+      "file_path": "src/modules/farm_manager/api/v1/managers.py",
+      "line_number": 1,
+      "module": "farm_manager",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "List users with manager/admin roles for farm assignment."
+    },
+    {
+      "node_id": "farm_manager.service.FarmService",
+      "node_type": "class",
+      "name": "FarmService",
+      "file_path": "src/modules/farm_manager/services/farm/farm_service.py",
+      "line_number": 20,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "FarmService"
+      ],
+      "description": "Farm CRUD orchestration delegating to FarmRepository."
+    },
+    {
+      "node_id": "farm_manager.service.FarmRepository",
+      "node_type": "class",
+      "name": "FarmRepository",
+      "file_path": "src/modules/farm_manager/services/farm/farm_repository.py",
+      "line_number": 19,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "FarmRepository"
+      ],
+      "description": "MongoDB data access for 'farms' collection."
+    },
+    {
+      "node_id": "farm_manager.service.FarmAnalyticsService",
+      "node_type": "class",
+      "name": "FarmAnalyticsService",
+      "file_path": "src/modules/farm_manager/services/farm/farm_analytics_service.py",
+      "line_number": 34,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "FarmAnalyticsService"
+      ],
+      "description": "Computes farm-level analytics: yield metrics, state breakdown, block comparison."
+    },
+    {
+      "node_id": "farm_manager.service.GlobalAnalyticsService",
+      "node_type": "class",
+      "name": "GlobalAnalyticsService",
+      "file_path": "src/modules/farm_manager/services/global_analytics_service.py",
+      "line_number": 29,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "GlobalAnalyticsService"
+      ],
+      "description": "Cross-farm analytics aggregation using FarmAnalyticsService and FarmRepository."
+    },
+    {
+      "node_id": "farm_manager.service.BlockService",
+      "node_type": "class",
+      "name": "BlockService",
+      "file_path": "src/modules/farm_manager/services/block/block_service_new.py",
+      "line_number": 30,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "BlockService"
+      ],
+      "description": "Block lifecycle management with VALID_TRANSITIONS state machine, KPI recalc, archiving."
+    },
+    {
+      "node_id": "farm_manager.service.BlockRepository",
+      "node_type": "class",
+      "name": "BlockRepository",
+      "file_path": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "line_number": 21,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "BlockRepository"
+      ],
+      "description": "MongoDB data access for 'blocks' collection with filtering and aggregation."
+    },
+    {
+      "node_id": "farm_manager.service.HarvestService",
+      "node_type": "class",
+      "name": "HarvestService",
+      "file_path": "src/modules/farm_manager/services/block/harvest_service.py",
+      "line_number": 28,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "HarvestService"
+      ],
+      "description": "Block harvest CRUD with quality grade mapping to inventory integration."
+    },
+    {
+      "node_id": "farm_manager.service.HarvestRepository",
+      "node_type": "class",
+      "name": "HarvestRepository",
+      "file_path": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "HarvestRepository"
+      ],
+      "description": "MongoDB data access for 'block_harvests' collection."
+    },
+    {
+      "node_id": "farm_manager.service.AlertService",
+      "node_type": "class",
+      "name": "AlertService",
+      "file_path": "src/modules/farm_manager/services/block/alert_service.py",
+      "line_number": 23,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "AlertService"
+      ],
+      "description": "Block alert CRUD with resolve/dismiss and active alert queries."
+    },
+    {
+      "node_id": "farm_manager.service.AlertRepository",
+      "node_type": "class",
+      "name": "AlertRepository",
+      "file_path": "src/modules/farm_manager/services/block/alert_repository.py",
+      "line_number": 21,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "AlertRepository"
+      ],
+      "description": "MongoDB data access for 'block_alerts' collection."
+    },
+    {
+      "node_id": "farm_manager.service.ArchiveService",
+      "node_type": "class",
+      "name": "ArchiveService",
+      "file_path": "src/modules/farm_manager/services/block/archive_service.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "ArchiveService"
+      ],
+      "description": "Block archive CRUD with performance analytics and crop comparison."
+    },
+    {
+      "node_id": "farm_manager.service.ArchiveRepository",
+      "node_type": "class",
+      "name": "ArchiveRepository",
+      "file_path": "src/modules/farm_manager/services/block/archive_repository.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "ArchiveRepository"
+      ],
+      "description": "MongoDB data access for 'block_archives' collection."
+    },
+    {
+      "node_id": "farm_manager.service.BlockAnalyticsService",
+      "node_type": "class",
+      "name": "BlockAnalyticsService",
+      "file_path": "src/modules/farm_manager/services/block/analytics_service.py",
+      "line_number": 36,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "BlockAnalyticsService"
+      ],
+      "description": "Block-level analytics: yield trends, timeline, task stats, performance metrics."
+    },
+    {
+      "node_id": "farm_manager.service.VirtualBlockService",
+      "node_type": "class",
+      "name": "VirtualBlockService",
+      "file_path": "src/modules/farm_manager/services/block/virtual_block_service.py",
+      "line_number": 24,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "VirtualBlockService"
+      ],
+      "description": "Multi-crop virtual block management: add/empty virtual crops under parent blocks."
+    },
+    {
+      "node_id": "farm_manager.service.TaskService",
+      "node_type": "class",
+      "name": "TaskService",
+      "file_path": "src/modules/farm_manager/services/task/task_service.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "TaskService"
+      ],
+      "description": "Farm task CRUD: create, assign, complete, harvest entry, cancel."
+    },
+    {
+      "node_id": "farm_manager.service.TaskRepository",
+      "node_type": "class",
+      "name": "TaskRepository",
+      "file_path": "src/modules/farm_manager/services/task/task_repository.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "TaskRepository"
+      ],
+      "description": "MongoDB data access for 'farm_tasks' collection."
+    },
+    {
+      "node_id": "farm_manager.service.TaskGeneratorService",
+      "node_type": "class",
+      "name": "TaskGeneratorService",
+      "file_path": "src/modules/farm_manager/services/task/task_generator.py",
+      "line_number": 21,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "TaskGeneratorService"
+      ],
+      "description": "Auto-generates tasks on block state transitions (e.g. planting, harvesting)."
+    },
+    {
+      "node_id": "farm_manager.service.HarvestAggregatorService",
+      "node_type": "class",
+      "name": "HarvestAggregatorService",
+      "file_path": "src/modules/farm_manager/services/task/harvest_aggregator.py",
+      "line_number": 19,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "HarvestAggregatorService"
+      ],
+      "description": "Daily aggregation of harvest entries into block_harvests (runs at 23:00)."
+    },
+    {
+      "node_id": "farm_manager.service.CascadeDeletionService",
+      "node_type": "class",
+      "name": "CascadeDeletionService",
+      "file_path": "src/modules/farm_manager/services/cascade_deletion_service.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "CascadeDeletionService"
+      ],
+      "description": "Cascade deletion: moves farms/blocks/harvests/archives to deleted_* collections."
+    },
+    {
+      "node_id": "farm_manager.service.WeatherService",
+      "node_type": "class",
+      "name": "WeatherService",
+      "file_path": "src/modules/farm_manager/services/weather/weather_service.py",
+      "line_number": 72,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "WeatherService"
+      ],
+      "description": "Weather data retrieval via WeatherBit API with caching."
+    },
+    {
+      "node_id": "farm_manager.service.WeatherCacheService",
+      "node_type": "class",
+      "name": "WeatherCacheService",
+      "file_path": "src/modules/farm_manager/services/weather/weather_cache_service.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "WeatherCacheService"
+      ],
+      "description": "Server-side weather response caching with TTL management."
+    },
+    {
+      "node_id": "farm_manager.service.WeatherAPIClient",
+      "node_type": "class",
+      "name": "WeatherAPIClient",
+      "file_path": "src/modules/farm_manager/services/weather/weather_client.py",
+      "line_number": 26,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "WeatherAPIClient"
+      ],
+      "description": "HTTP client for WeatherBit API (current, forecast, agri data)."
+    },
+    {
+      "node_id": "farm_manager.service.SenseHubClient",
+      "node_type": "class",
+      "name": "SenseHubClient",
+      "file_path": "src/modules/farm_manager/services/sensehub/sensehub_client.py",
+      "line_number": 26,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "SenseHubClient"
+      ],
+      "description": "HTTP client for SenseHub edge devices: equipment, automations, alerts, relay control."
+    },
+    {
+      "node_id": "farm_manager.service.SenseHubMCPClient",
+      "node_type": "class",
+      "name": "SenseHubMCPClient",
+      "file_path": "src/modules/farm_manager/services/sensehub/sensehub_mcp_client.py",
+      "line_number": 36,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "SenseHubMCPClient"
+      ],
+      "description": "MCP protocol client for SenseHub with dynamic tool discovery via SSE transport."
+    },
+    {
+      "node_id": "farm_manager.service.SenseHubConnectionService",
+      "node_type": "class",
+      "name": "SenseHubConnectionService",
+      "file_path": "src/modules/farm_manager/services/sensehub/sensehub_connection_service.py",
+      "line_number": 23,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "SenseHubConnectionService"
+      ],
+      "description": "SenseHub connection lifecycle: connect, disconnect, status, get_client, get_mcp_client."
+    },
+    {
+      "node_id": "farm_manager.service.FarmAIChatService",
+      "node_type": "class",
+      "name": "FarmAIChatService",
+      "file_path": "src/modules/farm_manager/services/farm_ai/service.py",
+      "line_number": 62,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "FarmAIChatService"
+      ],
+      "description": "Orchestrates Vertex AI Gemini chat with SenseHub tool execution and confirmation flow."
+    },
+    {
+      "node_id": "farm_manager.service.ConfigService",
+      "node_type": "class",
+      "name": "ConfigService",
+      "file_path": "src/modules/farm_manager/services/config_service.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "ConfigService"
+      ],
+      "description": "Spacing standards configuration stored in 'system_config' collection."
+    },
+    {
+      "node_id": "farm_manager.service.FarmingYearService",
+      "node_type": "class",
+      "name": "FarmingYearService",
+      "file_path": "src/modules/farm_manager/services/farming_year_service.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "FarmingYearService"
+      ],
+      "description": "Configurable farming year periods for analytics date ranges."
+    },
+    {
+      "node_id": "farm_manager.service.PlantDataService",
+      "node_type": "class",
+      "name": "PlantDataService",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_service.py",
+      "line_number": 20,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "PlantDataService"
+      ],
+      "description": "Simple plant data CRUD with CSV import/export."
+    },
+    {
+      "node_id": "farm_manager.service.PlantDataRepository",
+      "node_type": "class",
+      "name": "PlantDataRepository",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_repository.py",
+      "line_number": 18,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "PlantDataRepository"
+      ],
+      "description": "MongoDB data access for 'plant_data' collection."
+    },
+    {
+      "node_id": "farm_manager.service.PlantDataEnhancedService",
+      "node_type": "class",
+      "name": "PlantDataEnhancedService",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "line_number": 25,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "PlantDataEnhancedService"
+      ],
+      "description": "Enhanced plant data CRUD with growth cycles, fertigation, search, clone."
+    },
+    {
+      "node_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "node_type": "class",
+      "name": "PlantDataEnhancedRepository",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "line_number": 23,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "PlantDataEnhancedRepository"
+      ],
+      "description": "MongoDB data access for 'plant_data_enhanced' collection."
+    },
+    {
+      "node_id": "farm_manager.service.PlantingService",
+      "node_type": "class",
+      "name": "PlantingService",
+      "file_path": "src/modules/farm_manager/services/planting/planting_service.py",
+      "line_number": 22,
+      "module": "farm_manager",
+      "layer": "service",
+      "exports": [
+        "PlantingService"
+      ],
+      "description": "Planting plan management: create plan, mark planted, list plantings."
+    },
+    {
+      "node_id": "farm_manager.service.PlantingRepository",
+      "node_type": "class",
+      "name": "PlantingRepository",
+      "file_path": "src/modules/farm_manager/services/planting/planting_repository.py",
+      "line_number": 18,
+      "module": "farm_manager",
+      "layer": "repository",
+      "exports": [
+        "PlantingRepository"
+      ],
+      "description": "MongoDB data access for 'plantings' collection."
+    },
+    {
+      "node_id": "farm_manager.service.FarmDatabaseManager",
+      "node_type": "class",
+      "name": "FarmDatabaseManager",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "line_number": 17,
+      "module": "farm_manager",
+      "layer": "infrastructure",
+      "exports": [
+        "FarmDatabaseManager",
+        "farm_db"
+      ],
+      "description": "Database manager delegating to core MongoDB; creates indexes for 20+ farm collections."
+    },
+    {
+      "node_id": "farm_manager.model.Farm",
+      "node_type": "pydantic_model",
+      "name": "Farm",
+      "file_path": "src/modules/farm_manager/models/farm.py",
+      "line_number": 71,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "Farm",
+        "FarmCreate",
+        "FarmUpdate",
+        "FarmBase"
+      ],
+      "description": "Farm Pydantic model with location, boundary, metadata, and farmId."
+    },
+    {
+      "node_id": "farm_manager.model.Block",
+      "node_type": "pydantic_model",
+      "name": "Block",
+      "file_path": "src/modules/farm_manager/models/block.py",
+      "line_number": 244,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "Block",
+        "BlockCreate",
+        "BlockUpdate",
+        "BlockStatus",
+        "BlockKPI",
+        "IoTController"
+      ],
+      "description": "Block model with status lifecycle, KPI, IoT controller, virtual crop support."
+    },
+    {
+      "node_id": "farm_manager.model.BlockHarvest",
+      "node_type": "pydantic_model",
+      "name": "BlockHarvest",
+      "file_path": "src/modules/farm_manager/models/block_harvest.py",
+      "line_number": 61,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "BlockHarvest",
+        "BlockHarvestCreate",
+        "QualityGrade"
+      ],
+      "description": "Harvest record model with quality grades and metadata."
+    },
+    {
+      "node_id": "farm_manager.model.BlockAlert",
+      "node_type": "pydantic_model",
+      "name": "BlockAlert",
+      "file_path": "src/modules/farm_manager/models/block_alert.py",
+      "line_number": 72,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "BlockAlert",
+        "BlockAlertCreate",
+        "AlertSeverity",
+        "AlertStatus"
+      ],
+      "description": "Block alert model with severity, status, category, and comments."
+    },
+    {
+      "node_id": "farm_manager.model.BlockArchive",
+      "node_type": "pydantic_model",
+      "name": "BlockArchive",
+      "file_path": "src/modules/farm_manager/models/block_archive.py",
+      "line_number": 28,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "BlockArchive",
+        "BlockArchiveAnalytics"
+      ],
+      "description": "Archive record for completed block cycles with yield and alert summaries."
+    },
+    {
+      "node_id": "farm_manager.model.FarmTask",
+      "node_type": "pydantic_model",
+      "name": "FarmTask",
+      "file_path": "src/modules/farm_manager/models/farm_task.py",
+      "line_number": 180,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "FarmTask",
+        "FarmTaskCreate",
+        "TaskType",
+        "TaskStatus",
+        "HarvestEntry"
+      ],
+      "description": "Farm task model with type, priority, status, and harvest entry support."
+    },
+    {
+      "node_id": "farm_manager.model.PlantDataEnhanced",
+      "node_type": "pydantic_model",
+      "name": "PlantDataEnhanced",
+      "file_path": "src/modules/farm_manager/models/plant_data_enhanced.py",
+      "line_number": 441,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "PlantDataEnhanced",
+        "PlantDataEnhancedCreate",
+        "GrowthCycleDuration",
+        "FertigationSchedule"
+      ],
+      "description": "Enhanced plant library with growth cycles, fertigation, environmental requirements."
+    },
+    {
+      "node_id": "farm_manager.model.PlantData",
+      "node_type": "pydantic_model",
+      "name": "PlantData",
+      "file_path": "src/modules/farm_manager/models/plant_data.py",
+      "line_number": 101,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "PlantData",
+        "PlantDataCreate"
+      ],
+      "description": "Simple plant data model (legacy format)."
+    },
+    {
+      "node_id": "farm_manager.model.Inventory",
+      "node_type": "pydantic_model",
+      "name": "HarvestInventory",
+      "file_path": "src/modules/farm_manager/models/inventory.py",
+      "line_number": 397,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "HarvestInventory",
+        "InputInventory",
+        "AssetInventory",
+        "WasteInventory",
+        "InventoryMovement"
+      ],
+      "description": "Comprehensive inventory models: harvest, input, asset, waste types with movements and transfers."
+    },
+    {
+      "node_id": "farm_manager.model.DashboardSummary",
+      "node_type": "pydantic_model",
+      "name": "DashboardSummary",
+      "file_path": "src/modules/farm_manager/models/dashboard.py",
+      "line_number": 108,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "DashboardSummary",
+        "DashboardResponse",
+        "DashboardSummaryResponse"
+      ],
+      "description": "Dashboard summary models with block states, harvest data, and farming year context."
+    },
+    {
+      "node_id": "farm_manager.model.FarmAnalyticsResponse",
+      "node_type": "pydantic_model",
+      "name": "FarmAnalyticsResponse",
+      "file_path": "src/modules/farm_manager/models/farm_analytics.py",
+      "line_number": 93,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "FarmAnalyticsResponse",
+        "AggregatedMetrics",
+        "StateBreakdown"
+      ],
+      "description": "Farm analytics response models: aggregated metrics, state breakdown, trends."
+    },
+    {
+      "node_id": "farm_manager.model.GlobalAnalyticsResponse",
+      "node_type": "pydantic_model",
+      "name": "GlobalAnalyticsResponse",
+      "file_path": "src/modules/farm_manager/models/global_analytics.py",
+      "line_number": 79,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "GlobalAnalyticsResponse",
+        "GlobalAggregatedMetrics"
+      ],
+      "description": "Global analytics response aggregating across all farms."
+    },
+    {
+      "node_id": "farm_manager.model.Weather",
+      "node_type": "pydantic_model",
+      "name": "CurrentWeather",
+      "file_path": "src/modules/farm_manager/models/weather.py",
+      "line_number": 78,
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [
+        "CurrentWeather",
+        "AgriWeatherData",
+        "WeatherCacheEntry"
+      ],
+      "description": "Weather models: current conditions, agricultural forecast, cache entries."
+    },
+    {
+      "node_id": "hr.api.employees",
+      "node_type": "api_endpoint",
+      "name": "CRUD /hr/employees",
+      "file_path": "src/modules/hr/api/v1/employees.py",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Employee CRUD with Arabic name support, Emirates ID handling, pagination."
+    },
+    {
+      "node_id": "hr.api.contracts",
+      "node_type": "api_endpoint",
+      "name": "CRUD /hr/contracts",
+      "file_path": "src/modules/hr/api/v1/contracts.py",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Employment contract management CRUD."
+    },
+    {
+      "node_id": "hr.api.visas",
+      "node_type": "api_endpoint",
+      "name": "CRUD /hr/visas",
+      "file_path": "src/modules/hr/api/v1/visas.py",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Employee visa tracking and management."
+    },
+    {
+      "node_id": "hr.api.insurance",
+      "node_type": "api_endpoint",
+      "name": "CRUD /hr/insurance",
+      "file_path": "src/modules/hr/api/v1/insurance.py",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Employee insurance policy management."
+    },
+    {
+      "node_id": "hr.api.performance",
+      "node_type": "api_endpoint",
+      "name": "CRUD /hr/performance",
+      "file_path": "src/modules/hr/api/v1/performance.py",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Employee performance reviews and ratings."
+    },
+    {
+      "node_id": "hr.api.dashboard",
+      "node_type": "api_endpoint",
+      "name": "GET /hr/dashboard",
+      "file_path": "src/modules/hr/api/v1/dashboard.py",
+      "line_number": 1,
+      "module": "hr",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "HR dashboard statistics and summaries."
+    },
+    {
+      "node_id": "hr.service.EmployeeService",
+      "node_type": "class",
+      "name": "EmployeeService",
+      "file_path": "src/modules/hr/services/employee/employee_service.py",
+      "line_number": 20,
+      "module": "hr",
+      "layer": "service",
+      "exports": [
+        "EmployeeService"
+      ],
+      "description": "Employee CRUD orchestration with EmployeeRepository."
+    },
+    {
+      "node_id": "hr.service.EmployeeRepository",
+      "node_type": "class",
+      "name": "EmployeeRepository",
+      "file_path": "src/modules/hr/services/employee/employee_repository.py",
+      "line_number": 19,
+      "module": "hr",
+      "layer": "repository",
+      "exports": [
+        "EmployeeRepository"
+      ],
+      "description": "MongoDB data access for 'employees' collection."
+    },
+    {
+      "node_id": "hr.service.ContractService",
+      "node_type": "class",
+      "name": "ContractService",
+      "file_path": "src/modules/hr/services/employee/contract_service.py",
+      "line_number": 20,
+      "module": "hr",
+      "layer": "service",
+      "exports": [
+        "ContractService"
+      ],
+      "description": "Employment contract CRUD with ContractRepository."
+    },
+    {
+      "node_id": "hr.service.VisaService",
+      "node_type": "class",
+      "name": "VisaService",
+      "file_path": "src/modules/hr/services/employee/visa_service.py",
+      "line_number": 20,
+      "module": "hr",
+      "layer": "service",
+      "exports": [
+        "VisaService"
+      ],
+      "description": "Visa tracking CRUD with VisaRepository."
+    },
+    {
+      "node_id": "hr.service.InsuranceService",
+      "node_type": "class",
+      "name": "InsuranceService",
+      "file_path": "src/modules/hr/services/employee/insurance_service.py",
+      "line_number": 20,
+      "module": "hr",
+      "layer": "service",
+      "exports": [
+        "InsuranceService"
+      ],
+      "description": "Insurance policy CRUD with InsuranceRepository."
+    },
+    {
+      "node_id": "hr.service.PerformanceService",
+      "node_type": "class",
+      "name": "PerformanceService",
+      "file_path": "src/modules/hr/services/employee/performance_service.py",
+      "line_number": 20,
+      "module": "hr",
+      "layer": "service",
+      "exports": [
+        "PerformanceService"
+      ],
+      "description": "Performance review CRUD with PerformanceRepository."
+    },
+    {
+      "node_id": "hr.service.HRDatabaseManager",
+      "node_type": "class",
+      "name": "HRDatabaseManager",
+      "file_path": "src/modules/hr/services/database.py",
+      "line_number": 16,
+      "module": "hr",
+      "layer": "infrastructure",
+      "exports": [
+        "HRDatabaseManager"
+      ],
+      "description": "HR database manager with indexes for employees, contracts, visas, insurance, performance."
+    },
+    {
+      "node_id": "hr.model.Employee",
+      "node_type": "pydantic_model",
+      "name": "Employee",
+      "file_path": "src/modules/hr/models/employee.py",
+      "line_number": 116,
+      "module": "hr",
+      "layer": "model",
+      "exports": [
+        "Employee",
+        "EmployeeCreate",
+        "EmployeeStatus"
+      ],
+      "description": "Employee model with Arabic name support, Emirates ID, emergency contacts."
+    },
+    {
+      "node_id": "hr.model.Contract",
+      "node_type": "pydantic_model",
+      "name": "Contract",
+      "file_path": "src/modules/hr/models/contract.py",
+      "line_number": 59,
+      "module": "hr",
+      "layer": "model",
+      "exports": [
+        "Contract",
+        "ContractCreate",
+        "ContractType"
+      ],
+      "description": "Employment contract model with type, status, salary."
+    },
+    {
+      "node_id": "crm.api.customers",
+      "node_type": "api_endpoint",
+      "name": "CRUD /crm/customers",
+      "file_path": "src/modules/crm/api/v1/customers.py",
+      "line_number": 1,
+      "module": "crm",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Customer CRUD with address management and type/status filtering."
+    },
+    {
+      "node_id": "crm.service.CustomerService",
+      "node_type": "class",
+      "name": "CustomerService",
+      "file_path": "src/modules/crm/services/customer/customer_service.py",
+      "line_number": 20,
+      "module": "crm",
+      "layer": "service",
+      "exports": [
+        "CustomerService"
+      ],
+      "description": "Customer CRUD orchestration with CustomerRepository."
+    },
+    {
+      "node_id": "crm.service.CustomerRepository",
+      "node_type": "class",
+      "name": "CustomerRepository",
+      "file_path": "src/modules/crm/services/customer/customer_repository.py",
+      "line_number": 19,
+      "module": "crm",
+      "layer": "repository",
+      "exports": [
+        "CustomerRepository"
+      ],
+      "description": "MongoDB data access for 'customers' collection."
+    },
+    {
+      "node_id": "crm.service.CRMDatabaseManager",
+      "node_type": "class",
+      "name": "CRMDatabaseManager",
+      "file_path": "src/modules/crm/services/database.py",
+      "line_number": 16,
+      "module": "crm",
+      "layer": "infrastructure",
+      "exports": [
+        "CRMDatabaseManager"
+      ],
+      "description": "CRM database manager with customer collection indexes."
+    },
+    {
+      "node_id": "crm.model.Customer",
+      "node_type": "pydantic_model",
+      "name": "Customer",
+      "file_path": "src/modules/crm/models/customer.py",
+      "line_number": 68,
+      "module": "crm",
+      "layer": "model",
+      "exports": [
+        "Customer",
+        "CustomerCreate",
+        "CustomerType",
+        "CustomerStatus"
+      ],
+      "description": "Customer model with type, status, address, and contact info."
+    },
+    {
+      "node_id": "sales.api.orders",
+      "node_type": "api_endpoint",
+      "name": "CRUD /sales/orders",
+      "file_path": "src/modules/sales/api/v1/orders.py",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Sales order CRUD with customer integration and status tracking."
+    },
+    {
+      "node_id": "sales.api.inventory",
+      "node_type": "api_endpoint",
+      "name": "CRUD /sales/inventory",
+      "file_path": "src/modules/sales/api/v1/inventory.py",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Sales harvest inventory management."
+    },
+    {
+      "node_id": "sales.api.purchase_orders",
+      "node_type": "api_endpoint",
+      "name": "CRUD /sales/purchase-orders",
+      "file_path": "src/modules/sales/api/v1/purchase_orders.py",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Purchase order management for procurement."
+    },
+    {
+      "node_id": "sales.api.returns",
+      "node_type": "api_endpoint",
+      "name": "CRUD /sales/returns",
+      "file_path": "src/modules/sales/api/v1/returns.py",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Sales returns processing and restocking."
+    },
+    {
+      "node_id": "sales.api.dashboard",
+      "node_type": "api_endpoint",
+      "name": "GET /sales/dashboard",
+      "file_path": "src/modules/sales/api/v1/dashboard.py",
+      "line_number": 1,
+      "module": "sales",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Sales dashboard statistics and summaries."
+    },
+    {
+      "node_id": "sales.service.OrderService",
+      "node_type": "class",
+      "name": "OrderService",
+      "file_path": "src/modules/sales/services/sales/order_service.py",
+      "line_number": 26,
+      "module": "sales",
+      "layer": "service",
+      "exports": [
+        "OrderService"
+      ],
+      "description": "Sales order orchestration integrating with CRM customers and farm inventory."
+    },
+    {
+      "node_id": "sales.service.OrderRepository",
+      "node_type": "class",
+      "name": "OrderRepository",
+      "file_path": "src/modules/sales/services/sales/order_repository.py",
+      "line_number": 20,
+      "module": "sales",
+      "layer": "repository",
+      "exports": [
+        "OrderRepository"
+      ],
+      "description": "MongoDB data access for 'sales_orders' collection."
+    },
+    {
+      "node_id": "sales.service.InventoryService",
+      "node_type": "class",
+      "name": "InventoryService",
+      "file_path": "src/modules/sales/services/sales/inventory_service.py",
+      "line_number": 19,
+      "module": "sales",
+      "layer": "service",
+      "exports": [
+        "InventoryService"
+      ],
+      "description": "Sales harvest inventory CRUD with InventoryRepository."
+    },
+    {
+      "node_id": "sales.service.PurchaseOrderService",
+      "node_type": "class",
+      "name": "PurchaseOrderService",
+      "file_path": "src/modules/sales/services/sales/purchase_order_service.py",
+      "line_number": 19,
+      "module": "sales",
+      "layer": "service",
+      "exports": [
+        "PurchaseOrderService"
+      ],
+      "description": "Purchase order CRUD with PurchaseOrderRepository."
+    },
+    {
+      "node_id": "sales.service.ReturnService",
+      "node_type": "class",
+      "name": "ReturnService",
+      "file_path": "src/modules/sales/services/sales/return_service.py",
+      "line_number": 28,
+      "module": "sales",
+      "layer": "service",
+      "exports": [
+        "ReturnService"
+      ],
+      "description": "Sales returns processing with restocking to inventory."
+    },
+    {
+      "node_id": "sales.service.SalesDatabaseManager",
+      "node_type": "class",
+      "name": "SalesDatabaseManager",
+      "file_path": "src/modules/sales/services/database.py",
+      "line_number": 16,
+      "module": "sales",
+      "layer": "infrastructure",
+      "exports": [
+        "SalesDatabaseManager"
+      ],
+      "description": "Sales database manager with indexes for orders, inventory, purchase orders."
+    },
+    {
+      "node_id": "sales.model.SalesOrder",
+      "node_type": "pydantic_model",
+      "name": "SalesOrder",
+      "file_path": "src/modules/sales/models/sales_order.py",
+      "line_number": 102,
+      "module": "sales",
+      "layer": "model",
+      "exports": [
+        "SalesOrder",
+        "SalesOrderCreate",
+        "SalesOrderStatus",
+        "PaymentStatus"
+      ],
+      "description": "Sales order model with line items, shipping address, payment status."
+    },
+    {
+      "node_id": "sales.model.ReturnOrder",
+      "node_type": "pydantic_model",
+      "name": "ReturnOrder",
+      "file_path": "src/modules/sales/models/return_order.py",
+      "line_number": 122,
+      "module": "sales",
+      "layer": "model",
+      "exports": [
+        "ReturnOrder",
+        "ReturnOrderCreate",
+        "ReturnReason",
+        "ReturnCondition"
+      ],
+      "description": "Return order model with reason, condition, restocking support."
+    },
+    {
+      "node_id": "logistics.api.shipments",
+      "node_type": "api_endpoint",
+      "name": "CRUD /logistics/shipments",
+      "file_path": "src/modules/logistics/api/v1/shipments.py",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Shipment CRUD with tracking, status updates, and order assignment."
+    },
+    {
+      "node_id": "logistics.api.vehicles",
+      "node_type": "api_endpoint",
+      "name": "CRUD /logistics/vehicles",
+      "file_path": "src/modules/logistics/api/v1/vehicles.py",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Fleet vehicle management CRUD."
+    },
+    {
+      "node_id": "logistics.api.routes",
+      "node_type": "api_endpoint",
+      "name": "CRUD /logistics/routes",
+      "file_path": "src/modules/logistics/api/v1/routes.py",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Delivery route management with distance and duration tracking."
+    },
+    {
+      "node_id": "logistics.api.dashboard",
+      "node_type": "api_endpoint",
+      "name": "GET /logistics/dashboard",
+      "file_path": "src/modules/logistics/api/v1/dashboard.py",
+      "line_number": 1,
+      "module": "logistics",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Logistics dashboard statistics and summaries."
+    },
+    {
+      "node_id": "logistics.service.ShipmentService",
+      "node_type": "class",
+      "name": "ShipmentService",
+      "file_path": "src/modules/logistics/services/logistics/shipment_service.py",
+      "line_number": 28,
+      "module": "logistics",
+      "layer": "service",
+      "exports": [
+        "ShipmentService"
+      ],
+      "description": "Shipment orchestration integrating with sales OrderService for order fulfillment."
+    },
+    {
+      "node_id": "logistics.service.ShipmentRepository",
+      "node_type": "class",
+      "name": "ShipmentRepository",
+      "file_path": "src/modules/logistics/services/logistics/shipment_repository.py",
+      "line_number": 20,
+      "module": "logistics",
+      "layer": "repository",
+      "exports": [
+        "ShipmentRepository"
+      ],
+      "description": "MongoDB data access for 'shipments' collection."
+    },
+    {
+      "node_id": "logistics.service.VehicleService",
+      "node_type": "class",
+      "name": "VehicleService",
+      "file_path": "src/modules/logistics/services/logistics/vehicle_service.py",
+      "line_number": 19,
+      "module": "logistics",
+      "layer": "service",
+      "exports": [
+        "VehicleService"
+      ],
+      "description": "Vehicle fleet CRUD with VehicleRepository."
+    },
+    {
+      "node_id": "logistics.service.RouteService",
+      "node_type": "class",
+      "name": "RouteService",
+      "file_path": "src/modules/logistics/services/logistics/route_service.py",
+      "line_number": 19,
+      "module": "logistics",
+      "layer": "service",
+      "exports": [
+        "RouteService"
+      ],
+      "description": "Delivery route CRUD with RouteRepository."
+    },
+    {
+      "node_id": "logistics.service.LogisticsDatabaseManager",
+      "node_type": "class",
+      "name": "LogisticsDatabaseManager",
+      "file_path": "src/modules/logistics/services/database.py",
+      "line_number": 16,
+      "module": "logistics",
+      "layer": "infrastructure",
+      "exports": [
+        "LogisticsDatabaseManager"
+      ],
+      "description": "Logistics database manager with indexes for shipments, vehicles, routes."
+    },
+    {
+      "node_id": "logistics.model.Shipment",
+      "node_type": "pydantic_model",
+      "name": "Shipment",
+      "file_path": "src/modules/logistics/models/shipment.py",
+      "line_number": 76,
+      "module": "logistics",
+      "layer": "model",
+      "exports": [
+        "Shipment",
+        "ShipmentCreate",
+        "ShipmentStatus",
+        "CargoItem"
+      ],
+      "description": "Shipment model with cargo items, tracking, and order assignment."
+    },
+    {
+      "node_id": "marketing.api.campaigns",
+      "node_type": "api_endpoint",
+      "name": "CRUD /marketing/campaigns",
+      "file_path": "src/modules/marketing/api/v1/campaigns.py",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Marketing campaign CRUD with budget and channel integration."
+    },
+    {
+      "node_id": "marketing.api.budgets",
+      "node_type": "api_endpoint",
+      "name": "CRUD /marketing/budgets",
+      "file_path": "src/modules/marketing/api/v1/budgets.py",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Marketing budget allocation and tracking."
+    },
+    {
+      "node_id": "marketing.api.channels",
+      "node_type": "api_endpoint",
+      "name": "CRUD /marketing/channels",
+      "file_path": "src/modules/marketing/api/v1/channels.py",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Marketing channel management with metrics tracking."
+    },
+    {
+      "node_id": "marketing.api.events",
+      "node_type": "api_endpoint",
+      "name": "CRUD /marketing/events",
+      "file_path": "src/modules/marketing/api/v1/events.py",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Marketing event planning and management."
+    },
+    {
+      "node_id": "marketing.api.dashboard",
+      "node_type": "api_endpoint",
+      "name": "GET /marketing/dashboard",
+      "file_path": "src/modules/marketing/api/v1/dashboard.py",
+      "line_number": 1,
+      "module": "marketing",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "Marketing dashboard statistics and campaign performance."
+    },
+    {
+      "node_id": "marketing.service.CampaignService",
+      "node_type": "class",
+      "name": "CampaignService",
+      "file_path": "src/modules/marketing/services/marketing/campaign_service.py",
+      "line_number": 21,
+      "module": "marketing",
+      "layer": "service",
+      "exports": [
+        "CampaignService"
+      ],
+      "description": "Campaign orchestration using BudgetRepository and ChannelRepository."
+    },
+    {
+      "node_id": "marketing.service.BudgetService",
+      "node_type": "class",
+      "name": "BudgetService",
+      "file_path": "src/modules/marketing/services/marketing/budget_service.py",
+      "line_number": 19,
+      "module": "marketing",
+      "layer": "service",
+      "exports": [
+        "BudgetService"
+      ],
+      "description": "Budget allocation CRUD with BudgetRepository."
+    },
+    {
+      "node_id": "marketing.service.ChannelService",
+      "node_type": "class",
+      "name": "ChannelService",
+      "file_path": "src/modules/marketing/services/marketing/channel_service.py",
+      "line_number": 19,
+      "module": "marketing",
+      "layer": "service",
+      "exports": [
+        "ChannelService"
+      ],
+      "description": "Marketing channel CRUD with ChannelRepository."
+    },
+    {
+      "node_id": "marketing.service.EventService",
+      "node_type": "class",
+      "name": "EventService",
+      "file_path": "src/modules/marketing/services/marketing/event_service.py",
+      "line_number": 20,
+      "module": "marketing",
+      "layer": "service",
+      "exports": [
+        "EventService"
+      ],
+      "description": "Marketing event CRUD with EventRepository."
+    },
+    {
+      "node_id": "marketing.service.MarketingDatabaseManager",
+      "node_type": "class",
+      "name": "MarketingDatabaseManager",
+      "file_path": "src/modules/marketing/services/database.py",
+      "line_number": 16,
+      "module": "marketing",
+      "layer": "infrastructure",
+      "exports": [
+        "MarketingDatabaseManager"
+      ],
+      "description": "Marketing database manager with indexes for campaigns, budgets, channels, events."
+    },
+    {
+      "node_id": "marketing.model.Campaign",
+      "node_type": "pydantic_model",
+      "name": "Campaign",
+      "file_path": "src/modules/marketing/models/campaign.py",
+      "line_number": 67,
+      "module": "marketing",
+      "layer": "model",
+      "exports": [
+        "Campaign",
+        "CampaignCreate",
+        "CampaignStatus",
+        "CampaignMetrics"
+      ],
+      "description": "Marketing campaign model with status, metrics, and channel assignments."
+    },
+    {
+      "node_id": "ai_analytics.api.chat",
+      "node_type": "api_endpoint",
+      "name": "POST /ai/chat",
+      "file_path": "src/modules/ai_analytics/api/v1/chat.py",
+      "line_number": 1,
+      "module": "ai_analytics",
+      "layer": "api",
+      "exports": [
+        "router"
+      ],
+      "description": "AI analytics chat endpoint: NL-to-MongoDB query via Vertex AI Gemini."
+    },
+    {
+      "node_id": "ai_analytics.service.QueryEngine",
+      "node_type": "class",
+      "name": "QueryEngine",
+      "file_path": "src/modules/ai_analytics/services/query_engine.py",
+      "line_number": 27,
+      "module": "ai_analytics",
+      "layer": "service",
+      "exports": [
+        "QueryEngine"
+      ],
+      "description": "Full NL-to-MongoDB pipeline: schema discovery, Gemini query gen, execution, formatting."
+    },
+    {
+      "node_id": "ai_analytics.service.GeminiService",
+      "node_type": "class",
+      "name": "GeminiService",
+      "file_path": "src/modules/ai_analytics/services/gemini_service.py",
+      "line_number": 23,
+      "module": "ai_analytics",
+      "layer": "service",
+      "exports": [
+        "GeminiService"
+      ],
+      "description": "Vertex AI Gemini API client for NL-to-MongoDB query generation."
+    },
+    {
+      "node_id": "ai_analytics.service.SchemaService",
+      "node_type": "class",
+      "name": "SchemaService",
+      "file_path": "src/modules/ai_analytics/services/schema_service.py",
+      "line_number": 17,
+      "module": "ai_analytics",
+      "layer": "service",
+      "exports": [
+        "SchemaService"
+      ],
+      "description": "Auto-discovers MongoDB collection schemas by sampling documents."
+    },
+    {
+      "node_id": "ai_analytics.service.CostTrackingService",
+      "node_type": "class",
+      "name": "CostTrackingService",
+      "file_path": "src/modules/ai_analytics/services/cost_tracking_service.py",
+      "line_number": 16,
+      "module": "ai_analytics",
+      "layer": "service",
+      "exports": [
+        "CostTrackingService"
+      ],
+      "description": "Logs AI query costs to 'ai_query_log' collection for usage tracking."
+    },
+    {
+      "node_id": "ai_analytics.util.QueryValidator",
+      "node_type": "class",
+      "name": "QueryValidator",
+      "file_path": "src/modules/ai_analytics/utils/validators.py",
+      "line_number": 20,
+      "module": "ai_analytics",
+      "layer": "service",
+      "exports": [
+        "QueryValidator"
+      ],
+      "description": "Validates generated MongoDB queries for safety (blocks destructive operations)."
+    },
+    {
+      "node_id": "ai_analytics.model.ChatQueryResponse",
+      "node_type": "pydantic_model",
+      "name": "ChatQueryResponse",
+      "file_path": "src/modules/ai_analytics/models/chat.py",
+      "line_number": 110,
+      "module": "ai_analytics",
+      "layer": "model",
+      "exports": [
+        "ChatQueryRequest",
+        "ChatQueryResponse",
+        "SchemaResponse"
+      ],
+      "description": "AI chat request/response models with query info, visualization suggestions, cost info."
+    },
+    {
+      "node_id": "core.config.Settings",
+      "node_type": "class",
+      "name": "Settings",
+      "file_path": "src/config/settings.py",
+      "line_number": 13,
+      "module": "core",
+      "layer": "config",
+      "exports": [
+        "Settings",
+        "settings"
+      ],
+      "description": "Pydantic BaseSettings with 30+ env vars: DB, auth, AI, rate limiting, CORS."
+    },
+    {
+      "node_id": "core.model.UserRole",
+      "node_type": "pydantic_model",
+      "name": "UserRole",
+      "file_path": "src/models/user.py",
+      "line_number": 15,
+      "module": "core",
+      "layer": "model",
+      "exports": [
+        "UserRole",
+        "UserBase",
+        "UserCreate",
+        "UserResponse",
+        "TokenPayload",
+        "UserInDB"
+      ],
+      "description": "Core user models: role enum, registration, authentication tokens, MFA."
+    },
+    {
+      "node_id": "core.model.ModuleConfig",
+      "node_type": "pydantic_model",
+      "name": "ModuleConfig",
+      "file_path": "src/models/module.py",
+      "line_number": 46,
+      "module": "core",
+      "layer": "model",
+      "exports": [
+        "ModuleStatus",
+        "ModuleHealth",
+        "ModuleConfig",
+        "ModuleInDB"
+      ],
+      "description": "Module management models: config, status, health, audit log."
+    },
+    {
+      "node_id": "core.model.DashboardConfig",
+      "node_type": "pydantic_model",
+      "name": "DashboardConfig",
+      "file_path": "src/models/dashboard.py",
+      "line_number": 144,
+      "module": "core",
+      "layer": "model",
+      "exports": [
+        "ChartWidgetData",
+        "StatWidgetData",
+        "DashboardConfig",
+        "CCMWidget"
+      ],
+      "description": "Core dashboard widget models for configurable dashboard layouts."
+    },
+    {
+      "node_id": "core.middleware.auth",
+      "node_type": "function",
+      "name": "get_current_active_user",
+      "file_path": "src/middleware/auth.py",
+      "line_number": 1,
+      "module": "core",
+      "layer": "middleware",
+      "exports": [
+        "get_current_user",
+        "get_current_active_user",
+        "CurrentUser"
+      ],
+      "description": "JWT token validation and user extraction dependency for FastAPI routes."
+    },
+    {
+      "node_id": "core.middleware.RoleChecker",
+      "node_type": "class",
+      "name": "RoleChecker",
+      "file_path": "src/middleware/permissions.py",
+      "line_number": 15,
+      "module": "core",
+      "layer": "middleware",
+      "exports": [
+        "RoleChecker"
+      ],
+      "description": "Role-based access control dependency checking user roles against allowed list."
+    },
+    {
+      "node_id": "core.middleware.RateLimiter",
+      "node_type": "class",
+      "name": "RateLimiter",
+      "file_path": "src/middleware/rate_limit.py",
+      "line_number": 24,
+      "module": "core",
+      "layer": "middleware",
+      "exports": [
+        "RateLimiter",
+        "RateLimitMiddleware",
+        "LoginRateLimiter"
+      ],
+      "description": "Redis-backed rate limiting with in-memory fallback, per-role limits."
+    },
+    {
+      "node_id": "core.middleware.TimingMiddleware",
+      "node_type": "class",
+      "name": "TimingMiddleware",
+      "file_path": "src/middleware/timing.py",
+      "line_number": 24,
+      "module": "core",
+      "layer": "middleware",
+      "exports": [
+        "TimingMiddleware",
+        "ResponseTimeCollector"
+      ],
+      "description": "Request timing middleware adding X-Response-Time header to all responses."
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "farm_manager.api.farms.create_farm",
+      "target_id": "farm_manager.service.FarmService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_service.py",
+      "context": "Farm API endpoints delegate to FarmService for all CRUD operations."
+    },
+    {
+      "source_id": "farm_manager.api.farms.delete_farm",
+      "target_id": "farm_manager.service.CascadeDeletionService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/cascade_deletion_service.py",
+      "context": "Farm deletion uses CascadeDeletionService to archive all related data."
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_farm_analytics",
+      "target_id": "farm_manager.service.FarmAnalyticsService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_analytics_service.py",
+      "context": "Farm analytics endpoint delegates to FarmAnalyticsService."
+    },
+    {
+      "source_id": "farm_manager.api.farms.get_global_analytics",
+      "target_id": "farm_manager.service.GlobalAnalyticsService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/modules/farm_manager/services/global_analytics_service.py",
+      "context": "Global analytics endpoint delegates to GlobalAnalyticsService."
+    },
+    {
+      "source_id": "farm_manager.api.blocks.create_block",
+      "target_id": "farm_manager.service.BlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "context": "Block API endpoints delegate to BlockService for lifecycle management."
+    },
+    {
+      "source_id": "farm_manager.api.blocks.add_virtual_crop",
+      "target_id": "farm_manager.service.VirtualBlockService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/virtual_block_service.py",
+      "context": "Virtual crop endpoints delegate to VirtualBlockService."
+    },
+    {
+      "source_id": "farm_manager.api.blocks.get_block_analytics",
+      "target_id": "farm_manager.service.BlockAnalyticsService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "target_file": "src/modules/farm_manager/services/block/analytics_service.py",
+      "context": "Block analytics endpoint delegates to BlockAnalyticsService."
+    },
+    {
+      "source_id": "farm_manager.api.block_harvests",
+      "target_id": "farm_manager.service.HarvestService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/block_harvests.py",
+      "target_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "context": "Harvest API delegates to HarvestService."
+    },
+    {
+      "source_id": "farm_manager.api.block_alerts",
+      "target_id": "farm_manager.service.AlertService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/block_alerts.py",
+      "target_file": "src/modules/farm_manager/services/block/alert_service.py",
+      "context": "Alert API delegates to AlertService."
+    },
+    {
+      "source_id": "farm_manager.api.block_archives",
+      "target_id": "farm_manager.service.ArchiveService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/block_archives.py",
+      "target_file": "src/modules/farm_manager/services/block/archive_service.py",
+      "context": "Archive API delegates to ArchiveService."
+    },
+    {
+      "source_id": "farm_manager.api.tasks",
+      "target_id": "farm_manager.service.TaskService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/tasks.py",
+      "target_file": "src/modules/farm_manager/services/task/task_service.py",
+      "context": "Task API delegates to TaskService."
+    },
+    {
+      "source_id": "farm_manager.api.tasks",
+      "target_id": "farm_manager.service.TaskGeneratorService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/tasks.py",
+      "target_file": "src/modules/farm_manager/services/task/task_generator.py",
+      "context": "Task API uses TaskGeneratorService for auto-generation endpoints."
+    },
+    {
+      "source_id": "farm_manager.api.tasks",
+      "target_id": "farm_manager.service.HarvestAggregatorService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/tasks.py",
+      "target_file": "src/modules/farm_manager/services/task/harvest_aggregator.py",
+      "context": "Task API uses HarvestAggregatorService for harvest aggregation endpoints."
+    },
+    {
+      "source_id": "farm_manager.api.weather",
+      "target_id": "farm_manager.service.WeatherService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/weather.py",
+      "target_file": "src/modules/farm_manager/services/weather/weather_service.py",
+      "context": "Weather API delegates to WeatherService."
+    },
+    {
+      "source_id": "farm_manager.api.weather",
+      "target_id": "farm_manager.service.WeatherCacheService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/weather.py",
+      "target_file": "src/modules/farm_manager/services/weather/weather_cache_service.py",
+      "context": "Weather API uses WeatherCacheService for cache management endpoints."
+    },
+    {
+      "source_id": "farm_manager.api.sensehub",
+      "target_id": "farm_manager.service.SenseHubConnectionService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/sensehub.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_connection_service.py",
+      "context": "SenseHub API delegates to SenseHubConnectionService for connection management."
+    },
+    {
+      "source_id": "farm_manager.api.farm_ai_chat",
+      "target_id": "farm_manager.service.FarmAIChatService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/farm_ai_chat.py",
+      "target_file": "src/modules/farm_manager/services/farm_ai/service.py",
+      "context": "Farm AI chat API delegates to FarmAIChatService."
+    },
+    {
+      "source_id": "farm_manager.api.config",
+      "target_id": "farm_manager.service.ConfigService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/config.py",
+      "target_file": "src/modules/farm_manager/services/config_service.py",
+      "context": "Config API delegates to ConfigService for spacing standards."
+    },
+    {
+      "source_id": "farm_manager.api.config",
+      "target_id": "farm_manager.service.FarmingYearService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/config.py",
+      "target_file": "src/modules/farm_manager/services/farming_year_service.py",
+      "context": "Config API delegates to FarmingYearService for farming year CRUD."
+    },
+    {
+      "source_id": "farm_manager.api.plant_data",
+      "target_id": "farm_manager.service.PlantDataService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/plant_data.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_service.py",
+      "context": "Plant data API delegates to PlantDataService."
+    },
+    {
+      "source_id": "farm_manager.api.plant_data_enhanced",
+      "target_id": "farm_manager.service.PlantDataEnhancedService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "context": "Enhanced plant data API delegates to PlantDataEnhancedService."
+    },
+    {
+      "source_id": "farm_manager.api.plantings",
+      "target_id": "farm_manager.service.PlantingService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/api/v1/plantings.py",
+      "target_file": "src/modules/farm_manager/services/planting/planting_service.py",
+      "context": "Planting API delegates to PlantingService."
+    },
+    {
+      "source_id": "farm_manager.service.FarmService",
+      "target_id": "farm_manager.service.FarmRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/farm/farm_service.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_repository.py",
+      "context": "FarmService delegates DB operations to FarmRepository."
+    },
+    {
+      "source_id": "farm_manager.service.BlockService",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "BlockService delegates DB operations to BlockRepository."
+    },
+    {
+      "source_id": "farm_manager.service.BlockService",
+      "target_id": "farm_manager.service.HarvestRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "target_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "context": "BlockService reads harvest data for KPI calculation."
+    },
+    {
+      "source_id": "farm_manager.service.BlockService",
+      "target_id": "farm_manager.service.TaskGeneratorService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/block/block_service_new.py",
+      "target_file": "src/modules/farm_manager/services/task/task_generator.py",
+      "context": "BlockService triggers task generation on state transitions."
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.service.HarvestRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "context": "HarvestService delegates DB operations to HarvestRepository."
+    },
+    {
+      "source_id": "farm_manager.service.HarvestService",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/harvest_service.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "HarvestService reads block info to validate and update KPI."
+    },
+    {
+      "source_id": "farm_manager.service.AlertService",
+      "target_id": "farm_manager.service.AlertRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/alert_service.py",
+      "target_file": "src/modules/farm_manager/services/block/alert_repository.py",
+      "context": "AlertService delegates DB operations to AlertRepository."
+    },
+    {
+      "source_id": "farm_manager.service.ArchiveService",
+      "target_id": "farm_manager.service.ArchiveRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/archive_service.py",
+      "target_file": "src/modules/farm_manager/services/block/archive_repository.py",
+      "context": "ArchiveService delegates DB operations to ArchiveRepository."
+    },
+    {
+      "source_id": "farm_manager.service.TaskService",
+      "target_id": "farm_manager.service.TaskRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/task/task_service.py",
+      "target_file": "src/modules/farm_manager/services/task/task_repository.py",
+      "context": "TaskService delegates DB operations to TaskRepository."
+    },
+    {
+      "source_id": "farm_manager.service.VirtualBlockService",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/virtual_block_service.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "VirtualBlockService reads/writes block data via BlockRepository."
+    },
+    {
+      "source_id": "farm_manager.service.VirtualBlockService",
+      "target_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/block/virtual_block_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "context": "VirtualBlockService looks up plant data for virtual crop creation."
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataService",
+      "target_id": "farm_manager.service.PlantDataRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_repository.py",
+      "context": "PlantDataService delegates DB operations to PlantDataRepository."
+    },
+    {
+      "source_id": "farm_manager.service.PlantDataEnhancedService",
+      "target_id": "farm_manager.service.PlantDataEnhancedRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py",
+      "target_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "context": "PlantDataEnhancedService delegates DB operations to PlantDataEnhancedRepository."
+    },
+    {
+      "source_id": "farm_manager.service.PlantingService",
+      "target_id": "farm_manager.service.PlantingRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/planting/planting_service.py",
+      "target_file": "src/modules/farm_manager/services/planting/planting_repository.py",
+      "context": "PlantingService delegates DB operations to PlantingRepository."
+    },
+    {
+      "source_id": "farm_manager.service.FarmAnalyticsService",
+      "target_id": "farm_manager.service.BlockRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/farm/farm_analytics_service.py",
+      "target_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "context": "FarmAnalyticsService reads block data for analytics calculations."
+    },
+    {
+      "source_id": "farm_manager.service.FarmAnalyticsService",
+      "target_id": "farm_manager.service.HarvestRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/farm/farm_analytics_service.py",
+      "target_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "context": "FarmAnalyticsService reads harvest data for yield analytics."
+    },
+    {
+      "source_id": "farm_manager.service.GlobalAnalyticsService",
+      "target_id": "farm_manager.service.FarmAnalyticsService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/global_analytics_service.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_analytics_service.py",
+      "context": "GlobalAnalyticsService aggregates per-farm analytics from FarmAnalyticsService."
+    },
+    {
+      "source_id": "farm_manager.service.GlobalAnalyticsService",
+      "target_id": "farm_manager.service.FarmRepository",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/global_analytics_service.py",
+      "target_file": "src/modules/farm_manager/services/farm/farm_repository.py",
+      "context": "GlobalAnalyticsService reads farm list to iterate across all farms."
+    },
+    {
+      "source_id": "farm_manager.service.WeatherService",
+      "target_id": "farm_manager.service.WeatherAPIClient",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/weather/weather_service.py",
+      "target_file": "src/modules/farm_manager/services/weather/weather_client.py",
+      "context": "WeatherService calls WeatherBit API via WeatherAPIClient."
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubConnectionService",
+      "target_id": "farm_manager.service.SenseHubClient",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/sensehub/sensehub_connection_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_client.py",
+      "context": "SenseHubConnectionService creates SenseHubClient instances for blocks."
+    },
+    {
+      "source_id": "farm_manager.service.SenseHubConnectionService",
+      "target_id": "farm_manager.service.SenseHubMCPClient",
+      "edge_type": "creates",
+      "source_file": "src/modules/farm_manager/services/sensehub/sensehub_connection_service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_mcp_client.py",
+      "context": "SenseHubConnectionService creates MCP client when mcpApiKey is configured."
+    },
+    {
+      "source_id": "farm_manager.service.FarmAIChatService",
+      "target_id": "farm_manager.service.SenseHubConnectionService",
+      "edge_type": "calls",
+      "source_file": "src/modules/farm_manager/services/farm_ai/service.py",
+      "target_file": "src/modules/farm_manager/services/sensehub/sensehub_connection_service.py",
+      "context": "Farm AI chat service gets SenseHub clients for tool execution."
+    },
+    {
+      "source_id": "farm_manager.service.FarmAIChatService",
+      "target_id": "core.config.Settings",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/farm_ai/service.py",
+      "target_file": "src/config/settings.py",
+      "context": "FarmAIChatService reads GOOGLE_CLOUD_PROJECT, VERTEX_AI_MODEL, etc. from settings."
+    },
+    {
+      "source_id": "farm_manager.service.CascadeDeletionService",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "uses",
+      "source_file": "src/modules/farm_manager/services/cascade_deletion_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "CascadeDeletionService accesses deleted_* collections via farm_db."
+    },
+    {
+      "source_id": "farm_manager.service.FarmRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/farm/farm_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "FarmRepository reads/writes 'farms' collection via farm_db."
+    },
+    {
+      "source_id": "farm_manager.service.BlockRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "BlockRepository reads/writes 'blocks' collection via farm_db."
+    },
+    {
+      "source_id": "farm_manager.service.HarvestRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "HarvestRepository reads/writes 'block_harvests' collection via farm_db."
+    },
+    {
+      "source_id": "farm_manager.service.AlertRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/alert_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "AlertRepository reads/writes 'block_alerts' collection via farm_db."
+    },
+    {
+      "source_id": "farm_manager.service.ArchiveRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/block/archive_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "ArchiveRepository reads/writes 'block_archives' collection via farm_db."
+    },
+    {
+      "source_id": "farm_manager.service.TaskRepository",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/farm_manager/services/task/task_repository.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "TaskRepository reads/writes 'farm_tasks' collection via farm_db."
+    },
+    {
+      "source_id": "farm_manager.api.farms.create_farm",
+      "target_id": "core.middleware.auth",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/farm_manager/api/v1/farms.py",
+      "target_file": "src/middleware/auth.py",
+      "context": "All farm_manager API endpoints use get_current_active_user dependency."
+    },
+    {
+      "source_id": "hr.api.employees",
+      "target_id": "hr.service.EmployeeService",
+      "edge_type": "calls",
+      "source_file": "src/modules/hr/api/v1/employees.py",
+      "target_file": "src/modules/hr/services/employee/employee_service.py",
+      "context": "Employee API delegates to EmployeeService."
+    },
+    {
+      "source_id": "hr.api.contracts",
+      "target_id": "hr.service.ContractService",
+      "edge_type": "calls",
+      "source_file": "src/modules/hr/api/v1/contracts.py",
+      "target_file": "src/modules/hr/services/employee/contract_service.py",
+      "context": "Contract API delegates to ContractService."
+    },
+    {
+      "source_id": "hr.api.visas",
+      "target_id": "hr.service.VisaService",
+      "edge_type": "calls",
+      "source_file": "src/modules/hr/api/v1/visas.py",
+      "target_file": "src/modules/hr/services/employee/visa_service.py",
+      "context": "Visa API delegates to VisaService."
+    },
+    {
+      "source_id": "hr.api.insurance",
+      "target_id": "hr.service.InsuranceService",
+      "edge_type": "calls",
+      "source_file": "src/modules/hr/api/v1/insurance.py",
+      "target_file": "src/modules/hr/services/employee/insurance_service.py",
+      "context": "Insurance API delegates to InsuranceService."
+    },
+    {
+      "source_id": "hr.api.performance",
+      "target_id": "hr.service.PerformanceService",
+      "edge_type": "calls",
+      "source_file": "src/modules/hr/api/v1/performance.py",
+      "target_file": "src/modules/hr/services/employee/performance_service.py",
+      "context": "Performance API delegates to PerformanceService."
+    },
+    {
+      "source_id": "hr.service.EmployeeService",
+      "target_id": "hr.service.EmployeeRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/hr/services/employee/employee_service.py",
+      "target_file": "src/modules/hr/services/employee/employee_repository.py",
+      "context": "EmployeeService delegates DB operations to EmployeeRepository."
+    },
+    {
+      "source_id": "hr.service.EmployeeRepository",
+      "target_id": "hr.service.HRDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/hr/services/employee/employee_repository.py",
+      "target_file": "src/modules/hr/services/database.py",
+      "context": "EmployeeRepository reads/writes 'employees' collection via hr_db."
+    },
+    {
+      "source_id": "crm.api.customers",
+      "target_id": "crm.service.CustomerService",
+      "edge_type": "calls",
+      "source_file": "src/modules/crm/api/v1/customers.py",
+      "target_file": "src/modules/crm/services/customer/customer_service.py",
+      "context": "Customer API delegates to CustomerService."
+    },
+    {
+      "source_id": "crm.service.CustomerService",
+      "target_id": "crm.service.CustomerRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/crm/services/customer/customer_service.py",
+      "target_file": "src/modules/crm/services/customer/customer_repository.py",
+      "context": "CustomerService delegates DB operations to CustomerRepository."
+    },
+    {
+      "source_id": "crm.service.CustomerRepository",
+      "target_id": "crm.service.CRMDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/crm/services/customer/customer_repository.py",
+      "target_file": "src/modules/crm/services/database.py",
+      "context": "CustomerRepository reads/writes 'customers' collection via crm_db."
+    },
+    {
+      "source_id": "sales.api.orders",
+      "target_id": "sales.service.OrderService",
+      "edge_type": "calls",
+      "source_file": "src/modules/sales/api/v1/orders.py",
+      "target_file": "src/modules/sales/services/sales/order_service.py",
+      "context": "Order API delegates to OrderService."
+    },
+    {
+      "source_id": "sales.service.OrderService",
+      "target_id": "sales.service.OrderRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/sales/services/sales/order_service.py",
+      "target_file": "src/modules/sales/services/sales/order_repository.py",
+      "context": "OrderService delegates DB operations to OrderRepository."
+    },
+    {
+      "source_id": "sales.service.OrderRepository",
+      "target_id": "sales.service.SalesDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/sales/services/sales/order_repository.py",
+      "target_file": "src/modules/sales/services/database.py",
+      "context": "OrderRepository reads/writes 'sales_orders' collection via sales_db."
+    },
+    {
+      "source_id": "sales.service.OrderService",
+      "target_id": "crm.service.CustomerRepository",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/sales/services/sales/order_service.py",
+      "target_file": "src/modules/crm/services/customer/customer_repository.py",
+      "context": "OrderService looks up customer data from CRM for order creation."
+    },
+    {
+      "source_id": "sales.service.OrderService",
+      "target_id": "farm_manager.service.FarmDatabaseManager",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/sales/services/sales/order_service.py",
+      "target_file": "src/modules/farm_manager/services/database.py",
+      "context": "OrderService reads farm_manager inventory collections for stock checks."
+    },
+    {
+      "source_id": "logistics.service.ShipmentService",
+      "target_id": "sales.service.OrderService",
+      "edge_type": "depends_on",
+      "source_file": "src/modules/logistics/services/logistics/shipment_service.py",
+      "target_file": "src/modules/sales/services/sales/order_service.py",
+      "context": "ShipmentService links shipments to sales orders for fulfillment."
+    },
+    {
+      "source_id": "logistics.api.shipments",
+      "target_id": "logistics.service.ShipmentService",
+      "edge_type": "calls",
+      "source_file": "src/modules/logistics/api/v1/shipments.py",
+      "target_file": "src/modules/logistics/services/logistics/shipment_service.py",
+      "context": "Shipment API delegates to ShipmentService."
+    },
+    {
+      "source_id": "logistics.service.ShipmentService",
+      "target_id": "logistics.service.ShipmentRepository",
+      "edge_type": "uses",
+      "source_file": "src/modules/logistics/services/logistics/shipment_service.py",
+      "target_file": "src/modules/logistics/services/logistics/shipment_repository.py",
+      "context": "ShipmentService delegates DB operations to ShipmentRepository."
+    },
+    {
+      "source_id": "logistics.service.ShipmentRepository",
+      "target_id": "logistics.service.LogisticsDatabaseManager",
+      "edge_type": "stores_in",
+      "source_file": "src/modules/logistics/services/logistics/shipment_repository.py",
+      "target_file": "src/modules/logistics/services/database.py",
+      "context": "ShipmentRepository reads/writes 'shipments' collection via logistics_db."
+    },
+    {
+      "source_id": "marketing.api.campaigns",
+      "target_id": "marketing.service.CampaignService",
+      "edge_type": "calls",
+      "source_file": "src/modules/marketing/api/v1/campaigns.py",
+      "target_file": "src/modules/marketing/services/marketing/campaign_service.py",
+      "context": "Campaign API delegates to CampaignService."
+    },
+    {
+      "source_id": "marketing.service.CampaignService",
+      "target_id": "marketing.service.BudgetService",
+      "edge_type": "uses",
+      "source_file": "src/modules/marketing/services/marketing/campaign_service.py",
+      "target_file": "src/modules/marketing/services/marketing/budget_service.py",
+      "context": "CampaignService uses BudgetService for budget allocation."
+    },
+    {
+      "source_id": "ai_analytics.api.chat",
+      "target_id": "ai_analytics.service.QueryEngine",
+      "edge_type": "calls",
+      "source_file": "src/modules/ai_analytics/api/v1/chat.py",
+      "target_file": "src/modules/ai_analytics/services/query_engine.py",
+      "context": "AI chat API delegates to QueryEngine for NL-to-MongoDB pipeline."
+    },
+    {
+      "source_id": "ai_analytics.service.QueryEngine",
+      "target_id": "ai_analytics.service.GeminiService",
+      "edge_type": "calls",
+      "source_file": "src/modules/ai_analytics/services/query_engine.py",
+      "target_file": "src/modules/ai_analytics/services/gemini_service.py",
+      "context": "QueryEngine uses GeminiService for NL-to-MongoDB query generation."
+    },
+    {
+      "source_id": "ai_analytics.service.QueryEngine",
+      "target_id": "ai_analytics.service.SchemaService",
+      "edge_type": "calls",
+      "source_file": "src/modules/ai_analytics/services/query_engine.py",
+      "target_file": "src/modules/ai_analytics/services/schema_service.py",
+      "context": "QueryEngine uses SchemaService to discover MongoDB schemas."
+    },
+    {
+      "source_id": "ai_analytics.service.QueryEngine",
+      "target_id": "ai_analytics.util.QueryValidator",
+      "edge_type": "calls",
+      "source_file": "src/modules/ai_analytics/services/query_engine.py",
+      "target_file": "src/modules/ai_analytics/utils/validators.py",
+      "context": "QueryEngine validates generated queries via QueryValidator."
+    },
+    {
+      "source_id": "ai_analytics.service.QueryEngine",
+      "target_id": "ai_analytics.service.CostTrackingService",
+      "edge_type": "calls",
+      "source_file": "src/modules/ai_analytics/services/query_engine.py",
+      "target_file": "src/modules/ai_analytics/services/cost_tracking_service.py",
+      "context": "QueryEngine logs query costs via CostTrackingService."
+    },
+    {
+      "source_id": "ai_analytics.service.GeminiService",
+      "target_id": "core.config.Settings",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/ai_analytics/services/gemini_service.py",
+      "target_file": "src/config/settings.py",
+      "context": "GeminiService reads VERTEX_AI_MODEL and GOOGLE_CLOUD_PROJECT from settings."
+    }
+  ]
+}

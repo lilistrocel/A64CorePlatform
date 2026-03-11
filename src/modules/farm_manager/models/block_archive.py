@@ -69,6 +69,10 @@ class BlockArchive(BaseModel):
     # Alerts Summary
     alertsSummary: AlertsSummary = Field(default_factory=AlertsSummary, description="Alerts summary for cycle")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Archive Metadata
     archivedAt: datetime = Field(default_factory=datetime.utcnow, description="When archived")
     archivedBy: UUID = Field(..., description="User who triggered archival")

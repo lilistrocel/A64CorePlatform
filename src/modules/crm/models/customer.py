@@ -70,6 +70,10 @@ class Customer(CustomerBase):
     customerId: UUID = Field(default_factory=uuid4, description="Unique customer identifier")
     customerCode: Optional[str] = Field(None, description="Human-readable customer code (e.g., C001)")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdBy: UUID = Field(..., description="User ID who created this customer")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

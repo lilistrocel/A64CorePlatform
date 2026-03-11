@@ -53,7 +53,7 @@ class PlantDataEnhancedService:
                 detail=f"Plant data for '{plant_data.plantName}' already exists"
             )
 
-        # Validate growth cycle totals match
+        # Validate growth cycle totals match (skip if individual stages are all 0)
         calculated_total = (
             plant_data.growthCycle.germinationDays +
             plant_data.growthCycle.vegetativeDays +
@@ -62,54 +62,56 @@ class PlantDataEnhancedService:
             plant_data.growthCycle.harvestDurationDays
         )
 
-        if calculated_total != plant_data.growthCycle.totalCycleDays:
+        if calculated_total > 0 and calculated_total != plant_data.growthCycle.totalCycleDays:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Growth cycle mismatch: sum of stages ({calculated_total}) "
                        f"does not match totalCycleDays ({plant_data.growthCycle.totalCycleDays})"
             )
 
-        # Validate temperature range
-        temp = plant_data.environmentalRequirements.temperature
-        if temp.minCelsius > temp.maxCelsius:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Temperature range invalid: minCelsius must be <= maxCelsius"
-            )
-
-        if not (temp.minCelsius <= temp.optimalCelsius <= temp.maxCelsius):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Optimal temperature must be within min-max range"
-            )
-
-        # Validate pH range
-        ph = plant_data.soilRequirements.phRequirements
-        if ph.minPH > ph.maxPH:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="pH range invalid: minPH must be <= maxPH"
-            )
-
-        if not (ph.minPH <= ph.optimalPH <= ph.maxPH):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Optimal pH must be within min-max range"
-            )
-
-        # Validate humidity if provided
-        if plant_data.environmentalRequirements.humidity:
-            hum = plant_data.environmentalRequirements.humidity
-            if hum.minPercentage > hum.maxPercentage:
+        # Validate temperature range (only if environmentalRequirements provided)
+        if plant_data.environmentalRequirements and plant_data.environmentalRequirements.temperature:
+            temp = plant_data.environmentalRequirements.temperature
+            if temp.minCelsius > temp.maxCelsius:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Humidity range invalid: minPercentage must be <= maxPercentage"
+                    detail="Temperature range invalid: minCelsius must be <= maxCelsius"
                 )
 
-            if not (hum.minPercentage <= hum.optimalPercentage <= hum.maxPercentage):
+            if not (temp.minCelsius <= temp.optimalCelsius <= temp.maxCelsius):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Optimal humidity must be within min-max range"
+                    detail="Optimal temperature must be within min-max range"
+                )
+
+            # Validate humidity if provided
+            if plant_data.environmentalRequirements.humidity:
+                hum = plant_data.environmentalRequirements.humidity
+                if hum.minPercentage > hum.maxPercentage:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Humidity range invalid: minPercentage must be <= maxPercentage"
+                    )
+
+                if not (hum.minPercentage <= hum.optimalPercentage <= hum.maxPercentage):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Optimal humidity must be within min-max range"
+                    )
+
+        # Validate pH range (only if soilRequirements provided)
+        if plant_data.soilRequirements and plant_data.soilRequirements.phRequirements:
+            ph = plant_data.soilRequirements.phRequirements
+            if ph.minPH > ph.maxPH:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="pH range invalid: minPH must be <= maxPH"
+                )
+
+            if not (ph.minPH <= ph.optimalPH <= ph.maxPH):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Optimal pH must be within min-max range"
                 )
 
         # Create plant data
@@ -285,7 +287,7 @@ class PlantDataEnhancedService:
                     detail="Optimal pH must be within min-max range"
                 )
 
-        # Validate growth cycle if updating
+        # Validate growth cycle if updating (skip if individual stages are all 0)
         if update_data.growthCycle:
             calculated_total = (
                 update_data.growthCycle.germinationDays +
@@ -295,7 +297,7 @@ class PlantDataEnhancedService:
                 update_data.growthCycle.harvestDurationDays
             )
 
-            if calculated_total != update_data.growthCycle.totalCycleDays:
+            if calculated_total > 0 and calculated_total != update_data.growthCycle.totalCycleDays:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Growth cycle mismatch: sum of stages ({calculated_total}) "

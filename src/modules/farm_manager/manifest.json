@@ -27,5 +27,7 @@
   ],
   "license_required": true,
   "enabled_by_default": true,
-  "core_module": true
+  "core_module": true,
+  "industries": ["vegetable_fruits"],
+  "industry_mode": "exclusive"
 }

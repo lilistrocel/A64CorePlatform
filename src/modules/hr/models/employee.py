@@ -118,6 +118,10 @@ class Employee(EmployeeBase):
     employeeId: UUID = Field(default_factory=uuid4, description="Unique employee identifier")
     employeeCode: Optional[str] = Field(None, description="Human-readable employee code (e.g., E001)")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdBy: UUID = Field(..., description="User ID who created this employee")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

@@ -14,6 +14,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { DashboardBlock, DashboardBlockStatus, PerformanceCategory } from '../../types/farm';
 
 export type SortOption =
+  | 'name'
   | 'blockCode'
   | 'state'
   | 'daysInState'
@@ -130,7 +131,7 @@ export function useDashboardFilters(
   blocks: DashboardBlock[]
 ): UseDashboardFiltersReturn {
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
-  const [sortBy, setSortBy] = useState<SortOption>('blockCode');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   /**
@@ -177,6 +178,10 @@ export function useDashboardFilters(
       let comparison = 0;
 
       switch (sortBy) {
+        case 'name':
+          comparison = (a.name || a.blockCode).localeCompare(b.name || b.blockCode);
+          break;
+
         case 'blockCode':
           comparison = a.blockCode.localeCompare(b.blockCode);
           break;

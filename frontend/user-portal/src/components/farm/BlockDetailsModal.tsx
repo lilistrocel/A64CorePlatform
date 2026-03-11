@@ -351,7 +351,10 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
       >
         <Header>
           <HeaderLeft>
-            <BlockCode>{block.blockCode}</BlockCode>
+            <HeaderTitles>
+              <BlockCodeSmall>{block.blockCode}</BlockCodeSmall>
+              <BlockName>{block.name || block.blockCode}</BlockName>
+            </HeaderTitles>
             <StatusBadge $color={getStatusColor()}>
               {block.state.charAt(0).toUpperCase() + block.state.slice(1)}
             </StatusBadge>
@@ -413,8 +416,36 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
                 </InfoGrid>
               </Section>
 
+              {/* Yield: Predicted vs Actual */}
+              {block.kpi.predictedYieldKg > 0 && (
+                <Section>
+                  <SectionTitle>Yield</SectionTitle>
+                  <YieldContainer>
+                    <YieldHeader>
+                      <YieldActual>{block.kpi.actualYieldKg.toFixed(0)} kg</YieldActual>
+                      <YieldSeparator>/</YieldSeparator>
+                      <YieldPredicted>{block.kpi.predictedYieldKg.toFixed(0)} kg predicted</YieldPredicted>
+                    </YieldHeader>
+                    <YieldBarBackground>
+                      <YieldBarFill
+                        $percent={Math.min(block.calculated.yieldProgress, 100)}
+                        $overTarget={block.calculated.yieldProgress > 100}
+                      />
+                    </YieldBarBackground>
+                    <YieldFooter>
+                      <YieldPercent $overTarget={block.calculated.yieldProgress > 100}>
+                        {block.calculated.yieldProgress.toFixed(1)}%
+                      </YieldPercent>
+                      {block.kpi.totalHarvests > 0 && (
+                        <YieldHarvestCount>{block.kpi.totalHarvests} harvests</YieldHarvestCount>
+                      )}
+                    </YieldFooter>
+                  </YieldContainer>
+                </Section>
+              )}
+
               {/* Performance Metrics */}
-              {block.state === 'harvesting' && (
+              {block.state !== 'empty' && block.state !== 'planned' && (
                 <Section>
                   <SectionTitle>Performance</SectionTitle>
                   <PerformanceGrid>
@@ -543,12 +574,23 @@ const HeaderLeft = styled.div`
   gap: ${({ theme }) => theme.spacing.md};
 `;
 
-const BlockCode = styled.h2`
+const HeaderTitles = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const BlockCodeSmall = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.neutral[400]};
+  font-family: 'Courier New', monospace;
+`;
+
+const BlockName = styled.h2`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
-  font-family: 'Courier New', monospace;
 `;
 
 const StatusBadge = styled.div<{ $color: string }>`
@@ -823,6 +865,71 @@ const DateValue = styled.div`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const YieldContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => theme.colors.neutral[50]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+`;
+
+const YieldHeader = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const YieldActual = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const YieldSeparator = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.lg};
+  color: ${({ theme }) => theme.colors.neutral[400]};
+`;
+
+const YieldPredicted = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const YieldBarBackground = styled.div`
+  width: 100%;
+  height: 10px;
+  background: ${({ theme }) => theme.colors.neutral[200]};
+  border-radius: 5px;
+  overflow: hidden;
+`;
+
+const YieldBarFill = styled.div<{ $percent: number; $overTarget: boolean }>`
+  height: 100%;
+  width: ${({ $percent }) => $percent}%;
+  background: ${({ $overTarget }) => ($overTarget ? '#10B981' : '#3B82F6')};
+  border-radius: 5px;
+  transition: width 0.5s ease-in-out;
+`;
+
+const YieldFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const YieldPercent = styled.span<{ $overTarget: boolean }>`
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ $overTarget }) => ($overTarget ? '#10B981' : '#3B82F6')};
+`;
+
+const YieldHarvestCount = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PerformanceGrid = styled.div`

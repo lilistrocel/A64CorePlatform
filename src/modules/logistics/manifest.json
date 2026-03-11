@@ -21,5 +21,7 @@
   ],
   "license_required": false,
   "enabled_by_default": true,
-  "core_module": false
+  "core_module": false,
+  "industries": ["all"],
+  "industry_mode": "shared"
 }

@@ -1,0 +1,36 @@
+{
+  "module_name": "mushroom_manager",
+  "display_name": "Mushroom Manager",
+  "version": "1.0.0",
+  "description": "Controlled-environment mushroom cultivation management with facility tracking, growing room lifecycle, strain library, substrate management, multi-flush harvests, and contamination monitoring",
+  "route_prefix": "/api/v1/mushroom",
+  "dependencies": {
+    "core": ">=1.3.0",
+    "python": ">=3.11"
+  },
+  "database_collections": [
+    "mushroom_facilities",
+    "growing_rooms",
+    "mushroom_strains",
+    "substrate_batches",
+    "mushroom_harvests",
+    "room_environment_logs",
+    "contamination_reports",
+    "mushroom_tasks"
+  ],
+  "permissions": [
+    "mushroom.view",
+    "mushroom.create",
+    "mushroom.edit",
+    "mushroom.delete",
+    "mushroom.harvest.view",
+    "mushroom.harvest.create",
+    "mushroom.environment.view",
+    "mushroom.contamination.report"
+  ],
+  "license_required": true,
+  "enabled_by_default": true,
+  "core_module": true,
+  "industries": ["mushroom"],
+  "industry_mode": "exclusive"
+}

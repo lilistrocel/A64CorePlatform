@@ -48,6 +48,10 @@ class Visa(VisaBase):
     """Complete visa model with all fields"""
     visaId: UUID = Field(default_factory=uuid4, description="Unique visa identifier")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)

@@ -86,6 +86,10 @@ class BlockCycle(BaseModel):
     completedBy: Optional[UUID] = Field(None, description="Manager who completed cycle")
     completedByEmail: Optional[str] = Field(None, description="Email of completer")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Timestamps
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)

@@ -233,3 +233,7 @@ class WeatherCacheEntry(BaseModel):
     data: dict = Field(..., description="Cached data")
     cachedAt: datetime = Field(default_factory=datetime.utcnow, description="Cache timestamp")
     expiresAt: datetime = Field(..., description="Cache expiration timestamp")
+
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")

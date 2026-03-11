@@ -25,6 +25,7 @@ from .core.cache import get_redis_cache, close_redis_cache
 from .core.logging_config import setup_logging
 from .middleware.rate_limit import RateLimitMiddleware
 from .middleware.timing import TimingMiddlewareWithCollector
+from .middleware.division_context import DivisionContextMiddleware
 
 # Configure structured logging (JSON in production, text in development)
 setup_logging(log_level=settings.LOG_LEVEL, environment=settings.ENVIRONMENT)
@@ -47,7 +48,7 @@ app.add_middleware(
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-Division-Id", "X-Organization-Id"],
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
@@ -58,6 +59,10 @@ app.add_middleware(TimingMiddlewareWithCollector, slow_threshold_ms=1000, skip_h
 # Rate Limiting Middleware - Applied after CORS
 # Limits vary by role: Guest=10, User=100, Moderator=200, Admin=500, Super Admin=1000 req/min
 app.add_middleware(RateLimitMiddleware)
+
+# Division Context Middleware - Reads X-Division-Id header and sets ContextVar
+# Applied after rate limiting so division scoping is available to all request handlers
+app.add_middleware(DivisionContextMiddleware)
 
 # Global exception handler
 @app.exception_handler(Exception)

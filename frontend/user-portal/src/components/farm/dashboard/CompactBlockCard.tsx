@@ -130,7 +130,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
         }
       }}
     >
-      {/* Header */}
+      {/* Header - code as small top text */}
       <Header>
         <BlockCode>{config.layout.showBlockCode && block.blockCode}</BlockCode>
       </Header>
@@ -141,9 +141,9 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
         <span>{block.state.charAt(0).toUpperCase() + block.state.slice(1)}</span>
       </StateBadge>
 
-      {/* Block Name */}
-      {block.name && config.layout.showBlockName && (
-        <BlockName>{block.name}</BlockName>
+      {/* Block Name - primary label */}
+      {config.layout.showBlockName && (
+        <BlockName>{block.name || block.blockCode}</BlockName>
       )}
 
       {/* State-Specific Content */}
@@ -536,9 +536,9 @@ const Header = styled.div`
 `;
 
 const BlockCode = styled.div`
-  font-size: 12px;
-  font-weight: 700;
-  color: #212121;
+  font-size: 11px;
+  font-weight: 500;
+  color: #9e9e9e;
   font-family: 'Courier New', monospace;
 `;
 
@@ -558,9 +558,9 @@ const StateBadge = styled.div<{ $color: string }>`
 `;
 
 const BlockName = styled.div`
-  font-size: 13px;
-  font-weight: 500;
-  color: #616161;
+  font-size: 14px;
+  font-weight: 700;
+  color: #212121;
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;

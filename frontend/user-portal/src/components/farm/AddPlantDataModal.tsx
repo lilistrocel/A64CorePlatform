@@ -30,7 +30,10 @@ const plantDataSchema = z.object({
   plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']),
   farmTypeCompatibility: z.array(z.string()).min(1, 'Select at least one farm type'),
   tags: z.string().optional(),
-  spacingCategory: z.enum(['xs', 's', 'm', 'l', 'xl', 'bush', 'large_bush', 'small_tree', 'medium_tree', 'large_tree']).optional(),
+  spacingCategory: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.enum(['xs', 's', 'm', 'l', 'xl', 'bush', 'large_bush', 'small_tree', 'medium_tree', 'large_tree']).optional(),
+  ),
 
   // Growth Cycle (Required)
   germinationDays: z.number().nonnegative('Cannot be negative').optional(),
@@ -471,11 +474,11 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
         spacingCategory: data.spacingCategory as SpacingCategory | undefined,
 
         growthCycle: {
-          germinationDays: data.germinationDays,
-          vegetativeDays: data.vegetativeDays,
-          floweringDays: data.floweringDays,
-          fruitingDays: data.fruitingDays,
-          harvestDurationDays: data.harvestDurationDays,
+          germinationDays: data.germinationDays ?? 0,
+          vegetativeDays: data.vegetativeDays ?? 0,
+          floweringDays: data.floweringDays ?? 0,
+          fruitingDays: data.fruitingDays ?? 0,
+          harvestDurationDays: data.harvestDurationDays ?? 0,
           totalCycleDays: data.totalCycleDays,
         },
 

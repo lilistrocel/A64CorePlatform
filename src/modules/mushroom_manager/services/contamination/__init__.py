@@ -1,0 +1,1 @@
+"""Mushroom Manager - Contamination Service"""

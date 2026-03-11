@@ -10,6 +10,7 @@ import { useSearchParams } from 'react-router-dom';
 import styled, { css, keyframes } from 'styled-components';
 import { FarmCard } from './FarmCard';
 import { CreateFarmModal } from './CreateFarmModal';
+import { EditFarmModal } from './EditFarmModal';
 import { FarmAnalyticsModal } from './FarmAnalyticsModal';
 import { farmApi } from '../../services/farmApi';
 import { useDeleteFarm } from '../../hooks/queries/useFarms';
@@ -476,6 +477,8 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [selectedFarmName, setSelectedFarmName] = useState<string>('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
 
   // Mobile filter collapse state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -615,6 +618,21 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
     setIsAnalyticsModalOpen(true);
   };
 
+  const handleEditFarm = (farmId: string) => {
+    const farm = farms.find((f) => f.farmId === farmId);
+    if (farm) {
+      setEditingFarm(farm);
+      setIsEditModalOpen(true);
+    }
+    onEditFarm?.(farmId);
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditModalOpen(false);
+    setEditingFarm(null);
+    loadFarms();
+  };
+
   return (
     <Container>
       <CreateFarmModal
@@ -622,6 +640,18 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={handleCreateSuccess}
       />
+
+      {editingFarm && (
+        <EditFarmModal
+          farm={editingFarm}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingFarm(null);
+          }}
+          onSuccess={handleEditSuccess}
+        />
+      )}
 
       <FarmAnalyticsModal
         isOpen={isAnalyticsModalOpen}
@@ -716,7 +746,7 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
                 key={farm.farmId}
                 farm={farm}
                 summary={summaries[farm.farmId]}
-                onEdit={onEditFarm}
+                onEdit={handleEditFarm}
                 onDelete={handleDelete}
                 onViewStatistics={handleViewStatistics}
               />

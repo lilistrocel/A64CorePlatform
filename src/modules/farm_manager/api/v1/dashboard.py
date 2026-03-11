@@ -417,7 +417,7 @@ async def get_farm_dashboard(
             dashboard_blocks.append(dashboard_block)
 
         # Get recent activity (last 7 days)
-        recent_activity = await get_recent_activity(farmId, days=7)
+        recent_activity = await get_recent_activity(farmId, days=7, farming_year=farmingYear)
 
         # Get upcoming events (next 7 days)
         upcoming_events = await get_upcoming_events(blocks, days=7)
@@ -590,16 +590,142 @@ async def quick_harvest(
 
 
 # ============================================================================
+# KPI RECALCULATION
+# ============================================================================
+
+@router.post(
+    "/recalculate-kpi",
+    summary="Recalculate block KPIs from harvest records",
+    description="Recomputes actualYieldKg, totalHarvests, and yieldEfficiencyPercent for all blocks (or a specific farm) by summing actual harvest records. Use this to fix KPI drift caused by race conditions during bulk imports."
+)
+async def recalculate_kpi(
+    farmId: Optional[UUID] = Query(None, description="Limit to a specific farm (omit for all farms)"),
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """
+    Recalculate block KPIs from actual harvest records.
+
+    Fixes data where actualYieldKg / totalHarvests don't match
+    the sum of block_harvests records (caused by concurrent write race conditions).
+    """
+    if current_user.role not in ["super_admin", "admin"]:
+        raise HTTPException(403, "Only admins can recalculate KPIs")
+
+    from ...services.block.harvest_repository import HarvestRepository
+    from ...services.database import farm_db
+
+    db = farm_db.get_database()
+
+    try:
+        # Get blocks to recalculate
+        block_filter = {"isActive": True}
+        if farmId:
+            block_filter["farmId"] = str(farmId)
+
+        blocks = await db.blocks.find(block_filter, {"blockId": 1, "kpi": 1, "blockCode": 1}).to_list(length=5000)
+
+        fixed = 0
+        skipped = 0
+        errors = []
+
+        for block_doc in blocks:
+            block_id = block_doc["blockId"]
+            block_code = block_doc.get("blockCode", block_id[:8])
+
+            try:
+                # Sum all harvest records for this block
+                pipeline = [
+                    {"$match": {"blockId": block_id}},
+                    {"$group": {
+                        "_id": None,
+                        "totalYieldKg": {"$sum": "$quantityKg"},
+                        "harvestCount": {"$sum": 1}
+                    }}
+                ]
+                agg_result = await db.block_harvests.aggregate(pipeline).to_list(length=1)
+
+                if agg_result:
+                    actual_yield = round(agg_result[0]["totalYieldKg"], 2)
+                    actual_count = agg_result[0]["harvestCount"]
+                else:
+                    actual_yield = 0.0
+                    actual_count = 0
+
+                current_kpi = block_doc.get("kpi", {})
+                current_yield = current_kpi.get("actualYieldKg", 0)
+                current_count = current_kpi.get("totalHarvests", 0)
+                predicted = current_kpi.get("predictedYieldKg", 0)
+
+                # Check if update needed
+                yield_diff = abs(actual_yield - current_yield)
+                count_diff = abs(actual_count - current_count)
+
+                if yield_diff < 0.5 and count_diff == 0:
+                    skipped += 1
+                    continue
+
+                # Calculate new efficiency
+                efficiency = round((actual_yield / predicted) * 100, 2) if predicted > 0 else 0.0
+
+                # Update block KPI
+                await db.blocks.update_one(
+                    {"blockId": block_id},
+                    {"$set": {
+                        "kpi.actualYieldKg": actual_yield,
+                        "kpi.totalHarvests": actual_count,
+                        "kpi.yieldEfficiencyPercent": efficiency,
+                        "updatedAt": datetime.utcnow()
+                    }}
+                )
+
+                fixed += 1
+                logger.info(
+                    f"[KPI Recalc] {block_code}: yield {current_yield:.1f} -> {actual_yield:.1f} kg, "
+                    f"harvests {current_count} -> {actual_count}"
+                )
+
+            except Exception as e:
+                errors.append({"blockCode": block_code, "error": str(e)})
+                logger.error(f"[KPI Recalc] Error for {block_code}: {str(e)}")
+
+        result = {
+            "success": True,
+            "message": f"KPI recalculation complete",
+            "totalBlocks": len(blocks),
+            "fixed": fixed,
+            "skipped": skipped,
+            "errors": len(errors)
+        }
+
+        if errors:
+            result["errorDetails"] = errors[:10]
+
+        logger.info(
+            f"[KPI Recalc] Done: {fixed} fixed, {skipped} already correct, "
+            f"{len(errors)} errors out of {len(blocks)} blocks"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[KPI Recalc] Failed: {str(e)}", exc_info=True)
+        raise HTTPException(500, f"KPI recalculation failed: {str(e)}")
+
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
-async def get_recent_activity(farm_id: UUID, days: int = 7) -> List[DashboardActivity]:
+async def get_recent_activity(farm_id: UUID, days: int = 7, farming_year: Optional[int] = None) -> List[DashboardActivity]:
     """
     Get recent activity for the farm (last N days)
 
     Args:
         farm_id: Farm ID
         days: Number of days to look back
+        farming_year: Optional farming year filter
 
     Returns:
         List of recent activities
@@ -609,7 +735,7 @@ async def get_recent_activity(farm_id: UUID, days: int = 7) -> List[DashboardAct
     try:
         # Get virtual blocks for farm (physical blocks are just containers)
         blocks, _ = await BlockRepository.get_by_farm(
-            farm_id, skip=0, limit=1000, block_category='virtual'
+            farm_id, skip=0, limit=1000, block_category='virtual', farming_year=farming_year
         )
 
         cutoff_date = datetime.utcnow() - timedelta(days=days)

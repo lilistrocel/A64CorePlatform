@@ -104,6 +104,10 @@ class SalesOrder(SalesOrderBase):
     orderId: UUID = Field(default_factory=uuid4, description="Unique order identifier")
     orderCode: Optional[str] = Field(None, description="Human-readable order code (e.g., SO001)")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Tracking information
     createdBy: UUID = Field(..., description="User ID who created this order")
     createdAt: datetime = Field(default_factory=datetime.utcnow)

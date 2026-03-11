@@ -352,6 +352,7 @@ async def get_farm_analytics(
         description="Time period: '30d', '90d', '6m', '1y', 'all'",
         regex="^(30d|90d|6m|1y|all)$"
     ),
+    farmingYear: Optional[int] = Query(None, description="Filter by farming year"),
     current_user: CurrentUser = Depends(get_current_active_user),
     service: FarmService = Depends()
 ):
@@ -388,7 +389,8 @@ async def get_farm_analytics(
     # Generate analytics
     analytics = await FarmAnalyticsService.get_farm_analytics(
         farm_id=farm_id,
-        period=period
+        period=period,
+        farming_year=farmingYear
     )
 
     return SuccessResponse(

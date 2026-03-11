@@ -68,6 +68,10 @@ class BlockHarvest(BlockHarvestBase):
     recordedBy: UUID = Field(..., description="User ID who recorded harvest")
     recordedByEmail: str = Field(..., description="Email of user who recorded harvest")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Timestamps
     createdAt: datetime = Field(default_factory=datetime.utcnow)
 

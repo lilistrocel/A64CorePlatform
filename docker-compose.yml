@@ -26,6 +26,9 @@ services:
       - VERTEX_AI_MODEL=gemini-2.5-flash
       - VERTEX_AI_MAX_OUTPUT_TOKENS=2048
       - VERTEX_AI_TEMPERATURE=0.1
+      # Anthropic Claude AI (Farm AI Chat)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
       # WeatherBit API Settings (Agricultural Weather Data)
       - WEATHERBIT_API_KEY=${WEATHERBIT_API_KEY:-}
       - WEATHERBIT_ENABLED=true

@@ -62,6 +62,10 @@ class Alert(BaseModel):
     status: AlertStatus = Field(AlertStatus.ACTIVE, description="Alert status")
     source: Optional[str] = Field(None, description="Where alert came from (e.g., task_manager, sensor_id)")
 
+    # Multi-industry scoping
+    divisionId: Optional[str] = Field(None, description="Division scope")
+    organizationId: Optional[str] = Field(None, description="Organization scope")
+
     # Created By
     createdBy: UUID = Field(..., description="User ID who created alert")
     createdByEmail: str = Field(..., description="Email of user who created alert")

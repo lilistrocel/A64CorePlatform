@@ -5,7 +5,7 @@
  * Features: search, filters, cards grid, pagination, and quick stats.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { PlantDataCard } from '../../components/farm/PlantDataCard';
 import { PlantDataDetail } from '../../components/farm/PlantDataDetail';
@@ -208,11 +208,14 @@ const ClearButton = styled.button`
   }
 `;
 
-const CardsGrid = styled.div`
+const CardsGrid = styled.div<{ $loading?: boolean }>`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
   margin-bottom: 32px;
+  opacity: ${({ $loading }) => ($loading ? 0.5 : 1)};
+  pointer-events: ${({ $loading }) => ($loading ? 'none' : 'auto')};
+  transition: opacity 150ms ease-in-out;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -395,12 +398,14 @@ const ProgressBarInner = styled.div<{ $progress: number }>`
 export function PlantDataLibrary() {
   const { user } = useAuthStore();
   const [plants, setPlants] = useState<PlantDataEnhanced[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalPlants, setTotalPlants] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedFarmType, setSelectedFarmType] = useState<FarmTypeCompatibility | ''>('');
   const [selectedContributor, setSelectedContributor] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
@@ -426,9 +431,18 @@ export function PlantDataLibrary() {
     loadFilterOptions();
   }, []);
 
+  // Debounce search term (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   useEffect(() => {
     loadPlants();
-  }, [currentPage, searchTerm, selectedFarmType, selectedContributor, selectedRegion]);
+  }, [currentPage, debouncedSearch, selectedFarmType, selectedContributor, selectedRegion]);
 
   const loadFilterOptions = async () => {
     try {
@@ -447,7 +461,7 @@ export function PlantDataLibrary() {
       const params: PlantDataEnhancedSearchParams = {
         page: currentPage,
         perPage,
-        search: searchTerm || undefined,
+        search: debouncedSearch || undefined,
         farmType: selectedFarmType || undefined,
         contributor: selectedContributor || undefined,
         targetRegion: selectedRegion || undefined,
@@ -462,12 +476,12 @@ export function PlantDataLibrary() {
       console.error('Error loading plant data:', err);
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1);
   };
 
   const handleFarmTypeChange = (value: string) => {
@@ -636,7 +650,7 @@ export function PlantDataLibrary() {
     loadPlants();
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <Container>
         <LoadingContainer>
@@ -646,7 +660,7 @@ export function PlantDataLibrary() {
     );
   }
 
-  if (error) {
+  if (error && !plants.length) {
     return (
       <Container>
         <ErrorContainer>{error}</ErrorContainer>
@@ -796,7 +810,7 @@ export function PlantDataLibrary() {
         </EmptyState>
       ) : (
         <>
-          <CardsGrid>
+          <CardsGrid $loading={loading}>
             {plants.map((plant) => (
               <PlantDataCard
                 key={plant.plantDataId}

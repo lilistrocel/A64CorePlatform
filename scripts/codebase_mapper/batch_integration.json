@@ -1,0 +1,1986 @@
+{
+  "nodes": [
+    {
+      "node_id": "collection_users",
+      "node_type": "db_model",
+      "name": "users",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: users - stores user accounts, auth info, MFA settings"
+    },
+    {
+      "node_id": "collection_refresh_tokens",
+      "node_type": "db_model",
+      "name": "refresh_tokens",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: refresh_tokens - stores JWT refresh tokens with rotation"
+    },
+    {
+      "node_id": "collection_verification_tokens",
+      "node_type": "db_model",
+      "name": "verification_tokens",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: verification_tokens - stores email verification and password reset tokens"
+    },
+    {
+      "node_id": "collection_installed_modules",
+      "node_type": "db_model",
+      "name": "installed_modules",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: installed_modules - tracks installed platform modules"
+    },
+    {
+      "node_id": "collection_module_audit_log",
+      "node_type": "db_model",
+      "name": "module_audit_log",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: module_audit_log - audit trail for module install/uninstall operations"
+    },
+    {
+      "node_id": "collection_ai_query_log",
+      "node_type": "db_model",
+      "name": "ai_query_log",
+      "file_path": "src/services/database.py",
+      "module": "ai_analytics",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: ai_query_log - tracks AI query usage and costs (Vertex AI)"
+    },
+    {
+      "node_id": "collection_user_mfa",
+      "node_type": "db_model",
+      "name": "user_mfa",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: user_mfa - stores MFA secrets and TOTP configuration"
+    },
+    {
+      "node_id": "collection_mfa_backup_codes",
+      "node_type": "db_model",
+      "name": "mfa_backup_codes",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: mfa_backup_codes - stores hashed MFA backup codes"
+    },
+    {
+      "node_id": "collection_mfa_audit_log",
+      "node_type": "db_model",
+      "name": "mfa_audit_log",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: mfa_audit_log - audit trail for MFA enable/disable/verify actions"
+    },
+    {
+      "node_id": "collection_mfa_pending_tokens",
+      "node_type": "db_model",
+      "name": "mfa_pending_tokens",
+      "file_path": "src/services/auth_service.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: mfa_pending_tokens - temporary tokens during MFA login flow"
+    },
+    {
+      "node_id": "collection_admin_audit_log",
+      "node_type": "db_model",
+      "name": "admin_audit_log",
+      "file_path": "src/services/database.py",
+      "module": "core",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: admin_audit_log - audit trail for admin actions (role changes, status updates)"
+    },
+    {
+      "node_id": "collection_farms",
+      "node_type": "db_model",
+      "name": "farms",
+      "file_path": "src/modules/farm_manager/services/farm/farm_repository.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: farms - stores farm documents with location, manager, and metadata"
+    },
+    {
+      "node_id": "collection_blocks",
+      "node_type": "db_model",
+      "name": "blocks",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: blocks - stores farm blocks (physical and virtual) with state machine"
+    },
+    {
+      "node_id": "collection_plant_data",
+      "node_type": "db_model",
+      "name": "plant_data",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_repository.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: plant_data - simple plant catalog schema"
+    },
+    {
+      "node_id": "collection_plant_data_enhanced",
+      "node_type": "db_model",
+      "name": "plant_data_enhanced",
+      "file_path": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: plant_data_enhanced - comprehensive plant library with growth cycles, farm type compatibility"
+    },
+    {
+      "node_id": "collection_plantings",
+      "node_type": "db_model",
+      "name": "plantings",
+      "file_path": "src/modules/farm_manager/services/planting/planting_repository.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: plantings - stores planting plans with block assignments"
+    },
+    {
+      "node_id": "collection_block_cycles",
+      "node_type": "db_model",
+      "name": "block_cycles",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: block_cycles - historical growing cycles for blocks"
+    },
+    {
+      "node_id": "collection_daily_harvests",
+      "node_type": "db_model",
+      "name": "daily_harvests",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: daily_harvests - individual daily harvest entries"
+    },
+    {
+      "node_id": "collection_harvests",
+      "node_type": "db_model",
+      "name": "harvests",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: harvests - aggregated harvest summaries"
+    },
+    {
+      "node_id": "collection_block_harvests",
+      "node_type": "db_model",
+      "name": "block_harvests",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: block_harvests - harvest records per block with farming year"
+    },
+    {
+      "node_id": "collection_block_archives",
+      "node_type": "db_model",
+      "name": "block_archives",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: block_archives - archived growing cycles for historical reference"
+    },
+    {
+      "node_id": "collection_alerts",
+      "node_type": "db_model",
+      "name": "alerts",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: alerts - block alerts with severity, status, and resolution"
+    },
+    {
+      "node_id": "collection_farm_tasks",
+      "node_type": "db_model",
+      "name": "farm_tasks",
+      "file_path": "src/modules/farm_manager/services/task/task_repository.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: farm_tasks - operations task manager for farming activities"
+    },
+    {
+      "node_id": "collection_farmer_assignments",
+      "node_type": "db_model",
+      "name": "farmer_assignments",
+      "file_path": "src/modules/farm_manager/services/task/task_service.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: farmer_assignments - assigns farmers/workers to specific farms"
+    },
+    {
+      "node_id": "collection_farm_assignments",
+      "node_type": "db_model",
+      "name": "farm_assignments",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: farm_assignments - maps users to farms for access control"
+    },
+    {
+      "node_id": "collection_stock_inventory",
+      "node_type": "db_model",
+      "name": "stock_inventory",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: stock_inventory - farm stock/harvest inventory for FIFO tracking"
+    },
+    {
+      "node_id": "collection_inventory_harvest",
+      "node_type": "db_model",
+      "name": "inventory_harvest",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: inventory_harvest - harvest inventory items with quality grades"
+    },
+    {
+      "node_id": "collection_inventory_input",
+      "node_type": "db_model",
+      "name": "inventory_input",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: inventory_input - farm input supplies (seeds, fertilizer, chemicals)"
+    },
+    {
+      "node_id": "collection_inventory_asset",
+      "node_type": "db_model",
+      "name": "inventory_asset",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: inventory_asset - farm equipment and asset tracking"
+    },
+    {
+      "node_id": "collection_inventory_movements",
+      "node_type": "db_model",
+      "name": "inventory_movements",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: inventory_movements - tracks inventory transfers and usage"
+    },
+    {
+      "node_id": "collection_products",
+      "node_type": "db_model",
+      "name": "products",
+      "file_path": "src/modules/farm_manager/services/database.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: products - master product catalog for inventory"
+    },
+    {
+      "node_id": "collection_system_config",
+      "node_type": "db_model",
+      "name": "system_config",
+      "file_path": "src/modules/farm_manager/services/config_service.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: system_config - stores farming year config and spacing standards"
+    },
+    {
+      "node_id": "collection_weather_cache",
+      "node_type": "db_model",
+      "name": "weather_cache",
+      "file_path": "src/modules/farm_manager/services/weather/weather_cache_service.py",
+      "module": "farm_manager",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: weather_cache - caches WeatherBit API responses"
+    },
+    {
+      "node_id": "collection_employees",
+      "node_type": "db_model",
+      "name": "employees",
+      "file_path": "src/modules/hr/services/employee/employee_repository.py",
+      "module": "hr",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: employees - HR employee records with Arabic name support"
+    },
+    {
+      "node_id": "collection_employee_contracts",
+      "node_type": "db_model",
+      "name": "employee_contracts",
+      "file_path": "src/modules/hr/services/employee/contract_repository.py",
+      "module": "hr",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: employee_contracts - employment contract records"
+    },
+    {
+      "node_id": "collection_employee_visas",
+      "node_type": "db_model",
+      "name": "employee_visas",
+      "file_path": "src/modules/hr/services/employee/visa_repository.py",
+      "module": "hr",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: employee_visas - visa and work permit tracking (UAE)"
+    },
+    {
+      "node_id": "collection_employee_insurance",
+      "node_type": "db_model",
+      "name": "employee_insurance",
+      "file_path": "src/modules/hr/services/employee/insurance_repository.py",
+      "module": "hr",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: employee_insurance - employee insurance policy records"
+    },
+    {
+      "node_id": "collection_employee_performance",
+      "node_type": "db_model",
+      "name": "employee_performance",
+      "file_path": "src/modules/hr/services/employee/performance_repository.py",
+      "module": "hr",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: employee_performance - performance review records"
+    },
+    {
+      "node_id": "collection_customers",
+      "node_type": "db_model",
+      "name": "customers",
+      "file_path": "src/modules/crm/services/customer/customer_repository.py",
+      "module": "crm",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: customers - CRM customer records (individual and business)"
+    },
+    {
+      "node_id": "collection_sales_orders",
+      "node_type": "db_model",
+      "name": "sales_orders",
+      "file_path": "src/modules/sales/services/sales/order_repository.py",
+      "module": "sales",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: sales_orders - sales order records with items and payment status"
+    },
+    {
+      "node_id": "collection_harvest_inventory",
+      "node_type": "db_model",
+      "name": "harvest_inventory",
+      "file_path": "src/modules/sales/services/sales/inventory_repository.py",
+      "module": "sales",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: harvest_inventory - sales module harvest inventory with quality grades"
+    },
+    {
+      "node_id": "collection_purchase_orders",
+      "node_type": "db_model",
+      "name": "purchase_orders",
+      "file_path": "src/modules/sales/services/sales/purchase_order_repository.py",
+      "module": "sales",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: purchase_orders - purchase order records from suppliers"
+    },
+    {
+      "node_id": "collection_return_orders",
+      "node_type": "db_model",
+      "name": "return_orders",
+      "file_path": "src/modules/sales/services/sales/return_service.py",
+      "module": "sales",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: return_orders - customer return/refund order records"
+    },
+    {
+      "node_id": "collection_vehicles",
+      "node_type": "db_model",
+      "name": "vehicles",
+      "file_path": "src/modules/logistics/services/logistics/vehicle_repository.py",
+      "module": "logistics",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: vehicles - fleet vehicle records with maintenance tracking"
+    },
+    {
+      "node_id": "collection_routes",
+      "node_type": "db_model",
+      "name": "routes",
+      "file_path": "src/modules/logistics/services/logistics/route_repository.py",
+      "module": "logistics",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: routes - delivery route definitions with stops"
+    },
+    {
+      "node_id": "collection_shipments",
+      "node_type": "db_model",
+      "name": "shipments",
+      "file_path": "src/modules/logistics/services/logistics/shipment_repository.py",
+      "module": "logistics",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: shipments - shipment tracking records"
+    },
+    {
+      "node_id": "collection_marketing_campaigns",
+      "node_type": "db_model",
+      "name": "marketing_campaigns",
+      "file_path": "src/modules/marketing/services/marketing/campaign_repository.py",
+      "module": "marketing",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: marketing_campaigns - marketing campaign records"
+    },
+    {
+      "node_id": "collection_marketing_budgets",
+      "node_type": "db_model",
+      "name": "marketing_budgets",
+      "file_path": "src/modules/marketing/services/marketing/budget_repository.py",
+      "module": "marketing",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: marketing_budgets - marketing budget allocations"
+    },
+    {
+      "node_id": "collection_marketing_channels",
+      "node_type": "db_model",
+      "name": "marketing_channels",
+      "file_path": "src/modules/marketing/services/marketing/channel_repository.py",
+      "module": "marketing",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: marketing_channels - marketing channel definitions"
+    },
+    {
+      "node_id": "collection_marketing_events",
+      "node_type": "db_model",
+      "name": "marketing_events",
+      "file_path": "src/modules/marketing/services/marketing/event_repository.py",
+      "module": "marketing",
+      "layer": "model",
+      "exports": [],
+      "description": "MongoDB collection: marketing_events - marketing event records"
+    },
+    {
+      "node_id": "env_APP_NAME",
+      "node_type": "config",
+      "name": "APP_NAME",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Application display name (default: A64 Core Platform API Hub)"
+    },
+    {
+      "node_id": "env_ENVIRONMENT",
+      "node_type": "config",
+      "name": "ENVIRONMENT",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Runtime environment: development, staging, production"
+    },
+    {
+      "node_id": "env_DEBUG",
+      "node_type": "config",
+      "name": "DEBUG",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Debug mode flag (must be False in production)"
+    },
+    {
+      "node_id": "env_HOST",
+      "node_type": "config",
+      "name": "HOST",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Server bind host (default: 0.0.0.0)"
+    },
+    {
+      "node_id": "env_PORT",
+      "node_type": "config",
+      "name": "PORT",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Server port (default: 8000)"
+    },
+    {
+      "node_id": "env_ALLOWED_ORIGINS",
+      "node_type": "config",
+      "name": "ALLOWED_ORIGINS",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "CORS allowed origins list for frontend access"
+    },
+    {
+      "node_id": "env_MONGODB_URL",
+      "node_type": "config",
+      "name": "MONGODB_URL",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB connection URL"
+    },
+    {
+      "node_id": "env_MONGODB_DB_NAME",
+      "node_type": "config",
+      "name": "MONGODB_DB_NAME",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB database name (default: a64core_db)"
+    },
+    {
+      "node_id": "env_SECRET_KEY",
+      "node_type": "config",
+      "name": "SECRET_KEY",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "JWT signing secret key (must be changed in production)"
+    },
+    {
+      "node_id": "env_API_KEY_PREFIX",
+      "node_type": "config",
+      "name": "API_KEY_PREFIX",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Prefix for generated API keys"
+    },
+    {
+      "node_id": "env_FRONTEND_URL",
+      "node_type": "config",
+      "name": "FRONTEND_URL",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Frontend URL for email links and CORS"
+    },
+    {
+      "node_id": "env_FROM_EMAIL",
+      "node_type": "config",
+      "name": "FROM_EMAIL",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Email sender address for system emails"
+    },
+    {
+      "node_id": "env_LOG_LEVEL",
+      "node_type": "config",
+      "name": "LOG_LEVEL",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Logging level (default: INFO)"
+    },
+    {
+      "node_id": "env_GOOGLE_CLOUD_PROJECT",
+      "node_type": "config",
+      "name": "GOOGLE_CLOUD_PROJECT",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Google Cloud project ID for Vertex AI"
+    },
+    {
+      "node_id": "env_VERTEX_AI_LOCATION",
+      "node_type": "config",
+      "name": "VERTEX_AI_LOCATION",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Vertex AI region (default: us-central1)"
+    },
+    {
+      "node_id": "env_VERTEX_AI_MODEL",
+      "node_type": "config",
+      "name": "VERTEX_AI_MODEL",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Vertex AI model name (default: gemini-2.5-flash)"
+    },
+    {
+      "node_id": "env_VERTEX_AI_MAX_OUTPUT_TOKENS",
+      "node_type": "config",
+      "name": "VERTEX_AI_MAX_OUTPUT_TOKENS",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Maximum output tokens for Vertex AI responses"
+    },
+    {
+      "node_id": "env_VERTEX_AI_TEMPERATURE",
+      "node_type": "config",
+      "name": "VERTEX_AI_TEMPERATURE",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Vertex AI sampling temperature (default: 0.1)"
+    },
+    {
+      "node_id": "env_FARM_AI_MAX_TOKENS",
+      "node_type": "config",
+      "name": "FARM_AI_MAX_TOKENS",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Max tokens for Farm AI Chat responses"
+    },
+    {
+      "node_id": "env_FARM_AI_DAILY_LIMIT",
+      "node_type": "config",
+      "name": "FARM_AI_DAILY_LIMIT",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Daily limit on Farm AI Chat queries per user"
+    },
+    {
+      "node_id": "env_RATE_LIMIT_GUEST",
+      "node_type": "config",
+      "name": "RATE_LIMIT_GUEST",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Rate limit per minute for guest users (default: 30)"
+    },
+    {
+      "node_id": "env_RATE_LIMIT_USER",
+      "node_type": "config",
+      "name": "RATE_LIMIT_USER",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Rate limit per minute for regular users (default: 300)"
+    },
+    {
+      "node_id": "env_RATE_LIMIT_MODERATOR",
+      "node_type": "config",
+      "name": "RATE_LIMIT_MODERATOR",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Rate limit per minute for moderators (default: 500)"
+    },
+    {
+      "node_id": "env_RATE_LIMIT_ADMIN",
+      "node_type": "config",
+      "name": "RATE_LIMIT_ADMIN",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Rate limit per minute for admins (default: 1000)"
+    },
+    {
+      "node_id": "env_RATE_LIMIT_SUPER_ADMIN",
+      "node_type": "config",
+      "name": "RATE_LIMIT_SUPER_ADMIN",
+      "file_path": "src/config/settings.py",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Rate limit per minute for super admins (default: 2000)"
+    },
+    {
+      "node_id": "env_MYSQL_HOST",
+      "node_type": "config",
+      "name": "MYSQL_HOST",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MySQL host (.env.example only - secondary DB)"
+    },
+    {
+      "node_id": "env_MYSQL_PORT",
+      "node_type": "config",
+      "name": "MYSQL_PORT",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MySQL port (.env.example only - secondary DB)"
+    },
+    {
+      "node_id": "env_MYSQL_USER",
+      "node_type": "config",
+      "name": "MYSQL_USER",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MySQL user (.env.example only)"
+    },
+    {
+      "node_id": "env_MYSQL_PASSWORD",
+      "node_type": "config",
+      "name": "MYSQL_PASSWORD",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MySQL password (.env.example only)"
+    },
+    {
+      "node_id": "env_MYSQL_DB_NAME",
+      "node_type": "config",
+      "name": "MYSQL_DB_NAME",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MySQL database name (.env.example only)"
+    },
+    {
+      "node_id": "env_ADMIN_EMAIL",
+      "node_type": "config",
+      "name": "ADMIN_EMAIL",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Admin email for cron service authentication"
+    },
+    {
+      "node_id": "env_ADMIN_PASSWORD",
+      "node_type": "config",
+      "name": "ADMIN_PASSWORD",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Admin password for cron service authentication"
+    },
+    {
+      "node_id": "env_MONGO_ROOT_USERNAME",
+      "node_type": "config",
+      "name": "MONGO_ROOT_USERNAME",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB root user for production authentication"
+    },
+    {
+      "node_id": "env_MONGO_ROOT_PASSWORD",
+      "node_type": "config",
+      "name": "MONGO_ROOT_PASSWORD",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB root password for production authentication"
+    },
+    {
+      "node_id": "env_MONGO_APP_USER",
+      "node_type": "config",
+      "name": "MONGO_APP_USER",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB application user for production"
+    },
+    {
+      "node_id": "env_MONGO_APP_PASSWORD",
+      "node_type": "config",
+      "name": "MONGO_APP_PASSWORD",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB application password for production"
+    },
+    {
+      "node_id": "env_REDIS_URL",
+      "node_type": "config",
+      "name": "REDIS_URL",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Redis connection URL for caching and rate limiting"
+    },
+    {
+      "node_id": "env_REDIS_PASSWORD",
+      "node_type": "config",
+      "name": "REDIS_PASSWORD",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Redis authentication password"
+    },
+    {
+      "node_id": "env_MODULE_REGISTRY_PATH",
+      "node_type": "config",
+      "name": "MODULE_REGISTRY_PATH",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Path to module registry JSON configuration"
+    },
+    {
+      "node_id": "env_LICENSE_ENCRYPTION_KEY",
+      "node_type": "config",
+      "name": "LICENSE_ENCRYPTION_KEY",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Encryption key for module license validation (Fernet + PBKDF2)"
+    },
+    {
+      "node_id": "env_DOCKER_REGISTRY_URL",
+      "node_type": "config",
+      "name": "DOCKER_REGISTRY_URL",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Docker registry URL for module images"
+    },
+    {
+      "node_id": "env_DOCKER_REGISTRY_USERNAME",
+      "node_type": "config",
+      "name": "DOCKER_REGISTRY_USERNAME",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Docker registry authentication username"
+    },
+    {
+      "node_id": "env_DOCKER_REGISTRY_PASSWORD",
+      "node_type": "config",
+      "name": "DOCKER_REGISTRY_PASSWORD",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Docker registry authentication password"
+    },
+    {
+      "node_id": "env_MAX_MODULES",
+      "node_type": "config",
+      "name": "MAX_MODULES",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Maximum number of installable modules"
+    },
+    {
+      "node_id": "env_MAX_MODULES_PER_USER",
+      "node_type": "config",
+      "name": "MAX_MODULES_PER_USER",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Maximum modules per user"
+    },
+    {
+      "node_id": "env_MODULE_INSTALL_TIMEOUT",
+      "node_type": "config",
+      "name": "MODULE_INSTALL_TIMEOUT",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Module installation timeout in seconds"
+    },
+    {
+      "node_id": "env_TRUSTED_REGISTRIES",
+      "node_type": "config",
+      "name": "TRUSTED_REGISTRIES",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Comma-separated list of trusted Docker registries"
+    },
+    {
+      "node_id": "env_LICENSE_VALIDATION_MODE",
+      "node_type": "config",
+      "name": "LICENSE_VALIDATION_MODE",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "License validation mode: format (offline) or online"
+    },
+    {
+      "node_id": "env_ANTHROPIC_API_KEY",
+      "node_type": "config",
+      "name": "ANTHROPIC_API_KEY",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Anthropic Claude API key for Farm AI Chat"
+    },
+    {
+      "node_id": "env_ANTHROPIC_MODEL",
+      "node_type": "config",
+      "name": "ANTHROPIC_MODEL",
+      "file_path": ".env.example",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Anthropic Claude model ID for Farm AI Chat"
+    },
+    {
+      "node_id": "env_PYTHONPATH",
+      "node_type": "config",
+      "name": "PYTHONPATH",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Python module search path (docker-compose: /app/src)"
+    },
+    {
+      "node_id": "env_GOOGLE_APPLICATION_CREDENTIALS",
+      "node_type": "config",
+      "name": "GOOGLE_APPLICATION_CREDENTIALS",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Path to Google Cloud service account JSON for Vertex AI"
+    },
+    {
+      "node_id": "env_WEATHERBIT_API_KEY",
+      "node_type": "config",
+      "name": "WEATHERBIT_API_KEY",
+      "file_path": "docker-compose.yml",
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "WeatherBit API key for agricultural weather data"
+    },
+    {
+      "node_id": "env_WEATHERBIT_ENABLED",
+      "node_type": "config",
+      "name": "WEATHERBIT_ENABLED",
+      "file_path": "docker-compose.yml",
+      "module": "farm_manager",
+      "layer": "config",
+      "exports": [],
+      "description": "Enable/disable WeatherBit integration"
+    },
+    {
+      "node_id": "env_UVICORN_WORKERS",
+      "node_type": "config",
+      "name": "UVICORN_WORKERS",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Number of Uvicorn worker processes"
+    },
+    {
+      "node_id": "env_MONGO_INITDB_DATABASE",
+      "node_type": "config",
+      "name": "MONGO_INITDB_DATABASE",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "MongoDB initial database name for container startup"
+    },
+    {
+      "node_id": "env_NODE_ENV",
+      "node_type": "config",
+      "name": "NODE_ENV",
+      "file_path": "docker-compose.yml",
+      "module": "frontend",
+      "layer": "config",
+      "exports": [],
+      "description": "Node.js environment for user-portal frontend"
+    },
+    {
+      "node_id": "env_VITE_API_URL",
+      "node_type": "config",
+      "name": "VITE_API_URL",
+      "file_path": "docker-compose.yml",
+      "module": "frontend",
+      "layer": "config",
+      "exports": [],
+      "description": "Vite build-time and runtime API URL for frontend"
+    },
+    {
+      "node_id": "env_VITE_API_TARGET",
+      "node_type": "config",
+      "name": "VITE_API_TARGET",
+      "file_path": "docker-compose.yml",
+      "module": "frontend",
+      "layer": "config",
+      "exports": [],
+      "description": "Vite dev server proxy target (Docker network: http://api:8000)"
+    },
+    {
+      "node_id": "env_BACKUP_RETENTION_DAILY",
+      "node_type": "config",
+      "name": "BACKUP_RETENTION_DAILY",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Number of daily MongoDB backups to retain"
+    },
+    {
+      "node_id": "env_BACKUP_RETENTION_WEEKLY",
+      "node_type": "config",
+      "name": "BACKUP_RETENTION_WEEKLY",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Number of weekly MongoDB backups to retain"
+    },
+    {
+      "node_id": "env_BACKUP_RETENTION_MONTHLY",
+      "node_type": "config",
+      "name": "BACKUP_RETENTION_MONTHLY",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Number of monthly MongoDB backups to retain"
+    },
+    {
+      "node_id": "env_ENCRYPT_BACKUPS",
+      "node_type": "config",
+      "name": "ENCRYPT_BACKUPS",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "Enable AES-256 encryption for MongoDB backups"
+    },
+    {
+      "node_id": "env_BACKUP_ENCRYPTION_KEY",
+      "node_type": "config",
+      "name": "BACKUP_ENCRYPTION_KEY",
+      "file_path": "docker-compose.yml",
+      "module": "core",
+      "layer": "config",
+      "exports": [],
+      "description": "AES-256 encryption key for backup encryption"
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_POST_auth_login",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "axios.post('/v1/auth/login')"
+    },
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_POST_auth_register",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "axios.post('/v1/auth/register')"
+    },
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_POST_auth_logout",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "apiClient.post('/v1/auth/logout')"
+    },
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_GET_auth_me",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "apiClient.get('/v1/auth/me')"
+    },
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_PATCH_auth_me",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "apiClient.patch('/v1/auth/me')"
+    },
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_POST_auth_refresh",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "axios.post('/v1/auth/refresh')"
+    },
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_GET_auth_mfa_status",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "apiClient.get('/v1/auth/mfa/status')"
+    },
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_POST_auth_mfa_verify",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "axios.post('/v1/auth/mfa/verify')"
+    },
+    {
+      "source_id": "authService",
+      "target_id": "endpoint_POST_auth_mfa_backup_codes",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/auth.service.ts",
+      "target_file": "src/api/v1/auth.py",
+      "context": "apiClient.post('/v1/auth/mfa/backup-codes')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_managers",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/managers.py",
+      "context": "apiClient.get('/v1/farm/managers')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_farms",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/farms.py",
+      "context": "apiClient.get('/v1/farm/farms')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_farms_farmId",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/farms.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_POST_farm_farms",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/farms.py",
+      "context": "apiClient.post('/v1/farm/farms')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_PATCH_farm_farms_farmId",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/farms.py",
+      "context": "apiClient.patch('/v1/farm/farms/${farmId}')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_DELETE_farm_farms_farmId",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/farms.py",
+      "context": "apiClient.delete('/v1/farm/farms/${farmId}')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_farms_farmId_summary",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/farms.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}/summary')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_farms_farmId_blocks",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}/blocks')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_POST_farm_farms_farmId_blocks",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.post('/v1/farm/farms/${farmId}/blocks')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_PATCH_farm_farms_farmId_blocks_blockId_status",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.patch('/v1/farm/farms/${farmId}/blocks/${blockId}/status')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_plant_data",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/plant_data.py",
+      "context": "apiClient.get('/v1/farm/plant-data')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_POST_farm_plant_data",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/plant_data.py",
+      "context": "apiClient.post('/v1/farm/plant-data')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_plantings",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/plantings.py",
+      "context": "apiClient.get('/v1/farm/plantings')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_POST_farm_plantings",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/plantings.py",
+      "context": "apiClient.post('/v1/farm/plantings')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_farms_farmId_blocks_blockId_alerts",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}/blocks/${blockId}/alerts')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_farms_farmId_blocks_blockId_harvests",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}/blocks/${blockId}/harvests')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_POST_farm_farms_farmId_blocks_blockId_harvests",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/harvests')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_GET_farm_farms_farmId_blocks_blockId_archives",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}/blocks/${blockId}/archives')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_POST_farm_farms_farmId_blocks_blockId_sensehub_connect",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/sensehub.py",
+      "context": "apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/connect')"
+    },
+    {
+      "source_id": "farmApi",
+      "target_id": "endpoint_POST_farm_farms_farmId_blocks_blockId_ai_chat",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/farmApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/farm_ai.py",
+      "context": "apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/ai-chat/')"
+    },
+    {
+      "source_id": "plantDataEnhancedApi",
+      "target_id": "endpoint_GET_farm_plant_data_enhanced",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/plantDataEnhancedApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "context": "apiClient.get('/v1/farm/plant-data-enhanced')"
+    },
+    {
+      "source_id": "plantDataEnhancedApi",
+      "target_id": "endpoint_POST_farm_plant_data_enhanced",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/plantDataEnhancedApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "context": "apiClient.post('/v1/farm/plant-data-enhanced')"
+    },
+    {
+      "source_id": "plantDataEnhancedApi",
+      "target_id": "endpoint_GET_farm_plant_data_enhanced_active",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/plantDataEnhancedApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/plant_data_enhanced.py",
+      "context": "apiClient.get('/v1/farm/plant-data-enhanced/active')"
+    },
+    {
+      "source_id": "alertsApi",
+      "target_id": "endpoint_POST_farm_farms_farmId_blocks_blockId_alerts",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/alertsApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/alerts')"
+    },
+    {
+      "source_id": "alertsApi",
+      "target_id": "endpoint_POST_farm_farms_farmId_blocks_blockId_alerts_id_resolve",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/alertsApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/blocks.py",
+      "context": "apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/alerts/${alertId}/resolve')"
+    },
+    {
+      "source_id": "weatherApi",
+      "target_id": "endpoint_GET_farm_farms_farmId_weather_current",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/weatherApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/weather.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}/weather/current')"
+    },
+    {
+      "source_id": "weatherApi",
+      "target_id": "endpoint_GET_farm_farms_farmId_weather_forecast",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/weatherApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/weather.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}/weather/forecast')"
+    },
+    {
+      "source_id": "weatherApi",
+      "target_id": "endpoint_GET_farm_farms_farmId_weather_agri_data",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/weatherApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/weather.py",
+      "context": "apiClient.get('/v1/farm/farms/${farmId}/weather/agri-data')"
+    },
+    {
+      "source_id": "tasksApi",
+      "target_id": "endpoint_GET_farm_tasks_pending_count",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/tasksApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/tasks.py",
+      "context": "apiClient.get('/v1/farm/tasks/pending-count')"
+    },
+    {
+      "source_id": "tasksApi",
+      "target_id": "endpoint_GET_farm_tasks_my_tasks",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/tasksApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/tasks.py",
+      "context": "apiClient.get('/v1/farm/tasks/my-tasks')"
+    },
+    {
+      "source_id": "tasksApi",
+      "target_id": "endpoint_POST_farm_tasks",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/tasksApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/tasks.py",
+      "context": "apiClient.post('/v1/farm/tasks')"
+    },
+    {
+      "source_id": "tasksApi",
+      "target_id": "endpoint_POST_farm_tasks_id_complete",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/tasksApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/tasks.py",
+      "context": "apiClient.post('/v1/farm/tasks/${taskId}/complete')"
+    },
+    {
+      "source_id": "inventoryApi",
+      "target_id": "endpoint_GET_farm_inventory_summary",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/inventoryApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "context": "apiClient.get('/v1/farm/inventory/summary')"
+    },
+    {
+      "source_id": "inventoryApi",
+      "target_id": "endpoint_GET_farm_inventory_harvest",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/inventoryApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "context": "apiClient.get('/v1/farm/inventory/harvest')"
+    },
+    {
+      "source_id": "inventoryApi",
+      "target_id": "endpoint_GET_farm_inventory_input",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/inventoryApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "context": "apiClient.get('/v1/farm/inventory/input')"
+    },
+    {
+      "source_id": "inventoryApi",
+      "target_id": "endpoint_GET_farm_inventory_asset",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/inventoryApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "context": "apiClient.get('/v1/farm/inventory/asset')"
+    },
+    {
+      "source_id": "inventoryApi",
+      "target_id": "endpoint_GET_farm_inventory_movements",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/inventoryApi.ts",
+      "target_file": "src/modules/farm_manager/api/v1/inventory.py",
+      "context": "apiClient.get('/v1/farm/inventory/movements')"
+    },
+    {
+      "source_id": "dashboardDataService",
+      "target_id": "endpoint_GET_farm_dashboard_summary",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/dashboard-data.service.ts",
+      "target_file": "src/modules/farm_manager/api/v1/dashboard.py",
+      "context": "apiClient.get('/v1/farm/dashboard/summary')"
+    },
+    {
+      "source_id": "dashboardDataService",
+      "target_id": "endpoint_GET_sales_dashboard",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/dashboard-data.service.ts",
+      "target_file": "src/modules/sales/api/v1/dashboard.py",
+      "context": "apiClient.get('/v1/sales/dashboard')"
+    },
+    {
+      "source_id": "dashboardService",
+      "target_id": "endpoint_GET_dashboard_layout",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/dashboard.service.ts",
+      "target_file": "src/api/v1/dashboard.py",
+      "context": "apiClient.get('/v1/dashboard/layout')"
+    },
+    {
+      "source_id": "dashboardService",
+      "target_id": "endpoint_PUT_dashboard_layout",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/dashboard.service.ts",
+      "target_file": "src/api/v1/dashboard.py",
+      "context": "apiClient.put('/v1/dashboard/layout')"
+    },
+    {
+      "source_id": "hrService",
+      "target_id": "endpoint_GET_hr_employees",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/hrService.ts",
+      "target_file": "src/modules/hr/api/v1/employees.py",
+      "context": "apiClient.get('/v1/hr/employees')"
+    },
+    {
+      "source_id": "hrService",
+      "target_id": "endpoint_POST_hr_employees",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/hrService.ts",
+      "target_file": "src/modules/hr/api/v1/employees.py",
+      "context": "apiClient.post('/v1/hr/employees')"
+    },
+    {
+      "source_id": "hrService",
+      "target_id": "endpoint_GET_hr_dashboard",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/hrService.ts",
+      "target_file": "src/modules/hr/api/v1/dashboard.py",
+      "context": "apiClient.get('/v1/hr/dashboard')"
+    },
+    {
+      "source_id": "crmService",
+      "target_id": "endpoint_GET_crm_customers",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/crmService.ts",
+      "target_file": "src/modules/crm/api/v1/customers.py",
+      "context": "apiClient.get('/v1/crm/customers')"
+    },
+    {
+      "source_id": "crmService",
+      "target_id": "endpoint_POST_crm_customers",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/crmService.ts",
+      "target_file": "src/modules/crm/api/v1/customers.py",
+      "context": "apiClient.post('/v1/crm/customers')"
+    },
+    {
+      "source_id": "salesService",
+      "target_id": "endpoint_GET_sales_orders",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/salesService.ts",
+      "target_file": "src/modules/sales/api/v1/orders.py",
+      "context": "apiClient.get('/v1/sales/orders')"
+    },
+    {
+      "source_id": "salesService",
+      "target_id": "endpoint_POST_sales_orders",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/salesService.ts",
+      "target_file": "src/modules/sales/api/v1/orders.py",
+      "context": "apiClient.post('/v1/sales/orders')"
+    },
+    {
+      "source_id": "salesService",
+      "target_id": "endpoint_GET_sales_inventory",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/salesService.ts",
+      "target_file": "src/modules/sales/api/v1/inventory.py",
+      "context": "apiClient.get('/v1/sales/inventory')"
+    },
+    {
+      "source_id": "salesService",
+      "target_id": "endpoint_GET_sales_purchase_orders",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/salesService.ts",
+      "target_file": "src/modules/sales/api/v1/purchase_orders.py",
+      "context": "apiClient.get('/v1/sales/purchase-orders')"
+    },
+    {
+      "source_id": "salesService",
+      "target_id": "endpoint_GET_sales_returns",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/salesService.ts",
+      "target_file": "src/modules/sales/api/v1/returns.py",
+      "context": "apiClient.get('/v1/sales/returns')"
+    },
+    {
+      "source_id": "salesService",
+      "target_id": "endpoint_GET_sales_dashboard",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/salesService.ts",
+      "target_file": "src/modules/sales/api/v1/dashboard.py",
+      "context": "apiClient.get('/v1/sales/dashboard')"
+    },
+    {
+      "source_id": "logisticsService",
+      "target_id": "endpoint_GET_logistics_vehicles",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/logisticsService.ts",
+      "target_file": "src/modules/logistics/api/v1/vehicles.py",
+      "context": "apiClient.get('/v1/logistics/vehicles')"
+    },
+    {
+      "source_id": "logisticsService",
+      "target_id": "endpoint_GET_logistics_routes",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/logisticsService.ts",
+      "target_file": "src/modules/logistics/api/v1/routes.py",
+      "context": "apiClient.get('/v1/logistics/routes')"
+    },
+    {
+      "source_id": "logisticsService",
+      "target_id": "endpoint_GET_logistics_shipments",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/logisticsService.ts",
+      "target_file": "src/modules/logistics/api/v1/shipments.py",
+      "context": "apiClient.get('/v1/logistics/shipments')"
+    },
+    {
+      "source_id": "logisticsService",
+      "target_id": "endpoint_GET_logistics_dashboard",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/logisticsService.ts",
+      "target_file": "src/modules/logistics/api/v1/dashboard.py",
+      "context": "apiClient.get('/v1/logistics/dashboard')"
+    },
+    {
+      "source_id": "marketingService",
+      "target_id": "endpoint_GET_marketing_campaigns",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/marketingService.ts",
+      "target_file": "src/modules/marketing/api/v1/campaigns.py",
+      "context": "apiClient.get('/v1/marketing/campaigns')"
+    },
+    {
+      "source_id": "marketingService",
+      "target_id": "endpoint_GET_marketing_budgets",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/marketingService.ts",
+      "target_file": "src/modules/marketing/api/v1/budgets.py",
+      "context": "apiClient.get('/v1/marketing/budgets')"
+    },
+    {
+      "source_id": "marketingService",
+      "target_id": "endpoint_GET_marketing_channels",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/marketingService.ts",
+      "target_file": "src/modules/marketing/api/v1/channels.py",
+      "context": "apiClient.get('/v1/marketing/channels')"
+    },
+    {
+      "source_id": "marketingService",
+      "target_id": "endpoint_GET_marketing_events",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/marketingService.ts",
+      "target_file": "src/modules/marketing/api/v1/events.py",
+      "context": "apiClient.get('/v1/marketing/events')"
+    },
+    {
+      "source_id": "marketingService",
+      "target_id": "endpoint_GET_marketing_dashboard",
+      "edge_type": "calls",
+      "source_file": "frontend/user-portal/src/services/marketingService.ts",
+      "target_file": "src/modules/marketing/api/v1/dashboard.py",
+      "context": "apiClient.get('/v1/marketing/dashboard')"
+    },
+    {
+      "source_id": "FarmRepository",
+      "target_id": "collection_farms",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/farm/farm_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'farms'"
+    },
+    {
+      "source_id": "BlockRepository",
+      "target_id": "collection_blocks",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/block_repository_new.py",
+      "target_file": "",
+      "context": "db.blocks.find/insert/update"
+    },
+    {
+      "source_id": "PlantDataRepository",
+      "target_id": "collection_plant_data",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_repository.py",
+      "target_file": "",
+      "context": "db.plant_data.find/insert/update"
+    },
+    {
+      "source_id": "PlantDataEnhancedRepository",
+      "target_id": "collection_plant_data_enhanced",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/plant_data/plant_data_enhanced_repository.py",
+      "target_file": "",
+      "context": "COLLECTION = 'plant_data_enhanced'"
+    },
+    {
+      "source_id": "PlantingRepository",
+      "target_id": "collection_plantings",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/planting/planting_repository.py",
+      "target_file": "",
+      "context": "farm_db.db.plantings.find/insert"
+    },
+    {
+      "source_id": "HarvestRepository",
+      "target_id": "collection_block_harvests",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/harvest_repository.py",
+      "target_file": "",
+      "context": "db.block_harvests"
+    },
+    {
+      "source_id": "AlertRepository",
+      "target_id": "collection_alerts",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/alert_repository.py",
+      "target_file": "",
+      "context": "db.alerts"
+    },
+    {
+      "source_id": "ArchiveRepository",
+      "target_id": "collection_block_archives",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/block/archive_repository.py",
+      "target_file": "",
+      "context": "db.block_archives"
+    },
+    {
+      "source_id": "TaskRepository",
+      "target_id": "collection_farm_tasks",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/task/task_repository.py",
+      "target_file": "",
+      "context": "db.farm_tasks.find/insert/update"
+    },
+    {
+      "source_id": "ConfigService",
+      "target_id": "collection_system_config",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/config_service.py",
+      "target_file": "",
+      "context": "COLLECTION_NAME = 'system_config'"
+    },
+    {
+      "source_id": "FarmingYearService",
+      "target_id": "collection_system_config",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/farming_year_service.py",
+      "target_file": "",
+      "context": "COLLECTION_NAME = 'system_config'"
+    },
+    {
+      "source_id": "WeatherCacheService",
+      "target_id": "collection_weather_cache",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/farm_manager/services/weather/weather_cache_service.py",
+      "target_file": "",
+      "context": "COLLECTION_NAME = 'weather_cache'"
+    },
+    {
+      "source_id": "CostTrackingService",
+      "target_id": "collection_ai_query_log",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/ai_analytics/services/cost_tracking_service.py",
+      "target_file": "",
+      "context": "self.collection = self.db['ai_query_log']"
+    },
+    {
+      "source_id": "AuthService",
+      "target_id": "collection_users",
+      "edge_type": "reads_from",
+      "source_file": "src/services/auth_service.py",
+      "target_file": "",
+      "context": "db.users.find_one/insert_one/update_one"
+    },
+    {
+      "source_id": "AuthService",
+      "target_id": "collection_refresh_tokens",
+      "edge_type": "reads_from",
+      "source_file": "src/services/auth_service.py",
+      "target_file": "",
+      "context": "db.refresh_tokens.find_one/insert_one/update_one"
+    },
+    {
+      "source_id": "AuthService",
+      "target_id": "collection_mfa_pending_tokens",
+      "edge_type": "reads_from",
+      "source_file": "src/services/auth_service.py",
+      "target_file": "",
+      "context": "db.mfa_pending_tokens.insert_one/find_one/update_one"
+    },
+    {
+      "source_id": "UserService",
+      "target_id": "collection_users",
+      "edge_type": "reads_from",
+      "source_file": "src/services/user_service.py",
+      "target_file": "",
+      "context": "db.users.find_one/count_documents/update_one"
+    },
+    {
+      "source_id": "MfaService",
+      "target_id": "collection_users",
+      "edge_type": "reads_from",
+      "source_file": "src/services/mfa_service.py",
+      "target_file": "",
+      "context": "db.users.find_one/update_one (MFA fields)"
+    },
+    {
+      "source_id": "EmployeeRepository",
+      "target_id": "collection_employees",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/hr/services/employee/employee_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'employees'"
+    },
+    {
+      "source_id": "ContractRepository",
+      "target_id": "collection_employee_contracts",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/hr/services/employee/contract_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'employee_contracts'"
+    },
+    {
+      "source_id": "VisaRepository",
+      "target_id": "collection_employee_visas",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/hr/services/employee/visa_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'employee_visas'"
+    },
+    {
+      "source_id": "InsuranceRepository",
+      "target_id": "collection_employee_insurance",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/hr/services/employee/insurance_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'employee_insurance'"
+    },
+    {
+      "source_id": "PerformanceRepository",
+      "target_id": "collection_employee_performance",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/hr/services/employee/performance_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'employee_performance'"
+    },
+    {
+      "source_id": "CustomerRepository",
+      "target_id": "collection_customers",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/crm/services/customer/customer_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'customers'"
+    },
+    {
+      "source_id": "OrderRepository",
+      "target_id": "collection_sales_orders",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/sales/order_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'sales_orders'"
+    },
+    {
+      "source_id": "InventoryRepository",
+      "target_id": "collection_harvest_inventory",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/sales/inventory_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'harvest_inventory'"
+    },
+    {
+      "source_id": "PurchaseOrderRepository",
+      "target_id": "collection_purchase_orders",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/sales/purchase_order_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'purchase_orders'"
+    },
+    {
+      "source_id": "ReturnService",
+      "target_id": "collection_return_orders",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/sales/services/sales/return_service.py",
+      "target_file": "",
+      "context": "self.collection_name = 'return_orders'"
+    },
+    {
+      "source_id": "VehicleRepository",
+      "target_id": "collection_vehicles",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/logistics/services/logistics/vehicle_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'vehicles'"
+    },
+    {
+      "source_id": "RouteRepository",
+      "target_id": "collection_routes",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/logistics/services/logistics/route_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'routes'"
+    },
+    {
+      "source_id": "ShipmentRepository",
+      "target_id": "collection_shipments",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/logistics/services/logistics/shipment_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'shipments'"
+    },
+    {
+      "source_id": "CampaignRepository",
+      "target_id": "collection_marketing_campaigns",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/marketing/services/marketing/campaign_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'marketing_campaigns'"
+    },
+    {
+      "source_id": "BudgetRepository",
+      "target_id": "collection_marketing_budgets",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/marketing/services/marketing/budget_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'marketing_budgets'"
+    },
+    {
+      "source_id": "ChannelRepository",
+      "target_id": "collection_marketing_channels",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/marketing/services/marketing/channel_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'marketing_channels'"
+    },
+    {
+      "source_id": "EventRepository",
+      "target_id": "collection_marketing_events",
+      "edge_type": "reads_from",
+      "source_file": "src/modules/marketing/services/marketing/event_repository.py",
+      "target_file": "",
+      "context": "self.collection_name = 'marketing_events'"
+    }
+  ]
+}
