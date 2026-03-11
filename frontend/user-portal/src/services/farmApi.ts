@@ -778,6 +778,70 @@ export async function getAvailableFarmingYears(farmId: string): Promise<{
 // UTILITY FUNCTIONS
 // ============================================================================
 
+// ============================================================================
+// WATCHDOG / TELEGRAM BOT ENDPOINTS
+// ============================================================================
+
+export interface WatchdogConfig {
+  botToken: string;
+  botTokenConfigured: boolean;
+  chatId: string;
+  enabled: boolean;
+  checkIntervalMinutes: number;
+  notificationCooldownMinutes: number;
+  severityThreshold: string;
+  enabledChecks: string[];
+  updatedAt: string | null;
+  updatedBy: string | null;
+  updatedByEmail: string | null;
+}
+
+export interface WatchdogConfigUpdate {
+  botToken?: string;
+  chatId?: string;
+  enabled?: boolean;
+  checkIntervalMinutes?: number;
+  notificationCooldownMinutes?: number;
+  severityThreshold?: string;
+  enabledChecks?: string[];
+}
+
+export async function getWatchdogConfig() {
+  const response = await apiClient.get<{ data: WatchdogConfig }>('/v1/farm/config/watchdog');
+  return response.data.data;
+}
+
+export async function updateWatchdogConfig(update: WatchdogConfigUpdate) {
+  const response = await apiClient.put<{ data: WatchdogConfig; message: string }>(
+    '/v1/farm/config/watchdog',
+    update
+  );
+  return response.data;
+}
+
+export async function testWatchdogNotification() {
+  const response = await apiClient.post<{ data: any }>('/v1/farm/config/watchdog/test');
+  return response.data.data;
+}
+
+export async function getWatchdogStatus() {
+  const response = await apiClient.get<{ data: any }>('/v1/farm/config/watchdog/status');
+  return response.data.data;
+}
+
+export async function triggerWatchdogCheck() {
+  const response = await apiClient.post<{ data: any }>('/v1/farm/config/watchdog/trigger');
+  return response.data.data;
+}
+
+export async function getWatchdogHistory(limit: number = 50) {
+  const response = await apiClient.get<{ data: any[] }>('/v1/farm/config/watchdog/history', {
+    params: { limit },
+  });
+  return response.data.data;
+}
+
+
 /**
  * Calculate total plants in a planting plan
  */
@@ -1058,7 +1122,38 @@ import type {
   FarmAIChatResponse,
   ConfirmActionRequest,
   ConfirmActionResponse,
+  FarmLevelAIChatResponse,
+  GlobalAIChatResponse,
 } from '../types/farmAI';
+
+// ============================================================================
+// MULTI-LEVEL AI CHAT ENDPOINTS
+// ============================================================================
+
+export async function sendFarmLevelAIChat(
+  farmId: string, data: FarmAIChatRequest
+) {
+  const response = await apiClient.post<FarmLevelAIChatResponse>(
+    `/v1/farm/farms/${farmId}/ai-chat/`, data
+  );
+  return response.data;
+}
+
+export async function confirmFarmLevelAIAction(
+  farmId: string, data: ConfirmActionRequest
+) {
+  const response = await apiClient.post<ConfirmActionResponse>(
+    `/v1/farm/farms/${farmId}/ai-chat/confirm`, data
+  );
+  return response.data;
+}
+
+export async function sendGlobalAIChat(data: FarmAIChatRequest) {
+  const response = await apiClient.post<GlobalAIChatResponse>(
+    `/v1/farm/ai-monitor/chat`, data
+  );
+  return response.data;
+}
 
 export async function sendFarmAIChat(
   farmId: string, blockId: string, data: FarmAIChatRequest
@@ -1181,6 +1276,19 @@ export const farmApi = {
   // Farm AI Chat
   sendFarmAIChat,
   confirmFarmAIAction,
+
+  // Multi-Level AI Chat
+  sendFarmLevelAIChat,
+  confirmFarmLevelAIAction,
+  sendGlobalAIChat,
+
+  // Watchdog / Telegram Bot
+  getWatchdogConfig,
+  updateWatchdogConfig,
+  testWatchdogNotification,
+  getWatchdogStatus,
+  triggerWatchdogCheck,
+  getWatchdogHistory,
 
   // Utilities
   calculateTotalPlants,

@@ -7,6 +7,7 @@ import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/
 import { useAuthStore } from '../../stores/auth.store';
 import { authService, type MfaStatusResponse } from '../../services/auth.service';
 import { useToastStore } from '../../stores/toast.store';
+import { TelegramBotSettings } from '../../components/settings/TelegramBotSettings';
 
 // Month names for farming year configuration
 const MONTH_NAMES = [
@@ -860,6 +861,8 @@ export function Settings() {
           </ModalContent>
         </ModalOverlay>
       )}
+
+      {isAdmin && <TelegramBotSettings />}
     </SettingsContainer>
   );
 }

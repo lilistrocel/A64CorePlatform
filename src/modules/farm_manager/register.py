@@ -46,6 +46,30 @@ async def startup_hook():
         logger.error(f"[Farm Module] Failed to initialize weather cache: {e}")
         # Don't raise - weather cache is not critical for startup
 
+    # Initialize AI Dashboard scheduler with 4-hour inspection cycle
+    try:
+        from .services.ai_dashboard.scheduler import AIDashboardScheduler
+
+        db = farm_db.get_database()
+        ai_dashboard = await AIDashboardScheduler.initialize(db)
+        await ai_dashboard.start()
+        logger.info("[Farm Module] AI Dashboard scheduler started (4h interval)")
+    except Exception as e:
+        logger.error(f"[Farm Module] Failed to initialize AI Dashboard scheduler: {e}")
+        # Don't raise - AI Dashboard is not critical for startup
+
+    # Initialize Watchdog scheduler for periodic monitoring + Telegram notifications
+    try:
+        from .services.watchdog.scheduler import WatchdogScheduler
+
+        db = farm_db.get_database()
+        watchdog = await WatchdogScheduler.initialize(db)
+        await watchdog.start()
+        logger.info("[Farm Module] Watchdog scheduler started")
+    except Exception as e:
+        logger.error(f"[Farm Module] Failed to initialize Watchdog scheduler: {e}")
+        # Don't raise - Watchdog is not critical for startup
+
 
 async def shutdown_hook():
     """
@@ -63,6 +87,24 @@ async def shutdown_hook():
         logger.info("[Farm Module] Weather cache background refresh stopped")
     except Exception as e:
         logger.error(f"[Farm Module] Error stopping weather cache: {e}")
+
+    # Stop AI Dashboard scheduler
+    try:
+        from .services.ai_dashboard.scheduler import AIDashboardScheduler
+        ai_scheduler = AIDashboardScheduler.get_instance()
+        await ai_scheduler.stop()
+        logger.info("[Farm Module] AI Dashboard scheduler stopped")
+    except Exception as e:
+        logger.error(f"[Farm Module] Error stopping AI Dashboard scheduler: {e}")
+
+    # Stop Watchdog scheduler
+    try:
+        from .services.watchdog.scheduler import WatchdogScheduler
+        watchdog_scheduler = WatchdogScheduler.get_instance()
+        await watchdog_scheduler.stop()
+        logger.info("[Farm Module] Watchdog scheduler stopped")
+    except Exception as e:
+        logger.error(f"[Farm Module] Error stopping Watchdog scheduler: {e}")
 
     await farm_db.disconnect()
     logger.info("[Farm Module] Database disconnected")

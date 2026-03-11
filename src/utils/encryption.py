@@ -304,6 +304,84 @@ def decrypt_sensehub_password(encrypted_password: str) -> str:
 
 
 # =============================================================================
+# Telegram Bot Token Encryption
+# =============================================================================
+
+# Separate salt for Telegram bot tokens (isolated from other encryption)
+TELEGRAM_SALT = b"a64core_telegram_bot_token_v1"
+
+
+def encrypt_telegram_token(token: str) -> str:
+    """
+    Encrypt a Telegram bot token for secure storage.
+
+    Uses SECRET_KEY from app settings (always available for JWT).
+
+    Args:
+        token: Plain text Telegram bot token
+
+    Returns:
+        Fernet-encrypted token string
+
+    Security Notes:
+        - NEVER log the plain text token
+        - NEVER return decrypted token in API responses
+    """
+    from src.config.settings import settings
+    secret_key = settings.SECRET_KEY
+    if not secret_key or len(secret_key) < 16:
+        raise ValueError(
+            "SECRET_KEY is not set or too short. "
+            "Required for Telegram token encryption."
+        )
+
+    try:
+        fernet_key = _derive_fernet_key(secret_key, salt=TELEGRAM_SALT)
+        fernet = Fernet(fernet_key)
+        encrypted_bytes = fernet.encrypt(token.encode())
+        return encrypted_bytes.decode()
+    except Exception as e:
+        raise Exception(f"Failed to encrypt Telegram token: {str(e)}") from e
+
+
+def decrypt_telegram_token(encrypted_token: str) -> str:
+    """
+    Decrypt a Telegram bot token from database.
+
+    Args:
+        encrypted_token: Fernet-encrypted token string
+
+    Returns:
+        Plain text Telegram bot token
+
+    Security Notes:
+        - NEVER log the decrypted token
+        - NEVER return in API responses
+        - Only use for Telegram Bot API calls
+    """
+    from src.config.settings import settings
+    secret_key = settings.SECRET_KEY
+    if not secret_key or len(secret_key) < 16:
+        raise ValueError(
+            "SECRET_KEY is not set or too short. "
+            "Required for Telegram token decryption."
+        )
+
+    try:
+        fernet_key = _derive_fernet_key(secret_key, salt=TELEGRAM_SALT)
+        fernet = Fernet(fernet_key)
+        decrypted_bytes = fernet.decrypt(encrypted_token.encode())
+        return decrypted_bytes.decode()
+    except InvalidToken:
+        raise InvalidToken(
+            "Failed to decrypt Telegram token. "
+            "This may indicate SECRET_KEY rotation or data corruption."
+        )
+    except Exception as e:
+        raise Exception(f"Failed to decrypt Telegram token: {str(e)}") from e
+
+
+# =============================================================================
 # Utility Functions
 # =============================================================================
 

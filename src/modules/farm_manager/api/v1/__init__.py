@@ -20,6 +20,10 @@ from .inventory import router as inventory_router
 from .iot_proxy import router as iot_proxy_router
 from .sensehub import router as sensehub_router
 from .farm_ai_chat import router as farm_ai_chat_router
+from .farm_level_ai_chat import router as farm_level_ai_chat_router
+from .global_ai_chat import router as global_ai_chat_router
+from .ai_dashboard import router as ai_dashboard_router
+from .watchdog import router as watchdog_router
 
 api_router = APIRouter()
 
@@ -43,3 +47,7 @@ api_router.include_router(inventory_router, tags=["inventory"])  # Inventory man
 api_router.include_router(iot_proxy_router, tags=["iot-proxy"])  # IoT controller proxy for CORS handling
 api_router.include_router(sensehub_router, tags=["sensehub"])  # SenseHub edge computing proxy
 api_router.include_router(farm_ai_chat_router, tags=["farm-ai-chat"])  # AI chat assistant for farm blocks
+api_router.include_router(farm_level_ai_chat_router, tags=["farm-level-ai-chat"])  # Farm-level AI chat (all blocks on a farm)
+api_router.include_router(global_ai_chat_router, tags=["global-ai-chat"])  # Global read-only AI monitoring assistant
+api_router.include_router(ai_dashboard_router, tags=["ai-dashboard"])  # Automated AI farm inspection dashboard
+api_router.include_router(watchdog_router, tags=["watchdog"])  # Watchdog monitoring with Telegram notifications
