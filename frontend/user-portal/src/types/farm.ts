@@ -1588,3 +1588,32 @@ export interface SenseHubDashboard {
   active_automations: SenseHubAutomation[];
   equipment_list: SenseHubEquipment[];
 }
+
+export interface SenseHubLabReading {
+  id: number;
+  sample_date: string;
+  nutrient: string;
+  value: number;
+  unit: string;
+  zone_id: string;
+  zone_name: string;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface SenseHubLabReadingsResponse {
+  readings: SenseHubLabReading[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface SenseHubLabStat {
+  nutrient: string;
+  avg: number;
+  min: number;
+  max: number;
+  count: number;
+  unit: string;
+}

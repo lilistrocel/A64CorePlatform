@@ -1093,6 +1093,47 @@ export async function triggerSenseHubAutomation(
   return response.data;
 }
 
+// Lab Data (MCP-only)
+export async function getSenseHubLabNutrients(farmId: string, blockId: string) {
+  const response = await apiClient.get<Array<{ id: string; name: string; category: string; defaultUnit: string }>>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/lab/nutrients`
+  );
+  return response.data;
+}
+
+export async function getSenseHubLabLatest(
+  farmId: string, blockId: string,
+  params?: { zone_id?: string }
+) {
+  const response = await apiClient.get<any[]>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/lab/latest`,
+    { params }
+  );
+  return response.data;
+}
+
+export async function getSenseHubLabReadings(
+  farmId: string, blockId: string,
+  params?: { nutrient?: string; zone_id?: string; from?: string; to?: string; limit?: number }
+) {
+  const response = await apiClient.get<any>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/lab/readings`,
+    { params }
+  );
+  return response.data;
+}
+
+export async function getSenseHubLabStats(
+  farmId: string, blockId: string,
+  params?: { zone_id?: string; from?: string; to?: string }
+) {
+  const response = await apiClient.get<any[]>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/sensehub/lab/stats`,
+    { params }
+  );
+  return response.data;
+}
+
 // Alerts
 export async function getSenseHubAlerts(
   farmId: string, blockId: string,
@@ -1270,6 +1311,10 @@ export const farmApi = {
   deleteSenseHubAutomation,
   toggleSenseHubAutomation,
   triggerSenseHubAutomation,
+  getSenseHubLabNutrients,
+  getSenseHubLabLatest,
+  getSenseHubLabReadings,
+  getSenseHubLabStats,
   getSenseHubAlerts,
   acknowledgeSenseHubAlert,
 

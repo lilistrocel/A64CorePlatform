@@ -437,6 +437,88 @@ async def get_sensehub_alerts(
         _handle_sensehub_error(e, "alerts list")
 
 
+# =============================================================================
+# Lab Data (MCP-only — no REST API on SenseHub)
+# =============================================================================
+
+@router.get("/lab/nutrients", summary="List lab nutrient types")
+async def get_sensehub_lab_nutrients(
+    farm_id: UUID,
+    block_id: UUID,
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """Get list of nutrient types tracked in lab data (MCP-only)."""
+    try:
+        client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
+        return await client.get_lab_nutrients()
+    except HTTPException:
+        raise
+    except Exception as e:
+        _handle_sensehub_error(e, "lab nutrients")
+
+
+@router.get("/lab/latest", summary="Get latest lab reading per nutrient")
+async def get_sensehub_lab_latest(
+    farm_id: UUID,
+    block_id: UUID,
+    zone_id: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """Get the most recent lab reading for each nutrient (MCP-only)."""
+    try:
+        client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
+        return await client.get_lab_latest(zone_id=zone_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        _handle_sensehub_error(e, "lab latest readings")
+
+
+@router.get("/lab/readings", summary="Get historical lab readings")
+async def get_sensehub_lab_readings(
+    farm_id: UUID,
+    block_id: UUID,
+    nutrient: Optional[str] = Query(None),
+    zone_id: Optional[str] = Query(None),
+    from_dt: Optional[str] = Query(None, alias="from"),
+    to_dt: Optional[str] = Query(None, alias="to"),
+    limit: Optional[int] = Query(None),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """Get historical lab readings with optional filters (MCP-only)."""
+    try:
+        client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
+        return await client.get_lab_readings(
+            nutrient=nutrient, zone_id=zone_id,
+            from_date=from_dt, to_date=to_dt, limit=limit,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        _handle_sensehub_error(e, "lab readings")
+
+
+@router.get("/lab/stats", summary="Get lab data statistics")
+async def get_sensehub_lab_stats(
+    farm_id: UUID,
+    block_id: UUID,
+    zone_id: Optional[str] = Query(None),
+    from_dt: Optional[str] = Query(None, alias="from"),
+    to_dt: Optional[str] = Query(None, alias="to"),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """Get statistical summary of lab data per nutrient (MCP-only)."""
+    try:
+        client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
+        return await client.get_lab_stats(
+            zone_id=zone_id, from_date=from_dt, to_date=to_dt,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        _handle_sensehub_error(e, "lab stats")
+
+
 @router.post(
     "/alerts/{alert_id}/acknowledge",
     summary="Acknowledge a SenseHub alert",

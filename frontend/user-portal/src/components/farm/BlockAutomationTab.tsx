@@ -31,6 +31,11 @@ import {
   Play,
   Pause,
   Eye,
+  FlaskConical,
+  Filter,
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   connectSenseHub,
@@ -44,6 +49,9 @@ import {
   triggerSenseHubAutomation,
   getSenseHubAlerts,
   acknowledgeSenseHubAlert,
+  getSenseHubLabNutrients,
+  getSenseHubLabLatest,
+  getSenseHubLabReadings,
 } from '../../services/farmApi';
 import type {
   SenseHubConnectionStatus,
@@ -51,6 +59,8 @@ import type {
   SenseHubEquipment,
   SenseHubAutomation,
   SenseHubAlert,
+  SenseHubLabReading,
+  SenseHubLabStat,
 } from '../../types/farm';
 import { FarmAIChat } from './FarmAIChat';
 
@@ -63,7 +73,7 @@ interface BlockAutomationTabProps {
   farmId: string;
 }
 
-type SubTab = 'overview' | 'equipment' | 'automations' | 'alerts';
+type SubTab = 'overview' | 'equipment' | 'automations' | 'alerts' | 'lab';
 
 // ============================================================================
 // COMPONENT
@@ -96,6 +106,20 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const autoRefreshInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // Lab data state
+  const [labLatest, setLabLatest] = useState<SenseHubLabReading[]>([]);
+  const [labStatsByZone, setLabStatsByZone] = useState<Record<string, SenseHubLabStat[]>>({});
+  const [labReadings, setLabReadings] = useState<SenseHubLabReading[]>([]);
+  const [labReadingsTotal, setLabReadingsTotal] = useState(0);
+  const [labNutrients, setLabNutrients] = useState<Array<{ id: string; name: string }>>([]);
+  const [labLoading, setLabLoading] = useState(false);
+  const [labError, setLabError] = useState<string | null>(null);
+  const [labZoneFilter, setLabZoneFilter] = useState('');
+  const [labNutrientFilter, setLabNutrientFilter] = useState('');
+  const [labFromDate, setLabFromDate] = useState('');
+  const [labToDate, setLabToDate] = useState('');
+  const [labPage, setLabPage] = useState(0);
 
   // Action states
   const [togglingRelay, setTogglingRelay] = useState<number | null>(null);
@@ -174,6 +198,73 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
     }
   };
 
+  const loadLabData = async () => {
+    setLabLoading(true);
+    setLabError(null);
+    try {
+      const params: Record<string, string | number> = {};
+      if (labZoneFilter) params.zone_id = labZoneFilter;
+      if (labFromDate) params.from = labFromDate;
+      if (labToDate) params.to = labToDate;
+
+      const [nutrients, latest] = await Promise.all([
+        getSenseHubLabNutrients(farmId, blockId),
+        getSenseHubLabLatest(farmId, blockId, labZoneFilter ? { zone_id: labZoneFilter } : undefined),
+      ]);
+      setLabNutrients(nutrients);
+      setLabLatest(latest);
+
+      // Build per-zone stats from latest readings so fertigation and drain aren't mixed
+      const statsByZone: Record<string, SenseHubLabStat[]> = {};
+      for (const r of latest) {
+        const zone = r.zone_name || String(r.zone_id);
+        if (!statsByZone[zone]) statsByZone[zone] = [];
+        // Check if nutrient already in this zone's stats (shouldn't happen for "latest" but be safe)
+        const existing = statsByZone[zone].find(s => s.nutrient === r.nutrient);
+        if (existing) {
+          existing.count++;
+          existing.avg = (existing.avg * (existing.count - 1) + r.value) / existing.count;
+          existing.min = Math.min(existing.min, r.value);
+          existing.max = Math.max(existing.max, r.value);
+        } else {
+          statsByZone[zone].push({
+            nutrient: r.nutrient,
+            avg: r.value,
+            min: r.value,
+            max: r.value,
+            count: 1,
+            unit: r.unit,
+          });
+        }
+      }
+      setLabStatsByZone(statsByZone);
+
+      // Load readings if nutrient filter is set
+      if (labNutrientFilter) {
+        const readingsParams: Record<string, string | number> = { nutrient: labNutrientFilter, limit: 20 };
+        if (labZoneFilter) readingsParams.zone_id = labZoneFilter;
+        if (labFromDate) readingsParams.from = labFromDate;
+        if (labToDate) readingsParams.to = labToDate;
+        const readingsData = await getSenseHubLabReadings(farmId, blockId, readingsParams as any);
+        setLabReadings(readingsData.readings || []);
+        setLabReadingsTotal(readingsData.total || 0);
+      } else {
+        setLabReadings([]);
+        setLabReadingsTotal(0);
+      }
+    } catch (err: any) {
+      if (err.response?.status === 400) {
+        setLabError('MCP not configured. Connect with MCP API key to access lab data.');
+      } else if (err.response?.status === 503) {
+        setLabError('SenseHub not responding. Check if device is online.');
+      } else {
+        setLabError(err.response?.data?.detail || err.message || 'Failed to load lab data');
+      }
+    } finally {
+      setLabLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
@@ -188,6 +279,8 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
       loadAutomations();
     } else if (activeSubTab === 'alerts') {
       loadAlerts();
+    } else if (activeSubTab === 'lab') {
+      loadLabData();
     }
   }, [activeSubTab, connectionStatus]);
 
@@ -202,6 +295,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
         if (activeSubTab === 'equipment') loadEquipment();
         if (activeSubTab === 'automations') loadAutomations();
         if (activeSubTab === 'alerts') loadAlerts();
+        if (activeSubTab === 'lab') loadLabData();
       }, 10000); // 10 seconds
 
       return () => {
@@ -329,6 +423,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
     if (activeSubTab === 'equipment') await loadEquipment();
     if (activeSubTab === 'automations') await loadAutomations();
     if (activeSubTab === 'alerts') await loadAlerts();
+    if (activeSubTab === 'lab') await loadLabData();
   };
 
   // ============================================================================
@@ -514,7 +609,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
       )}
 
       {/* Sub-tabs (only show when connected) */}
-      {isConnected && dashboard && (
+      {isConnected && (
         <>
           <SubTabBar>
             <SubTab $active={activeSubTab === 'overview'} onClick={() => setActiveSubTab('overview')}>
@@ -533,10 +628,14 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
               <Bell size={16} />
               Alerts {dashboard?.alerts?.unacknowledged > 0 && <AlertBadge>{dashboard.alerts.unacknowledged}</AlertBadge>}
             </SubTab>
+            <SubTab $active={activeSubTab === 'lab'} onClick={() => setActiveSubTab('lab')}>
+              <FlaskConical size={16} />
+              Lab Data
+            </SubTab>
           </SubTabBar>
 
           {/* Overview Tab */}
-          {activeSubTab === 'overview' && (
+          {activeSubTab === 'overview' && dashboard && (
             <Section>
               <SectionHeader>
                 <SectionTitle>Dashboard Summary</SectionTitle>
@@ -819,6 +918,218 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
                     </AlertCard>
                   ))}
                 </AlertsList>
+              )}
+            </Section>
+          )}
+          {/* Lab Data Tab */}
+          {activeSubTab === 'lab' && (
+            <Section>
+              <SectionHeader>
+                <SectionTitle><FlaskConical size={20} /> Lab Data</SectionTitle>
+                <SectionSubtitle>Nutrient analysis from fertigation and drain systems</SectionSubtitle>
+              </SectionHeader>
+
+              {/* Filters */}
+              <LabFilters>
+                <LabFilterGroup>
+                  <Label>Zone</Label>
+                  <LabSelect value={labZoneFilter} onChange={(e) => setLabZoneFilter(e.target.value)}>
+                    <option value="">All Zones</option>
+                    {[...new Set(labLatest.map(r => r.zone_id))].map(zid => {
+                      const name = labLatest.find(r => r.zone_id === zid)?.zone_name || zid;
+                      return <option key={zid} value={zid}>{name}</option>;
+                    })}
+                  </LabSelect>
+                </LabFilterGroup>
+                <LabFilterGroup>
+                  <Label>Nutrient</Label>
+                  <LabSelect value={labNutrientFilter} onChange={(e) => setLabNutrientFilter(e.target.value)}>
+                    <option value="">All Nutrients</option>
+                    {labNutrients.map(n => (
+                      <option key={n.id} value={n.id}>{n.name}</option>
+                    ))}
+                  </LabSelect>
+                </LabFilterGroup>
+                <LabFilterGroup>
+                  <Label>From</Label>
+                  <Input type="date" value={labFromDate} onChange={(e) => setLabFromDate(e.target.value)} />
+                </LabFilterGroup>
+                <LabFilterGroup>
+                  <Label>To</Label>
+                  <Input type="date" value={labToDate} onChange={(e) => setLabToDate(e.target.value)} />
+                </LabFilterGroup>
+                <LabApplyButton onClick={() => { setLabPage(0); loadLabData(); }}>
+                  <Filter size={14} /> Apply
+                </LabApplyButton>
+              </LabFilters>
+
+              {labError && (
+                <ErrorBanner>
+                  <AlertCircle size={20} />
+                  <ErrorText>{labError}</ErrorText>
+                  <RetryButton onClick={loadLabData}>Retry</RetryButton>
+                </ErrorBanner>
+              )}
+
+              {labLoading && !labError && (
+                <LoadingState>
+                  <RefreshCw size={24} className="spin" />
+                  Loading lab data...
+                </LoadingState>
+              )}
+
+              {!labLoading && !labError && labLatest.length === 0 && (
+                <EmptyState>
+                  <EmptyIcon><FlaskConical size={48} /></EmptyIcon>
+                  <EmptyText>No lab data available yet.</EmptyText>
+                </EmptyState>
+              )}
+
+              {!labLoading && !labError && labLatest.length > 0 && (
+                <>
+                  {/* Latest Readings by Zone */}
+                  <LabSectionTitle><Droplet size={16} /> Latest Readings</LabSectionTitle>
+                  {(() => {
+                    const zones = [...new Set(labLatest.map(r => r.zone_name))];
+                    return (
+                      <LabZoneGrid>
+                        {zones.map(zone => (
+                          <LabZoneCard key={zone}>
+                            <LabZoneHeader>{zone}</LabZoneHeader>
+                            <LabReadingsGrid>
+                              {labLatest.filter(r => r.zone_name === zone).map(r => (
+                                <LabReadingCard key={`${r.zone_id}-${r.nutrient}`}>
+                                  <LabReadingNutrient>{r.nutrient}</LabReadingNutrient>
+                                  <LabReadingValue>{typeof r.value === 'number' ? r.value.toFixed(2) : r.value}</LabReadingValue>
+                                  <LabReadingUnit>{r.unit}</LabReadingUnit>
+                                  <LabReadingDate>{new Date(r.sample_date).toLocaleDateString()}</LabReadingDate>
+                                </LabReadingCard>
+                              ))}
+                            </LabReadingsGrid>
+                          </LabZoneCard>
+                        ))}
+                      </LabZoneGrid>
+                    );
+                  })()}
+
+                  {/* Zone Comparison (only when no zone filter) */}
+                  {!labZoneFilter && labLatest.length > 0 && (() => {
+                    const zones = [...new Set(labLatest.map(r => r.zone_name))];
+                    const nutrients = [...new Set(labLatest.map(r => r.nutrient))];
+                    if (zones.length < 2) return null;
+                    return (
+                      <>
+                        <LabSectionTitle><BarChart3 size={16} /> Zone Comparison</LabSectionTitle>
+                        <LabTable>
+                          <thead>
+                            <tr>
+                              <LabTh>Nutrient</LabTh>
+                              {zones.map(z => <LabTh key={z}>{z}</LabTh>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {nutrients.map(nutrient => {
+                              const unit = labLatest.find(r => r.nutrient === nutrient)?.unit || '';
+                              return (
+                                <tr key={nutrient}>
+                                  <LabTd><strong>{nutrient}</strong> <span style={{ color: '#9e9e9e', fontSize: 12 }}>({unit})</span></LabTd>
+                                  {zones.map(zone => {
+                                    const reading = labLatest.find(r => r.zone_name === zone && r.nutrient === nutrient);
+                                    return (
+                                      <LabTd key={zone}>
+                                        {reading ? (typeof reading.value === 'number' ? reading.value.toFixed(2) : reading.value) : '-'}
+                                      </LabTd>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </LabTable>
+                      </>
+                    );
+                  })()}
+
+                  {/* Nutrient Summary (per zone) */}
+                  {Object.keys(labStatsByZone).length > 0 && (
+                    <>
+                      <LabSectionTitle><TrendingUp size={16} /> Nutrient Summary</LabSectionTitle>
+                      {Object.entries(labStatsByZone).map(([zoneName, stats]) => (
+                        stats.length > 0 && (
+                          <div key={zoneName}>
+                            <LabZoneStatsHeader>{zoneName}</LabZoneStatsHeader>
+                            <LabTable>
+                              <thead>
+                                <tr>
+                                  <LabTh>Nutrient</LabTh>
+                                  <LabTh>Value</LabTh>
+                                  <LabTh>Unit</LabTh>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {stats.map(s => (
+                                  <tr key={s.nutrient}>
+                                    <LabTd><strong>{s.nutrient}</strong></LabTd>
+                                    <LabTd>{typeof s.avg === 'number' ? s.avg.toFixed(2) : s.avg}</LabTd>
+                                    <LabTd>{s.unit}</LabTd>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </LabTable>
+                          </div>
+                        )
+                      ))}
+                    </>
+                  )}
+
+                  {/* History (when nutrient filter active) */}
+                  {labNutrientFilter && labReadings.length > 0 && (
+                    <>
+                      <LabSectionTitle><Clock size={16} /> Reading History: {labNutrientFilter}</LabSectionTitle>
+                      <LabTable>
+                        <thead>
+                          <tr>
+                            <LabTh>Date</LabTh>
+                            <LabTh>Value</LabTh>
+                            <LabTh>Unit</LabTh>
+                            <LabTh>Zone</LabTh>
+                            <LabTh>Notes</LabTh>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {labReadings.map(r => (
+                            <tr key={r.id}>
+                              <LabTd>{new Date(r.sample_date).toLocaleString()}</LabTd>
+                              <LabTd><strong>{typeof r.value === 'number' ? r.value.toFixed(2) : r.value}</strong></LabTd>
+                              <LabTd>{r.unit}</LabTd>
+                              <LabTd>{r.zone_name}</LabTd>
+                              <LabTd>{r.notes || '-'}</LabTd>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </LabTable>
+                      {labReadingsTotal > 20 && (
+                        <LabPagination>
+                          <AutomationButton
+                            disabled={labPage === 0}
+                            onClick={() => setLabPage(p => Math.max(0, p - 1))}
+                          >
+                            <ChevronLeft size={14} /> Prev
+                          </AutomationButton>
+                          <span style={{ fontSize: 14, color: '#616161' }}>
+                            Page {labPage + 1} of {Math.ceil(labReadingsTotal / 20)}
+                          </span>
+                          <AutomationButton
+                            disabled={(labPage + 1) * 20 >= labReadingsTotal}
+                            onClick={() => setLabPage(p => p + 1)}
+                          >
+                            Next <ChevronRight size={14} />
+                          </AutomationButton>
+                        </LabPagination>
+                      )}
+                    </>
+                  )}
+                </>
               )}
             </Section>
           )}
@@ -1524,4 +1835,174 @@ const AutomationButton = styled.button`
     opacity: 0.5;
     cursor: not-allowed;
   }
+`;
+
+// Lab Data styled components
+
+const LabFilters = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+`;
+
+const LabFilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const LabSelect = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #d4d4d4;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #212121;
+  background: white;
+  min-width: 140px;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px #bfdbfe;
+  }
+`;
+
+const LabApplyButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: #1d4ed8;
+  }
+`;
+
+const LabSectionTitle = styled.h4`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #212121;
+  margin: 8px 0 0 0;
+`;
+
+const LabZoneGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+`;
+
+const LabZoneCard = styled.div`
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+`;
+
+const LabZoneHeader = styled.div`
+  font-size: 15px;
+  font-weight: 600;
+  color: #212121;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const LabReadingsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+`;
+
+const LabReadingCard = styled.div`
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+`;
+
+const LabReadingNutrient = styled.div`
+  font-size: 11px;
+  font-weight: 600;
+  color: #616161;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const LabReadingValue = styled.div`
+  font-size: 20px;
+  font-weight: 700;
+  color: #212121;
+  margin: 4px 0 2px;
+`;
+
+const LabReadingUnit = styled.div`
+  font-size: 11px;
+  color: #9e9e9e;
+`;
+
+const LabReadingDate = styled.div`
+  font-size: 10px;
+  color: #bdbdbd;
+  margin-top: 4px;
+`;
+
+const LabTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+const LabTh = styled.th`
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #616161;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const LabTd = styled.td`
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #212121;
+  border-bottom: 1px solid #f5f5f5;
+`;
+
+const LabZoneStatsHeader = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b82f6;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: #eff6ff;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid #e0e0e0;
+  border-bottom: none;
+`;
+
+const LabPagination = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 0;
 `;

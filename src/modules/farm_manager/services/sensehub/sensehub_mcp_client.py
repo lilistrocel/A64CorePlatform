@@ -255,3 +255,68 @@ class SenseHubMCPClient:
         return await self._call_tool(
             "toggle_automation", {"automation_id": automation_id}
         )
+
+    # =========================================================================
+    # Lab Data (MCP-only — no REST API equivalent)
+    # =========================================================================
+
+    async def get_lab_nutrients(self) -> list:
+        """Get list of nutrient types tracked in lab data."""
+        result = await self._call_tool("get_lab_nutrients", {})
+        if isinstance(result, list):
+            return result
+        return result.get("nutrients", result.get("data", []))
+
+    async def get_lab_latest(self, zone_id: Optional[str] = None) -> list:
+        """Get latest lab reading per nutrient, optionally filtered by zone."""
+        args: dict = {}
+        if zone_id:
+            args["zone_id"] = zone_id
+        result = await self._call_tool("get_lab_latest", args)
+        if isinstance(result, list):
+            return result
+        return result.get("readings", result.get("data", []))
+
+    async def get_lab_readings(
+        self,
+        nutrient: Optional[str] = None,
+        zone_id: Optional[str] = None,
+        from_date: Optional[str] = None,
+        to_date: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> dict:
+        """Get historical lab readings with optional filters."""
+        args: dict = {}
+        if nutrient:
+            args["nutrient"] = nutrient
+        if zone_id:
+            args["zone_id"] = zone_id
+        if from_date:
+            args["from"] = from_date
+        if to_date:
+            args["to"] = to_date
+        if limit:
+            args["limit"] = limit
+        result = await self._call_tool("get_lab_readings", args)
+        if isinstance(result, dict):
+            return result
+        return {"readings": result, "total": len(result), "limit": limit or 50, "offset": 0}
+
+    async def get_lab_stats(
+        self,
+        zone_id: Optional[str] = None,
+        from_date: Optional[str] = None,
+        to_date: Optional[str] = None,
+    ) -> list:
+        """Get statistical summary of lab data per nutrient."""
+        args: dict = {}
+        if zone_id:
+            args["zone_id"] = zone_id
+        if from_date:
+            args["from"] = from_date
+        if to_date:
+            args["to"] = to_date
+        result = await self._call_tool("get_lab_stats", args)
+        if isinstance(result, list):
+            return result
+        return result.get("stats", result.get("data", []))
