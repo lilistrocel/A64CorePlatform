@@ -21,15 +21,20 @@ from ..block.harvest_repository import HarvestRepository
 from ..block.alert_repository import AlertRepository
 from ..farm.farm_analytics_service import FarmAnalyticsService
 from ..sensehub.sensehub_connection_service import SenseHubConnectionService
+from ..sensehub.cache_query_service import SenseHubCacheQueryService
 from .models import (
     AutomationAuditResult,
     AutomationBlockEntry,
+    CropNutrientTargets,
     EquipmentBlockEntry,
     EquipmentHealthResult,
     FarmCensusResult,
     GrowthTimelineResult,
     HarvestProgressResult,
     InspectionRawData,
+    LabAnalysisBlockEntry,
+    LabAnalysisResult,
+    LabNutrientReading,
     PlatformAlertResult,
     SenseHubAlertEntry,
     SenseHubAlertResult,
@@ -54,19 +59,22 @@ EXPECTED_DURATION_BY_STATE: Dict[str, int] = {
 # Per-block SenseHub call timeout
 SENSEHUB_CALL_TIMEOUT = 5.0
 
+# MCP call timeout (longer due to 3-step handshake)
+MCP_CALL_TIMEOUT = 10.0
+
 
 class DataCollector:
     """
     Collects raw platform data for the AI Dashboard inspection.
 
-    Runs 8 inspection tasks in parallel using asyncio.gather.  Tasks that
+    Runs 9 inspection tasks in parallel using asyncio.gather.  Tasks that
     raise exceptions set their corresponding InspectionRawData field to None
     rather than aborting the whole inspection.
     """
 
     async def collect_all(self) -> InspectionRawData:
         """
-        Run all 8 inspection tasks in parallel and return the aggregated result.
+        Run all 9 inspection tasks in parallel and return the aggregated result.
 
         Returns:
             InspectionRawData with all fields populated where collection
@@ -74,7 +82,7 @@ class DataCollector:
         """
         logger.info("[DataCollector] Starting parallel inspection tasks")
 
-        # Fetch IoT-connected blocks once and share among tasks 4-6
+        # Fetch IoT-connected blocks once and share among tasks 4-6 and 9
         iot_blocks = await self._get_iot_connected_blocks()
 
         tasks = [
@@ -86,6 +94,7 @@ class DataCollector:
             self._automation_audit(iot_blocks),
             self._harvest_progress(),
             self._platform_alerts(),
+            self._lab_analysis(iot_blocks),
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -99,6 +108,7 @@ class DataCollector:
             "automationAudit",
             "harvestProgress",
             "platformAlerts",
+            "labAnalysis",
         ]
 
         raw_data_kwargs: Dict[str, Any] = {}
@@ -428,16 +438,29 @@ class DataCollector:
                     f"[DataCollector] Skipping SenseHub alert scan for "
                     f"block {block_id_str}: no credentials"
                 )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    f"[DataCollector] SenseHub alert scan timed out for "
-                    f"block {block_id_str}"
-                )
-            except Exception as exc:
+            except (asyncio.TimeoutError, Exception) as exc:
+                # Try cache fallback on connection/timeout errors
                 logger.warning(
                     f"[DataCollector] SenseHub alert scan error for "
-                    f"block {block_id_str}: {exc}"
+                    f"block {block_id_str}: {exc}, trying cache"
                 )
+                try:
+                    cached_alerts = await SenseHubCacheQueryService.get_alerts_as_list(block_id_str)
+                    if cached_alerts:
+                        block_critical = sum(
+                            1 for a in cached_alerts
+                            if isinstance(a, dict) and a.get("severity") == "critical"
+                        )
+                        total_alerts += len(cached_alerts)
+                        critical_count += block_critical
+                        entries.append(SenseHubAlertEntry(
+                            blockId=block_id_str,
+                            blockName=block_name,
+                            farmName=farm_name,
+                            alerts=cached_alerts,
+                        ))
+                except Exception:
+                    pass
 
         blocks_with_alerts = sum(1 for e in entries if e.alerts)
 
@@ -522,16 +545,35 @@ class DataCollector:
                     f"[DataCollector] Skipping equipment health for "
                     f"block {block_id_str}: no credentials"
                 )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    f"[DataCollector] Equipment health timed out for "
-                    f"block {block_id_str}"
-                )
-            except Exception as exc:
+            except (asyncio.TimeoutError, Exception) as exc:
+                # Try cache fallback on connection/timeout errors
                 logger.warning(
                     f"[DataCollector] Equipment health error for "
-                    f"block {block_id_str}: {exc}"
+                    f"block {block_id_str}: {exc}, trying cache"
                 )
+                try:
+                    cached_eq = await SenseHubCacheQueryService.get_equipment_as_list(block_id_str)
+                    if cached_eq:
+                        online = sum(
+                            1 for e in cached_eq
+                            if isinstance(e, dict) and e.get("status") == "online"
+                        )
+                        offline = sum(
+                            1 for e in cached_eq
+                            if isinstance(e, dict) and e.get("status") != "online"
+                        )
+                        total_online += online
+                        total_offline += offline
+                        entries.append(EquipmentBlockEntry(
+                            blockId=block_id_str,
+                            blockName=block_name,
+                            farmName=farm_name,
+                            onlineCount=online,
+                            offlineCount=offline,
+                            equipment=cached_eq,
+                        ))
+                except Exception:
+                    pass
 
         logger.info(
             f"[DataCollector] Equipment health: scanned={len(entries)}, "
@@ -756,6 +798,227 @@ class DataCollector:
             bySeverity=by_severity,
             topAlerts=top_alerts,
         )
+
+    # -------------------------------------------------------------------------
+    # Task 9: Lab Nutrient Analysis
+    # -------------------------------------------------------------------------
+
+    async def _lab_analysis(
+        self, iot_blocks: List[Dict[str, Any]]
+    ) -> LabAnalysisResult:
+        """
+        Collect lab nutrient readings from SenseHub MCP and match with crop
+        target ranges from plant_data_enhanced.
+
+        Args:
+            iot_blocks: Pre-fetched list of IoT-connected block documents.
+
+        Returns:
+            LabAnalysisResult with per-block readings and crop targets.
+        """
+        db = farm_db.get_database()
+        entries: List[LabAnalysisBlockEntry] = []
+        blocks_with_lab_data = 0
+        blocks_with_crop_targets = 0
+
+        for block in iot_blocks:
+            block_id_str = block.get("blockId", "")
+            farm_id_str = block.get("farmId", "")
+            block_name = block.get("name", block_id_str)
+            farm_name = await self._get_farm_name(farm_id_str)
+
+            # Pre-filter: skip blocks without MCP API key
+            iot_ctrl = block.get("iotController") or {}
+            if not iot_ctrl.get("mcpApiKey"):
+                continue
+
+            # --- Fetch lab readings via MCP ---
+            readings: List[LabNutrientReading] = []
+            try:
+                block_uuid = UUID(block_id_str)
+                farm_uuid = UUID(farm_id_str)
+                client = await SenseHubConnectionService.get_mcp_client(
+                    farm_uuid, block_uuid
+                )
+                lab_raw = await asyncio.wait_for(
+                    client.get_lab_latest(),
+                    timeout=MCP_CALL_TIMEOUT,
+                )
+                if isinstance(lab_raw, list):
+                    for r in lab_raw:
+                        if isinstance(r, dict):
+                            readings.append(LabNutrientReading(
+                                nutrient=r.get("nutrient", "unknown"),
+                                value=float(r.get("value", 0)),
+                                unit=r.get("unit", ""),
+                                zone=r.get("zone", "unknown"),
+                                timestamp=str(r.get("timestamp", "")) if r.get("timestamp") else None,
+                            ))
+            except HTTPException:
+                logger.debug(
+                    f"[DataCollector] Skipping lab analysis for "
+                    f"block {block_id_str}: no MCP credentials"
+                )
+                continue
+            except (asyncio.TimeoutError, Exception) as exc:
+                # Try cache fallback on connection/timeout errors
+                logger.warning(
+                    f"[DataCollector] Lab analysis error for "
+                    f"block {block_id_str}: {exc}, trying cache"
+                )
+                try:
+                    cached_lab = await SenseHubCacheQueryService.get_lab_latest(block_id_str)
+                    for r in cached_lab:
+                        if isinstance(r, dict):
+                            readings.append(LabNutrientReading(
+                                nutrient=r.get("nutrient", "unknown"),
+                                value=float(r.get("value", 0)),
+                                unit=r.get("unit", ""),
+                                zone=r.get("zone", "unknown"),
+                                timestamp=str(r.get("timestamp", "")) if r.get("timestamp") else None,
+                            ))
+                except Exception:
+                    pass
+
+            has_lab_data = len(readings) > 0
+            if has_lab_data:
+                blocks_with_lab_data += 1
+
+            # --- Look up crop targets from plant_data_enhanced ---
+            crop_targets: Optional[CropNutrientTargets] = None
+            target_crop_id = block.get("targetCrop")
+            crop_name = block.get("targetCropName")
+
+            if target_crop_id:
+                try:
+                    plant_doc = await db.plant_data_enhanced.find_one(
+                        {"plantDataId": str(target_crop_id)}
+                    )
+                    if plant_doc:
+                        soil_req = plant_doc.get("soilRequirements") or {}
+                        ph_req = soil_req.get("phRequirements") or {}
+                        env_req = plant_doc.get("environmentalRequirements") or {}
+                        temp_range = env_req.get("temperature") or {}
+                        humidity_range = env_req.get("humidity") or {}
+
+                        crop_targets = CropNutrientTargets(
+                            cropName=plant_doc.get("plantName", crop_name or "Unknown"),
+                            scientificName=plant_doc.get("scientificName"),
+                            phMin=ph_req.get("minPH"),
+                            phMax=ph_req.get("maxPH"),
+                            phOptimal=ph_req.get("optimalPH"),
+                            ecRangeMs=soil_req.get("ecRangeMs"),
+                            nutrientsRecommendations=soil_req.get("nutrientsRecommendations"),
+                            temperatureMin=temp_range.get("min"),
+                            temperatureMax=temp_range.get("max"),
+                            temperatureOptimal=temp_range.get("optimal"),
+                            humidityMin=humidity_range.get("min"),
+                            humidityMax=humidity_range.get("max"),
+                            humidityOptimal=humidity_range.get("optimal"),
+                        )
+                        blocks_with_crop_targets += 1
+                except Exception as exc:
+                    logger.warning(
+                        f"[DataCollector] Failed to fetch crop targets for "
+                        f"block {block_id_str}: {exc}"
+                    )
+
+            # --- Growth stage calculation ---
+            days_since_planting: Optional[int] = None
+            current_growth_stage: Optional[str] = None
+            total_cycle_days: Optional[int] = None
+            active_fert_card: Optional[Dict[str, Any]] = None
+
+            planted_date = block.get("plantedDate")
+            if isinstance(planted_date, datetime):
+                days_since_planting = max(0, (datetime.utcnow() - planted_date).days)
+
+                if target_crop_id:
+                    try:
+                        plant_doc_gc = await db.plant_data_enhanced.find_one(
+                            {"plantDataId": str(target_crop_id)},
+                            {"growthCycle": 1, "fertigationSchedule": 1},
+                        )
+                        if plant_doc_gc:
+                            growth_cycle = plant_doc_gc.get("growthCycle") or {}
+                            total_cycle_days = growth_cycle.get("totalCycleDays")
+                            current_growth_stage = self._determine_growth_stage(
+                                days_since_planting, growth_cycle
+                            )
+
+                            # Find active fertigation card for current stage
+                            fert_schedule = plant_doc_gc.get("fertigationSchedule") or {}
+                            for card in fert_schedule.get("cards", []):
+                                if isinstance(card, dict) and card.get("isActive", True):
+                                    day_start = card.get("dayStart", 0)
+                                    day_end = card.get("dayEnd", 0)
+                                    if day_start <= days_since_planting <= day_end:
+                                        active_fert_card = card
+                                        break
+                    except Exception as exc:
+                        logger.warning(
+                            f"[DataCollector] Failed to compute growth stage for "
+                            f"block {block_id_str}: {exc}"
+                        )
+
+            entries.append(LabAnalysisBlockEntry(
+                blockId=block_id_str,
+                blockName=block_name,
+                farmName=farm_name,
+                cropName=crop_name,
+                blockState=block.get("state"),
+                daysSincePlanting=days_since_planting,
+                currentGrowthStage=current_growth_stage,
+                totalCycleDays=total_cycle_days,
+                latestReadings=readings,
+                cropTargets=crop_targets,
+                activeFertigationCard=active_fert_card,
+            ))
+
+        logger.info(
+            f"[DataCollector] Lab analysis: scanned={len(entries)}, "
+            f"with_lab_data={blocks_with_lab_data}, "
+            f"with_crop_targets={blocks_with_crop_targets}"
+        )
+
+        return LabAnalysisResult(
+            blocksScanned=len(entries),
+            blocksWithLabData=blocks_with_lab_data,
+            blocksWithCropTargets=blocks_with_crop_targets,
+            entries=entries,
+        )
+
+    @staticmethod
+    def _determine_growth_stage(
+        days_since_planting: int, growth_cycle: Dict[str, Any]
+    ) -> str:
+        """
+        Determine the current growth stage based on days since planting.
+
+        Cumulative day calculation through the growth cycle stages.
+
+        Args:
+            days_since_planting: Number of days since planting started.
+            growth_cycle: Growth cycle dict from plant_data_enhanced.
+
+        Returns:
+            Growth stage name string.
+        """
+        stages = [
+            ("germination", growth_cycle.get("germinationDays", 0)),
+            ("vegetative", growth_cycle.get("vegetativeDays", 0)),
+            ("flowering", growth_cycle.get("floweringDays", 0)),
+            ("fruiting", growth_cycle.get("fruitingDays", 0)),
+            ("harvest", growth_cycle.get("harvestDurationDays", 0)),
+        ]
+
+        cumulative = 0
+        for stage_name, duration in stages:
+            cumulative += duration
+            if days_since_planting <= cumulative:
+                return stage_name
+
+        return "post-harvest"
 
     # -------------------------------------------------------------------------
     # Internal helper

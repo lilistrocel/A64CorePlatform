@@ -25,10 +25,10 @@ export interface EmployeeCardProps {
 // ============================================================================
 
 const Card = styled.div<{ $clickable: boolean }>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: all 150ms ease-in-out;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
 
@@ -56,14 +56,14 @@ const EmployeeInfo = styled.div`
 const EmployeeName = styled.h4`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
 const EmployeeCode = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-family: 'JetBrains Mono', monospace;
 `;
 
@@ -90,7 +90,7 @@ const InfoItem = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const InfoIcon = styled.span`
@@ -101,10 +101,10 @@ const InfoIcon = styled.span`
 
 const Department = styled.div`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #f5f5f5;
+  border-top: 1px solid ${({ theme }) => theme.colors.surface};
 `;
 
 const Actions = styled.div`
@@ -112,7 +112,7 @@ const Actions = styled.div`
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`

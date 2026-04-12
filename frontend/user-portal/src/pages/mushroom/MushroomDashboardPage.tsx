@@ -285,7 +285,7 @@ const Container = styled.div`
   padding: 24px;
   max-width: 100%;
   min-height: 100vh;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const TopBar = styled.div`
@@ -302,7 +302,7 @@ const TitleSection = styled.div``;
 const PageTitle = styled.h1`
   font-size: 28px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
@@ -376,7 +376,7 @@ interface StatCardProps {
 }
 
 const StatCard = styled.div<StatCardProps>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   border-left: 4px solid ${({ $accent }) => $accent};
   padding: 16px;
@@ -401,14 +401,14 @@ interface StatNumberProps {
 const StatNumber = styled.div<StatNumberProps>`
   font-size: 24px;
   font-weight: 700;
-  color: ${({ $alert }) => ($alert ? '#EF4444' : '#212121')};
+  color: ${({ $alert, theme }) => ($alert ? '#EF4444' : theme.colors.textPrimary)};
   line-height: 1;
   margin-bottom: 2px;
 `;
 
 const StatLabel = styled.div`
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-weight: 500;
 `;
 
@@ -429,18 +429,18 @@ const ControlGroup = styled.div`
 const ControlLabel = styled.label`
   font-size: 12px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const Select = styled.select`
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
   min-width: 200px;
@@ -454,10 +454,10 @@ const Select = styled.select`
 
 const ClearFilterBtn = styled.button`
   padding: 8px 14px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  background: white;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 13px;
   cursor: pointer;
   transition: all 150ms;
@@ -465,8 +465,8 @@ const ClearFilterBtn = styled.button`
   align-self: flex-end;
 
   &:hover {
-    background: #f5f5f5;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
     outline: 2px solid #2196f3;
@@ -475,7 +475,7 @@ const ClearFilterBtn = styled.button`
 `;
 
 const GridSection = styled.section`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
@@ -493,7 +493,7 @@ const SectionHeader = styled.div`
 const SectionTitle = styled.h2`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   display: flex;
   align-items: center;
@@ -516,7 +516,7 @@ const LoadingDot = styled.span`
 
 const RoomCount = styled.span`
   font-size: 13px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const LoadingContainer = styled.div`
@@ -530,7 +530,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid #e0e0e0;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -542,7 +542,7 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const BottomRow = styled.div`
@@ -556,7 +556,7 @@ const BottomRow = styled.div`
 `;
 
 const BottomCard = styled.section`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
@@ -574,16 +574,16 @@ const HTh = styled.th`
   padding: 7px 8px;
   font-size: 11px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
 
 const HTd = styled.td`
   padding: 9px 8px;
-  border-bottom: 1px solid #f5f5f5;
-  color: #424242;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
   vertical-align: middle;
 `;
 
@@ -603,7 +603,7 @@ const GradeDot = styled.span<GradeDotProps>`
 
 const EmptyState = styled.div`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   padding: 24px;
   text-align: center;
 `;
@@ -646,13 +646,13 @@ const AlertItem = styled.div<AlertItemProps>`
 const AlertRoom = styled.span`
   font-size: 13px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   min-width: 60px;
 `;
 
 const AlertType = styled.span`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   flex: 1;
   text-transform: capitalize;
 `;

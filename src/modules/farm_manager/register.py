@@ -70,6 +70,18 @@ async def startup_hook():
         logger.error(f"[Farm Module] Failed to initialize Watchdog scheduler: {e}")
         # Don't raise - Watchdog is not critical for startup
 
+    # Initialize SenseHub Sync Service (every 3h, under the 4h watchdog stale threshold)
+    try:
+        from .services.sensehub.sync_service import SenseHubSyncService
+
+        db = farm_db.get_database()
+        sensehub_sync = await SenseHubSyncService.initialize(db)
+        await sensehub_sync.start_background_sync(interval_seconds=10800)
+        logger.info("[Farm Module] SenseHub sync service started (3h interval)")
+    except Exception as e:
+        logger.error(f"[Farm Module] Failed to initialize SenseHub sync: {e}")
+        # Don't raise - SenseHub sync is not critical for startup
+
 
 async def shutdown_hook():
     """
@@ -105,6 +117,15 @@ async def shutdown_hook():
         logger.info("[Farm Module] Watchdog scheduler stopped")
     except Exception as e:
         logger.error(f"[Farm Module] Error stopping Watchdog scheduler: {e}")
+
+    # Stop SenseHub sync service
+    try:
+        from .services.sensehub.sync_service import SenseHubSyncService
+        sensehub_sync = SenseHubSyncService.get_instance()
+        await sensehub_sync.stop_background_sync()
+        logger.info("[Farm Module] SenseHub sync service stopped")
+    except Exception as e:
+        logger.error(f"[Farm Module] Error stopping SenseHub sync: {e}")
 
     await farm_db.disconnect()
     logger.info("[Farm Module] Database disconnected")

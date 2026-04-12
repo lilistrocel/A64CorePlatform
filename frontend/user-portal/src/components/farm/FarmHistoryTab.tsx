@@ -31,7 +31,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -43,7 +43,7 @@ const FilterSection = styled.div`
 
 const PageInfo = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 // Summary Cards Section
@@ -52,7 +52,7 @@ const SummaryGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
@@ -63,7 +63,7 @@ const SummaryCard = styled.div`
 const SummaryLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -72,12 +72,12 @@ const SummaryLabel = styled.div`
 const SummaryValue = styled.div`
   font-size: 28px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
@@ -89,8 +89,8 @@ const ArchivesList = styled.div`
 `;
 
 const ArchiveCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 20px;
   transition: box-shadow 150ms ease-in-out, transform 150ms ease-in-out;
@@ -116,18 +116,18 @@ const ArchiveTitleSection = styled.div`
 const ArchiveTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
 const ArchiveMeta = styled.div`
   font-size: 13px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const BlockInfo = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
@@ -185,7 +185,7 @@ const ArchiveStats = styled.div`
   gap: 16px;
   margin-bottom: 16px;
   padding: 16px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 6px;
 `;
 
@@ -197,7 +197,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -206,12 +206,12 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const QualitySection = styled.div`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   line-height: 1.6;
 `;
 
@@ -224,13 +224,13 @@ const QualityRow = styled.div`
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -246,7 +246,7 @@ const Spinner = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 
   p {
     margin: 8px 0;
@@ -272,8 +272,8 @@ const PaginationContainer = styled.div`
 
 const PaginationButton = styled.button<{ $disabled?: boolean }>`
   padding: 8px 16px;
-  background: ${({ $disabled }) => ($disabled ? '#e0e0e0' : '#3B82F6')};
-  color: ${({ $disabled }) => ($disabled ? '#9e9e9e' : 'white')};
+  background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : '#3B82F6')};
+  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : 'white')};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -282,7 +282,7 @@ const PaginationButton = styled.button<{ $disabled?: boolean }>`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $disabled }) => ($disabled ? '#e0e0e0' : '#2563eb')};
+    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : '#2563eb')};
   }
 `;
 
@@ -312,7 +312,7 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   max-width: 500px;
@@ -342,7 +342,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -353,14 +353,14 @@ const CloseButton = styled.button`
   padding: 4px;
   background: transparent;
   border: none;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   cursor: pointer;
   border-radius: 4px;
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -376,8 +376,8 @@ const WarningText = styled.p`
 `;
 
 const ArchiveDetails = styled.div`
-  background: #f9fafb;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[50]};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 16px;
   margin-top: 12px;
@@ -388,7 +388,7 @@ const DetailRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 
   &:last-child {
     border-bottom: none;
@@ -397,13 +397,13 @@ const DetailRow = styled.div`
 
 const DetailLabel = styled.span`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
 `;
 
 const DetailValue = styled.span`
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: 600;
 `;
 
@@ -415,8 +415,8 @@ const ModalFooter = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  background: #e0e0e0;
-  color: #212121;
+  background: ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.textPrimary};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -531,7 +531,7 @@ const DetailModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const DetailModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   max-width: 900px;
   width: 90%;
@@ -558,7 +558,7 @@ const DetailModalHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   padding: 24px 32px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const DetailModalHeaderLeft = styled.div`
@@ -568,13 +568,13 @@ const DetailModalHeaderLeft = styled.div`
 const DetailModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const DetailModalSubtitle = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   display: flex;
   align-items: center;
   gap: 12px;
@@ -604,10 +604,10 @@ const DetailSection = styled.div`
 const DetailSectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
   padding-bottom: 8px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const DetailGrid = styled.div`
@@ -625,7 +625,7 @@ const DetailItem = styled.div`
 const DetailItemLabel = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -633,7 +633,7 @@ const DetailItemLabel = styled.span`
 const DetailItemValue = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Timeline = styled.div`
@@ -646,7 +646,7 @@ const TimelineItem = styled.div`
   display: flex;
   gap: 16px;
   padding: 16px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
   border-left: 4px solid #3B82F6;
 `;
@@ -672,19 +672,19 @@ const TimelineContent = styled.div`
 const TimelineTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 4px;
 `;
 
 const TimelineDate = styled.div`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 8px;
 `;
 
 const TimelineDetails = styled.div`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   line-height: 1.5;
 `;
 
@@ -755,21 +755,21 @@ const QualityCard = styled.div<{ $grade: string }>`
 const QualityGradeLabel = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 8px;
 `;
 
 const QualityAmount = styled.div`
   font-size: 24px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const YieldComparisonBar = styled.div`
   display: flex;
   gap: 16px;
   align-items: center;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   padding: 20px;
   border-radius: 8px;
 `;
@@ -782,7 +782,7 @@ const YieldColumn = styled.div`
 const YieldLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -791,19 +791,19 @@ const YieldLabel = styled.div`
 const YieldValue = styled.div`
   font-size: 28px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const YieldUnit = styled.span`
   font-size: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-left: 4px;
 `;
 
 const VsDivider = styled.div`
   font-size: 20px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 // ============================================================================

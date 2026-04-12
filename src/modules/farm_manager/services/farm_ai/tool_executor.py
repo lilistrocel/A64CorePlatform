@@ -6,29 +6,79 @@ Handles both read (immediate execution) and write (returns data for pending acti
 """
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
+import httpx
 from vertexai.generative_models import GenerationConfig, GenerativeModel
 
 from src.config.settings import settings
 from ..sensehub import SenseHubClient
+from ..sensehub.cache_query_service import SenseHubCacheQueryService
 from .tool_definitions import get_google_search_tool
 
 logger = logging.getLogger(__name__)
+
+
+async def _try_cache_fallback(
+    tool_name: str,
+    tool_input: dict,
+    block_id: Optional[str] = None,
+) -> Optional[dict]:
+    """
+    Attempt to serve a read tool result from the SenseHub cache.
+    Returns None if no cached data is available.
+    """
+    if not block_id:
+        return None
+
+    try:
+        if tool_name == "get_equipment_list":
+            equipment = await SenseHubCacheQueryService.get_equipment_as_list(block_id)
+            if equipment:
+                return {"equipment": equipment, "count": len(equipment), "_cached": True}
+
+        elif tool_name == "get_alerts":
+            severity = tool_input.get("severity")
+            alerts = await SenseHubCacheQueryService.get_alerts_as_list(block_id, severity=severity)
+            if alerts:
+                return {"alerts": alerts, "count": len(alerts), "_cached": True}
+
+        elif tool_name == "get_sensor_readings":
+            # Fall back to cached equipment list for latest readings
+            equipment = await SenseHubCacheQueryService.get_equipment_as_list(block_id)
+            equipment_id = int(tool_input.get("equipment_id", 0))
+            for eq in equipment:
+                eq_id = eq.get("id")
+                if eq_id is not None and int(eq_id) == equipment_id:
+                    return {
+                        "equipment_id": equipment_id,
+                        "readings": [],
+                        "count": 0,
+                        "latest_reading": eq.get("last_reading"),
+                        "_cached": True,
+                    }
+
+    except Exception as exc:
+        logger.debug(f"Cache fallback failed for {tool_name}: {exc}")
+
+    return None
 
 
 async def execute_read_tool(
     client: SenseHubClient,
     tool_name: str,
     tool_input: dict,
+    block_id: Optional[str] = None,
 ) -> dict:
     """
     Execute a read-only tool and return the result.
+    Falls back to cached data on SenseHub connection errors.
 
     Args:
         client: Authenticated SenseHubClient
         tool_name: Name of the tool to execute
         tool_input: Tool input parameters from Claude
+        block_id: Optional block ID for cache fallback
 
     Returns:
         Tool execution result as a dict
@@ -96,6 +146,13 @@ async def execute_read_tool(
             raise ValueError(f"Unknown read tool: {tool_name}")
 
     except Exception as e:
+        # On connection errors, try cache fallback before returning error
+        if isinstance(e, (httpx.ConnectError, httpx.TimeoutException, ConnectionError, OSError)):
+            logger.warning(f"SenseHub unreachable for {tool_name}, trying cache: {e}")
+            cached = await _try_cache_fallback(tool_name, tool_input, block_id)
+            if cached:
+                return cached
+
         logger.error(f"Tool execution failed: {tool_name} - {e}")
         return {"error": str(e)}
 
@@ -153,6 +210,48 @@ async def execute_write_tool(
                 "result": result,
             }
 
+        elif tool_name == "create_automation":
+            # Build the automation payload forwarded to SenseHub.
+            # Reason: Pull recognised fields explicitly; include any extra fields
+            # the caller provided so schedule sub-fields are preserved verbatim.
+            automation_data: dict = {
+                "name": tool_input["name"],
+                "equipment_id": int(tool_input["equipment_id"]),
+                "channel": int(tool_input["channel"]),
+                "schedule": tool_input["schedule"],
+            }
+            result = await client.create_automation(automation_data)
+            return {
+                "success": True,
+                "message": f"Automation '{tool_input['name']}' created successfully",
+                "result": result,
+            }
+
+        elif tool_name == "update_automation":
+            result = await client.update_automation(
+                automation_id=int(tool_input["automation_id"]),
+                automation_data=tool_input["updates"],
+            )
+            return {
+                "success": True,
+                "message": (
+                    f"Automation {tool_input['automation_id']} updated successfully"
+                ),
+                "result": result,
+            }
+
+        elif tool_name == "delete_automation":
+            result = await client.delete_automation(
+                automation_id=int(tool_input["automation_id"])
+            )
+            return {
+                "success": True,
+                "message": (
+                    f"Automation {tool_input['automation_id']} deleted permanently"
+                ),
+                "result": result,
+            }
+
         else:
             raise ValueError(f"Unknown write tool: {tool_name}")
 
@@ -183,6 +282,26 @@ def describe_write_action(tool_name: str, tool_input: dict) -> tuple[str, str]:
     elif tool_name == "toggle_automation":
         desc = f"Toggle automation #{tool_input.get('automation_id', '?')} enabled/disabled"
         return desc, "medium"
+
+    elif tool_name == "create_automation":
+        desc = (
+            f"Create new automation '{tool_input.get('name', '?')}' on equipment "
+            f"#{tool_input.get('equipment_id', '?')} channel {tool_input.get('channel', '?')}"
+        )
+        return desc, "high"
+
+    elif tool_name == "update_automation":
+        desc = (
+            f"Update automation #{tool_input.get('automation_id', '?')} "
+            f"with: {list(tool_input.get('updates', {}).keys())}"
+        )
+        return desc, "high"
+
+    elif tool_name == "delete_automation":
+        desc = (
+            f"PERMANENTLY DELETE automation #{tool_input.get('automation_id', '?')}"
+        )
+        return desc, "high"
 
     return f"Execute {tool_name}", "high"
 

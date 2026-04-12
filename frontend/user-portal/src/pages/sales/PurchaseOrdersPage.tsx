@@ -28,13 +28,13 @@ const PageHeader = styled.div`
 const PageTitle = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const PageDescription = styled.p`
   font-size: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -56,10 +56,10 @@ const FiltersGroup = styled.div`
 
 const Select = styled.select`
   padding: 10px 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -72,7 +72,7 @@ const Select = styled.select`
 
 const SearchInput = styled.input`
   padding: 10px 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   min-width: 250px;
@@ -85,7 +85,7 @@ const SearchInput = styled.input`
   }
 
   &::placeholder {
-    color: #9e9e9e;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 `;
 
@@ -98,14 +98,14 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: #616161;
-        border: 1px solid #e0e0e0;
+        color: ${theme.colors.textSecondary};
+        border: 1px solid ${theme.colors.neutral[300]};
         &:hover {
-          background: #f5f5f5;
+          background: ${theme.colors.surface};
         }
       `;
     }
@@ -135,7 +135,7 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   padding: 32px;
   max-width: 900px;
@@ -151,14 +151,14 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const ErrorState = styled.div`

@@ -112,15 +112,15 @@ async def get_dashboard_summary(
     async def get_block_stats():
         total = await db.blocks.count_documents({})
         active = await db.blocks.count_documents({"isActive": True})
-        # Get status breakdown
+        # Get state breakdown (blocks use 'state' field, not 'status')
         pipeline = [
-            {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+            {"$group": {"_id": "$state", "count": {"$sum": 1}}}
         ]
-        status_breakdown = {}
+        state_breakdown = {}
         async for doc in db.blocks.aggregate(pipeline):
             if doc["_id"]:
-                status_breakdown[doc["_id"]] = doc["count"]
-        return ModuleSummary(total=total, active=active, details=status_breakdown if status_breakdown else None)
+                state_breakdown[doc["_id"]] = doc["count"]
+        return ModuleSummary(total=total, active=active, details=state_breakdown if state_breakdown else None)
 
     # Employee counts
     async def get_employee_stats():

@@ -9,7 +9,7 @@ import type { SoilConditions } from '../../../types/farm';
 import { formatTemperature, formatSoilMoisture } from '../../../services/weatherApi';
 
 const Card = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -18,7 +18,7 @@ const Card = styled.div`
 const Title = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 20px 0;
   display: flex;
   align-items: center;
@@ -35,7 +35,7 @@ const Section = styled.div`
   h4 {
     font-size: 13px;
     font-weight: 600;
-    color: #616161;
+    color: ${({ theme }) => theme.colors.textSecondary};
     margin: 0 0 12px 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -47,7 +47,7 @@ const DepthItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   margin-bottom: 8px;
 
@@ -57,20 +57,20 @@ const DepthItem = styled.div`
 
   .depth {
     font-size: 13px;
-    color: #616161;
+    color: ${({ theme }) => theme.colors.textSecondary};
   }
 
   .value {
     font-size: 14px;
     font-weight: 600;
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const NoDataMessage = styled.div`
   text-align: center;
   padding: 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-size: 14px;
 `;
 

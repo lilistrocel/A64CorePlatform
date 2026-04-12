@@ -71,12 +71,12 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
@@ -88,17 +88,17 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -109,14 +109,14 @@ const Select = styled.select<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -131,7 +131,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
@@ -150,7 +150,7 @@ const FormRow = styled.div`
 
 const FormSection = styled.div`
   padding: 16px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
   margin-top: 8px;
 `;
@@ -158,7 +158,7 @@ const FormSection = styled.div`
 const SectionTitle = styled.h4`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
   display: flex;
   justify-content: space-between;
@@ -186,7 +186,7 @@ const TotalRow = styled.div`
   align-items: center;
   padding: 8px 0;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 
   &.total {
     font-size: 18px;
@@ -246,14 +246,14 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: #616161;
-        border: 1px solid #e0e0e0;
+        color: ${theme.colors.textSecondary};
+        border: 1px solid ${theme.colors.neutral[300]};
         &:hover {
-          background: #f5f5f5;
+          background: ${theme.colors.surface};
         }
       `;
     }

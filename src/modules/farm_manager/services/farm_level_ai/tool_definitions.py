@@ -273,6 +273,111 @@ WRITE_TOOLS = [
             "required": ["block_code", "automation_id"],
         },
     },
+    {
+        "name": "create_block_automation",
+        "description": (
+            "Create a new automation program/schedule on a specific block's SenseHub. "
+            "Can set up timed relay control, irrigation schedules, or any recurring "
+            "equipment action. Requires a name, the equipment ID to automate, the relay "
+            "channel to control, and a schedule configuration object. "
+            "Specify the target block with block_code. "
+            "This is a HIGH-RISK WRITE action - the user will be asked to confirm before execution."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "block_code": {
+                    "type": "string",
+                    "description": "The block code of the target block (e.g. 'BLK-001')",
+                },
+                "name": {
+                    "type": "string",
+                    "description": (
+                        "Human-readable name for the automation "
+                        "(e.g. 'Morning Irrigation')"
+                    ),
+                },
+                "equipment_id": {
+                    "type": "integer",
+                    "description": "The SenseHub equipment ID to automate",
+                },
+                "channel": {
+                    "type": "integer",
+                    "description": "The relay channel number to control (0-based)",
+                },
+                "schedule": {
+                    "type": "object",
+                    "description": (
+                        "Schedule configuration object. Common fields: "
+                        "type ('time' or 'interval'), start_time (HH:MM), "
+                        "end_time (HH:MM), days (list of 0-6 for Sun-Sat), "
+                        "duration_seconds (for interval type), "
+                        "interval_seconds (for interval type). "
+                        "Use get_block_automations first to see the schedule "
+                        "format used by existing automations on this block."
+                    ),
+                },
+            },
+            "required": ["block_code", "name", "equipment_id", "channel", "schedule"],
+        },
+    },
+    {
+        "name": "update_block_automation",
+        "description": (
+            "Update an existing automation program's schedule, name, or enabled state "
+            "on a specific block's SenseHub. Only the fields provided in 'updates' will "
+            "be changed. Use get_block_automations first to retrieve the automation ID "
+            "and current settings. "
+            "Specify the target block with block_code. "
+            "This is a HIGH-RISK WRITE action - the user will be asked to confirm before execution."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "block_code": {
+                    "type": "string",
+                    "description": "The block code of the target block (e.g. 'BLK-001')",
+                },
+                "automation_id": {
+                    "type": "integer",
+                    "description": "The automation program ID to update",
+                },
+                "updates": {
+                    "type": "object",
+                    "description": (
+                        "Fields to update on the automation. Any combination of: "
+                        "name (string), enabled (boolean), schedule (object with "
+                        "the same structure as used in create_block_automation)."
+                    ),
+                },
+            },
+            "required": ["block_code", "automation_id", "updates"],
+        },
+    },
+    {
+        "name": "delete_block_automation",
+        "description": (
+            "Permanently delete an automation program from a specific block's SenseHub. "
+            "This action cannot be undone. "
+            "Use get_block_automations first to confirm the correct automation_id. "
+            "Specify the target block with block_code. "
+            "This is a HIGH-RISK WRITE action - the user will be asked to confirm before execution."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "block_code": {
+                    "type": "string",
+                    "description": "The block code of the target block (e.g. 'BLK-001')",
+                },
+                "automation_id": {
+                    "type": "integer",
+                    "description": "The automation program ID to permanently delete",
+                },
+            },
+            "required": ["block_code", "automation_id"],
+        },
+    },
 ]
 
 # Set of write tool names for quick lookup during tool-use loop

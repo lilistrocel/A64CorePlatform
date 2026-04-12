@@ -24,7 +24,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   display: flex;
   align-items: center;
@@ -59,13 +59,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 12px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 15px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 32px 0;
   max-width: 500px;
   line-height: 1.6;
@@ -80,7 +80,7 @@ const FeaturesList = styled.div`
 `;
 
 const FeatureCard = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 20px;
   text-align: left;
@@ -94,19 +94,19 @@ const FeatureCard = styled.div`
   .title {
     font-size: 14px;
     font-weight: 600;
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
     margin-bottom: 4px;
   }
 
   .description {
     font-size: 12px;
-    color: #9e9e9e;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 `;
 
 const ContactInfo = styled.div`
   padding: 20px 24px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -121,14 +121,14 @@ const ContactInfo = styled.div`
 
     .label {
       font-size: 13px;
-      color: #9e9e9e;
+      color: ${({ theme }) => theme.colors.textDisabled};
       margin-bottom: 4px;
     }
 
     .text {
       font-size: 15px;
       font-weight: 500;
-      color: #212121;
+      color: ${({ theme }) => theme.colors.textPrimary};
     }
   }
 `;
@@ -142,7 +142,7 @@ const SupportedSensorsSection = styled.div`
 const SectionTitle = styled.h4`
   font-size: 13px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0 0 16px 0;
@@ -157,11 +157,11 @@ const SensorLogos = styled.div`
 
 const SensorBrand = styled.div`
   padding: 12px 20px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 `;
 

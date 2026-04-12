@@ -16,10 +16,10 @@ interface BadgeProps {
 }
 
 const Card = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -39,7 +39,7 @@ const Header = styled.div`
 const Title = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -61,7 +61,7 @@ const Code = styled.div`
 
 const Description = styled.p`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 16px 0;
 `;
 
@@ -73,21 +73,21 @@ const MetricsGrid = styled.div`
 `;
 
 const Metric = styled.div`
-  background: #fafafa;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
   padding: 12px;
 `;
 
 const MetricLabel = styled.div`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 4px;
 `;
 
 const MetricValue = styled.div`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TagsContainer = styled.div`

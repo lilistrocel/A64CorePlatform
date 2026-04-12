@@ -11,12 +11,12 @@ import type { MarketingBudget, BudgetStatus } from '../../types/marketing';
 
 const Container = styled.div`padding: 32px; max-width: 1440px; margin: 0 auto;`;
 const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;`;
-const Title = styled.h1`font-size: 28px; font-weight: 600; color: #212121; margin: 0;`;
+const Title = styled.h1`font-size: 28px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0;`;
 const FilterRow = styled.div`display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;`;
-const SearchInput = styled.input`flex: 1; min-width: 200px; padding: 10px 16px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; &:focus { outline: none; border-color: #3B82F6; }`;
-const Select = styled.select`padding: 10px 16px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: white; cursor: pointer; &:focus { outline: none; border-color: #3B82F6; }`;
+const SearchInput = styled.input`flex: 1; min-width: 200px; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; &:focus { outline: none; border-color: #3B82F6; }`;
+const Select = styled.select`padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; cursor: pointer; &:focus { outline: none; border-color: #3B82F6; }`;
 const Button = styled.button`padding: 10px 24px; background: #3B82F6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: #1976d2; }`;
-const LoadingContainer = styled.div`display: flex; justify-content: center; align-items: center; min-height: 400px; font-size: 16px; color: #9e9e9e;`;
+const LoadingContainer = styled.div`display: flex; justify-content: center; align-items: center; min-height: 400px; font-size: 16px; color: ${({ theme }) => theme.colors.textDisabled};`;
 const ErrorContainer = styled.div`background: #FEE2E2; border: 1px solid #EF4444; color: #991B1B; padding: 16px; border-radius: 8px; margin-bottom: 24px;`;
 
 export function BudgetManagementPage() {

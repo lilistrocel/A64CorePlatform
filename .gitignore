@@ -140,6 +140,9 @@ playwright-report/
 *-swagger.txt
 swagger-*.txt
 
+# SenseHub camera snapshots (synced from MCP hubs)
+data/sensehub_images/
+
 # Database backups (local)
 backups/
 
@@ -172,3 +175,23 @@ COMPONENT_HIERARCHY_DIAGRAM.md
 HIERARCHICAL_BLOCKS_VISUAL_SUMMARY.md
 IMPLEMENTATION_SUMMARY_PHYSICAL_BLOCKS.md
 TEST_PLAN_PHYSICAL_BLOCKS.md
+
+# Debug/snapshot artifacts from Playwright testing sessions
+ai-chat-response.md
+block-page-snapshot.md
+facility-detail.md
+farm-blocks-snapshot.md
+network-log.md
+plant-library-snapshot.md
+relay-confirm.md
+snapshot.md
+test-sensehub-debug.js
+test-sensehub-ui.js
+test-equipment-detailed.js
+test-subtabs.js
+
+# Generated mapping files
+scripts/*_mapping.json
+
+# Old data (contains sensitive HR files)
+OldData/

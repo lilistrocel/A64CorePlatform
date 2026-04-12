@@ -3747,6 +3747,258 @@ GET /api/v1/farm/inventory/movements
 
 ---
 
+## Finance Module — P&L Endpoints
+
+**Status:** ✅ **IMPLEMENTED** (v2.0.0, 2026-04-08)
+**Module path:** `src/modules/finance/`
+**Base prefix:** `/api/v1/finance/pnl`
+**Permission required:** `finance.view` (all authenticated roles)
+**Authentication:** `Authorization: Bearer {token}`
+**Data sources:** `sales_order_lines`, `purchase_register`, `block_harvests`, `sales_orders`, `farms`, `customers`
+
+### Data Notes
+
+- **Revenue** is taken from `sales_order_lines.excel_data.totalAmountAfterTax` (enriched per-line data from Excel reconciliation).  Lines with `excel_data = null` contribute 0 to monetary figures but are counted in `lineCount`.
+- **COGS** uses Option B allocation: `purchase_register.items` where `mappedCropName != null` are crop-direct; items where `mappedCropName == null` are treated as farm overhead and allocated proportionally by revenue ratio. `inventory_movements` are excluded until the `totalCost` field data quality issue (inflated by mg-based baseQuantity) is resolved.
+- **Monetary values** are plain `float` in AED. Frontend handles formatting.
+- **by-farm sum note:** ~3.1M AED in revenue belongs to order lines where `farmId` is null (Supabase migration gap). These lines appear in the summary total but not in the by-farm breakdown.
+
+---
+
+### GET /api/v1/finance/pnl/summary
+
+**Purpose:** Top-level P&L snapshot for the requested period/farm/year. Used for KPI cards.
+
+**Query Parameters:**
+- `farmId` (string UUID, optional): Filter to a single farm
+- `farmingYear` (integer 2000–2100, optional): Filter to a farming year
+- `startDate` (date YYYY-MM-DD, optional): Custom range start
+- `endDate` (date YYYY-MM-DD, optional): Custom range end
+- `includeImputed` (boolean, default: `true`): Include lines where `priceSource = imputed_customer_crop_avg`. Set `false` to restrict to `excel_match` and `excel_alias_match` only.
+- `priceSourceFilter` (string, optional): Restrict to a single priceSource value
+
+**Success Response (200 OK):**
+```json
+{
+  "revenue": {
+    "gross": 18279701.44,
+    "tax": 900000.0,
+    "net": 19179701.44,
+    "lineCount": 13281,
+    "paidAmount": 9778000.0,
+    "unpaidAmount": 9401701.44,
+    "collectionRate": 0.51,
+    "bySource": {
+      "excel_match": 6862273.32,
+      "excel_alias_match": 3916961.10,
+      "imputed_customer_crop_avg": 8400467.01,
+      "no_data": 0.0
+    }
+  },
+  "cogs": {
+    "total": 1771973.05,
+    "allocatedByCrop": 210799.63,
+    "allocatedByFarm": 1561173.42,
+    "unallocatedOverhead": 0.0
+  },
+  "grossProfit": 17407728.39,
+  "grossMarginPercent": 90.76,
+  "opex": {
+    "total": 9195.0,
+    "logistics": 0.0,
+    "maintenance": 5070.0,
+    "labor": 0.0,
+    "other": 4125.0
+  },
+  "operatingProfit": 17398533.39,
+  "operatingMarginPercent": 90.71,
+  "kg": {
+    "sold": 9831587.11,
+    "harvested": 5300000.0
+  },
+  "orders": {
+    "total": 4648,
+    "paid": 3781,
+    "pending": 827,
+    "partial": 40
+  },
+  "period": {
+    "start": "2024-08-01",
+    "end": "2026-04-06"
+  }
+}
+```
+
+**Status Codes:** 200 OK, 401 Unauthorized, 403 Forbidden, 500 Internal Server Error
+
+---
+
+### GET /api/v1/finance/pnl/by-month
+
+**Purpose:** Monthly P&L time series for trend charts. Sorted ascending by `yearMonth`.
+
+**Query Parameters:** Same as `/summary` (`farmId`, `farmingYear`, `startDate`, `endDate`, `includeImputed`, `priceSourceFilter`)
+
+**Success Response (200 OK):** Array of monthly buckets
+```json
+[
+  {
+    "yearMonth": "2024-08",
+    "revenue": 3637.69,
+    "cogs": 0.0,
+    "opex": 0.0,
+    "grossProfit": 3637.69,
+    "netProfit": 3637.69,
+    "kgSold": 19666.35,
+    "orderCount": 55
+  },
+  {
+    "yearMonth": "2025-08",
+    "revenue": 1200000.0,
+    "cogs": 80000.0,
+    "opex": 20000.0,
+    "grossProfit": 1120000.0,
+    "netProfit": 1100000.0,
+    "kgSold": 150000.0,
+    "orderCount": 150
+  }
+]
+```
+
+**Status Codes:** 200 OK, 401, 403, 500
+
+---
+
+### GET /api/v1/finance/pnl/by-farm
+
+**Purpose:** Per-farm P&L breakdown sorted by revenue descending. All farms included even with zero revenue.
+
+**Query Parameters:** `farmingYear`, `startDate`, `endDate`, `includeImputed`, `priceSourceFilter`
+
+**Success Response (200 OK):** Array of farm buckets
+```json
+[
+  {
+    "farmId": "042ab6a6-74c2-58ca-84ec-73dd3186b0d9",
+    "farmName": "Al Ain",
+    "revenue": 6487839.93,
+    "cogs": 531202.17,
+    "grossProfit": 5956637.76,
+    "marginPercent": 91.81,
+    "kgSold": 3542553.96,
+    "orderCount": 1479
+  }
+]
+```
+
+**Note:** The sum of farm revenues will be less than the global total by ~3.1M AED because some order lines have no `farmId` (Supabase migration gap).
+
+**Status Codes:** 200 OK, 401, 403, 500
+
+---
+
+### GET /api/v1/finance/pnl/by-crop
+
+**Purpose:** Top 20 crops by net revenue with COGS breakdown.
+
+**Query Parameters:** `farmId`, `farmingYear`, `startDate`, `endDate`, `includeImputed`, `priceSourceFilter`
+
+**Success Response (200 OK):** Array of up to 20 crop buckets
+```json
+[
+  {
+    "cropName": "Cucumber",
+    "revenue": 4342670.78,
+    "cogs": 58956.43,
+    "grossProfit": 4283714.35,
+    "kgSold": 2191755.19,
+    "avgPricePerKg": 1.98
+  }
+]
+```
+
+**Status Codes:** 200 OK, 401, 403, 500
+
+---
+
+### GET /api/v1/finance/pnl/ar-aging
+
+**Purpose:** Customer accounts receivable aging. Only orders with `paymentStatus = pending | partial` and outstanding > 0 are included. Invoice date is `orderDate`. Aging calculated from today (UTC).
+
+**Query Parameters:** `farmId`, `farmingYear`
+
+**Success Response (200 OK):**
+```json
+{
+  "current": {"count": 57, "amount": 809219.21},
+  "aging_30_60": {"count": 18, "amount": 120000.0},
+  "aging_60_90": {"count": 10, "amount": 59000.0},
+  "over_90": {"count": 8, "amount": 15572.03},
+  "total_outstanding": 1003782.03,
+  "byCustomer": [
+    {
+      "customerId": "9d9d549a-...",
+      "customerName": "LETO",
+      "outstanding": 250000.0,
+      "overdue": 50000.0,
+      "orderCount": 45
+    }
+  ]
+}
+```
+
+**Status Codes:** 200 OK, 401, 403, 500
+
+---
+
+### GET /api/v1/finance/pnl/revenue-sources
+
+**Purpose:** Revenue and line count breakdown by price-source confidence level. Enables assessment of data quality risk in revenue figures.
+
+**Query Parameters:** `farmId`, `farmingYear`, `startDate`, `endDate`
+
+**Success Response (200 OK):**
+```json
+{
+  "excel_match": {
+    "lineCount": 4897,
+    "revenue": 6862273.32,
+    "orderCount": 1346
+  },
+  "excel_alias_match": {
+    "lineCount": 1484,
+    "revenue": 3916961.10,
+    "orderCount": 551
+  },
+  "imputed_customer_crop_avg": {
+    "lineCount": 3949,
+    "revenue": 8400467.01,
+    "orderCount": 2141
+  },
+  "no_data": {
+    "lineCount": 2951,
+    "revenue": 0.0,
+    "orderCount": 1354
+  }
+}
+```
+
+**Status Codes:** 200 OK, 401, 403, 500
+
+---
+
+### Error Response Format (Finance Module)
+
+```json
+{
+  "detail": "Failed to compute P&L summary"
+}
+```
+
+**Note:** Detailed error messages are logged server-side. Clients receive generic messages only.
+
+---
+
 ## Response Standards
 
 ### Success Response Format
@@ -4096,6 +4348,18 @@ Current implementation uses mock data generators for development/testing:
 - ✅ Agronomist role-based permissions
 - ✅ 3 sample plants included (Tomato, Lettuce, Strawberry)
 - ✅ Farm Management Module summary added (34 total endpoints)
+
+### v2.0.0 - 2026-04-08
+- ✅ **Finance / P&L Module** implemented
+- ✅ 6 read-only aggregation endpoints under `/api/v1/finance/pnl/`
+- ✅ Revenue sourced from `sales_order_lines.excel_data` (the enriched per-line data)
+- ✅ COGS from `purchase_register` items (Option B: crop-direct + farm overhead allocated by revenue ratio)
+- ✅ inventory_movements excluded from COGS until `totalCost` data quality is confirmed (baseQuantity bug)
+- ✅ AR aging buckets (0–30, 31–60, 61–90, >90 days) with top-10 customer breakdown
+- ✅ Revenue confidence breakdown by `metadata.priceSource`
+- ✅ All query params: `farmId`, `farmingYear`, `startDate`, `endDate`, `includeImputed`, `priceSourceFilter`
+- ✅ 7 MongoDB indexes added for aggregation performance
+- ✅ Permission: `finance.view` (all authenticated roles)
 
 ### v1.5.0 - 2025-10-30
 - ✅ **Farm Management Module - Planting Service** implemented

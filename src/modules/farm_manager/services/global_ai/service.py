@@ -190,8 +190,16 @@ class GlobalAIChatService:
 
         except GoogleAPICallError as e:
             logger.error(f"Vertex AI API error in global chat: {e}")
+            if '429' in str(e) or 'Resource exhausted' in str(e):
+                detail = "Vertex AI rate limit exceeded (429). Please wait a moment and try again."
+            elif '403' in str(e) or 'Permission' in str(e):
+                detail = "Vertex AI permission denied (403). Check service account credentials."
+            elif '404' in str(e):
+                detail = "Vertex AI model not found (404). Check VERTEX_AI_MODEL setting."
+            else:
+                detail = f"Vertex AI error: {str(e)[:200]}"
             return GlobalAIChatResponse(
-                message="AI service error. Please try again.",
+                message=detail,
                 tools_used=tools_used,
             )
         except Exception as e:
@@ -199,7 +207,7 @@ class GlobalAIChatService:
                 f"Unexpected error in Global AI chat: {e}", exc_info=True
             )
             return GlobalAIChatResponse(
-                message="An unexpected error occurred. Please try again.",
+                message=f"Unexpected error: {type(e).__name__}: {str(e)[:200]}",
                 tools_used=tools_used,
             )
 

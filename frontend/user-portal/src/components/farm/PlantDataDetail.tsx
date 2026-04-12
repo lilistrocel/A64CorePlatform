@@ -42,7 +42,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -55,7 +55,7 @@ const Modal = styled.div`
 
 const Header = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -74,20 +74,20 @@ const PlantIcon = styled.div`
 const PlantName = styled.h2`
   font-size: 28px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
 const ScientificName = styled.div`
   font-size: 16px;
   font-style: italic;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 8px;
 `;
 
 const VersionInfo = styled.div`
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const HeaderActions = styled.div`
@@ -107,7 +107,7 @@ const ActionButton = styled.button<{ $variant?: 'edit' | 'clone' | 'delete' | 'c
   align-items: center;
   gap: 6px;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'edit') {
       return `
         background: #F59E0B;
@@ -136,10 +136,10 @@ const ActionButton = styled.button<{ $variant?: 'edit' | 'clone' | 'delete' | 'c
       `;
     }
     return `
-      background: #e0e0e0;
-      color: #616161;
+      background: ${theme.colors.neutral[300]};
+      color: ${theme.colors.textSecondary};
       &:hover {
-        background: #d0d0d0;
+        background: ${theme.colors.neutral[400]};
       }
     `;
   }}
@@ -153,7 +153,7 @@ const Content = styled.div`
 
 const Section = styled.div`
   margin-bottom: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -161,7 +161,7 @@ const Section = styled.div`
 const SectionHeader = styled.button<{ $isOpen: boolean }>`
   width: 100%;
   padding: 16px 20px;
-  background: ${({ $isOpen }) => ($isOpen ? '#f5f5f5' : 'white')};
+  background: ${({ $isOpen, theme }) => ($isOpen ? theme.colors.surface : theme.colors.background)};
   border: none;
   cursor: pointer;
   display: flex;
@@ -170,14 +170,14 @@ const SectionHeader = styled.button<{ $isOpen: boolean }>`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   text-align: left;
 `;
@@ -193,7 +193,7 @@ const SectionContent = styled.div<{ $isOpen: boolean }>`
   max-height: ${({ $isOpen }) => ($isOpen ? '2000px' : '0')};
   overflow: hidden;
   transition: all 300ms ease-in-out;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
 `;
 
 const FieldGrid = styled.div`
@@ -215,7 +215,7 @@ const Field = styled.div`
 const FieldLabel = styled.label`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -223,7 +223,7 @@ const FieldLabel = styled.label`
 
 const FieldValue = styled.div`
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   word-break: break-word;
 `;
 
@@ -239,8 +239,8 @@ const Badge = styled.span<{ $color?: string }>`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ $color }) => $color || '#e0e0e0'};
-  color: ${({ $color }) => ($color ? 'white' : '#616161')};
+  background: ${({ $color, theme }) => $color || theme.colors.neutral[300]};
+  color: ${({ $color, theme }) => ($color ? 'white' : theme.colors.textSecondary)};
 `;
 
 const Tag = styled.span`
@@ -249,13 +249,13 @@ const Tag = styled.span`
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  background: #f5f5f5;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ArrayItem = styled.div`
   padding: 12px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
   margin-bottom: 8px;
 
@@ -266,19 +266,19 @@ const ArrayItem = styled.div`
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   margin: 16px 0;
 `;
 
 const EmptyText = styled.div`
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-style: italic;
   font-size: 14px;
 `;
 
 const RuleCard = styled.div`
   padding: 16px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
   margin-bottom: 12px;
 
@@ -297,7 +297,7 @@ const RuleHeader = styled.div`
 const RuleName = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const FrequencyBadge = styled.span`
@@ -343,7 +343,7 @@ const CardHeader = styled.div`
 const CardTitle = styled.span`
   font-size: 15px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StageBadge = styled.span`

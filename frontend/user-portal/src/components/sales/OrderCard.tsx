@@ -24,10 +24,10 @@ export interface OrderCardProps {
 // ============================================================================
 
 const Card = styled.div<{ $clickable: boolean }>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: all 150ms ease-in-out;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
 
@@ -50,14 +50,14 @@ const OrderInfo = styled.div`
 const OrderCode = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
   font-family: 'JetBrains Mono', monospace;
 `;
 
 const CustomerName = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const StatusContainer = styled.div`
@@ -128,7 +128,7 @@ const InfoRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
 
   &:last-child {
     border-bottom: none;
@@ -137,22 +137,22 @@ const InfoRow = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: 500;
 `;
 
 const ItemsList = styled.div`
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   padding: 12px;
   border-radius: 6px;
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const Actions = styled.div`
@@ -160,7 +160,7 @@ const Actions = styled.div`
   gap: 8px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`

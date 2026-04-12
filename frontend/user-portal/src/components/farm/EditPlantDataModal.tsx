@@ -114,7 +114,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const Modal = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   max-width: 900px;
@@ -125,13 +125,13 @@ const Modal = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   position: sticky;
   top: 0;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   z-index: 10;
 `;
 
@@ -144,7 +144,7 @@ const ModalHeaderContent = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -166,12 +166,12 @@ const CloseButton = styled.button`
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 4px 8px;
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -196,13 +196,13 @@ const SectionHeader = styled.div`
   align-items: center;
   gap: 12px;
   padding-bottom: 8px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const SectionTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -211,7 +211,7 @@ const OptionalBadge = styled.span`
   font-weight: 500;
   padding: 4px 8px;
   border-radius: 9999px;
-  background: #9e9e9e;
+  background: ${({ theme }) => theme.colors.textDisabled};
   color: white;
   text-transform: uppercase;
 `;
@@ -225,12 +225,12 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
@@ -242,17 +242,17 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -263,14 +263,14 @@ const Select = styled.select<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   resize: vertical;
@@ -285,7 +285,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
@@ -297,7 +297,7 @@ const ErrorText = styled.span`
 
 const HelpText = styled.span`
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const GridRow = styled.div<{ $columns?: number }>`
@@ -315,7 +315,7 @@ const CheckboxGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
 `;
 
@@ -329,7 +329,7 @@ const CheckboxLabel = styled.label`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -341,7 +341,7 @@ const Checkbox = styled.input`
 
 const CheckboxText = styled.span`
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const ExpandButton = styled.button<{ $expanded: boolean }>`
@@ -350,9 +350,9 @@ const ExpandButton = styled.button<{ $expanded: boolean }>`
   justify-content: center;
   gap: 8px;
   padding: 12px 24px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #3B82F6;
   font-size: 14px;
   font-weight: 500;
@@ -361,7 +361,7 @@ const ExpandButton = styled.button<{ $expanded: boolean }>`
   width: 100%;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -370,15 +370,15 @@ const StatusToggle = styled.div`
   align-items: center;
   gap: 12px;
   padding: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const StatusLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatusSwitch = styled.label`
@@ -409,7 +409,7 @@ const StatusSwitch = styled.label`
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #e0e0e0;
+    background-color: ${({ theme }) => theme.colors.neutral[300]};
     transition: 0.3s;
     border-radius: 24px;
 
@@ -429,14 +429,14 @@ const StatusSwitch = styled.label`
 
 const ModalFooter = styled.div`
   padding: 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   position: sticky;
   bottom: 0;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
 `;
 
 const SuccessMessage = styled.div`
@@ -471,7 +471,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
         background: #3B82F6;
@@ -483,10 +483,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     }
     return `
       background: transparent;
-      color: #616161;
-      border: 1px solid #e0e0e0;
+      color: ${theme.colors.textSecondary};
+      border: 1px solid ${theme.colors.neutral[300]};
       &:hover:not(:disabled) {
-        background: #f5f5f5;
+        background: ${theme.colors.surface};
       }
     `;
   }}
@@ -506,9 +506,9 @@ const ScheduleList = styled.div`
 
 const ScheduleItem = styled.div`
   padding: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -523,7 +523,7 @@ const ScheduleItemHeader = styled.div`
 const ScheduleItemTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const RemoveButton = styled.button`

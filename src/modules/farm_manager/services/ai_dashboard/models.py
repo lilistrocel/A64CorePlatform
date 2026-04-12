@@ -158,6 +158,67 @@ class PlatformAlertResult(BaseModel):
     topAlerts: List[Dict[str, Any]]
 
 
+class LabNutrientReading(BaseModel):
+    """
+    A single lab nutrient measurement from SenseHub MCP.
+    """
+
+    nutrient: str  # e.g. "EC", "pH", "NO3", "PO4", "K"
+    value: float
+    unit: str  # e.g. "mS/cm", "pH", "mg/L"
+    zone: str  # "fertigation" or "drain"
+    timestamp: Optional[str] = None
+
+
+class CropNutrientTargets(BaseModel):
+    """
+    Ideal nutrient/environmental ranges for a crop from plant_data_enhanced.
+    """
+
+    cropName: str
+    scientificName: Optional[str] = None
+    phMin: Optional[float] = None
+    phMax: Optional[float] = None
+    phOptimal: Optional[float] = None
+    ecRangeMs: Optional[str] = None  # e.g. "1.5-2.5"
+    nutrientsRecommendations: Optional[str] = None
+    temperatureMin: Optional[float] = None
+    temperatureMax: Optional[float] = None
+    temperatureOptimal: Optional[float] = None
+    humidityMin: Optional[float] = None
+    humidityMax: Optional[float] = None
+    humidityOptimal: Optional[float] = None
+
+
+class LabAnalysisBlockEntry(BaseModel):
+    """
+    Combined lab readings and crop targets for a single block.
+    """
+
+    blockId: str
+    blockName: str
+    farmName: str
+    cropName: Optional[str] = None
+    blockState: Optional[str] = None
+    daysSincePlanting: Optional[int] = None
+    currentGrowthStage: Optional[str] = None
+    totalCycleDays: Optional[int] = None
+    latestReadings: List[LabNutrientReading] = []
+    cropTargets: Optional[CropNutrientTargets] = None
+    activeFertigationCard: Optional[Dict[str, Any]] = None
+
+
+class LabAnalysisResult(BaseModel):
+    """
+    Result of the lab nutrient analysis task across all IoT-connected blocks.
+    """
+
+    blocksScanned: int
+    blocksWithLabData: int
+    blocksWithCropTargets: int
+    entries: List[LabAnalysisBlockEntry] = []
+
+
 class InspectionRawData(BaseModel):
     """
     Container for all raw inspection task results.
@@ -174,6 +235,7 @@ class InspectionRawData(BaseModel):
     automationAudit: Optional[AutomationAuditResult] = None
     harvestProgress: Optional[HarvestProgressResult] = None
     platformAlerts: Optional[PlatformAlertResult] = None
+    labAnalysis: Optional[LabAnalysisResult] = None
 
 
 # ---------------------------------------------------------------------------

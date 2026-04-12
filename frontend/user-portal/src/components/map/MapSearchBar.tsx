@@ -200,7 +200,7 @@ const SearchContainer = styled.div`
 const SearchForm = styled.form`
   display: flex;
   align-items: center;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   padding: 8px 12px;
@@ -269,7 +269,7 @@ const ResultsList = styled.ul`
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   list-style: none;

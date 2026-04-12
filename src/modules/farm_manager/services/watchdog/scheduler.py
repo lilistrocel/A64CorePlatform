@@ -1,9 +1,13 @@
 """
 Watchdog Scheduler - Singleton asyncio background loop with dynamic interval from DB config.
+
+Uses a Redis distributed lock so only ONE Uvicorn worker runs the check
+per cycle (multiple workers each start their own scheduler instance).
 """
 
 import asyncio
 import logging
+import os
 from datetime import datetime
 from typing import Optional
 
@@ -11,6 +15,9 @@ from .config_service import WatchdogConfigService
 from .service import WatchdogService
 
 logger = logging.getLogger(__name__)
+
+LOCK_KEY = "watchdog:scheduler_lock"
+LOCK_TTL_SECONDS = 120  # Lock auto-expires in 2 minutes (safety net)
 
 
 class WatchdogScheduler:
@@ -54,6 +61,24 @@ class WatchdogScheduler:
         logger.info("[WatchdogScheduler] Initialised")
         return instance
 
+    async def _acquire_lock(self, interval: int) -> bool:
+        """Try to acquire a Redis distributed lock. Returns True if acquired."""
+        try:
+            from src.core.cache.redis_cache import get_redis_cache
+
+            cache = await get_redis_cache()
+            if not cache.is_available or not cache._redis:
+                # Redis unavailable — fall back to running (better noisy than silent)
+                return True
+
+            # SET NX with TTL = lock duration (interval or fallback)
+            ttl = min(interval, LOCK_TTL_SECONDS)
+            acquired = await cache._redis.set(LOCK_KEY, "1", nx=True, ex=ttl)
+            return bool(acquired)
+        except Exception as e:
+            logger.warning(f"[WatchdogScheduler] Lock acquire failed: {e}")
+            return True  # Fall back to running if Redis errors
+
     async def start(self) -> None:
         """Start the background watchdog loop. Idempotent."""
         if self._is_running:
@@ -76,10 +101,14 @@ class WatchdogScheduler:
                     interval = config.checkIntervalMinutes * 60
 
                     if config.enabled:
-                        service = WatchdogService(self._db)
-                        result = await service.run_check(triggered_by="scheduler")
-                        self._last_run = datetime.utcnow()
-                        self._last_result = result.model_dump()
+                        # Acquire distributed lock so only 1 worker runs per cycle
+                        if not await self._acquire_lock(interval):
+                            logger.debug("[WatchdogScheduler] Another worker holds the lock, skipping")
+                        else:
+                            service = WatchdogService(self._db)
+                            result = await service.run_check(triggered_by="scheduler")
+                            self._last_run = datetime.utcnow()
+                            self._last_result = result.model_dump()
                     else:
                         logger.debug("[WatchdogScheduler] Watchdog disabled, sleeping")
 

@@ -33,7 +33,7 @@ const Header = styled.div`
 const Title = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -60,8 +60,8 @@ const CardList = styled.div`
 `;
 
 const Card = styled.div`
-  background: #fafafa;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[50]};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 16px;
 `;
@@ -76,7 +76,7 @@ const CardHeader = styled.div`
 const CardTitle = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const RatingContainer = styled.div`
@@ -93,7 +93,7 @@ const RatingStars = styled.div`
 const RatingText = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const CardDetails = styled.div`
@@ -102,7 +102,7 @@ const CardDetails = styled.div`
   gap: 12px;
   margin-bottom: 12px;
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const DetailRow = styled.div`
@@ -114,13 +114,13 @@ const DetailRow = styled.div`
 const DetailLabel = styled.span`
   font-weight: 600;
   min-width: 150px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const HappinessBar = styled.div<{ $score: number }>`
   width: 200px;
   height: 8px;
-  background: #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
   overflow: hidden;
   position: relative;
@@ -161,7 +161,7 @@ const Actions = styled.div`
   display: flex;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
@@ -197,7 +197,7 @@ const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
 const EmptyText = styled.div`
   text-align: center;
   padding: 48px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const Modal = styled.div<{ $isOpen: boolean }>`
@@ -215,7 +215,7 @@ const Modal = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   max-width: 700px;
@@ -234,7 +234,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -242,13 +242,13 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   cursor: pointer;
   padding: 0;
   line-height: 1;
 
   &:hover {
-    color: #616161;
+    color: ${({ theme }) => theme.colors.textSecondary};
   }
 `;
 
@@ -267,19 +267,19 @@ const FormField = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Input = styled.input`
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
 `;
 
 const Textarea = styled.textarea`
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   min-height: 80px;
@@ -302,7 +302,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
         background: #3B82F6;
@@ -315,10 +315,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     }
     return `
       background: transparent;
-      color: #616161;
-      border: 1px solid #e0e0e0;
+      color: ${theme.colors.textSecondary};
+      border: 1px solid ${theme.colors.neutral[300]};
       &:hover {
-        background: #f5f5f5;
+        background: ${theme.colors.surface};
       }
     `;
   }}
@@ -326,7 +326,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 
 const HelpText = styled.span`
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 // ============================================================================

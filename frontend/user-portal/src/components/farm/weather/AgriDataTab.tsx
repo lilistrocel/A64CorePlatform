@@ -31,7 +31,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   display: flex;
   align-items: center;
@@ -43,8 +43,8 @@ const RefreshButton = styled.button`
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #f5f5f5;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -52,7 +52,7 @@ const RefreshButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
   }
 
   &:disabled {
@@ -75,7 +75,7 @@ const DataSourceBadge = styled.div`
 
 const LastUpdated = styled.span`
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const MainGrid = styled.div`
@@ -104,7 +104,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid #e0e0e0;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -117,7 +117,7 @@ const Spinner = styled.div`
 `;
 
 const LoadingText = styled.p`
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
   margin: 0;
 `;
@@ -145,7 +145,7 @@ const ErrorMessage = styled.p`
 
 const NoLocationContainer = styled.div`
   padding: 48px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 12px;
   text-align: center;
 `;
@@ -156,14 +156,14 @@ const NoLocationIcon = styled.div`
 `;
 
 const NoLocationTitle = styled.h3`
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 18px;
   font-weight: 600;
   margin: 0 0 8px 0;
 `;
 
 const NoLocationMessage = styled.p`
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
   margin: 0;
   max-width: 400px;

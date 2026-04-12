@@ -26,11 +26,11 @@ export interface PlantDataCardProps {
 // ============================================================================
 
 const Card = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: all 150ms ease-in-out;
   cursor: pointer;
   position: relative;
@@ -50,7 +50,7 @@ const PlantIcon = styled.div`
 const PlantName = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
   text-align: center;
 `;
@@ -58,7 +58,7 @@ const PlantName = styled.h3`
 const ScientificName = styled.div`
   font-size: 14px;
   font-style: italic;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-align: center;
   margin-bottom: 16px;
   min-height: 20px;
@@ -71,7 +71,7 @@ const FarmTypeBadges = styled.div`
   justify-content: center;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const FarmTypeBadge = styled.span<{ $color: string }>`
@@ -100,7 +100,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -109,7 +109,7 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TagsContainer = styled.div`
@@ -127,8 +127,8 @@ const Tag = styled.span`
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  background: #f5f5f5;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const Actions = styled.div`
@@ -155,7 +155,7 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
   align-items: center;
   gap: 4px;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'view') {
       return `
         background: #3B82F6;
@@ -194,7 +194,7 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
       `;
     }
     return `
-      background: white;
+      background: ${theme.colors.background};
       color: #3B82F6;
       border: 1px solid #3B82F6;
       &:hover {

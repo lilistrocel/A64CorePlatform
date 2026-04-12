@@ -2,8 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'styled-components';
 import { Suspense, lazy } from 'react';
-import { theme, GlobalStyles } from '@a64core/shared';
+import { lightTheme, darkTheme, GlobalStyles } from '@a64core/shared';
 import { queryClient } from './config/react-query.config';
+import { useThemeStore } from './stores/theme.store';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { MFAVerifyGuard, MFASetupGuard } from './components/common/MFARouteGuards';
 import { MainLayout } from './components/layout/MainLayout';
@@ -12,6 +13,7 @@ import { UnsavedChangesDialog } from './components/common/UnsavedChangesDialog';
 import { ToastContainer } from './components/common/ToastContainer';
 
 // Loading component for suspense fallback
+// Note: inline style color is a neutral gray; theme is not available outside ThemeProvider at this point
 const PageLoader = () => (
   <div style={{
     display: 'flex',
@@ -19,7 +21,7 @@ const PageLoader = () => (
     alignItems: 'center',
     height: '100vh',
     fontSize: '1.2rem',
-    color: '#666'
+    color: '#616161'
   }}>
     Loading...
   </div>
@@ -45,11 +47,8 @@ const OperationsDashboard = lazy(() => import('./pages/operations/OperationsDash
 const FarmBlocksView = lazy(() => import('./pages/operations/FarmBlocksView').then(m => ({ default: m.FarmBlocksView })));
 const BlockTaskList = lazy(() => import('./pages/operations/BlockTaskList').then(m => ({ default: m.BlockTaskList })));
 
-// AI Analytics (loads Gemini client)
-const AIAnalytics = lazy(() => import('./pages/ai/AIAnalytics').then(m => ({ default: m.AIAnalytics })));
-
-// AI Dashboard (automated farm inspection)
-const AIDashboard = lazy(() => import('./pages/ai/AIDashboard').then(m => ({ default: m.AIDashboard })));
+// AI Hub — full-screen, super admin only (replaces AI Analytics + AI Dashboard)
+const AIHub = lazy(() => import('./pages/ai/AIHub').then(m => ({ default: m.AIHub })));
 
 // Inventory module
 const InventoryDashboard = lazy(() => import('./pages/inventory/InventoryDashboard').then(m => ({ default: m.InventoryDashboard })));
@@ -86,6 +85,9 @@ const BudgetManagementPage = lazy(() => import('./pages/marketing/BudgetManageme
 const EventManagementPage = lazy(() => import('./pages/marketing/EventManagementPage').then(m => ({ default: m.EventManagementPage })));
 const ChannelManagementPage = lazy(() => import('./pages/marketing/ChannelManagementPage').then(m => ({ default: m.ChannelManagementPage })));
 
+// Finance / P&L module
+const PnLPage = lazy(() => import('./pages/pnl/PnLPage').then(m => ({ default: m.PnLPage })));
+
 // Mushroom farming module pages
 const MushroomDashboardPage = lazy(() =>
   import('./pages/mushroom/MushroomDashboardPage').then(m => ({ default: m.MushroomDashboardPage }))
@@ -115,9 +117,12 @@ const ClearCache = lazy(() => import('./pages/debug/ClearCache').then(m => ({ de
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 
 function App() {
+  const mode = useThemeStore((state) => state.mode);
+  const activeTheme = mode === 'dark' ? darkTheme : lightTheme;
+
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={activeTheme}>
         <GlobalStyles />
         <BrowserRouter
           future={{
@@ -152,6 +157,9 @@ function App() {
               {/* Division selector - full-page, outside MainLayout */}
               <Route path="/select-division" element={<DivisionSelector />} />
 
+              {/* AI Hub - full-screen, outside MainLayout, super admin only */}
+              <Route path="/ai" element={<AIHub />} />
+
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/farm/*" element={<FarmManager />} />
@@ -179,9 +187,6 @@ function App() {
                 <Route path="/marketing/budgets" element={<BudgetManagementPage />} />
                 <Route path="/marketing/events" element={<EventManagementPage />} />
                 <Route path="/marketing/channels" element={<ChannelManagementPage />} />
-                <Route path="/ai-analytics" element={<AIAnalytics />} />
-                <Route path="/ai-dashboard" element={<AIDashboard />} />
-
                 {/* Mushroom farming module */}
                 <Route path="/mushroom/dashboard" element={<MushroomDashboardPage />} />
                 <Route path="/mushroom/facilities" element={<MushroomFacilityManager />} />
@@ -189,6 +194,7 @@ function App() {
                 <Route path="/mushroom/rooms" element={<MushroomRoomMonitor />} />
                 <Route path="/mushroom" element={<MushroomDashboardPage />} />
 
+                <Route path="/pnl" element={<PnLPage />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/admin/users" element={<UserManagementPage />} />

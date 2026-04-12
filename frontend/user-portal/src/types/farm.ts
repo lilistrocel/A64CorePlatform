@@ -1127,6 +1127,10 @@ export interface DashboardBlock {
   // Calculated metrics
   calculated: BlockCalculated;
 
+  // Block hierarchy
+  blockCategory?: 'physical' | 'virtual' | null;
+  parentBlockId?: string | null;
+
   // Active alerts
   activeAlerts: DashboardAlert[];
 }

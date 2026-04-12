@@ -219,7 +219,10 @@ class FarmAIChatService:
                         if tool_name == "web_search":
                             result = await execute_read_tool(client, tool_name, tool_input)
                         elif client:
-                            result = await execute_read_tool(client, tool_name, tool_input)
+                            result = await execute_read_tool(
+                                client, tool_name, tool_input,
+                                block_id=str(block_id),
+                            )
                             # Refresh cached auth token after SenseHub call
                             await SenseHubConnectionService._update_token_cache(
                                 farm_id, block_id, client
@@ -250,15 +253,23 @@ class FarmAIChatService:
 
         except GoogleAPICallError as e:
             logger.error(f"Vertex AI API error: {e}")
+            if '429' in str(e) or 'Resource exhausted' in str(e):
+                detail = "Vertex AI rate limit exceeded (429). Please wait a moment and try again."
+            elif '403' in str(e) or 'Permission' in str(e):
+                detail = "Vertex AI permission denied (403). Check service account credentials."
+            elif '404' in str(e):
+                detail = "Vertex AI model not found (404). Check VERTEX_AI_MODEL setting."
+            else:
+                detail = f"Vertex AI error: {str(e)[:200]}"
             return FarmAIChatResponse(
-                message=f"AI service error. Please try again.",
+                message=detail,
                 tools_used=tools_used,
                 growth_stage=growth_stage,
             )
         except Exception as e:
             logger.error(f"Unexpected error in Farm AI chat: {e}", exc_info=True)
             return FarmAIChatResponse(
-                message="An unexpected error occurred. Please try again.",
+                message=f"Unexpected error: {type(e).__name__}: {str(e)[:200]}",
                 tools_used=tools_used,
                 growth_stage=growth_stage,
             )

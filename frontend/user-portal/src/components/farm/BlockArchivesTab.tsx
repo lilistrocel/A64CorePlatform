@@ -27,7 +27,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
   max-width: 450px;
@@ -47,7 +47,7 @@ const ModalTitle = styled.h3`
 
 const ModalText = styled.p`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 8px 0;
   line-height: 1.6;
 `;
@@ -71,9 +71,9 @@ const ModalButtons = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  background: #f5f5f5;
-  color: #616161;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -81,7 +81,7 @@ const CancelButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
   }
 `;
 
@@ -125,7 +125,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -135,7 +135,7 @@ const SummaryGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
@@ -146,7 +146,7 @@ const SummaryCard = styled.div`
 const SummaryLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -155,12 +155,12 @@ const SummaryLabel = styled.div`
 const SummaryValue = styled.div`
   font-size: 28px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
@@ -172,8 +172,8 @@ const ArchivesList = styled.div`
 `;
 
 const ArchiveCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 20px;
   transition: box-shadow 150ms ease-in-out;
@@ -195,13 +195,13 @@ const ArchiveTitleSection = styled.div``;
 const ArchiveTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
 const ArchiveMeta = styled.div`
   font-size: 13px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const EfficiencyBadge = styled.span<{ $efficiency: number }>`
@@ -225,7 +225,7 @@ const ArchiveStats = styled.div`
   gap: 16px;
   margin-bottom: 16px;
   padding: 16px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 6px;
 `;
 
@@ -237,7 +237,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -246,12 +246,12 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const QualitySection = styled.div`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   line-height: 1.6;
 `;
 
@@ -265,7 +265,7 @@ const ArchiveActions = styled.div`
   justify-content: flex-end;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const DeleteButton = styled.button`
@@ -291,13 +291,13 @@ const DeleteButton = styled.button`
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 
   p {
     margin: 8px 0;

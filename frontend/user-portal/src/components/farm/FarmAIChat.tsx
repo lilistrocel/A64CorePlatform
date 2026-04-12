@@ -312,7 +312,7 @@ const ChatPanel = styled.div`
   right: 24px;
   width: 420px;
   max-height: 600px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -334,7 +334,7 @@ const ChatHeader = styled.div`
   justify-content: space-between;
   padding: 12px 16px;
   background: #f8fdf9;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   flex-shrink: 0;
 `;
 
@@ -347,7 +347,7 @@ const HeaderLeft = styled.div`
 const HeaderTitle = styled.div`
   font-size: 15px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const HeaderRight = styled.div`
@@ -374,13 +374,13 @@ const IconButton = styled.button`
   height: 28px;
   border: none;
   background: transparent;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   border-radius: 4px;
 
   &:hover {
-    background: #e0e0e0;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -407,12 +407,12 @@ const WelcomeMessage = styled.div`
 const WelcomeTitle = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const WelcomeText = styled.div`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   line-height: 1.5;
 `;
 
@@ -451,8 +451,8 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   padding: 10px 14px;
   border-radius: ${({ $isUser }) =>
     $isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
-  background: ${({ $isUser }) => ($isUser ? '#10B981' : '#f5f5f5')};
-  color: ${({ $isUser }) => ($isUser ? 'white' : '#212121')};
+  background: ${({ $isUser, theme }) => ($isUser ? '#10B981' : theme.colors.surface)};
+  color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.textPrimary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -474,15 +474,15 @@ const ToolBadges = styled.div`
 const ToolBadge = styled.span`
   font-size: 10px;
   font-weight: 500;
-  color: #616161;
-  background: #e0e0e0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.neutral[300]};
   padding: 1px 6px;
   border-radius: 4px;
   text-transform: capitalize;
 `;
 
 const ActionCard = styled.div<{ $riskColor: string }>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ $riskColor }) => $riskColor}40;
   border-left: 3px solid ${({ $riskColor }) => $riskColor};
   border-radius: 8px;
@@ -501,20 +501,20 @@ const ActionHeader = styled.div`
 const ActionTitle = styled.span`
   font-size: 12px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   flex: 1;
 `;
 
 const ExpiryBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-family: monospace;
 `;
 
 const ActionDescription = styled.div`
   font-size: 13px;
-  color: #424242;
+  color: ${({ theme }) => theme.colors.textSecondary};
   line-height: 1.4;
 `;
 
@@ -542,7 +542,7 @@ const ApproveButton = styled.button`
 const DenyButton = styled.button`
   flex: 1;
   padding: 6px 12px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #EF4444;
   border: 1px solid #EF4444;
   border-radius: 6px;
@@ -570,7 +570,7 @@ const Dot = styled.div<{ $delay: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #9E9E9E;
+  background: ${({ theme }) => theme.colors.textDisabled};
   animation: ${bounce} 1.2s infinite ease-in-out;
   animation-delay: ${({ $delay }) => $delay};
 `;
@@ -589,7 +589,7 @@ const QuickActionsBar = styled.div`
   gap: 4px;
   padding: 6px 16px;
   overflow-x: auto;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-shrink: 0;
 
   &::-webkit-scrollbar { display: none; }
@@ -597,9 +597,9 @@ const QuickActionsBar = styled.div`
 
 const QuickActionSmall = styled.button`
   padding: 3px 10px;
-  background: #f5f5f5;
-  color: #616161;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
@@ -609,8 +609,8 @@ const QuickActionSmall = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #e0e0e0;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -621,29 +621,29 @@ const InputContainer = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #e0e0e0;
-  background: white;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 `;
 
 const ChatInput = styled.input`
   flex: 1;
   padding: 10px 14px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[400]};
   border-radius: 20px;
   font-size: 14px;
-  color: #212121;
-  background: #f9f9f9;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface};
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
     border-color: #10B981;
     box-shadow: 0 0 0 2px #10B98130;
-    background: white;
+    background: ${({ theme }) => theme.colors.background};
   }
 
-  &::placeholder { color: #9E9E9E; }
+  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
   &:disabled { opacity: 0.6; }
 `;
 

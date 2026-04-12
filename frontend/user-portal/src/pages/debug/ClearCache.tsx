@@ -18,7 +18,7 @@ const Container = styled.div`
 `;
 
 const Card = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   padding: 48px;
   max-width: 600px;
@@ -29,14 +29,14 @@ const Card = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 12px 0;
   text-align: center;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 32px 0;
   text-align: center;
 `;
@@ -44,14 +44,14 @@ const Subtitle = styled.p`
 const Section = styled.div`
   margin-bottom: 24px;
   padding: 20px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
 const SectionTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 12px 0;
 `;
 
@@ -59,7 +59,7 @@ const InfoRow = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 
   &:last-child {
     border-bottom: none;
@@ -68,13 +68,13 @@ const InfoRow = styled.div`
 
 const Label = styled.span`
   font-size: 14px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const Value = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const ButtonGroup = styled.div`
@@ -105,8 +105,8 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
     }
     if (props.$variant === 'secondary') {
       return `
-        background: #e0e0e0;
-        color: #212121;
+        background: ${props.theme.colors.neutral[300]};
+        color: ${props.theme.colors.textPrimary};
         &:hover {
           background: #d0d0d0;
         }

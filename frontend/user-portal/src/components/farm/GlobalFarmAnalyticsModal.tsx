@@ -677,7 +677,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContainer = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   width: 100%;
   max-width: 1400px;
@@ -695,11 +695,11 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 
   @media (max-width: 768px) {
@@ -729,7 +729,7 @@ const HeaderRight = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -738,12 +738,12 @@ const SystemInfo = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const InfoText = styled.span`
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PeriodFilter = styled.div`
@@ -755,16 +755,16 @@ const PeriodFilter = styled.div`
 const PeriodLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PeriodSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
@@ -778,7 +778,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 32px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   padding: 0;
   width: 36px;
@@ -790,15 +790,15 @@ const CloseButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 2px solid #e0e0e0;
-  background: #fafafa;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.neutral[50]};
   overflow-x: auto;
   flex-shrink: 0;
 
@@ -813,8 +813,8 @@ const Tab = styled.button<{ $active: boolean }>`
   gap: 6px;
   padding: 14px 20px;
   border: none;
-  background: ${({ $active }) => ($active ? 'white' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#3b82f6' : '#616161')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '600' : '500')};
   cursor: pointer;
@@ -823,7 +823,7 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    background: ${({ $active }) => ($active ? 'white' : '#f0f0f0')};
+    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
   }
 `;
 
@@ -837,7 +837,7 @@ const ModalBody = styled.div`
   padding: 24px;
   overflow-y: auto;
   flex: 1;
-  background: #fafafa;
+  background: ${({ theme }) => theme.colors.neutral[50]};
 `;
 
 const TabContent = styled.div`
@@ -847,7 +847,7 @@ const TabContent = styled.div`
 `;
 
 const Section = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -856,7 +856,7 @@ const Section = styled.div`
 const SectionTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
 `;
 
@@ -872,7 +872,7 @@ const MetricCard = styled.div`
   align-items: center;
   gap: 8px;
   padding: 20px 16px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   text-align: center;
 `;
@@ -884,14 +884,14 @@ const MetricIcon = styled.div`
 const MetricValue = styled.div<{ $color?: string }>`
   font-size: 28px;
   font-weight: 700;
-  color: ${({ $color }) => $color || '#212121'};
+  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
   line-height: 1;
 `;
 
 const MetricLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -906,7 +906,7 @@ const TrendIndicator = styled.div`
   align-items: center;
   gap: 20px;
   padding: 20px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
@@ -928,7 +928,7 @@ const TrendLabel = styled.div<{ $color: string }>`
 
 const TrendDescription = styled.div`
   font-size: 14px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const TableContainer = styled.div`
@@ -945,31 +945,31 @@ const Table = styled.table`
 const TableHeader = styled.th<{ $sortable?: boolean }>`
   text-align: left;
   padding: 12px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   font-weight: 600;
-  color: #616161;
-  border-bottom: 2px solid #e0e0e0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   white-space: nowrap;
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
   user-select: none;
 
   &:hover {
-    background: ${({ $sortable }) => ($sortable ? '#eeeeee' : '#f5f5f5')};
+    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.neutral[200] : theme.colors.surface)};
   }
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #f9f9f9;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
 const TableCell = styled.td<{ $bold?: boolean }>`
   padding: 12px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: ${({ $bold }) => ($bold ? '600' : '400')};
 `;
 
@@ -989,7 +989,7 @@ const PerformerItem = styled.div`
   align-items: center;
   gap: 16px;
   padding: 16px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
@@ -1002,11 +1002,11 @@ const PerformerRank = styled.div<{ $rank: number }>`
   justify-content: center;
   font-size: 18px;
   font-weight: 700;
-  background: ${({ $rank }) => {
+  background: ${({ $rank, theme }) => {
     if ($rank === 1) return 'linear-gradient(135deg, #FFD700, #FFA500)';
     if ($rank === 2) return 'linear-gradient(135deg, #C0C0C0, #A0A0A0)';
     if ($rank === 3) return 'linear-gradient(135deg, #CD7F32, #8B4513)';
-    return '#e0e0e0';
+    return theme.colors.neutral[300];
   }};
   color: white;
   flex-shrink: 0;
@@ -1022,12 +1022,12 @@ const PerformerInfo = styled.div`
 const PerformerName = styled.div`
   font-size: 15px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const PerformerDetails = styled.div`
   font-size: 13px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
@@ -1059,7 +1059,7 @@ const AttentionInfo = styled.div`
 const AttentionName = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const AttentionDetails = styled.div`
@@ -1111,7 +1111,7 @@ const UnderPerformerItem = styled.div`
 const UnderPerformerName = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const UnderPerformerMetrics = styled.div`
@@ -1141,7 +1141,7 @@ const LoadingContainer = styled.div`
 const LoadingSpinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -1156,7 +1156,7 @@ const LoadingSpinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ErrorContainer = styled.div`
@@ -1176,13 +1176,13 @@ const ErrorIcon = styled.div`
 const ErrorTitle = styled.div`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
 
 const ErrorMessage = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 24px;
 `;
 
@@ -1218,7 +1218,7 @@ const EmptyStateSection = styled.div`
   justify-content: center;
   padding: 40px 20px;
   text-align: center;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
 `;
 
@@ -1230,5 +1230,5 @@ const EmptyIcon = styled.div`
 
 const EmptyText = styled.div`
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;

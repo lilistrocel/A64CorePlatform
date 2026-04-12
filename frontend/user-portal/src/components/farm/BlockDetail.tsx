@@ -52,7 +52,7 @@ const BackButton = styled.button`
 `;
 
 const Header = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -76,7 +76,7 @@ const TitleSection = styled.div``;
 const BlockTitle = styled.h1`
   font-size: 36px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
@@ -85,7 +85,7 @@ const BlockMeta = styled.div`
   gap: 16px;
   align-items: center;
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const StatusBadge = styled.span<{ $status: string }>`
@@ -123,7 +123,7 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 24px;
   padding-top: 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const StatCard = styled.div`
@@ -134,7 +134,7 @@ const StatCard = styled.div`
 const StatLabel = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -143,17 +143,17 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatSubtext = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
 const TabsContainer = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -161,7 +161,7 @@ const TabsContainer = styled.div`
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   overflow-x: auto;
 
   &::-webkit-scrollbar {
@@ -169,15 +169,15 @@ const TabBar = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
     border-radius: 2px;
   }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
-  background: ${({ $active }) => ($active ? 'white' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#3b82f6' : '#616161')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  color: ${({ $active }) => ($active ? '#3b82f6' : 'inherit')};
   border: none;
   border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
   font-size: 14px;
@@ -187,7 +187,7 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     color: #3b82f6;
   }
 `;
@@ -206,7 +206,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -235,7 +235,7 @@ const OverviewGrid = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 20px;
 `;
@@ -243,7 +243,7 @@ const InfoCard = styled.div`
 const InfoTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
 `;
 
@@ -251,7 +251,7 @@ const InfoItem = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 
   &:last-child {
     border-bottom: none;
@@ -260,13 +260,13 @@ const InfoItem = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 // Multi-crop styled components
@@ -288,7 +288,7 @@ const AreaBudgetTitle = styled.h3`
 const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
   width: 100%;
   height: 24px;
-  background: #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -308,7 +308,7 @@ const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
 
 const AreaBudgetText = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-align: center;
   margin-bottom: 12px;
 `;
@@ -331,17 +331,17 @@ const AddCropButton = styled.button`
 `;
 
 const VirtualChildrenSection = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #424242;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 16px 0;
 `;
 
@@ -350,7 +350,7 @@ const VirtualChildCard = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 6px;
   margin-bottom: 8px;
   cursor: pointer;
@@ -361,12 +361,12 @@ const VirtualChildCard = styled.div`
   }
 
   &:hover {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
   }
 
   span {
     font-size: 14px;
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
 
     &:first-child {
       font-weight: 600;

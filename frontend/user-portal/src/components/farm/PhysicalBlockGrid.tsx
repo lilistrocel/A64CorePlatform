@@ -46,13 +46,13 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const BlockCount = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
   margin-top: 4px;
   display: block;
@@ -81,16 +81,16 @@ const SortControl = styled.div`
 
 const SortLabel = styled.span`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const SortSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 13px;
-  color: #424242;
-  background: white;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
 
@@ -102,23 +102,23 @@ const SortSelect = styled.select`
 const SortDirectionButton = styled.button`
   padding: 8px 10px;
   background: transparent;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
   background: ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
-  color: ${({ $active }) => ($active ? 'white' : '#616161')};
-  border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#e0e0e0')};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -126,7 +126,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
+    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
   }
 `;
 
@@ -143,7 +143,7 @@ const GridContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const EmptyIcon = styled.div`
@@ -154,13 +154,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0;
 `;
 

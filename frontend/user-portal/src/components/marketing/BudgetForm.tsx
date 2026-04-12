@@ -6,16 +6,16 @@ import type { MarketingBudget, MarketingBudgetCreate, MarketingBudgetUpdate } fr
 interface BudgetFormProps { budget: MarketingBudget | null; onClose: () => void; }
 
 const Overlay = styled.div`position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;`;
-const Modal = styled.div`background: white; border-radius: 12px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;`;
-const Title = styled.h2`font-size: 24px; font-weight: 600; color: #212121; margin: 0 0 24px 0;`;
+const Modal = styled.div`background: ${({ theme }) => theme.colors.background}; border-radius: 12px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;`;
+const Title = styled.h2`font-size: 24px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary}; margin: 0 0 24px 0;`;
 const Form = styled.form``;
 const FormGroup = styled.div`margin-bottom: 20px;`;
-const Label = styled.label`display: block; font-size: 14px; font-weight: 500; color: #212121; margin-bottom: 8px;`;
-const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; &:focus { outline: none; border-color: #3B82F6; }`;
-const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: white; &:focus { outline: none; border-color: #3B82F6; }`;
+const Label = styled.label`display: block; font-size: 14px; font-weight: 500; color: ${({ theme }) => theme.colors.textPrimary}; margin-bottom: 8px;`;
+const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; &:focus { outline: none; border-color: #3B82F6; }`;
+const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; &:focus { outline: none; border-color: #3B82F6; }`;
 const ButtonRow = styled.div`display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;`;
 const Button = styled.button`padding: 10px 24px; background: #3B82F6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: #1976d2; }`;
-const CancelButton = styled(Button)`background: transparent; color: #616161; border: 1px solid #e0e0e0; &:hover { background: #f5f5f5; }`;
+const CancelButton = styled(Button)`background: transparent; color: ${({ theme }) => theme.colors.textSecondary}; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; &:hover { background: ${({ theme }) => theme.colors.surface}; }`;
 const ErrorText = styled.div`color: #EF4444; font-size: 13px; margin-top: 8px;`;
 
 export function BudgetForm({ budget, onClose }: BudgetFormProps) {

@@ -1,58 +1,5 @@
-export const theme = {
-  colors: {
-    // Primary palette (Blue)
-    primary: {
-      50: '#e3f2fd',
-      100: '#bbdefb',
-      200: '#90caf9',
-      300: '#64b5f6',
-      400: '#42a5f5',
-      500: '#2196f3',  // Main brand color
-      600: '#1e88e5',
-      700: '#1976d2',
-      800: '#1565c0',
-      900: '#0d47a1',
-    },
-
-    // Secondary palette (Purple)
-    secondary: {
-      50: '#f3e5f5',
-      100: '#e1bee7',
-      500: '#9c27b0',
-      700: '#7b1fa2',
-      900: '#4a148c',
-    },
-
-    // Neutral palette
-    neutral: {
-      50: '#fafafa',
-      100: '#f5f5f5',
-      200: '#eeeeee',
-      300: '#e0e0e0',
-      400: '#bdbdbd',
-      500: '#9e9e9e',
-      600: '#757575',
-      700: '#616161',
-      800: '#424242',
-      900: '#212121',
-    },
-
-    // Semantic colors (matching app_spec.txt color palette)
-    success: '#10B981',   // Green - Tailwind emerald-500
-    warning: '#F59E0B',   // Amber - Tailwind amber-500
-    error: '#EF4444',     // Red - Tailwind red-500
-    info: '#3B82F6',      // Blue - Tailwind blue-500
-
-    // Background & surface
-    background: '#ffffff',
-    surface: '#f5f5f5',
-
-    // Text
-    textPrimary: '#212121',
-    textSecondary: '#616161',
-    textDisabled: '#9e9e9e',
-  },
-
+// Shared design tokens (non-color values are identical across themes)
+const sharedTokens = {
   typography: {
     fontFamily: {
       primary: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif",
@@ -101,14 +48,6 @@ export const theme = {
     full: '9999px',
   },
 
-  shadows: {
-    none: 'none',
-    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-  },
-
   breakpoints: {
     mobile: '320px',
     tablet: '768px',
@@ -127,4 +66,124 @@ export const theme = {
   },
 };
 
-export type Theme = typeof theme;
+// Primary palette (Blue) — same in both themes
+const primaryPalette = {
+  50: '#e3f2fd',
+  100: '#bbdefb',
+  200: '#90caf9',
+  300: '#64b5f6',
+  400: '#42a5f5',
+  500: '#2196f3',  // Main brand color
+  600: '#1e88e5',
+  700: '#1976d2',
+  800: '#1565c0',
+  900: '#0d47a1',
+};
+
+// Secondary palette (Purple) — same in both themes
+const secondaryPalette = {
+  50: '#f3e5f5',
+  100: '#e1bee7',
+  500: '#9c27b0',
+  700: '#7b1fa2',
+  900: '#4a148c',
+};
+
+// Semantic colors — same in both themes
+const semanticColors = {
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+};
+
+// ─── Light Theme ─────────────────────────────────────────────────────────────
+
+export const lightTheme = {
+  ...sharedTokens,
+  colors: {
+    primary: primaryPalette,
+    secondary: secondaryPalette,
+
+    // Neutral palette — light grays
+    neutral: {
+      50: '#fafafa',
+      100: '#f5f5f5',
+      200: '#eeeeee',
+      300: '#e0e0e0',
+      400: '#bdbdbd',
+      500: '#9e9e9e',
+      600: '#757575',
+      700: '#616161',
+      800: '#424242',
+      900: '#212121',
+    },
+
+    ...semanticColors,
+
+    // Background & surface
+    background: '#ffffff',
+    surface: '#f5f5f5',
+
+    // Text
+    textPrimary: '#212121',
+    textSecondary: '#616161',
+    textDisabled: '#9e9e9e',
+  },
+
+  shadows: {
+    none: 'none',
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+  },
+};
+
+// ─── Dark Theme ──────────────────────────────────────────────────────────────
+
+export const darkTheme = {
+  ...sharedTokens,
+  colors: {
+    primary: primaryPalette,
+    secondary: secondaryPalette,
+
+    // Neutral palette — dark grays (inverted scale for dark mode)
+    neutral: {
+      50: '#1a1a1a',   // Darkest surface (was lightest)
+      100: '#242424',
+      200: '#2e2e2e',
+      300: '#3a3a3a',
+      400: '#4a4a4a',
+      500: '#6b6b6b',
+      600: '#8a8a8a',
+      700: '#a3a3a3',
+      800: '#d4d4d4',
+      900: '#f5f5f5',  // Lightest text (was darkest)
+    },
+
+    ...semanticColors,
+
+    // Background & surface
+    background: '#121212',
+    surface: '#1e1e1e',
+
+    // Text
+    textPrimary: '#f5f5f5',
+    textSecondary: '#a3a3a3',
+    textDisabled: '#6b6b6b',
+  },
+
+  shadows: {
+    none: 'none',
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+    md: '0 4px 6px -1px rgba(0, 0, 0, 0.4)',
+    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.6)',
+  },
+};
+
+// Default export (light theme) preserved for backward compatibility
+export const theme = lightTheme;
+
+export type Theme = typeof lightTheme;

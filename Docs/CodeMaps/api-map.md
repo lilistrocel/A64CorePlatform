@@ -10,7 +10,7 @@ and their connections to frontend service calls.
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md) | [frontend-map.md](frontend-map.md)
 
-## API Endpoints (69 total)
+## API Endpoints (75 total)
 
 ### Module: `ai_analytics`
 
@@ -100,6 +100,17 @@ and their connections to frontend service calls.
 | `CRUD /logistics/shipments` | `src/modules/logistics/api/v1/shipments.py:1` | Shipment CRUD with tracking, status updates, and order assignment. | router |
 | `CRUD /logistics/vehicles` | `src/modules/logistics/api/v1/vehicles.py:1` | Fleet vehicle management CRUD. | router |
 | `GET /logistics/dashboard` | `src/modules/logistics/api/v1/dashboard.py:1` | Logistics dashboard statistics and summaries. | router |
+
+### Module: `finance`
+
+| Endpoint | File | Description |
+|----------|------|-------------|
+| `GET /api/v1/finance/pnl/summary` | `src/modules/finance/api/v1/pnl.py` | P&L summary: revenue, COGS, gross/operating profit, KG volumes, order counts. Supports farmId, farmingYear, date range, priceSource filters. |
+| `GET /api/v1/finance/pnl/by-month` | `src/modules/finance/api/v1/pnl.py` | Monthly P&L time series sorted ascending by yearMonth. Suitable for trend charts. |
+| `GET /api/v1/finance/pnl/by-farm` | `src/modules/finance/api/v1/pnl.py` | Per-farm P&L breakdown sorted by revenue descending. All farms included. |
+| `GET /api/v1/finance/pnl/by-crop` | `src/modules/finance/api/v1/pnl.py` | Top 20 crops by revenue with COGS and avgPricePerKg. |
+| `GET /api/v1/finance/pnl/ar-aging` | `src/modules/finance/api/v1/pnl.py` | AR aging buckets (0-30, 31-60, 61-90, >90 days) and top-10 customer breakdown. |
+| `GET /api/v1/finance/pnl/revenue-sources` | `src/modules/finance/api/v1/pnl.py` | Revenue confidence breakdown by metadata.priceSource. |
 
 ### Module: `marketing`
 

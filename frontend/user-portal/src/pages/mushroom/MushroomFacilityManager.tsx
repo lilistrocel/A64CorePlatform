@@ -435,7 +435,7 @@ const Container = styled.div`
   padding: 24px;
   max-width: 100%;
   min-height: 100vh;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const PageHeader = styled.div`
@@ -452,7 +452,7 @@ const TitleSection = styled.div``;
 const PageTitle = styled.h1`
   font-size: 28px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
@@ -491,7 +491,7 @@ const FacilitiesGrid = styled.div`
 `;
 
 const DetailPanel = styled.section`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -511,7 +511,7 @@ const DetailPanelHeader = styled.div`
 const DetailPanelTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -525,7 +525,7 @@ const AddRoomBtn = styled.button`
   padding: 8px 14px;
   border: 1px solid #3b82f6;
   border-radius: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #3b82f6;
   font-size: 13px;
   font-weight: 600;
@@ -546,14 +546,14 @@ const CloseDetailBtn = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   padding: 4px 8px;
   border-radius: 6px;
   transition: all 150ms;
 
   &:hover {
-    background: #f5f5f5;
-    color: #424242;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textSecondary};
   }
   &:focus-visible {
     outline: 2px solid #2196f3;
@@ -567,7 +567,7 @@ const DetailSection = styled.div`
 const DetailSectionTitle = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: #424242;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -578,7 +578,7 @@ const InlineSpinner = styled.span`
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -601,20 +601,20 @@ const SubstrateRow = styled.div`
   padding: 10px 14px;
   background: #f9fafb;
   border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-wrap: wrap;
 `;
 
 const SubstrateBatchCode = styled.span`
   font-size: 13px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   min-width: 80px;
 `;
 
 const SubstrateType = styled.span`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: capitalize;
   flex: 1;
 `;
@@ -645,7 +645,7 @@ const SubstrateStatus = styled.span<SubstrateStatusProps>`
 
 const SubstrateWeight = styled.span`
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 // Shared form elements
@@ -661,7 +661,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid #e0e0e0;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -673,13 +673,13 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
   max-width: 480px;
@@ -698,13 +698,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 22px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 15px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -722,7 +722,7 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   width: 100%;
@@ -742,7 +742,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -751,14 +751,14 @@ const CloseModalBtn = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 150ms;
 
   &:hover {
-    background: #f5f5f5;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
     outline: 2px solid #2196f3;
@@ -786,7 +786,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Required = styled.span`
@@ -796,10 +796,10 @@ const Required = styled.span`
 
 const Input = styled.input`
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   outline: none;
   transition: border-color 150ms;
 
@@ -811,11 +811,11 @@ const Input = styled.input`
 
 const SelectField = styled.select`
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
@@ -828,10 +828,10 @@ const SelectField = styled.select`
 
 const TextArea = styled.textarea`
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   font-family: inherit;
   outline: none;
@@ -860,17 +860,17 @@ const FormActions = styled.div`
 
 const CancelBtn = styled.button`
   padding: 10px 20px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  background: white;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
   &:focus-visible {
     outline: 2px solid #2196f3;

@@ -489,7 +489,7 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
           )}
 
           {activeTab === 'automation' && (
-            <BlockAutomationTab blockId={block.blockId} farmId={farmId} />
+            <BlockAutomationTab blockId={block.parentBlockId || block.blockId} farmId={farmId} />
           )}
         </Content>
       </Modal>
@@ -551,20 +551,20 @@ const TabBar = styled.div`
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: ${({ $active, theme }) => ($active ? theme.colors.surface : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  padding: 16px 24px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
   border: none;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.surface};
+    color: #3b82f6;
   }
 `;
 

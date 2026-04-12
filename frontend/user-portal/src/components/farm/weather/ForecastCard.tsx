@@ -14,7 +14,7 @@ import {
 } from '../../../services/weatherApi';
 
 const Card = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -23,7 +23,7 @@ const Card = styled.div`
 const Title = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 20px 0;
   display: flex;
   align-items: center;
@@ -41,7 +41,7 @@ const DayCard = styled.div<{ $isToday?: boolean }>`
   flex-direction: column;
   align-items: center;
   padding: 16px 12px;
-  background: ${({ $isToday }) => ($isToday ? '#EFF6FF' : '#f5f5f5')};
+  background: ${({ $isToday, theme }) => ($isToday ? '#EFF6FF' : theme.colors.surface)};
   border-radius: 12px;
   border: ${({ $isToday }) => ($isToday ? '2px solid #3B82F6' : '1px solid transparent')};
   transition: all 150ms ease-in-out;
@@ -55,7 +55,7 @@ const DayCard = styled.div<{ $isToday?: boolean }>`
 const DayName = styled.div<{ $isToday?: boolean }>`
   font-size: 13px;
   font-weight: ${({ $isToday }) => ($isToday ? '600' : '500')};
-  color: ${({ $isToday }) => ($isToday ? '#3B82F6' : '#616161')};
+  color: ${({ $isToday, theme }) => ($isToday ? '#3B82F6' : theme.colors.textSecondary)};
   margin-bottom: 8px;
 `;
 
@@ -78,12 +78,12 @@ const TempRange = styled.div`
   .high {
     font-size: 15px;
     font-weight: 600;
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   .low {
     font-size: 15px;
-    color: #9e9e9e;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 `;
 
@@ -101,7 +101,7 @@ const Precipitation = styled.div`
 
 const Description = styled.div`
   font-size: 11px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-align: center;
   margin-top: 4px;
   text-transform: capitalize;
@@ -119,7 +119,7 @@ const EvapotranspirationBadge = styled.div`
 const NoDataMessage = styled.div`
   text-align: center;
   padding: 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-size: 14px;
 `;
 

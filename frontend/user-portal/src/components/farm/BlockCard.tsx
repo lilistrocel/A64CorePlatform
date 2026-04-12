@@ -33,7 +33,7 @@ export interface BlockCardProps {
 // ============================================================================
 
 const Card = styled.div<{ $stateColor: string; $isVirtual?: boolean }>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -123,7 +123,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -132,11 +132,11 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const PlantingInfo = styled.div`
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
@@ -145,18 +145,18 @@ const PlantingInfo = styled.div`
 
 const PlantingLabel = styled.div`
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 4px;
 `;
 
 const PlantingDetail = styled.div`
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const CapacityBar = styled.div`
   width: 100%;
   height: 8px;
-  background: #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -171,7 +171,7 @@ const CapacityFill = styled.div<{ $percent: number; $color: string }>`
 
 const CapacityText = styled.div`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-align: center;
 `;
 
@@ -253,7 +253,7 @@ const StateSelect = styled.select`
   font-size: 13px;
   font-weight: 500;
   color: #3B82F6;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   flex: 1;
   transition: all 150ms ease-in-out;
@@ -383,7 +383,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
             {block.name || block.targetCropName || block.blockCode}
           </BlockName>
           {block.blockCode && (
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'inherit', marginTop: '4px', opacity: 0.6 }}>
               {block.blockCode}
               {block.legacyBlockCode && ` (${block.legacyBlockCode})`}
             </div>

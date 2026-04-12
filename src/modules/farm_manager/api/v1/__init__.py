@@ -24,6 +24,9 @@ from .farm_level_ai_chat import router as farm_level_ai_chat_router
 from .global_ai_chat import router as global_ai_chat_router
 from .ai_dashboard import router as ai_dashboard_router
 from .watchdog import router as watchdog_router
+from .ai_hub import router as ai_hub_router
+from .sensehub_cache import router as sensehub_cache_router
+from .cameras import router as cameras_router
 
 api_router = APIRouter()
 
@@ -51,3 +54,6 @@ api_router.include_router(farm_level_ai_chat_router, tags=["farm-level-ai-chat"]
 api_router.include_router(global_ai_chat_router, tags=["global-ai-chat"])  # Global read-only AI monitoring assistant
 api_router.include_router(ai_dashboard_router, tags=["ai-dashboard"])  # Automated AI farm inspection dashboard
 api_router.include_router(watchdog_router, tags=["watchdog"])  # Watchdog monitoring with Telegram notifications
+api_router.include_router(ai_hub_router, tags=["ai-hub"])  # Unified AI Hub (super admin only: Control, Monitor, Report, Advise)
+api_router.include_router(sensehub_cache_router, tags=["sensehub-cache"])  # SenseHub data cache & sync
+api_router.include_router(cameras_router, tags=["cameras"])  # Camera snapshots from SenseHub MCP hubs

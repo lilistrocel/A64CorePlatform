@@ -36,6 +36,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Database,
 } from 'lucide-react';
 import {
   connectSenseHub,
@@ -52,6 +53,8 @@ import {
   getSenseHubLabNutrients,
   getSenseHubLabLatest,
   getSenseHubLabReadings,
+  getSenseHubCacheStatus,
+  triggerSenseHubSync,
 } from '../../services/farmApi';
 import type {
   SenseHubConnectionStatus,
@@ -126,6 +129,11 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
   const [togglingAutomation, setTogglingAutomation] = useState<number | null>(null);
   const [triggeringAutomation, setTriggeringAutomation] = useState<number | null>(null);
   const [acknowledgingAlert, setAcknowledgingAlert] = useState<number | null>(null);
+
+  // Data Sync state
+  const [syncStatus, setSyncStatus] = useState<any | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // ============================================================================
   // LOAD STATUS & DATA
@@ -265,9 +273,36 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
     }
   };
 
+  // ============================================================================
+  // DATA SYNC
+  // ============================================================================
+
+  const loadCacheStatus = useCallback(async () => {
+    try {
+      const status = await getSenseHubCacheStatus();
+      setSyncStatus(status);
+    } catch {
+      // Cache status is non-critical; silently ignore errors
+    }
+  }, []);
+
+  const handleSyncNow = async () => {
+    try {
+      setSyncing(true);
+      setSyncError(null);
+      await triggerSenseHubSync();
+      await loadCacheStatus();
+    } catch (err: any) {
+      setSyncError(err.response?.data?.detail || err.message || 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   useEffect(() => {
     loadStatus();
-  }, [loadStatus]);
+    loadCacheStatus();
+  }, [loadStatus, loadCacheStatus]);
 
   // Load sub-tab data when switching tabs
   useEffect(() => {
@@ -596,6 +631,62 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
           </ConfigCard>
         )}
       </Section>
+
+      {/* Data Sync Section */}
+      {isConnected && (
+        <Section>
+          <SectionHeader>
+            <SectionTitle>
+              <Database size={20} />
+              Data Sync
+            </SectionTitle>
+          </SectionHeader>
+          <ConfigCard>
+            <ConfigInfo>
+              <ConfigLabel>Last synced:</ConfigLabel>
+              <ConfigValue>
+                <Clock size={16} />
+                {syncStatus?.cacheStats?.lastSync?.startedAt
+                  ? formatTimeAgo(new Date(syncStatus.cacheStats.lastSync.startedAt))
+                  : syncStatus?.lastSync
+                  ? formatTimeAgo(new Date(syncStatus.lastSync))
+                  : 'Never'}
+              </ConfigValue>
+            </ConfigInfo>
+            {syncStatus?.cacheStats && (
+              <ConfigInfo>
+                <ConfigLabel>Cached data:</ConfigLabel>
+                <LastUpdateText>
+                  {syncStatus.cacheStats.equipment ?? 0} equipment &nbsp;&middot;&nbsp;
+                  {syncStatus.cacheStats.alerts ?? 0} alerts &nbsp;&middot;&nbsp;
+                  {syncStatus.cacheStats.labReadings ?? 0} lab readings
+                </LastUpdateText>
+              </ConfigInfo>
+            )}
+            <ConfigActions>
+              <RefreshButton onClick={handleSyncNow} disabled={syncing}>
+                {syncing ? (
+                  <>
+                    <RefreshCw size={16} />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <Database size={16} />
+                    Sync Now
+                  </>
+                )}
+              </RefreshButton>
+            </ConfigActions>
+            {syncError && (
+              <LastUpdateText style={{ color: '#991b1b' }}>
+                <AlertCircle size={12} />
+                {syncError}
+              </LastUpdateText>
+            )}
+          </ConfigCard>
+        </Section>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -1158,7 +1249,7 @@ const LoadingState = styled.div`
   justify-content: center;
   padding: 32px;
   gap: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const Section = styled.div`
@@ -1179,13 +1270,13 @@ const SectionTitle = styled.h3`
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const SectionSubtitle = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ConfigEmptyState = styled.div`
@@ -1195,8 +1286,8 @@ const ConfigEmptyState = styled.div`
   justify-content: center;
   padding: 32px;
   gap: 16px;
-  background: #f5f5f5;
-  border: 2px dashed #d4d4d4;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
 `;
 
@@ -1207,7 +1298,7 @@ const EmptyState = styled.div`
   justify-content: center;
   padding: 32px;
   gap: 16px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   text-align: center;
 `;
@@ -1218,7 +1309,7 @@ const EmptyIcon = styled.div`
 
 const EmptyText = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ConfigButton = styled.button`
@@ -1238,8 +1329,8 @@ const ConfigButton = styled.button`
 `;
 
 const ConnectionForm = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 24px;
   display: flex;
@@ -1251,7 +1342,7 @@ const ConnectionForm = styled.div`
 const FormTitle = styled.h4`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -1264,16 +1355,16 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Input = styled.input`
   padding: 8px 16px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 16px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   transition: all 150ms ease-in-out;
 
   &:focus {
@@ -1283,7 +1374,7 @@ const Input = styled.input`
   }
 
   &::placeholder {
-    color: #9e9e9e;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 `;
 
@@ -1315,8 +1406,8 @@ const ConnectButton = styled.button`
 
 const ConfigCard = styled.div`
   padding: 16px;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -1332,7 +1423,7 @@ const ConfigInfo = styled.div`
 const ConfigLabel = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ConfigValue = styled.div`
@@ -1341,7 +1432,7 @@ const ConfigValue = styled.div`
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-family: 'Courier New', monospace;
 `;
 
@@ -1357,9 +1448,9 @@ const RefreshButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  background: #f5f5f5;
-  color: #212121;
-  border: 1px solid #d4d4d4;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
@@ -1367,7 +1458,7 @@ const RefreshButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
   }
 
   &:disabled {
@@ -1388,7 +1479,7 @@ const ToggleInput = styled.input`
 
 const ToggleLabel = styled.label`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
 `;
 
@@ -1413,7 +1504,7 @@ const LastUpdateText = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ErrorBanner = styled.div`
@@ -1451,7 +1542,7 @@ const RetryButton = styled.button`
 const SubTabBar = styled.div`
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   padding-bottom: 4px;
 `;
 
@@ -1461,7 +1552,7 @@ const SubTab = styled.button<{ $active: boolean }>`
   gap: 4px;
   padding: 8px 16px;
   background: ${({ $active }) => ($active ? '#e3f2fd' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#3b82f6' : '#616161')};
+  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
   border: none;
   border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
   font-size: 14px;
@@ -1493,8 +1584,8 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -1505,7 +1596,7 @@ const StatCard = styled.div`
 const StatLabel = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -1513,7 +1604,7 @@ const StatLabel = styled.div`
 const StatValue = styled.div`
   font-size: 30px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatBreakdown = styled.div`
@@ -1535,7 +1626,7 @@ const AlertsList = styled.div`
 `;
 
 const AlertCard = styled.div<{ $severity: 'critical' | 'warning' | 'info' }>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-left: 4px solid ${({ $severity }) => {
     switch ($severity) {
       case 'critical': return '#ef4444';
@@ -1560,13 +1651,13 @@ const AlertHeader = styled.div`
 const AlertTitle = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   flex: 1;
 `;
 
 const AlertMeta = styled.div`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const AcknowledgeButton = styled.button`
@@ -1611,8 +1702,8 @@ const EquipmentGrid = styled.div`
 
 const EquipmentCard = styled.div`
   padding: 16px;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -1653,7 +1744,7 @@ const EquipmentInfo = styled.div`
 const EquipmentName = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const EquipmentMeta = styled.div`
@@ -1671,16 +1762,16 @@ const StatusDot = styled.div<{ $online: boolean }>`
 
 const EquipmentStatus = styled.div`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: capitalize;
 `;
 
 const EquipmentType = styled.div`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   padding: 2px 6px;
-  background: #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
 `;
 
@@ -1689,7 +1780,7 @@ const ReadingsContainer = styled.div`
   flex-direction: column;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const ReadingRow = styled.div`
@@ -1701,14 +1792,14 @@ const ReadingRow = styled.div`
 const ReadingLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: capitalize;
 `;
 
 const ReadingValue = styled.div`
   font-size: 16px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const RelayControls = styled.div`
@@ -1716,7 +1807,7 @@ const RelayControls = styled.div`
   flex-direction: column;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const RelayControl = styled.div`
@@ -1728,13 +1819,13 @@ const RelayControl = styled.div`
 const RelayLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ToggleRelayButton = styled.button<{ $isOn: boolean }>`
   padding: 4px 12px;
-  background: ${({ $isOn }) => ($isOn ? '#10b981' : '#d4d4d4')};
-  color: ${({ $isOn }) => ($isOn ? 'white' : '#212121')};
+  background: ${({ $isOn, theme }) => ($isOn ? '#10b981' : theme.colors.neutral[300])};
+  color: ${({ $isOn, theme }) => ($isOn ? 'white' : theme.colors.textPrimary)};
   border: none;
   border-radius: 4px;
   font-size: 12px;
@@ -1760,8 +1851,8 @@ const AutomationsList = styled.div`
 `;
 
 const AutomationCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -1786,12 +1877,12 @@ const AutomationInfo = styled.div`
 const AutomationName = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const AutomationDescription = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const AutomationBadge = styled.span<{ $enabled: boolean }>`
@@ -1805,7 +1896,7 @@ const AutomationBadge = styled.span<{ $enabled: boolean }>`
 
 const AutomationMeta = styled.div`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const AutomationActions = styled.div`
@@ -1818,9 +1909,9 @@ const AutomationButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: #f5f5f5;
-  color: #212121;
-  border: 1px solid #d4d4d4;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
@@ -1828,7 +1919,7 @@ const AutomationButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
   }
 
   &:disabled {
@@ -1854,11 +1945,11 @@ const LabFilterGroup = styled.div`
 
 const LabSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   min-width: 140px;
 
   &:focus {
@@ -1893,7 +1984,7 @@ const LabSectionTitle = styled.h4`
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 8px 0 0 0;
 `;
 
@@ -1904,8 +1995,8 @@ const LabZoneGrid = styled.div`
 `;
 
 const LabZoneCard = styled.div`
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 16px;
 `;
@@ -1913,10 +2004,10 @@ const LabZoneCard = styled.div`
 const LabZoneHeader = styled.div`
   font-size: 15px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const LabReadingsGrid = styled.div`
@@ -1926,8 +2017,8 @@ const LabReadingsGrid = styled.div`
 `;
 
 const LabReadingCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
   padding: 8px;
   text-align: center;
@@ -1936,7 +2027,7 @@ const LabReadingCard = styled.div`
 const LabReadingNutrient = styled.div`
   font-size: 11px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -1944,26 +2035,26 @@ const LabReadingNutrient = styled.div`
 const LabReadingValue = styled.div`
   font-size: 20px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 4px 0 2px;
 `;
 
 const LabReadingUnit = styled.div`
   font-size: 11px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const LabReadingDate = styled.div`
   font-size: 10px;
-  color: #bdbdbd;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin-top: 4px;
 `;
 
 const LabTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -1973,18 +2064,18 @@ const LabTh = styled.th`
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const LabTd = styled.td`
   padding: 10px 12px;
   font-size: 14px;
-  color: #212121;
-  border-bottom: 1px solid #f5f5f5;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
 `;
 
 const LabZoneStatsHeader = styled.div`
@@ -1995,7 +2086,7 @@ const LabZoneStatsHeader = styled.div`
   padding: 6px 12px;
   background: #eff6ff;
   border-radius: 6px 6px 0 0;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-bottom: none;
 `;
 

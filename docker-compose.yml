@@ -32,6 +32,8 @@ services:
       # WeatherBit API Settings (Agricultural Weather Data)
       - WEATHERBIT_API_KEY=${WEATHERBIT_API_KEY:-}
       - WEATHERBIT_ENABLED=true
+      # ElevenLabs TTS
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
       # Uvicorn worker configuration (production: 2 * CPU cores + 1)
       - UVICORN_WORKERS=${UVICORN_WORKERS:-4}
     volumes:
@@ -41,6 +43,7 @@ services:
       - ./config:/app/config
       - ./logs:/app/logs  # Centralized logging
       - ./.credentials:/app/.credentials  # Google Cloud credentials for Vertex AI
+      - ./data/sensehub_images:/app/data/sensehub_images  # Camera snapshot storage
       - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for module management
       - nginx_modules_config:/etc/nginx/conf.d/modules  # Shared volume for module proxy configs
     user: "0:0"  # Run as root to access Docker socket (CRITICAL for module management)

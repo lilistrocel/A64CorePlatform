@@ -57,7 +57,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContainer = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   width: 100%;
   max-width: 800px;
@@ -70,18 +70,18 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -89,7 +89,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 28px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -101,7 +101,7 @@ const CloseButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -118,7 +118,7 @@ const FormSection = styled.div`
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #424242;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 16px 0;
 `;
 
@@ -130,7 +130,7 @@ const Label = styled.label`
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 8px;
 `;
 
@@ -142,11 +142,11 @@ const RequiredMark = styled.span`
 const Select = styled.select`
   width: 100%;
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   transition: border-color 150ms ease-in-out;
 
   &:focus {
@@ -155,7 +155,7 @@ const Select = styled.select`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
@@ -163,10 +163,10 @@ const Select = styled.select`
 const Input = styled.input`
   width: 100%;
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
 
   &:focus {
@@ -175,14 +175,14 @@ const Input = styled.input`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const HelpText = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
@@ -218,7 +218,7 @@ const PreviewGrid = styled.div`
 `;
 
 const PreviewItem = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 6px;
   padding: 16px;
 `;
@@ -226,7 +226,7 @@ const PreviewItem = styled.div`
 const PreviewLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
@@ -235,17 +235,17 @@ const PreviewLabel = styled.div`
 const PreviewValue = styled.div`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const PreviewSubtext = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
 const TimelineSection = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 6px;
   padding: 16px;
   margin-top: 16px;
@@ -254,7 +254,7 @@ const TimelineSection = styled.div`
 const TimelineTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #424242;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 12px;
 `;
 
@@ -262,7 +262,7 @@ const TimelineItem = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
 
   &:last-child {
     border-bottom: none;
@@ -271,22 +271,22 @@ const TimelineItem = styled.div`
 
 const TimelineLabel = styled.div`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const TimelineDate = styled.div`
   font-size: 13px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const ModalFooter = styled.div`
   padding: 20px 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 `;
 
@@ -299,7 +299,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
         return `
@@ -319,10 +319,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
         `;
       default:
         return `
-          background: #f5f5f5;
-          color: #616161;
+          background: ${theme.colors.surface};
+          color: ${theme.colors.textSecondary};
           &:hover:not(:disabled) {
-            background: #e0e0e0;
+            background: ${theme.colors.neutral[300]};
           }
         `;
     }
@@ -337,7 +337,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
 const LoadingText = styled.div`
   text-align: center;
   padding: 40px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const AutoCalculationInfo = styled.div`
@@ -683,7 +683,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
             <>
               <FormSection>
                 <SectionTitle>Block Information</SectionTitle>
-                <div style={{ fontSize: '14px', color: '#616161', marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', marginBottom: '16px' }}>
                   <div>
                     <strong>Block:</strong> {block.name}
                   </div>

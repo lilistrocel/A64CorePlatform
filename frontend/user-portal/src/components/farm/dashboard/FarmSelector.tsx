@@ -181,7 +181,7 @@ const Label = styled.label`
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -193,8 +193,8 @@ const SelectorButton = styled.button`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: white;
-  border: 2px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
@@ -217,7 +217,7 @@ const FarmName = styled.div`
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   flex: 1;
   text-align: left;
 `;
@@ -228,13 +228,13 @@ const FarmIcon = styled.span`
 
 const FarmLocation = styled.span`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-left: 8px;
 `;
 
 const Arrow = styled.span<{ $isOpen: boolean }>`
   font-size: 10px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   transition: transform 150ms ease-in-out;
   transform: ${(props) => (props.$isOpen ? 'rotate(180deg)' : 'rotate(0)')};
 `;
@@ -244,8 +244,8 @@ const Dropdown = styled.div`
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: white;
-  border: 2px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   z-index: 1000;
@@ -257,16 +257,18 @@ const Dropdown = styled.div`
 const SearchInput = styled.input`
   padding: 12px 16px;
   border: none;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   font-size: 14px;
   outline: none;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
 
   &:focus {
     border-bottom-color: #3b82f6;
   }
 
   &::placeholder {
-    color: #9e9e9e;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 `;
 
@@ -280,10 +282,10 @@ const FarmOption = styled.div<{ $isSelected: boolean }>`
   cursor: pointer;
   transition: background 100ms ease-in-out;
   border-left: 4px solid ${(props) => (props.$isSelected ? '#3b82f6' : 'transparent')};
-  background: ${(props) => (props.$isSelected ? '#f0f7ff' : 'white')};
+  background: ${(props) => (props.$isSelected ? '#f0f7ff' : 'transparent')};
 
   &:hover {
-    background: ${(props) => (props.$isSelected ? '#e3f2fd' : '#f5f5f5')};
+    background: ${(props) => (props.$isSelected ? '#e3f2fd' : props.theme.colors.surface)};
   }
 `;
 
@@ -293,13 +295,13 @@ const FarmOptionName = styled.div`
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 4px;
 `;
 
 const FarmOptionLocation = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 4px;
 `;
 
@@ -308,7 +310,7 @@ const FarmOptionMeta = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const ActiveBadge = styled.span`
@@ -325,14 +327,14 @@ const NoResults = styled.div`
   padding: 32px 16px;
   text-align: center;
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const LoadingText = styled.div`
   padding: 12px 16px;
   text-align: center;
   font-size: 14px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const EmptyText = styled.div`

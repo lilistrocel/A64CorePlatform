@@ -72,7 +72,7 @@ const PrimaryButton = styled.button`
 
 const SecondaryButton = styled.button`
   padding: 0.75rem 2rem;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #374151;
   border: 1px solid #D1D5DB;
   border-radius: 8px;
@@ -82,7 +82,7 @@ const SecondaryButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #F9FAFB;
+    background: ${({ theme }) => theme.colors.neutral[50]};
     border-color: #9CA3AF;
   }
 `;

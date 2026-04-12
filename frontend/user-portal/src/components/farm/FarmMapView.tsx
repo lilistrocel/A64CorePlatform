@@ -66,7 +66,7 @@ const MapWrapper = styled.div<{ $height: string }>`
   border-radius: 8px;
   overflow: hidden;
   position: relative;
-  background-color: #f0f0f0;
+  background-color: ${({ theme }) => theme.colors.neutral[200]};
 `;
 
 const MapInner = styled.div`
@@ -92,10 +92,10 @@ const MapInner = styled.div`
   .maplibregl-popup-close-button {
     font-size: 18px;
     padding: 4px 8px;
-    color: #666;
+    color: ${({ theme }) => theme.colors.textSecondary};
 
     &:hover {
-      background: #f0f0f0;
+      background: ${({ theme }) => theme.colors.neutral[200]};
     }
   }
 `;
@@ -117,7 +117,7 @@ const LoadingOverlay = styled.div`
 const LoadingSpinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid #e0e0e0;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -131,7 +131,7 @@ const LoadingSpinner = styled.div`
 
 const LoadingText = styled.span`
   margin-top: 12px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
 `;
 
@@ -139,7 +139,7 @@ const Legend = styled.div`
   position: absolute;
   bottom: 24px;
   left: 16px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   padding: 12px 16px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -150,7 +150,7 @@ const Legend = styled.div`
 const LegendTitle = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -162,7 +162,7 @@ const LegendItem = styled.div`
   gap: 8px;
   margin-bottom: 4px;
   font-size: 12px;
-  color: #4b5563;
+  color: ${({ theme }) => theme.colors.textSecondary};
 
   &:last-child {
     margin-bottom: 0;
@@ -186,19 +186,19 @@ const EditBoundaryButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border: none;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   z-index: 5;
   transition: all 0.2s;
 
   &:hover {
-    background: #f3f4f6;
+    background: ${({ theme }) => theme.colors.surface};
     color: #3b82f6;
   }
 

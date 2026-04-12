@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { useDivisionStore } from '../../stores/division.store';
+import { useThemeStore } from '../../stores/theme.store';
 import { getPendingTaskCount } from '../../services/tasksApi';
 import { Button } from '@a64core/shared';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
@@ -27,9 +28,9 @@ const SHARED_BOTTOM_NAV_ITEMS: NavItemDef[] = [
   { to: '/hr', icon: '👔', label: 'HR' },
   { to: '/logistics', icon: '🚚', label: 'Logistics' },
   { to: '/sales', icon: '💰', label: 'Sales' },
+  { to: '/pnl', icon: '📈', label: 'P&L' },
   { to: '/marketing', icon: '📢', label: 'Marketing' },
-  { to: '/ai-analytics', icon: '🤖', label: 'AI Analytics' },
-  { to: '/ai-dashboard', icon: '📋', label: 'AI Dashboard' },
+  { to: '/ai', icon: '🤖', label: 'AI Hub' },
   { to: '/profile', icon: '👤', label: 'Profile' },
   { to: '/settings', icon: '⚙️', label: 'Settings' },
 ];
@@ -59,6 +60,7 @@ const ADMIN_NAV_ITEMS: NavItemDef[] = [
 export function MainLayout() {
   const { user, logout } = useAuthStore();
   const { currentDivision } = useDivisionStore();
+  const { mode, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const location = useLocation();
   const unsavedChanges = useContext(UnsavedChangesContext);
@@ -111,7 +113,16 @@ export function MainLayout() {
   const navItems: NavItemDef[] = [
     ...SHARED_NAV_ITEMS,
     ...industryNavItems,
-    ...SHARED_BOTTOM_NAV_ITEMS,
+    // AI Hub is super_admin only; P&L requires super_admin or finance.view permission
+    ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
+      if (item.to === '/ai') return user?.role === 'super_admin';
+      if (item.to === '/pnl') {
+        if (user?.role === 'super_admin') return true;
+        const perms = (user as unknown as { permissions?: string[] })?.permissions;
+        return Array.isArray(perms) && perms.includes('finance.view');
+      }
+      return true;
+    }),
     ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
   ];
 
@@ -172,6 +183,16 @@ export function MainLayout() {
         </Nav>
 
         <SidebarFooter>
+          <ThemeToggleButton
+            onClick={toggleTheme}
+            aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <ThemeToggleIcon aria-hidden="true">
+              {mode === 'dark' ? '☀️' : '🌙'}
+            </ThemeToggleIcon>
+            <span>{mode === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+          </ThemeToggleButton>
           <Button variant="outline" fullWidth onClick={handleLogout}>
             Logout
           </Button>
@@ -398,6 +419,43 @@ const SidebarFooter = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
   border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const ThemeToggleButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.md};
+  min-height: 44px; /* WCAG touch target minimum */
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: none;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[100]};
+    color: ${({ theme }) => theme.colors.textPrimary};
+    border-color: ${({ theme }) => theme.colors.neutral[400]};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+  }
+`;
+
+const ThemeToggleIcon = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  line-height: 1;
 `;
 
 const MainContent = styled.main`

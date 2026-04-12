@@ -28,7 +28,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -41,7 +41,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
         return `
@@ -62,10 +62,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
       default:
         return `
           background: transparent;
-          color: #616161;
-          border: 1px solid #e0e0e0;
+          color: ${theme.colors.textSecondary};
+          border: 1px solid ${theme.colors.neutral[300]};
           &:hover:not(:disabled) {
-            background: #f5f5f5;
+            background: ${theme.colors.surface};
           }
         `;
     }
@@ -84,7 +84,7 @@ const AlertsList = styled.div`
 `;
 
 const AlertCard = styled.div<{ $severity: AlertSeverity; $status: string }>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border: 2px solid
     ${({ $severity }) => {
       switch ($severity) {
@@ -115,7 +115,7 @@ const AlertHeader = styled.div`
 const AlertTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -126,7 +126,7 @@ const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  background: ${({ $severity }) => {
+  background: ${({ $severity, theme }) => {
     switch ($severity) {
       case 'critical':
         return '#ef4444';
@@ -137,7 +137,7 @@ const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
       case 'low':
         return '#3b82f6';
       default:
-        return '#9e9e9e';
+        return theme.colors.textDisabled;
     }
   }};
   color: white;
@@ -145,7 +145,7 @@ const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
 
 const AlertDescription = styled.p`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 16px 0;
   line-height: 1.6;
 `;
@@ -154,7 +154,7 @@ const AlertMeta = styled.div`
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin-bottom: 12px;
 `;
 
@@ -166,13 +166,13 @@ const AlertActions = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 // Modal styles (simplified - reuse from other modals)
@@ -190,7 +190,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   max-width: 500px;
@@ -202,7 +202,7 @@ const Modal = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 24px 0;
 `;
 
@@ -221,12 +221,12 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Input = styled.input`
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 150ms ease-in-out;
@@ -239,7 +239,7 @@ const Input = styled.input`
 
 const Textarea = styled.textarea`
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   min-height: 100px;
@@ -255,7 +255,7 @@ const Textarea = styled.textarea`
 
 const Select = styled.select`
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 150ms ease-in-out;

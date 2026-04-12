@@ -43,7 +43,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -60,7 +60,7 @@ const Actions = styled.div`
 const SearchInput = styled.input`
   padding: 12px 16px;
   min-height: 44px; /* WCAG touch target minimum */
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   width: 300px;
@@ -123,15 +123,15 @@ const FilterGroup = styled.div`
 const FilterLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
   min-height: 44px; /* WCAG touch target minimum */
   background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active }) => ($active ? 'white' : '#616161')};
-  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -139,14 +139,14 @@ const FilterButton = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
+    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
   }
 `;
 
 const ViewToggle = styled.div`
   display: flex;
   gap: 8px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   padding: 4px;
   border-radius: 8px;
 `;
@@ -154,8 +154,8 @@ const ViewToggle = styled.div`
 const ViewButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
   min-height: 44px; /* WCAG touch target minimum */
-  background: ${({ $active }) => ($active ? 'white' : 'transparent')};
-  color: #616161;
+  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  color: ${({ theme }) => theme.colors.textSecondary};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -165,7 +165,7 @@ const ViewButton = styled.button<{ $active: boolean }>`
   box-shadow: ${({ $active }) => ($active ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none')};
 
   &:hover {
-    background: ${({ $active }) => ($active ? 'white' : '#eeeeee')};
+    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
   }
 `;
 
@@ -187,14 +187,14 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   gap: 16px;
 `;
 
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -242,9 +242,9 @@ const Pagination = styled.div`
 const PageButton = styled.button`
   padding: 8px 16px;
   min-height: 44px; /* WCAG touch target minimum */
-  background: white;
-  color: #616161;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -252,7 +252,7 @@ const PageButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 
   &:disabled {
@@ -263,7 +263,7 @@ const PageButton = styled.button`
 
 const PageInfo = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const EmptyStateContainer = styled.div`
@@ -272,9 +272,9 @@ const EmptyStateContainer = styled.div`
   align-items: center;
   justify-content: center;
   padding: 64px 32px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const EmptyStateIcon = styled.div`
@@ -285,13 +285,13 @@ const EmptyStateIcon = styled.div`
 const EmptyStateTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #424242;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyStateMessage = styled.p`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0 0 24px 0;
   text-align: center;
   max-width: 400px;

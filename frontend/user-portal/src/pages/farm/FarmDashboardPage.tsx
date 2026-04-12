@@ -248,7 +248,7 @@ const Container = styled.div`
   padding: 24px;
   max-width: 100%;
   min-height: 100vh;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const TopBar = styled.div`
@@ -271,13 +271,13 @@ const TitleSection = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 14px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -302,7 +302,7 @@ const StatsButton = styled.button`
   padding: 10px 16px;
   border: 2px solid #10B981;
   border-radius: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #10B981;
   font-size: 14px;
   font-weight: 500;
@@ -320,11 +320,11 @@ const StatsButton = styled.button`
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    border-color: #e0e0e0;
-    color: #9e9e9e;
+    border-color: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.textDisabled};
 
     &:hover {
-      background: white;
+      background: ${({ theme }) => theme.colors.background};
     }
   }
 `;
@@ -373,7 +373,7 @@ const SettingsButton = styled.button`
   padding: 10px 16px;
   border: 2px solid #3b82f6;
   border-radius: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #3b82f6;
   font-size: 14px;
   font-weight: 500;
@@ -401,7 +401,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -415,12 +415,12 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ErrorContainer = styled.div`
   padding: 32px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border: 2px solid #f44336;
   border-radius: 12px;
   text-align: center;
@@ -442,7 +442,7 @@ const ErrorTitle = styled.h3`
 
 const ErrorMessage = styled.p`
   font-size: 14px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 16px 0;
 `;
 
@@ -465,7 +465,7 @@ const RetryButton = styled.button`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   max-width: 600px;
@@ -481,12 +481,12 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;

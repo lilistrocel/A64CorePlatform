@@ -199,7 +199,7 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   width: 100%;
@@ -219,7 +219,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   flex: 1;
 `;
@@ -238,15 +238,15 @@ const CloseButton = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 150ms;
   line-height: 1;
 
   &:hover {
-    background: #f5f5f5;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
     outline: 2px solid #2196f3;
@@ -255,10 +255,10 @@ const CloseButton = styled.button`
 
 const StrainInfo = styled.div`
   font-size: 13px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 16px;
   padding: 8px 12px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
 `;
 
@@ -277,7 +277,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Required = styled.span`
@@ -298,10 +298,10 @@ interface InputProps {
 const Input = styled.input<InputProps>`
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#ef5350' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#ef5350' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   outline: none;
   transition: border-color 150ms;
 
@@ -314,7 +314,7 @@ const Input = styled.input<InputProps>`
 const UnitLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   min-width: 24px;
 `;
 
@@ -337,7 +337,7 @@ const GradeOption = styled.button<GradeOptionProps>`
   cursor: pointer;
   transition: all 150ms;
   border: 2px solid ${({ $color }) => $color};
-  background: ${({ $selected, $color }) => ($selected ? $color : 'white')};
+  background: ${({ $selected, $color, theme }) => ($selected ? $color : theme.colors.background)};
   color: ${({ $selected, $color }) => ($selected ? 'white' : $color)};
 
   &:hover {
@@ -352,10 +352,10 @@ const GradeOption = styled.button<GradeOptionProps>`
 
 const TextArea = styled.textarea`
   padding: 10px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   font-family: inherit;
   outline: none;
@@ -385,17 +385,17 @@ const ActionRow = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  background: white;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
   &:focus-visible {
     outline: 2px solid #2196f3;

@@ -115,9 +115,9 @@ interface CardWrapperProps {
 }
 
 const CardWrapper = styled.div<CardWrapperProps>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
-  border: 2px solid ${({ $selected }) => ($selected ? '#2196f3' : '#e0e0e0')};
+  border: 2px solid ${({ $selected, theme }) => ($selected ? '#2196f3' : theme.colors.neutral[300])};
   padding: 16px;
   box-shadow: ${({ $selected }) =>
     $selected
@@ -161,7 +161,7 @@ const HeaderInfo = styled.div`
 const FacilityName = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 2px 0;
   white-space: nowrap;
   overflow: hidden;
@@ -170,7 +170,7 @@ const FacilityName = styled.h3`
 
 const FacilityType = styled.span`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 interface StatusBadgeProps {
@@ -201,7 +201,7 @@ const LocationIcon = styled.span`
 
 const LocationText = styled.span`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -226,14 +226,14 @@ interface StatValueProps {
 const StatValue = styled.div<StatValueProps>`
   font-size: 18px;
   font-weight: 700;
-  color: ${({ $highlight }) => ($highlight ? '#10B981' : '#212121')};
+  color: ${({ $highlight, theme }) => ($highlight ? '#10B981' : theme.colors.textPrimary)};
   line-height: 1;
   margin-bottom: 2px;
 `;
 
 const StatLabel = styled.div`
   font-size: 11px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;
@@ -241,12 +241,12 @@ const StatLabel = styled.div`
 const Divider = styled.div`
   width: 1px;
   height: 28px;
-  background: #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const UtilizationTrack = styled.div`
   height: 4px;
-  background: #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
   overflow: hidden;
 `;

@@ -987,7 +987,7 @@ const TableRow = styled.tr`
   }
 
   &:nth-child(odd) {
-    background: #ffffff;
+    background: ${({ theme }: any) => theme.colors.background};
   }
 
   &:hover {
@@ -1095,7 +1095,7 @@ const DensityInput = styled.input`
   border: 2px solid ${({ theme }: any) => theme.colors.primary[300]};
   border-radius: 6px;
   color: ${({ theme }: any) => theme.colors.primary[600]};
-  background: ${({ theme }: any) => theme.colors.white};
+  background: ${({ theme }: any) => theme.colors.background};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
@@ -1152,7 +1152,7 @@ const PrimaryButton = styled(BaseButton)`
 `;
 
 const SecondaryButton = styled(BaseButton)`
-  background: white;
+  background: ${({ theme }: any) => theme.colors.background};
   color: ${({ theme }: any) => theme.colors.textSecondary};
   border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
 
@@ -1163,7 +1163,7 @@ const SecondaryButton = styled(BaseButton)`
 `;
 
 const DangerButton = styled(BaseButton)`
-  background: white;
+  background: ${({ theme }: any) => theme.colors.background};
   color: ${({ theme }: any) => theme.colors.error[600]};
   border: 1px solid ${({ theme }: any) => theme.colors.error[300]};
 
@@ -1179,7 +1179,7 @@ const PreferenceSelect = styled.select`
   border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
   border-radius: 6px;
   color: ${({ theme }: any) => theme.colors.primary[600]};
-  background: ${({ theme }: any) => theme.colors.white};
+  background: ${({ theme }: any) => theme.colors.background};
   cursor: pointer;
   width: 100%;
   max-width: 350px;
@@ -1318,7 +1318,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }: any) => theme.colors.background};
   border-radius: ${({ theme }: any) => theme.borderRadius.lg};
   padding: ${({ theme }: any) => theme.spacing.xl};
   max-width: 480px;
@@ -1442,7 +1442,7 @@ const BackupCodeItem = styled.div`
   font-family: 'Courier New', monospace;
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   color: ${({ theme }: any) => theme.colors.textPrimary};
-  background: white;
+  background: ${({ theme }: any) => theme.colors.background};
   padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
   border-radius: 4px;
   border: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
@@ -1452,7 +1452,7 @@ const BackupCodeItem = styled.div`
 const CopyCodesButton = styled.button`
   width: 100%;
   padding: ${({ theme }: any) => theme.spacing.sm};
-  background: white;
+  background: ${({ theme }: any) => theme.colors.background};
   border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
   border-radius: 4px;
   color: ${({ theme }: any) => theme.colors.primary[600]};

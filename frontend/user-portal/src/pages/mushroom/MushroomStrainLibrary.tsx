@@ -584,7 +584,7 @@ const Container = styled.div`
   padding: 24px;
   max-width: 100%;
   min-height: 100vh;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const PageHeader = styled.div`
@@ -601,7 +601,7 @@ const TitleSection = styled.div``;
 const PageTitle = styled.h1`
   font-size: 28px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
 `;
 
@@ -642,11 +642,11 @@ const FiltersRow = styled.div`
 
 const SearchInput = styled.input`
   padding: 9px 14px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   outline: none;
   min-width: 240px;
   transition: border-color 150ms;
@@ -670,18 +670,18 @@ const FilterGroup = styled.div`
 const FilterLabel = styled.label`
   font-size: 11px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const FilterSelect = styled.select`
   padding: 9px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
@@ -694,7 +694,7 @@ const FilterSelect = styled.select`
 
 const ResultsCount = styled.span`
   font-size: 13px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   align-self: flex-end;
   padding-bottom: 10px;
 `;
@@ -717,7 +717,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid #e0e0e0;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #8B5CF6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -729,13 +729,13 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
   max-width: 480px;
@@ -754,13 +754,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 22px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 15px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -779,7 +779,7 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   width: 100%;
@@ -798,7 +798,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -807,14 +807,14 @@ const CloseModalBtn = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 150ms;
 
   &:hover {
-    background: #f5f5f5;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
     outline: 2px solid #2196f3;
@@ -836,12 +836,12 @@ const FormSection = styled.div`
 const FormSectionTitle = styled.h3`
   font-size: 13px;
   font-weight: 700;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0;
   padding-bottom: 6px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
 
 const TwoColForm = styled.div`
@@ -863,7 +863,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 13px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Required = styled.span`
@@ -873,10 +873,10 @@ const Required = styled.span`
 
 const Input = styled.input`
   padding: 9px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   outline: none;
   transition: border-color 150ms;
   width: 100%;
@@ -895,17 +895,17 @@ const TwoInputRow = styled.div`
 
 const RangeSep = styled.span`
   font-size: 16px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   flex-shrink: 0;
 `;
 
 const SelectField = styled.select`
   padding: 9px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
@@ -918,10 +918,10 @@ const SelectField = styled.select`
 
 const TextArea = styled.textarea`
   padding: 9px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   font-family: inherit;
   outline: none;
@@ -951,17 +951,17 @@ const FormActions = styled.div`
 
 const CancelBtn = styled.button`
   padding: 10px 20px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  background: white;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
   &:focus-visible {
     outline: 2px solid #2196f3;

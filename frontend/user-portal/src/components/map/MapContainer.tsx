@@ -310,9 +310,9 @@ const MapWrapper = styled.div<{ $height: string }>`
   min-height: 300px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid ${(props) => props.theme?.colors?.border || '#e0e0e0'};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   position: relative;
-  background-color: #f0f0f0;
+  background-color: ${({ theme }) => theme.colors.neutral[200]};
 `;
 
 const MapInner = styled.div`
@@ -359,7 +359,7 @@ const LoadingOverlay = styled.div`
 const LoadingSpinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid #e0e0e0;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -373,7 +373,7 @@ const LoadingSpinner = styled.div`
 
 const LoadingText = styled.span`
   margin-top: 12px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
 `;
 
@@ -431,18 +431,18 @@ const StyleToggleButton = styled.button`
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border: none;
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: #f3f4f6;
+    background: ${({ theme }) => theme.colors.surface};
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 

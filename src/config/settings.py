@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # ElevenLabs TTS
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_VOICE_ID: str = "JBFqnCBsd6RMkjVDRZzb"  # Default: "George"
+    ELEVENLABS_MODEL_ID: str = "eleven_multilingual_v2"
+
     # Farm AI Chat (Vertex AI / Gemini)
     GOOGLE_CLOUD_PROJECT: str = ""
     VERTEX_AI_LOCATION: str = "us-central1"

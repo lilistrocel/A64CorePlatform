@@ -29,9 +29,9 @@ type SortDirection = 'asc' | 'desc';
 // ============================================================================
 
 const TableContainer = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   overflow: hidden;
 `;
 
@@ -41,8 +41,8 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: #f5f5f5;
-  border-bottom: 2px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
@@ -50,7 +50,7 @@ const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
@@ -58,7 +58,7 @@ const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $sortable }) => ($sortable ? '#eeeeee' : '#f5f5f5')};
+    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.neutral[200] : theme.colors.surface)};
   }
 `;
 
@@ -70,16 +70,16 @@ const SortIndicator = styled.span`
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: background 150ms ease-in-out;
 
   /* Striped rows for readability - alternating row colors */
   &:nth-child(even) {
-    background: #f9fafb;
+    background: ${({ theme }) => theme.colors.neutral[50]};
   }
 
   &:nth-child(odd) {
-    background: #ffffff;
+    background: ${({ theme }) => theme.colors.background};
   }
 
   &:hover {
@@ -94,13 +94,13 @@ const TableRow = styled.tr`
 const TableCell = styled.td`
   padding: 16px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TruncatedCell = styled.td`
   padding: 16px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -110,7 +110,7 @@ const TruncatedCell = styled.td`
 const OrderCodeCell = styled.div`
   font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatusBadge = styled.span<{ $status: string }>`
@@ -212,7 +212,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 // ============================================================================

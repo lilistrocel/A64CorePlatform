@@ -61,7 +61,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -77,7 +77,7 @@ const Actions = styled.div`
 
 const SearchInput = styled.input`
   padding: 12px 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 16px; /* Prevents iOS zoom on focus */
   width: 300px;
@@ -91,7 +91,7 @@ const SearchInput = styled.input`
   }
 
   &::placeholder {
-    color: #9e9e9e;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 
   @media (max-width: 768px) {
@@ -153,9 +153,9 @@ const slideDown = keyframes`
 const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
   display: none;
   padding: 12px 16px;
-  background: ${({ $hasActiveFilters }) => ($hasActiveFilters ? '#EBF5FF' : '#f5f5f5')};
-  color: ${({ $hasActiveFilters }) => ($hasActiveFilters ? '#3B82F6' : '#616161')};
-  border: 1px solid ${({ $hasActiveFilters }) => ($hasActiveFilters ? '#3B82F6' : '#e0e0e0')};
+  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#EBF5FF' : theme.colors.surface)};
+  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.textSecondary)};
+  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -223,8 +223,8 @@ const FilterBar = styled.div<{ $isCollapsed?: boolean }>`
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 12px 16px;
   background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active }) => ($active ? 'white' : '#616161')};
-  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -236,7 +236,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
   justify-content: center;
 
   &:hover {
-    background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
+    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
   }
 
   &:active {
@@ -313,7 +313,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -337,7 +337,7 @@ const ErrorContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const EmptyIcon = styled.div`
@@ -348,13 +348,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 24px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0 0 24px 0;
 `;
 
@@ -373,9 +373,9 @@ const Pagination = styled.div`
 
 const PageButton = styled.button<{ $active?: boolean }>`
   padding: 12px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'white')};
-  color: ${({ $active }) => ($active ? 'white' : '#616161')};
-  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
@@ -386,7 +386,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   justify-content: center;
 
   &:hover:not(:disabled) {
-    background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
+    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
   }
 
   &:active:not(:disabled) {
@@ -401,7 +401,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
 
 const PageInfo = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PageSizeContainer = styled.div`
@@ -420,16 +420,16 @@ const PageSizeContainer = styled.div`
 
 const PageSizeLabel = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PageSizeSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 16px; /* Prevents iOS zoom */
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   min-height: 44px; /* Touch-friendly height */
@@ -441,7 +441,7 @@ const PageSizeSelect = styled.select`
   }
 
   &:hover {
-    border-color: #bdbdbd;
+    border-color: ${({ theme }) => theme.colors.neutral[400]};
   }
 `;
 

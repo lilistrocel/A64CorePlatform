@@ -41,7 +41,7 @@ structured JSON object with the following exact schema:
   ],
   "inspectionResults": [
     {
-      "taskName": "<string — one of: Farm Census | Yield Assessment | Growth Timeline | SenseHub Alerts | Equipment Health | Automation Audit | Harvest Progress | Platform Alerts>",
+      "taskName": "<string — one of: Farm Census | Yield Assessment | Growth Timeline | SenseHub Alerts | Equipment Health | Automation Audit | Harvest Progress | Platform Alerts | Nutrient Analysis>",
       "verdict": "<one of: pass | warning | fail>",
       "summary": "<1-2 sentence description of findings>"
     }
@@ -63,6 +63,15 @@ Rules:
 - farmStatusCards should only include farms that appear in the yield data.
 - overallHealthRating must reflect the worst issue found.
 - If a data section is null/missing, omit it from verdicts rather than guessing.
+
+Nutrient Analysis Guidelines (for the labAnalysis section):
+- Compare actual lab readings (EC, pH, NO3, PO4, K) against the crop target ranges in cropTargets.
+- Analyse fertigation vs drain zones: if drain EC is significantly higher than fertigation EC, it indicates poor nutrient absorption by the crop.
+- Factor in currentGrowthStage: different stages have different nutrient profiles (e.g. fruiting needs more K and PO4).
+- Use the activeFertigationCard if present to check whether the current fertigation recipe matches the growth stage.
+- Generate specific actionable recommendations with numbers (e.g. "Reduce EC from 3.2 to 2.5 mS/cm in Block X").
+- Flag blocks that have lab data but no cropTargets as data gaps requiring attention.
+- Verdict: pass if readings are within target ranges, warning if slightly outside range or no crop targets to compare, fail if critical deviation detected.
 """
 
 

@@ -729,7 +729,7 @@ const QRCodeContainer = styled.div`
   display: flex;
   justify-content: center;
   padding: 1rem;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
   margin-bottom: 0.75rem;
   border: 2px solid ${({ theme }) => theme.colors.neutral[200]};

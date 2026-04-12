@@ -49,13 +49,13 @@ const HeaderRight = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -67,10 +67,10 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: all 150ms ease-in-out;
 
   &:hover {
@@ -80,14 +80,14 @@ const StatCard = styled.div`
 
 const StatLabel = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 8px;
 `;
 
 const StatValue = styled.div`
   font-size: 36px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const WidgetsRow = styled.div`
@@ -102,16 +102,16 @@ const WidgetsRow = styled.div`
 `;
 
 const Widget = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const WidgetTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
 `;
 
@@ -126,26 +126,26 @@ const ShipmentItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: #fafafa;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
 const ShipmentCode = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-family: 'JetBrains Mono', monospace;
 `;
 
 const ShipmentDate = styled.span`
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const QuickActions = styled.div`
@@ -177,7 +177,7 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const ErrorContainer = styled.div`
@@ -192,7 +192,7 @@ const ErrorContainer = styled.div`
 const EmptyText = styled.div`
   text-align: center;
   padding: 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const FarmingYearBadge = styled.span`

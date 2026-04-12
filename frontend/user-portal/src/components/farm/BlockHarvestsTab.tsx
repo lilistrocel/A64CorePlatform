@@ -39,7 +39,7 @@ const HeaderLeft = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -71,7 +71,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) =>
+  ${({ $variant, theme }) =>
     $variant === 'primary'
       ? `
     background: #3b82f6;
@@ -82,10 +82,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   `
       : `
     background: transparent;
-    color: #616161;
-    border: 1px solid #e0e0e0;
+    color: ${theme.colors.textSecondary};
+    border: 1px solid ${theme.colors.neutral[300]};
     &:hover:not(:disabled) {
-      background: #f5f5f5;
+      background: ${theme.colors.surface};
     }
   `}
 
@@ -100,7 +100,7 @@ const SummaryGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
@@ -111,7 +111,7 @@ const SummaryCard = styled.div`
 const SummaryLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -120,12 +120,12 @@ const SummaryLabel = styled.div`
 const SummaryValue = styled.div`
   font-size: 28px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
@@ -136,8 +136,8 @@ const HarvestsList = styled.div`
 `;
 
 const HarvestCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -154,12 +154,12 @@ const HarvestInfo = styled.div`
 const HarvestDate = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const HarvestMeta = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   display: flex;
   gap: 12px;
 `;
@@ -188,13 +188,13 @@ const QualityBadge = styled.span<{ $grade: QualityGrade }>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 // Modal styles
@@ -212,7 +212,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   max-width: 500px;
@@ -224,7 +224,7 @@ const Modal = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 24px 0;
 `;
 
@@ -243,12 +243,12 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Input = styled.input`
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 150ms ease-in-out;
@@ -261,7 +261,7 @@ const Input = styled.input`
 
 const Textarea = styled.textarea`
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   min-height: 80px;
@@ -277,7 +277,7 @@ const Textarea = styled.textarea`
 
 const Select = styled.select`
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 150ms ease-in-out;
@@ -306,7 +306,7 @@ const ErrorMessage = styled.div`
 
 const HelpText = styled.p`
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0;
 `;
 
@@ -339,17 +339,17 @@ const ConfirmModalContent = styled.div`
 
 const ConfirmText = styled.p`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
   line-height: 1.5;
 `;
 
 const ConfirmHighlight = styled.div`
   padding: 12px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const DangerButton = styled.button`

@@ -39,7 +39,7 @@ const Section = styled.div`
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   display: flex;
   align-items: center;
@@ -79,7 +79,7 @@ const FormField = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Required = styled.span`
@@ -88,7 +88,7 @@ const Required = styled.span`
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
@@ -100,17 +100,17 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -121,7 +121,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
@@ -136,7 +136,7 @@ const Actions = styled.div`
   gap: 12px;
   justify-content: flex-end;
   padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
@@ -148,7 +148,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
         background: #3B82F6;
@@ -170,10 +170,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
     }
     return `
       background: transparent;
-      color: #616161;
-      border: 1px solid #e0e0e0;
+      color: ${theme.colors.textSecondary};
+      border: 1px solid ${theme.colors.neutral[300]};
       &:hover:not(:disabled) {
-        background: #f5f5f5;
+        background: ${theme.colors.surface};
       }
     `;
   }}

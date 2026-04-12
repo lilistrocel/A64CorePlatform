@@ -17,11 +17,72 @@ from src.modules.farm_manager.models.farming_year_config import get_farming_year
 logger = logging.getLogger(__name__)
 
 
+# Placeholder product UUID used for migrated orders that pre-date SKU-level line items.
+# Reason: SalesOrderBase.items requires min_length=1 — a placeholder satisfies the
+# model contract while making it obvious the item came from legacy migration.
+_MIGRATION_PLACEHOLDER_PRODUCT_ID = "00000000-0000-0000-0000-000000000000"
+
+
 class OrderRepository:
     """Repository for Sales Order data access"""
 
     def __init__(self):
         self.collection_name = "sales_orders"
+
+    def _normalize_legacy_order(self, order_doc: dict) -> dict:
+        """
+        Normalize legacy / migrated sales order data to satisfy current Pydantic model.
+
+        Handles migration from the Supabase import (stage4) where documents were
+        intentionally stored in a simplified shape and then normalized here at
+        read time so no re-import is needed if the model evolves.
+
+        Fields corrected:
+        - status: "pending"   → "draft";  "completed" → "delivered"
+          (model enum: draft|confirmed|processing|assigned|in_transit|shipped|
+                       delivered|partially_returned|returned|cancelled)
+        - paymentStatus: "unknown" → "pending"
+          (model enum: pending|partial|paid)
+        - items: missing or empty → single placeholder OrderItem so min_length=1
+          is satisfied
+        - subtotal / total: missing → 0.0
+        """
+        # Reason: avoid mutating the original dict from the cursor
+        doc = order_doc.copy()
+
+        # --- status normalization ---
+        status_map = {
+            "pending": "draft",
+            "completed": "delivered",
+        }
+        if doc.get("status") in status_map:
+            doc["status"] = status_map[doc["status"]]
+
+        # --- paymentStatus normalization ---
+        if doc.get("paymentStatus") == "unknown":
+            doc["paymentStatus"] = "pending"
+
+        # --- items / financials ---
+        if not doc.get("items"):
+            # Reason: SalesOrderBase.items = Field(..., min_length=1).
+            # Migrated orders were header-only records — no SKU breakdown available.
+            # Insert a single placeholder item so the model validates.
+            doc["items"] = [
+                {
+                    "productId": _MIGRATION_PLACEHOLDER_PRODUCT_ID,
+                    "productName": "Legacy Migration Placeholder",
+                    "quantity": 1.0,
+                    "unitPrice": 0.0,
+                    "totalPrice": 0.0,
+                    "sourceType": "fresh",
+                }
+            ]
+        if doc.get("subtotal") is None:
+            doc["subtotal"] = 0.0
+        if doc.get("total") is None:
+            doc["total"] = 0.0
+
+        return doc
 
     def _get_collection(self):
         """Get sales orders collection"""
@@ -113,6 +174,7 @@ class OrderRepository:
 
         if order_doc:
             order_doc.pop("_id", None)  # Remove MongoDB _id
+            order_doc = self._normalize_legacy_order(order_doc)
             return SalesOrder(**order_doc)
         return None
 
@@ -156,6 +218,7 @@ class OrderRepository:
 
         async for order_doc in cursor:
             order_doc.pop("_id", None)
+            order_doc = self._normalize_legacy_order(order_doc)
             orders.append(SalesOrder(**order_doc))
 
         return orders, total

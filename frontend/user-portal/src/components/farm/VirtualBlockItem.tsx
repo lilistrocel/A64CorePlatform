@@ -31,14 +31,14 @@ const Container = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #fafafa;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
   border-left: 3px solid #1976d2;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     transform: translateX(4px);
   }
 `;
@@ -67,7 +67,7 @@ const CropInfo = styled.div`
 const CropName = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -75,7 +75,7 @@ const CropName = styled.div`
 
 const BlockCode = styled.div`
   font-size: 11px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-family: 'Courier New', monospace;
 `;
 
@@ -100,7 +100,7 @@ const StateBadge = styled.span<{ $color: string }>`
 
 const DaysInfo = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   white-space: nowrap;
 `;
 

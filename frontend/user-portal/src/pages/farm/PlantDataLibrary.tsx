@@ -47,13 +47,13 @@ const HeaderLeft = styled.div`
 const Title = styled.h1`
   font-size: 36px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -89,7 +89,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       `;
     }
     return `
-      background: white;
+      background: transparent;
       color: #3B82F6;
       border: 2px solid #3B82F6;
       &:hover {
@@ -112,7 +112,7 @@ const StatsRow = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -122,7 +122,7 @@ const StatCard = styled.div`
 const StatLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -131,11 +131,11 @@ const StatLabel = styled.div`
 const StatValue = styled.div`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const FilterBar = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -153,7 +153,7 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 250px;
   padding: 12px 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
@@ -165,17 +165,17 @@ const SearchInput = styled.input`
   }
 
   &::placeholder {
-    color: #9e9e9e;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 `;
 
 const Select = styled.select`
   padding: 12px 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  background: white;
-  color: #212121;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   min-width: 140px;
@@ -187,24 +187,24 @@ const Select = styled.select`
   }
 
   option {
-    color: #212121;
-    background: white;
+    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.background};
   }
 `;
 
 const ClearButton = styled.button`
   padding: 12px 20px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  background: white;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -234,14 +234,14 @@ const PageButton = styled.button<{ $active?: boolean }>`
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
-  border: 1px solid #e0e0e0;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'white')};
-  color: ${({ $active }) => ($active ? 'white' : '#616161')};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
+    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
   }
 
   &:disabled {
@@ -260,7 +260,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -284,7 +284,7 @@ const ErrorContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const EmptyIcon = styled.div`
@@ -295,13 +295,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 14px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0;
 `;
 

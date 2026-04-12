@@ -752,7 +752,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContainer = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   width: 100%;
   max-width: 1200px;
@@ -770,11 +770,11 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 
   @media (max-width: 768px) {
@@ -804,7 +804,7 @@ const HeaderRight = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -813,17 +813,17 @@ const BlockInfo = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const BlockCode = styled.span`
   font-family: 'Courier New', monospace;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const BlockName = styled.span`
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PeriodFilter = styled.div`
@@ -835,16 +835,16 @@ const PeriodFilter = styled.div`
 const PeriodLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PeriodSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
@@ -858,7 +858,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 32px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
   cursor: pointer;
   padding: 0;
   width: 36px;
@@ -870,15 +870,15 @@ const CloseButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
-    color: #212121;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 2px solid #e0e0e0;
-  background: #fafafa;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.neutral[50]};
   overflow-x: auto;
   flex-shrink: 0;
 
@@ -893,8 +893,8 @@ const Tab = styled.button<{ $active: boolean }>`
   gap: 6px;
   padding: 14px 20px;
   border: none;
-  background: ${({ $active }) => ($active ? 'white' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#3b82f6' : '#616161')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '600' : '500')};
   cursor: pointer;
@@ -903,7 +903,7 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    background: ${({ $active }) => ($active ? 'white' : '#f0f0f0')};
+    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
   }
 `;
 
@@ -917,7 +917,7 @@ const ModalBody = styled.div`
   padding: 24px;
   overflow-y: auto;
   flex: 1;
-  background: #fafafa;
+  background: ${({ theme }) => theme.colors.neutral[50]};
 `;
 
 const TabContent = styled.div`
@@ -927,7 +927,7 @@ const TabContent = styled.div`
 `;
 
 const Section = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -936,7 +936,7 @@ const Section = styled.div`
 const SectionTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
 `;
 
@@ -955,7 +955,7 @@ const InfoCard = styled.div`
 const InfoLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -963,7 +963,7 @@ const InfoLabel = styled.div`
 const InfoValue = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StateBadge = styled.span<{ $color: string }>`
@@ -1009,14 +1009,14 @@ const SubScore = styled.div`
 const SubScoreLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
 `;
 
 const SubScoreValue = styled.div`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const QuickStatsGrid = styled.div`
@@ -1031,7 +1031,7 @@ const QuickStatCard = styled.div`
   align-items: center;
   gap: 8px;
   padding: 16px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   text-align: center;
 `;
@@ -1043,13 +1043,13 @@ const QuickStatIcon = styled.div`
 const QuickStatValue = styled.div`
   font-size: 24px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const QuickStatLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const YieldStatsGrid = styled.div`
@@ -1060,14 +1060,14 @@ const YieldStatsGrid = styled.div`
 
 const YieldStatCard = styled.div`
   padding: 16px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
 const YieldStatLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   margin-bottom: 8px;
 `;
@@ -1075,7 +1075,7 @@ const YieldStatLabel = styled.div`
 const YieldStatValue = styled.div<{ $color?: string }>`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ $color }) => $color || '#212121'};
+  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
 const ChartContainer = styled.div`
@@ -1096,7 +1096,7 @@ const TransitionItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 
   @media (max-width: 768px) {
@@ -1115,12 +1115,12 @@ const TransitionStates = styled.div`
 const TransitionState = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TransitionArrow = styled.span`
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const TransitionDetails = styled.div`
@@ -1137,12 +1137,12 @@ const TransitionDetails = styled.div`
 const TransitionDate = styled.div`
   font-size: 13px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TransitionDuration = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const TimelineSummary = styled.div`
@@ -1156,7 +1156,7 @@ const SummaryItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 
   @media (max-width: 768px) {
@@ -1169,13 +1169,13 @@ const SummaryItem = styled.div`
 const SummaryLabel = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const SummaryValue = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const TaskStatsGrid = styled.div`
@@ -1186,14 +1186,14 @@ const TaskStatsGrid = styled.div`
 
 const TaskStatCard = styled.div`
   padding: 16px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
 const TaskStatLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   margin-bottom: 8px;
 `;
@@ -1201,7 +1201,7 @@ const TaskStatLabel = styled.div`
 const TaskStatValue = styled.div<{ $color?: string }>`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ $color }) => $color || '#212121'};
+  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
 const TaskMetrics = styled.div`
@@ -1215,7 +1215,7 @@ const MetricItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 
   @media (max-width: 768px) {
@@ -1228,13 +1228,13 @@ const MetricItem = styled.div`
 const MetricLabel = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const MetricValue = styled.div<{ $color?: string }>`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ $color }) => $color || '#212121'};
+  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
 const AlertStatsGrid = styled.div`
@@ -1245,14 +1245,14 @@ const AlertStatsGrid = styled.div`
 
 const AlertStatCard = styled.div`
   padding: 16px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
 `;
 
 const AlertStatLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   margin-bottom: 8px;
 `;
@@ -1260,7 +1260,7 @@ const AlertStatLabel = styled.div`
 const AlertStatValue = styled.div<{ $color?: string }>`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ $color }) => $color || '#212121'};
+  color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
 const LoadingContainer = styled.div`
@@ -1275,7 +1275,7 @@ const LoadingContainer = styled.div`
 const LoadingSpinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -1290,7 +1290,7 @@ const LoadingSpinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ErrorContainer = styled.div`
@@ -1310,13 +1310,13 @@ const ErrorIcon = styled.div`
 const ErrorTitle = styled.div`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
 
 const ErrorMessage = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 24px;
 `;
 
@@ -1352,7 +1352,7 @@ const EmptyStateSection = styled.div`
   justify-content: center;
   padding: 40px 20px;
   text-align: center;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
 `;
 
@@ -1364,5 +1364,5 @@ const EmptyIcon = styled.div`
 
 const EmptyText = styled.div`
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;

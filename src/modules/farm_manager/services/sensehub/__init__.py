@@ -7,5 +7,12 @@ instances running on Raspberry Pi devices in farm blocks.
 
 from .sensehub_client import SenseHubClient
 from .sensehub_connection_service import SenseHubConnectionService
+from .sync_service import SenseHubSyncService
+from .cache_query_service import SenseHubCacheQueryService
 
-__all__ = ["SenseHubClient", "SenseHubConnectionService"]
+__all__ = [
+    "SenseHubClient",
+    "SenseHubConnectionService",
+    "SenseHubSyncService",
+    "SenseHubCacheQueryService",
+]

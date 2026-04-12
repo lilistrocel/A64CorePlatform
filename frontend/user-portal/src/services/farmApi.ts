@@ -1154,6 +1154,17 @@ export async function acknowledgeSenseHubAlert(
   return response.data;
 }
 
+// SenseHub Cache / Sync
+export async function getSenseHubCacheStatus() {
+  const response = await apiClient.get<any>('/v1/farm/sensehub-cache/status');
+  return response.data;
+}
+
+export async function triggerSenseHubSync() {
+  const response = await apiClient.post<any>('/v1/farm/sensehub-cache/sync');
+  return response.data;
+}
+
 // ============================================================================
 // FARM AI CHAT ENDPOINTS
 // ============================================================================
@@ -1317,6 +1328,8 @@ export const farmApi = {
   getSenseHubLabStats,
   getSenseHubAlerts,
   acknowledgeSenseHubAlert,
+  getSenseHubCacheStatus,
+  triggerSenseHubSync,
 
   // Farm AI Chat
   sendFarmAIChat,

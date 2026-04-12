@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-02-26
-> **Tasks:** 0 active · 0 ready · 0 blocked · 0 completed
+> **Updated:** 2026-04-07
+> **Tasks:** 1 active · 0 ready · 0 blocked · 0 completed
 
 ## Rules for Agents
 
@@ -68,7 +68,24 @@
 
 ## 🔵 Active
 
-_No active tasks._
+### T-001 | Supabase 2026-04-07 reimport — User runs stages
+- **Category:** Database · **Priority:** P0
+- **Assigned:** backend-dev-expert · **Started:** 2026-04-07
+- **Depends on:** —
+- **Blocks:** —
+- **Description:** Scripts built and dry-run verified. Blocked on user running stage-by-stage
+  with UI verification between stages. One crop blocker: `Lettuce - Phase 1 (5cm)` not in
+  plant_data_enhanced — user must add it (or decide to skip) before stage 3 will succeed.
+- **Steps:**
+  1. User resolves `Lettuce - Phase 1 (5cm)` crop (add to plant_data_enhanced or skip)
+  2. User runs `stage2_farms_blocks.py` → verifies farms in UI
+  3. User runs `stage3_cycles_harvests.py` → verifies block states, archives, harvests in UI
+  4. User runs `stage4_clients_vehicles_orders.py` → verifies CRM/Sales in UI
+  5. User runs `stage5_sales_excel.py` → verifies payment enrichment on order lines
+  6. User runs `stage6_purchase_register.py` → verify via mongosh count
+  7. User runs `stage7_finalize.py` → verify farm assignments, financial_summary
+  8. Regenerate CodeMaps (new collections: sales_order_lines, sales_unmatched, purchase_register, financial_summary)
+  9. Move task to ARCHIVE.md
 
 ---
 

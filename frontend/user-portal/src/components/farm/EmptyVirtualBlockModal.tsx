@@ -42,7 +42,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContainer = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   width: 100%;
   max-width: 600px;
@@ -55,11 +55,11 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 `;
 
@@ -71,14 +71,14 @@ const WarningIcon = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
   text-align: center;
 `;
 
 const ModalDescription = styled.p`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
   text-align: center;
 `;
@@ -115,7 +115,7 @@ const Icon = styled.div<{ $warning?: boolean }>`
 
 const Text = styled.div`
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   line-height: 1.5;
 `;
 
@@ -134,7 +134,7 @@ const WarningText = styled.div`
 const LoadingContainer = styled.div`
   text-align: center;
   padding: 40px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const ErrorContainer = styled.div`
@@ -147,11 +147,11 @@ const ErrorContainer = styled.div`
 
 const ModalFooter = styled.div`
   padding: 20px 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   flex-shrink: 0;
 `;
 
@@ -164,7 +164,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     switch ($variant) {
       case 'danger':
         return `
@@ -176,10 +176,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
         `;
       default:
         return `
-          background: #f5f5f5;
-          color: #616161;
+          background: ${theme.colors.surface};
+          color: ${theme.colors.textSecondary};
           &:hover:not(:disabled) {
-            background: #e0e0e0;
+            background: ${theme.colors.neutral[300]};
           }
         `;
     }

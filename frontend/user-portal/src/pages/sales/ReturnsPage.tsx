@@ -33,7 +33,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -52,14 +52,14 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: #616161;
-        border: 1px solid #e0e0e0;
+        color: ${theme.colors.textSecondary};
+        border: 1px solid ${theme.colors.neutral[300]};
         &:hover {
-          background: #f5f5f5;
+          background: ${theme.colors.surface};
         }
       `;
     }
@@ -81,8 +81,8 @@ const StatsRow = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 12px;
   padding: 20px;
   text-align: center;
@@ -92,13 +92,13 @@ const StatCard = styled.div`
 const StatValue = styled.div`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
 `;
 
 const StatLabel = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
 `;
 
@@ -112,10 +112,10 @@ const FiltersRow = styled.div`
 
 const Select = styled.select`
   padding: 12px 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   min-width: 200px;
 
@@ -127,8 +127,8 @@ const Select = styled.select`
 `;
 
 const TableContainer = styled.div`
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
@@ -140,20 +140,20 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: #f9fafb;
-  border-bottom: 1px solid #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[50]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 
   /* Striped rows for readability - alternating row colors */
   &:nth-child(even) {
-    background: #f9fafb;
+    background: ${({ theme }) => theme.colors.neutral[50]};
   }
 
   &:nth-child(odd) {
-    background: #ffffff;
+    background: ${({ theme }) => theme.colors.background};
   }
 
   &:last-child {
@@ -178,7 +178,7 @@ const TableHeader = styled.th`
 const TableCell = styled.td`
   padding: 16px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatusBadge = styled.span<{ $status: ReturnStatus }>`
@@ -269,7 +269,7 @@ const Pagination = styled.div`
 
 const PageInfo = styled.div`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PageControls = styled.div`
@@ -279,16 +279,16 @@ const PageControls = styled.div`
 
 const PageButton = styled.button<{ $active?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'white')};
-  color: ${({ $active }) => ($active ? 'white' : '#212121')};
+  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textPrimary)};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
+    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
   }
 
   &:disabled {
@@ -300,7 +300,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
 const LoadingContainer = styled.div`
   text-align: center;
   padding: 48px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-size: 16px;
 `;
 

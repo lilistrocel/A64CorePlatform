@@ -271,7 +271,7 @@ const BackupCode = styled.div`
   align-items: center;
   gap: 0.375rem;
   font-family: 'Courier New', monospace;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   padding: 0.5rem 0.625rem;
   border-radius: 4px;
   border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
@@ -321,7 +321,7 @@ const ActionButton = styled.button`
   flex: 1;
   min-height: 44px; /* Touch-friendly */
   padding: 0.625rem 1rem;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   color: ${({ theme }) => theme.colors.primary[600]};
@@ -385,7 +385,7 @@ const CloseButton = styled.button<{ $acknowledged: boolean }>`
     $acknowledged ? theme.colors.primary[500] : theme.colors.neutral[300]};
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ $acknowledged }) => $acknowledged ? 'white' : '#666'};
+  color: ${({ $acknowledged, theme }) => $acknowledged ? 'white' : theme.colors.textSecondary};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: ${({ $acknowledged }) => $acknowledged ? 'pointer' : 'not-allowed'};

@@ -28,7 +28,8 @@ from ...models.dashboard import (
     DashboardRecentActivity,
     FarmBlockSummary,
     FarmHarvestSummary,
-    FarmingYearContext
+    FarmingYearContext,
+    CropBreakdownItem
 )
 from ...models.block import Block, BlockStatus
 from ...services.farm.farm_repository import FarmRepository
@@ -59,6 +60,26 @@ async def get_dashboard_summary(
         None,
         description="Filter data by farming year (e.g., 2025). When specified, blocks are filtered by farmingYearPlanted and harvests by farmingYear."
     ),
+    farmIds: Optional[str] = Query(
+        None,
+        description="Comma-separated farm IDs to filter by"
+    ),
+    states: Optional[str] = Query(
+        None,
+        description="Comma-separated block states to filter by (e.g., 'growing,harvesting')"
+    ),
+    cropName: Optional[str] = Query(
+        None,
+        description="Filter by crop name (partial match, case-insensitive)"
+    ),
+    dateFrom: Optional[str] = Query(
+        None,
+        description="Filter harvests from this date (ISO format YYYY-MM-DD)"
+    ),
+    dateTo: Optional[str] = Query(
+        None,
+        description="Filter harvests up to this date (ISO format YYYY-MM-DD)"
+    ),
     current_user: CurrentUser = Depends(get_current_user)
 ):
     """
@@ -72,6 +93,12 @@ async def get_dashboard_summary(
     - Harvests are filtered by `farmingYear` field
     - Default (no filter): Returns all data regardless of farming year
 
+    **Additional Filters**:
+    - `farmIds`: Restrict results to a specific subset of farms (comma-separated IDs)
+    - `states`: Restrict block counts to specific block states (comma-separated)
+    - `cropName`: Case-insensitive partial match on `targetCropName`
+    - `dateFrom` / `dateTo`: Narrow harvest records to a date range (YYYY-MM-DD)
+
     Returns:
     - Overview metrics (total farms, blocks, active plantings, upcoming harvests)
     - Block counts by state (across all farms)
@@ -79,10 +106,10 @@ async def get_dashboard_summary(
     - Harvest totals by farm
     - Recent activity counts
     - Farming year context (when filter is applied)
+    - Crop breakdown (block count per crop, top 20)
     """
     try:
         from ...services.database import farm_db
-        from datetime import timedelta
 
         db = farm_db.get_database()
 
@@ -100,6 +127,32 @@ async def get_dashboard_summary(
         farms = await db.farms.aggregate(farms_pipeline).to_list(None)
         farm_ids = [farm["farmId"] for farm in farms]
 
+        # Apply farmIds filter: restrict to the requested subset
+        if farmIds:
+            requested_ids = [fid.strip() for fid in farmIds.split(",") if fid.strip()]
+            farm_ids = [fid for fid in farm_ids if fid in requested_ids]
+
+        # Validate and parse dateFrom / dateTo once so both harvest queries share the values
+        parsed_date_from: Optional[datetime] = None
+        parsed_date_to: Optional[datetime] = None
+        if dateFrom:
+            try:
+                parsed_date_from = datetime.fromisoformat(dateFrom)
+            except ValueError:
+                raise HTTPException(
+                    400,
+                    f"Invalid dateFrom format '{dateFrom}'. Expected YYYY-MM-DD."
+                )
+        if dateTo:
+            try:
+                # Include the full end day by setting time to 23:59:59
+                parsed_date_to = datetime.fromisoformat(dateTo + "T23:59:59")
+            except ValueError:
+                raise HTTPException(
+                    400,
+                    f"Invalid dateTo format '{dateTo}'. Expected YYYY-MM-DD."
+                )
+
         # Step 2: Aggregate blocks by state (all farms)
         # Build block match criteria
         block_match_criteria = {
@@ -110,6 +163,16 @@ async def get_dashboard_summary(
         # Add farming year filter if specified
         if farmingYear is not None:
             block_match_criteria["farmingYearPlanted"] = farmingYear
+        # Add states filter if specified
+        if states:
+            state_list = [s.strip() for s in states.split(",") if s.strip()]
+            block_match_criteria["state"] = {"$in": state_list}
+        # Add cropName partial-match filter if specified
+        if cropName:
+            block_match_criteria["targetCropName"] = {
+                "$regex": cropName.strip(),
+                "$options": "i"
+            }
 
         blocks_by_state_pipeline = [
             {"$match": block_match_criteria},
@@ -182,6 +245,13 @@ async def get_dashboard_summary(
         # Add farming year filter if specified
         if farmingYear is not None:
             harvest_match_criteria["farmingYear"] = farmingYear
+        # Add date range filters if specified
+        if parsed_date_from or parsed_date_to:
+            harvest_match_criteria["harvestDate"] = {}
+            if parsed_date_from:
+                harvest_match_criteria["harvestDate"]["$gte"] = parsed_date_from
+            if parsed_date_to:
+                harvest_match_criteria["harvestDate"]["$lte"] = parsed_date_to
 
         harvests_by_farm_pipeline = [
             {"$match": harvest_match_criteria},
@@ -214,20 +284,45 @@ async def get_dashboard_summary(
             "status": {"$in": ["open", "in_progress"]}
         })
 
-        # Step 6: Count recent harvests (last 7 days)
+        # Step 6: Count recent harvests (last 7 days), respecting date filters
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
-        recent_harvests_query = {
-            "farmId": {"$in": farm_ids},
-            "harvestDate": {"$gte": seven_days_ago}
+        recent_harvests_query: dict = {
+            "farmId": {"$in": farm_ids}
         }
         # Add farming year filter if specified
         if farmingYear is not None:
             recent_harvests_query["farmingYear"] = farmingYear
+        # Merge date range: use the later of seven_days_ago vs parsed_date_from
+        effective_from = max(seven_days_ago, parsed_date_from) if parsed_date_from else seven_days_ago
+        recent_harvests_query["harvestDate"] = {"$gte": effective_from}
+        if parsed_date_to:
+            recent_harvests_query["harvestDate"]["$lte"] = parsed_date_to
 
         recent_harvests_count = await db.block_harvests.count_documents(recent_harvests_query)
 
         # Step 7: Count pending tasks (if task system exists)
         pending_tasks_count = 0  # Placeholder - implement when task system is ready
+
+        # Step 8: Crop breakdown - top 20 crops by block count
+        crops_pipeline = [
+            {
+                "$match": {
+                    **block_match_criteria,
+                    "targetCropName": {"$ne": None}
+                }
+            },
+            {"$group": {
+                "_id": "$targetCropName",
+                "blockCount": {"$sum": 1}
+            }},
+            {"$sort": {"blockCount": -1}},
+            {"$limit": 20}
+        ]
+        crops_result = await db.blocks.aggregate(crops_pipeline).to_list(None)
+        crop_breakdown = [
+            CropBreakdownItem(cropName=item["_id"], blockCount=item["blockCount"])
+            for item in crops_result
+        ]
 
         # Calculate overview metrics
         total_blocks = sum(blocks_by_state_dict.values())
@@ -273,7 +368,8 @@ async def get_dashboard_summary(
                 pendingTasks=pending_tasks_count,
                 activeAlerts=active_alerts_count
             ),
-            farmingYearContext=farming_year_context
+            farmingYearContext=farming_year_context,
+            cropBreakdown=crop_breakdown
         )
 
         farming_year_str = f" (farmingYear={farmingYear})" if farmingYear else ""
@@ -287,9 +383,53 @@ async def get_dashboard_summary(
             data=summary_data
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[Dashboard Summary] Error: {str(e)}", exc_info=True)
         raise HTTPException(500, f"Failed to load dashboard summary: {str(e)}")
+
+
+# ============================================================================
+# FILTER HELPER ENDPOINTS
+# ============================================================================
+
+@router.get(
+    "/filters/crops",
+    summary="Get available crop names for filtering",
+    description="Return distinct crop names across all active virtual blocks for use in filter dropdowns"
+)
+async def get_filter_crops(
+    farmingYear: Optional[int] = Query(
+        None,
+        description="Restrict crop names to blocks planted in this farming year"
+    ),
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    """
+    Get distinct crop names across all blocks for filter dropdown.
+
+    Args:
+        farmingYear: Optional farming year to narrow the result set
+        current_user: Authenticated user (injected by dependency)
+
+    Returns:
+        Sorted list of distinct crop name strings
+    """
+    from ...services.database import farm_db
+
+    db = farm_db.get_database()
+
+    match_criteria = {
+        "isActive": True,
+        "blockCategory": "virtual",
+        "targetCropName": {"$ne": None}
+    }
+    if farmingYear is not None:
+        match_criteria["farmingYearPlanted"] = farmingYear
+
+    crops = await db.blocks.distinct("targetCropName", match_criteria)
+    return {"success": True, "crops": sorted([c for c in crops if c])}
 
 
 # ============================================================================
@@ -410,6 +550,8 @@ async def get_farm_dashboard(
                     "yieldEfficiencyPercent": block.kpi.yieldEfficiencyPercent,
                     "totalHarvests": block.kpi.totalHarvests
                 },
+                blockCategory=getattr(block, 'blockCategory', None),
+                parentBlockId=getattr(block, 'parentBlockId', None),
                 calculated=calculated,
                 activeAlerts=active_alerts
             )

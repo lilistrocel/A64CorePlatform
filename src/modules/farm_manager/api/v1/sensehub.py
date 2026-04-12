@@ -13,8 +13,15 @@ import logging
 
 from ...middleware.auth import get_current_active_user, CurrentUser
 from ...services.sensehub import SenseHubConnectionService
+from ...services.sensehub.cache_query_service import SenseHubCacheQueryService
 
 logger = logging.getLogger(__name__)
+
+
+def _is_connection_error(e: Exception) -> bool:
+    """Check if an exception is a SenseHub connectivity issue (worth cache fallback)."""
+    return isinstance(e, (httpx.ConnectError, httpx.TimeoutException, ConnectionError, OSError))
+
 
 router = APIRouter(
     prefix="/farms/{farm_id}/blocks/{block_id}/sensehub",
@@ -166,6 +173,26 @@ async def get_sensehub_dashboard(
     except HTTPException:
         raise
     except Exception as e:
+        if _is_connection_error(e):
+            logger.warning(f"SenseHub unreachable for dashboard, falling back to cache: {e}")
+            cached_eq = await SenseHubCacheQueryService.get_equipment_as_list(str(block_id))
+            cached_alerts = await SenseHubCacheQueryService.get_alerts_as_list(str(block_id))
+            if cached_eq or cached_alerts:
+                online = sum(1 for eq in cached_eq if eq.get("status") == "online")
+                offline = sum(1 for eq in cached_eq if eq.get("status") == "offline")
+                error_count = sum(1 for eq in cached_eq if eq.get("status") == "error")
+                critical = sum(1 for a in cached_alerts if a.get("severity") == "critical" and not a.get("acknowledged"))
+                warning = sum(1 for a in cached_alerts if a.get("severity") == "warning" and not a.get("acknowledged"))
+                info = sum(1 for a in cached_alerts if a.get("severity") == "info" and not a.get("acknowledged"))
+                return {
+                    "equipment": {"total": len(cached_eq), "online": online, "offline": offline, "error": error_count},
+                    "automations": {"total": 0, "active": 0},
+                    "alerts": {"unacknowledged": critical + warning + info, "critical": critical, "warning": warning, "info": info},
+                    "recent_alerts": cached_alerts[:10],
+                    "active_automations": [],
+                    "equipment_list": cached_eq,
+                    "_cached": True,
+                }
         _handle_sensehub_error(e, "dashboard")
 
 
@@ -177,7 +204,7 @@ async def get_sensehub_equipment(
     zone: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(get_current_active_user),
 ):
-    """Proxy to GET /api/equipment on SenseHub."""
+    """Proxy to GET /api/equipment on SenseHub. Falls back to cache on connection errors."""
     try:
         client = await SenseHubConnectionService.get_client(farm_id, block_id)
         data = await client.get_equipment(status=status, zone=zone)
@@ -186,6 +213,11 @@ async def get_sensehub_equipment(
     except HTTPException:
         raise
     except Exception as e:
+        if _is_connection_error(e):
+            logger.warning(f"SenseHub unreachable for equipment, falling back to cache: {e}")
+            cached = await SenseHubCacheQueryService.get_equipment_as_list(str(block_id))
+            if cached:
+                return cached
         _handle_sensehub_error(e, "equipment list")
 
 
@@ -425,7 +457,7 @@ async def get_sensehub_alerts(
     acknowledged: Optional[bool] = Query(None),
     current_user: CurrentUser = Depends(get_current_active_user),
 ):
-    """Proxy to GET /api/alerts on SenseHub."""
+    """Proxy to GET /api/alerts on SenseHub. Falls back to cache on connection errors."""
     try:
         client = await SenseHubConnectionService.get_client(farm_id, block_id)
         data = await client.get_alerts(severity=severity, acknowledged=acknowledged)
@@ -434,6 +466,11 @@ async def get_sensehub_alerts(
     except HTTPException:
         raise
     except Exception as e:
+        if _is_connection_error(e):
+            logger.warning(f"SenseHub unreachable for alerts, falling back to cache: {e}")
+            cached = await SenseHubCacheQueryService.get_alerts_as_list(str(block_id), severity=severity)
+            if cached:
+                return cached
         _handle_sensehub_error(e, "alerts list")
 
 
@@ -464,13 +501,18 @@ async def get_sensehub_lab_latest(
     zone_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(get_current_active_user),
 ):
-    """Get the most recent lab reading for each nutrient (MCP-only)."""
+    """Get the most recent lab reading for each nutrient (MCP-only). Falls back to cache."""
     try:
         client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
         return await client.get_lab_latest(zone_id=zone_id)
     except HTTPException:
         raise
     except Exception as e:
+        if _is_connection_error(e):
+            logger.warning(f"SenseHub MCP unreachable for lab latest, falling back to cache: {e}")
+            cached = await SenseHubCacheQueryService.get_lab_latest(str(block_id), zone_id=zone_id)
+            if cached:
+                return cached
         _handle_sensehub_error(e, "lab latest readings")
 
 
@@ -485,7 +527,7 @@ async def get_sensehub_lab_readings(
     limit: Optional[int] = Query(None),
     current_user: CurrentUser = Depends(get_current_active_user),
 ):
-    """Get historical lab readings with optional filters (MCP-only)."""
+    """Get historical lab readings with optional filters (MCP-only). Falls back to cache."""
     try:
         client = await SenseHubConnectionService.get_mcp_client(farm_id, block_id)
         return await client.get_lab_readings(
@@ -495,6 +537,14 @@ async def get_sensehub_lab_readings(
     except HTTPException:
         raise
     except Exception as e:
+        if _is_connection_error(e):
+            logger.warning(f"SenseHub MCP unreachable for lab readings, falling back to cache: {e}")
+            cached = await SenseHubCacheQueryService.get_lab_readings(
+                str(block_id), nutrient=nutrient, zone_id=zone_id,
+                from_date=from_dt, to_date=to_dt, limit=limit or 50,
+            )
+            if cached.get("readings"):
+                return cached
         _handle_sensehub_error(e, "lab readings")
 
 

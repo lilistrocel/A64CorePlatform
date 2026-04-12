@@ -32,7 +32,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   max-width: 800px;
@@ -48,19 +48,19 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
 const MapSection = styled.div`
   margin-bottom: 24px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -70,8 +70,8 @@ const MapLoadingFallback = styled.div`
   align-items: center;
   justify-content: center;
   height: 450px;
-  background: #f5f5f5;
-  color: #666;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
 `;
 
@@ -80,7 +80,7 @@ const InfoRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: 8px;
   margin-bottom: 24px;
 `;
@@ -111,7 +111,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
         return `
@@ -128,9 +128,9 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
       default:
         return `
           background: transparent;
-          color: #616161;
-          border: 1px solid #e0e0e0;
-          &:hover:not(:disabled) { background: #f5f5f5; }
+          color: ${theme.colors.textSecondary};
+          border: 1px solid ${theme.colors.neutral[300]};
+          &:hover:not(:disabled) { background: ${theme.colors.surface}; }
         `;
     }
   }}

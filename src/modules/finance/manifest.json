@@ -1,0 +1,30 @@
+{
+  "module_name": "finance",
+  "display_name": "Finance",
+  "version": "1.0.0",
+  "description": "Financial analytics and P&L reporting module for revenue, COGS, and profitability analysis",
+  "route_prefix": "/api/v1/finance",
+  "dependencies": {
+    "core": ">=1.3.0",
+    "python": ">=3.11",
+    "sales": ">=1.0.0"
+  },
+  "database_collections": [
+    "sales_orders",
+    "sales_order_lines",
+    "purchase_register",
+    "inventory_movements",
+    "block_harvests",
+    "farms",
+    "customers"
+  ],
+  "permissions": [
+    "finance.view",
+    "finance.manage"
+  ],
+  "license_required": false,
+  "enabled_by_default": true,
+  "core_module": false,
+  "industries": ["all"],
+  "industry_mode": "shared"
+}

@@ -25,7 +25,7 @@ const Overlay = styled.div`
 `;
 
 const Dialog = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   max-width: 440px;
@@ -48,13 +48,13 @@ const IconContainer = styled.div`
 const Title = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const Message = styled.p`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 24px 0;
   line-height: 1.5;
 `;
@@ -68,8 +68,8 @@ const Actions = styled.div`
 const CancelButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: #616161;
-  border: 1px solid #e0e0e0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -77,7 +77,7 @@ const CancelButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 

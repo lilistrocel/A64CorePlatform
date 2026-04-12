@@ -97,9 +97,9 @@ const Grid = styled.div<{ $cardsPerRow: number }>`
 const Summary = styled.div`
   text-align: center;
   font-size: 14px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 16px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 `;
@@ -107,7 +107,7 @@ const Summary = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
@@ -121,12 +121,12 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 16px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;

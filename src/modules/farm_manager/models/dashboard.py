@@ -86,6 +86,10 @@ class DashboardBlock(BaseModel):
     # Calculated metrics
     calculated: BlockCalculated
 
+    # Block hierarchy
+    blockCategory: Optional[str] = Field(None, description="'physical' or 'virtual'")
+    parentBlockId: Optional[UUID] = Field(None, description="Parent physical block ID (for virtual blocks)")
+
     # Active alerts
     activeAlerts: List[DashboardAlert] = Field(default_factory=list)
 
@@ -237,6 +241,12 @@ class FarmingYearContext(BaseModel):
     isFiltered: bool = Field(False, description="Whether data is filtered by farming year")
 
 
+class CropBreakdownItem(BaseModel):
+    """Crop distribution item - block count for a single crop name"""
+    cropName: str
+    blockCount: int
+
+
 class DashboardSummaryData(BaseModel):
     """Complete aggregated dashboard data (single API call response)"""
     overview: DashboardOverview
@@ -245,6 +255,10 @@ class DashboardSummaryData(BaseModel):
     harvestSummary: DashboardHarvestSummary
     recentActivity: DashboardRecentActivity
     farmingYearContext: Optional[FarmingYearContext] = Field(None, description="Farming year filter context")
+    cropBreakdown: List[CropBreakdownItem] = Field(
+        default_factory=list,
+        description="Block counts grouped by crop name (top 20, descending)"
+    )
 
 
 class DashboardSummaryResponse(BaseModel):

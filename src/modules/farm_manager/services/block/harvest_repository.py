@@ -19,6 +19,36 @@ from ..database import farm_db
 logger = logging.getLogger(__name__)
 
 
+def _normalize_legacy_harvest(harvest_doc: dict) -> dict:
+    """
+    Normalize legacy / migrated harvest data to satisfy current Pydantic model.
+
+    Handles migration from the Supabase import (stage3) where some source rows
+    had blank or non-standard grade values.
+
+    Fields corrected:
+    - qualityGrade: null / missing / invalid → "A"
+      (model enum: A|B|C; Field(...) — required, no default)
+    - quantityKg: <= 0 → 0.001
+      (model: Field(..., gt=0) — must be strictly positive; zero-quantity records
+       from source data are kept readable rather than dropped)
+    """
+    doc = harvest_doc.copy()
+
+    # Reason: qualityGrade is required (Field(...)) with no default.
+    # Source data contains null for records where the grade column was blank
+    # or held a non-standard value.  Default to "A" preserves the record.
+    if doc.get("qualityGrade") not in ("A", "B", "C"):
+        doc["qualityGrade"] = "A"
+
+    # Reason: quantityKg = Field(..., gt=0) — strictly positive required.
+    # A handful of migrated records had zero quantity; set to minimal valid value.
+    if doc.get("quantityKg") is not None and float(doc["quantityKg"]) <= 0:
+        doc["quantityKg"] = 0.001
+
+    return doc
+
+
 class HarvestRepository:
     """Repository for BlockHarvest data access"""
 
@@ -74,7 +104,8 @@ class HarvestRepository:
         if not harvest_doc:
             return None
 
-        return BlockHarvest(**harvest_doc)
+        harvest_doc.pop("_id", None)
+        return BlockHarvest(**_normalize_legacy_harvest(harvest_doc))
 
     @staticmethod
     async def get_by_block(
@@ -109,7 +140,7 @@ class HarvestRepository:
         cursor = db.block_harvests.find(query).sort("harvestDate", -1).skip(skip).limit(limit)
         harvest_docs = await cursor.to_list(length=limit)
 
-        harvests = [BlockHarvest(**doc) for doc in harvest_docs]
+        harvests = [BlockHarvest(**_normalize_legacy_harvest(doc)) for doc in harvest_docs]
 
         return harvests, total
 
@@ -146,7 +177,7 @@ class HarvestRepository:
         cursor = db.block_harvests.find(query).sort("harvestDate", -1).skip(skip).limit(limit)
         harvest_docs = await cursor.to_list(length=limit)
 
-        harvests = [BlockHarvest(**doc) for doc in harvest_docs]
+        harvests = [BlockHarvest(**_normalize_legacy_harvest(doc)) for doc in harvest_docs]
 
         return harvests, total
 
@@ -327,7 +358,7 @@ class HarvestRepository:
         cursor = db.block_harvests.find(query).sort("harvestDate", -1).skip(skip).limit(limit)
         harvest_docs = await cursor.to_list(length=limit)
 
-        harvests = [BlockHarvest(**doc) for doc in harvest_docs]
+        harvests = [BlockHarvest(**_normalize_legacy_harvest(doc)) for doc in harvest_docs]
 
         return harvests, total
 

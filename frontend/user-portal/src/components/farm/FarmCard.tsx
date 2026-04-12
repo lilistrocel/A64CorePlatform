@@ -26,11 +26,11 @@ export interface FarmCardProps {
 // ============================================================================
 
 const Card = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: all 150ms ease-in-out;
   cursor: pointer;
   overflow: hidden; /* Prevent content overflow */
@@ -64,7 +64,7 @@ const FarmIcon = styled.div`
 const FarmTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
   word-break: break-word; /* Handle long farm names */
 
@@ -88,7 +88,7 @@ const Location = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 16px;
   word-break: break-word; /* Handle long location text */
 
@@ -116,7 +116,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -129,7 +129,7 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 
   @media (max-width: 480px) {
     font-size: 16px;
@@ -142,7 +142,7 @@ const BlockStats = styled.div`
   flex-wrap: wrap;
   margin-bottom: 16px;
   padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const BlockStatBadge = styled.span<{ $color: string }>`

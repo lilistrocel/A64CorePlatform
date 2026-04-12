@@ -72,7 +72,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const Modal = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   max-width: 800px;
@@ -83,7 +83,7 @@ const Modal = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -92,7 +92,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -101,12 +101,12 @@ const CloseButton = styled.button`
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding: 4px 8px;
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -129,12 +129,12 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
@@ -146,18 +146,18 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
 
   &:focus {
@@ -167,7 +167,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
@@ -197,7 +197,7 @@ const CheckboxContainer = styled.label`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -209,13 +209,13 @@ const Checkbox = styled.input`
 
 const CheckboxLabel = styled.div`
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 // Map Section Styles
 const MapSection = styled.div`
   margin-top: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -226,16 +226,16 @@ const MapToggleButton = styled.button<{ $active: boolean }>`
   gap: 8px;
   padding: 12px 16px;
   width: 100%;
-  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
   border-radius: 8px;
-  background: ${({ $active }) => ($active ? '#EFF6FF' : 'white')};
-  color: ${({ $active }) => ($active ? '#3B82F6' : '#374151')};
+  background: ${({ $active, theme }) => ($active ? '#EFF6FF' : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.textPrimary)};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active }) => ($active ? '#DBEAFE' : '#f5f5f5')};
+    background: ${({ $active, theme }) => ($active ? '#DBEAFE' : theme.colors.surface)};
   }
 
   svg {
@@ -248,14 +248,14 @@ const MapLoadingFallback = styled.div`
   align-items: center;
   justify-content: center;
   height: 400px;
-  background: #f5f5f5;
-  color: #666;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
 `;
 
 const MapHint = styled.p`
   font-size: 12px;
-  color: #6B7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 8px 0 0 0;
 `;
 
@@ -269,7 +269,7 @@ const MapIcon = () => (
 
 const ModalFooter = styled.div`
   padding: 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -284,7 +284,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
         background: #3B82F6;
@@ -296,10 +296,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     }
     return `
       background: transparent;
-      color: #616161;
-      border: 1px solid #e0e0e0;
+      color: ${theme.colors.textSecondary};
+      border: 1px solid ${theme.colors.neutral[300]};
       &:hover:not(:disabled) {
-        background: #f5f5f5;
+        background: ${theme.colors.surface};
       }
     `;
   }}

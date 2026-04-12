@@ -73,6 +73,51 @@ export interface PlatformAlerts {
   topAlerts: unknown[];
 }
 
+export interface LabNutrientReading {
+  nutrient: string;
+  value: number;
+  unit: string;
+  zone: string;
+  timestamp: string | null;
+}
+
+export interface CropNutrientTargets {
+  cropName: string;
+  scientificName: string | null;
+  phMin: number | null;
+  phMax: number | null;
+  phOptimal: number | null;
+  ecRangeMs: string | null;
+  nutrientsRecommendations: string | null;
+  temperatureMin: number | null;
+  temperatureMax: number | null;
+  temperatureOptimal: number | null;
+  humidityMin: number | null;
+  humidityMax: number | null;
+  humidityOptimal: number | null;
+}
+
+export interface LabAnalysisBlockEntry {
+  blockId: string;
+  blockName: string;
+  farmName: string;
+  cropName: string | null;
+  blockState: string | null;
+  daysSincePlanting: number | null;
+  currentGrowthStage: string | null;
+  totalCycleDays: number | null;
+  latestReadings: LabNutrientReading[];
+  cropTargets: CropNutrientTargets | null;
+  activeFertigationCard: Record<string, unknown> | null;
+}
+
+export interface LabAnalysis {
+  blocksScanned: number;
+  blocksWithLabData: number;
+  blocksWithCropTargets: number;
+  entries: LabAnalysisBlockEntry[];
+}
+
 export interface InspectionRawData {
   farmCensus: FarmCensus | null;
   yieldAssessment: YieldAssessment | null;
@@ -82,6 +127,7 @@ export interface InspectionRawData {
   automationAudit: AutomationAudit | null;
   harvestProgress: HarvestProgress | null;
   platformAlerts: PlatformAlerts | null;
+  labAnalysis: LabAnalysis | null;
 }
 
 // ============================================================================

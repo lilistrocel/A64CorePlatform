@@ -173,7 +173,7 @@ const Label = styled.label`
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -198,22 +198,23 @@ const DropdownArrow = styled.span<{ $disabled?: boolean }>`
   position: absolute;
   right: 12px;
   font-size: 10px;
-  color: ${(props) => (props.$disabled ? '#bdbdbd' : '#757575')};
+  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : theme.colors.textSecondary)};
   pointer-events: none;
   transition: color 150ms ease-in-out, transform 150ms ease-in-out;
 `;
 
-const baseSelectStyles = `
+const Select = styled.select<{ $compact?: boolean }>`
   width: 100%;
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
-  background: white;
-  border: 2px solid #e0e0e0;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   cursor: pointer;
   appearance: none;
   transition: all 150ms ease-in-out;
+  padding: ${(props) => (props.$compact ? '8px 32px 8px 36px' : '12px 32px 12px 40px')};
 
   &:hover:not(:disabled) {
     border-color: #3b82f6;
@@ -226,20 +227,11 @@ const baseSelectStyles = `
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
 
-  &:focus + ${DropdownArrow} {
-    color: #3b82f6;
-  }
-
   &:disabled {
-    background-color: #f5f5f5;
-    color: #9e9e9e;
+    background-color: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textDisabled};
     cursor: not-allowed;
   }
-`;
-
-const Select = styled.select<{ $compact?: boolean }>`
-  ${baseSelectStyles}
-  padding: ${(props) => (props.$compact ? '8px 32px 8px 36px' : '12px 32px 12px 40px')};
 
   /* Mobile responsive */
   @media (max-width: 768px) {
@@ -249,27 +241,35 @@ const Select = styled.select<{ $compact?: boolean }>`
 `;
 
 const LoadingSelect = styled.select<{ $compact?: boolean }>`
-  ${baseSelectStyles}
+  width: 100%;
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.background};
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  cursor: pointer;
+  appearance: none;
+  transition: all 150ms ease-in-out;
   padding: ${(props) => (props.$compact ? '8px 32px 8px 36px' : '12px 32px 12px 40px')};
-  color: #757575;
   font-style: italic;
   padding-right: 40px;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
 
   @media (max-width: 768px) {
     padding: ${(props) => (props.$compact ? '8px 28px 8px 32px' : '10px 32px 10px 36px')};
   }
 `;
 
-const EmptySelect = styled.select<{ $compact?: boolean }>`
-  ${baseSelectStyles}
-  padding: ${(props) => (props.$compact ? '8px 32px 8px 36px' : '12px 32px 12px 40px')};
+const EmptySelect = styled(Select)`
   color: #ef4444;
   border-color: #fecaca;
   background-color: #fef2f2;
-
-  @media (max-width: 768px) {
-    padding: ${(props) => (props.$compact ? '8px 28px 8px 32px' : '10px 32px 10px 36px')};
-  }
 `;
 
 const LoadingSpinner = styled.div`
@@ -277,7 +277,7 @@ const LoadingSpinner = styled.div`
   right: 12px;
   width: 14px;
   height: 14px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
@@ -310,32 +310,32 @@ const YearBadge = styled.span<{
   transition: all 150ms ease-in-out;
 
   /* Current year styling - primary blue */
-  background: ${(props) =>
-    props.$isCurrent
+  background: ${({ $isCurrent, $isNext, theme }) =>
+    $isCurrent
       ? '#e3f2fd'
-      : props.$isNext
+      : $isNext
         ? '#fef3c7'
-        : '#f5f5f5'};
-  color: ${(props) =>
-    props.$isCurrent
+        : theme.colors.surface};
+  color: ${({ $isCurrent, $isNext, theme }) =>
+    $isCurrent
       ? '#1976d2'
-      : props.$isNext
+      : $isNext
         ? '#d97706'
-        : '#616161'};
-  border: 1px solid ${(props) =>
-    props.$isCurrent
+        : theme.colors.textSecondary};
+  border: 1px solid ${({ $isCurrent, $isNext, theme }) =>
+    $isCurrent
       ? '#bbdefb'
-      : props.$isNext
+      : $isNext
         ? '#fde68a'
-        : '#e0e0e0'};
+        : theme.colors.neutral[300]};
 
   &:hover {
-    background: ${(props) =>
-      props.$isCurrent
+    background: ${({ $isCurrent, $isNext, theme }) =>
+      $isCurrent
         ? '#bbdefb'
-        : props.$isNext
+        : $isNext
           ? '#fde68a'
-          : '#eeeeee'};
+          : theme.colors.neutral[200]};
   }
 
   @media (max-width: 768px) {

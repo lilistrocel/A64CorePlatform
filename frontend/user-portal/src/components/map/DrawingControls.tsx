@@ -444,7 +444,7 @@ const ControlsContainer = styled.div`
 const ControlsToolbar = styled.div`
   display: flex;
   gap: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   padding: 8px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -504,7 +504,7 @@ const AreaDisplay = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   padding: 8px 12px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);

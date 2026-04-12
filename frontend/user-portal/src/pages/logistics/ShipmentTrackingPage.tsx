@@ -47,13 +47,13 @@ const HeaderRight = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -103,14 +103,14 @@ const FilterGroup = styled.div`
 const FilterLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
   background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active }) => ($active ? 'white' : '#616161')};
-  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -118,22 +118,22 @@ const FilterButton = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active }) => ($active ? '#1976d2' : '#f5f5f5')};
+    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
   }
 `;
 
 const ViewToggle = styled.div`
   display: flex;
   gap: 8px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   padding: 4px;
   border-radius: 8px;
 `;
 
 const ViewButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? 'white' : 'transparent')};
-  color: #616161;
+  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  color: ${({ theme }) => theme.colors.textSecondary};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -143,7 +143,7 @@ const ViewButton = styled.button<{ $active: boolean }>`
   box-shadow: ${({ $active }) => ($active ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none')};
 
   &:hover {
-    background: ${({ $active }) => ($active ? 'white' : '#eeeeee')};
+    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
   }
 `;
 
@@ -168,7 +168,7 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   max-width: 800px;
@@ -187,7 +187,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -195,12 +195,12 @@ const CloseButton = styled.button`
   background: transparent;
   border: none;
   font-size: 24px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   padding: 4px;
 
   &:hover {
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -209,7 +209,7 @@ const LoadingContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 400px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const ErrorContainer = styled.div`

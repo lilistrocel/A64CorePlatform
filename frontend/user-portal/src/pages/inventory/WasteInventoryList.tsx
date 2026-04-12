@@ -20,7 +20,7 @@ const toast = {
 
 // Basic Card component
 const Card = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   padding: 16px;
@@ -168,7 +168,7 @@ const FilterSelect = styled.select`
   border-radius: 8px;
   font-size: 0.875rem;
   min-width: 180px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
 
   &:focus {
     outline: none;
@@ -236,11 +236,11 @@ const TableHeader = styled.th`
 const TableRow = styled.tr`
   /* Striped rows for readability - alternating row colors */
   &:nth-child(even) {
-    background: #f9fafb;
+    background: ${({ theme }) => theme.colors.neutral[50]};
   }
 
   &:nth-child(odd) {
-    background: #ffffff;
+    background: ${({ theme }) => theme.colors.background};
   }
 
   &:hover {
@@ -413,7 +413,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
   width: 100%;

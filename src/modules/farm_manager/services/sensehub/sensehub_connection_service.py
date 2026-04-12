@@ -325,6 +325,7 @@ class SenseHubConnectionService:
                     "iotController.senseHubCredentials.token": client.cached_token,
                     "iotController.senseHubCredentials.tokenExpiresAt": client.cached_token_expires,
                     "iotController.lastConnected": datetime.utcnow(),
+                    "iotController.lastSyncedAt": datetime.utcnow(),
                 }
             },
         )

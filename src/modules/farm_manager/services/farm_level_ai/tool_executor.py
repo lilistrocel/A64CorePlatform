@@ -358,6 +358,9 @@ async def execute_write_tool(
         "control_block_relay": "control_relay",
         "trigger_block_automation": "trigger_automation",
         "toggle_block_automation": "toggle_automation",
+        "create_block_automation": "create_automation",
+        "update_block_automation": "update_automation",
+        "delete_block_automation": "delete_automation",
     }
 
     block_tool_name = _FARM_TO_BLOCK.get(tool_name)
@@ -408,5 +411,29 @@ def describe_write_action(tool_name: str, tool_input: dict) -> tuple[str, str]:
             f"#{tool_input.get('automation_id', '?')} enabled/disabled"
         )
         return desc, "medium"
+
+    elif tool_name == "create_block_automation":
+        desc = (
+            f"[Block {block_code}] Create new automation "
+            f"'{tool_input.get('name', '?')}' on equipment "
+            f"#{tool_input.get('equipment_id', '?')} channel "
+            f"{tool_input.get('channel', '?')}"
+        )
+        return desc, "high"
+
+    elif tool_name == "update_block_automation":
+        desc = (
+            f"[Block {block_code}] Update automation "
+            f"#{tool_input.get('automation_id', '?')} "
+            f"with: {list(tool_input.get('updates', {}).keys())}"
+        )
+        return desc, "high"
+
+    elif tool_name == "delete_block_automation":
+        desc = (
+            f"[Block {block_code}] PERMANENTLY DELETE automation "
+            f"#{tool_input.get('automation_id', '?')}"
+        )
+        return desc, "high"
 
     return f"[Block {block_code}] Execute {tool_name}", "high"

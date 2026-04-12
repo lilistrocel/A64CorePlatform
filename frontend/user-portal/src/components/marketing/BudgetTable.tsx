@@ -4,18 +4,18 @@ import type { MarketingBudget } from '../../types/marketing';
 
 interface BudgetTableProps { budgets: MarketingBudget[]; onEdit: (budget: MarketingBudget) => void; onDelete: (budgetId: string) => void; loading?: boolean; }
 
-const Table = styled.table`width: 100%; background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e0e0e0;`;
-const Thead = styled.thead`background: #fafafa; border-bottom: 2px solid #e0e0e0;`;
-const Th = styled.th`padding: 16px; text-align: left; font-size: 13px; font-weight: 600; color: #616161; text-transform: uppercase;`;
+const Table = styled.table`width: 100%; background: ${({ theme }) => theme.colors.background}; border-radius: 12px; overflow: hidden; border: 1px solid ${({ theme }) => theme.colors.neutral[300]};`;
+const Thead = styled.thead`background: ${({ theme }) => theme.colors.neutral[50]}; border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};`;
+const Th = styled.th`padding: 16px; text-align: left; font-size: 13px; font-weight: 600; color: ${({ theme }) => theme.colors.textSecondary}; text-transform: uppercase;`;
 const Tbody = styled.tbody``;
-const Tr = styled.tr`border-bottom: 1px solid #e0e0e0; &:hover { background: #fafafa; }`;
-const Td = styled.td`padding: 16px; font-size: 14px; color: #212121;`;
+const Tr = styled.tr`border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]}; &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }`;
+const Td = styled.td`padding: 16px; font-size: 14px; color: ${({ theme }) => theme.colors.textPrimary};`;
 interface BadgeProps { $color: string; }
 const Badge = styled.span<BadgeProps>`padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${({ $color }) => $color}20; color: ${({ $color }) => $color};`;
-const ActionButton = styled.button`padding: 6px 12px; margin-right: 8px; background: transparent; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: #f5f5f5; }`;
+const ActionButton = styled.button`padding: 6px 12px; margin-right: 8px; background: transparent; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: ${({ theme }) => theme.colors.surface}; }`;
 const DeleteButton = styled(ActionButton)`color: #EF4444; border-color: #EF4444; &:hover { background: #FEE2E2; }`;
-const EmptyText = styled.div`text-align: center; padding: 48px 24px; color: #9e9e9e;`;
-const ProgressBar = styled.div`width: 100px; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;`;
+const EmptyText = styled.div`text-align: center; padding: 48px 24px; color: ${({ theme }) => theme.colors.textDisabled};`;
+const ProgressBar = styled.div`width: 100px; height: 8px; background: ${({ theme }) => theme.colors.neutral[300]}; border-radius: 4px; overflow: hidden;`;
 interface ProgressFillProps { $percentage: number; }
 const ProgressFill = styled.div<ProgressFillProps>`height: 100%; background: ${({ $percentage }) => $percentage >= 90 ? '#EF4444' : $percentage >= 75 ? '#F59E0B' : '#10B981'}; width: ${({ $percentage }) => Math.min($percentage, 100)}%;`;
 

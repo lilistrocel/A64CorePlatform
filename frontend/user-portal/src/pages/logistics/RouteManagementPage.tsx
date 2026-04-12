@@ -27,7 +27,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -62,7 +62,7 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
   max-width: 800px;
@@ -81,7 +81,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
 `;
 
@@ -89,12 +89,12 @@ const CloseButton = styled.button`
   background: transparent;
   border: none;
   font-size: 24px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   padding: 4px;
 
   &:hover {
-    color: #212121;
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -103,7 +103,7 @@ const LoadingContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 400px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const ErrorContainer = styled.div`

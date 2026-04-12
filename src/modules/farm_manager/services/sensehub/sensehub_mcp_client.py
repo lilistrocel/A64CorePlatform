@@ -256,6 +256,25 @@ class SenseHubMCPClient:
             "toggle_automation", {"automation_id": automation_id}
         )
 
+    async def create_automation(self, automation_data: dict) -> dict:
+        """Create a new automation program via MCP tool."""
+        return await self._call_tool("create_automation", automation_data)
+
+    async def update_automation(
+        self, automation_id: int, automation_data: dict
+    ) -> dict:
+        """Update an existing automation program via MCP tool."""
+        return await self._call_tool(
+            "update_automation",
+            {"automation_id": automation_id, **automation_data},
+        )
+
+    async def delete_automation(self, automation_id: int) -> dict:
+        """Delete an automation program via MCP tool."""
+        return await self._call_tool(
+            "delete_automation", {"automation_id": automation_id}
+        )
+
     # =========================================================================
     # Lab Data (MCP-only — no REST API equivalent)
     # =========================================================================
@@ -320,3 +339,44 @@ class SenseHubMCPClient:
         if isinstance(result, list):
             return result
         return result.get("stats", result.get("data", []))
+
+    # =========================================================================
+    # Camera (MCP-only)
+    # =========================================================================
+
+    async def get_cameras(self) -> list:
+        """Get list of cameras with status, model, and stream info."""
+        result = await self._call_tool("get_cameras", {})
+        if isinstance(result, list):
+            return result
+        return result.get("cameras", result.get("data", []))
+
+    async def capture_camera_snapshot(self, camera_id: int) -> dict:
+        """Trigger an immediate snapshot capture on a camera."""
+        return await self._call_tool(
+            "capture_camera_snapshot", {"camera_id": camera_id}
+        )
+
+    async def get_camera_snapshots(
+        self, camera_id: int, limit: int = 42
+    ) -> list:
+        """Get list of stored snapshots with metadata for a camera."""
+        result = await self._call_tool(
+            "get_camera_snapshots", {"camera_id": camera_id, "limit": limit}
+        )
+        if isinstance(result, list):
+            return result
+        return result.get("snapshots", result.get("data", []))
+
+    async def get_camera_snapshot_image(self, filename: str) -> dict:
+        """Get the direct HTTP URL for a snapshot image file."""
+        return await self._call_tool(
+            "get_camera_snapshot_image", {"filename": filename}
+        )
+
+    async def download_snapshot(self, image_url: str) -> bytes:
+        """Download a snapshot image from the hub's HTTP endpoint."""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(image_url)
+            resp.raise_for_status()
+            return resp.content

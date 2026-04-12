@@ -106,7 +106,7 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const ErrorContainer = styled.div`
@@ -119,10 +119,10 @@ const ErrorContainer = styled.div`
 `;
 
 const DetailsCard = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const EmployeeHeader = styled.div`
@@ -131,7 +131,7 @@ const EmployeeHeader = styled.div`
   align-items: flex-start;
   margin-bottom: 32px;
   padding-bottom: 24px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const EmployeeInfo = styled.div`
@@ -141,14 +141,14 @@ const EmployeeInfo = styled.div`
 const EmployeeName = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
 const EmployeeCode = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-family: 'JetBrains Mono', monospace;
 `;
 
@@ -165,15 +165,15 @@ const StatusBadge = styled.span<{ $color: string }>`
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   margin-bottom: 24px;
   overflow-x: auto;
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 12px 24px;
-  background: ${({ $active }) => ($active ? 'white' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#3B82F6' : '#616161')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.textSecondary)};
   border: none;
   border-bottom: 2px solid ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
   font-size: 14px;
@@ -202,7 +202,7 @@ const Section = styled.div`
 const SectionTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
 `;
 
@@ -225,18 +225,18 @@ const DetailItem = styled.div`
 const DetailLabel = styled.span`
   font-size: 12px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const DetailValue = styled.span`
   font-size: 15px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const EmptyText = styled.span`
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-style: italic;
 `;
 
@@ -244,9 +244,9 @@ const Metadata = styled.div`
   display: flex;
   gap: 24px;
   padding-top: 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   font-size: 12px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 // ============================================================================

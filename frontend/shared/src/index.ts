@@ -1,5 +1,5 @@
 // Theme
-export { theme, GlobalStyles } from './theme';
+export { theme, lightTheme, darkTheme, GlobalStyles } from './theme';
 export type { Theme } from './theme';
 
 // Components

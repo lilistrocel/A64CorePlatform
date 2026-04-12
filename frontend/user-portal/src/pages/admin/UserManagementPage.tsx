@@ -392,7 +392,7 @@ const Subtitle = styled.p`
 `;
 
 const FiltersCard = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   padding: ${({ theme }) => theme.spacing.md};
   margin-bottom: ${({ theme }) => theme.spacing.md};
@@ -429,7 +429,7 @@ const FilterSelect = styled.select`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   min-width: 140px;
 
@@ -443,7 +443,7 @@ const ClearButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
   border: 1px solid ${({ theme }) => theme.colors.error[300]};
   border-radius: 6px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.error[600]};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
@@ -494,7 +494,7 @@ const TableRow = styled.tr`
   }
 
   &:nth-child(odd) {
-    background: #ffffff;
+    background: ${({ theme }) => theme.colors.background};
   }
 
   &:hover {
@@ -592,7 +592,7 @@ const SmallButton = styled.button`
   padding: 4px 8px;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   cursor: pointer;
 
@@ -610,7 +610,7 @@ const ActionButton = styled.button`
   padding: 4px 8px;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   cursor: pointer;
   color: ${({ theme }) => theme.colors.textSecondary};
@@ -694,7 +694,7 @@ const PageButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   cursor: pointer;
 
