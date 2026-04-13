@@ -26,6 +26,8 @@ from .core.logging_config import setup_logging
 from .middleware.rate_limit import RateLimitMiddleware
 from .middleware.timing import TimingMiddlewareWithCollector
 from .middleware.division_context import DivisionContextMiddleware
+from .utils.security import hash_password
+from .models.user import UserRole
 
 # Configure structured logging (JSON in production, text in development)
 setup_logging(log_level=settings.LOG_LEVEL, environment=settings.ENVIRONMENT)
@@ -113,6 +115,109 @@ async def root() -> Dict[str, Any]:
         "health": "/api/health"
     }
 
+async def seed_admin() -> None:
+    """Create default super_admin, organization, and division if none exist."""
+    import uuid
+    from datetime import datetime
+
+    db = mongodb.get_database()
+
+    # Check if any super_admin exists
+    existing_admin = await db.users.find_one({"role": UserRole.SUPER_ADMIN.value})
+    if existing_admin:
+        logger.info(f"Super admin already exists: {existing_admin['email']}")
+        return
+
+    admin_email = settings.ADMIN_EMAIL
+    admin_password = settings.ADMIN_PASSWORD
+
+    if not admin_email or not admin_password:
+        logger.warning("ADMIN_EMAIL or ADMIN_PASSWORD not set — skipping admin seed")
+        return
+
+    # Check if the email is already registered (as a non-admin)
+    existing_user = await db.users.find_one({"email": admin_email})
+    if existing_user:
+        # Promote existing user to super_admin
+        await db.users.update_one(
+            {"email": admin_email},
+            {"$set": {"role": UserRole.SUPER_ADMIN.value, "updatedAt": datetime.utcnow()}}
+        )
+        logger.info(f"Promoted existing user to super_admin: {admin_email}")
+        return
+
+    now = datetime.utcnow()
+    org_id = str(uuid.uuid4())
+    division_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+
+    try:
+        # Seed default organization
+        existing_org = await db.organizations.find_one({})
+        if not existing_org:
+            org_doc = {
+                "organizationId": org_id,
+                "name": "Default Organization",
+                "slug": "default",
+                "industries": ["vegetable_fruits"],
+                "logoUrl": None,
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            }
+            await db.organizations.insert_one(org_doc)
+            logger.info(f"Created default organization: {org_id}")
+        else:
+            org_id = existing_org["organizationId"]
+
+        # Seed default division
+        existing_div = await db.divisions.find_one({})
+        if not existing_div:
+            div_doc = {
+                "divisionId": division_id,
+                "organizationId": org_id,
+                "name": "Main Division",
+                "divisionCode": "MAIN-01",
+                "industryType": "vegetable_fruits",
+                "description": "Default division",
+                "settings": {},
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            }
+            await db.divisions.insert_one(div_doc)
+            logger.info(f"Created default division: {division_id}")
+
+        # Create super_admin user linked to the organization
+        user_doc = {
+            "userId": user_id,
+            "email": admin_email,
+            "passwordHash": hash_password(admin_password),
+            "firstName": "Super",
+            "lastName": "Admin",
+            "role": UserRole.SUPER_ADMIN.value,
+            "isActive": True,
+            "isEmailVerified": True,
+            "mfaEnabled": False,
+            "mfaSetupRequired": False,
+            "phone": None,
+            "avatar": None,
+            "timezone": None,
+            "locale": None,
+            "organizationId": org_id,
+            "lastLoginAt": None,
+            "createdAt": now,
+            "updatedAt": now,
+            "deletedAt": None,
+            "metadata": {}
+        }
+        await db.users.insert_one(user_doc)
+        logger.info(f"Created default super_admin account: {admin_email}")
+    except Exception:
+        # Race condition with multiple workers — another worker already created it
+        pass
+
+
 # Startup event
 @app.on_event("startup")
 async def startup_event() -> None:
@@ -156,6 +261,12 @@ async def startup_event() -> None:
         logger.info("Port Manager injected into Module Manager")
     except Exception as e:
         logger.error(f"Failed to initialize Port Manager: {e}")
+
+    # Seed super_admin account if none exists
+    try:
+        await seed_admin()
+    except Exception as e:
+        logger.error(f"Failed to seed admin account: {e}")
 
     # Load plugin modules
     try:

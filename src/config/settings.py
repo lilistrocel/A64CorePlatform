@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     FARM_AI_MAX_TOKENS: int = 2048
     FARM_AI_DAILY_LIMIT: int = 50
 
+    # Admin Seed (auto-create super_admin on first startup)
+    ADMIN_EMAIL: str = "admin@a64platform.com"
+    ADMIN_PASSWORD: str = "SuperAdmin123!"
+
     # Rate Limiting (requests per minute per role)
     RATE_LIMIT_GUEST: int = 30
     RATE_LIMIT_USER: int = 300

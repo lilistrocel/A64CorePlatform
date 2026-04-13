@@ -3,17 +3,16 @@ version: '3.8'
 services:
   # FastAPI Application
   api:
-    container_name: a64core-api-dev
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     environment:
       - ENVIRONMENT=development
       - DEBUG=True
       - MONGODB_URL=mongodb://mongodb:27017
-      - MONGODB_DB_NAME=a64core_db
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-a64core_db}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
@@ -34,6 +33,9 @@ services:
       - WEATHERBIT_ENABLED=true
       # ElevenLabs TTS
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      # Admin seed (auto-creates super_admin on first startup if none exists)
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@a64platform.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-SuperAdmin123!}
       # Uvicorn worker configuration (production: 2 * CPU cores + 1)
       - UVICORN_WORKERS=${UVICORN_WORKERS:-4}
     volumes:
@@ -78,12 +80,11 @@ services:
 
   # MongoDB Database
   mongodb:
-    container_name: a64core-mongodb-dev
     image: mongo:7.0
     ports:
-      - "27017:27017"
+      - "${MONGODB_PORT:-27017}:27017"
     environment:
-      - MONGO_INITDB_DATABASE=a64core_db
+      - MONGO_INITDB_DATABASE=${MONGODB_DB_NAME:-a64core_db}
       - MONGO_APP_USER=${MONGO_APP_USER:-a64core_app}
       - MONGO_APP_PASSWORD=${MONGO_APP_PASSWORD:-changeme_in_production}
     # MongoDB wiredTiger cache: 50% of memory limit (1.5GB of 3GB = ~1.5GB cache)
@@ -118,10 +119,9 @@ services:
 
   # Redis - Caching and Rate Limiting
   redis:
-    container_name: a64core-redis-dev
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redispassword}
     # Redis maxmemory: 256MB with allkeys-lru eviction policy
@@ -154,13 +154,12 @@ services:
 
   # NGINX - Reverse Proxy
   nginx:
-    container_name: a64core-nginx-dev
     image: nginx:1.25-alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
     volumes:
-      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ${NGINX_CONF:-./nginx/nginx.dev.conf}:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./logs/nginx:/var/log/nginx
       - ./nginx/conf.d:/etc/nginx/conf.d:ro  # Module proxy configs (bind mount for easy development)
@@ -191,10 +190,9 @@ services:
 
   # Adminer - Database Management UI
   adminer:
-    container_name: a64core-adminer-dev
     image: adminer:latest
     ports:
-      - "8080:8080"
+      - "${ADMINER_PORT:-8080}:8080"
     networks:
       - a64core-network
     healthcheck:
@@ -209,10 +207,9 @@ services:
 
   # Local Docker Registry - For Module Images
   registry:
-    container_name: a64core-registry-dev
     image: registry:2
     ports:
-      - "5050:5000"
+      - "${REGISTRY_PORT:-5050}:5000"
     environment:
       - REGISTRY_STORAGE_DELETE_ENABLED=true
     volumes:
@@ -234,18 +231,17 @@ services:
 
   # User Portal (Frontend) - Development Mode
   user-portal:
-    container_name: a64core-user-portal-dev
     build:
       context: .
       dockerfile: frontend/user-portal/Dockerfile
       target: development  # Use development stage
       args:
-        - VITE_API_URL=http://localhost/api  # Build-time API URL for local development
+        - VITE_API_URL=${VITE_API_URL:-/api}  # Build-time API URL
     ports:
-      - "5173:5173"  # Vite dev server
+      - "${USER_PORTAL_PORT:-5173}:5173"  # Vite dev server
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost/api  # Runtime API URL (also needed for dev server)
+      - VITE_API_URL=${VITE_API_URL:-/api}  # Runtime API URL
       - VITE_API_TARGET=http://api:8000  # Proxy target for Vite dev server (Docker network)
     volumes:
       - ./frontend/shared:/app/shared  # Hot-reload for shared library
@@ -274,7 +270,6 @@ services:
 
   # Cron Service - Automated Tasks
   cron:
-    container_name: a64core-cron-dev
     build:
       context: ./cron
       dockerfile: Dockerfile
@@ -304,12 +299,11 @@ services:
 
   # IoT Simulator - Simulates greenhouse sensors and relays for testing
   iot-simulator:
-    container_name: a64core-iot-simulator
     build:
       context: ./services/iot-simulator
       dockerfile: Dockerfile
     ports:
-      - "8090:8090"
+      - "${IOT_SIM_PORT:-8090}:8090"
     networks:
       - a64core-network
     restart: unless-stopped
@@ -327,14 +321,13 @@ services:
 
   # Backup Service - Automated MongoDB backups with retention policy
   backup:
-    container_name: a64core-backup
     build:
       context: .
       dockerfile: docker/backup/Dockerfile
     environment:
       - MONGO_HOST=mongodb
       - MONGO_PORT=27017
-      - MONGO_DB=a64core_db
+      - MONGO_DB=${MONGODB_DB_NAME:-a64core_db}
       - MONGO_USER=${MONGO_APP_USER:-a64core_app}
       - MONGO_PASSWORD=${MONGO_APP_PASSWORD:-changeme_in_production}
       - MONGO_AUTH_DB=admin

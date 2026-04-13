@@ -193,6 +193,11 @@ test-subtabs.js
 # Generated mapping files
 scripts/*_mapping.json
 
+# Multi-instance data (keep templates, ignore instance configs with secrets)
+instances/*/
+!instances/_template/
+!instances/instance-manager.sh
+
 # Old data (contains sensitive HR files)
 OldData/
 create-farm-filled.md

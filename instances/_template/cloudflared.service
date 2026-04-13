@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudflare Tunnel (a20core)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=noobcity
+ExecStart=/usr/local/bin/cloudflared tunnel run a20core
+Restart=always
+RestartSec=5
+Environment=HOME=/home/noobcity
+
+[Install]
+WantedBy=multi-user.target
