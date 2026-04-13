@@ -14,6 +14,12 @@ import { farmApi } from '../../services/farmApi';
 import { useUpdateFarm } from '../../hooks/queries/useFarms';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Farm, FarmUpdate, Manager } from '../../types/farm';
+import {
+  LOCATIONS,
+  OTHER_VALUE,
+  getStatesForCountry,
+  resolveDropdownValue,
+} from '../../data/locations';
 
 // ============================================================================
 // VALIDATION SCHEMA
@@ -22,8 +28,7 @@ import type { Farm, FarmUpdate, Manager } from '../../types/farm';
 const farmUpdateSchema = z.object({
   name: z.string().min(1, 'Farm name is required').max(100, 'Name too long'),
   owner: z.string().max(200, 'Owner name too long').optional().nullable(),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
+  state: z.string().min(1, 'State/Province is required'),
   country: z.string().min(1, 'Country is required'),
   latitude: z.number().min(-90, 'Invalid latitude').max(90, 'Invalid latitude').optional().nullable(),
   longitude: z.number().min(-180, 'Invalid longitude').max(180, 'Invalid longitude').optional().nullable(),
@@ -307,17 +312,28 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
     return null;
   };
 
+  // ---- Location dropdown helpers ----
+  // Resolve the initial dropdown values: known values are used directly,
+  // unknown values map to "Other" so the free-text fallback is pre-shown.
+  const knownCountryValues = LOCATIONS.map((c) => c.value);
+  const initialCountryDropdown = resolveDropdownValue(knownCountryValues, farm.location?.country);
+  const initialStateDropdown = resolveDropdownValue(
+    getStatesForCountry(initialCountryDropdown).map((s) => s.value),
+    farm.location?.state,
+  );
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    watch,
   } = useForm<FormData>({
     resolver: zodResolver(farmUpdateSchema),
     defaultValues: {
       name: farm.name,
       owner: farm.owner || '',
-      city: farm.location?.city || '',
+      // Store the raw string as the form value; dropdowns will read it via watch
       state: farm.location?.state || '',
       country: farm.location?.country || '',
       latitude: getCurrentLatitude(),
@@ -329,15 +345,39 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
     },
   });
 
+  // Watch location fields to drive cascading dropdown state
+  const watchedCountry = watch('country');
+  const watchedState = watch('state');
+  // "Other" free-text fallback values — initialised from existing farm data
+  // when the stored value is not in our known lists.
+  const [countryOtherText, setCountryOtherText] = useState<string>(
+    initialCountryDropdown === OTHER_VALUE ? (farm.location?.country ?? '') : '',
+  );
+  const [stateOtherText, setStateOtherText] = useState<string>(
+    initialStateDropdown === OTHER_VALUE ? (farm.location?.state ?? '') : '',
+  );
+
   // Fetch managers when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchManagers();
-      // Reset form with current farm values
+
+      // Re-resolve location dropdown values from the (potentially changed) farm prop
+      const freshKnownCountries = LOCATIONS.map((c) => c.value);
+      const freshCountryDropdown = resolveDropdownValue(freshKnownCountries, farm.location?.country);
+      const freshStateDropdown = resolveDropdownValue(
+        getStatesForCountry(freshCountryDropdown).map((s) => s.value),
+        farm.location?.state,
+      );
+
+      // Pre-fill "Other" text boxes if the stored value is not in the known lists
+      setCountryOtherText(freshCountryDropdown === OTHER_VALUE ? (farm.location?.country ?? '') : '');
+      setStateOtherText(freshStateDropdown === OTHER_VALUE ? (farm.location?.state ?? '') : '');
+
+      // Reset form with current farm values (raw strings, selects derive display from watch)
       reset({
         name: farm.name,
         owner: farm.owner || '',
-        city: farm.location?.city || '',
         state: farm.location?.state || '',
         country: farm.location?.country || '',
         latitude: getCurrentLatitude(),
@@ -366,6 +406,21 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
     }
   };
 
+  // Derived list for cascading dropdown
+  const availableStates = getStatesForCountry(watchedCountry ?? '');
+
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCountry = e.target.value;
+    setValue('country', newCountry === OTHER_VALUE ? countryOtherText || OTHER_VALUE : newCountry);
+    setValue('state', '');
+    setStateOtherText('');
+  };
+
+  const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newState = e.target.value;
+    setValue('state', newState === OTHER_VALUE ? stateOtherText || OTHER_VALUE : newState);
+  };
+
   const onSubmit = async (data: FormData) => {
     // Synchronous ref guard prevents concurrent submissions (double-click protection)
     if (submittingRef.current) return;
@@ -378,7 +433,7 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
         name: data.name,
         owner: data.owner || undefined,
         location: {
-          city: data.city,
+          city: data.state,
           state: data.state,
           country: data.country,
           latitude: data.latitude ?? undefined,
@@ -461,45 +516,73 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
             {/* Location Section */}
             <SectionTitle>Location</SectionTitle>
 
-            <GridRow>
-              <FormGroup>
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  type="text"
-                  placeholder="City"
-                  $hasError={!!errors.city}
-                  disabled={submitting}
-                  {...register('city')}
-                />
-                {errors.city && <ErrorText>{errors.city.message}</ErrorText>}
-              </FormGroup>
-
-              <FormGroup>
-                <Label htmlFor="state">State/Province *</Label>
-                <Input
-                  id="state"
-                  type="text"
-                  placeholder="State"
-                  $hasError={!!errors.state}
-                  disabled={submitting}
-                  {...register('state')}
-                />
-                {errors.state && <ErrorText>{errors.state.message}</ErrorText>}
-              </FormGroup>
-            </GridRow>
-
+            {/* Country → State → City cascading dropdowns */}
             <FormGroup>
               <Label htmlFor="country">Country *</Label>
-              <Input
+              <Select
                 id="country"
-                type="text"
-                placeholder="Country"
                 $hasError={!!errors.country}
                 disabled={submitting}
-                {...register('country')}
-              />
+                value={watchedCountry === OTHER_VALUE ? OTHER_VALUE : (watchedCountry ?? '')}
+                onChange={handleCountryChange}
+              >
+                <option value="">Select a country...</option>
+                {LOCATIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+              {watchedCountry === OTHER_VALUE && (
+                <Input
+                  type="text"
+                  placeholder="Enter country name"
+                  value={countryOtherText}
+                  $hasError={!!errors.country}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    setCountryOtherText(e.target.value);
+                    setValue('country', e.target.value);
+                  }}
+                />
+              )}
               {errors.country && <ErrorText>{errors.country.message}</ErrorText>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="state">State/Province *</Label>
+              <Select
+                id="state"
+                $hasError={!!errors.state}
+                disabled={submitting || !watchedCountry || watchedCountry === OTHER_VALUE}
+                value={watchedState === OTHER_VALUE ? OTHER_VALUE : (watchedState ?? '')}
+                onChange={handleStateChange}
+              >
+                <option value="">
+                  {!watchedCountry || watchedCountry === OTHER_VALUE
+                    ? 'Select a country first'
+                    : 'Select a state/province...'}
+                </option>
+                {availableStates.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+              {watchedState === OTHER_VALUE && (
+                <Input
+                  type="text"
+                  placeholder="Enter state/province name"
+                  value={stateOtherText}
+                  $hasError={!!errors.state}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    setStateOtherText(e.target.value);
+                    setValue('state', e.target.value);
+                  }}
+                />
+              )}
+              {errors.state && <ErrorText>{errors.state.message}</ErrorText>}
             </FormGroup>
 
             {/* GPS Coordinates Section */}

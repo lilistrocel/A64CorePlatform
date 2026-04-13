@@ -15,6 +15,11 @@ import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { CreateFarmFormData, Manager, GeoJSONPolygon, FarmBoundary } from '../../types/farm';
 import { useMapDrawing } from '../../hooks/map/useMapDrawing';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import {
+  LOCATIONS,
+  OTHER_VALUE,
+  getStatesForCountry,
+} from '../../data/locations';
 
 // Lazy load map components for better performance
 const MapContainer = lazy(() => import('../map/MapContainer').then(m => ({ default: m.MapContainer })));
@@ -27,8 +32,7 @@ const DrawingControls = lazy(() => import('../map/DrawingControls').then(m => ({
 const farmSchema = z.object({
   name: z.string().min(1, 'Farm name is required').max(100, 'Name too long'),
   owner: z.string().max(200, 'Owner name too long').optional(),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
+  state: z.string().min(1, 'State/Province is required'),
   country: z.string().min(1, 'Country is required'),
   totalArea: z.preprocess(
     (val) => (val === '' || val === undefined || Number.isNaN(Number(val)) ? undefined : Number(val)),
@@ -337,14 +341,42 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
     resolver: zodResolver(farmSchema),
     defaultValues: {
       isActive: true,
+      country: 'UAE',
+      state: '',
     },
   });
+
+  // Watch location fields to drive cascading dropdown state
+  const watchedCountry = watch('country');
+  const watchedState = watch('state');
+  // Local state for "Other" free-text fallback inputs
+  const [countryOtherText, setCountryOtherText] = useState('');
+  const [stateOtherText, setStateOtherText] = useState('');
 
   // Warn user on page refresh if form has unsaved changes
   useUnsavedChanges(isOpen && isDirty);
 
   // Watch totalArea to sync with polygon
   const watchedTotalArea = watch('totalArea');
+
+  // Derived list for cascading dropdown
+  const availableStates = getStatesForCountry(watchedCountry ?? '');
+
+  /**
+   * When country changes, reset state and city selections.
+   * If the new country is "Other" we also store the text in the form value.
+   */
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCountry = e.target.value;
+    setValue('country', newCountry === OTHER_VALUE ? countryOtherText || OTHER_VALUE : newCountry);
+    setValue('state', '');
+    setStateOtherText('');
+  };
+
+  const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newState = e.target.value;
+    setValue('state', newState === OTHER_VALUE ? stateOtherText || OTHER_VALUE : newState);
+  };
 
   // Handle polygon change from drawing controls
   const handlePolygonChange = useCallback((newPolygon: GeoJSONPolygon | null, areaSquareMeters: number) => {
@@ -396,7 +428,7 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
         name: data.name,
         owner: data.owner,
         location: {
-          city: data.city,
+          city: data.state,
           state: data.state,
           country: data.country,
         },
@@ -411,6 +443,8 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
       reset();
       clearPolygon();
       setShowMap(false);
+      setCountryOtherText('');
+      setStateOtherText('');
       showSuccessToast('Farm created successfully');
       onSuccess?.();
       onClose();
@@ -429,6 +463,8 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
       reset();
       clearPolygon();
       setShowMap(false);
+      setCountryOtherText('');
+      setStateOtherText('');
       onClose();
     }
   };
@@ -477,45 +513,73 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
               {errors.owner && <ErrorText>{errors.owner.message}</ErrorText>}
             </FormGroup>
 
-            <GridRow>
-              <FormGroup>
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  type="text"
-                  placeholder="City"
-                  $hasError={!!errors.city}
-                  disabled={submitting}
-                  {...register('city')}
-                />
-                {errors.city && <ErrorText>{errors.city.message}</ErrorText>}
-              </FormGroup>
-
-              <FormGroup>
-                <Label htmlFor="state">State/Province *</Label>
-                <Input
-                  id="state"
-                  type="text"
-                  placeholder="State"
-                  $hasError={!!errors.state}
-                  disabled={submitting}
-                  {...register('state')}
-                />
-                {errors.state && <ErrorText>{errors.state.message}</ErrorText>}
-              </FormGroup>
-            </GridRow>
-
+            {/* Country → State → City cascading dropdowns */}
             <FormGroup>
               <Label htmlFor="country">Country *</Label>
-              <Input
+              <Select
                 id="country"
-                type="text"
-                placeholder="Country"
                 $hasError={!!errors.country}
                 disabled={submitting}
-                {...register('country')}
-              />
+                value={watchedCountry === OTHER_VALUE ? OTHER_VALUE : (watchedCountry ?? '')}
+                onChange={handleCountryChange}
+              >
+                <option value="">Select a country...</option>
+                {LOCATIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+              {watchedCountry === OTHER_VALUE && (
+                <Input
+                  type="text"
+                  placeholder="Enter country name"
+                  value={countryOtherText}
+                  $hasError={!!errors.country}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    setCountryOtherText(e.target.value);
+                    setValue('country', e.target.value);
+                  }}
+                />
+              )}
               {errors.country && <ErrorText>{errors.country.message}</ErrorText>}
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="state">State/Province *</Label>
+              <Select
+                id="state"
+                $hasError={!!errors.state}
+                disabled={submitting || !watchedCountry || watchedCountry === OTHER_VALUE}
+                value={watchedState === OTHER_VALUE ? OTHER_VALUE : (watchedState ?? '')}
+                onChange={handleStateChange}
+              >
+                <option value="">
+                  {!watchedCountry || watchedCountry === OTHER_VALUE
+                    ? 'Select a country first'
+                    : 'Select a state/province...'}
+                </option>
+                {availableStates.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+              {watchedState === OTHER_VALUE && (
+                <Input
+                  type="text"
+                  placeholder="Enter state/province name"
+                  value={stateOtherText}
+                  $hasError={!!errors.state}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    setStateOtherText(e.target.value);
+                    setValue('state', e.target.value);
+                  }}
+                />
+              )}
+              {errors.state && <ErrorText>{errors.state.message}</ErrorText>}
             </FormGroup>
 
             {/* Map Boundary Section */}

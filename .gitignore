@@ -195,3 +195,5 @@ scripts/*_mapping.json
 
 # Old data (contains sensitive HR files)
 OldData/
+create-farm-filled.md
+farm-dashboard-snapshot.md

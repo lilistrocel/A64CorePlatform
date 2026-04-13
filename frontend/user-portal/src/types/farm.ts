@@ -926,7 +926,6 @@ export interface ManagersResponse {
 export interface CreateFarmFormData {
   name: string;
   owner?: string;
-  city: string;
   state: string;
   country: string;
   totalArea: number;
