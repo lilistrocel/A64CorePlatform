@@ -7,6 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+#### Global Farm Statistics Modal — Number Formatting & Chart Layout - 2026-04-14
+
+**UX Enhancement:** `frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx`
+
+- **Comma thousand-separators** applied across all three tabs via `formatNumber()` / `formatCompact()` from `../../utils`:
+  - Production Timeline: 4 harvest metric cards + chart Tooltip values now display with commas.
+  - Farm Comparison: all numeric table cells (Total Blocks, Active Plantings, Total Yield, Avg Efficiency, Performance, Utilization).
+  - Performance Insights: Top Performing, Farms Needing Attention, Under Performing badge counts.
+- **Production Timeline line-chart Y-axis improvements:**
+  - Tick labels now use compact notation (K/M/B) via `formatCompact(value, 1)` to prevent overflow.
+  - Axis labels ("Daily Yield (kg)", "Cumulative (kg)") moved from `insideLeft`/`insideRight` to `left`/`right` position with `offset: 20`/`30` so they no longer overlap tick numbers.
+  - `YAxis width={50}`, chart margin `{ top: 20, right: 60, left: 50, bottom: 5 }`, label `fontSize: 14`, `fontWeight: 500`.
+
+#### Data-Entry Modal Overlay-Click Protection (40+ modals) - 2026-04-14
+
+**UX Enhancement:** Removed accidental data-loss on outside-click for all data-input and destructive-confirmation modals. Only the explicit close/cancel button now dismisses these modals. View-only and analytics modals are intentionally unchanged.
+
+**Files modified — Farm:**
+- `frontend/user-portal/src/components/farm/AddPlantDataModal.tsx`
+- `frontend/user-portal/src/components/farm/EditPlantDataModal.tsx`
+- `frontend/user-portal/src/components/farm/EditFarmModal.tsx`
+- `frontend/user-portal/src/components/farm/CreateFarmModal.tsx`
+- `frontend/user-portal/src/components/farm/AddVirtualCropModal.tsx`
+- `frontend/user-portal/src/components/farm/PlantAssignmentModal.tsx`
+- `frontend/user-portal/src/components/farm/CreateBlockModal.tsx`
+- `frontend/user-portal/src/components/farm/EditBlockModal.tsx`
+- `frontend/user-portal/src/components/farm/EditFarmBoundaryModal.tsx`
+- `frontend/user-portal/src/components/farm/EmptyVirtualBlockModal.tsx`
+- `frontend/user-portal/src/components/farm/PendingTasksWarningModal.tsx`
+- `frontend/user-portal/src/components/farm/BlockAlertsTab.tsx` (2 embedded modals)
+- `frontend/user-portal/src/components/farm/BlockHarvestsTab.tsx` (2 embedded modals)
+- `frontend/user-portal/src/components/farm/BlockArchivesTab.tsx`
+- `frontend/user-portal/src/components/farm/FarmHistoryTab.tsx` (delete confirmation only)
+
+**Files modified — Dashboard / Operations / Marketing / Mushroom / Common:**
+- `frontend/user-portal/src/components/farm/dashboard/QuickPlanModal.tsx`
+- `frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx`
+- `frontend/user-portal/src/components/operations/TaskCompletionModal.tsx`
+- `frontend/user-portal/src/components/operations/HarvestEntryModal.tsx`
+- `frontend/user-portal/src/components/operations/ReportAlertModal.tsx`
+- `frontend/user-portal/src/components/marketing/CampaignForm.tsx`
+- `frontend/user-portal/src/components/marketing/BudgetForm.tsx`
+- `frontend/user-portal/src/components/marketing/ChannelForm.tsx`
+- `frontend/user-portal/src/components/marketing/EventForm.tsx`
+- `frontend/user-portal/src/components/mushroom/HarvestEntryModal.tsx`
+- `frontend/user-portal/src/components/common/UnsavedChangesDialog.tsx`
+
+**Files modified — Pages (Sales / Logistics / Inventory / Mushroom / Settings):**
+- `frontend/user-portal/src/pages/sales/SalesOrdersPage.tsx`
+- `frontend/user-portal/src/pages/sales/InventoryPage.tsx`
+- `frontend/user-portal/src/pages/sales/PurchaseOrdersPage.tsx`
+- `frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx`
+- `frontend/user-portal/src/pages/logistics/RouteManagementPage.tsx`
+- `frontend/user-portal/src/pages/logistics/VehicleManagementPage.tsx`
+- `frontend/user-portal/src/pages/inventory/HarvestInventoryList.tsx`
+- `frontend/user-portal/src/pages/inventory/InputInventoryList.tsx`
+- `frontend/user-portal/src/pages/inventory/AssetInventoryList.tsx`
+- `frontend/user-portal/src/pages/inventory/WasteInventoryList.tsx`
+- `frontend/user-portal/src/pages/mushroom/MushroomStrainLibrary.tsx`
+- `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx`
+- `frontend/user-portal/src/pages/settings/Settings.tsx` (regenerate backup codes modal)
+
+**Technique:** Removed `onClick={handleOverlayClick}` / `onClick={onClose}` / inline `(e) => e.target === e.currentTarget && onClose()` handlers from Overlay/Modal/Backdrop wrapper elements. `stopPropagation` on the inner modal container is preserved.
+
+### Fixed
+
+#### Block Monitor — Portal Event Bubbling & Analytics Modal Layout Flash - 2026-04-14
+
+1. **Portal event bubbling (CompactBlockCard.tsx)**
+   - `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx`
+   - **Problem:** Modals rendered via `createPortal` sat inside `<Card>` in the React tree. React synthetic events bubble through the React tree (not the DOM), so clicks inside any modal also fired the Card's `onClick`, causing BlockDetailsModal to open on top of whichever modal the user had triggered (e.g. Stats button opened Analytics + Details simultaneously).
+   - **Fix:** Moved `createPortal(...)` call outside the `<Card>` JSX so portal content is no longer a React child of Card — events inside portals no longer bubble to Card's handler.
+
+2. **Analytics modal layout flash (BlockAnalyticsModal.tsx)**
+   - `frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx`
+   - **Problem:** `ModalContainer` used `max-height: 90vh`. On open, the modal sized itself tightly around the loading spinner, then jumped to full size once data arrived, causing a visible flash/grow animation.
+   - **Fix:** Changed to `height: 90vh` (and `95vh` on mobile breakpoint) so the modal occupies a fixed height from the moment it opens, eliminating the layout shift.
+
+#### HR Dashboard 500 Error — Invalid Employee Email - 2026-04-14
+
+`GET /api/v1/hr/dashboard` was returning HTTP 500 because employee E-0084 had an invalid email address (`emp.mohammed.sohag.mohammed.ruhul..21425eb3@a64farms.ae` — note the `..`) which caused Pydantic `EmailStr` validation to raise `ValidationError` during `Employee(**doc)` deserialization, crashing the entire endpoint.
+
+Three-layer fix:
+
+1. **Data fix (MongoDB direct):** Corrected the double-dot in employee E-0084's email (`..` → `.`). No code change — documented here for traceability.
+
+2. **Seeding script fix** — `scripts/data_import/2026_04_07/stage8_hr_payroll.py` (lines 270-275):
+   - **Root cause:** `slug[:30]` truncation could land on a `.` boundary, making the f-string concatenation produce `..` in the generated email address.
+   - **Fix:** Added a second dot-collapse and strip step *after* the `[:30]` slice to ensure no double-dots or leading/trailing dots survive into the final email string.
+
+3. **Endpoint resilience** — `src/modules/hr/services/employee/employee_repository.py`:
+   - Added `_build_employee_safe()` helper that catches `pydantic.ValidationError`, logs the offending `employeeCode` plus full error details, and skips the invalid row rather than crashing the endpoint.
+   - Applied to `get_all()` and `search()` (which return lists — one bad row should not prevent all others from loading).
+   - Single-record lookups (`get_employee_by_id`) deliberately left to raise — a specific-record fetch should fail loudly on corrupt data rather than silently return `None`.
+
 ### Added
 
 #### Default Inventory System (Farm Management Module v1.10.0) - 2026-01-22

@@ -345,13 +345,6 @@ export function EditBlockModal({ block, farmId, farmBoundary, farmLocation, onCl
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && !loading) {
-      setShowMap(false);
-      onClose();
-    }
-  };
-
   const handleClose = () => {
     if (!loading) {
       setShowMap(false);
@@ -362,7 +355,7 @@ export function EditBlockModal({ block, farmId, farmBoundary, farmLocation, onCl
   const hasBoundary = !!block.boundary || !!polygon;
 
   return (
-    <Overlay onClick={handleOverlayClick}>
+    <Overlay>
       <Modal>
         <Header>
           <Title>Edit Block</Title>

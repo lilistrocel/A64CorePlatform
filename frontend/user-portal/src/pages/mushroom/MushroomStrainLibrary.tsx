@@ -302,7 +302,7 @@ export function MushroomStrainLibrary() {
 
       {/* Create / Edit Modal */}
       {showModal && (
-        <Backdrop onClick={handleClose} role="dialog" aria-modal="true" aria-labelledby="strain-modal-title">
+        <Backdrop role="dialog" aria-modal="true" aria-labelledby="strain-modal-title">
           <ModalBox onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle id="strain-modal-title">

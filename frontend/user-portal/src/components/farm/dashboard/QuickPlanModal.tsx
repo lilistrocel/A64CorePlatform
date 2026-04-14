@@ -67,7 +67,7 @@ export function QuickPlanModal({ isOpen, onClose, block, mode, onConfirm }: Quic
   if (!isOpen) return null;
 
   return createPortal(
-    <Overlay onClick={onClose}>
+    <Overlay>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>

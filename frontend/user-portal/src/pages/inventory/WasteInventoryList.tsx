@@ -792,7 +792,7 @@ const WasteInventoryList: React.FC = () => {
 
       {/* Disposal Update Modal */}
       {showDisposalModal && selectedItem && (
-        <ModalOverlay onClick={() => setShowDisposalModal(false)}>
+        <ModalOverlay>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>Update Disposal Information</ModalTitle>
 

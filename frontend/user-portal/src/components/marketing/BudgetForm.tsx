@@ -65,7 +65,7 @@ export function BudgetForm({ budget, onClose }: BudgetFormProps) {
   };
 
   return (
-    <Overlay onClick={onClose}>
+    <Overlay>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Title>{budget ? 'Edit Budget' : 'Create Budget'}</Title>
         <Form onSubmit={handleSubmit}>

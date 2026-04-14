@@ -10,10 +10,31 @@ from uuid import UUID
 from datetime import datetime
 import logging
 
+from pydantic import ValidationError
+
 from src.modules.hr.models.employee import Employee, EmployeeCreate, EmployeeUpdate, EmployeeStatus
 from src.modules.hr.services.database import hr_db
 
 logger = logging.getLogger(__name__)
+
+
+def _build_employee_safe(employee_doc: dict) -> Optional[Employee]:
+    """
+    Instantiate Employee from a Mongo document, returning None if the row is
+    malformed (e.g. email with '..' that fails Pydantic's EmailStr validator).
+
+    Logs the skipped row so bad data doesn't silently disappear — callers can
+    surface a count or trigger an admin alert.
+    """
+    try:
+        return Employee(**employee_doc)
+    except ValidationError as exc:
+        logger.error(
+            "Skipping malformed employee row employeeCode=%s errors=%s",
+            employee_doc.get("employeeCode"),
+            exc.errors(),
+        )
+        return None
 
 
 class EmployeeRepository:
@@ -146,7 +167,9 @@ class EmployeeRepository:
             # Convert datetime back to date
             if "hireDate" in employee_doc and isinstance(employee_doc["hireDate"], datetime):
                 employee_doc["hireDate"] = employee_doc["hireDate"].date()
-            employees.append(Employee(**employee_doc))
+            employee = _build_employee_safe(employee_doc)
+            if employee is not None:
+                employees.append(employee)
 
         return employees, total
 
@@ -188,7 +211,9 @@ class EmployeeRepository:
             # Convert datetime back to date
             if "hireDate" in employee_doc and isinstance(employee_doc["hireDate"], datetime):
                 employee_doc["hireDate"] = employee_doc["hireDate"].date()
-            employees.append(Employee(**employee_doc))
+            employee = _build_employee_safe(employee_doc)
+            if employee is not None:
+                employees.append(employee)
 
         return employees, total
 

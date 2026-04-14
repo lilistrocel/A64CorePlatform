@@ -699,12 +699,6 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
   const usedArea = (block.area || 0) - (block.availableArea || 0);
   const totalArea = block.area || 0;
   const nextVirtualCode = block.blockCode
@@ -712,7 +706,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
     : 'N/A';
 
   const modalContent = (
-    <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
+    <Overlay $isOpen={isOpen}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Add Additional Crop to Block</ModalTitle>

@@ -756,7 +756,7 @@ const ModalContainer = styled.div`
   border-radius: 16px;
   width: 100%;
   max-width: 1200px;
-  max-height: 90vh;
+  height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
@@ -764,7 +764,7 @@ const ModalContainer = styled.div`
 
   @media (max-width: 768px) {
     max-width: 100%;
-    max-height: 95vh;
+    height: 95vh;
   }
 `;
 

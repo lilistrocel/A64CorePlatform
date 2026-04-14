@@ -109,7 +109,7 @@ export function UnsavedChangesDialog() {
   }
 
   return (
-    <Overlay onClick={context.cancelNavigation}>
+    <Overlay>
       <Dialog onClick={(e) => e.stopPropagation()}>
         <IconContainer>&#9888;</IconContainer>
         <Title>You have unsaved changes</Title>

@@ -82,7 +82,7 @@ export function HarvestEntryModal({
   if (!isOpen) return null;
 
   return (
-    <Backdrop onClick={handleClose} role="dialog" aria-modal="true" aria-label="Log Harvest">
+    <Backdrop role="dialog" aria-modal="true" aria-label="Log Harvest">
       <ModalBox onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Log Harvest</ModalTitle>

@@ -269,8 +269,11 @@ def make_employee_email(name: str, emp_uuid: str) -> str:
     """
     slug = re.sub(r"[^a-z0-9]", ".", normalize_name(name))
     slug = re.sub(r"\.{2,}", ".", slug).strip(".")
+    # Truncate FIRST, then re-collapse/trim — otherwise slug[:30] can end with '.'
+    # and the f-string concatenation below produces '..' (an invalid email per RFC 5322).
+    slug = re.sub(r"\.{2,}", ".", slug[:30]).strip(".")
     short_id = emp_uuid.split("-")[0]
-    return f"emp.{slug[:30]}.{short_id}@a64farms.ae"
+    return f"emp.{slug}.{short_id}@a64farms.ae"
 
 
 # ---------------------------------------------------------------------------

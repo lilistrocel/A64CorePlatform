@@ -66,7 +66,7 @@ export function ChannelForm({ channel, onClose }: ChannelFormProps) {
   };
 
   return (
-    <Overlay onClick={onClose}>
+    <Overlay>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Title>{channel ? 'Edit Channel' : 'Create Channel'}</Title>
         <Form onSubmit={handleSubmit}>

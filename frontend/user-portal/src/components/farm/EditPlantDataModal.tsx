@@ -727,12 +727,6 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
   const toggleFarmType = (farmType: string) => {
     const current = selectedFarmTypes;
     const updated = current.includes(farmType)
@@ -744,7 +738,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
   if (!plantData) return null;
 
   return (
-    <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
+    <Overlay $isOpen={isOpen}>
       <Modal>
         <ModalHeader>
           <ModalHeaderContent>

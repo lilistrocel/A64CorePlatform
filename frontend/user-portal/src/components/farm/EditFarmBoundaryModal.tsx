@@ -229,12 +229,6 @@ export function EditFarmBoundaryModal({ farm, onClose, onUpdate }: EditFarmBound
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && !loading) {
-      onClose();
-    }
-  };
-
   // Determine initial map center
   const getInitialCenter = () => {
     if (farm.boundary?.center) {
@@ -255,7 +249,7 @@ export function EditFarmBoundaryModal({ farm, onClose, onUpdate }: EditFarmBound
   const hasBoundary = !!farm.boundary || !!polygon;
 
   return (
-    <Overlay onClick={handleOverlayClick}>
+    <Overlay>
       <Modal>
         <Header>
           <Title>Edit Farm Boundary</Title>

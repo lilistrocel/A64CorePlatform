@@ -693,7 +693,7 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
 
       {/* Delete Confirmation Modal */}
       {harvestToDelete && (
-        <Overlay onClick={(e) => e.target === e.currentTarget && !deleting && setHarvestToDelete(null)}>
+        <Overlay>
           <Modal>
             <ModalTitle>Delete Harvest Record</ModalTitle>
             <ConfirmModalContent>
@@ -771,7 +771,7 @@ function RecordHarvestModal({ blockId, onClose, onRecord }: RecordHarvestModalPr
   };
 
   return (
-    <Overlay onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <Overlay>
       <Modal>
         <ModalTitle>Record Harvest</ModalTitle>
         <Form onSubmit={handleSubmit}>

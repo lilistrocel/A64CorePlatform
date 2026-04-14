@@ -28,7 +28,7 @@ import {
 import { useGlobalAnalytics } from '../../hooks/farm/useGlobalAnalytics';
 import type { TimePeriod, FarmSummary } from '../../types/global-analytics';
 import { TIME_PERIOD_OPTIONS } from '../../types/global-analytics';
-import { formatNumber } from '../../utils';
+import { formatNumber, formatCompact } from '../../utils';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -412,16 +412,16 @@ function ComparisonTab({ analytics }: { analytics: any }) {
               {sortedFarms.map((farm) => (
                 <TableRow key={farm.farmId}>
                   <TableCell $bold>{farm.farmName}</TableCell>
-                  <TableCell>{farm.totalBlocks}</TableCell>
-                  <TableCell>{farm.activePlantings}</TableCell>
-                  <TableCell>{farm.totalYieldKg.toFixed(1)}</TableCell>
-                  <TableCell>{farm.avgYieldEfficiency.toFixed(1)}</TableCell>
+                  <TableCell>{formatNumber(farm.totalBlocks)}</TableCell>
+                  <TableCell>{formatNumber(farm.activePlantings)}</TableCell>
+                  <TableCell>{formatNumber(farm.totalYieldKg, { decimals: 1 })}</TableCell>
+                  <TableCell>{formatNumber(farm.avgYieldEfficiency, { decimals: 1 })}</TableCell>
                   <TableCell>
                     <PerformanceScore $color={getPerformanceColor(farm.overallPerformanceScore)}>
-                      {farm.overallPerformanceScore.toFixed(0)}
+                      {formatNumber(farm.overallPerformanceScore, { decimals: 0 })}
                     </PerformanceScore>
                   </TableCell>
-                  <TableCell>{farm.currentUtilization.toFixed(0)}</TableCell>
+                  <TableCell>{formatNumber(farm.currentUtilization, { decimals: 0 })}</TableCell>
                 </TableRow>
               ))}
             </tbody>
@@ -458,18 +458,43 @@ function TimelineTab({ analytics }: { analytics: any }) {
             <SectionTitle>Production Timeline</SectionTitle>
             <ChartContainer>
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={timelineWithCumulative}>
+                <LineChart data={timelineWithCumulative} margin={{ top: 20, right: 60, left: 50, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
                     tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   />
-                  <YAxis yAxisId="left" label={{ value: 'Daily Yield (kg)', angle: -90, position: 'insideLeft' }} />
-                  <YAxis yAxisId="right" orientation="right" label={{ value: 'Cumulative (kg)', angle: 90, position: 'insideRight' }} />
+                  <YAxis
+                    yAxisId="left"
+                    width={50}
+                    tickFormatter={(value) => formatCompact(value, 1)}
+                    label={{
+                      value: 'Daily Yield (kg)',
+                      angle: -90,
+                      position: 'left',
+                      offset: 20,
+                      style: { textAnchor: 'middle', fontSize: 14, fontWeight: 500 },
+                    }}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    width={50}
+                    tickFormatter={(value) => formatCompact(value, 1)}
+                    label={{
+                      value: 'Cumulative (kg)',
+                      angle: 90,
+                      position: 'right',
+                      offset: 30,
+                      style: { textAnchor: 'middle', fontSize: 14, fontWeight: 500 },
+                    }}
+                  />
                   <Tooltip
                     labelFormatter={(value) => new Date(value).toLocaleDateString()}
                     formatter={(value: number, name: string) => {
-                      if (name === 'Daily Yield' || name === 'Cumulative Yield') return [`${value.toFixed(2)} kg`, name];
+                      if (name === 'Daily Yield' || name === 'Cumulative Yield') {
+                        return [formatNumber(value, { decimals: 2, suffix: ' kg' }), name];
+                      }
                       return [value, name];
                     }}
                   />
@@ -487,25 +512,27 @@ function TimelineTab({ analytics }: { analytics: any }) {
             <MetricsGrid>
               <MetricCard>
                 <MetricIcon>🌾</MetricIcon>
-                <MetricValue>{analytics.yieldTimeline.reduce((sum: number, p: any) => sum + p.harvestCount, 0)}</MetricValue>
+                <MetricValue>{formatNumber(analytics.yieldTimeline.reduce((sum: number, p: any) => sum + p.harvestCount, 0))}</MetricValue>
                 <MetricLabel>Total Harvests</MetricLabel>
               </MetricCard>
               <MetricCard>
                 <MetricIcon>🏞️</MetricIcon>
-                <MetricValue>{analytics.yieldTimeline.reduce((sum: number, p: any) => sum + p.farmCount, 0) / analytics.yieldTimeline.length}</MetricValue>
+                <MetricValue>
+                  {formatNumber(analytics.yieldTimeline.reduce((sum: number, p: any) => sum + p.farmCount, 0) / analytics.yieldTimeline.length, { decimals: 1 })}
+                </MetricValue>
                 <MetricLabel>Avg Farms Harvesting</MetricLabel>
               </MetricCard>
               <MetricCard>
                 <MetricIcon>📊</MetricIcon>
                 <MetricValue>
-                  {(analytics.yieldTimeline.reduce((sum: number, p: any) => sum + p.totalYieldKg, 0) / analytics.yieldTimeline.length).toFixed(1)} kg
+                  {formatNumber(analytics.yieldTimeline.reduce((sum: number, p: any) => sum + p.totalYieldKg, 0) / analytics.yieldTimeline.length, { decimals: 1, suffix: ' kg' })}
                 </MetricValue>
                 <MetricLabel>Avg Daily Yield</MetricLabel>
               </MetricCard>
               <MetricCard>
                 <MetricIcon>🔝</MetricIcon>
                 <MetricValue>
-                  {Math.max(...analytics.yieldTimeline.map((p: any) => p.totalYieldKg)).toFixed(1)} kg
+                  {formatNumber(Math.max(...analytics.yieldTimeline.map((p: any) => p.totalYieldKg)), { decimals: 1, suffix: ' kg' })}
                 </MetricValue>
                 <MetricLabel>Peak Daily Yield</MetricLabel>
               </MetricCard>
@@ -593,9 +620,9 @@ function InsightsTab({ analytics }: { analytics: any }) {
                 <PerformerInfo>
                   <PerformerName>{farm.farmName}</PerformerName>
                   <PerformerDetails>
-                    <span>Performance: {farm.overallPerformanceScore.toFixed(0)}/100</span>
-                    <span>Yield: {farm.totalYieldKg.toFixed(1)} kg</span>
-                    <span>Efficiency: {farm.avgYieldEfficiency.toFixed(1)}%</span>
+                    <span>Performance: {formatNumber(farm.overallPerformanceScore, { decimals: 0 })}/100</span>
+                    <span>Yield: {formatNumber(farm.totalYieldKg, { decimals: 1, suffix: ' kg' })}</span>
+                    <span>Efficiency: {formatNumber(farm.avgYieldEfficiency, { decimals: 1, suffix: '%' })}</span>
                   </PerformerDetails>
                 </PerformerInfo>
               </PerformerItem>
@@ -615,10 +642,10 @@ function InsightsTab({ analytics }: { analytics: any }) {
                   <AttentionName>{farm.farmName}</AttentionName>
                   <AttentionDetails>
                     <PerformanceBadge $score={farm.overallPerformanceScore}>
-                      Performance: {farm.overallPerformanceScore.toFixed(0)}%
+                      Performance: {formatNumber(farm.overallPerformanceScore, { decimals: 0, suffix: '%' })}
                     </PerformanceBadge>
                     {farm.currentUtilization < 50 && (
-                      <UtilizationBadge>Low Utilization: {farm.currentUtilization.toFixed(0)}%</UtilizationBadge>
+                      <UtilizationBadge>Low Utilization: {formatNumber(farm.currentUtilization, { decimals: 0, suffix: '%' })}</UtilizationBadge>
                     )}
                   </AttentionDetails>
                 </AttentionInfo>
@@ -638,13 +665,13 @@ function InsightsTab({ analytics }: { analytics: any }) {
                 <UnderPerformerName>{farm.farmName}</UnderPerformerName>
                 <UnderPerformerMetrics>
                   <MetricBadge $color={getPerformanceColor(farm.overallPerformanceScore)}>
-                    Score: {farm.overallPerformanceScore.toFixed(0)}
+                    Score: {formatNumber(farm.overallPerformanceScore, { decimals: 0 })}
                   </MetricBadge>
                   <MetricBadge $color="#757575">
-                    Yield: {farm.totalYieldKg.toFixed(1)} kg
+                    Yield: {formatNumber(farm.totalYieldKg, { decimals: 1, suffix: ' kg' })}
                   </MetricBadge>
                   <MetricBadge $color="#757575">
-                    Efficiency: {farm.avgYieldEfficiency.toFixed(1)}%
+                    Efficiency: {formatNumber(farm.avgYieldEfficiency, { decimals: 1, suffix: '%' })}
                   </MetricBadge>
                 </UnderPerformerMetrics>
               </UnderPerformerItem>

@@ -56,7 +56,7 @@ export function TaskCompletionModal({ isOpen, task, onClose, onComplete }: TaskC
   const formatStateName = (state: string) => state.toUpperCase();
 
   return (
-    <Overlay onClick={onClose}>
+    <Overlay>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Header>
           <Title>Complete Task</Title>

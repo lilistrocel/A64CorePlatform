@@ -230,7 +230,7 @@ export function MushroomFacilityManager() {
 
       {/* ── CREATE FACILITY MODAL ── */}
       {showCreateFacility && (
-        <Backdrop onClick={() => setShowCreateFacility(false)} role="dialog" aria-modal="true">
+        <Backdrop role="dialog" aria-modal="true">
           <ModalBox onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>New Growing Facility</ModalTitle>
@@ -344,7 +344,7 @@ export function MushroomFacilityManager() {
 
       {/* ── CREATE ROOM MODAL ── */}
       {showCreateRoom && selectedFacility && (
-        <Backdrop onClick={() => setShowCreateRoom(false)} role="dialog" aria-modal="true">
+        <Backdrop role="dialog" aria-modal="true">
           <ModalBox onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Add Room to {selectedFacility.name}</ModalTitle>

@@ -375,7 +375,7 @@ function AddAssetModal({ farms, onClose, onSubmit }: AddAssetModalProps) {
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Add Farm Asset</ModalTitle>
@@ -723,7 +723,7 @@ function EditAssetModal({ asset, onClose, onSubmit }: EditAssetModalProps) {
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Edit Asset</ModalTitle>

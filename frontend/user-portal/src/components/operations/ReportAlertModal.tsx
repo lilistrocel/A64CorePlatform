@@ -99,7 +99,7 @@ export function ReportAlertModal({
 
   return (
     <>
-      <Overlay onClick={handleClose} />
+      <Overlay />
       <Modal>
         <ModalHeader>
           <ModalTitle>🚨 Report Issue</ModalTitle>

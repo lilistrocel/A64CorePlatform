@@ -369,7 +369,7 @@ function AddHarvestModal({
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Add Harvest Inventory</ModalTitle>
@@ -562,7 +562,7 @@ function EditHarvestModal({
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Edit: {item.plantName}</ModalTitle>

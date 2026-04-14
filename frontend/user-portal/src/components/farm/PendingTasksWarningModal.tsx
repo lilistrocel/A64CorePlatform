@@ -51,7 +51,7 @@ export function PendingTasksWarningModal({
   };
 
   return (
-    <Overlay onClick={onCancel}>
+    <Overlay>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Header>
           <WarningIcon>⚠️</WarningIcon>

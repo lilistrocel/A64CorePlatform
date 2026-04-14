@@ -510,7 +510,7 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && archiveToDelete && (
-        <ModalOverlay onClick={handleCancelDelete}>
+        <ModalOverlay>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               <span>⚠️</span>

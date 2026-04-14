@@ -328,7 +328,7 @@ export function PurchaseOrdersPage() {
       )}
 
       {isModalOpen && (
-        <Modal onClick={handleCancel}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>{editingPO ? 'Edit Purchase Order' : 'Create New Purchase Order'}</ModalTitle>

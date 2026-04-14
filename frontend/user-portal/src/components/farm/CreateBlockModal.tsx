@@ -330,14 +330,6 @@ export function CreateBlockModal({ farmId, farmBoundary, farmLocation, onClose, 
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && !loading) {
-      clearPolygon();
-      setShowMap(false);
-      onClose();
-    }
-  };
-
   const handleClose = () => {
     if (!loading) {
       clearPolygon();
@@ -347,7 +339,7 @@ export function CreateBlockModal({ farmId, farmBoundary, farmLocation, onClose, 
   };
 
   return (
-    <Overlay onClick={handleOverlayClick}>
+    <Overlay>
       <Modal>
         <Header>
           <Title>Add New Block</Title>

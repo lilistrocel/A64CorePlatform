@@ -73,7 +73,7 @@ export function ResolveAlertModal({
   if (!isOpen) return null;
 
   return (
-    <Overlay onClick={onClose}>
+    <Overlay>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <Header>
           <Title>Resolve Alert</Title>

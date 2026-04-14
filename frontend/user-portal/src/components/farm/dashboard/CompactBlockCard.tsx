@@ -443,65 +443,67 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           )}
         </QuickActions>
       )}
-
-      {/* Render modals outside the Card using Portal to prevent mouse event issues */}
-      {createPortal(
-        <>
-          {/* Quick Plan Modal (for Plan and Plant actions) */}
-          <QuickPlanModal
-            isOpen={showPlanModal}
-            onClose={() => setShowPlanModal(false)}
-            block={block}
-            mode={planMode}
-            onConfirm={handlePlanConfirm}
-          />
-
-          {/* Resolve Alert Modal */}
-          <ResolveAlertModal
-            isOpen={showResolveAlertModal}
-            onClose={() => setShowResolveAlertModal(false)}
-            farmId={farmId}
-            blockId={block.blockId}
-            blockName={block.name || block.blockCode}
-            alerts={block.activeAlerts}
-            onSuccess={() => {
-              setShowResolveAlertModal(false);
-              onUpdate?.();
-            }}
-          />
-
-          {/* Block Details Modal */}
-          <BlockDetailsModal
-            isOpen={showBlockDetailsModal}
-            onClose={() => setShowBlockDetailsModal(false)}
-            block={block}
-            farmId={farmId}
-          />
-
-          {/* Block Harvest Entry Modal */}
-          {showHarvestModal && (
-            <BlockHarvestEntryModal
-              isOpen={showHarvestModal}
-              farmId={farmId}
-              blockId={block.blockId}
-              blockCode={block.blockCode}
-              blockName={block.name}
-              onClose={() => setShowHarvestModal(false)}
-              onComplete={handleHarvestComplete}
-            />
-          )}
-
-          {/* Block Analytics Modal */}
-          <BlockAnalyticsModal
-            isOpen={showAnalyticsModal}
-            onClose={() => setShowAnalyticsModal(false)}
-            blockId={block.blockId}
-            farmId={farmId}
-          />
-        </>,
-        document.body
-      )}
     </Card>
+
+    {/* Modals rendered outside the Card in the React tree so their events do
+        not bubble up into Card.onClick (which would re-trigger handleCardClick
+        and open BlockDetailsModal on top of the intended modal). */}
+    {createPortal(
+      <>
+        {/* Quick Plan Modal (for Plan and Plant actions) */}
+        <QuickPlanModal
+          isOpen={showPlanModal}
+          onClose={() => setShowPlanModal(false)}
+          block={block}
+          mode={planMode}
+          onConfirm={handlePlanConfirm}
+        />
+
+        {/* Resolve Alert Modal */}
+        <ResolveAlertModal
+          isOpen={showResolveAlertModal}
+          onClose={() => setShowResolveAlertModal(false)}
+          farmId={farmId}
+          blockId={block.blockId}
+          blockName={block.name || block.blockCode}
+          alerts={block.activeAlerts}
+          onSuccess={() => {
+            setShowResolveAlertModal(false);
+            onUpdate?.();
+          }}
+        />
+
+        {/* Block Details Modal */}
+        <BlockDetailsModal
+          isOpen={showBlockDetailsModal}
+          onClose={() => setShowBlockDetailsModal(false)}
+          block={block}
+          farmId={farmId}
+        />
+
+        {/* Block Harvest Entry Modal */}
+        {showHarvestModal && (
+          <BlockHarvestEntryModal
+            isOpen={showHarvestModal}
+            farmId={farmId}
+            blockId={block.blockId}
+            blockCode={block.blockCode}
+            blockName={block.name}
+            onClose={() => setShowHarvestModal(false)}
+            onComplete={handleHarvestComplete}
+          />
+        )}
+
+        {/* Block Analytics Modal */}
+        <BlockAnalyticsModal
+          isOpen={showAnalyticsModal}
+          onClose={() => setShowAnalyticsModal(false)}
+          blockId={block.blockId}
+          farmId={farmId}
+        />
+      </>,
+      document.body
+    )}
     </>
   );
 }

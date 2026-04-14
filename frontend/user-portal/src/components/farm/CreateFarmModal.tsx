@@ -469,14 +469,8 @@ export function CreateFarmModal({ isOpen, onClose, onSuccess }: CreateFarmModalP
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
   return (
-    <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
+    <Overlay $isOpen={isOpen}>
       <Modal>
         <ModalHeader>
           <ModalTitle>Create New Farm</ModalTitle>

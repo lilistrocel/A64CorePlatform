@@ -1144,7 +1144,7 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
       )}
 
       {/* Delete Confirmation Modal */}
-      <ModalOverlay $isOpen={showDeleteModal} onClick={handleCloseModal}>
+      <ModalOverlay $isOpen={showDeleteModal}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <ModalHeader>
             <ModalTitle>Delete Archived Cycle</ModalTitle>

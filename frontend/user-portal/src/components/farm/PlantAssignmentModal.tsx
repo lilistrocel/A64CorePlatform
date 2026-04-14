@@ -662,14 +662,8 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
   const modalContent = (
-    <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
+    <Overlay $isOpen={isOpen}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>🌱 Assign Plant to Block</ModalTitle>

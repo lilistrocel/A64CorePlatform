@@ -69,7 +69,7 @@ export function EventForm({ event, onClose }: EventFormProps) {
   };
 
   return (
-    <Overlay onClick={onClose}>
+    <Overlay>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Title>{event ? 'Edit Event' : 'Create Event'}</Title>
         <Form onSubmit={handleSubmit}>

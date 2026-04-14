@@ -39,10 +39,10 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ## Current Versions
 
-**Last Updated:** 2025-10-30
+**Last Updated:** 2026-04-14
 
 ### Platform Version
-**A64 Core Platform:** `1.5.0`
+**A64 Core Platform:** `1.10.0` (Unreleased)
 
 ### API Versions
 | API Component | Version | Status | Supported Until |
@@ -89,7 +89,29 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ### Platform Version History
 
-#### v1.9.0 - 2025-11-23 (Current - Unreleased)
+#### v1.10.0 - 2026-04-14 (Unreleased)
+**Type:** Minor Release — UX Polish & Bug Fixes (Frontend + HR Backend)
+
+**Changed:**
+- **Global Farm Statistics Modal number formatting** (`GlobalFarmAnalyticsModal.tsx`): comma thousand-separators across Production Timeline, Farm Comparison, and Performance Insights tabs; Y-axis ticks use compact notation (K/M/B); axis labels repositioned to `left`/`right` with proper offsets so they no longer overlap tick numbers.
+- **Overlay-click protection for 40+ data-entry modals**: clicking the backdrop no longer dismisses modals that contain unsaved form data. Only the explicit close/cancel button dismisses. View-only and analytics modals intentionally unchanged. Affects farm, operations, marketing, mushroom, inventory, sales, logistics, and settings pages.
+
+**Fixed:**
+- **Block Monitor portal event bubbling** (`CompactBlockCard.tsx`): moved `createPortal` call outside `<Card>` JSX so React synthetic events from inside portals no longer bubble to Card's onClick handler. Previously, any Stats/Alert button opened both the target modal and BlockDetailsModal simultaneously.
+- **Block Analytics Modal layout flash** (`BlockAnalyticsModal.tsx`): changed `max-height: 90vh` to `height: 90vh` (mobile: `95vh`) so the modal does not jump from spinner-sized to full-height when data loads.
+- **HR Dashboard HTTP 500** (`GET /api/v1/hr/dashboard`): employee E-0084 had `..` in email address, failing Pydantic `EmailStr` validation and crashing the entire endpoint. Fixed at three layers: corrected the data directly in MongoDB; patched the seeding script (`stage8_hr_payroll.py`) to collapse double-dots after slug truncation; added `_build_employee_safe()` in `employee_repository.py` to skip invalid rows in list endpoints rather than raising.
+
+**Compatibility:**
+- No breaking changes. No new API endpoints, collections, or services.
+- Fully backward compatible with v1.9.0.
+
+**Files Changed (summary):**
+- Frontend: `GlobalFarmAnalyticsModal.tsx`, `CompactBlockCard.tsx`, `BlockAnalyticsModal.tsx`, and 40+ modal/page files (overlay handler removal).
+- Backend: `src/modules/hr/services/employee/employee_repository.py`, `scripts/data_import/2026_04_07/stage8_hr_payroll.py`.
+
+---
+
+#### v1.9.0 - 2025-11-23 (Unreleased)
 **Type:** Minor Release - Farm Management Module (Farm Analytics System)
 
 **Added:**

@@ -348,7 +348,7 @@ function AddInputModal({
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Add Input Inventory</ModalTitle>
@@ -557,7 +557,7 @@ function EditInputModal({
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Edit: {item.itemName}</ModalTitle>
@@ -659,7 +659,7 @@ function UseInputModal({
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Use: {item.itemName}</ModalTitle>

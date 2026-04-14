@@ -771,7 +771,7 @@ export function Settings() {
 
       {/* Regenerate Backup Codes Modal */}
       {showRegenerateModal && (
-        <ModalOverlay onClick={handleCloseRegenerateModal}>
+        <ModalOverlay>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               {newBackupCodes ? 'New Backup Codes' : 'Regenerate Backup Codes'}

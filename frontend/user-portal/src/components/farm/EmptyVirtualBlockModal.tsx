@@ -264,14 +264,8 @@ export function EmptyVirtualBlockModal({
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleCancel();
-    }
-  };
-
   const modalContent = (
-    <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
+    <Overlay $isOpen={isOpen}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <WarningIcon>⚠️</WarningIcon>

@@ -466,14 +466,8 @@ export function EditFarmModal({ farm, isOpen, onClose, onSuccess }: EditFarmModa
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
   return (
-    <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
+    <Overlay $isOpen={isOpen}>
       <Modal>
         <ModalHeader>
           <ModalTitle>Edit Farm</ModalTitle>

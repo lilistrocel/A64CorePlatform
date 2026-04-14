@@ -470,7 +470,7 @@ export function SalesOrdersPage() {
       )}
 
       {showModal && (
-        <Modal onClick={() => setShowModal(false)}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>{selectedOrder ? 'Edit Order' : 'Create Order'}</ModalTitle>

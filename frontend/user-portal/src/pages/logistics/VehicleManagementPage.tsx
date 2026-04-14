@@ -493,7 +493,7 @@ export function VehicleManagementPage() {
       )}
 
       {showCreateModal && (
-        <Modal onClick={() => setShowCreateModal(false)}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Create New Vehicle</ModalTitle>
@@ -509,7 +509,7 @@ export function VehicleManagementPage() {
       )}
 
       {editingVehicle && (
-        <Modal onClick={() => setEditingVehicle(null)}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Edit Vehicle</ModalTitle>

@@ -70,7 +70,7 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
   };
 
   return (
-    <Overlay onClick={onClose}>
+    <Overlay>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Header>
           <Title>Record Harvest</Title>

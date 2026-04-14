@@ -556,12 +556,6 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
   const toggleFarmType = (farmType: string) => {
     const current = selectedFarmTypes;
     const updated = current.includes(farmType)
@@ -571,7 +565,7 @@ export function AddPlantDataModal({ isOpen, onClose, onSuccess }: AddPlantDataMo
   };
 
   return (
-    <Overlay $isOpen={isOpen} onClick={handleOverlayClick}>
+    <Overlay $isOpen={isOpen}>
       <Modal>
         <ModalHeader>
           <ModalTitle>Add New Plant Data</ModalTitle>

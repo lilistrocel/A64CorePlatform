@@ -92,7 +92,7 @@ export function CampaignForm({ campaign, onClose }: CampaignFormProps) {
   };
 
   return (
-    <Overlay onClick={onClose}>
+    <Overlay>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Title>{campaign ? 'Edit Campaign' : 'Create Campaign'}</Title>
         <Form onSubmit={handleSubmit}>

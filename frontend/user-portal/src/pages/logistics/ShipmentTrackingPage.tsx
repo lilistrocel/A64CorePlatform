@@ -442,7 +442,7 @@ export function ShipmentTrackingPage() {
       )}
 
       {showCreateModal && (
-        <Modal onClick={() => setShowCreateModal(false)}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Create New Shipment</ModalTitle>
@@ -458,7 +458,7 @@ export function ShipmentTrackingPage() {
       )}
 
       {editingShipment && (
-        <Modal onClick={() => setEditingShipment(null)}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Edit Shipment</ModalTitle>

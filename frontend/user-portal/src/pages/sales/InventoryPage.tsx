@@ -323,7 +323,7 @@ export function InventoryPage() {
       )}
 
       {isModalOpen && (
-        <Modal onClick={handleCancel}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>{editingInventory ? 'Edit Inventory Item' : 'Add New Inventory Item'}</ModalTitle>

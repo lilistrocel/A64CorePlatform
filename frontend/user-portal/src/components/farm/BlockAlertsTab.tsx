@@ -484,7 +484,7 @@ function CreateAlertModal({ blockId, onClose, onCreate }: CreateAlertModalProps)
   };
 
   return (
-    <Overlay onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <Overlay>
       <Modal>
         <ModalTitle>Create Alert</ModalTitle>
         <Form onSubmit={handleSubmit}>
@@ -577,7 +577,7 @@ function ResolveAlertModal({ alert, onClose, onResolve }: ResolveAlertModalProps
   };
 
   return (
-    <Overlay onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <Overlay>
       <Modal>
         <ModalTitle>Resolve Alert: {alert.title}</ModalTitle>
         <Form onSubmit={handleSubmit}>

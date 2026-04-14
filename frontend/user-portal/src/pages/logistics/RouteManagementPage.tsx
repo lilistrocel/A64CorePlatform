@@ -202,7 +202,7 @@ export function RouteManagementPage() {
       )}
 
       {showCreateModal && (
-        <Modal onClick={() => setShowCreateModal(false)}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Create New Route</ModalTitle>
@@ -218,7 +218,7 @@ export function RouteManagementPage() {
       )}
 
       {editingRoute && (
-        <Modal onClick={() => setEditingRoute(null)}>
+        <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Edit Route</ModalTitle>
