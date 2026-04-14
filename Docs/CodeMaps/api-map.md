@@ -1,6 +1,6 @@
 # API Map
 
-> Generated: 2026-02-24 10:11 UTC  
+> Generated: 2026-04-14 12:39 UTC  
 > Source: MongoDB `mapper_nodes` (layer=api, node_type=api_endpoint)
 
 ## Quick Reference
@@ -10,13 +10,21 @@ and their connections to frontend service calls.
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md) | [frontend-map.md](frontend-map.md)
 
-## API Endpoints (75 total)
+## API Endpoints (94 total)
 
 ### Module: `ai_analytics`
 
 | Endpoint | File | Description |
 |----------|------|-------------|
 | `POST /ai/chat` | `src/modules/ai_analytics/api/v1/chat.py:1` | AI analytics chat endpoint: NL-to-MongoDB query via Vertex AI Gemini. | router |
+
+### Module: `auth`
+
+| Endpoint | File | Description |
+|----------|------|-------------|
+| `admin router` | `src/api/v1/admin.py:30` | Admin-only endpoints: list/get/update users, change role/status, delete user, reset MFA. | router |
+| `auth router` | `src/api/v1/auth.py:38` | Authentication endpoints: /register, /login, /logout, /refresh, /me, email verification, password reset, MFA (verify/setup/enable/disable/backup-codes). | router |
+| `users router` | `src/api/v1/users.py` | User profile management endpoints under /users. | router |
 
 ### Module: `core`
 
@@ -39,12 +47,23 @@ and their connections to frontend service calls.
 | `POST /api/v1/auth/register` | `src/api/v1/auth.py:41` | Register new user, auto-login with JWT tokens, sends verification email |
 | `POST /api/v1/modules/install` | `src/api/v1/modules.py:47` | Install Docker module: validate license, pull image, create container (super_admin only) |
 | `PUT /api/v1/admin/users/{user_id}/mfa/reset` | `src/api/v1/admin.py:433` | Admin: reset MFA for locked-out user, logs to admin_audit_log |
+| `divisions router` | `src/api/v1/divisions.py:16` | Division (tenant) selection and management endpoints. | router |
+| `health router` | `src/api/health.py` | Health-check endpoints mounted at /api/health. | router |
+| `industries router` | `src/api/v1/industries.py:18` | Industry enumeration and industry-to-module lookup. | router |
+| `modules router` | `src/api/v1/modules.py:40` | Module plugin install/enable/disable endpoints. | router |
+| `organizations router` | `src/api/v1/organizations.py` | Organization (top-tenant) management endpoints. | router |
 
 ### Module: `crm`
 
 | Endpoint | File | Description |
 |----------|------|-------------|
 | `CRUD /crm/customers` | `src/modules/crm/api/v1/customers.py:1` | Customer CRUD with address management and type/status filtering. | router |
+
+### Module: `dashboard`
+
+| Endpoint | File | Description |
+|----------|------|-------------|
+| `dashboard router` | `src/api/v1/dashboard.py:22` | Dashboard summary, widget data, bulk widget, refresh, and health endpoints. | router |
 
 ### Module: `farm_manager`
 
@@ -60,6 +79,7 @@ and their connections to frontend service calls.
 | `CRUD /sensehub` | `src/modules/farm_manager/api/v1/sensehub.py:1` | SenseHub proxy: connect/disconnect, dashboard, equipment, automations, alerts, relay control. | router |
 | `CRUD /tasks` | `src/modules/farm_manager/api/v1/tasks.py:1` | Farm task management: my-tasks, pending-count, CRUD, complete, harvest entry. | router |
 | `DELETE /farms/{farm_id}` | `src/modules/farm_manager/api/v1/farms.py:182` | Delete farm with cascade deletion of blocks, harvests, alerts, archives. | delete_farm |
+| `DELETE /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:414` | Delete task (admin). Destructive. | delete_task |
 | `GET /archives` | `src/modules/farm_manager/api/v1/block_archives.py:1` | Block archives: cycle history, performance analytics, crop comparison. | router |
 | `GET /dashboard` | `src/modules/farm_manager/api/v1/dashboard.py:1` | Farm dashboard summary, quick transitions, quick harvest, KPI recalculation. | router |
 | `GET /farms` | `src/modules/farm_manager/api/v1/farms.py:62` | List all farms with optional pagination and filtering. | get_farms |
@@ -72,6 +92,12 @@ and their connections to frontend service calls.
 | `GET /farms/{farm_id}/farming-years` | `src/modules/farm_manager/api/v1/farms.py:465` | Get farming year configuration for a specific farm. | get_farm_farming_years |
 | `GET /farms/{farm_id}/summary` | `src/modules/farm_manager/api/v1/farms.py:233` | Get a summary of a farm including block counts and status distribution. | get_farm_summary |
 | `GET /managers` | `src/modules/farm_manager/api/v1/managers.py:1` | List users with manager/admin roles for farm assignment. | router |
+| `GET /tasks/admin/pending-aggregations` | `src/modules/farm_manager/api/v1/tasks.py:522` | List daily_harvest tasks still needing aggregation. | admin_get_pending_aggregations |
+| `GET /tasks/blocks/{block_id}` | `src/modules/farm_manager/api/v1/tasks.py:123` | Paginated tasks for a block. v1.11.0: returns PaginatedResponse[FarmTaskWithDetails]. | list_block_tasks |
+| `GET /tasks/farms/{farm_id}` | `src/modules/farm_manager/api/v1/tasks.py:86` | Paginated tasks for a farm. v1.11.0: returns PaginatedResponse[FarmTaskWithDetails]. Supports farmingYear filter. | list_farm_tasks |
+| `GET /tasks/my-tasks` | `src/modules/farm_manager/api/v1/tasks.py:29` | Returns current user's tasks as List[FarmTaskWithDetails] (v1.11.0: enriched with blockCode/blockName/farmCode/farmName/targetCrop/targetCropName/actualPlantCount/expectedYieldKg). | get_my_tasks |
+| `GET /tasks/pending-count` | `src/modules/farm_manager/api/v1/tasks.py:63` | Returns count of pending tasks for current user (menu badge). | get_pending_task_count |
+| `GET /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:158` | Task detail. v1.11.0: returns SuccessResponse[FarmTaskWithDetails]. | get_task |
 | `GET /weather` | `src/modules/farm_manager/api/v1/weather.py:1` | Weather endpoints: current, forecast, agri-data, cache stats, refresh. | router |
 | `PATCH /farms/{farm_id}` | `src/modules/farm_manager/api/v1/farms.py:147` | Partially update a farm's name, location, boundary, or metadata. | update_farm |
 | `PATCH /farms/{farm_id}/blocks/{block_id}/iot-controller` | `src/modules/farm_manager/api/v1/blocks.py:750` | Update IoT controller configuration (address, port, credentials) for a block. | update_iot_controller |
@@ -80,6 +106,15 @@ and their connections to frontend service calls.
 | `POST /farms/{farm_id}/blocks` | `src/modules/farm_manager/api/v1/blocks.py:25` | Create a new block within a farm with crop, area, and row configuration. | create_block |
 | `POST /farms/{farm_id}/blocks/{block_id}/ai/chat` | `src/modules/farm_manager/api/v1/farm_ai_chat.py:1` | Farm AI chat using Vertex AI Gemini with SenseHub tool execution. | router |
 | `POST /farms/{farm_id}/blocks/{block_id}/virtual-crops` | `src/modules/farm_manager/api/v1/blocks.py:471` | Add a virtual crop sub-block to a multi-crop parent block. | add_virtual_crop |
+| `POST /tasks` | `src/modules/farm_manager/api/v1/tasks.py:183` | Create custom task (requires farm.manage). | create_custom_task |
+| `POST /tasks/admin/aggregate-harvest/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:450` | Admin manual trigger for a specific harvest task aggregation. | admin_aggregate_harvest |
+| `POST /tasks/admin/run-daily-aggregation` | `src/modules/farm_manager/api/v1/tasks.py:483` | Cron endpoint: run daily aggregation for all in-progress tasks. | admin_run_daily_aggregation |
+| `POST /tasks/{task_id}/cancel` | `src/modules/farm_manager/api/v1/tasks.py:380` | Cancel a task (requires farm.manage). | cancel_task |
+| `POST /tasks/{task_id}/complete` | `src/modules/farm_manager/api/v1/tasks.py:257` | Complete a non-harvest task. Supports optional block state transition via triggerTransition. | complete_task |
+| `POST /tasks/{task_id}/end-harvest` | `src/modules/farm_manager/api/v1/tasks.py:342` | Manager aggregates and completes a daily_harvest task early. | end_daily_harvest |
+| `POST /tasks/{task_id}/harvest` | `src/modules/farm_manager/api/v1/tasks.py:299` | Append harvest entry to a daily_harvest task. | add_harvest_entry |
+| `PUT /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:221` | Update task scheduling/status/priority (requires farm.manage). | update_task |
+| `tasks router` | `src/modules/farm_manager/api/v1/tasks.py:21` | Operations Task Manager endpoints under /tasks. v1.11.0: list/detail endpoints now return FarmTaskWithDetails (block + farm + crop context). | router |
 
 ### Module: `hr`
 
@@ -101,17 +136,6 @@ and their connections to frontend service calls.
 | `CRUD /logistics/vehicles` | `src/modules/logistics/api/v1/vehicles.py:1` | Fleet vehicle management CRUD. | router |
 | `GET /logistics/dashboard` | `src/modules/logistics/api/v1/dashboard.py:1` | Logistics dashboard statistics and summaries. | router |
 
-### Module: `finance`
-
-| Endpoint | File | Description |
-|----------|------|-------------|
-| `GET /api/v1/finance/pnl/summary` | `src/modules/finance/api/v1/pnl.py` | P&L summary: revenue, COGS, gross/operating profit, KG volumes, order counts. Supports farmId, farmingYear, date range, priceSource filters. |
-| `GET /api/v1/finance/pnl/by-month` | `src/modules/finance/api/v1/pnl.py` | Monthly P&L time series sorted ascending by yearMonth. Suitable for trend charts. |
-| `GET /api/v1/finance/pnl/by-farm` | `src/modules/finance/api/v1/pnl.py` | Per-farm P&L breakdown sorted by revenue descending. All farms included. |
-| `GET /api/v1/finance/pnl/by-crop` | `src/modules/finance/api/v1/pnl.py` | Top 20 crops by revenue with COGS and avgPricePerKg. |
-| `GET /api/v1/finance/pnl/ar-aging` | `src/modules/finance/api/v1/pnl.py` | AR aging buckets (0-30, 31-60, 61-90, >90 days) and top-10 customer breakdown. |
-| `GET /api/v1/finance/pnl/revenue-sources` | `src/modules/finance/api/v1/pnl.py` | Revenue confidence breakdown by metadata.priceSource. |
-
 ### Module: `marketing`
 
 | Endpoint | File | Description |
@@ -132,13 +156,17 @@ and their connections to frontend service calls.
 | `CRUD /sales/returns` | `src/modules/sales/api/v1/returns.py:1` | Sales returns processing and restocking. | router |
 | `GET /sales/dashboard` | `src/modules/sales/api/v1/dashboard.py:1` | Sales dashboard statistics and summaries. | router |
 
-## API Router Files (77 total)
+## API Router Files (104 total)
 
 | Name | File | Description |
 |------|------|-------------|
 | `POST /ai/chat` | `src/modules/ai_analytics/api/v1/chat.py:1` | AI analytics chat endpoint: NL-to-MongoDB query via Vertex AI Gemini. | router |
+| `admin router` | `src/api/v1/admin.py:30` | Admin-only endpoints: list/get/update users, change role/status, delete user, reset MFA. | router |
+| `auth router` | `src/api/v1/auth.py:38` | Authentication endpoints: /register, /login, /logout, /refresh, /me, email verification, password reset, MFA (verify/setup/enable/disable/backup-codes). | router |
+| `users router` | `src/api/v1/users.py` | User profile management endpoints under /users. | router |
 | `DELETE /api/v1/admin/users/{user_id}` | `src/api/v1/admin.py:362` | Admin: soft-delete user (sets deletedAt, retains data 90 days) |
 | `DELETE /api/v1/modules/{module_name}` | `src/api/v1/modules.py:295` | Uninstall Docker module: stop container, remove routes (super_admin only) |
+| `FastAPI app` | `src/main.py:37` | Top-level FastAPI application. Mounts /api (health) and /api/v1 (api_router), CORS, rate limiting, timing, and division-context middleware. | app |
 | `GET /api/health` | `src/api/health.py:18` | Health check: returns MongoDB and Redis connectivity status |
 | `GET /api/metrics` | `src/api/health.py:107` | Response time metrics (total, avg, p50/p95/p99) for API monitoring |
 | `GET /api/ready` | `src/api/health.py:76` | Readiness check: service ready if MongoDB is healthy |
@@ -161,8 +189,15 @@ and their connections to frontend service calls.
 | `api/v1/dashboard.py` | `src/api/v1/dashboard.py:1` | Dashboard endpoints: aggregated summary across all modules, widget data fetch/refresh/bulk | router, get_dashboard_summary, get_widget_data, refresh_widget_data, get_bulk_wi |
 | `api/v1/modules.py` | `src/api/v1/modules.py:1` | Module management API (super_admin only): install/uninstall Docker modules, audit log | router, install_module, list_installed_modules, get_module_status, uninstall_mod |
 | `api/v1/users.py` | `src/api/v1/users.py:1` | User CRUD endpoints with RBAC; users can manage themselves, admins manage all | router, list_users, get_user, update_user, delete_user, change_user_role, activa |
+| `api_router` | `src/api/routes.py:15` | Aggregates /api/v1 sub-routers: auth, users, admin, modules, dashboard, organizations, divisions, industries, and ai_analytics chat. | api_router |
+| `divisions router` | `src/api/v1/divisions.py:16` | Division (tenant) selection and management endpoints. | router |
+| `health router` | `src/api/health.py` | Health-check endpoints mounted at /api/health. | router |
+| `industries router` | `src/api/v1/industries.py:18` | Industry enumeration and industry-to-module lookup. | router |
 | `main.py` | `src/main.py:1` | FastAPI app entry point: initializes middleware, routes, startup/shutdown events | app, startup_event, shutdown_event, root, global_exception_handler |
+| `modules router` | `src/api/v1/modules.py:40` | Module plugin install/enable/disable endpoints. | router |
+| `organizations router` | `src/api/v1/organizations.py` | Organization (top-tenant) management endpoints. | router |
 | `CRUD /crm/customers` | `src/modules/crm/api/v1/customers.py:1` | Customer CRUD with address management and type/status filtering. | router |
+| `dashboard router` | `src/api/v1/dashboard.py:22` | Dashboard summary, widget data, bulk widget, refresh, and health endpoints. | router |
 | `CRUD /config` | `src/modules/farm_manager/api/v1/config.py:1` | Spacing standards CRUD, plant calculator, farming year configuration. | router |
 | `CRUD /farms/{farm_id}/blocks/{block_id}/alerts` | `src/modules/farm_manager/api/v1/block_alerts.py:1` | CRUD for block alerts with resolve/dismiss, active alerts, and farm-level listing. | router, farm_router |
 | `CRUD /farms/{farm_id}/blocks/{block_id}/harvests` | `src/modules/farm_manager/api/v1/block_harvests.py:1` | CRUD for block harvest records with summary and farm-level aggregation. | router, farm_router |
@@ -173,6 +208,7 @@ and their connections to frontend service calls.
 | `CRUD /sensehub` | `src/modules/farm_manager/api/v1/sensehub.py:1` | SenseHub proxy: connect/disconnect, dashboard, equipment, automations, alerts, relay control. | router |
 | `CRUD /tasks` | `src/modules/farm_manager/api/v1/tasks.py:1` | Farm task management: my-tasks, pending-count, CRUD, complete, harvest entry. | router |
 | `DELETE /farms/{farm_id}` | `src/modules/farm_manager/api/v1/farms.py:182` | Delete farm with cascade deletion of blocks, harvests, alerts, archives. | delete_farm |
+| `DELETE /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:414` | Delete task (admin). Destructive. | delete_task |
 | `GET /archives` | `src/modules/farm_manager/api/v1/block_archives.py:1` | Block archives: cycle history, performance analytics, crop comparison. | router |
 | `GET /dashboard` | `src/modules/farm_manager/api/v1/dashboard.py:1` | Farm dashboard summary, quick transitions, quick harvest, KPI recalculation. | router |
 | `GET /farms` | `src/modules/farm_manager/api/v1/farms.py:62` | List all farms with optional pagination and filtering. | get_farms |
@@ -185,6 +221,12 @@ and their connections to frontend service calls.
 | `GET /farms/{farm_id}/farming-years` | `src/modules/farm_manager/api/v1/farms.py:465` | Get farming year configuration for a specific farm. | get_farm_farming_years |
 | `GET /farms/{farm_id}/summary` | `src/modules/farm_manager/api/v1/farms.py:233` | Get a summary of a farm including block counts and status distribution. | get_farm_summary |
 | `GET /managers` | `src/modules/farm_manager/api/v1/managers.py:1` | List users with manager/admin roles for farm assignment. | router |
+| `GET /tasks/admin/pending-aggregations` | `src/modules/farm_manager/api/v1/tasks.py:522` | List daily_harvest tasks still needing aggregation. | admin_get_pending_aggregations |
+| `GET /tasks/blocks/{block_id}` | `src/modules/farm_manager/api/v1/tasks.py:123` | Paginated tasks for a block. v1.11.0: returns PaginatedResponse[FarmTaskWithDetails]. | list_block_tasks |
+| `GET /tasks/farms/{farm_id}` | `src/modules/farm_manager/api/v1/tasks.py:86` | Paginated tasks for a farm. v1.11.0: returns PaginatedResponse[FarmTaskWithDetails]. Supports farmingYear filter. | list_farm_tasks |
+| `GET /tasks/my-tasks` | `src/modules/farm_manager/api/v1/tasks.py:29` | Returns current user's tasks as List[FarmTaskWithDetails] (v1.11.0: enriched with blockCode/blockName/farmCode/farmName/targetCrop/targetCropName/actualPlantCount/expectedYieldKg). | get_my_tasks |
+| `GET /tasks/pending-count` | `src/modules/farm_manager/api/v1/tasks.py:63` | Returns count of pending tasks for current user (menu badge). | get_pending_task_count |
+| `GET /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:158` | Task detail. v1.11.0: returns SuccessResponse[FarmTaskWithDetails]. | get_task |
 | `GET /weather` | `src/modules/farm_manager/api/v1/weather.py:1` | Weather endpoints: current, forecast, agri-data, cache stats, refresh. | router |
 | `PATCH /farms/{farm_id}` | `src/modules/farm_manager/api/v1/farms.py:147` | Partially update a farm's name, location, boundary, or metadata. | update_farm |
 | `PATCH /farms/{farm_id}/blocks/{block_id}/iot-controller` | `src/modules/farm_manager/api/v1/blocks.py:750` | Update IoT controller configuration (address, port, credentials) for a block. | update_iot_controller |
@@ -193,6 +235,15 @@ and their connections to frontend service calls.
 | `POST /farms/{farm_id}/blocks` | `src/modules/farm_manager/api/v1/blocks.py:25` | Create a new block within a farm with crop, area, and row configuration. | create_block |
 | `POST /farms/{farm_id}/blocks/{block_id}/ai/chat` | `src/modules/farm_manager/api/v1/farm_ai_chat.py:1` | Farm AI chat using Vertex AI Gemini with SenseHub tool execution. | router |
 | `POST /farms/{farm_id}/blocks/{block_id}/virtual-crops` | `src/modules/farm_manager/api/v1/blocks.py:471` | Add a virtual crop sub-block to a multi-crop parent block. | add_virtual_crop |
+| `POST /tasks` | `src/modules/farm_manager/api/v1/tasks.py:183` | Create custom task (requires farm.manage). | create_custom_task |
+| `POST /tasks/admin/aggregate-harvest/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:450` | Admin manual trigger for a specific harvest task aggregation. | admin_aggregate_harvest |
+| `POST /tasks/admin/run-daily-aggregation` | `src/modules/farm_manager/api/v1/tasks.py:483` | Cron endpoint: run daily aggregation for all in-progress tasks. | admin_run_daily_aggregation |
+| `POST /tasks/{task_id}/cancel` | `src/modules/farm_manager/api/v1/tasks.py:380` | Cancel a task (requires farm.manage). | cancel_task |
+| `POST /tasks/{task_id}/complete` | `src/modules/farm_manager/api/v1/tasks.py:257` | Complete a non-harvest task. Supports optional block state transition via triggerTransition. | complete_task |
+| `POST /tasks/{task_id}/end-harvest` | `src/modules/farm_manager/api/v1/tasks.py:342` | Manager aggregates and completes a daily_harvest task early. | end_daily_harvest |
+| `POST /tasks/{task_id}/harvest` | `src/modules/farm_manager/api/v1/tasks.py:299` | Append harvest entry to a daily_harvest task. | add_harvest_entry |
+| `PUT /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:221` | Update task scheduling/status/priority (requires farm.manage). | update_task |
+| `tasks router` | `src/modules/farm_manager/api/v1/tasks.py:21` | Operations Task Manager endpoints under /tasks. v1.11.0: list/detail endpoints now return FarmTaskWithDetails (block + farm + crop context). | router |
 | `CRUD /hr/contracts` | `src/modules/hr/api/v1/contracts.py:1` | Employment contract management CRUD. | router |
 | `CRUD /hr/employees` | `src/modules/hr/api/v1/employees.py:1` | Employee CRUD with Arabic name support, Emirates ID handling, pagination. | router |
 | `CRUD /hr/insurance` | `src/modules/hr/api/v1/insurance.py:1` | Employee insurance policy management. | router |

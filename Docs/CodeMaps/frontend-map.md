@@ -1,6 +1,6 @@
 # Frontend Map
 
-> Generated: 2026-02-24 10:11 UTC  
+> Generated: 2026-04-14 12:39 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=component|hook|store|type, layer=frontend)
 
 ## Overview
@@ -10,15 +10,18 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 
 **Related Maps:** [api-map.md](api-map.md) | [module-map.md](module-map.md)
 
-## React Components (89)
+## React Components (105)
 
 | Component | File | Description |
 |-----------|------|-------------|
 | `AIAnalytics` | `frontend/user-portal/src/pages/ai/AIAnalytics.tsx:1` | AI Analytics page rendering AIAnalyticsChat component | AIAnalytics |
 | `AIAnalyticsChat` | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx:1` | AI analytics chat component using useAIAnalytics hook for conversational data exploration | AIAnalyticsChat |
+| `AIAnalyticsChat` | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx` | AI analytics chat. Dark-mode pass in v1.11.0. | AIAnalyticsChat |
+| `AIHubChat` | `frontend/user-portal/src/components/ai/AIHubChat.tsx` | AI Hub chat interface. Dark-mode pass in v1.11.0. | AIHubChat |
 | `AddPlantDataModal` | `frontend/user-portal/src/components/farm/AddPlantDataModal.tsx:1` | Modal for adding new plant data entries | AddPlantDataModal |
 | `AddVirtualCropModal` | `frontend/user-portal/src/components/farm/AddVirtualCropModal.tsx:1` | Modal for adding virtual crops to blocks | AddVirtualCropModal |
 | `AddWidgetModal` | `frontend/user-portal/src/components/dashboard/AddWidgetModal.tsx:1` | Modal for adding widgets to the main dashboard | AddWidgetModal |
+| `App` | `frontend/user-portal/src/App.tsx` | Top-level React Router configuration. v1.11.0: adds /crm/customers/:customerId/edit route so edit mode is URL-addressable (shareable link). | App |
 | `BackupCodesModal` | `frontend/user-portal/src/components/auth/BackupCodesModal.tsx:1` | Modal displaying MFA backup codes | BackupCodesModal |
 | `BlockAlertsTab` | `frontend/user-portal/src/components/farm/BlockAlertsTab.tsx:1` | Block detail tab displaying alerts list for a block | BlockAlertsTab |
 | `BlockAnalyticsModal` | `frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx:1` | Block analytics modal with tabs: overview, yield, timeline, tasks, alerts. Uses useBlockAnalytics hook and recharts | BlockAnalyticsModal |
@@ -26,21 +29,26 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `BlockAutomationTab` | `frontend/user-portal/src/components/farm/BlockAutomationTab.tsx:1` | Block detail tab for automation/IoT integration | BlockAutomationTab |
 | `BlockCard` | `frontend/user-portal/src/components/farm/BlockCard.tsx:1` | Block card with state colors, renders PlantAssignmentModal, PendingTasksWarningModal, BlockAnalyticsModal | BlockCard |
 | `BlockDetail` | `frontend/user-portal/src/components/farm/BlockDetail.tsx:1` | Block detail page with tabs for alerts, automation, harvests, archives. Uses farmApi service | BlockDetail |
+| `BlockDetail` | `frontend/user-portal/src/components/farm/BlockDetail.tsx` | Block detail view with tabs (alerts, archives, automation, harvests, history). Dark-mode styling pass applied in v1.11.0. | BlockDetail |
 | `BlockDetailsModal` | `frontend/user-portal/src/components/farm/BlockDetailsModal.tsx:1` | Comprehensive modal: block header, planting details, harvest history, growth timeline. Uses farmApi | BlockDetailsModal |
 | `BlockGrid` | `frontend/user-portal/src/components/farm/BlockGrid.tsx:1` | Grid layout of BlockCard components with state filter tabs | BlockGrid |
 | `BlockGrid (dashboard)` | `frontend/user-portal/src/components/farm/dashboard/BlockGrid.tsx:1` | Dashboard block grid rendering CompactBlockCard components | BlockGrid |
 | `BlockHarvestEntryModal` | `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx:1` | Modal for entering harvest data for a block | BlockHarvestEntryModal |
+| `BlockHarvestEntryModal` | `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx:50` | Modal for logging a harvest entry from inside a block detail view. v1.11.0: adds structured context card (block code, crop name, KPI chips) plus prior-harvest progress chips (N harvests / Y kg) sourced from DashboardBlock. Uses positiveNumberInputProps on quantity input. | BlockHarvestEntryModal |
 | `BlockHarvestsTab` | `frontend/user-portal/src/components/farm/BlockHarvestsTab.tsx:1` | Block detail tab showing harvest records | BlockHarvestsTab |
 | `BlockTaskList` | `frontend/user-portal/src/pages/operations/BlockTaskList.tsx:1` | Task list for a specific block in operations module | BlockTaskList |
 | `BudgetManagementPage` | `frontend/user-portal/src/pages/marketing/BudgetManagementPage.tsx:1` | Marketing budget management page | BudgetManagementPage |
 | `CRMPage` | `frontend/user-portal/src/pages/crm/CRMPage.tsx:1` | CRM customers list page | CRMPage |
+| `CRMPage` | `frontend/user-portal/src/pages/crm/CRMPage.tsx` | CRM customers listing page. Dark-mode pass applied in v1.11.0. | CRMPage |
 | `CampaignManagementPage` | `frontend/user-portal/src/pages/marketing/CampaignManagementPage.tsx:1` | Campaign management page | CampaignManagementPage |
 | `ChannelManagementPage` | `frontend/user-portal/src/pages/marketing/ChannelManagementPage.tsx:1` | Marketing channel management page | ChannelManagementPage |
 | `ClearCache` | `frontend/user-portal/src/pages/debug/ClearCache.tsx:1` | Debug page for clearing browser cache and storage | ClearCache |
 | `CompactBlockCard` | `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx:1` | Compact block card for dashboard with state-specific layouts. Uses useBlockActions, renders QuickPlanModal, ResolveAlertModal, BlockDetailsModal, BlockHarvestEntryModal, BlockAnalyticsModal | CompactBlockCard |
+| `CompactBlockCard` | `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx` | Dashboard compact block tile. v1.11.0: QuickActions overlay now theme-aware (surface color + 95% alpha) instead of hard-coded white. | CompactBlockCard |
 | `CreateBlockModal` | `frontend/user-portal/src/components/farm/CreateBlockModal.tsx:1` | Block creation modal with map boundary drawing. Uses useMapDrawing hook | CreateBlockModal |
 | `CreateFarmModal` | `frontend/user-portal/src/components/farm/CreateFarmModal.tsx:1` | Farm creation modal with form, map boundary drawing. Uses farmApi, useMapDrawing, useUnsavedChanges, toast.store | CreateFarmModal |
 | `CustomerDetailPage` | `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx:1` | Customer detail view page | CustomerDetailPage |
+| `CustomerDetailPage` | `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx` | CRM customer detail view. v1.11.0: derives edit mode from URL path (/edit suffix) instead of component state — route serves both view and edit modes. | CustomerDetailPage |
 | `Dashboard` | `frontend/user-portal/src/pages/dashboard/Dashboard.tsx:1` | Main dashboard page with draggable widget grid (react-grid-layout). Uses useDashboardStore | Dashboard |
 | `DashboardFilters` | `frontend/user-portal/src/components/farm/dashboard/DashboardFilters.tsx:1` | Filter controls for farm dashboard: state, search, performance, sort. Uses types from useDashboardFilters | DashboardFilters |
 | `DashboardHeader` | `frontend/user-portal/src/components/farm/dashboard/DashboardHeader.tsx:1` | Dashboard header showing farm info and summary metrics | DashboardHeader |
@@ -58,7 +66,9 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `FarmBlocksView` | `frontend/user-portal/src/pages/operations/FarmBlocksView.tsx:1` | Operations view of blocks within a farm | FarmBlocksView |
 | `FarmCard` | `frontend/user-portal/src/components/farm/FarmCard.tsx:1` | Farm summary card displaying farm info, navigates to farm detail on click | FarmCard |
 | `FarmDashboard` | `frontend/user-portal/src/components/farm/FarmDashboard.tsx:1` | Main farm module dashboard showing key metrics and quick actions. Uses farmApi and renders GlobalFarmAnalyticsModal | FarmDashboard |
+| `FarmDashboard` | `frontend/user-portal/src/components/farm/FarmDashboard.tsx` | Farm dashboard with filters, farm selector, block grid. Dark-mode pass in v1.11.0. | FarmDashboard |
 | `FarmDashboardPage` | `frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx:23` | Block monitor dashboard page. Uses useDashboardData, useDashboardConfig, useDashboardFilters hooks | FarmDashboardPage |
+| `FarmDashboardPage` | `frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx` | Route page wrapper for the farm dashboard. Dark-mode pass in v1.11.0. | FarmDashboardPage |
 | `FarmDetail` | `frontend/user-portal/src/components/farm/FarmDetail.tsx:1` | Farm detail page with tabs (blocks, map, history, weather). Uses useFarm, useFarmBlocks, useAvailableFarmingYears hooks | FarmDetail |
 | `FarmHistoryTab` | `frontend/user-portal/src/components/farm/FarmHistoryTab.tsx:1` | Farm detail tab showing historical farm activity | FarmHistoryTab |
 | `FarmList` | `frontend/user-portal/src/components/farm/FarmList.tsx:1` | Paginated farm card grid with search/filter. Renders FarmCard, CreateFarmModal, EditFarmModal, FarmAnalyticsModal | FarmList, FarmListProps |
@@ -68,7 +78,11 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `FarmingYearSelector` | `frontend/user-portal/src/components/farm/FarmingYearSelector.tsx:1` | Dropdown selector for farming year filter | FarmingYearSelector |
 | `GlobalFarmAnalyticsModal` | `frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx:1` | System-wide analytics modal: farm comparison, production timeline, performance insights. Uses useGlobalAnalytics and recharts | GlobalFarmAnalyticsModal, GlobalFarmAnalyticsModalProps |
 | `HRDashboardPage` | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx:1` | HR module dashboard page | HRDashboardPage |
+| `HRDashboardPage` | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx` | HR dashboard landing page. Dark-mode pass in v1.11.0. | HRDashboardPage |
+| `HarvestEntryModal (mushroom)` | `frontend/user-portal/src/components/mushroom/HarvestEntryModal.tsx` | Mushroom-room-specific harvest entry modal. Dark-mode pass in v1.11.0; quantity input uses positiveNumberInputProps. | HarvestEntryModal |
+| `HarvestEntryModal (operations)` | `frontend/user-portal/src/components/operations/HarvestEntryModal.tsx` | Modal opened from the Operations task list. v1.11.0: structured context card (block, crop, KPI chips, task title) sourced from enriched TaskWithDetails fields (blockCode/blockName/targetCropName/actualPlantCount/expectedYieldKg) with metadata fallback. | HarvestEntryModal |
 | `InventoryDashboard` | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx:1` | Inventory management dashboard | InventoryDashboard |
+| `InventoryDashboard` | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx` | Inventory dashboard with sub-routes. Dark-mode pass in v1.11.0. | InventoryDashboard |
 | `InventoryPage` | `frontend/user-portal/src/pages/sales/InventoryPage.tsx:1` | Sales inventory page | InventoryPage |
 | `Login` | `frontend/user-portal/src/pages/auth/Login.tsx:1` | Login page with form validation (react-hook-form + zod). Uses useAuthStore and usePageVisibility | Login |
 | `LogisticsDashboardPage` | `frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx:1` | Logistics module dashboard page | LogisticsDashboardPage |
@@ -77,6 +91,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `MFAVerifyPage` | `frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx:1` | MFA verification page for TOTP code entry | MFAVerifyPage |
 | `MainLayout` | `frontend/user-portal/src/components/layout/MainLayout.tsx:1` | Main app layout with sidebar navigation, header, and Outlet for nested routes. Uses useAuthStore and tasksApi | MainLayout |
 | `MarketingDashboardPage` | `frontend/user-portal/src/pages/marketing/MarketingDashboardPage.tsx:1` | Marketing module dashboard page | MarketingDashboardPage |
+| `MushroomFacilityManager` | `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx` | Mushroom growing room / strain management page. Dark-mode pass in v1.11.0. | MushroomFacilityManager |
 | `NotFound` | `frontend/user-portal/src/pages/NotFound.tsx:1` | 404 Not Found page | NotFound |
 | `OperationsDashboard` | `frontend/user-portal/src/pages/operations/OperationsDashboard.tsx:1` | Operations module dashboard page | OperationsDashboard |
 | `PendingTasksWarningModal` | `frontend/user-portal/src/components/farm/PendingTasksWarningModal.tsx:1` | Warning modal shown when block has pending tasks before state transition | PendingTasksWarningModal |
@@ -95,6 +110,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `ReturnsPage` | `frontend/user-portal/src/pages/sales/ReturnsPage.tsx:1` | Returns management page | ReturnsPage |
 | `RouteManagementPage` | `frontend/user-portal/src/pages/logistics/RouteManagementPage.tsx:1` | Route management page | RouteManagementPage |
 | `SalesDashboardPage` | `frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx:1` | Sales module dashboard page | SalesDashboardPage |
+| `SalesDashboardPage` | `frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx` | Sales dashboard. Dark-mode pass in v1.11.0. | SalesDashboardPage |
 | `SalesOrdersPage` | `frontend/user-portal/src/pages/sales/SalesOrdersPage.tsx:1` | Sales orders list page | SalesOrdersPage |
 | `Settings` | `frontend/user-portal/src/pages/settings/Settings.tsx:1` | User settings page | Settings |
 | `ShipmentTrackingPage` | `frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx:1` | Shipment tracking page | ShipmentTrackingPage |
@@ -135,10 +151,18 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `useDashboardStore` | `frontend/user-portal/src/stores/dashboard.store.ts:1` | Zustand store with persist: widgets, widgetData, layout. Uses dashboardDataService and queryClient | useDashboardStore, waitForHydration, WIDGET_CATALOG |
 | `useToastStore` | `frontend/user-portal/src/stores/toast.store.ts:1` | Zustand toast notification store with convenience functions for success, error, warning, info toasts | useToastStore, showToast, showErrorToast, showSuccessToast, showWarningToast, sh |
 
-## TypeScript Types (14)
+## TypeScript Types (22)
 
 | Type | File | Description |
 |------|------|-------------|
+| `HarvestEntry` | `frontend/user-portal/src/types/tasks.ts:81` | Single harvest entry record. | HarvestEntry |
+| `HarvestGrade` | `frontend/user-portal/src/types/tasks.ts:23` | Grades A/B/C/D/Waste. | HarvestGrade |
+| `HarvestSummary` | `frontend/user-portal/src/types/tasks.ts:95` | Aggregated harvest summary (totals, grade breakdown, first/last entry). | HarvestSummary |
+| `PaginatedTasksResponse` | `frontend/user-portal/src/types/tasks.ts:183` | Paginated list response — items is TaskWithDetails[] so list consumers get enriched data automatically. | PaginatedTasksResponse |
+| `Task` | `frontend/user-portal/src/types/tasks.ts:29` | Core Task interface matching backend FarmTask. Includes metadata (plantingId, targetCrop, targetCropName, plantCount, expectedYieldKg) and triggerStateChange for Phase 2 transitions. | Task |
+| `TaskStatus` | `frontend/user-portal/src/types/tasks.ts:21` | String-literal union for task status. | TaskStatus |
+| `TaskType` | `frontend/user-portal/src/types/tasks.ts:12` | String-literal union mirroring backend TaskType enum. | TaskType |
+| `TaskWithDetails` | `frontend/user-portal/src/types/tasks.ts:63` | v1.11.0 extension: Task + farmName/farmCode/blockCode/blockName, plus targetCrop/targetCropName/actualPlantCount/expectedYieldKg joined by the backend _enrich_tasks_with_block_farm helper so harvest modals render context without follow-up fetches. | TaskWithDetails |
 | `alert types` | `frontend/user-portal/src/types/alerts.ts:1` | Alert type definitions: severity, status, type enums and request/response interfaces | AlertSeverity, AlertStatus, AlertType, Alert, CreateAlertRequest, ResolveAlertRe |
 | `analytics types` | `frontend/user-portal/src/types/analytics.ts:1` | Block analytics and AI analytics types: yield, timeline, task, performance, alert analytics and chat interfaces | BlockInfo, YieldAnalytics, TimelineAnalytics, TaskAnalytics, PerformanceMetrics, |
 | `crm types` | `frontend/user-portal/src/types/crm.ts:1` | CRM type definitions: customer type/status enums, customer and address interfaces | CustomerType, CustomerStatus, Customer, CustomerAddress |
@@ -199,3 +223,5 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `page::PlantDataLibrary` | renders | `component::PlantDataCard` |
 | `page::Dashboard` | renders | `component::AddWidgetModal` |
 | `component::PhysicalBlockGrid` | renders | `component::PhysicalBlockCard` |
+| `frontend.App` | renders | `frontend.pages.crm.CustomerDetailPage` |
+| `frontend.App` | renders | `frontend.pages.crm.CRMPage` |

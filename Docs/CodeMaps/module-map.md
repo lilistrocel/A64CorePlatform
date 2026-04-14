@@ -1,6 +1,6 @@
 # Module Map
 
-> Generated: 2026-02-24 10:11 UTC  
+> Generated: 2026-04-14 12:39 UTC  
 > Source: MongoDB `mapper_nodes` (grouped by module)
 
 ## Backend Module Architecture
@@ -15,13 +15,13 @@ Each module contains API, service, and model layers.
 | Module | Nodes | Layers Present |
 |--------|-------|----------------|
 | `ai_analytics` | 8 | api, model, service |
-| `auth` | 9 | frontend |
-| `core` | 120 | api, config, core, middleware, model, service |
+| `auth` | 12 | api, frontend |
+| `core` | 127 | api, config, core, middleware, model, service |
 | `crm` | 10 | api, frontend, infrastructure, model, repository, service |
-| `dashboard` | 6 | frontend |
+| `dashboard` | 7 | api, frontend |
 | `farm` | 81 | frontend |
-| `farm_manager` | 102 | api, config, infrastructure, model, repository, service |
-| `frontend` | 3 | config |
+| `farm_manager` | 137 | api, config, infrastructure, model, repository, service |
+| `frontend` | 31 | config, frontend |
 | `hr` | 25 | api, frontend, infrastructure, model, repository, service |
 | `logistics` | 19 | api, frontend, infrastructure, model, repository, service |
 | `marketing` | 22 | api, frontend, infrastructure, model, service |
@@ -43,10 +43,13 @@ Each module contains API, service, and model layers.
 | class | `QueryValidator` | service | `src/modules/ai_analytics/utils/validators.py` |
 | class | `SchemaService` | service | `src/modules/ai_analytics/services/schema_service.py` |
 
-### `auth` (9 nodes)
+### `auth` (12 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
+| api_endpoint | `admin router` | api | `src/api/v1/admin.py` |
+| api_endpoint | `auth router` | api | `src/api/v1/auth.py` |
+| api_endpoint | `users router` | api | `src/api/v1/users.py` |
 | component | `BackupCodesModal` | frontend | `frontend/user-portal/src/components/auth/BackupCodesModal.tsx` |
 | component | `Login` | frontend | `frontend/user-portal/src/pages/auth/Login.tsx` |
 | component | `MFARouteGuards` | frontend | `frontend/user-portal/src/components/common/MFARouteGuards.tsx` |
@@ -57,12 +60,13 @@ Each module contains API, service, and model layers.
 | store | `useAuthStore` | frontend | `frontend/user-portal/src/stores/auth.store.ts` |
 | hook | `useMFA` | frontend | `frontend/user-portal/src/hooks/queries/useMFA.ts` |
 
-### `core` (120 nodes)
+### `core` (127 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
 | api_endpoint | `DELETE /api/v1/admin/users/{user_id}` | api | `src/api/v1/admin.py` |
 | api_endpoint | `DELETE /api/v1/modules/{module_name}` | api | `src/api/v1/modules.py` |
+| config | `FastAPI app` | api | `src/main.py` |
 | api_endpoint | `GET /api/health` | api | `src/api/health.py` |
 | api_endpoint | `GET /api/metrics` | api | `src/api/health.py` |
 | api_endpoint | `GET /api/ready` | api | `src/api/health.py` |
@@ -85,7 +89,13 @@ Each module contains API, service, and model layers.
 | file | `api/v1/dashboard.py` | api | `src/api/v1/dashboard.py` |
 | file | `api/v1/modules.py` | api | `src/api/v1/modules.py` |
 | file | `api/v1/users.py` | api | `src/api/v1/users.py` |
+| config | `api_router` | api | `src/api/routes.py` |
+| api_endpoint | `divisions router` | api | `src/api/v1/divisions.py` |
+| api_endpoint | `health router` | api | `src/api/health.py` |
+| api_endpoint | `industries router` | api | `src/api/v1/industries.py` |
 | file | `main.py` | api | `src/main.py` |
+| api_endpoint | `modules router` | api | `src/api/v1/modules.py` |
+| api_endpoint | `organizations router` | api | `src/api/v1/organizations.py` |
 | config | `ADMIN_EMAIL` | config | `.env.example` |
 | config | `ADMIN_PASSWORD` | config | `.env.example` |
 | config | `ALLOWED_ORIGINS` | config | `src/config/settings.py` |
@@ -197,10 +207,11 @@ Each module contains API, service, and model layers.
 | class | `CustomerRepository` | repository | `src/modules/crm/services/customer/customer_repository.py` |
 | class | `CustomerService` | service | `src/modules/crm/services/customer/customer_service.py` |
 
-### `dashboard` (6 nodes)
+### `dashboard` (7 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
+| api_endpoint | `dashboard router` | api | `src/api/v1/dashboard.py` |
 | component | `AddWidgetModal` | frontend | `frontend/user-portal/src/components/dashboard/AddWidgetModal.tsx` |
 | component | `Dashboard` | frontend | `frontend/user-portal/src/pages/dashboard/Dashboard.tsx` |
 | function | `dashboardDataService` | frontend | `frontend/user-portal/src/services/dashboard-data.service.ts` |
@@ -294,7 +305,7 @@ Each module contains API, service, and model layers.
 | hook | `useWeatherData` | frontend | `frontend/user-portal/src/hooks/farm/useWeatherData.ts` |
 | function | `weatherApi` | frontend | `frontend/user-portal/src/services/weatherApi.ts` |
 
-### `farm_manager` (102 nodes)
+### `farm_manager` (137 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
@@ -308,6 +319,7 @@ Each module contains API, service, and model layers.
 | api_endpoint | `CRUD /sensehub` | api | `src/modules/farm_manager/api/v1/sensehub.py` |
 | api_endpoint | `CRUD /tasks` | api | `src/modules/farm_manager/api/v1/tasks.py` |
 | api_endpoint | `DELETE /farms/{farm_id}` | api | `src/modules/farm_manager/api/v1/farms.py` |
+| api_endpoint | `DELETE /tasks/{task_id}` | api | `src/modules/farm_manager/api/v1/tasks.py` |
 | api_endpoint | `GET /archives` | api | `src/modules/farm_manager/api/v1/block_archives.py` |
 | api_endpoint | `GET /dashboard` | api | `src/modules/farm_manager/api/v1/dashboard.py` |
 | api_endpoint | `GET /farms` | api | `src/modules/farm_manager/api/v1/farms.py` |
@@ -320,6 +332,12 @@ Each module contains API, service, and model layers.
 | api_endpoint | `GET /farms/{farm_id}/farming-years` | api | `src/modules/farm_manager/api/v1/farms.py` |
 | api_endpoint | `GET /farms/{farm_id}/summary` | api | `src/modules/farm_manager/api/v1/farms.py` |
 | api_endpoint | `GET /managers` | api | `src/modules/farm_manager/api/v1/managers.py` |
+| api_endpoint | `GET /tasks/admin/pending-aggregations` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `GET /tasks/blocks/{block_id}` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `GET /tasks/farms/{farm_id}` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `GET /tasks/my-tasks` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `GET /tasks/pending-count` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `GET /tasks/{task_id}` | api | `src/modules/farm_manager/api/v1/tasks.py` |
 | api_endpoint | `GET /weather` | api | `src/modules/farm_manager/api/v1/weather.py` |
 | api_endpoint | `PATCH /farms/{farm_id}` | api | `src/modules/farm_manager/api/v1/farms.py` |
 | api_endpoint | `PATCH /farms/{farm_id}/blocks/{block_id}/iot-controller` | api | `src/modules/farm_manager/api/v1/blocks.py` |
@@ -328,6 +346,15 @@ Each module contains API, service, and model layers.
 | api_endpoint | `POST /farms/{farm_id}/blocks` | api | `src/modules/farm_manager/api/v1/blocks.py` |
 | api_endpoint | `POST /farms/{farm_id}/blocks/{block_id}/ai/chat` | api | `src/modules/farm_manager/api/v1/farm_ai_chat.py` |
 | api_endpoint | `POST /farms/{farm_id}/blocks/{block_id}/virtual-crops` | api | `src/modules/farm_manager/api/v1/blocks.py` |
+| api_endpoint | `POST /tasks` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `POST /tasks/admin/aggregate-harvest/{task_id}` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `POST /tasks/admin/run-daily-aggregation` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `POST /tasks/{task_id}/cancel` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `POST /tasks/{task_id}/complete` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `POST /tasks/{task_id}/end-harvest` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `POST /tasks/{task_id}/harvest` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `PUT /tasks/{task_id}` | api | `src/modules/farm_manager/api/v1/tasks.py` |
+| api_endpoint | `tasks router` | api | `src/modules/farm_manager/api/v1/tasks.py` |
 | config | `WEATHERBIT_API_KEY` | config | `docker-compose.yml` |
 | config | `WEATHERBIT_ENABLED` | config | `docker-compose.yml` |
 | class | `FarmDatabaseManager` | infrastructure | `src/modules/farm_manager/services/database.py` |
@@ -340,10 +367,24 @@ Each module contains API, service, and model layers.
 | pydantic_model | `Farm` | model | `src/modules/farm_manager/models/farm.py` |
 | pydantic_model | `FarmAnalyticsResponse` | model | `src/modules/farm_manager/models/farm_analytics.py` |
 | pydantic_model | `FarmTask` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `FarmTask` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `FarmTaskCreate` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `FarmTaskListResponse` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `FarmTaskUpdate` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `FarmTaskWithDetails` | model | `src/modules/farm_manager/models/farm_task.py` |
 | pydantic_model | `GlobalAnalyticsResponse` | model | `src/modules/farm_manager/models/global_analytics.py` |
+| db_model | `HarvestEntry` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `HarvestEntryCreate` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `HarvestGrade` | model | `src/modules/farm_manager/models/farm_task.py` |
 | pydantic_model | `HarvestInventory` | model | `src/modules/farm_manager/models/inventory.py` |
+| db_model | `HarvestTotal` | model | `src/modules/farm_manager/models/farm_task.py` |
 | pydantic_model | `PlantData` | model | `src/modules/farm_manager/models/plant_data.py` |
 | pydantic_model | `PlantDataEnhanced` | model | `src/modules/farm_manager/models/plant_data_enhanced.py` |
+| db_model | `TaskCompletionData` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `TaskData` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `TaskPriority` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `TaskStatus` | model | `src/modules/farm_manager/models/farm_task.py` |
+| db_model | `TaskType` | model | `src/modules/farm_manager/models/farm_task.py` |
 | db_model | `alerts` | model | `src/modules/farm_manager/services/database.py` |
 | db_model | `block_archives` | model | `src/modules/farm_manager/services/database.py` |
 | db_model | `block_cycles` | model | `src/modules/farm_manager/services/database.py` |
@@ -387,6 +428,7 @@ Each module contains API, service, and model layers.
 | class | `FarmingYearService` | service | `src/modules/farm_manager/services/farming_year_service.py` |
 | class | `GlobalAnalyticsService` | service | `src/modules/farm_manager/services/global_analytics_service.py` |
 | class | `HarvestAggregatorService` | service | `src/modules/farm_manager/services/task/harvest_aggregator.py` |
+| class | `HarvestAggregatorService` | service | `src/modules/farm_manager/services/task/harvest_aggregator.py` |
 | class | `HarvestService` | service | `src/modules/farm_manager/services/block/harvest_service.py` |
 | class | `PlantDataEnhancedService` | service | `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py` |
 | class | `PlantDataService` | service | `src/modules/farm_manager/services/plant_data/plant_data_service.py` |
@@ -395,19 +437,51 @@ Each module contains API, service, and model layers.
 | class | `SenseHubConnectionService` | service | `src/modules/farm_manager/services/sensehub/sensehub_connection_service.py` |
 | class | `SenseHubMCPClient` | service | `src/modules/farm_manager/services/sensehub/sensehub_mcp_client.py` |
 | class | `TaskGeneratorService` | service | `src/modules/farm_manager/services/task/task_generator.py` |
+| class | `TaskGeneratorService` | service | `src/modules/farm_manager/services/task/task_generator.py` |
+| class | `TaskRepository` | service | `src/modules/farm_manager/services/task/task_repository.py` |
+| class | `TaskService` | service | `src/modules/farm_manager/services/task/task_service.py` |
 | class | `TaskService` | service | `src/modules/farm_manager/services/task/task_service.py` |
 | class | `VirtualBlockService` | service | `src/modules/farm_manager/services/block/virtual_block_service.py` |
 | class | `WeatherAPIClient` | service | `src/modules/farm_manager/services/weather/weather_client.py` |
 | class | `WeatherCacheService` | service | `src/modules/farm_manager/services/weather/weather_cache_service.py` |
 | class | `WeatherService` | service | `src/modules/farm_manager/services/weather/weather_service.py` |
+| function | `_enrich_tasks_with_block_farm` | service | `src/modules/farm_manager/services/task/task_repository.py` |
 
-### `frontend` (3 nodes)
+### `frontend` (31 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
 | config | `NODE_ENV` | config | `docker-compose.yml` |
 | config | `VITE_API_TARGET` | config | `docker-compose.yml` |
 | config | `VITE_API_URL` | config | `docker-compose.yml` |
+| component | `AIAnalyticsChat` | frontend | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx` |
+| component | `AIHubChat` | frontend | `frontend/user-portal/src/components/ai/AIHubChat.tsx` |
+| component | `App` | frontend | `frontend/user-portal/src/App.tsx` |
+| component | `BlockDetail` | frontend | `frontend/user-portal/src/components/farm/BlockDetail.tsx` |
+| component | `BlockHarvestEntryModal` | frontend | `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx` |
+| component | `CRMPage` | frontend | `frontend/user-portal/src/pages/crm/CRMPage.tsx` |
+| component | `CompactBlockCard` | frontend | `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx` |
+| component | `CustomerDetailPage` | frontend | `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx` |
+| component | `FarmDashboard` | frontend | `frontend/user-portal/src/components/farm/FarmDashboard.tsx` |
+| component | `FarmDashboardPage` | frontend | `frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx` |
+| component | `HRDashboardPage` | frontend | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx` |
+| type | `HarvestEntry` | frontend | `frontend/user-portal/src/types/tasks.ts` |
+| component | `HarvestEntryModal (mushroom)` | frontend | `frontend/user-portal/src/components/mushroom/HarvestEntryModal.tsx` |
+| component | `HarvestEntryModal (operations)` | frontend | `frontend/user-portal/src/components/operations/HarvestEntryModal.tsx` |
+| type | `HarvestGrade` | frontend | `frontend/user-portal/src/types/tasks.ts` |
+| type | `HarvestSummary` | frontend | `frontend/user-portal/src/types/tasks.ts` |
+| component | `InventoryDashboard` | frontend | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx` |
+| component | `MushroomFacilityManager` | frontend | `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx` |
+| type | `PaginatedTasksResponse` | frontend | `frontend/user-portal/src/types/tasks.ts` |
+| component | `SalesDashboardPage` | frontend | `frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx` |
+| type | `Task` | frontend | `frontend/user-portal/src/types/tasks.ts` |
+| type | `TaskStatus` | frontend | `frontend/user-portal/src/types/tasks.ts` |
+| type | `TaskType` | frontend | `frontend/user-portal/src/types/tasks.ts` |
+| type | `TaskWithDetails` | frontend | `frontend/user-portal/src/types/tasks.ts` |
+| function | `positiveIntegerInputProps` | frontend | `frontend/user-portal/src/utils/inputGuards.ts` |
+| function | `positiveNumberInputProps` | frontend | `frontend/user-portal/src/utils/inputGuards.ts` |
+| config | `theme` | frontend | `frontend/shared/src/theme/theme.ts` |
+| file | `utils/index` | frontend | `frontend/user-portal/src/utils/index.ts` |
 
 ### `hr` (25 nodes)
 

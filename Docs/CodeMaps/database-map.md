@@ -1,6 +1,6 @@
 # Database Map
 
-> Generated: 2026-02-24 10:11 UTC  
+> Generated: 2026-04-14 12:39 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=db_model, layer=model)
 
 ## Overview
@@ -10,7 +10,7 @@ This map covers all collections, document schemas, and inter-collection relation
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md)
 
-## Collections by Module (50 models)
+## Collections by Module (64 models)
 
 ### Module: `ai_analytics`
 
@@ -56,11 +56,25 @@ This map covers all collections, document schemas, and inter-collection relation
 | `DashboardSummary` | `src/modules/farm_manager/models/dashboard.py:108` | Dashboard summary models with block states, harvest data, and farming year context. | DashboardSummary, DashboardResponse, DashboardSummaryResponse |
 | `Farm` | `src/modules/farm_manager/models/farm.py:71` | Farm Pydantic model with location, boundary, metadata, and farmId. | Farm, FarmCreate, FarmUpdate, FarmBase |
 | `FarmAnalyticsResponse` | `src/modules/farm_manager/models/farm_analytics.py:93` | Farm analytics response models: aggregated metrics, state breakdown, trends. | FarmAnalyticsResponse, AggregatedMetrics, StateBreakdown |
+| `FarmTask` | `src/modules/farm_manager/models/farm_task.py:180` | Complete farm task document stored in the farm_tasks collection. Includes taskData (harvestEntries, totalHarvest, notes, photoUrls), status, completion tracking, divisionId/organizationId scoping. | FarmTask |
 | `FarmTask` | `src/modules/farm_manager/models/farm_task.py:180` | Farm task model with type, priority, status, and harvest entry support. | FarmTask, FarmTaskCreate, TaskType, TaskStatus, HarvestEntry |
+| `FarmTaskCreate` | `src/modules/farm_manager/models/farm_task.py:160` | Request schema for creating a new farm task (farmId, blockId, taskType, scheduledDate, priority, assignedTo, triggerStateChange). | FarmTaskCreate |
+| `FarmTaskListResponse` | `src/modules/farm_manager/models/farm_task.py:288` | Paginated list response wrapper for FarmTask. | FarmTaskListResponse |
+| `FarmTaskUpdate` | `src/modules/farm_manager/models/farm_task.py:279` | Partial-update schema for tasks (scheduledDate, dueDate, status, priority, description). | FarmTaskUpdate |
+| `FarmTaskWithDetails` | `src/modules/farm_manager/models/farm_task.py:257` | v1.11.0 NEW: FarmTask extended with joined block/farm context. Optional fields: blockCode, blockName, targetCrop, targetCropName, actualPlantCount, expectedYieldKg (from blocks); farmCode, farmName (from farms). Used by Operations task UI and harvest-entry modals so clients don't need follow-up fetches. | FarmTaskWithDetails |
 | `GlobalAnalyticsResponse` | `src/modules/farm_manager/models/global_analytics.py:79` | Global analytics response aggregating across all farms. | GlobalAnalyticsResponse, GlobalAggregatedMetrics |
+| `HarvestEntry` | `src/modules/farm_manager/models/farm_task.py:49` | Single harvest entry attached to a daily_harvest task (entryId, userId, userEmail, timestamp, quantity, grade, notes). | HarvestEntry |
+| `HarvestEntryCreate` | `src/modules/farm_manager/models/farm_task.py:243` | Request schema for adding a harvest entry (quantity > 0, grade, optional notes). | HarvestEntryCreate |
+| `HarvestGrade` | `src/modules/farm_manager/models/farm_task.py:40` | Enum: A, B, C, D, Waste. | HarvestGrade |
 | `HarvestInventory` | `src/modules/farm_manager/models/inventory.py:397` | Comprehensive inventory models: harvest, input, asset, waste types with movements and transfers. | HarvestInventory, InputInventory, AssetInventory, WasteInventory, InventoryMovem |
+| `HarvestTotal` | `src/modules/farm_manager/models/farm_task.py:73` | Aggregated harvest totals (totalQuantity, gradeBreakdown per grade, contributors, entryCount). | HarvestTotal |
 | `PlantData` | `src/modules/farm_manager/models/plant_data.py:101` | Simple plant data model (legacy format). | PlantData, PlantDataCreate |
 | `PlantDataEnhanced` | `src/modules/farm_manager/models/plant_data_enhanced.py:441` | Enhanced plant library with growth cycles, fertigation, environmental requirements. | PlantDataEnhanced, PlantDataEnhancedCreate, GrowthCycleDuration, FertigationSche |
+| `TaskCompletionData` | `src/modules/farm_manager/models/farm_task.py:250` | Request schema for completing a non-harvest task (notes, photoUrls, triggerTransition for Phase 2 block state change). | TaskCompletionData |
+| `TaskData` | `src/modules/farm_manager/models/farm_task.py:106` | Task-specific completion data: harvestEntries list, totalHarvest, notes, photoUrls. Validators coerce None to empty list for backward compatibility. | TaskData |
+| `TaskPriority` | `src/modules/farm_manager/models/farm_task.py:33` | Enum: high, medium, low. | TaskPriority |
+| `TaskStatus` | `src/modules/farm_manager/models/farm_task.py:25` | Enum: pending, in_progress, completed, cancelled. | TaskStatus |
+| `TaskType` | `src/modules/farm_manager/models/farm_task.py:14` | Enum: planting, fruiting_check, harvest_readiness, daily_harvest, harvest_completion, cleaning, custom. | TaskType |
 | `alerts` | `src/modules/farm_manager/services/database.py` | MongoDB collection: alerts - block alerts with severity, status, and resolution |
 | `block_archives` | `src/modules/farm_manager/services/database.py` | MongoDB collection: block_archives - archived growing cycles for historical reference |
 | `block_cycles` | `src/modules/farm_manager/services/database.py` | MongoDB collection: block_cycles - historical growing cycles for blocks |

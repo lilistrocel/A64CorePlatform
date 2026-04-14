@@ -1,6 +1,6 @@
 # Service Map
 
-> Generated: 2026-02-24 10:11 UTC  
+> Generated: 2026-04-14 12:39 UTC  
 > Source: MongoDB `mapper_nodes` (layer=service)
 
 ## Overview
@@ -10,7 +10,7 @@ Services are injected into API endpoints via FastAPI dependency injection.
 
 **Related Maps:** [api-map.md](api-map.md) | [database-map.md](database-map.md) | [module-map.md](module-map.md)
 
-## Services by Module (55 total)
+## Services by Module (60 total)
 
 ### `ai_analytics`
 
@@ -57,6 +57,7 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `FarmingYearService` | `src/modules/farm_manager/services/farming_year_service.py:25` | FarmingYearService | Configurable farming year periods for analytics date ranges. |
 | `GlobalAnalyticsService` | `src/modules/farm_manager/services/global_analytics_service.py:29` | GlobalAnalyticsService | Cross-farm analytics aggregation using FarmAnalyticsService and FarmRepository. |
 | `HarvestAggregatorService` | `src/modules/farm_manager/services/task/harvest_aggregator.py:19` | HarvestAggregatorService | Daily aggregation of harvest entries into block_harvests (runs at 23:00). |
+| `HarvestAggregatorService` | `src/modules/farm_manager/services/task/harvest_aggregator.py` | HarvestAggregatorService | Cron-driven aggregator for daily harvest tasks. Aggregates entries at 23:00, creates harvest records, updates block KPIs, generates next-day task if block still HARVESTING. |
 | `HarvestService` | `src/modules/farm_manager/services/block/harvest_service.py:28` | HarvestService | Block harvest CRUD with quality grade mapping to inventory integration. |
 | `PlantDataEnhancedService` | `src/modules/farm_manager/services/plant_data/plant_data_enhanced_service.py:25` | PlantDataEnhancedService | Enhanced plant data CRUD with growth cycles, fertigation, search, clone. |
 | `PlantDataService` | `src/modules/farm_manager/services/plant_data/plant_data_service.py:20` | PlantDataService | Simple plant data CRUD with CSV import/export. |
@@ -65,11 +66,15 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `SenseHubConnectionService` | `src/modules/farm_manager/services/sensehub/sensehub_connection_service.py:23` | SenseHubConnectionService | SenseHub connection lifecycle: connect, disconnect, status, get_client, get_mcp_client. |
 | `SenseHubMCPClient` | `src/modules/farm_manager/services/sensehub/sensehub_mcp_client.py:36` | SenseHubMCPClient | MCP protocol client for SenseHub with dynamic tool discovery via SSE transport. |
 | `TaskGeneratorService` | `src/modules/farm_manager/services/task/task_generator.py:21` | TaskGeneratorService | Auto-generates tasks on block state transitions (e.g. planting, harvesting). |
+| `TaskGeneratorService` | `src/modules/farm_manager/services/task/task_generator.py` | TaskGeneratorService | Auto-generates tasks from block cycle state transitions. |
+| `TaskRepository` | `src/modules/farm_manager/services/task/task_repository.py:75` | TaskRepository | Data access layer for farm tasks. Handles CRUD, get_by_farm/get_by_block/get_my_tasks pagination, complete_task, add_harvest_entry, aggregate_daily_harvest. |
 | `TaskService` | `src/modules/farm_manager/services/task/task_service.py:25` | TaskService | Farm task CRUD: create, assign, complete, harvest entry, cancel. |
+| `TaskService` | `src/modules/farm_manager/services/task/task_service.py:25` | TaskService | Business logic layer for farm tasks. v1.11.0: get_task/get_farm_tasks/get_block_tasks/get_my_tasks now return FarmTaskWithDetails via _enrich_tasks_with_block_farm. Also handles task completion + optional block state transition. |
 | `VirtualBlockService` | `src/modules/farm_manager/services/block/virtual_block_service.py:24` | VirtualBlockService | Multi-crop virtual block management: add/empty virtual crops under parent blocks. |
 | `WeatherAPIClient` | `src/modules/farm_manager/services/weather/weather_client.py:26` | WeatherAPIClient | HTTP client for WeatherBit API (current, forecast, agri data). |
 | `WeatherCacheService` | `src/modules/farm_manager/services/weather/weather_cache_service.py:22` | WeatherCacheService | Server-side weather response caching with TTL management. |
 | `WeatherService` | `src/modules/farm_manager/services/weather/weather_service.py:72` | WeatherService | Weather data retrieval via WeatherBit API with caching. |
+| `_enrich_tasks_with_block_farm` | `src/modules/farm_manager/services/task/task_repository.py:22` | _enrich_tasks_with_block_farm | v1.11.0 helper: batched $in lookup against blocks and farms collections to enrich FarmTask list into FarmTaskWithDetails (attaches blockCode, blockName, farmCode, farmName, targetCrop, targetCropName, actualPlantCount, expectedYieldKg). Single round-trip per collection regardless of task count. |
 
 ### `hr`
 
@@ -154,3 +159,11 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `component::MFARouteGuards` | uses | `hook::useMFA` | MFARouteGuards imports getCachedVerifyState from useMFA |
 | `component::ToastContainer` | uses | `store::useToastStore` | ToastContainer uses useToastStore |
 | `component::MainLayout` | uses | `store::useAuthStore` | MainLayout uses useAuthStore for user info |
+| `farm_manager.api.v1.tasks.router` | uses | `farm_manager.models.farm_task.FarmTaskWithDetails` | line 12: imports FarmTaskWithDetails as response model for l |
+| `farm_manager.services.task.task_repository._enrich_tasks_with_block_farm` | uses | `farm_manager.models.farm_task.FarmTaskWithDetails` | line 60: FarmTaskWithDetails(**task.model_dump(), blockCode= |
+| `farm_manager.models.farm_task.FarmTask` | uses | `farm_manager.models.farm_task.TaskData` | taskData: TaskData field |
+| `farm_manager.models.farm_task.TaskData` | uses | `farm_manager.models.farm_task.HarvestEntry` | harvestEntries: List[HarvestEntry] |
+| `farm_manager.models.farm_task.TaskData` | uses | `farm_manager.models.farm_task.HarvestTotal` | totalHarvest: Optional[HarvestTotal] |
+| `frontend.components.operations.HarvestEntryModal` | uses | `frontend.types.tasks.TaskWithDetails` | reads blockCode/blockName/targetCropName/actualPlantCount/ex |
+| `frontend.components.operations.HarvestEntryModal` | uses | `frontend.utils.inputGuards.positiveNumberInputProps` | spreads positiveNumberInputProps onto harvest quantity input |
+| `frontend.components.farm.BlockHarvestEntryModal` | uses | `frontend.utils.inputGuards.positiveNumberInputProps` | spreads positiveNumberInputProps onto harvest quantity input |
