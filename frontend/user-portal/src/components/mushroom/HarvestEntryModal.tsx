@@ -227,7 +227,7 @@ const ModalTitle = styled.h2`
 const RoomBadge = styled.span`
   font-size: 13px;
   font-weight: 600;
-  background: #e3f2fd;
+  background: ${({ theme }) => theme.colors.infoBg};
   color: #1565c0;
   border-radius: 20px;
   padding: 4px 10px;
@@ -370,7 +370,7 @@ const TextArea = styled.textarea`
 const ValidationError = styled.div`
   font-size: 13px;
   color: #ef5350;
-  background: #fef2f2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 10px 12px;

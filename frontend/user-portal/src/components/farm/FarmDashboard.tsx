@@ -615,7 +615,7 @@ const SpinnerEl = styled.div`
 
 const ErrorContainer = styled.div`
   padding: ${({ theme }) => theme.spacing.lg};
-  background: #FEF2F2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   color: ${({ theme }) => theme.colors.error};

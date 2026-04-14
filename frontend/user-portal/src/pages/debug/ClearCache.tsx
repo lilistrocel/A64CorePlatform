@@ -134,23 +134,23 @@ const Message = styled.div<{ $type: 'success' | 'error' | 'info' }>`
   font-size: 14px;
   text-align: center;
 
-  ${props => {
-    if (props.$type === 'success') {
+  ${({ $type, theme }) => {
+    if ($type === 'success') {
       return `
-        background: #e8f5e9;
+        background: ${theme.colors.successBg};
         color: #2e7d32;
         border: 1px solid #4caf50;
       `;
     }
-    if (props.$type === 'error') {
+    if ($type === 'error') {
       return `
-        background: #ffebee;
+        background: ${theme.colors.errorBg};
         color: #c62828;
         border: 1px solid #f44336;
       `;
     }
     return `
-      background: #e3f2fd;
+      background: ${theme.colors.infoBg};
       color: #1565c0;
       border: 1px solid #2196f3;
     `;

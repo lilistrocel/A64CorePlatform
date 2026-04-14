@@ -936,7 +936,7 @@ const TextArea = styled.textarea`
 const FormError = styled.div`
   font-size: 13px;
   color: #ef5350;
-  background: #fef2f2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 10px 12px;

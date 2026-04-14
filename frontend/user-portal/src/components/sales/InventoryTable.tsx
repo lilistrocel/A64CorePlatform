@@ -81,7 +81,7 @@ const TableRow = styled.tr`
   }
 
   &:hover {
-    background: #f0f4f8;
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 
   &:last-child {
@@ -103,18 +103,18 @@ const StatusBadge = styled.span<{ $status: string }>`
   font-weight: 500;
   text-transform: capitalize;
 
-  ${({ $status }) => {
+  ${({ $status, theme }) => {
     switch ($status) {
       case 'available':
-        return 'background: #D1FAE5; color: #065F46;';
+        return `background: ${theme.colors.successBg}; color: #065F46;`;
       case 'reserved':
-        return 'background: #FEF3C7; color: #92400E;';
+        return `background: ${theme.colors.warningBg}; color: #92400E;`;
       case 'sold':
-        return 'background: #DBEAFE; color: #1E40AF;';
+        return `background: ${theme.colors.infoBg}; color: #1E40AF;`;
       case 'expired':
-        return 'background: #FEE2E2; color: #991B1B;';
+        return `background: ${theme.colors.errorBg}; color: #991B1B;`;
       default:
-        return 'background: #E0E0E0; color: #616161;';
+        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
     }
   }}
 `;
@@ -126,16 +126,16 @@ const QualityBadge = styled.span<{ $quality: string }>`
   font-size: 12px;
   font-weight: 500;
 
-  ${({ $quality }) => {
+  ${({ $quality, theme }) => {
     switch ($quality) {
       case 'A':
-        return 'background: #D1FAE5; color: #065F46;';
+        return `background: ${theme.colors.successBg}; color: #065F46;`;
       case 'B':
-        return 'background: #FEF3C7; color: #92400E;';
+        return `background: ${theme.colors.warningBg}; color: #92400E;`;
       case 'C':
-        return 'background: #FED7AA; color: #9A3412;';
+        return `background: ${theme.colors.warningBg}; color: #9A3412;`;
       default:
-        return 'background: #E0E0E0; color: #616161;';
+        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
     }
   }}
 `;
@@ -155,23 +155,23 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'danger') {
       return `
         background: transparent;
         color: #EF4444;
         border: 1px solid #EF4444;
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.infoBg};
       }
     `;
   }}

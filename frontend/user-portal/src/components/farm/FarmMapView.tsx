@@ -110,7 +110,7 @@ const LoadingOverlay = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
+  background: ${({ theme }) => theme.colors.background}e6;
   z-index: 10;
 `;
 

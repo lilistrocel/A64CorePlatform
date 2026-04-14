@@ -314,7 +314,7 @@ const StatsButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #d1fae5;
+    background: ${({ theme }) => theme.colors.successBg};
   }
 
   &:disabled {
@@ -333,7 +333,7 @@ const RefreshButton = styled.button`
   padding: 10px 16px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.primary[500]};
   color: white;
   font-size: 14px;
   font-weight: 500;
@@ -345,7 +345,7 @@ const RefreshButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
 
   &:disabled {
@@ -385,7 +385,7 @@ const SettingsButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #e3f2fd;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
 

@@ -8,6 +8,7 @@
 import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { addHarvestEntry } from '../../services/tasksApi';
+import { positiveNumberInputProps } from '../../utils';
 import type { TaskWithDetails, HarvestGrade } from '../../types/tasks';
 import { HARVEST_GRADE_COLORS, HARVEST_GRADE_LABELS } from '../../types/tasks';
 
@@ -79,17 +80,42 @@ export function HarvestEntryModal({ isOpen, task, onClose, onComplete }: Harvest
 
         <Content>
           <TaskInfo>
-            <TaskTitle>{task.title}</TaskTitle>
-            {task.blockCode && (
-              <TaskSubtitle>Block: {task.blockCode}</TaskSubtitle>
+            <BlockLine>
+              <LineIcon aria-hidden>📍</LineIcon>
+              <BlockIdentity>
+                {task.blockCode || `Block ${task.blockId.slice(0, 8)}`}
+                {task.blockName && <BlockName> — {task.blockName}</BlockName>}
+              </BlockIdentity>
+            </BlockLine>
+
+            {/* Prefer enriched fields from the backend join (fall back to
+                metadata, kept for older tasks that snapshot this into metadata). */}
+            {(task.targetCropName || task.metadata?.targetCropName) && (
+              <CropLine>
+                <LineIcon aria-hidden>🌱</LineIcon>
+                <CropName>{task.targetCropName || task.metadata?.targetCropName}</CropName>
+              </CropLine>
             )}
+
+            {((task.actualPlantCount ?? task.metadata?.plantCount) || (task.expectedYieldKg ?? task.metadata?.expectedYieldKg)) && (
+              <ChipRow>
+                {(task.actualPlantCount ?? task.metadata?.plantCount) && (
+                  <Chip>{(task.actualPlantCount ?? task.metadata?.plantCount)!.toLocaleString('en-US')} plants</Chip>
+                )}
+                {(task.expectedYieldKg ?? task.metadata?.expectedYieldKg) && (
+                  <Chip>Target: {(task.expectedYieldKg ?? task.metadata?.expectedYieldKg)!.toLocaleString('en-US', { maximumFractionDigits: 1 })} kg</Chip>
+                )}
+              </ChipRow>
+            )}
+
+            {task.title && <TaskTitleLine>Task: {task.title}</TaskTitleLine>}
           </TaskInfo>
 
           <Form onSubmit={handleSubmit}>
             <FormGroup>
               <Label>Quantity (kg) *</Label>
               <Input
-                type="number"
+                {...positiveNumberInputProps}
                 step="0.01"
                 min="0.01"
                 value={quantityKg}
@@ -213,23 +239,74 @@ const Content = styled.div`
 `;
 
 const TaskInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.xs};
   margin-bottom: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.md};
   background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-left: 4px solid #10B981; /* grade-A green: signals crop/harvest context */
 `;
 
-const TaskTitle = styled.h3`
+const BlockLine = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const CropLine = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const LineIcon = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  line-height: 1;
+`;
+
+const BlockIdentity = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
+  font-family: 'Courier New', monospace;
 `;
 
-const TaskSubtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+const BlockName = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
   color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
+`;
+
+const CropName = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const ChipRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.xs};
+  margin-top: 2px;
+`;
+
+const Chip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px ${({ theme }) => theme.spacing.xs};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+`;
+
+const TaskTitleLine = styled.p`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin: 4px 0 0 0;
+  font-style: italic;
 `;
 
 const Form = styled.form`

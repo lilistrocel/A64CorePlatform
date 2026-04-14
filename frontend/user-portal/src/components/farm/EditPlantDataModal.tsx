@@ -153,7 +153,7 @@ const VersionBadge = styled.div`
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: #e3f2fd;
+  background: ${({ theme }) => theme.colors.infoBg};
   color: #1976d2;
   border-radius: 9999px;
   font-size: 12px;
@@ -441,7 +441,7 @@ const ModalFooter = styled.div`
 
 const SuccessMessage = styled.div`
   padding: 12px 16px;
-  background: #D1FAE5;
+  background: ${({ theme }) => theme.colors.successBg};
   color: #059669;
   border-radius: 8px;
   font-size: 14px;
@@ -450,7 +450,7 @@ const SuccessMessage = styled.div`
 
 const ErrorMessage = styled.div`
   padding: 12px 16px;
-  background: #FEE2E2;
+  background: ${({ theme }) => theme.colors.errorBg};
   color: #EF4444;
   border-radius: 8px;
   font-size: 14px;
@@ -474,10 +474,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: ${theme.colors.primary[500]};
         color: white;
         &:hover:not(:disabled) {
-          background: #1976d2;
+          background: ${theme.colors.primary[700]};
         }
       `;
     }
@@ -528,7 +528,7 @@ const ScheduleItemTitle = styled.div`
 
 const RemoveButton = styled.button`
   padding: 6px 12px;
-  background: #FEE2E2;
+  background: ${({ theme }) => theme.colors.errorBg};
   color: #EF4444;
   border: none;
   border-radius: 6px;
@@ -544,7 +544,7 @@ const RemoveButton = styled.button`
 
 const AddButton = styled.button`
   padding: 10px 16px;
-  background: #E0F2FE;
+  background: ${({ theme }) => theme.colors.infoBg};
   color: #0284C7;
   border: 1px dashed #0284C7;
   border-radius: 8px;
@@ -555,7 +555,8 @@ const AddButton = styled.button`
   width: 100%;
 
   &:hover {
-    background: #BAE6FD;
+    background: ${({ theme }) => theme.colors.infoBg};
+    filter: brightness(0.92);
   }
 `;
 

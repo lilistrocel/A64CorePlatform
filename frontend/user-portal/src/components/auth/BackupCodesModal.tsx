@@ -205,8 +205,8 @@ const ModalFooter = styled.div`
 `;
 
 const WarningBanner = styled.div`
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.75rem;
   margin-bottom: 1rem;

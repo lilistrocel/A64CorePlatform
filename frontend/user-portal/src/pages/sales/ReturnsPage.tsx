@@ -161,7 +161,7 @@ const TableRow = styled.tr`
   }
 
   &:hover {
-    background: #f0f4f8;
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
 
@@ -190,18 +190,18 @@ const StatusBadge = styled.span<{ $status: ReturnStatus }>`
   font-weight: 600;
   text-transform: capitalize;
 
-  ${({ $status }) => {
+  ${({ $status, theme }) => {
     switch ($status) {
       case 'pending':
-        return 'background: #FEF3C7; color: #92400E;';
+        return `background: ${theme.colors.warningBg}; color: #92400E;`;
       case 'processing':
-        return 'background: #DBEAFE; color: #1E40AF;';
+        return `background: ${theme.colors.infoBg}; color: #1E40AF;`;
       case 'completed':
-        return 'background: #D1FAE5; color: #065F46;';
+        return `background: ${theme.colors.successBg}; color: #065F46;`;
       case 'rejected':
-        return 'background: #FEE2E2; color: #991B1B;';
+        return `background: ${theme.colors.errorBg}; color: #991B1B;`;
       default:
-        return 'background: #F3F4F6; color: #374151;';
+        return `background: ${theme.colors.surface}; color: ${theme.colors.textPrimary};`;
     }
   }}
 `;
@@ -305,7 +305,7 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid #EF4444;
   color: #991B1B;
   padding: 16px;

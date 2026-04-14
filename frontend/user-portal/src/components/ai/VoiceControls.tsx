@@ -185,14 +185,14 @@ const ErrorToast = styled.div`
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error}40;
   border-radius: 10px;
-  color: #DC2626;
+  color: ${({ theme }) => theme.colors.error};
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   z-index: 50;
   animation: ${slideIn} 200ms ease-out;
   pointer-events: none;

@@ -128,7 +128,7 @@ const EmployeeDate = styled.span`
 
 const VisaItem = styled.div`
   padding: 12px;
-  background: #fef3c7;
+  background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid #fbbf24;
   border-radius: 8px;
   margin-bottom: 8px;
@@ -178,7 +178,7 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid #EF4444;
   color: #991B1B;
   padding: 16px;
@@ -216,7 +216,7 @@ const DepartmentCount = styled.span`
   font-size: 14px;
   font-weight: 600;
   color: #3B82F6;
-  background: #EBF5FF;
+  background: ${({ theme }) => theme.colors.infoBg};
   padding: 4px 12px;
   border-radius: 16px;
 `;

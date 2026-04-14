@@ -189,16 +189,16 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
         color: #EF4444;
         border: 1px solid #EF4444;
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
       background: ${theme.colors.background};
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.infoBg};
       }
     `;
   }}

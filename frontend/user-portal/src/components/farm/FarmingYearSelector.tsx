@@ -218,7 +218,7 @@ const Select = styled.select<{ $compact?: boolean }>`
 
   &:hover:not(:disabled) {
     border-color: #3b82f6;
-    background-color: #f8faff;
+    background-color: ${({ theme }) => theme.colors.infoBg};
   }
 
   &:focus {
@@ -269,7 +269,7 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 const EmptySelect = styled(Select)`
   color: #ef4444;
   border-color: #fecaca;
-  background-color: #fef2f2;
+  background-color: ${({ theme }) => theme.colors.errorBg};
 `;
 
 const LoadingSpinner = styled.div`

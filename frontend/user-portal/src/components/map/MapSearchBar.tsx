@@ -248,19 +248,19 @@ const ClearButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3f4f6;
+  background: ${({ theme }) => theme.colors.surface};
   border: none;
   border-radius: 50%;
   width: 20px;
   height: 20px;
   cursor: pointer;
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
   flex-shrink: 0;
   transition: all 0.2s;
 
   &:hover {
-    background: #e5e7eb;
-    color: #374151;
+    background: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;
 
@@ -288,7 +288,7 @@ const ResultItem = styled.li`
   transition: background 0.15s;
 
   &:hover {
-    background: #f3f4f6;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -314,12 +314,12 @@ const ErrorMessage = styled.div`
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: #fee2e2;
+  background: ${({ theme }) => theme.colors.errorBg};
   color: #dc2626;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 export default MapSearchBar;

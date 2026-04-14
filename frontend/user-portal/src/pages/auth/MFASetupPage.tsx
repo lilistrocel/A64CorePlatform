@@ -562,7 +562,7 @@ const ErrorBanner = styled.div`
 `;
 
 const WarningBanner = styled.div`
-  background: #fef3c7;
+  background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid #f59e0b;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 0.75rem 1rem;

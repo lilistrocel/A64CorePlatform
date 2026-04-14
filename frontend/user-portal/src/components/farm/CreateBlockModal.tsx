@@ -153,10 +153,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: #fee2e2;
-  border: 1px solid #ef4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   font-size: 14px;
 `;
 

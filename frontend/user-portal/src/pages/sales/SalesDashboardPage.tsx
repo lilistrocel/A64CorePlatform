@@ -43,7 +43,7 @@ const HeaderRight = styled.div`
 
 const FarmingYearBadge = styled.span`
   display: inline-block;
-  background: #e0f2fe;
+  background: ${({ theme }) => theme.colors.infoBg};
   color: #0369a1;
   padding: 4px 10px;
   border-radius: 12px;
@@ -177,7 +177,7 @@ const InventoryItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #FEF3C7;
+  background: ${({ theme }) => theme.colors.warningBg};
   border-left: 3px solid #F59E0B;
   border-radius: 4px;
   font-size: 13px;
@@ -202,7 +202,7 @@ const QuickActions = styled.div`
 
 const ActionButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
+  background: ${({ theme }) => theme.colors.primary[500]};
   color: white;
   border: none;
   border-radius: 8px;
@@ -212,7 +212,7 @@ const ActionButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
 `;
 
@@ -226,7 +226,7 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid #EF4444;
   color: #991B1B;
   padding: 16px;

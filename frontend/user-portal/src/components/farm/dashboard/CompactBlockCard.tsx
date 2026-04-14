@@ -489,6 +489,11 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             blockId={block.blockId}
             blockCode={block.blockCode}
             blockName={block.name}
+            targetCropName={block.targetCropName}
+            actualPlantCount={block.actualPlantCount}
+            predictedYieldKg={block.kpi?.predictedYieldKg}
+            actualYieldKg={block.kpi?.actualYieldKg}
+            totalHarvests={block.kpi?.totalHarvests}
             onClose={() => setShowHarvestModal(false)}
             onComplete={handleHarvestComplete}
           />
@@ -513,10 +518,10 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
 // ============================================================================
 
 const Card = styled.div<{ $stateColor: string }>`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 8px;
   padding: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: ${({ theme }) => theme.shadows.sm};
   border-left: 4px solid ${(props) => props.$stateColor};
   transition: all 200ms ease-in-out;
   position: relative;
@@ -540,7 +545,7 @@ const Header = styled.div`
 const BlockCode = styled.div`
   font-size: 11px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   font-family: 'Courier New', monospace;
 `;
 
@@ -562,7 +567,7 @@ const StateBadge = styled.div<{ $color: string }>`
 const BlockName = styled.div`
   font-size: 14px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -594,7 +599,7 @@ const EmptyIcon = styled.div`
 
 const EmptyText = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 4px;
 `;
 
@@ -636,13 +641,13 @@ const CleaningIcon = styled.div`
 
 const CleaningText = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 4px;
 `;
 
 const LastYield = styled.div`
   font-size: 11px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 // Common Elements
@@ -659,7 +664,7 @@ const CropIcon = styled.span`
 const CropName = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -667,21 +672,21 @@ const CropName = styled.div`
 
 const Capacity = styled.div`
   font-size: 11px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const CapacityBar = styled.div``;
 
 const CapacityLabel = styled.div`
   font-size: 11px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-bottom: 4px;
 `;
 
 const ProgressBar = styled.div`
   width: 100%;
   height: 6px;
-  background: #e0e0e0;
+  background: ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 4px;
@@ -696,7 +701,7 @@ const ProgressFill = styled.div<{ $percent: number; $color: string }>`
 
 const CapacityPercent = styled.div`
   font-size: 10px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-align: right;
 `;
 
@@ -720,7 +725,7 @@ const InfoIcon = styled.span`
 
 const InfoText = styled.span`
   font-size: 11px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const DelayBadge = styled.div<{ $color: string }>`
@@ -746,14 +751,14 @@ const TimelineIcon = styled.span`
 
 const TimelineText = styled.span`
   font-size: 11px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const YieldProgress = styled.div``;
 
 const YieldLabel = styled.div`
   font-size: 12px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: 600;
   margin-bottom: 4px;
 `;
@@ -770,7 +775,7 @@ const HarvestInfo = styled.div``;
 const AlertsSection = styled.div`
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -781,28 +786,28 @@ const AlertBadge = styled.div<{ $severity: string }>`
   border-radius: 4px;
   font-size: 10px;
   font-weight: 600;
-  background: ${(props) => {
-    switch (props.$severity) {
+  background: ${({ $severity, theme }) => {
+    switch ($severity) {
       case 'critical':
-        return '#FEE2E2';
+        return theme.colors.errorBg;
       case 'high':
-        return '#FEF3C7';
+        return theme.colors.warningBg;
       case 'medium':
-        return '#DBEAFE';
+        return theme.colors.infoBg;
       default:
-        return '#F3F4F6';
+        return theme.colors.surface;
     }
   }};
-  color: ${(props) => {
-    switch (props.$severity) {
+  color: ${({ $severity, theme }) => {
+    switch ($severity) {
       case 'critical':
-        return '#DC2626';
+        return theme.colors.error;
       case 'high':
-        return '#F59E0B';
+        return theme.colors.warning;
       case 'medium':
-        return '#3B82F6';
+        return theme.colors.info;
       default:
-        return '#6B7280';
+        return theme.colors.textSecondary;
     }
   }};
   overflow: hidden;
@@ -812,7 +817,7 @@ const AlertBadge = styled.div<{ $severity: string }>`
 
 const MoreAlerts = styled.div`
   font-size: 10px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-align: center;
 `;
 
@@ -824,10 +829,13 @@ const QuickActions = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.95);
+  /* "f2" hex alpha = ~95% opacity on the themed surface so the card state
+     color still shows faintly through the action bar while keeping contrast
+     against whatever's below in dark mode. */
+  background: ${({ theme }) => `${theme.colors.surface}f2`};
   padding: 4px;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   max-width: calc(100% - 16px);
 `;
 

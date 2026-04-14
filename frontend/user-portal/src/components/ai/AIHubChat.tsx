@@ -405,9 +405,9 @@ const Dot = styled.div<DotProps>`
 
 const ErrorBanner = styled.div`
   font-size: 13px;
-  color: #EF4444;
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
+  color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error}40;
   padding: 8px 14px;
   border-radius: 8px;
   text-align: center;

@@ -10,13 +10,13 @@ from datetime import datetime
 import logging
 
 from ...models.farm_task import (
-    FarmTask, FarmTaskCreate, FarmTaskUpdate,
+    FarmTask, FarmTaskCreate, FarmTaskUpdate, FarmTaskWithDetails,
     TaskType, TaskStatus, HarvestEntryCreate,
     TaskCompletionData
 )
 from ...models.block import BlockStatus, BlockStatusUpdate
 from ...utils.responses import PaginatedResponse, PaginationMeta
-from .task_repository import TaskRepository
+from .task_repository import TaskRepository, _enrich_tasks_with_block_farm
 from ..database import farm_db
 
 logger = logging.getLogger(__name__)
@@ -82,15 +82,16 @@ class TaskService:
         return task
 
     @staticmethod
-    async def get_task(task_id: UUID) -> FarmTask:
+    async def get_task(task_id: UUID) -> FarmTaskWithDetails:
         """
-        Get task by ID
+        Get task by ID, enriched with block/farm context so the Operations UI
+        can render block code, crop name, etc. without extra round-trips.
 
         Args:
             task_id: Task ID
 
         Returns:
-            FarmTask
+            FarmTaskWithDetails
 
         Raises:
             ValueError: If task not found
@@ -98,7 +99,8 @@ class TaskService:
         task = await TaskRepository.get_by_id(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")
-        return task
+        enriched = await _enrich_tasks_with_block_farm([task])
+        return enriched[0]
 
     @staticmethod
     async def get_farm_tasks(
@@ -107,9 +109,10 @@ class TaskService:
         page: int = 1,
         per_page: int = 50,
         farming_year: Optional[int] = None
-    ) -> PaginatedResponse[FarmTask]:
+    ) -> PaginatedResponse[FarmTaskWithDetails]:
         """
-        Get tasks for a farm
+        Get tasks for a farm, enriched with block/farm context for the
+        Operations UI.
 
         Args:
             farm_id: Farm ID
@@ -119,13 +122,13 @@ class TaskService:
             farming_year: Optional farming year filter (filters by block's farmingYearPlanted)
 
         Returns:
-            PaginatedResponse with paginated tasks
+            PaginatedResponse with paginated enriched tasks
         """
         tasks, total = await TaskRepository.get_by_farm(farm_id, status, page, per_page, farming_year)
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
         return PaginatedResponse(
-            data=tasks,
+            data=await _enrich_tasks_with_block_farm(tasks),
             meta=PaginationMeta(
                 total=total,
                 page=page,
@@ -141,9 +144,11 @@ class TaskService:
         page: int = 1,
         per_page: int = 50,
         sort_by: str = "scheduledDate"
-    ) -> PaginatedResponse[FarmTask]:
+    ) -> PaginatedResponse[FarmTaskWithDetails]:
         """
-        Get tasks for a block
+        Get tasks for a block, enriched with block/farm context so the
+        Operations UI can render block code, crop, and planting stats without
+        follow-up fetches.
 
         Args:
             block_id: Block ID
@@ -153,13 +158,13 @@ class TaskService:
             sort_by: Sort field (scheduledDate, priority, createdAt)
 
         Returns:
-            PaginatedResponse with paginated tasks
+            PaginatedResponse with paginated enriched tasks
         """
         tasks, total = await TaskRepository.get_by_block(block_id, status, page, per_page, sort_by)
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
         return PaginatedResponse(
-            data=tasks,
+            data=await _enrich_tasks_with_block_farm(tasks),
             meta=PaginationMeta(
                 total=total,
                 page=page,
@@ -173,9 +178,10 @@ class TaskService:
         user_id: UUID,
         farm_id: Optional[UUID] = None,
         status: Optional[TaskStatus] = None
-    ) -> List[FarmTask]:
+    ) -> List[FarmTaskWithDetails]:
         """
-        Get tasks visible to a user
+        Get tasks visible to a user, enriched with block/farm context for
+        the Operations UI.
 
         For farmers: Auto-tasks on their assigned farms + tasks assigned to them
         For managers: All tasks on their farms
@@ -186,7 +192,7 @@ class TaskService:
             status: Optional status filter
 
         Returns:
-            List of tasks
+            List of tasks with block/farm context attached
         """
         db = farm_db.get_database()
 
@@ -223,7 +229,9 @@ class TaskService:
         # Sort by scheduled date
         all_tasks.sort(key=lambda t: t.scheduledDate)
 
-        return all_tasks
+        # Enrich with block + farm context so clients can display block code,
+        # crop name, etc. without follow-up fetches per task.
+        return await _enrich_tasks_with_block_farm(all_tasks)
 
     @staticmethod
     async def get_pending_task_count(user_id: UUID) -> int:

@@ -128,7 +128,7 @@ const ToggleInput = styled.input<ToggleInputProps>`
     left: ${({ $checked }) => ($checked ? '18px' : '2px')};
     width: 16px;
     height: 16px;
-    background: white;
+    background: ${({ theme }) => theme.colors.background};
     border-radius: ${({ theme }) => theme.borderRadius.full};
     transition: left 150ms ease-in-out;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);

@@ -391,7 +391,7 @@ const ErrorIcon = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #fee2e2;
+  background: ${({ theme }) => theme.colors.errorBg};
   color: #dc2626;
   font-size: 24px;
   font-weight: bold;

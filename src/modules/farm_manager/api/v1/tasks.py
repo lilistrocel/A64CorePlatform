@@ -9,7 +9,7 @@ from typing import Optional, List
 from uuid import UUID
 
 from ...models.farm_task import (
-    FarmTask, FarmTaskCreate, FarmTaskUpdate,
+    FarmTask, FarmTaskCreate, FarmTaskUpdate, FarmTaskWithDetails,
     TaskType, TaskStatus, TaskPriority, HarvestEntryCreate, TaskCompletionData
 )
 from ...services.task.task_service import TaskService
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 @router.get(
     "/my-tasks",
-    response_model=SuccessResponse[List[FarmTask]],
+    response_model=SuccessResponse[List[FarmTaskWithDetails]],
     summary="Get tasks for current user"
 )
 async def get_my_tasks(
@@ -80,7 +80,7 @@ async def get_pending_task_count(
 
 @router.get(
     "/farms/{farm_id}",
-    response_model=PaginatedResponse[FarmTask],
+    response_model=PaginatedResponse[FarmTaskWithDetails],
     summary="List tasks for a farm"
 )
 async def list_farm_tasks(
@@ -117,7 +117,7 @@ async def list_farm_tasks(
 
 @router.get(
     "/blocks/{block_id}",
-    response_model=PaginatedResponse[FarmTask],
+    response_model=PaginatedResponse[FarmTaskWithDetails],
     summary="List tasks for a block"
 )
 async def list_block_tasks(
@@ -152,7 +152,7 @@ async def list_block_tasks(
 
 @router.get(
     "/{task_id}",
-    response_model=SuccessResponse[FarmTask],
+    response_model=SuccessResponse[FarmTaskWithDetails],
     summary="Get task details"
 )
 async def get_task(

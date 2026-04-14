@@ -145,7 +145,7 @@ const Overlay = styled.div`
 `;
 
 const ModalContainer = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
@@ -187,7 +187,7 @@ const CloseButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -202,7 +202,7 @@ const BlockInfo = styled.div`
   justify-content: space-between;
   margin-bottom: 12px;
   padding: 8px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 4px;
 `;
 
@@ -230,11 +230,11 @@ const Label = styled.label`
 const Select = styled.select`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 14px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
 
   &:focus {
@@ -243,7 +243,7 @@ const Select = styled.select`
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
@@ -251,10 +251,11 @@ const Select = styled.select`
 const Input = styled.input`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 14px;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
 
   &:focus {
     outline: none;
@@ -270,7 +271,7 @@ const Hint = styled.div`
 
 const ModalFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   display: flex;
   gap: 12px;
   justify-content: flex-end;
@@ -278,17 +279,17 @@ const ModalFooter = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
-  background: white;
-  color: #616161;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 

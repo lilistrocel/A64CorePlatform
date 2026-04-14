@@ -42,7 +42,7 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 **Last Updated:** 2026-04-14
 
 ### Platform Version
-**A64 Core Platform:** `1.10.0` (Unreleased)
+**A64 Core Platform:** `1.11.0` (Unreleased)
 
 ### API Versions
 | API Component | Version | Status | Supported Until |
@@ -88,6 +88,34 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 ## Version History
 
 ### Platform Version History
+
+#### v1.11.0 - 2026-04-14 (Unreleased)
+**Type:** Minor Release — Task API Enrichment, Harvest Modal Context Cards, Dark Mode Pass, Input Guards, CRM Routing
+
+**Added:**
+- **Task Endpoints — Block + Farm Context Enrichment**: `FarmTaskWithDetails` response model added to four task endpoints (`/my-tasks`, `/{task_id}`, `/blocks/{block_id}`, `/farms/{farm_id}`). New fields: `blockCode`, `blockName`, `farmCode`, `farmName`, `targetCrop`, `targetCropName`, `actualPlantCount`, `expectedYieldKg`. Resolved via batched `$in` lookups — no migration required.
+- **HarvestEntryModal context card** (`operations/HarvestEntryModal.tsx`): block code/name, crop name, plant count/expected yield chips, task-title line. Graceful fallback to `task.metadata` snapshot fields.
+- **BlockHarvestEntryModal context card + progress chips** (`farm/BlockHarvestEntryModal.tsx`): same context card as operations modal plus prior-harvest summary row when `totalHarvests > 0`.
+- **Input Guards utility** (`frontend/user-portal/src/utils/inputGuards.ts`): `positiveNumberInputProps` and `positiveIntegerInputProps` spread-props for harvest quantity fields; blocks `e`/`E`/`+`/`-` and invalid paste patterns.
+- **CRM edit route** (`/crm/customers/:customerId/edit`): shareable URL-driven edit mode in `CustomerDetailPage`.
+
+**Changed:**
+- **Dark mode — comprehensive pass (~60 files)**: Four new semantic BG tokens in `frontend/shared/src/theme/theme.ts` (`warningBg`, `errorBg`, `successBg`, `infoBg`). Replaced hardcoded light-only colors, white container backgrounds, plain form input backgrounds, and hardcoded text colors across all major frontend areas.
+
+**Compatibility:**
+- No breaking changes. New task response fields are purely additive.
+- No new MongoDB collections or services.
+- Fully backward compatible with v1.10.0.
+
+**Files Changed (summary):**
+- Backend: `farm_task.py`, `task_repository.py`, `task_service.py`, `tasks.py` (api)
+- Frontend types: `tasks.ts`
+- Frontend components: `HarvestEntryModal.tsx` (operations), `BlockHarvestEntryModal.tsx`, `CompactBlockCard.tsx`, and ~60 files for dark-mode pass
+- Frontend utils: `inputGuards.ts` (new), `index.ts`
+- Frontend routing: `App.tsx`, `CustomerDetailPage.tsx`
+- Theme: `frontend/shared/src/theme/theme.ts`
+
+---
 
 #### v1.10.0 - 2026-04-14 (Unreleased)
 **Type:** Minor Release — UX Polish & Bug Fixes (Frontend + HR Backend)

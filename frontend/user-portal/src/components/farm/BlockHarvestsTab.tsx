@@ -10,7 +10,7 @@ import styled from 'styled-components';
 import { farmApi, getAvailableFarmingYears, type FarmingYearItem } from '../../services/farmApi';
 import { FarmingYearSelector } from './FarmingYearSelector';
 import type { BlockHarvest, BlockHarvestCreate, BlockHarvestSummary, QualityGrade } from '../../types/farm';
-import { formatNumber } from '../../utils';
+import { formatNumber, positiveNumberInputProps } from '../../utils';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -297,10 +297,10 @@ const ButtonGroup = styled.div`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: #fee2e2;
-  border: 1px solid #ef4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   font-size: 14px;
 `;
 
@@ -318,11 +318,11 @@ const DeleteButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: #ef4444;
-  border: 1px solid #ef4444;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
 
   &:hover:not(:disabled) {
-    background: #fee2e2;
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 
   &:disabled {
@@ -374,8 +374,8 @@ const DangerButton = styled.button`
 `;
 
 const VirtualBlockInfoBanner = styled.div`
-  background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
-  border: 1px solid #93c5fd;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.primary[300]};
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -384,7 +384,7 @@ const VirtualBlockInfoBanner = styled.div`
 const BannerTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #1e40af;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -393,12 +393,12 @@ const BannerTitle = styled.div`
 
 const BannerText = styled.div`
   font-size: 13px;
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.textSecondary};
   line-height: 1.5;
 `;
 
 const ViewHistoryLink = styled.button`
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.primary[500]};
   color: white;
   border: none;
   border-radius: 6px;
@@ -410,13 +410,13 @@ const ViewHistoryLink = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #2563eb;
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
 `;
 
 const PhysicalBlockBanner = styled.div`
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border: 1px solid #6ee7b7;
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.success}40;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -425,7 +425,7 @@ const PhysicalBlockBanner = styled.div`
 const PhysicalBannerTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #065f46;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 4px;
   display: flex;
   align-items: center;
@@ -794,7 +794,7 @@ function RecordHarvestModal({ blockId, onClose, onRecord }: RecordHarvestModalPr
             <Label htmlFor="quantityKg">Quantity (kg) *</Label>
             <Input
               id="quantityKg"
-              type="number"
+              {...positiveNumberInputProps}
               step="0.1"
               min="0.1"
               value={formData.quantityKg}

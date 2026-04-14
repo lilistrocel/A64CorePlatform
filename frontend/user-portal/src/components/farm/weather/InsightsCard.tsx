@@ -139,7 +139,7 @@ const AlertItem = styled.div`
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  background: #FEE2E2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border-radius: 8px;
   border-left: 4px solid #EF4444;
 
@@ -166,7 +166,7 @@ const RecommendationItem = styled.div`
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  background: #F0FDF4;
+  background: ${({ theme }) => theme.colors.successBg};
   border-radius: 8px;
 
   .icon {

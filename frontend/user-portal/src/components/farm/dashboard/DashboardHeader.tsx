@@ -160,23 +160,23 @@ function formatStateName(state: string): string {
 // ============================================================================
 
 const Container = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   margin-bottom: 24px;
 `;
 
 const FarmInfoSection = styled.div`
   margin-bottom: 24px;
   padding-bottom: 24px;
-  border-bottom: 2px solid #f5f5f5;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.surface};
 `;
 
 const FarmName = styled.h2`
   font-size: 28px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 12px 0;
 `;
 
@@ -198,7 +198,7 @@ const MetaIcon = styled.span`
 
 const MetaValue = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
 `;
 
@@ -211,7 +211,7 @@ const StatsGrid = styled.div`
 
 const StatCard = styled.div`
   padding: 16px;
-  background: #f8f9fa;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   text-align: center;
   position: relative;
@@ -225,13 +225,13 @@ const StatIcon = styled.div`
 const StatValue = styled.div`
   font-size: 24px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 4px;
 `;
 
 const StatLabel = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
@@ -277,13 +277,13 @@ const AlertBadge = styled.div<{ $severity: 'critical' | 'high' | 'medium' }>`
 
 const StateBreakdown = styled.div`
   padding-top: 16px;
-  border-top: 2px solid #f5f5f5;
+  border-top: 2px solid ${({ theme }) => theme.colors.surface};
 `;
 
 const StateTitle = styled.h3`
   font-size: 14px;
   font-weight: 600;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0 0 12px 0;
@@ -312,12 +312,12 @@ const StateIcon = styled.span`
 const StateCount = styled.span`
   font-size: 16px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StateLabel = styled.span`
   font-size: 12px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
 `;
 

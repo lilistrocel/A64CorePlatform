@@ -1035,7 +1035,7 @@ const ModifiedBadge = styled.span`
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
   color: #b45309;
-  background: #fef3c7;
+  background: ${({ theme }: any) => theme.colors.warningBg};
   border-radius: 4px;
 `;
 
@@ -1045,7 +1045,7 @@ const DefaultBadge = styled.span`
   font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
   color: #059669;
-  background: #d1fae5;
+  background: ${({ theme }: any) => theme.colors.successBg};
   border-radius: 4px;
 `;
 
@@ -1248,7 +1248,7 @@ const FarmingYearExample = styled.div`
 `;
 
 const ConfirmationBox = styled.div`
-  background: #fef3c7;
+  background: ${({ theme }: any) => theme.colors.warningBg};
   border: 1px solid #f59e0b;
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.lg};
@@ -1276,7 +1276,7 @@ const MfaEnabledBadge = styled.span`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
   color: #059669;
-  background: #d1fae5;
+  background: ${({ theme }: any) => theme.colors.successBg};
   border-radius: 4px;
 `;
 
@@ -1286,7 +1286,7 @@ const MfaPendingBadge = styled.span`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
   color: #b45309;
-  background: #fef3c7;
+  background: ${({ theme }: any) => theme.colors.warningBg};
   border-radius: 4px;
 `;
 
@@ -1343,7 +1343,7 @@ const ModalDescription = styled.p`
 `;
 
 const ModalWarning = styled.div`
-  background: #fef3c7;
+  background: ${({ theme }: any) => theme.colors.warningBg};
   border: 1px solid #f59e0b;
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
   padding: ${({ theme }: any) => theme.spacing.md};

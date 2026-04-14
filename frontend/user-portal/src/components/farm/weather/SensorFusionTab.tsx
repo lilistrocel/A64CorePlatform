@@ -35,7 +35,7 @@ const ComingSoonBadge = styled.span`
   font-size: 11px;
   font-weight: 500;
   color: #8B5CF6;
-  background: #EDE9FE;
+  background: ${({ theme }) => theme.colors.infoBg};
   padding: 4px 10px;
   border-radius: 12px;
 `;
@@ -46,7 +46,7 @@ const EmptyStateContainer = styled.div`
   align-items: center;
   justify-content: center;
   padding: 64px 24px;
-  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+  background: ${({ theme }) => theme.colors.infoBg};
   border-radius: 16px;
   text-align: center;
 `;

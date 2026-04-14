@@ -306,7 +306,7 @@ const FrequencyBadge = styled.span`
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 500;
-  background: #dbeafe;
+  background: ${({ theme }) => theme.colors.infoBg};
   color: #1d4ed8;
 `;
 
@@ -352,7 +352,7 @@ const StageBadge = styled.span`
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 500;
-  background: #d1fae5;
+  background: ${({ theme }) => theme.colors.successBg};
   color: #065f46;
 `;
 

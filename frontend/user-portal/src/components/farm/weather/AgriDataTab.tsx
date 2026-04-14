@@ -66,7 +66,7 @@ const DataSourceBadge = styled.div`
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: #EFF6FF;
+  background: ${({ theme }) => theme.colors.infoBg};
   color: #3B82F6;
   border-radius: 16px;
   font-size: 12px;
@@ -124,7 +124,7 @@ const LoadingText = styled.p`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: #FEE2E2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid #EF4444;
   border-radius: 12px;
   text-align: center;

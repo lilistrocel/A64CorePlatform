@@ -174,13 +174,14 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   justify-content: center;
   gap: 8px;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #4caf50;
+        background: ${theme.colors.success};
         color: white;
         &:hover {
-          background: #388e3c;
+          background: ${theme.colors.success};
+          filter: brightness(0.85);
         }
       `;
     }
@@ -190,16 +191,16 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         color: #dc2626;
         border: 1px solid #dc2626;
         &:hover {
-          background: #fef2f2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3b82f6;
-      border: 1px solid #3b82f6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.infoBg};
       }
     `;
   }}
@@ -224,7 +225,7 @@ const PhysicalBlockPlantingInfo = styled.div`
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+  background: ${({ theme }) => theme.colors.successBg};
   border-radius: 8px;
   margin-bottom: 8px;
 `;
@@ -238,18 +239,18 @@ const PlantingState = styled.div<{ $state: string }>`
   display: flex;
   align-items: center;
   gap: 4px;
-  background: ${({ $state }) => {
+  background: ${({ $state, theme }) => {
     switch ($state) {
       case 'planned':
-        return '#e3f2fd';
+        return theme.colors.infoBg;
       case 'growing':
-        return '#e8f5e9';
+        return theme.colors.successBg;
       case 'fruiting':
-        return '#fff3e0';
+        return theme.colors.warningBg;
       case 'harvesting':
-        return '#fce4ec';
+        return theme.colors.errorBg;
       default:
-        return '#f5f5f5';
+        return theme.colors.surface;
     }
   }};
   color: ${({ $state }) => {

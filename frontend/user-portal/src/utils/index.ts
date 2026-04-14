@@ -13,3 +13,8 @@ export {
   formatDuration,
   type FormatNumberOptions,
 } from './formatNumber';
+
+export {
+  positiveNumberInputProps,
+  positiveIntegerInputProps,
+} from './inputGuards';

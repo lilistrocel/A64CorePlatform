@@ -40,7 +40,7 @@ const Button = styled.button<ButtonProps>`
   transition: all 0.2s;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     switch ($variant) {
       case 'primary':
         return `
@@ -62,10 +62,10 @@ const Button = styled.button<ButtonProps>`
         `;
       default:
         return `
-          background: #f8f9fa;
-          color: #333;
-          border: 1px solid #ddd;
-          &:hover { background: #e9ecef; }
+          background: ${theme.colors.surface};
+          color: ${theme.colors.textPrimary};
+          border: 1px solid ${theme.colors.neutral[300]};
+          &:hover { background: ${theme.colors.neutral[300]}; }
         `;
     }
   }}
@@ -193,9 +193,9 @@ const SearchInput = styled.input`
 
 const ExportButton = styled.button`
   padding: 10px 20px;
-  background: #f8f9fa;
-  color: #333;
-  border: 1px solid #ddd;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -203,7 +203,7 @@ const ExportButton = styled.button`
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: #e9ecef;
+    background: ${({ theme }) => theme.colors.neutral[300]};
   }
 
   &:disabled {
@@ -228,9 +228,9 @@ const TableHeader = styled.th`
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #6c757d;
-  background: #f8f9fa;
-  border-bottom: 2px solid #e9ecef;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const TableRow = styled.tr`
@@ -244,7 +244,7 @@ const TableRow = styled.tr`
   }
 
   &:hover {
-    background: #f0f4f8;
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 `;
 
@@ -268,20 +268,20 @@ const SourceBadge = styled.span<SourceBadgeProps>`
   font-weight: 600;
   text-transform: capitalize;
 
-  ${({ $type }) => {
+  ${({ $type, theme }) => {
     switch ($type) {
       case 'return':
-        return 'background: #EDE9FE; color: #7C3AED;';
+        return `background: ${theme.colors.infoBg}; color: #7C3AED;`;
       case 'expired':
-        return 'background: #FEF3C7; color: #D97706;';
+        return `background: ${theme.colors.warningBg}; color: #D97706;`;
       case 'damaged':
-        return 'background: #FEE2E2; color: #DC2626;';
+        return `background: ${theme.colors.errorBg}; color: #DC2626;`;
       case 'harvest':
-        return 'background: #D1FAE5; color: #059669;';
+        return `background: ${theme.colors.successBg}; color: #059669;`;
       case 'quality_reject':
-        return 'background: #FCE7F3; color: #DB2777;';
+        return `background: ${theme.colors.errorBg}; color: #DB2777;`;
       default:
-        return 'background: #E5E7EB; color: #4B5563;';
+        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
     }
   }}
 `;
@@ -299,22 +299,22 @@ const DisposalBadge = styled.span<DisposalBadgeProps>`
   font-weight: 600;
   text-transform: capitalize;
 
-  ${({ $method }) => {
+  ${({ $method, theme }) => {
     switch ($method) {
       case 'compost':
-        return 'background: #D1FAE5; color: #059669;';
+        return `background: ${theme.colors.successBg}; color: #059669;`;
       case 'animal_feed':
-        return 'background: #DBEAFE; color: #2563EB;';
+        return `background: ${theme.colors.infoBg}; color: #2563EB;`;
       case 'donated':
-        return 'background: #E0E7FF; color: #4F46E5;';
+        return `background: ${theme.colors.infoBg}; color: #4F46E5;`;
       case 'sold_discount':
-        return 'background: #FEF3C7; color: #D97706;';
+        return `background: ${theme.colors.warningBg}; color: #D97706;`;
       case 'discard':
-        return 'background: #F3F4F6; color: #6B7280;';
+        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
       case 'pending':
-        return 'background: #FECACA; color: #DC2626;';
+        return `background: ${theme.colors.errorBg}; color: #DC2626;`;
       default:
-        return 'background: #E5E7EB; color: #4B5563;';
+        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
     }
   }}
 `;
@@ -381,16 +381,16 @@ interface PageButtonProps {
 
 const PageButton = styled.button<PageButtonProps>`
   padding: 8px 14px;
-  border: 1px solid ${({ $active }) => ($active ? '#4a90d9' : '#ddd')};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.neutral[300])};
   border-radius: 6px;
-  background: ${({ $active }) => ($active ? '#4a90d9' : 'white')};
-  color: ${({ $active }) => ($active ? 'white' : '#333')};
+  background: ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textPrimary)};
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ $active }) => ($active ? '#3a7bc8' : '#f8f9fa')};
+    background: ${({ $active, theme }) => ($active ? '#3a7bc8' : theme.colors.surface)};
   }
 
   &:disabled {

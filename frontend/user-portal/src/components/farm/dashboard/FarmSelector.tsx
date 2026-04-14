@@ -201,7 +201,7 @@ const SelectorButton = styled.button`
 
   &:hover {
     border-color: #3b82f6;
-    background: #f8faff;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
 
   &:focus {

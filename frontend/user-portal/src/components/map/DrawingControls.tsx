@@ -462,25 +462,25 @@ const ToolbarButton = styled.button<{ $variant: 'primary' | 'secondary' | 'dange
   cursor: pointer;
   transition: all 0.2s;
 
-  ${(props) => {
-    switch (props.$variant) {
+  ${({ $variant, theme }) => {
+    switch ($variant) {
       case 'primary':
         return `
-          background: #3b82f6;
+          background: ${theme.colors.primary[500]};
           color: white;
-          &:hover { background: #2563eb; }
+          &:hover { background: ${theme.colors.primary[700]}; }
         `;
       case 'danger':
         return `
-          background: #fee2e2;
+          background: ${theme.colors.errorBg};
           color: #dc2626;
-          &:hover { background: #fecaca; }
+          &:hover { background: ${theme.colors.errorBg}; filter: brightness(0.92); }
         `;
       default:
         return `
-          background: #f3f4f6;
-          color: #374151;
-          &:hover { background: #e5e7eb; }
+          background: ${theme.colors.surface};
+          color: ${theme.colors.textPrimary};
+          &:hover { background: ${theme.colors.neutral[300]}; }
         `;
     }
   }}
@@ -495,8 +495,8 @@ const ToolbarInfo = styled.span`
   align-items: center;
   padding: 8px 12px;
   font-size: 13px;
-  color: #6b7280;
-  background: #f9fafb;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 6px;
 `;
 

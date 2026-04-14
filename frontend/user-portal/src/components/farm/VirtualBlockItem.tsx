@@ -118,7 +118,7 @@ const DeleteButton = styled.button`
   gap: 4px;
 
   &:hover {
-    background: #fef2f2;
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 
   &:disabled {

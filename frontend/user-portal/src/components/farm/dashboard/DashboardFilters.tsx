@@ -305,7 +305,7 @@ const SortDirectionButton = styled.button`
 
   &:hover {
     border-color: #3b82f6;
-    background: #f0f7ff;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
 
@@ -325,7 +325,7 @@ const ExpandButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e3f2fd;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
 
@@ -409,14 +409,14 @@ const PerformanceChip = styled.button<{ $isSelected: boolean }>`
   padding: 6px 12px;
   border-radius: 20px;
   border: 2px solid ${(props) => (props.$isSelected ? '#3b82f6' : props.theme.colors.neutral[300])};
-  background: ${(props) => (props.$isSelected ? '#e3f2fd' : 'transparent')};
+  background: ${(props) => (props.$isSelected ? props.theme.colors.infoBg : 'transparent')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   font-size: 13px;
 
   &:hover {
     border-color: #3b82f6;
-    background: #f0f7ff;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
 
@@ -449,7 +449,7 @@ const ToggleChip = styled.button<{ $isActive: boolean }>`
 
   &:hover {
     border-color: #3b82f6;
-    background: ${(props) => (props.$isActive ? '#1976d2' : '#e3f2fd')};
+    background: ${(props) => (props.$isActive ? props.theme.colors.primary[700] : props.theme.colors.infoBg)};
     color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.textPrimary)};
   }
 `;

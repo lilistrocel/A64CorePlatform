@@ -259,7 +259,7 @@ const HeaderRight = styled.div`
 
 const FarmingYearBadge = styled.span`
   display: inline-block;
-  background: #e0f2fe;
+  background: ${({ theme }) => theme.colors.infoBg};
   color: #0369a1;
   padding: 4px 10px;
   border-radius: 12px;

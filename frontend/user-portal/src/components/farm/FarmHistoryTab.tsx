@@ -145,12 +145,12 @@ const DeleteButton = styled.button`
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   cursor: pointer;
   transition: background 150ms ease-in-out, transform 150ms ease-in-out;
 
   &:hover {
-    background: #fee2e2;
+    background: ${({ theme }) => theme.colors.errorBg};
     transform: scale(1.05);
   }
 
@@ -255,10 +255,10 @@ const EmptyState = styled.div`
 
 const ErrorState = styled.div`
   padding: 24px;
-  background: #fee2e2;
-  border: 1px solid #ef4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   text-align: center;
 `;
 
@@ -272,7 +272,7 @@ const PaginationContainer = styled.div`
 
 const PaginationButton = styled.button<{ $disabled?: boolean }>`
   padding: 8px 16px;
-  background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : '#3B82F6')};
+  background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : theme.colors.primary[500])};
   color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : 'white')};
   border: none;
   border-radius: 6px;

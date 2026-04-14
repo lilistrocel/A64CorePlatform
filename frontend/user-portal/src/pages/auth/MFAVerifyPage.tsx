@@ -632,7 +632,7 @@ const EmailConfirmationBox = styled.div`
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   margin: 0 0 1rem 0;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  background: ${({ theme }) => theme.colors.infoBg};
   border: 1px solid ${({ theme }) => theme.colors.primary[200]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
   animation: fadeInSlide 0.3s ease-out;
@@ -711,7 +711,7 @@ const ErrorBanner = styled.div`
 `;
 
 const WarningBanner = styled.div`
-  background: #fef3c7;
+  background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid #f59e0b;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 1rem;
@@ -965,7 +965,7 @@ const ShieldBadge = styled.span`
 `;
 
 const LockoutBanner = styled.div`
-  background: #fef3c7;
+  background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid #f59e0b;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   padding: 1rem;
@@ -1202,7 +1202,7 @@ const SessionTimer = styled.div<{ $warning?: boolean }>`
   padding: 0.5rem 0.75rem;
   margin-bottom: 1rem;
   border-radius: ${({ theme }) => theme.borderRadius.sm};
-  background: ${({ $warning }) => $warning ? '#fef3c7' : '#f0f9ff'};
+  background: ${({ $warning, theme }) => $warning ? theme.colors.warningBg : theme.colors.infoBg};
   border: 1px solid ${({ $warning }) => $warning ? '#f59e0b' : '#3b82f6'};
   font-size: 0.75rem;
 
@@ -1234,7 +1234,7 @@ const MobileReassuranceText = styled.p`
   color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 1rem 0;
   padding: 0.625rem 0.75rem;
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  background: ${({ theme }) => theme.colors.successBg};
   border: 1px solid #10b981;
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   line-height: 1.4;

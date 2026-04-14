@@ -67,52 +67,59 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#e0e0e0')};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #EF4444;
+  color: ${({ theme }) => theme.colors.error};
   margin-top: 4px;
 `;
 
@@ -124,7 +131,7 @@ const FormRow = styled.div`
 
 const FormSection = styled.div`
   padding: 16px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   margin-top: 8px;
 `;
@@ -132,7 +139,7 @@ const FormSection = styled.div`
 const SectionTitle = styled.h4`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
 `;
 
@@ -152,32 +159,32 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
   transition: all 150ms ease-in-out;
   border: none;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: #616161;
-        border: 1px solid #e0e0e0;
+        color: ${theme.colors.textSecondary};
+        border: 1px solid ${theme.colors.neutral[300]};
         &:hover {
-          background: #f5f5f5;
+          background: ${theme.colors.surface};
         }
       `;
     }
     if ($variant === 'reset') {
       return `
         background: transparent;
-        color: #F59E0B;
-        border: 1px solid #F59E0B;
+        color: ${theme.colors.warning};
+        border: 1px solid ${theme.colors.warning};
         &:hover:not(:disabled) {
-          background: #FEF3C7;
+          background: ${theme.colors.warningBg};
         }
       `;
     }
     return `
-      background: #3B82F6;
+      background: ${theme.colors.primary[500]};
       color: white;
       &:hover {
-        background: #1976d2;
+        background: ${theme.colors.primary[700]};
       }
       &:disabled {
         opacity: 0.6;

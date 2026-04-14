@@ -64,7 +64,13 @@ const SearchInput = styled.input`
   border-radius: 8px;
   font-size: 14px;
   width: 300px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;

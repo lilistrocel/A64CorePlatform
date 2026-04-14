@@ -169,6 +169,7 @@ function App() {
                 <Route path="/inventory/*" element={<InventoryDashboard />} />
                 <Route path="/crm/customers" element={<CRMPage />} />
                 <Route path="/crm/customers/:customerId" element={<CustomerDetailPage />} />
+                <Route path="/crm/customers/:customerId/edit" element={<CustomerDetailPage />} />
                 <Route path="/hr" element={<HRDashboardPage />} />
                 <Route path="/hr/employees" element={<EmployeeListPage />} />
                 <Route path="/hr/employees/:employeeId" element={<EmployeeDetailPage />} />

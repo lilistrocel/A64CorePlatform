@@ -82,7 +82,7 @@ const TableRow = styled.tr`
   }
 
   &:hover {
-    background: #f0f4f8;
+    background: ${({ theme }) => theme.colors.neutral[100]};
   }
 
   &:last-child {
@@ -110,20 +110,20 @@ const StatusBadge = styled.span<{ $status: string }>`
   font-weight: 500;
   text-transform: capitalize;
 
-  ${({ $status }) => {
+  ${({ $status, theme }) => {
     switch ($status) {
       case 'draft':
-        return 'background: #E0E0E0; color: #616161;';
+        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
       case 'sent':
-        return 'background: #DBEAFE; color: #1E40AF;';
+        return `background: ${theme.colors.infoBg}; color: #1E40AF;`;
       case 'confirmed':
-        return 'background: #FEF3C7; color: #92400E;';
+        return `background: ${theme.colors.warningBg}; color: #92400E;`;
       case 'received':
-        return 'background: #D1FAE5; color: #065F46;';
+        return `background: ${theme.colors.successBg}; color: #065F46;`;
       case 'cancelled':
-        return 'background: #FEE2E2; color: #991B1B;';
+        return `background: ${theme.colors.errorBg}; color: #991B1B;`;
       default:
-        return 'background: #E0E0E0; color: #616161;';
+        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
     }
   }}
 `;
@@ -146,10 +146,10 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: ${theme.colors.primary[500]};
         color: white;
         &:hover {
-          background: #1976d2;
+          background: ${theme.colors.primary[700]};
         }
       `;
     }
@@ -159,7 +159,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         color: #EF4444;
         border: 1px solid #EF4444;
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }

@@ -120,11 +120,11 @@ const Text = styled.div`
 `;
 
 const WarningText = styled.div`
-  background: #fee2e2;
-  border: 1px solid #ef4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   padding: 16px;
-  color: #b91c1c;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 14px;
   font-weight: 500;
   text-align: center;
@@ -140,8 +140,8 @@ const LoadingContainer = styled.div`
 const ErrorContainer = styled.div`
   text-align: center;
   padding: 24px;
-  color: #ef4444;
-  background: #fee2e2;
+  color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.errorBg};
   border-radius: 8px;
 `;
 
@@ -168,7 +168,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
     switch ($variant) {
       case 'danger':
         return `
-          background: #ef4444;
+          background: ${theme.colors.error};
           color: white;
           &:hover:not(:disabled) {
             background: #dc2626;

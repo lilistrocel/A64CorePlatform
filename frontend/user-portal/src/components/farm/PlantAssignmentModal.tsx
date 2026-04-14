@@ -194,8 +194,8 @@ const ErrorText = styled.div`
 
 const PreviewSection = styled.div<{ $visible: boolean }>`
   display: ${({ $visible }) => ($visible ? 'block' : 'none')};
-  background: #f5f9ff;
-  border: 1px solid #3b82f6;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   padding: 20px;
   margin-top: 24px;
@@ -204,7 +204,7 @@ const PreviewSection = styled.div<{ $visible: boolean }>`
 const PreviewTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #1976d2;
+  color: ${({ theme }) => theme.colors.primary[700]};
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
@@ -303,18 +303,19 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
     switch ($variant) {
       case 'primary':
         return `
-          background: #3b82f6;
+          background: ${theme.colors.primary[500]};
           color: white;
           &:hover:not(:disabled) {
-            background: #2563eb;
+            background: ${theme.colors.primary[700]};
           }
         `;
       case 'success':
         return `
-          background: #4caf50;
+          background: ${theme.colors.success};
           color: white;
           &:hover:not(:disabled) {
-            background: #388e3c;
+            background: ${theme.colors.success};
+            filter: brightness(0.9);
           }
         `;
       default:
@@ -345,12 +346,12 @@ const AutoCalculationInfo = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: #e8f5e9;
-  border: 1px solid #81c784;
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: 8px;
   margin-top: 8px;
   font-size: 13px;
-  color: #2e7d32;
+  color: ${({ theme }) => theme.colors.success};
 `;
 
 const AutoCalcIcon = styled.span`
@@ -360,7 +361,7 @@ const AutoCalcIcon = styled.span`
 const ManualOverrideButton = styled.button`
   background: none;
   border: none;
-  color: #1976d2;
+  color: ${({ theme }) => theme.colors.primary[700]};
   cursor: pointer;
   font-size: 12px;
   text-decoration: underline;
@@ -368,7 +369,7 @@ const ManualOverrideButton = styled.button`
   margin-left: auto;
 
   &:hover {
-    color: #1565c0;
+    color: ${({ theme }) => theme.colors.primary[900]};
   }
 `;
 
@@ -377,12 +378,12 @@ const NoSpacingWarning = styled.div`
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #fff3e0;
-  border: 1px solid #ffb74d;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   margin-top: 8px;
   font-size: 12px;
-  color: #e65100;
+  color: ${({ theme }) => theme.colors.warning};
 `;
 
 // ============================================================================

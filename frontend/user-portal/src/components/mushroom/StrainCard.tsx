@@ -114,12 +114,12 @@ interface CardWrapperProps {
 
 const CardWrapper = styled.div<CardWrapperProps>`
   position: relative;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
-  border: 2px solid ${({ $selected }) => ($selected ? '#2196f3' : '#e0e0e0')};
+  border: 2px solid ${({ $selected, theme }) => ($selected ? theme.colors.primary[500] : theme.colors.neutral[300])};
   padding: 16px;
-  box-shadow: ${({ $selected }) =>
-    $selected ? '0 0 0 3px rgba(33,150,243,0.18)' : '0 2px 6px rgba(0,0,0,0.07)'};
+  box-shadow: ${({ $selected, theme }) =>
+    $selected ? '0 0 0 3px rgba(33,150,243,0.18)' : theme.shadows.sm};
   transition: all 150ms ease-in-out;
   overflow: hidden;
 
@@ -131,8 +131,13 @@ const CardWrapper = styled.div<CardWrapperProps>`
       box-shadow: 0 6px 16px rgba(0,0,0,0.12);
       transform: translateY(-1px);
     }
+  `}
+
+  ${({ $clickable, theme }) =>
+    $clickable &&
+    `
     &:focus-visible {
-      outline: 2px solid #2196f3;
+      outline: 2px solid ${theme.colors.primary[500]};
       outline-offset: 2px;
     }
   `}
@@ -159,7 +164,7 @@ const TitleBlock = styled.div`
 const CommonName = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 2px 0;
   white-space: nowrap;
   overflow: hidden;
@@ -168,7 +173,7 @@ const CommonName = styled.h3`
 
 const ScientificName = styled.span`
   font-size: 12px;
-  color: #757575;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-style: italic;
   white-space: nowrap;
   overflow: hidden;
@@ -200,14 +205,14 @@ const SpeciesRow = styled.div`
 
 const SpeciesLabel = styled.span`
   font-size: 11px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const SpeciesValue = styled.span`
   font-size: 13px;
-  color: #424242;
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-weight: 500;
 `;
 
@@ -218,7 +223,7 @@ const StatsGrid = styled.div`
 `;
 
 const StatBox = styled.div`
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 8px 10px;
 `;
@@ -226,13 +231,13 @@ const StatBox = styled.div`
 const StatBoxValue = styled.div`
   font-size: 14px;
   font-weight: 700;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin-bottom: 2px;
 `;
 
 const StatBoxLabel = styled.div`
   font-size: 10px;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;

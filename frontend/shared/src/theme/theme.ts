@@ -125,6 +125,12 @@ export const lightTheme = {
     background: '#ffffff',
     surface: '#f5f5f5',
 
+    // Semantic status background tints
+    warningBg: '#fef3c7',
+    errorBg: '#fee2e2',
+    successBg: '#f0fdf4',
+    infoBg: '#e0f2fe',
+
     // Text
     textPrimary: '#212121',
     textSecondary: '#616161',
@@ -167,6 +173,12 @@ export const darkTheme = {
     // Background & surface
     background: '#121212',
     surface: '#1e1e1e',
+
+    // Semantic status background tints
+    warningBg: '#422006',
+    errorBg: '#450a0a',
+    successBg: '#052e16',
+    infoBg: '#082f49',
 
     // Text
     textPrimary: '#f5f5f5',

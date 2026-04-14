@@ -46,8 +46,8 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: #3B82F6;
-  border: 1px solid #3B82F6;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -56,15 +56,15 @@ const BackButton = styled.button`
   margin-bottom: 24px;
 
   &:hover {
-    background: #e3f2fd;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
 
 const Header = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
   padding: 32px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   margin-bottom: 32px;
 `;
 
@@ -90,7 +90,7 @@ const FarmIcon = styled.div`
 const FarmTitle = styled.h1`
   font-size: 36px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
 `;
 
@@ -99,7 +99,7 @@ const Location = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 16px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const StatusBadge = styled.span<{ $isActive: boolean }>`
@@ -123,7 +123,7 @@ const EditButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: #3B82F6;
+  background: ${({ theme }) => theme.colors.primary[500]};
   color: white;
   border: none;
   border-radius: 8px;
@@ -133,7 +133,7 @@ const EditButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #2563EB;
+    background: ${({ theme }) => theme.colors.primary[700]};
   }
 `;
 
@@ -142,7 +142,7 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 24px;
   padding-top: 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const StatCard = styled.div`
@@ -153,7 +153,7 @@ const StatCard = styled.div`
 const StatLabel = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -162,25 +162,25 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 32px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatSubtext = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 
 const TabsContainer = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadows.md};
   overflow: hidden;
 `;
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   overflow-x: auto;
 
   &::-webkit-scrollbar {
@@ -188,17 +188,17 @@ const TabBar = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
     border-radius: 2px;
   }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
-  background: ${({ $active }) => ($active ? 'white' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#3B82F6' : '#616161')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -206,8 +206,8 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    background: #f5f5f5;
-    color: #3B82F6;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
@@ -225,8 +225,8 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid #e0e0e0;
-  border-top-color: #3B82F6;
+  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -239,10 +239,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #EF4444;
+  color: ${({ theme }) => theme.colors.error};
   text-align: center;
   margin-top: 24px;
 `;
@@ -254,7 +254,7 @@ const OverviewGrid = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 20px;
 `;
@@ -262,7 +262,7 @@ const InfoCard = styled.div`
 const InfoTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
 `;
 
@@ -270,7 +270,7 @@ const InfoItem = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
 
   &:last-child {
     border-bottom: none;
@@ -279,13 +279,13 @@ const InfoItem = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 14px;
-  color: #616161;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 // Mobile Map/List Toggle Components
@@ -307,9 +307,9 @@ const MobileToggleButton = styled.button<{ $active: boolean }>`
   justify-content: center;
   gap: 8px;
   padding: 12px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'white')};
-  color: ${({ $active }) => ($active ? 'white' : '#616161')};
-  border: 1px solid ${({ $active }) => ($active ? '#3B82F6' : '#e0e0e0')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -328,6 +328,7 @@ const MobileToggleIcon = styled.span`
 
 const MobileMapContainer = styled.div<{ $isFullScreen: boolean }>`
   @media (max-width: 768px) {
+    background: ${({ theme }) => theme.colors.background};
     ${({ $isFullScreen }) => $isFullScreen && `
       position: fixed;
       top: 0;
@@ -335,7 +336,6 @@ const MobileMapContainer = styled.div<{ $isFullScreen: boolean }>`
       right: 0;
       bottom: 0;
       z-index: 1000;
-      background: white;
     `}
   }
 `;
@@ -348,15 +348,15 @@ const MobileMapHeader = styled.div`
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    background: white;
-    border-bottom: 1px solid #e0e0e0;
+    background: ${({ theme }) => theme.colors.background};
+    border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   }
 `;
 
 const MobileMapTitle = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: #212121;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const MobileCloseButton = styled.button`
@@ -365,7 +365,7 @@ const MobileCloseButton = styled.button`
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border: none;
   border-radius: 8px;
   font-size: 20px;
@@ -373,7 +373,7 @@ const MobileCloseButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
   }
 `;
 
@@ -396,7 +396,7 @@ const FloatingMapButton = styled.button`
     bottom: 24px;
     right: 24px;
     padding: 14px 20px;
-    background: #3B82F6;
+    background: ${({ theme }) => theme.colors.primary[500]};
     color: white;
     border: none;
     border-radius: 28px;

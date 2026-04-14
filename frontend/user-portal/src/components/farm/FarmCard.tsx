@@ -186,13 +186,13 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   align-items: center;
   justify-content: center;
 
-  ${({ $variant }) => {
+  ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: ${theme.colors.primary[500]};
         color: white;
         &:hover {
-          background: #1976d2;
+          background: ${theme.colors.primary[700]};
         }
       `;
     }
@@ -202,16 +202,16 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         color: #EF4444;
         border: 1px solid #EF4444;
         &:hover {
-          background: #FEE2E2;
+          background: ${theme.colors.errorBg};
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: ${theme.colors.primary[500]};
+      border: 1px solid ${theme.colors.primary[500]};
       &:hover {
-        background: #e3f2fd;
+        background: ${theme.colors.infoBg};
       }
     `;
   }}

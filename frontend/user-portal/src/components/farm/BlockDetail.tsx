@@ -220,10 +220,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: #fee2e2;
-  border: 1px solid #ef4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   text-align: center;
   margin-top: 24px;
 `;
@@ -271,8 +271,8 @@ const InfoValue = styled.span`
 
 // Multi-crop styled components
 const AreaBudgetSection = styled.div`
-  background: #f5f9ff;
-  border: 1px solid #3b82f6;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
@@ -281,7 +281,7 @@ const AreaBudgetSection = styled.div`
 const AreaBudgetTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #1976d2;
+  color: ${({ theme }) => theme.colors.primary[700]};
   margin: 0 0 12px 0;
 `;
 
@@ -376,8 +376,8 @@ const VirtualChildCard = styled.div`
 `;
 
 const VirtualBlockInfo = styled.div`
-  background: #e3f2fd;
-  border: 1px solid #1976d2;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.primary[700]};
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
@@ -385,24 +385,24 @@ const VirtualBlockInfo = styled.div`
 
 const VirtualBadge = styled.span`
   display: inline-block;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: ${({ theme }) => theme.colors.infoBg};
+  color: ${({ theme }) => theme.colors.primary[700]};
   font-size: 12px;
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border: 1px solid #1976d2;
+  border: 1px solid ${({ theme }) => theme.colors.primary[700]};
   margin-left: 12px;
 `;
 
 const EmptyVirtualButton = styled.button`
   margin-top: 16px;
   padding: 10px 16px;
-  background: #ffebee;
-  color: #c62828;
-  border: 1px solid #ef5350;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
@@ -411,8 +411,8 @@ const EmptyVirtualButton = styled.button`
   width: 100%;
 
   &:hover {
-    background: #ffcdd2;
-    border-color: #c62828;
+    background: ${({ theme }) => theme.colors.neutral[200]};
+    border-color: ${({ theme }) => theme.colors.error};
   }
 `;
 

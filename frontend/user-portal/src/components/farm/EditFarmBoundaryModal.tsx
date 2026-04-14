@@ -115,15 +115,15 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
     switch ($variant) {
       case 'primary':
         return `
-          background: #3B82F6;
+          background: ${theme.colors.primary[500]};
           color: white;
-          &:hover:not(:disabled) { background: #2563EB; }
+          &:hover:not(:disabled) { background: ${theme.colors.primary[700]}; }
         `;
       case 'danger':
         return `
-          background: #FEE2E2;
-          color: #DC2626;
-          &:hover:not(:disabled) { background: #FECACA; }
+          background: ${theme.colors.errorBg};
+          color: ${theme.colors.error};
+          &:hover:not(:disabled) { background: ${theme.colors.neutral[200]}; }
         `;
       default:
         return `
@@ -143,17 +143,17 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: #fee2e2;
-  border: 1px solid #ef4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   font-size: 14px;
   margin-bottom: 16px;
 `;
 
 const HelpText = styled.p`
   font-size: 13px;
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0 0 16px 0;
   line-height: 1.5;
 `;

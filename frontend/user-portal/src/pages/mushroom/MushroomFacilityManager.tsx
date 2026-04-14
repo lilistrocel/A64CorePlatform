@@ -533,7 +533,7 @@ const AddRoomBtn = styled.button`
   transition: all 150ms;
 
   &:hover {
-    background: #dbeafe;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
   &:focus-visible {
     outline: 2px solid #3b82f6;
@@ -599,7 +599,7 @@ const SubstrateRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-wrap: wrap;
@@ -846,7 +846,7 @@ const TextArea = styled.textarea`
 const FormError = styled.div`
   font-size: 13px;
   color: #ef5350;
-  background: #fef2f2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 10px 12px;

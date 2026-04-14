@@ -254,6 +254,28 @@ class TaskCompletionData(BaseModel):
     triggerTransition: Optional[bool] = Field(False, description="Phase 2: Trigger block state transition on completion")
 
 
+class FarmTaskWithDetails(FarmTask):
+    """
+    Farm task enriched with joined data from its block and farm documents.
+
+    Used by endpoints that feed the Operations task UI and harvest-entry modals
+    so that clients don't need to make follow-up fetches just to show which
+    block or crop a task belongs to. Fields are optional because the underlying
+    block/farm could have been deleted or the join simply couldn't resolve.
+    """
+    # From blocks collection
+    blockCode: Optional[str] = Field(None, description="Human-readable block code")
+    blockName: Optional[str] = Field(None, description="Block display name")
+    targetCrop: Optional[str] = Field(None, description="Block's current target crop ID")
+    targetCropName: Optional[str] = Field(None, description="Block's current target crop name")
+    actualPlantCount: Optional[int] = Field(None, description="Plant count on the block")
+    expectedYieldKg: Optional[float] = Field(None, description="Predicted yield for the current planting (kg)")
+
+    # From farms collection
+    farmCode: Optional[str] = Field(None, description="Farm code")
+    farmName: Optional[str] = Field(None, description="Farm display name")
+
+
 class FarmTaskUpdate(BaseModel):
     """Schema for updating a task (used for rescheduling)"""
     scheduledDate: Optional[datetime] = Field(None, description="New scheduled date")

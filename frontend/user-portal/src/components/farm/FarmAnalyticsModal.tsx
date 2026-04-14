@@ -969,8 +969,8 @@ const AttentionItem = styled.div`
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #fff3cd;
-  border-left: 4px solid #f59e0b;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border-left: 4px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
 `;
 
@@ -997,8 +997,8 @@ const AlertBadge = styled.span`
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #fee;
-  color: #c00;
+  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.error};
   font-weight: 500;
 `;
 
@@ -1006,8 +1006,8 @@ const PerformanceBadge = styled.span<{ $score: number }>`
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 4px;
-  background: ${({ $score }) => $score < 40 ? '#fee' : '#fef3cd'};
-  color: ${({ $score }) => $score < 40 ? '#c00' : '#f59e0b'};
+  background: ${({ $score, theme }) => $score < 40 ? theme.colors.errorBg : theme.colors.warningBg};
+  color: ${({ $score, theme }) => $score < 40 ? theme.colors.error : theme.colors.warning};
   font-weight: 500;
 `;
 

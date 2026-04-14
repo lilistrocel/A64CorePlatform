@@ -65,6 +65,13 @@ export interface TaskWithDetails extends Task {
   farmCode?: string;
   blockCode?: string;
   blockName?: string;
+  // Joined from the task's block at fetch time (see backend
+  // TaskRepository._enrich_tasks_with_block_farm). Used by harvest entry modals
+  // to show block identity + crop without additional fetches.
+  targetCrop?: string;
+  targetCropName?: string;
+  actualPlantCount?: number;
+  expectedYieldKg?: number;
 }
 
 // ============================================================================

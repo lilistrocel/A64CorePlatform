@@ -10,13 +10,66 @@ from datetime import datetime
 import logging
 
 from ...models.farm_task import (
-    FarmTask, FarmTaskCreate, FarmTaskUpdate,
+    FarmTask, FarmTaskCreate, FarmTaskUpdate, FarmTaskWithDetails,
     TaskType, TaskStatus, TaskPriority, HarvestEntry, HarvestEntryCreate,
     HarvestTotal, TaskData
 )
 from ..database import farm_db
 
 logger = logging.getLogger(__name__)
+
+
+async def _enrich_tasks_with_block_farm(tasks: List[FarmTask]) -> List[FarmTaskWithDetails]:
+    """
+    Attach blockCode/blockName/farmCode/farmName + crop/plant context to tasks
+    by joining against the blocks and farms collections. Returns one enriched
+    task per input task (order preserved). Missing joins leave the relevant
+    fields as None.
+
+    A single round-trip per collection (batched $in lookup) regardless of
+    task count — cheaper than N per-task lookups.
+    """
+    if not tasks:
+        return []
+
+    db = farm_db.get_database()
+
+    block_ids = {str(t.blockId) for t in tasks if t.blockId}
+    farm_ids = {str(t.farmId) for t in tasks if t.farmId}
+
+    blocks_by_id: Dict[str, dict] = {}
+    if block_ids:
+        async for b in db.blocks.find({"blockId": {"$in": list(block_ids)}}):
+            blocks_by_id[b["blockId"]] = b
+
+    farms_by_id: Dict[str, dict] = {}
+    if farm_ids:
+        async for f in db.farms.find({"farmId": {"$in": list(farm_ids)}}):
+            farms_by_id[f["farmId"]] = f
+
+    enriched: List[FarmTaskWithDetails] = []
+    for task in tasks:
+        block = blocks_by_id.get(str(task.blockId)) if task.blockId else None
+        farm = farms_by_id.get(str(task.farmId)) if task.farmId else None
+
+        # Prefer the block's predicted yield if stored on kpi; fall back to the
+        # flat field if present. The block document layout varies by age.
+        kpi = (block or {}).get("kpi") or {}
+        expected_yield = kpi.get("predictedYieldKg") if "predictedYieldKg" in kpi else (block or {}).get("expectedYieldKg")
+
+        enriched.append(FarmTaskWithDetails(
+            **task.model_dump(),
+            blockCode=(block or {}).get("blockCode"),
+            blockName=(block or {}).get("name"),
+            targetCrop=(block or {}).get("targetCrop"),
+            targetCropName=(block or {}).get("targetCropName"),
+            actualPlantCount=(block or {}).get("actualPlantCount"),
+            expectedYieldKg=expected_yield,
+            farmCode=(farm or {}).get("farmCode") or (farm or {}).get("code"),
+            farmName=(farm or {}).get("name"),
+        ))
+
+    return enriched
 
 
 class TaskRepository:

@@ -123,8 +123,8 @@ const SectionTitle = styled.h3`
 `;
 
 const AreaBudgetSection = styled.div`
-  background: #f5f9ff;
-  border: 1px solid #3b82f6;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
@@ -133,7 +133,7 @@ const AreaBudgetSection = styled.div`
 const AreaBudgetTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #1976d2;
+  color: ${({ theme }) => theme.colors.primary[700]};
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -241,14 +241,14 @@ const HelpText = styled.div`
 
 const ErrorText = styled.div`
   font-size: 12px;
-  color: #f44336;
+  color: ${({ theme }) => theme.colors.error};
   margin-top: 4px;
 `;
 
 const PreviewSection = styled.div<{ $visible: boolean }>`
   display: ${({ $visible }) => ($visible ? 'block' : 'none')};
-  background: #f0fdf4;
-  border: 1px solid #4caf50;
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.success}60;
   border-radius: 8px;
   padding: 20px;
   margin-top: 24px;
@@ -257,7 +257,7 @@ const PreviewSection = styled.div<{ $visible: boolean }>`
 const PreviewTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #2e7d32;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
@@ -384,8 +384,8 @@ const AutoCalculationInfo = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: #e8f5e9;
-  border: 1px solid #81c784;
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.success};
   border-radius: 8px;
   margin-top: 8px;
   font-size: 13px;
@@ -399,7 +399,7 @@ const AutoCalcIcon = styled.span`
 const ManualOverrideButton = styled.button`
   background: none;
   border: none;
-  color: #1976d2;
+  color: ${({ theme }) => theme.colors.primary[700]};
   cursor: pointer;
   font-size: 12px;
   text-decoration: underline;
@@ -416,8 +416,8 @@ const NoSpacingWarning = styled.div`
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #fff3e0;
-  border: 1px solid #ffb74d;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   margin-top: 8px;
   font-size: 12px;

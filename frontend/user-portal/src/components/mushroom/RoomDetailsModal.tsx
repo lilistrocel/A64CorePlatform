@@ -742,9 +742,9 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 16px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
+  box-shadow: ${({ theme }) => theme.shadows.lg};
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
@@ -820,8 +820,8 @@ const CloseButton = styled.button`
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid #e0e0e0;
-  background: #fafafa;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface};
   overflow-x: auto;
   flex-shrink: 0;
 `;
@@ -945,10 +945,10 @@ const AssignmentRow = styled.div`
 
 const EditAssignmentBtn = styled.button`
   padding: 4px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
-  background: white;
-  color: #6b7280;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -957,8 +957,8 @@ const EditAssignmentBtn = styled.button`
   margin-top: 2px;
 
   &:hover {
-    background: #f3f4f6;
-    color: #374151;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
   &:focus-visible {
     outline: 2px solid #3b82f6;
@@ -974,7 +974,7 @@ const AdvancePhaseBtn = styled.button`
   padding: 8px 16px;
   border: 1px solid #3b82f6;
   border-radius: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #3b82f6;
   font-size: 13px;
   font-weight: 600;
@@ -982,7 +982,7 @@ const AdvancePhaseBtn = styled.button`
   transition: all 150ms;
 
   &:hover {
-    background: #dbeafe;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
   &:focus-visible {
     outline: 2px solid #3b82f6;
@@ -991,8 +991,8 @@ const AdvancePhaseBtn = styled.button`
 `;
 
 const AdvanceFormBox = styled.div`
-  background: #f0f7ff;
-  border: 1px solid #bfdbfe;
+  background: ${({ theme }) => theme.colors.infoBg};
+  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
   border-radius: 10px;
   padding: 14px;
   display: flex;
@@ -1055,11 +1055,11 @@ const AdvanceFormLabel = styled.label`
 
 const AdvanceSelect = styled.select`
   padding: 8px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 13px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   cursor: pointer;
   outline: none;
 
@@ -1071,11 +1071,11 @@ const AdvanceSelect = styled.select`
 
 const AdvanceTextarea = styled.textarea`
   padding: 8px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 13px;
-  color: #212121;
-  background: white;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   font-family: inherit;
   outline: none;
@@ -1089,7 +1089,7 @@ const AdvanceTextarea = styled.textarea`
 const AdvanceError = styled.div`
   font-size: 12px;
   color: #dc2626;
-  background: #fef2f2;
+  background: ${({ theme }) => theme.colors.errorBg};
   border: 1px solid #fecaca;
   border-radius: 6px;
   padding: 8px 10px;
@@ -1103,17 +1103,17 @@ const AdvanceActions = styled.div`
 
 const AdvanceCancelBtn = styled.button`
   padding: 7px 14px;
-  border: 1px solid #d1d5db;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
-  background: white;
-  color: #6b7280;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: #f3f4f6;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -1165,8 +1165,8 @@ const BEExplain = styled.p`
 
 const NotesBox = styled.div`
   font-size: 14px;
-  color: #424242;
-  background: #f9fafb;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 10px 14px;
   line-height: 1.6;
@@ -1179,7 +1179,7 @@ const LatestReadingGrid = styled.div`
 `;
 
 const ReadingCard = styled.div`
-  background: #f9fafb;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 10px;
   padding: 12px;
   text-align: center;
@@ -1230,7 +1230,7 @@ const AddButton = styled.button`
   padding: 7px 14px;
   border: 1px solid #10B981;
   border-radius: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #10B981;
   font-size: 13px;
   font-weight: 600;
@@ -1238,7 +1238,7 @@ const AddButton = styled.button`
   transition: all 150ms;
 
   &:hover {
-    background: #d1fae5;
+    background: ${({ theme }) => theme.colors.successBg};
   }
   &:focus-visible {
     outline: 2px solid #10B981;
@@ -1260,8 +1260,8 @@ const Th = styled.th`
   color: #9e9e9e;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border-bottom: 2px solid #e0e0e0;
-  background: #fafafa;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const Td = styled.td`

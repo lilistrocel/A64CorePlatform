@@ -145,7 +145,7 @@ const ApproveButton = styled.button`
   flex: 1;
   padding: 8px 16px;
   min-height: 44px;
-  background: #10B981;
+  background: ${({ theme }) => theme.colors.success};
   color: white;
   border: none;
   border-radius: 8px;
@@ -159,7 +159,7 @@ const ApproveButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid ${({ theme }) => theme.colors.success};
     outline-offset: 2px;
   }
 
@@ -174,8 +174,8 @@ const DenyButton = styled.button`
   padding: 8px 16px;
   min-height: 44px;
   background: ${({ theme }) => theme.colors.background};
-  color: #EF4444;
-  border: 1.5px solid #EF4444;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1.5px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -183,7 +183,7 @@ const DenyButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #FEF2F2;
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 
   &:focus-visible {

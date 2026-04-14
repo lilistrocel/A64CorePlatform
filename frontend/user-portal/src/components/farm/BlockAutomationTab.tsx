@@ -1486,8 +1486,8 @@ const ToggleLabel = styled.label`
 const DisconnectButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: #ef4444;
-  border: 1px solid #ef4444;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
@@ -1495,7 +1495,7 @@ const DisconnectButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #fee2e2;
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 `;
 
@@ -1512,10 +1512,10 @@ const ErrorBanner = styled.div`
   align-items: center;
   gap: 16px;
   padding: 16px;
-  background: #fee2e2;
-  border: 1px solid #ef4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #991b1b;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const ErrorText = styled.div`
@@ -1561,13 +1561,13 @@ const SubTab = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e3f2fd;
-    color: #3b82f6;
+    background: ${({ theme }) => theme.colors.infoBg};
+    color: ${({ theme }) => theme.colors.primary[500]};
   }
 `;
 
 const AlertBadge = styled.span`
-  background: #ef4444;
+  background: ${({ theme }) => theme.colors.error};
   color: white;
   padding: 2px 6px;
   border-radius: 10px;
@@ -2081,10 +2081,10 @@ const LabTd = styled.td`
 const LabZoneStatsHeader = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #3b82f6;
+  color: ${({ theme }) => theme.colors.primary[500]};
   margin-top: 8px;
   padding: 6px 12px;
-  background: #eff6ff;
+  background: ${({ theme }) => theme.colors.infoBg};
   border-radius: 6px 6px 0 0;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-bottom: none;

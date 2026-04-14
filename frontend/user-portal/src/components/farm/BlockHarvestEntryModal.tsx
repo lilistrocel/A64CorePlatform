@@ -9,13 +9,24 @@
 import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { recordBlockHarvest } from '../../services/farmApi';
+import { positiveNumberInputProps } from '../../utils';
 
 interface BlockHarvestEntryModalProps {
   isOpen: boolean;
   farmId: string;
   blockId: string;
   blockCode: string;
-  blockName?: string;
+  blockName?: string | null;
+  /** Crop planted in this block (omit if unknown). */
+  targetCropName?: string | null;
+  /** Plant count currently on the block. */
+  actualPlantCount?: number | null;
+  /** Predicted total yield for this cycle (kg). */
+  predictedYieldKg?: number | null;
+  /** Actual yield already collected across prior harvests (kg). */
+  actualYieldKg?: number | null;
+  /** Number of harvest records already submitted in the current cycle. */
+  totalHarvests?: number | null;
   onClose: () => void;
   onComplete: () => void;
 }
@@ -42,6 +53,11 @@ export function BlockHarvestEntryModal({
   blockId,
   blockCode,
   blockName,
+  targetCropName,
+  actualPlantCount,
+  predictedYieldKg,
+  actualYieldKg,
+  totalHarvests,
   onClose,
   onComplete,
 }: BlockHarvestEntryModalProps) {
@@ -117,18 +133,51 @@ export function BlockHarvestEntryModal({
 
         <Content>
           <BlockInfo>
-            <BlockTitle>
-              {blockCode}
-              {blockName && ` - ${blockName}`}
-            </BlockTitle>
-            <BlockSubtitle>Recording harvest for this block</BlockSubtitle>
+            <BlockLine>
+              <LineIcon aria-hidden>📍</LineIcon>
+              <BlockIdentity>
+                {blockCode}
+                {blockName && <BlockNameInline> — {blockName}</BlockNameInline>}
+              </BlockIdentity>
+            </BlockLine>
+
+            {targetCropName && (
+              <CropLine>
+                <LineIcon aria-hidden>🌱</LineIcon>
+                <CropName>{targetCropName}</CropName>
+              </CropLine>
+            )}
+
+            {(actualPlantCount || predictedYieldKg) && (
+              <ChipRow>
+                {actualPlantCount ? (
+                  <Chip>{actualPlantCount.toLocaleString('en-US')} plants</Chip>
+                ) : null}
+                {predictedYieldKg ? (
+                  <Chip>Target: {predictedYieldKg.toLocaleString('en-US', { maximumFractionDigits: 1 })} kg</Chip>
+                ) : null}
+              </ChipRow>
+            )}
+
+            {!!totalHarvests && totalHarvests > 0 && (
+              <ChipRow>
+                <Chip $variant="progress">
+                  {totalHarvests.toLocaleString('en-US')} harvest{totalHarvests === 1 ? '' : 's'} so far
+                </Chip>
+                {actualYieldKg ? (
+                  <Chip $variant="progress">
+                    {actualYieldKg.toLocaleString('en-US', { maximumFractionDigits: 1 })} kg collected
+                  </Chip>
+                ) : null}
+              </ChipRow>
+            )}
           </BlockInfo>
 
           <Form onSubmit={handleSubmit}>
             <FormGroup>
               <Label>Quantity (kg) *</Label>
               <Input
-                type="number"
+                {...positiveNumberInputProps}
                 step="0.01"
                 min="0.01"
                 value={quantityKg}
@@ -254,25 +303,69 @@ const Content = styled.div`
 `;
 
 const BlockInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.xs};
   margin-bottom: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.md};
   background: ${({ theme }) => theme.colors.neutral[50]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  border-left: 4px solid ${({ theme }) => theme.colors.warning};
+  border-left: 4px solid #10B981; /* grade-A green: consistent with Operations harvest modal */
 `;
 
-const BlockTitle = styled.h3`
+const BlockLine = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const CropLine = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+const LineIcon = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  line-height: 1;
+`;
+
+const BlockIdentity = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
   font-family: 'Courier New', monospace;
 `;
 
-const BlockSubtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+const BlockNameInline = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
   color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
+`;
+
+const CropName = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const ChipRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.xs};
+  margin-top: 2px;
+`;
+
+const Chip = styled.span<{ $variant?: 'progress' }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px ${({ theme }) => theme.spacing.xs};
+  background: ${({ theme, $variant }) =>
+    $variant === 'progress' ? 'rgba(16, 185, 129, 0.1)' : theme.colors.neutral[100]};
+  color: ${({ theme, $variant }) =>
+    $variant === 'progress' ? '#047857' : theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
 `;
 
 const Form = styled.form`

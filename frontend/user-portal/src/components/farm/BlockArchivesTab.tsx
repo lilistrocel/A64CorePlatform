@@ -53,8 +53,8 @@ const ModalText = styled.p`
 `;
 
 const ModalWarning = styled.div`
-  background: #fff3e0;
-  border: 1px solid #ff9800;
+  background: ${({ theme }) => theme.colors.warningBg};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
   padding: 12px;
   margin: 16px 0;
@@ -273,7 +273,7 @@ const DeleteButton = styled.button`
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #ffebee;
+  background: ${({ theme }) => theme.colors.errorBg};
   color: #c62828;
   border: 1px solid #ef5350;
   border-radius: 6px;

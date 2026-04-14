@@ -138,10 +138,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: #fee2e2;
-  border: 1px solid #ef4444;
+  background: ${({ theme }) => theme.colors.errorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 8px;
-  color: #ef4444;
+  color: ${({ theme }) => theme.colors.error};
   font-size: 14px;
 `;
 
@@ -159,16 +159,16 @@ const MapToggleButton = styled.button<{ $active: boolean }>`
   gap: 8px;
   padding: 12px 16px;
   width: 100%;
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
   border-radius: 8px;
-  background: ${({ $active, theme }) => ($active ? '#EFF6FF' : theme.colors.background)};
-  color: ${({ $active }) => ($active ? '#3B82F6' : '#374151')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.infoBg : theme.colors.background)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textPrimary)};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#DBEAFE' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? theme.colors.neutral[200] : theme.colors.surface)};
   }
 
   svg {
@@ -197,8 +197,8 @@ const BoundaryBadge = styled.span`
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  background: #DCFCE7;
-  color: #166534;
+  background: ${({ theme }) => theme.colors.successBg};
+  color: ${({ theme }) => theme.colors.success};
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;

@@ -294,9 +294,9 @@ const Modal = styled.div`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  box-shadow: ${({ theme }) => theme.shadows.lg};
   z-index: 9999;
   width: 90%;
   max-width: 600px;
@@ -310,7 +310,7 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 2px solid #f5f5f5;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
 `;
 
 const Title = styled.h2`
@@ -324,7 +324,7 @@ const CloseButton = styled.button`
   width: 32px;
   height: 32px;
   border: none;
-  background: #f5f5f5;
+  background: ${({ theme }) => theme.colors.surface};
   border-radius: 50%;
   font-size: 18px;
   cursor: pointer;
@@ -334,7 +334,7 @@ const CloseButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #e0e0e0;
+    background: ${({ theme }) => theme.colors.neutral[300]};
   }
 `;
 
@@ -402,10 +402,11 @@ const SettingValue = styled.div`
 const Select = styled.select`
   flex: 1;
   padding: 8px 12px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: 14px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
 
   &:focus {
@@ -431,7 +432,7 @@ const IconSetOption = styled.div<{ $isSelected: boolean }>`
 
   &:hover {
     border-color: #3b82f6;
-    background: #f0f7ff;
+    background: ${({ theme }) => theme.colors.infoBg};
   }
 `;
 
@@ -472,7 +473,7 @@ const ColorSwatch = styled.div<{ $color: string }>`
   height: 32px;
   border-radius: 6px;
   background: ${(props) => props.$color};
-  border: 2px solid #e0e0e0;
+  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   cursor: pointer;
   transition: transform 150ms ease-in-out;
 
@@ -485,7 +486,7 @@ const Footer = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 16px 24px;
-  border-top: 2px solid #f5f5f5;
+  border-top: 2px solid ${({ theme }) => theme.colors.neutral[300]};
   gap: 12px;
 `;
 
@@ -493,7 +494,7 @@ const ResetButton = styled.button`
   padding: 10px 20px;
   border: 2px solid #f44336;
   border-radius: 8px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #f44336;
   font-size: 14px;
   font-weight: 500;
@@ -501,7 +502,7 @@ const ResetButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #ffebee;
+    background: ${({ theme }) => theme.colors.errorBg};
   }
 `;
 

@@ -367,7 +367,7 @@ const ChatHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #f8fdf9;
+  background: ${({ theme }) => theme.colors.successBg};
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   flex-shrink: 0;
   gap: 12px;
@@ -514,9 +514,9 @@ const QuickActionsGrid = styled.div`
 
 const QuickActionChip = styled.button`
   padding: 8px 18px;
-  background: #f0fdf4;
-  color: #10B981;
-  border: 1px solid #bbf7d0;
+  background: ${({ theme }) => theme.colors.successBg};
+  color: ${({ theme }) => theme.colors.success};
+  border: 1px solid ${({ theme }) => theme.colors.success}40;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
@@ -524,8 +524,8 @@ const QuickActionChip = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #dcfce7;
-    border-color: #86efac;
+    background: ${({ theme }) => theme.colors.neutral[200]};
+    border-color: ${({ theme }) => theme.colors.success}80;
   }
 
   &:disabled {
@@ -638,15 +638,15 @@ const DenyButton = styled.button`
   flex: 1;
   padding: 6px 12px;
   background: ${({ theme }) => theme.colors.background};
-  color: #EF4444;
-  border: 1px solid #EF4444;
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #FEE2E2; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.errorBg}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -671,8 +671,8 @@ const Dot = styled.div<{ $delay: string }>`
 
 const ErrorMessage = styled.div`
   font-size: 13px;
-  color: #EF4444;
-  background: #FEE2E2;
+  color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.errorBg};
   padding: 8px 12px;
   border-radius: 8px;
   text-align: center;
@@ -753,7 +753,7 @@ const SendButton = styled.button`
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: #10B981;
+  background: ${({ theme }) => theme.colors.success};
   color: white;
   border: none;
   cursor: pointer;

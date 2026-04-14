@@ -5,6 +5,88 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-04-14
+
+**Type:** Minor Release — Task API Enrichment, Harvest Modal Context Cards, Dark Mode Pass, Input Guards, CRM Routing
+
+### Added
+
+#### Task Endpoints — Block + Farm Context Enrichment (Backend)
+
+Four task list/detail endpoints (`GET /api/v1/farm/tasks/my-tasks`, `GET /api/v1/farm/tasks/{task_id}`, `GET /api/v1/farm/tasks/blocks/{block_id}`, `GET /api/v1/farm/tasks/farms/{farm_id}`) now return a new `FarmTaskWithDetails` response model that attaches resolved block and farm context at request time. No schema migration required — enrichment is performed via batched `$in` lookups (one round-trip per collection regardless of task count).
+
+**New fields on all task responses:**
+- `blockCode`, `blockName` — resolved from the `blocks` collection
+- `farmCode`, `farmName` — resolved from the `farms` collection
+- `targetCrop`, `targetCropName` — crop reference and display name
+- `actualPlantCount`, `expectedYieldKg` — block KPI snapshot fields
+
+**Backend files changed:**
+- `src/modules/farm_manager/models/farm_task.py` — new `FarmTaskWithDetails` Pydantic model
+- `src/modules/farm_manager/services/task/task_repository.py` — new `_enrich_tasks_with_block_farm()` helper
+- `src/modules/farm_manager/services/task/task_service.py` — `get_my_tasks()`, `get_task()`, `get_block_tasks()`, `get_farm_tasks()` pipe through enricher
+- `src/modules/farm_manager/api/v1/tasks.py` — response models updated on four endpoints
+
+#### HarvestEntryModal — Context Card (Operations)
+
+The task-bound Record Harvest modal (`operations/HarvestEntryModal.tsx`) now shows a structured context card above the form: block code + name, crop name, plant count / expected yield chips, and a subdued task-title line. All fields degrade gracefully when absent, with fallback to legacy `task.metadata` snapshot fields.
+
+**Frontend types extended:**
+- `frontend/user-portal/src/types/tasks.ts` — `TaskWithDetails` extended with `targetCrop`, `targetCropName`, `actualPlantCount`, `expectedYieldKg`
+
+#### BlockHarvestEntryModal — Context Card + Progress Chips (Block Monitor)
+
+The quick-entry harvest modal launched from `CompactBlockCard` (`farm/BlockHarvestEntryModal.tsx`) gained the same structured context card as the operations modal. Additionally shows a progress chip row with prior-harvest summary (`N harvests so far` / `Y kg collected`) when `totalHarvests > 0`. Data flows from the `DashboardBlock` already held by `CompactBlockCard` — no backend changes.
+
+**Frontend files changed:**
+- `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx` — extended props, new BlockInfo layout, progress-variant chip styling
+- `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx` — passes additional props from its `DashboardBlock`
+
+#### Input Guards Utility
+
+New reusable utility module for number input validation in harvest-entry forms.
+
+- `frontend/user-portal/src/utils/inputGuards.ts` (new) — exports `positiveNumberInputProps` and `positiveIntegerInputProps` spread-props that block `e`, `E`, `+`, `-` keystrokes and strip invalid paste patterns
+- `frontend/user-portal/src/utils/index.ts` — re-exports both helpers
+- Applied to `operations/HarvestEntryModal.tsx`, `farm/BlockHarvestEntryModal.tsx`, `farm/BlockHarvestsTab.tsx`
+
+#### CRM Edit Route
+
+Added `/crm/customers/:customerId/edit` route to `App.tsx` so the CRM list's Edit button navigates to a shareable, bookmarkable URL in edit mode. `CustomerDetailPage` now derives edit mode from the URL suffix rather than from component state.
+
+**Files changed:**
+- `frontend/user-portal/src/App.tsx` — new `/crm/customers/:customerId/edit` route
+- `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx` — edit-mode derived from route path
+
+### Changed
+
+#### Dark Mode — Comprehensive Color Sweep (~60 files)
+
+Full pass replacing hardcoded light-only colors across the entire `frontend/user-portal/src/` tree. Intentional exclusions: Recharts chart library internals and the auth splash screen (deliberately branded).
+
+**Theme tokens added (`frontend/shared/src/theme/theme.ts`):**
+- `warningBg`, `errorBg`, `successBg`, `infoBg` — semantic background tokens defined in both `lightTheme` and `darkTheme`
+
+**Patterns replaced across ~60 files:**
+- Hardcoded status tints → `theme.colors.warningBg` / `errorBg` / `successBg` / `infoBg`
+- True-white container backgrounds → `theme.colors.surface` / `theme.colors.background`
+- Unstyled form input backgrounds → `theme.colors.inputBackground`
+- Hardcoded text colors (`#212121`, `#616161`, `#757575`, `#9e9e9e`, etc.) → theme text tokens
+- Light-only hover/focus states → `theme.colors.surfaceHover` or alpha variants
+
+**Notable files (representative):**
+- `frontend/shared/src/theme/theme.ts`
+- `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx` — alert-badge semantic tints, QuickActions overlay now theme-aware (surface with 95% alpha + `theme.shadows.md`)
+- `frontend/user-portal/src/pages/crm/CRMPage.tsx` — SearchInput background/color/placeholder theme-aware
+- All areas: `components/farm`, `components/mushroom`, `components/sales`, `components/map`, `components/farm/dashboard`, `pages/inventory`, `pages/auth`, `pages/settings`, `pages/hr`, `pages/mushroom`, `pages/farm`, `pages/debug`
+
+**Compatibility:**
+- No breaking changes. All four task endpoints remain backward compatible (new fields are additive).
+- No new API endpoints, collections, or services (enrichment is in-process at request time).
+- Fully backward compatible with v1.10.0.
+
+---
+
 ## [Unreleased]
 
 ### Changed

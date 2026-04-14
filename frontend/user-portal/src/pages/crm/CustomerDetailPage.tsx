@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { CustomerForm } from '../../components/crm/CustomerForm';
 import { crmApi, formatCustomerAddress, getCustomerStatusColor, getCustomerTypeLabel } from '../../services/crmService';
@@ -264,6 +264,8 @@ const Metadata = styled.div`
 export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isEditRoute = location.pathname.endsWith('/edit');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -287,10 +289,11 @@ export function CustomerDetailPage() {
     } else if (customerId) {
       // Reset states when navigating to an existing customer (e.g., after creation)
       setIsNew(false);
-      setEditMode(false);
+      // Edit mode is driven by the URL: /crm/customers/:id/edit → edit; /crm/customers/:id → view
+      setEditMode(isEditRoute);
       loadCustomer();
     }
-  }, [customerId]);
+  }, [customerId, isEditRoute]);
 
   const loadCustomer = async () => {
     if (!customerId || customerId === 'new') return;
@@ -313,7 +316,8 @@ export function CustomerDetailPage() {
   };
 
   const handleEdit = () => {
-    setEditMode(true);
+    // Navigate to the /edit URL; the route change will flip editMode on via useEffect.
+    navigate(`/crm/customers/${customerId}/edit`);
   };
 
   const handleCancelEdit = () => {
@@ -321,7 +325,8 @@ export function CustomerDetailPage() {
     if (isNew) {
       navigate('/crm/customers');
     } else {
-      setEditMode(false);
+      // Drop /edit from the URL — returns to view mode via useEffect.
+      navigate(`/crm/customers/${customerId}`);
     }
   };
 
@@ -335,7 +340,8 @@ export function CustomerDetailPage() {
       } else if (customerId) {
         const updatedCustomer = await crmApi.updateCustomer(customerId, data);
         setCustomer(updatedCustomer);
-        setEditMode(false);
+        // Drop /edit from the URL on successful save — returns to view mode.
+        navigate(`/crm/customers/${customerId}`);
         showSuccessToast('Customer updated successfully');
       }
     } catch (err: any) {
