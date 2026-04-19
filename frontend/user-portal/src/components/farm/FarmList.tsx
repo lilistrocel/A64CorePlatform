@@ -81,6 +81,8 @@ const SearchInput = styled.input`
   border-radius: 8px;
   font-size: 16px; /* Prevents iOS zoom on focus */
   width: 300px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
   min-height: 44px; /* Touch-friendly height */
 

@@ -9,8 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { salesApi } from '../../services/salesService';
 import { formatNumber, formatCurrency } from '../../utils';
-import type { SalesDashboardStats, FarmingYearItem } from '../../types/sales';
-import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
+import type { SalesDashboardStats } from '../../types/sales';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -33,12 +33,6 @@ const Header = styled.div`
 
 const HeaderLeft = styled.div`
   flex: 1;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
 `;
 
 const FarmingYearBadge = styled.span`
@@ -250,32 +244,13 @@ export function SalesDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Farming year filter state
-  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(null);
-  const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
-  const [farmingYearsLoading, setFarmingYearsLoading] = useState(true);
-
-  // Load farming years on mount
-  useEffect(() => {
-    loadFarmingYears();
-  }, []);
+  // Use the global farming year from sidebar
+  const { selectedYear: selectedFarmingYear } = useFarmingYearStore();
 
   // Reload stats when farming year changes
   useEffect(() => {
     loadDashboardStats();
   }, [selectedFarmingYear]);
-
-  const loadFarmingYears = async () => {
-    setFarmingYearsLoading(true);
-    try {
-      const response = await salesApi.getAvailableFarmingYears();
-      setAvailableFarmingYears(response.years);
-    } catch (err) {
-      console.error('Failed to load farming years:', err);
-    } finally {
-      setFarmingYearsLoading(false);
-    }
-  };
 
   const loadDashboardStats = async () => {
     setLoading(true);
@@ -289,17 +264,6 @@ export function SalesDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFarmingYearChange = (year: number | null) => {
-    setSelectedFarmingYear(year);
-  };
-
-  // Get display string for current filter
-  const getFarmingYearDisplay = () => {
-    if (selectedFarmingYear === null) return null;
-    const yearItem = availableFarmingYears.find((y) => y.year === selectedFarmingYear);
-    return yearItem?.display || `${selectedFarmingYear}`;
   };
 
   if (loading) {
@@ -329,7 +293,7 @@ export function SalesDashboardPage() {
           <Title>
             Sales Management
             {selectedFarmingYear && (
-              <FarmingYearBadge>{getFarmingYearDisplay()}</FarmingYearBadge>
+              <FarmingYearBadge>Year {selectedFarmingYear}</FarmingYearBadge>
             )}
           </Title>
           <Subtitle>
@@ -338,16 +302,6 @@ export function SalesDashboardPage() {
               : 'Orders, inventory, and purchase order tracking'}
           </Subtitle>
         </HeaderLeft>
-        <HeaderRight>
-          <FarmingYearSelector
-            selectedYear={selectedFarmingYear}
-            availableYears={availableFarmingYears}
-            onYearChange={handleFarmingYearChange}
-            isLoading={farmingYearsLoading}
-            showAllOption={true}
-            compact={true}
-          />
-        </HeaderRight>
       </Header>
 
       <StatsGrid>

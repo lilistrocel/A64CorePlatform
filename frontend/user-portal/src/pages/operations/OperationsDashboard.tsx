@@ -12,41 +12,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { getFarms, getFarmingYearsList, type FarmingYearItem } from '../../services/farmApi';
+import { getFarms } from '../../services/farmApi';
 import { getFarmTasks } from '../../services/tasksApi';
-import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
 import type { Farm } from '../../types/farm';
-import type { TaskWithDetails } from '../../types/tasks';
 
 interface FarmWithTasks extends Farm {
   pendingTaskCount: number;
   inProgressTaskCount: number;
-}
-
-// Storage key for persisting farming year selection
-const FARMING_YEAR_STORAGE_KEY = 'operations_farming_year_filter';
-
-function getPersistedFarmingYear(): number | null {
-  try {
-    const stored = sessionStorage.getItem(FARMING_YEAR_STORAGE_KEY);
-    if (stored === null) return null;
-    const parsed = JSON.parse(stored);
-    return typeof parsed === 'number' ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function persistFarmingYear(year: number | null): void {
-  try {
-    if (year === null) {
-      sessionStorage.removeItem(FARMING_YEAR_STORAGE_KEY);
-    } else {
-      sessionStorage.setItem(FARMING_YEAR_STORAGE_KEY, JSON.stringify(year));
-    }
-  } catch {
-    // Ignore storage errors
-  }
 }
 
 export function OperationsDashboard() {
@@ -55,40 +28,8 @@ export function OperationsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Farming year filter state
-  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(getPersistedFarmingYear());
-  const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
-  const [loadingFarmingYears, setLoadingFarmingYears] = useState(false);
-
-  // Load available farming years on mount
-  useEffect(() => {
-    const loadFarmingYears = async () => {
-      try {
-        setLoadingFarmingYears(true);
-        const response = await getFarmingYearsList(5, true);
-        setAvailableFarmingYears(response.years || []);
-        // If no persisted year, default to current year
-        if (selectedFarmingYear === null && response.years.length > 0) {
-          const currentYear = response.years.find((y) => y.isCurrent);
-          if (currentYear) {
-            setSelectedFarmingYear(currentYear.year);
-            persistFarmingYear(currentYear.year);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading farming years:', error);
-      } finally {
-        setLoadingFarmingYears(false);
-      }
-    };
-    loadFarmingYears();
-  }, []);
-
-  // Handle farming year change
-  const handleFarmingYearChange = (year: number | null) => {
-    setSelectedFarmingYear(year);
-    persistFarmingYear(year);
-  };
+  // Use the global farming year from sidebar
+  const { selectedYear: selectedFarmingYear } = useFarmingYearStore();
 
   useEffect(() => {
     loadFarmsWithTaskCounts();
@@ -148,24 +89,18 @@ export function OperationsDashboard() {
     navigate(`/operations/${farmId}`);
   };
 
-  // Loading/Error/Empty header with farming year selector
-  const renderHeaderWithSelector = () => (
+  const renderHeader = () => (
     <Header>
       <HeaderTop>
         <HeaderTitles>
           <Title>Operations</Title>
-          <Subtitle>Select a farm to view tasks</Subtitle>
+          <Subtitle>
+            Select a farm to view tasks
+            {selectedFarmingYear !== null && (
+              <FarmingYearBadge>Year {selectedFarmingYear}</FarmingYearBadge>
+            )}
+          </Subtitle>
         </HeaderTitles>
-        <FarmingYearSelectorWrapper>
-          <FarmingYearSelector
-            selectedYear={selectedFarmingYear}
-            availableYears={availableFarmingYears}
-            onYearChange={handleFarmingYearChange}
-            showAllOption={true}
-            label="Farming Year"
-            isLoading={loadingFarmingYears}
-          />
-        </FarmingYearSelectorWrapper>
       </HeaderTop>
     </Header>
   );
@@ -173,7 +108,7 @@ export function OperationsDashboard() {
   if (loading) {
     return (
       <Container>
-        {renderHeaderWithSelector()}
+        {renderHeader()}
         <LoadingContainer>
           <LoadingSpinner />
           <LoadingText>Loading farms...</LoadingText>
@@ -185,7 +120,7 @@ export function OperationsDashboard() {
   if (error) {
     return (
       <Container>
-        {renderHeaderWithSelector()}
+        {renderHeader()}
         <ErrorContainer>
           <ErrorIcon>❌</ErrorIcon>
           <ErrorText>{error}</ErrorText>
@@ -198,7 +133,7 @@ export function OperationsDashboard() {
   if (farms.length === 0) {
     return (
       <Container>
-        {renderHeaderWithSelector()}
+        {renderHeader()}
         <EmptyContainer>
           <EmptyIcon>🏞️</EmptyIcon>
           <EmptyText>No farms available</EmptyText>
@@ -211,40 +146,9 @@ export function OperationsDashboard() {
   const totalPending = farms.reduce((sum, farm) => sum + farm.pendingTaskCount, 0);
   const totalInProgress = farms.reduce((sum, farm) => sum + farm.inProgressTaskCount, 0);
 
-  // Get farming year display string
-  const getFarmingYearDisplay = () => {
-    if (selectedFarmingYear === null) {
-      return 'All Years';
-    }
-    const yearItem = availableFarmingYears.find((y) => y.year === selectedFarmingYear);
-    return yearItem?.display || `Farming Year ${selectedFarmingYear}`;
-  };
-
   return (
     <Container>
-      <Header>
-        <HeaderTop>
-          <HeaderTitles>
-            <Title>Operations</Title>
-            <Subtitle>
-              Select a farm to view tasks
-              {selectedFarmingYear !== null && (
-                <FarmingYearBadge>{getFarmingYearDisplay()}</FarmingYearBadge>
-              )}
-            </Subtitle>
-          </HeaderTitles>
-          <FarmingYearSelectorWrapper>
-            <FarmingYearSelector
-              selectedYear={selectedFarmingYear}
-              availableYears={availableFarmingYears}
-              onYearChange={handleFarmingYearChange}
-              showAllOption={true}
-              label="Farming Year"
-              isLoading={loadingFarmingYears}
-            />
-          </FarmingYearSelectorWrapper>
-        </HeaderTop>
-      </Header>
+      {renderHeader()}
 
       {/* Summary */}
       <Summary>
@@ -343,15 +247,6 @@ const HeaderTop = styled.div`
 const HeaderTitles = styled.div`
   flex: 1;
   min-width: 200px;
-`;
-
-const FarmingYearSelectorWrapper = styled.div`
-  min-width: 200px;
-
-  @media (max-width: 640px) {
-    width: 100%;
-    margin-top: ${({ theme }) => theme.spacing.md};
-  }
 `;
 
 const Title = styled.h1`

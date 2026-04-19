@@ -358,7 +358,13 @@ const Input = styled.input`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 0.2s;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -378,9 +384,15 @@ const Textarea = styled.textarea`
   font-family: inherit;
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   resize: vertical;
   min-height: 120px;
   transition: border-color 0.2s;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;

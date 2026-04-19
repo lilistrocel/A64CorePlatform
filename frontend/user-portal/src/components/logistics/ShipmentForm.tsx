@@ -70,7 +70,13 @@ const Input = styled.input<{ $hasError?: boolean }>`
   border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -90,6 +96,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -113,7 +120,13 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
   font-family: inherit;
   min-height: 80px;
   resize: vertical;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;

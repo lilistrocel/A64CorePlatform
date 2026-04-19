@@ -11,8 +11,8 @@ const Title = styled.h2`font-size: 24px; font-weight: 600; color: ${({ theme }) 
 const Form = styled.form``;
 const FormGroup = styled.div`margin-bottom: 20px;`;
 const Label = styled.label`display: block; font-size: 14px; font-weight: 500; color: ${({ theme }) => theme.colors.textPrimary}; margin-bottom: 8px;`;
-const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; &:focus { outline: none; border-color: #3B82F6; }`;
-const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; &:focus { outline: none; border-color: #3B82F6; }`;
+const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; } &:focus { outline: none; border-color: #3B82F6; }`;
+const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &:focus { outline: none; border-color: #3B82F6; }`;
 const ButtonRow = styled.div`display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;`;
 const Button = styled.button`padding: 10px 24px; background: #3B82F6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: #1976d2; }`;
 const CancelButton = styled(Button)`background: transparent; color: ${({ theme }) => theme.colors.textSecondary}; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; &:hover { background: ${({ theme }) => theme.colors.surface}; }`;

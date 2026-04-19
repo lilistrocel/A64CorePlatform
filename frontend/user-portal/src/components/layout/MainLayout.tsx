@@ -1,9 +1,11 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
 import { useDivisionStore } from '../../stores/division.store';
 import { useThemeStore } from '../../stores/theme.store';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
+import { useFarmingYearsList } from '../../hooks/queries/useFarmingYears';
 import { getPendingTaskCount } from '../../services/tasksApi';
 import { Button } from '@a64core/shared';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
@@ -61,11 +63,23 @@ export function MainLayout() {
   const { user, logout } = useAuthStore();
   const { currentDivision } = useDivisionStore();
   const { mode, toggleTheme } = useThemeStore();
+  const { selectedYear, setYear, initialize } = useFarmingYearStore();
+  const { data: farmingYearsData } = useFarmingYearsList(5, true);
   const navigate = useNavigate();
   const location = useLocation();
   const unsavedChanges = useContext(UnsavedChangesContext);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pendingTaskCount, setPendingTaskCount] = useState(0);
+
+  // Initialize global year to the current farming year on first load
+  useEffect(() => {
+    if (farmingYearsData?.years) {
+      const currentYear = farmingYearsData.years.find((y) => y.isCurrent);
+      if (currentYear) {
+        initialize(currentYear.year);
+      }
+    }
+  }, [farmingYearsData, initialize]);
 
   // Load pending task count on mount and refresh every 30 seconds
   useEffect(() => {
@@ -161,6 +175,13 @@ export function MainLayout() {
             <DivisionSwitcher />
           </DivisionSwitcherWrapper>
         </SidebarHeader>
+
+        {/* Global farming year selector */}
+        <FarmingYearDropdown
+          years={farmingYearsData?.years ?? []}
+          selectedYear={selectedYear}
+          onSelect={setYear}
+        />
 
         <Nav aria-label="Main navigation">
           {navItems.map((item) => (
@@ -456,6 +477,185 @@ const ThemeToggleButton = styled.button`
 const ThemeToggleIcon = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
   line-height: 1;
+`;
+
+// ── Farming Year Custom Dropdown ──────────────────────────────────────────
+
+interface FarmingYearOption {
+  year: number;
+  display: string;
+  isCurrent?: boolean;
+}
+
+interface FarmingYearDropdownProps {
+  years: FarmingYearOption[];
+  selectedYear: number | null;
+  onSelect: (year: number | null) => void;
+}
+
+function FarmingYearDropdown({ years, selectedYear, onSelect }: FarmingYearDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selectedLabel = selectedYear === null
+    ? 'All Years'
+    : years.find((y) => y.year === selectedYear)?.display ?? `Year ${selectedYear}`;
+
+  return (
+    <FyWrapper ref={ref}>
+      <FyLabel>📅 Farming Year</FyLabel>
+      <FyTrigger onClick={() => setOpen((o) => !o)} $open={open}>
+        <span>{selectedLabel}</span>
+        <FyArrow $open={open}>▾</FyArrow>
+      </FyTrigger>
+      {open && (
+        <FyMenu>
+          <FyItem
+            $active={selectedYear === null}
+            onClick={() => { onSelect(null); setOpen(false); }}
+          >
+            All Years
+          </FyItem>
+          {years.map((y) => (
+            <FyItem
+              key={y.year}
+              $active={selectedYear === y.year}
+              onClick={() => { onSelect(y.year); setOpen(false); }}
+            >
+              <FyItemLabel>{y.display}</FyItemLabel>
+              {y.isCurrent && <GreenLed />}
+            </FyItem>
+          ))}
+        </FyMenu>
+      )}
+    </FyWrapper>
+  );
+}
+
+// ── Farming Year Dropdown Styles ──────────────────────────────────────────
+
+const FyWrapper = styled.div`
+  padding: ${({ theme }) => theme.spacing.lg};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  flex-shrink: 0;
+  position: relative;
+`;
+
+const FyLabel = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+`;
+
+const FyTrigger = styled.button<{ $open: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.md};
+  min-height: 44px;
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ $open, theme }) => ($open ? theme.colors.surface : 'transparent')};
+  border: 1px solid ${({ $open, theme }) => ($open ? theme.colors.primary[500] : theme.colors.neutral[300])};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[100]};
+  }
+`;
+
+const FyArrow = styled.span<{ $open: boolean }>`
+  font-size: 12px;
+  transition: transform 0.15s ease;
+  transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'rotate(0)')};
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const FyMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  left: ${({ theme }) => theme.spacing.lg};
+  right: ${({ theme }) => theme.spacing.lg};
+  margin-top: 4px;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+  z-index: ${({ theme }) => theme.zIndex.dropdown};
+  max-height: 240px;
+  overflow-y: auto;
+`;
+
+const FyItem = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ $active, theme }) => ($active ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.regular)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textPrimary)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.infoBg : 'transparent')};
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.1s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface};
+  }
+
+  &:first-child {
+    border-radius: ${({ theme }) => `${theme.borderRadius.md} ${theme.borderRadius.md} 0 0`};
+  }
+
+  &:last-child {
+    border-radius: ${({ theme }) => `0 0 ${theme.borderRadius.md} ${theme.borderRadius.md}`};
+  }
+`;
+
+const FyItemLabel = styled.span`
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const ledPulse = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 4px 1px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 8px 3px rgba(16, 185, 129, 0.7);
+  }
+`;
+
+const GreenLed = styled.span`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+  flex-shrink: 0;
+  animation: ${ledPulse} 2s ease-in-out infinite;
 `;
 
 const MainContent = styled.main`

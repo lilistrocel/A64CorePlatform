@@ -116,6 +116,7 @@ const Select = styled.select`
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   min-width: 200px;
 

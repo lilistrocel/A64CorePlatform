@@ -1,18 +1,20 @@
 /**
- * EditPlantDataModal Component
+ * PlantDataFormModal Component
  *
- * Modal dialog for editing existing plant data entries.
- * Pre-populates form with existing data and shows current version.
+ * Unified modal for creating and editing plant data entries.
+ * Pass `plantData` to enter edit mode; omit it (or pass null) for create mode.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import { plantDataEnhancedApi } from '../../services/plantDataEnhancedApi';
+import { positiveIntegerInputProps } from '../../utils';
 import type {
   PlantDataEnhanced,
+  PlantDataEnhancedCreate,
   PlantDataEnhancedUpdate,
   PlantTypeEnum,
   FarmTypeCompatibility,
@@ -21,10 +23,62 @@ import type {
 import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
 
 // ============================================================================
-// VALIDATION SCHEMA (Same as Add but all fields optional for PATCH)
+// VALIDATION SCHEMAS
 // ============================================================================
 
-const plantDataSchema = z.object({
+const createSchema = z.object({
+  plantName: z.string().min(1, 'Plant name is required').max(100, 'Name too long'),
+  scientificName: z.string().optional(),
+  plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']),
+  farmTypeCompatibility: z.array(z.string()).min(1, 'Select at least one farm type'),
+  tags: z.string().optional(),
+  spacingCategory: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.enum(['xs', 's', 'm', 'l', 'xl', 'bush', 'large_bush', 'small_tree', 'medium_tree', 'large_tree']).optional(),
+  ),
+
+  germinationDays: z.number().nonnegative('Cannot be negative').optional(),
+  vegetativeDays: z.number().nonnegative('Cannot be negative').optional(),
+  floweringDays: z.number().nonnegative('Cannot be negative').optional(),
+  fruitingDays: z.number().nonnegative('Cannot be negative').optional(),
+  harvestDurationDays: z.number().nonnegative('Cannot be negative').optional(),
+  totalCycleDays: z.number().min(1, 'Total cycle must be at least 1 day'),
+
+  yieldPerPlant: z.number().min(0.01, 'Yield must be greater than 0'),
+  yieldUnit: z.string().min(1, 'Yield unit is required'),
+  expectedWastePercent: z.number().nonnegative('Cannot be negative').max(100, 'Cannot exceed 100%').optional(),
+  seedsPerPlantingPoint: z.number().int('Must be a whole number').min(1, 'Must be at least 1').optional(),
+
+  temperatureMin: z.number().optional(),
+  temperatureOptimal: z.number().optional(),
+  temperatureMax: z.number().optional(),
+  humidityMin: z.number().nonnegative().max(100).optional(),
+  humidityOptimal: z.number().nonnegative().max(100).optional(),
+  humidityMax: z.number().nonnegative().max(100).optional(),
+
+  wateringFrequencyDays: z.number().min(1, 'Must be at least 1 day').optional(),
+  waterAmountPerPlant: z.number().nonnegative().optional(),
+  waterAmountUnit: z.string().optional(),
+
+  phMin: z.number().nonnegative('pH min must be 0-14').max(14, 'pH max is 14').optional(),
+  phOptimal: z.number().nonnegative('pH optimal must be 0-14').max(14, 'pH max is 14').optional(),
+  phMax: z.number().nonnegative('pH max must be 0-14').max(14, 'pH max is 14').optional(),
+
+  dailyLightHoursMin: z.number().nonnegative().max(24).optional(),
+  dailyLightHoursOptimal: z.number().nonnegative().max(24).optional(),
+  dailyLightHoursMax: z.number().nonnegative().max(24).optional(),
+
+  averageMarketValuePerKg: z.number().nonnegative().optional(),
+  currency: z.string().optional(),
+
+  spacingBetweenPlantsCm: z.number().nonnegative().optional(),
+  spacingBetweenRowsCm: z.number().nonnegative().optional(),
+  notes: z.string().optional(),
+
+  isActive: z.boolean().optional(),
+});
+
+const updateSchema = z.object({
   plantName: z.string().min(1, 'Plant name is required').max(100, 'Name too long').optional(),
   scientificName: z.string().optional(),
   plantType: z.enum(['crop', 'tree', 'herb', 'fruit', 'vegetable', 'ornamental', 'medicinal']).optional(),
@@ -35,7 +89,6 @@ const plantDataSchema = z.object({
     z.enum(['xs', 's', 'm', 'l', 'xl', 'bush', 'large_bush', 'small_tree', 'medium_tree', 'large_tree']).optional(),
   ),
 
-  // Growth Cycle - Using valueAsNumber in register() instead of preprocess
   germinationDays: z.number().nonnegative('Cannot be negative').optional(),
   vegetativeDays: z.number().nonnegative('Cannot be negative').optional(),
   floweringDays: z.number().nonnegative('Cannot be negative').optional(),
@@ -43,13 +96,11 @@ const plantDataSchema = z.object({
   harvestDurationDays: z.number().nonnegative('Cannot be negative').optional(),
   totalCycleDays: z.number().min(1, 'Total cycle must be at least 1 day').optional(),
 
-  // Yield Info
   yieldPerPlant: z.number().min(0.01, 'Yield must be greater than 0').optional(),
   yieldUnit: z.string().min(1, 'Yield unit is required').optional(),
   expectedWastePercent: z.number().nonnegative('Cannot be negative').max(100, 'Cannot exceed 100%').optional(),
   seedsPerPlantingPoint: z.number().int('Must be a whole number').min(1, 'Must be at least 1').optional(),
 
-  // Environmental Requirements
   temperatureMin: z.number().optional(),
   temperatureOptimal: z.number().optional(),
   temperatureMax: z.number().optional(),
@@ -57,26 +108,21 @@ const plantDataSchema = z.object({
   humidityOptimal: z.number().nonnegative().max(100).optional(),
   humidityMax: z.number().nonnegative().max(100).optional(),
 
-  // Watering Requirements
   wateringFrequencyDays: z.number().min(1, 'Must be at least 1 day').optional(),
   waterAmountPerPlant: z.number().nonnegative().optional(),
   waterAmountUnit: z.string().optional(),
 
-  // Soil Requirements
   phMin: z.number().nonnegative('pH min must be 0-14').max(14, 'pH max is 14').optional(),
   phOptimal: z.number().nonnegative('pH optimal must be 0-14').max(14, 'pH max is 14').optional(),
   phMax: z.number().nonnegative('pH max must be 0-14').max(14, 'pH max is 14').optional(),
 
-  // Light Requirements
   dailyLightHoursMin: z.number().nonnegative().max(24).optional(),
   dailyLightHoursOptimal: z.number().nonnegative().max(24).optional(),
   dailyLightHoursMax: z.number().nonnegative().max(24).optional(),
 
-  // Economics
   averageMarketValuePerKg: z.number().nonnegative().optional(),
   currency: z.string().optional(),
 
-  // Additional Info
   spacingBetweenPlantsCm: z.number().nonnegative().optional(),
   spacingBetweenRowsCm: z.number().nonnegative().optional(),
   notes: z.string().optional(),
@@ -84,21 +130,21 @@ const plantDataSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-type PlantDataFormData = z.infer<typeof plantDataSchema>;
+type PlantDataFormData = z.infer<typeof updateSchema>;
 
 // ============================================================================
 // COMPONENT PROPS
 // ============================================================================
 
-export interface EditPlantDataModalProps {
+export interface PlantDataFormModalProps {
   isOpen: boolean;
-  plantData: PlantDataEnhanced | null;
   onClose: () => void;
   onSuccess?: () => void;
+  plantData?: PlantDataEnhanced | null;
 }
 
 // ============================================================================
-// STYLED COMPONENTS (Reuse from AddPlantDataModal)
+// STYLED COMPONENTS
 // ============================================================================
 
 const Overlay = styled.div<{ $isOpen: boolean }>`
@@ -206,6 +252,16 @@ const SectionTitle = styled.h3`
   margin: 0;
 `;
 
+const RequiredBadge = styled.span`
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  background: #EF4444;
+  color: white;
+  text-transform: uppercase;
+`;
+
 const OptionalBadge = styled.span`
   font-size: 11px;
   font-weight: 500;
@@ -233,7 +289,13 @@ const Input = styled.input<{ $hasError?: boolean }>`
   border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
   border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -245,6 +307,12 @@ const Input = styled.input<{ $hasError?: boolean }>`
     background: ${({ theme }) => theme.colors.surface};
     cursor: not-allowed;
   }
+
+  &:read-only:not(:disabled) {
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textSecondary};
+    cursor: not-allowed;
+  }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
@@ -253,6 +321,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -276,7 +345,13 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
   resize: vertical;
   min-height: 80px;
   font-family: inherit;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -497,89 +572,26 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   }
 `;
 
-// Schedule Editor Components
-const ScheduleList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const ScheduleItem = styled.div`
-  padding: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const ScheduleItemHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const ScheduleItemTitle = styled.div`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-`;
-
-const RemoveButton = styled.button`
-  padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  color: #EF4444;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: #FECACA;
-  }
-`;
-
-const AddButton = styled.button`
-  padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.infoBg};
-  color: #0284C7;
-  border: 1px dashed #0284C7;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-  width: 100%;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
-    filter: brightness(0.92);
-  }
-`;
-
-const ScheduleItemFields = styled.div`
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 12px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: EditPlantDataModalProps) {
+export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: PlantDataFormModalProps) {
+  const isEdit = !!plantData;
+
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const createDefaultValues = useMemo((): PlantDataFormData => ({
+    plantType: 'vegetable',
+    farmTypeCompatibility: [],
+    currency: 'AED',
+    yieldUnit: 'kg',
+    waterAmountUnit: 'L',
+  }), []);
 
   const {
     register,
@@ -590,15 +602,32 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
     watch,
     setValue,
   } = useForm<PlantDataFormData>({
-    resolver: zodResolver(plantDataSchema),
+    resolver: zodResolver(isEdit ? updateSchema : createSchema),
+    defaultValues: isEdit ? undefined : createDefaultValues,
   });
 
   const selectedFarmTypes = watch('farmTypeCompatibility') || [];
 
-  // Pre-populate form when plantData changes
+  // Total Cycle Days is auto-computed as the sum of the five growth-stage
+  // durations. Watch each stage field and keep totalCycleDays in sync. Saved
+  // value is always the computed sum — the field is read-only in the UI.
+  const germinationDays = watch('germinationDays');
+  const vegetativeDays = watch('vegetativeDays');
+  const floweringDays = watch('floweringDays');
+  const fruitingDays = watch('fruitingDays');
+  const harvestDurationDays = watch('harvestDurationDays');
+  useEffect(() => {
+    const sum =
+      (germinationDays || 0) +
+      (vegetativeDays || 0) +
+      (floweringDays || 0) +
+      (fruitingDays || 0) +
+      (harvestDurationDays || 0);
+    setValue('totalCycleDays', sum, { shouldValidate: true, shouldDirty: true });
+  }, [germinationDays, vegetativeDays, floweringDays, fruitingDays, harvestDurationDays, setValue]);
+
   useEffect(() => {
     if (plantData) {
-      // Reset form with default values for ALL fields to prevent controlled/uncontrolled errors
       reset({
         plantName: plantData.plantName || '',
         scientificName: plantData.scientificName || '',
@@ -648,14 +677,14 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
         isActive: plantData.isActive ?? true,
       });
     }
-  }, [plantData, reset]);
+    // Depend on plantData.plantDataId rather than the whole object: if any
+    // upstream auto-refresh produces a new plantData reference with the same
+    // identity, this effect would fire and overwrite whatever the user was
+    // editing. We only want the reset when the user picks a genuinely
+    // different plant record to edit.
+  }, [plantData?.plantDataId, reset]);
 
   const onSubmit = async (data: PlantDataFormData) => {
-    if (!plantData) {
-      return;
-    }
-
-    // Synchronous ref guard prevents concurrent submissions (double-click protection)
     if (submittingRef.current) return;
     submittingRef.current = true;
 
@@ -664,55 +693,135 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
       setSuccessMessage(null);
       setErrorMessage(null);
 
-      // Transform form data to API format (only send changed fields)
-      // Note: plantType and isActive are not supported by backend update model
-      const updateData: PlantDataEnhancedUpdate = {
-        plantName: data.plantName,
-        scientificName: data.scientificName,
-        farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
-        tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        spacingCategory: data.spacingCategory as SpacingCategory,
+      if (isEdit && plantData) {
+        const updateData: PlantDataEnhancedUpdate = {
+          plantName: data.plantName,
+          scientificName: data.scientificName,
+          farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
+          tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          spacingCategory: data.spacingCategory as SpacingCategory,
 
-        growthCycle: {
-          germinationDays: data.germinationDays ?? 0,
-          vegetativeDays: data.vegetativeDays ?? 0,
-          floweringDays: data.floweringDays ?? 0,
-          fruitingDays: data.fruitingDays ?? 0,
-          harvestDurationDays: data.harvestDurationDays ?? 0,
-          totalCycleDays: data.totalCycleDays!,
-        },
+          growthCycle: {
+            germinationDays: data.germinationDays ?? 0,
+            vegetativeDays: data.vegetativeDays ?? 0,
+            floweringDays: data.floweringDays ?? 0,
+            fruitingDays: data.fruitingDays ?? 0,
+            harvestDurationDays: data.harvestDurationDays ?? 0,
+            totalCycleDays: data.totalCycleDays!,
+          },
 
-        yieldInfo: {
-          yieldPerPlant: data.yieldPerPlant!,
-          yieldUnit: data.yieldUnit!,
-          seedsPerPlantingPoint: data.seedsPerPlantingPoint,
-          expectedWastePercentage: data.expectedWastePercent ?? 0,
-        },
+          yieldInfo: {
+            yieldPerPlant: data.yieldPerPlant!,
+            yieldUnit: data.yieldUnit!,
+            seedsPerPlantingPoint: data.seedsPerPlantingPoint,
+            expectedWastePercentage: data.expectedWastePercent ?? 0,
+          },
+        };
 
-        // NOTE: Advanced fields (environmentalRequirements, wateringRequirements, soilRequirements,
-        // lightRequirements, economicsAndLabor, additionalInfo) require complex nested structures
-        // that don't match the simple form fields. These are preserved from original data during updates.
-        // Only the basic fields above are updated via this form.
-      };
+        const updated = await plantDataEnhancedApi.updatePlantDataEnhanced(plantData.plantDataId, updateData);
+        setSuccessMessage(`Plant "${updated.plantName}" updated to version ${updated.dataVersion}!`);
+        setTimeout(() => {
+          onSuccess?.();
+          onClose();
+        }, 1500);
+      } else {
+        const createData: PlantDataEnhancedCreate = {
+          plantName: data.plantName!,
+          scientificName: data.scientificName,
+          plantType: data.plantType as PlantTypeEnum,
+          farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
+          tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          spacingCategory: data.spacingCategory as SpacingCategory | undefined,
 
-      console.log('Sending update data:', JSON.stringify(updateData, null, 2));
-      const updated = await plantDataEnhancedApi.updatePlantDataEnhanced(plantData.plantDataId, updateData);
+          growthCycle: {
+            germinationDays: data.germinationDays ?? 0,
+            vegetativeDays: data.vegetativeDays ?? 0,
+            floweringDays: data.floweringDays ?? 0,
+            fruitingDays: data.fruitingDays ?? 0,
+            harvestDurationDays: data.harvestDurationDays ?? 0,
+            totalCycleDays: data.totalCycleDays!,
+          },
 
-      setSuccessMessage(`Plant "${updated.plantName}" updated to version ${updated.dataVersion}!`);
-      setTimeout(() => {
-        onSuccess?.();
-        onClose();
-      }, 1500);
-    } catch (error: any) {
-      console.error('Error updating plant data:', error);
-      console.error('Error response data:', error.response?.data);
-      const errorDetail = error.response?.data?.detail;
-      const errorMsg = typeof errorDetail === 'string'
-        ? errorDetail
-        : Array.isArray(errorDetail)
-          ? errorDetail.map((e: any) => `${e.loc?.join('.')}: ${e.msg}`).join('; ')
-          : error.response?.data?.message || 'Failed to update plant data. Please try again.';
-      setErrorMessage(errorMsg);
+          yieldInfo: {
+            yieldPerPlant: data.yieldPerPlant!,
+            yieldUnit: data.yieldUnit!,
+            seedsPerPlantingPoint: data.seedsPerPlantingPoint,
+            expectedWastePercentage: data.expectedWastePercent,
+          },
+
+          environmentalRequirements: (
+            data.temperatureMin !== undefined || data.temperatureOptimal !== undefined ||
+            data.temperatureMax !== undefined || data.humidityMin !== undefined ||
+            data.humidityOptimal !== undefined || data.humidityMax !== undefined
+          ) ? {
+            temperatureMin: data.temperatureMin,
+            temperatureOptimal: data.temperatureOptimal,
+            temperatureMax: data.temperatureMax,
+            humidityMin: data.humidityMin,
+            humidityOptimal: data.humidityOptimal,
+            humidityMax: data.humidityMax,
+          } : undefined,
+
+          wateringRequirements: data.wateringFrequencyDays ? {
+            wateringFrequencyDays: data.wateringFrequencyDays,
+            waterAmountPerPlant: data.waterAmountPerPlant,
+            waterAmountUnit: data.waterAmountUnit,
+          } : undefined,
+
+          soilRequirements: (
+            data.phMin !== undefined || data.phOptimal !== undefined || data.phMax !== undefined
+          ) ? {
+            phMin: data.phMin,
+            phOptimal: data.phOptimal,
+            phMax: data.phMax,
+          } : undefined,
+
+          lightRequirements: (
+            data.dailyLightHoursMin !== undefined || data.dailyLightHoursOptimal !== undefined ||
+            data.dailyLightHoursMax !== undefined
+          ) ? {
+            dailyLightHoursMin: data.dailyLightHoursMin,
+            dailyLightHoursOptimal: data.dailyLightHoursOptimal,
+            dailyLightHoursMax: data.dailyLightHoursMax,
+          } : undefined,
+
+          economicsAndLabor: data.averageMarketValuePerKg ? {
+            averageMarketValuePerKg: data.averageMarketValuePerKg,
+            currency: data.currency,
+          } : undefined,
+
+          additionalInfo: (
+            data.spacingBetweenPlantsCm !== undefined || data.spacingBetweenRowsCm !== undefined || data.notes
+          ) ? {
+            spacingBetweenPlantsCm: data.spacingBetweenPlantsCm,
+            spacingBetweenRowsCm: data.spacingBetweenRowsCm,
+            notes: data.notes,
+          } : undefined,
+        };
+
+        await plantDataEnhancedApi.createPlantDataEnhanced(createData);
+        setSuccessMessage(`Plant "${data.plantName}" created successfully!`);
+        setTimeout(() => {
+          reset();
+          onSuccess?.();
+          onClose();
+        }, 1500);
+      }
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { detail?: unknown; message?: string } } };
+      if (isEdit) {
+        const errorDetail = axiosError.response?.data?.detail;
+        const errorMsg = typeof errorDetail === 'string'
+          ? errorDetail
+          : Array.isArray(errorDetail)
+            ? errorDetail.map((e: { loc?: string[]; msg?: string }) => `${e.loc?.join('.')}: ${e.msg}`).join('; ')
+            : axiosError.response?.data?.message || 'Failed to update plant data. Please try again.';
+        setErrorMessage(errorMsg);
+      } else {
+        setErrorMessage(
+          axiosError.response?.data?.message || 'Failed to create plant data. Please try again.',
+        );
+      }
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -721,6 +830,9 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
 
   const handleClose = () => {
     if (!submitting) {
+      if (!isEdit) {
+        reset();
+      }
       setSuccessMessage(null);
       setErrorMessage(null);
       setShowAdvanced(false);
@@ -736,17 +848,19 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
     return updated;
   };
 
-  if (!plantData) return null;
-
   return (
     <Overlay $isOpen={isOpen}>
       <Modal>
         <ModalHeader>
           <ModalHeaderContent>
-            <ModalTitle>Edit Plant Data</ModalTitle>
-            <VersionBadge>
-              Current Version: v{plantData.dataVersion}
-            </VersionBadge>
+            <ModalTitle>
+              {isEdit ? `Edit Plant: ${plantData!.plantName}` : 'Add New Plant Data'}
+            </ModalTitle>
+            {isEdit && (
+              <VersionBadge>
+                Current Version: v{plantData!.dataVersion}
+              </VersionBadge>
+            )}
           </ModalHeaderContent>
           <CloseButton onClick={handleClose} disabled={submitting}>
             ✕
@@ -754,15 +868,16 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
         </ModalHeader>
 
         <Form onSubmit={handleSubmit(onSubmit)}>
-        <ModalBody>
+          <ModalBody>
             {/* BASIC INFORMATION */}
             <Section>
               <SectionHeader>
                 <SectionTitle>Basic Information</SectionTitle>
+                {!isEdit && <RequiredBadge>Required</RequiredBadge>}
               </SectionHeader>
 
               <FormGroup>
-                <Label htmlFor="plantName">Plant Name</Label>
+                <Label htmlFor="plantName">Plant Name {!isEdit && '*'}</Label>
                 <Input
                   id="plantName"
                   type="text"
@@ -776,7 +891,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
 
               <GridRow $columns={3}>
                 <FormGroup>
-                  <Label htmlFor="scientificName">Scientific Name</Label>
+                  <Label htmlFor="scientificName">Scientific Name {!isEdit && '(Optional)'}</Label>
                   <Input
                     id="scientificName"
                     type="text"
@@ -788,7 +903,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                 </FormGroup>
 
                 <FormGroup>
-                  <Label htmlFor="plantType">Plant Type</Label>
+                  <Label htmlFor="plantType">Plant Type {!isEdit && '*'}</Label>
                   <Select
                     id="plantType"
                     $hasError={!!errors.plantType}
@@ -827,7 +942,7 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
               </GridRow>
 
               <FormGroup>
-                <Label>Farm Type Compatibility</Label>
+                <Label>Farm Type Compatibility {!isEdit && '* (Select all that apply)'}</Label>
                 <Controller
                   name="farmTypeCompatibility"
                   control={control}
@@ -855,11 +970,13 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                     </CheckboxGrid>
                   )}
                 />
-                {errors.farmTypeCompatibility && <ErrorText>{errors.farmTypeCompatibility.message}</ErrorText>}
+                {errors.farmTypeCompatibility && (
+                  <ErrorText>{errors.farmTypeCompatibility.message}</ErrorText>
+                )}
               </FormGroup>
 
               <FormGroup>
-                <Label htmlFor="tags">Tags (comma-separated)</Label>
+                <Label htmlFor="tags">Tags ({isEdit ? 'comma-separated' : 'Optional, comma-separated'})</Label>
                 <Input
                   id="tags"
                   type="text"
@@ -867,35 +984,39 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   disabled={submitting}
                   {...register('tags')}
                 />
+                {!isEdit && <HelpText>Separate multiple tags with commas</HelpText>}
               </FormGroup>
 
-              <FormGroup>
-                <StatusToggle>
-                  <StatusLabel>Status:</StatusLabel>
-                  <Controller
-                    name="isActive"
-                    control={control}
-                    render={({ field }) => (
-                      <StatusSwitch>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={(e) => field.onChange(e.target.checked)}
-                          disabled={submitting}
-                        />
-                        <span></span>
-                      </StatusSwitch>
-                    )}
-                  />
-                  <StatusLabel>{watch('isActive') ? 'Active' : 'Inactive'}</StatusLabel>
-                </StatusToggle>
-              </FormGroup>
+              {isEdit && (
+                <FormGroup>
+                  <StatusToggle>
+                    <StatusLabel>Status:</StatusLabel>
+                    <Controller
+                      name="isActive"
+                      control={control}
+                      render={({ field }) => (
+                        <StatusSwitch>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={(e) => field.onChange(e.target.checked)}
+                            disabled={submitting}
+                          />
+                          <span></span>
+                        </StatusSwitch>
+                      )}
+                    />
+                    <StatusLabel>{watch('isActive') ? 'Active' : 'Inactive'}</StatusLabel>
+                  </StatusToggle>
+                </FormGroup>
+              )}
             </Section>
 
             {/* GROWTH CYCLE */}
             <Section>
               <SectionHeader>
                 <SectionTitle>Growth Cycle</SectionTitle>
+                {!isEdit && <RequiredBadge>Required</RequiredBadge>}
               </SectionHeader>
 
               <GridRow $columns={3}>
@@ -903,12 +1024,14 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <Label htmlFor="germinationDays">Germination (days)</Label>
                   <Input
                     id="germinationDays"
-                    type="number"
+                    {...positiveIntegerInputProps}
                     min="0"
                     step="1"
+                    placeholder="0"
+                    $hasError={!!errors.germinationDays}
                     disabled={submitting}
                     {...register('germinationDays', {
-                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v)
+                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
                     })}
                   />
                 </FormGroup>
@@ -917,11 +1040,15 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <Label htmlFor="vegetativeDays">Vegetative (days)</Label>
                   <Input
                     id="vegetativeDays"
-                    type="number"
+                    {...positiveIntegerInputProps}
                     min="0"
                     step="1"
+                    placeholder="0"
+                    $hasError={!!errors.vegetativeDays}
                     disabled={submitting}
-                    {...register('vegetativeDays', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                    {...register('vegetativeDays', {
+                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                    })}
                   />
                 </FormGroup>
 
@@ -929,11 +1056,15 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <Label htmlFor="floweringDays">Flowering (days)</Label>
                   <Input
                     id="floweringDays"
-                    type="number"
+                    {...positiveIntegerInputProps}
                     min="0"
                     step="1"
+                    placeholder="0"
+                    $hasError={!!errors.floweringDays}
                     disabled={submitting}
-                    {...register('floweringDays', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                    {...register('floweringDays', {
+                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                    })}
                   />
                 </FormGroup>
               </GridRow>
@@ -943,11 +1074,15 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <Label htmlFor="fruitingDays">Fruiting (days)</Label>
                   <Input
                     id="fruitingDays"
-                    type="number"
+                    {...positiveIntegerInputProps}
                     min="0"
                     step="1"
+                    placeholder="0"
+                    $hasError={!!errors.fruitingDays}
                     disabled={submitting}
-                    {...register('fruitingDays', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                    {...register('fruitingDays', {
+                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                    })}
                   />
                 </FormGroup>
 
@@ -955,27 +1090,35 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <Label htmlFor="harvestDurationDays">Harvest Duration (days)</Label>
                   <Input
                     id="harvestDurationDays"
-                    type="number"
+                    {...positiveIntegerInputProps}
                     min="0"
                     step="1"
+                    placeholder="0"
+                    $hasError={!!errors.harvestDurationDays}
                     disabled={submitting}
-                    {...register('harvestDurationDays', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                    {...register('harvestDurationDays', {
+                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                    })}
                   />
                 </FormGroup>
               </GridRow>
 
               <FormGroup>
-                <Label htmlFor="totalCycleDays">Total Cycle Days</Label>
+                <Label htmlFor="totalCycleDays">Total Cycle Days {!isEdit && '*'}</Label>
                 <Input
                   id="totalCycleDays"
-                  type="number"
+                  {...positiveIntegerInputProps}
                   min="1"
                   step="1"
+                  readOnly
                   $hasError={!!errors.totalCycleDays}
                   disabled={submitting}
-                  {...register('totalCycleDays', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                  {...register('totalCycleDays', {
+                    setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                  })}
                 />
                 {errors.totalCycleDays && <ErrorText>{errors.totalCycleDays.message}</ErrorText>}
+                <HelpText>Auto-calculated from the five stage durations above.</HelpText>
               </FormGroup>
             </Section>
 
@@ -983,25 +1126,29 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
             <Section>
               <SectionHeader>
                 <SectionTitle>Yield Information</SectionTitle>
+                {!isEdit && <RequiredBadge>Required</RequiredBadge>}
               </SectionHeader>
 
               <GridRow $columns={4}>
                 <FormGroup>
-                  <Label htmlFor="yieldPerPlant">Yield Per Plant</Label>
+                  <Label htmlFor="yieldPerPlant">Yield Per Plant {!isEdit && '*'}</Label>
                   <Input
                     id="yieldPerPlant"
                     type="number"
                     min="0.01"
                     step="0.01"
+                    placeholder="e.g., 2.5"
                     $hasError={!!errors.yieldPerPlant}
                     disabled={submitting}
-                    {...register('yieldPerPlant', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                    {...register('yieldPerPlant', {
+                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                    })}
                   />
                   {errors.yieldPerPlant && <ErrorText>{errors.yieldPerPlant.message}</ErrorText>}
                 </FormGroup>
 
                 <FormGroup>
-                  <Label htmlFor="yieldUnit">Yield Unit</Label>
+                  <Label htmlFor="yieldUnit">Yield Unit {!isEdit && '*'}</Label>
                   <Input
                     id="yieldUnit"
                     type="text"
@@ -1021,8 +1168,12 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                     min="0"
                     max="100"
                     step="0.1"
+                    placeholder="0-100"
+                    $hasError={!!errors.expectedWastePercent}
                     disabled={submitting}
-                    {...register('expectedWastePercent', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                    {...register('expectedWastePercent', {
+                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                    })}
                   />
                 </FormGroup>
 
@@ -1033,9 +1184,12 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                     type="number"
                     min="1"
                     step="1"
+                    placeholder="1"
                     $hasError={!!errors.seedsPerPlantingPoint}
                     disabled={submitting}
-                    {...register('seedsPerPlantingPoint', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })}
+                    {...register('seedsPerPlantingPoint', {
+                      setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                    })}
                   />
                   <HelpText>Seeds per drip/planting point</HelpText>
                 </FormGroup>
@@ -1051,9 +1205,10 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
               {showAdvanced ? '▼' : '▶'} {showAdvanced ? 'Hide' : 'Show'} Advanced Fields
             </ExpandButton>
 
-            {/* ADVANCED SECTIONS (same as AddPlantDataModal) */}
+            {/* ADVANCED FIELDS */}
             {showAdvanced && (
               <>
+                {/* ENVIRONMENTAL REQUIREMENTS */}
                 <Section>
                   <SectionHeader>
                     <SectionTitle>Environmental Requirements</SectionTitle>
@@ -1063,38 +1218,99 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <GridRow $columns={3}>
                     <FormGroup>
                       <Label htmlFor="temperatureMin">Min Temp (°C)</Label>
-                      <Input id="temperatureMin" type="number" step="0.1" disabled={submitting} {...register('temperatureMin', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="temperatureMin"
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g., 15"
+                        disabled={submitting}
+                        {...register('temperatureMin', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="temperatureOptimal">Optimal Temp (°C)</Label>
-                      <Input id="temperatureOptimal" type="number" step="0.1" disabled={submitting} {...register('temperatureOptimal', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="temperatureOptimal"
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g., 25"
+                        disabled={submitting}
+                        {...register('temperatureOptimal', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="temperatureMax">Max Temp (°C)</Label>
-                      <Input id="temperatureMax" type="number" step="0.1" disabled={submitting} {...register('temperatureMax', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="temperatureMax"
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g., 35"
+                        disabled={submitting}
+                        {...register('temperatureMax', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
                   </GridRow>
 
                   <GridRow $columns={3}>
                     <FormGroup>
                       <Label htmlFor="humidityMin">Min Humidity (%)</Label>
-                      <Input id="humidityMin" type="number" min="0" max="100" step="1" disabled={submitting} {...register('humidityMin', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="humidityMin"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        placeholder="0-100"
+                        disabled={submitting}
+                        {...register('humidityMin', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="humidityOptimal">Optimal Humidity (%)</Label>
-                      <Input id="humidityOptimal" type="number" min="0" max="100" step="1" disabled={submitting} {...register('humidityOptimal', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="humidityOptimal"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        placeholder="0-100"
+                        disabled={submitting}
+                        {...register('humidityOptimal', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="humidityMax">Max Humidity (%)</Label>
-                      <Input id="humidityMax" type="number" min="0" max="100" step="1" disabled={submitting} {...register('humidityMax', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="humidityMax"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        placeholder="0-100"
+                        disabled={submitting}
+                        {...register('humidityMax', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
                   </GridRow>
                 </Section>
 
+                {/* WATERING REQUIREMENTS */}
                 <Section>
                   <SectionHeader>
                     <SectionTitle>Watering Requirements</SectionTitle>
@@ -1104,21 +1320,48 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <GridRow $columns={3}>
                     <FormGroup>
                       <Label htmlFor="wateringFrequencyDays">Watering Frequency (days)</Label>
-                      <Input id="wateringFrequencyDays" type="number" min="1" step="1" disabled={submitting} {...register('wateringFrequencyDays', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="wateringFrequencyDays"
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="e.g., 3"
+                        disabled={submitting}
+                        {...register('wateringFrequencyDays', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="waterAmountPerPlant">Water Amount Per Plant</Label>
-                      <Input id="waterAmountPerPlant" type="number" min="0" step="0.1" disabled={submitting} {...register('waterAmountPerPlant', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="waterAmountPerPlant"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        placeholder="e.g., 1.5"
+                        disabled={submitting}
+                        {...register('waterAmountPerPlant', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="waterAmountUnit">Water Unit</Label>
-                      <Input id="waterAmountUnit" type="text" placeholder="L, gal, ml" disabled={submitting} {...register('waterAmountUnit')} />
+                      <Input
+                        id="waterAmountUnit"
+                        type="text"
+                        placeholder="L, gal, ml"
+                        disabled={submitting}
+                        {...register('waterAmountUnit')}
+                      />
                     </FormGroup>
                   </GridRow>
                 </Section>
 
+                {/* SOIL REQUIREMENTS */}
                 <Section>
                   <SectionHeader>
                     <SectionTitle>Soil Requirements</SectionTitle>
@@ -1128,21 +1371,58 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <GridRow $columns={3}>
                     <FormGroup>
                       <Label htmlFor="phMin">Min pH (0-14)</Label>
-                      <Input id="phMin" type="number" min="0" max="14" step="0.1" $hasError={!!errors.phMin} disabled={submitting} {...register('phMin', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="phMin"
+                        type="number"
+                        min="0"
+                        max="14"
+                        step="0.1"
+                        placeholder="e.g., 6.0"
+                        $hasError={!!errors.phMin}
+                        disabled={submitting}
+                        {...register('phMin', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="phOptimal">Optimal pH (0-14)</Label>
-                      <Input id="phOptimal" type="number" min="0" max="14" step="0.1" $hasError={!!errors.phOptimal} disabled={submitting} {...register('phOptimal', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="phOptimal"
+                        type="number"
+                        min="0"
+                        max="14"
+                        step="0.1"
+                        placeholder="e.g., 6.5"
+                        $hasError={!!errors.phOptimal}
+                        disabled={submitting}
+                        {...register('phOptimal', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="phMax">Max pH (0-14)</Label>
-                      <Input id="phMax" type="number" min="0" max="14" step="0.1" $hasError={!!errors.phMax} disabled={submitting} {...register('phMax', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="phMax"
+                        type="number"
+                        min="0"
+                        max="14"
+                        step="0.1"
+                        placeholder="e.g., 7.0"
+                        $hasError={!!errors.phMax}
+                        disabled={submitting}
+                        {...register('phMax', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
                   </GridRow>
                 </Section>
 
+                {/* LIGHT REQUIREMENTS */}
                 <Section>
                   <SectionHeader>
                     <SectionTitle>Light Requirements</SectionTitle>
@@ -1152,21 +1432,55 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <GridRow $columns={3}>
                     <FormGroup>
                       <Label htmlFor="dailyLightHoursMin">Min Light Hours/Day</Label>
-                      <Input id="dailyLightHoursMin" type="number" min="0" max="24" step="0.5" disabled={submitting} {...register('dailyLightHoursMin', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="dailyLightHoursMin"
+                        type="number"
+                        min="0"
+                        max="24"
+                        step="0.5"
+                        placeholder="0-24"
+                        disabled={submitting}
+                        {...register('dailyLightHoursMin', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="dailyLightHoursOptimal">Optimal Light Hours/Day</Label>
-                      <Input id="dailyLightHoursOptimal" type="number" min="0" max="24" step="0.5" disabled={submitting} {...register('dailyLightHoursOptimal', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="dailyLightHoursOptimal"
+                        type="number"
+                        min="0"
+                        max="24"
+                        step="0.5"
+                        placeholder="0-24"
+                        disabled={submitting}
+                        {...register('dailyLightHoursOptimal', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="dailyLightHoursMax">Max Light Hours/Day</Label>
-                      <Input id="dailyLightHoursMax" type="number" min="0" max="24" step="0.5" disabled={submitting} {...register('dailyLightHoursMax', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="dailyLightHoursMax"
+                        type="number"
+                        min="0"
+                        max="24"
+                        step="0.5"
+                        placeholder="0-24"
+                        disabled={submitting}
+                        {...register('dailyLightHoursMax', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
                   </GridRow>
                 </Section>
 
+                {/* ECONOMICS */}
                 <Section>
                   <SectionHeader>
                     <SectionTitle>Economics & Market Value</SectionTitle>
@@ -1176,16 +1490,33 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <GridRow>
                     <FormGroup>
                       <Label htmlFor="averageMarketValuePerKg">Market Value Per Kg</Label>
-                      <Input id="averageMarketValuePerKg" type="number" min="0" step="0.01" disabled={submitting} {...register('averageMarketValuePerKg', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="averageMarketValuePerKg"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="e.g., 5.50"
+                        disabled={submitting}
+                        {...register('averageMarketValuePerKg', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="currency">Currency</Label>
-                      <Input id="currency" type="text" placeholder="AED, USD, etc." disabled={submitting} {...register('currency')} />
+                      <Input
+                        id="currency"
+                        type="text"
+                        placeholder="AED, USD, etc."
+                        disabled={submitting}
+                        {...register('currency')}
+                      />
                     </FormGroup>
                   </GridRow>
                 </Section>
 
+                {/* ADDITIONAL INFORMATION */}
                 <Section>
                   <SectionHeader>
                     <SectionTitle>Additional Information</SectionTitle>
@@ -1195,44 +1526,71 @@ export function EditPlantDataModal({ isOpen, plantData, onClose, onSuccess }: Ed
                   <GridRow>
                     <FormGroup>
                       <Label htmlFor="spacingBetweenPlantsCm">Plant Spacing (cm)</Label>
-                      <Input id="spacingBetweenPlantsCm" type="number" min="0" step="1" disabled={submitting} {...register('spacingBetweenPlantsCm', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="spacingBetweenPlantsCm"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="e.g., 30"
+                        disabled={submitting}
+                        {...register('spacingBetweenPlantsCm', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
 
                     <FormGroup>
                       <Label htmlFor="spacingBetweenRowsCm">Row Spacing (cm)</Label>
-                      <Input id="spacingBetweenRowsCm" type="number" min="0" step="1" disabled={submitting} {...register('spacingBetweenRowsCm', { setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v) })} />
+                      <Input
+                        id="spacingBetweenRowsCm"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="e.g., 60"
+                        disabled={submitting}
+                        {...register('spacingBetweenRowsCm', {
+                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
+                        })}
+                      />
                     </FormGroup>
                   </GridRow>
 
                   <FormGroup>
                     <Label htmlFor="notes">Notes</Label>
-                    <TextArea id="notes" placeholder="Any additional information about this plant..." disabled={submitting} {...register('notes')} />
+                    <TextArea
+                      id="notes"
+                      placeholder="Any additional information about this plant..."
+                      disabled={submitting}
+                      {...register('notes')}
+                    />
                   </FormGroup>
                 </Section>
               </>
             )}
-        </ModalBody>
+          </ModalBody>
 
-        <ModalFooter>
-          <div>
-            {successMessage && <SuccessMessage>{successMessage}</SuccessMessage>}
-            {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
-          </div>
+          <ModalFooter>
+            <div>
+              {successMessage && <SuccessMessage>{successMessage}</SuccessMessage>}
+              {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
+            </div>
 
-          <FooterActions>
-            <Button type="button" onClick={handleClose} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              $variant="primary"
-              disabled={submitting}
-            >
-              {submitting ? 'Updating...' : 'Update Plant Data'}
-            </Button>
-          </FooterActions>
-        </ModalFooter>
-          </Form>
+            <FooterActions>
+              <Button type="button" onClick={handleClose} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                $variant="primary"
+                disabled={submitting}
+              >
+                {isEdit
+                  ? (submitting ? 'Updating...' : 'Update Plant Data')
+                  : (submitting ? 'Creating...' : 'Create Plant Data')}
+              </Button>
+            </FooterActions>
+          </ModalFooter>
+        </Form>
       </Modal>
     </Overlay>
   );

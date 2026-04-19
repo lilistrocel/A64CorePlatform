@@ -49,9 +49,15 @@ export function useDashboardData({
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Fetch dashboard data from API
+   * Fetch dashboard data from API.
+   *
+   * @param silent When true, does not toggle `loading` or clear `data`
+   *   beforehand — the stale data stays rendered until the fresh response
+   *   arrives, which replaces it seamlessly. Used by the auto-refresh
+   *   interval so the screen doesn't flash a full-page loading state (and
+   *   unmount open modals rooted in block cards) every 30 seconds.
    */
-  const fetchDashboard = useCallback(async () => {
+  const fetchDashboard = useCallback(async (silent: boolean = false) => {
     if (!farmId) {
       setData(null);
       setError(null);
@@ -60,9 +66,11 @@ export function useDashboardData({
     }
 
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+        setData(null); // Prevent old blockIds rendering with a new farmId
+      }
       setError(null);
-      setData(null); // Clear stale blocks immediately to prevent old blockIds rendering with new farmId
 
       // Build params with optional farmingYear filter
       const params: Record<string, any> = {};
@@ -89,28 +97,36 @@ export function useDashboardData({
         setError('Failed to load dashboard data');
       }
 
-      setData(null);
+      // Only wipe data on non-silent fetches. Silent (auto-refresh)
+      // failures keep the last-known-good data visible.
+      if (!silent) {
+        setData(null);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [farmId, farmingYear]);
 
   /**
-   * Manual refetch function
+   * Manual refetch function — shows the loading state (user-initiated
+   * refreshes should give immediate visual feedback).
    */
   const refetch = useCallback(async () => {
-    await fetchDashboard();
+    await fetchDashboard(false);
   }, [fetchDashboard]);
 
   /**
-   * Initial fetch when farmId changes
+   * Initial fetch when farmId / farmingYear changes — clears stale data.
    */
   useEffect(() => {
-    fetchDashboard();
+    fetchDashboard(false);
   }, [fetchDashboard]);
 
   /**
-   * Auto-refresh interval
+   * Auto-refresh interval — silent so the page doesn't flash to a loading
+   * spinner every 30 seconds and unmount modals rooted in block cards.
    */
   useEffect(() => {
     if (!autoRefresh || !farmId) {
@@ -118,7 +134,7 @@ export function useDashboardData({
     }
 
     const intervalId = setInterval(() => {
-      fetchDashboard();
+      fetchDashboard(true);
     }, refreshInterval);
 
     return () => {

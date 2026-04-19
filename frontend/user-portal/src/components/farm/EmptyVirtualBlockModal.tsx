@@ -1,8 +1,20 @@
 /**
  * EmptyVirtualBlockModal Component
  *
- * Confirmation modal for emptying a virtual block.
- * Shows preview of what will happen: task transfers, deletions, harvest transfers, and area return.
+ * Unified confirmation modal for removing a virtual block. Supports two modes:
+ *
+ *   - 'archive' (default): end the crop cycle — transfer completed tasks and
+ *     harvests to the parent block, return allocated area, write a record to
+ *     `block_archives`, then hard-delete the virtual block row.
+ *
+ *   - 'delete' (advanced): cascade-delete the virtual block outright. Tasks
+ *     and harvests are moved to the deleted_* trash collections, archives are
+ *     preserved under deleted_block_archives, and nothing is transferred to
+ *     the parent. Use this for misclicks / mis-created virtuals where there's
+ *     no meaningful cycle to archive.
+ *
+ * Both the trash-icon on a virtual planting row and the "End / Remove" button
+ * on BlockDetail open this modal — the user picks the mode inside.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -15,11 +27,19 @@ import type { Block, EmptyVirtualBlockPreview } from '../../types/farm';
 // TYPES
 // ============================================================================
 
+type RemoveMode = 'archive' | 'delete';
+
 interface EmptyVirtualBlockModalProps {
   isOpen: boolean;
   onClose: () => void;
   block: Block;
   onSuccess: () => void;
+  /**
+   * Initial mode when the modal opens. Users can still toggle inside; this
+   * only controls the default. Defaults to 'archive' (safer, matches
+   * "finish cycle" semantics).
+   */
+  initialMode?: RemoveMode;
 }
 
 // ============================================================================
@@ -100,7 +120,7 @@ const SummaryItem = styled.div<{ $warning?: boolean }>`
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  background: ${({ $warning }) => ($warning ? '#fef3c7' : '#f0fdf4')};
+  background: ${({ $warning, theme }) => ($warning ? theme.colors.warningBg : theme.colors.successBg)};
   border-radius: 8px;
   border-left: 4px solid ${({ $warning }) => ($warning ? '#f59e0b' : '#4caf50')};
 `;
@@ -129,6 +149,53 @@ const WarningText = styled.div`
   font-weight: 500;
   text-align: center;
   margin-top: 24px;
+`;
+
+const ModeSelector = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ModeOption = styled.button<{ $active: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.infoBg : theme.colors.surface)};
+  border: 2px solid
+    ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
+  cursor: pointer;
+  text-align: left;
+  transition: all 150ms ease-in-out;
+
+  &:hover:not(:disabled) {
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const ModeLabel = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const ModeHint = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  line-height: 1.4;
 `;
 
 const LoadingContainer = styled.div`
@@ -200,18 +267,24 @@ export function EmptyVirtualBlockModal({
   onClose,
   block,
   onSuccess,
+  initialMode = 'archive',
 }: EmptyVirtualBlockModalProps) {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<EmptyVirtualBlockPreview | null>(null);
+  const [mode, setMode] = useState<RemoveMode>(initialMode);
 
   useEffect(() => {
-    if (isOpen && block.blockCategory === 'virtual') {
-      loadPreview();
+    if (isOpen) {
+      // Reset mode to the caller's intent each time the modal opens.
+      setMode(initialMode);
+      if (block.blockCategory === 'virtual') {
+        loadPreview();
+      }
     }
-  }, [isOpen, block.blockId]);
+  }, [isOpen, block.blockId, initialMode]);
 
   const loadPreview = async () => {
     try {
@@ -234,21 +307,29 @@ export function EmptyVirtualBlockModal({
 
     try {
       setSubmitting(true);
-      const result = await farmApi.emptyVirtualBlock(block.farmId, block.blockId);
 
-      // Show success message
-      alert(
-        `Virtual block ${result.virtualBlockCode} emptied successfully!\n\n` +
-          `Tasks transferred: ${result.tasksTransferred}\n` +
-          `Harvests transferred: ${result.harvestsTransferred}\n` +
-          `Area returned: ${result.areaReturned} m²`
-      );
+      if (mode === 'archive') {
+        const result = await farmApi.emptyVirtualBlock(block.farmId, block.blockId);
+        alert(
+          `Virtual block ${result.virtualBlockCode} end-of-cycle complete.\n\n` +
+            `Tasks transferred: ${result.tasksTransferred}\n` +
+            `Harvests transferred: ${result.harvestsTransferred}\n` +
+            `Area returned: ${result.areaReturned} m²`
+        );
+      } else {
+        // 'delete' mode — cascade delete. Data goes to deleted_* collections,
+        // nothing transfers to parent, no archive entry is created.
+        await farmApi.deleteBlock(block.farmId, block.blockId);
+        alert(`Virtual block ${block.blockCode || block.name} deleted.`);
+      }
 
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error('Error emptying virtual block:', error);
-      const errorMsg = error.response?.data?.detail || 'Failed to empty virtual block. Please try again.';
+      console.error(`Error ${mode === 'archive' ? 'emptying' : 'deleting'} virtual block:`, error);
+      const errorMsg =
+        error.response?.data?.detail ||
+        `Failed to ${mode === 'archive' ? 'end cycle for' : 'delete'} virtual block. Please try again.`;
       alert(errorMsg);
     } finally {
       submittingRef.current = false;
@@ -264,23 +345,62 @@ export function EmptyVirtualBlockModal({
 
   if (!isOpen) return null;
 
+  const isArchive = mode === 'archive';
+  const titleText = isArchive
+    ? `End Cycle for ${block.blockCode || block.name}?`
+    : `Delete ${block.blockCode || block.name}?`;
+  const descriptionText = isArchive
+    ? 'Transfer this block\u2019s history to its parent, archive the cycle, and free up the allocated area.'
+    : 'Permanently remove this virtual block. Data is moved to the deleted-items trash (recoverable) but nothing is transferred to the parent and no archive is created.';
+  const confirmButtonLabel = submitting
+    ? isArchive
+      ? 'Ending cycle…'
+      : 'Deleting…'
+    : isArchive
+      ? 'End cycle & archive'
+      : 'Delete without archiving';
+
   const modalContent = (
     <Overlay $isOpen={isOpen}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <WarningIcon>⚠️</WarningIcon>
-          <ModalTitle>Empty Virtual Block {block.blockCode || block.name}?</ModalTitle>
-          <ModalDescription>
-            This will end the crop cycle and transfer all history to the parent block.
-          </ModalDescription>
+          <ModalTitle>{titleText}</ModalTitle>
+          <ModalDescription>{descriptionText}</ModalDescription>
         </ModalHeader>
 
         <ModalBody>
+          {/* Mode toggle — always visible so the user can switch before confirming */}
+          <ModeSelector role="radiogroup" aria-label="Removal mode">
+            <ModeOption
+              type="button"
+              role="radio"
+              aria-checked={isArchive}
+              $active={isArchive}
+              onClick={() => setMode('archive')}
+              disabled={submitting}
+            >
+              <ModeLabel>End cycle &amp; archive</ModeLabel>
+              <ModeHint>Default. Transfers history to parent, archives the cycle.</ModeHint>
+            </ModeOption>
+            <ModeOption
+              type="button"
+              role="radio"
+              aria-checked={!isArchive}
+              $active={!isArchive}
+              onClick={() => setMode('delete')}
+              disabled={submitting}
+            >
+              <ModeLabel>Delete without archiving</ModeLabel>
+              <ModeHint>Use for misclicks / mis-created virtuals.</ModeHint>
+            </ModeOption>
+          </ModeSelector>
+
           {loading && <LoadingContainer>Loading preview...</LoadingContainer>}
 
           {error && <ErrorContainer>{error}</ErrorContainer>}
 
-          {!loading && !error && preview && (
+          {!loading && !error && preview && isArchive && (
             <>
               <TransferSummary>
                 <SummaryItem>
@@ -327,6 +447,41 @@ export function EmptyVirtualBlockModal({
               <WarningText>⚠️ This action cannot be undone.</WarningText>
             </>
           )}
+
+          {!loading && !error && preview && !isArchive && (
+            <>
+              <TransferSummary>
+                <SummaryItem $warning>
+                  <Icon $warning>✗</Icon>
+                  <Text>
+                    Virtual block <strong>{preview.virtualBlockCode}</strong> will be removed. Nothing is
+                    transferred to parent <strong>{preview.parentBlockCode}</strong>.
+                  </Text>
+                </SummaryItem>
+
+                <SummaryItem $warning>
+                  <Icon $warning>✗</Icon>
+                  <Text>
+                    <strong>{preview.tasksToTransfer + preview.tasksToDelete} tasks</strong> and{' '}
+                    <strong>{preview.harvestsToTransfer} harvest records</strong> will be moved to
+                    deleted-items storage.
+                  </Text>
+                </SummaryItem>
+
+                <SummaryItem>
+                  <Icon>✓</Icon>
+                  <Text>
+                    <strong>{preview.areaToReturn} m²</strong> will be returned to parent block's area budget.
+                  </Text>
+                </SummaryItem>
+              </TransferSummary>
+
+              <WarningText>
+                ⚠️ Deleted data is preserved in trash collections but there is no UI to restore it —
+                contact an admin if you need to recover.
+              </WarningText>
+            </>
+          )}
         </ModalBody>
 
         <ModalFooter>
@@ -340,7 +495,7 @@ export function EmptyVirtualBlockModal({
             onClick={handleConfirm}
             disabled={loading || !!error || !preview || submitting}
           >
-            {submitting ? 'Emptying...' : 'Confirm & Empty Block'}
+            {confirmButtonLabel}
           </Button>
         </ModalFooter>
       </ModalContainer>

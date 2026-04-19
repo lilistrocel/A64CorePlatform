@@ -418,9 +418,10 @@ const Input = styled.input`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
   border-radius: 6px;
-  background: ${({ theme }: any) => theme.colors.white};
+  background: ${({ theme }: any) => theme.colors.background};
   color: ${({ theme }: any) => theme.colors.textPrimary};
   max-width: 400px;
+  &::placeholder { color: ${({ theme }: any) => theme.colors.textDisabled}; }
   &:focus { outline: none; border-color: ${({ theme }: any) => theme.colors.primary[500]}; }
 `;
 
@@ -434,7 +435,7 @@ const Select = styled.select`
   font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
   border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
   border-radius: 6px;
-  background: ${({ theme }: any) => theme.colors.white};
+  background: ${({ theme }: any) => theme.colors.background};
   color: ${({ theme }: any) => theme.colors.textPrimary};
   max-width: 300px;
   &:focus { outline: none; border-color: ${({ theme }: any) => theme.colors.primary[500]}; }

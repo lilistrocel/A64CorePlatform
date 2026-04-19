@@ -60,6 +60,7 @@ const Select = styled.select`
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -76,6 +77,8 @@ const SearchInput = styled.input`
   border-radius: 8px;
   font-size: 14px;
   min-width: 250px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
 
   &:focus {

@@ -9,10 +9,9 @@ import styled from 'styled-components';
 import { ShipmentTable } from '../../components/logistics/ShipmentTable';
 import { ShipmentCard } from '../../components/logistics/ShipmentCard';
 import { ShipmentForm } from '../../components/logistics/ShipmentForm';
-import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
 import { logisticsApi } from '../../services/logisticsService';
-import type { Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus, LogisticsFarmingYearItem } from '../../types/logistics';
-import type { FarmingYearItem } from '../../services/farmApi';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
+import type { Shipment, ShipmentCreate, ShipmentUpdate, ShipmentStatus } from '../../types/logistics';
 
 const Container = styled.div`
   padding: 32px;
@@ -221,18 +220,6 @@ const ErrorContainer = styled.div`
   margin-bottom: 24px;
 `;
 
-// Key for persisting farming year selection in sessionStorage
-const SHIPMENTS_FARMING_YEAR_STORAGE_KEY = 'shipments_farming_year_filter';
-
-// Helper to convert LogisticsFarmingYearItem to FarmingYearItem
-const convertToFarmingYearItem = (item: LogisticsFarmingYearItem): FarmingYearItem => ({
-  year: item.year,
-  display: item.display,
-  isCurrent: item.isCurrent,
-  hasHarvests: item.hasShipments,
-  hasBlocks: item.hasShipments,
-});
-
 export function ShipmentTrackingPage() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,54 +230,13 @@ export function ShipmentTrackingPage() {
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Farming year state
-  const [availableYears, setAvailableYears] = useState<FarmingYearItem[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number | null>(() => {
-    // Restore from sessionStorage on initial load
-    const stored = sessionStorage.getItem(SHIPMENTS_FARMING_YEAR_STORAGE_KEY);
-    return stored ? parseInt(stored, 10) : null;
-  });
-  const [yearsLoading, setYearsLoading] = useState(true);
-
-  // Load available farming years on mount
-  useEffect(() => {
-    loadAvailableFarmingYears();
-  }, []);
+  // Use the global farming year from sidebar
+  const { selectedYear } = useFarmingYearStore();
 
   // Load shipments when filters change
   useEffect(() => {
     loadShipments();
   }, [statusFilter, selectedYear]);
-
-  const loadAvailableFarmingYears = async () => {
-    setYearsLoading(true);
-    try {
-      const response = await logisticsApi.getAvailableFarmingYears();
-      setAvailableYears(response.years.map(convertToFarmingYearItem));
-    } catch (err: any) {
-      console.error('Failed to load farming years:', err);
-      // Continue with empty years - selector will show "No years available"
-    } finally {
-      setYearsLoading(false);
-    }
-  };
-
-  const handleYearChange = (year: number | null) => {
-    setSelectedYear(year);
-    // Persist to sessionStorage
-    if (year === null) {
-      sessionStorage.removeItem(SHIPMENTS_FARMING_YEAR_STORAGE_KEY);
-    } else {
-      sessionStorage.setItem(SHIPMENTS_FARMING_YEAR_STORAGE_KEY, year.toString());
-    }
-  };
-
-  // Get display string for selected year
-  const getSelectedYearDisplay = (): string | null => {
-    if (selectedYear === null) return null;
-    const yearItem = availableYears.find((y) => y.year === selectedYear);
-    return yearItem?.display || `${selectedYear}`;
-  };
 
   const loadShipments = async () => {
     setLoading(true);
@@ -356,7 +302,7 @@ export function ShipmentTrackingPage() {
             Shipment Tracking
             {selectedYear !== null && (
               <FarmingYearBadge>
-                📅 {getSelectedYearDisplay()}
+                Year {selectedYear}
               </FarmingYearBadge>
             )}
           </Title>
@@ -366,14 +312,6 @@ export function ShipmentTrackingPage() {
           </Subtitle>
         </HeaderLeft>
         <HeaderRight>
-          <FarmingYearSelector
-            selectedYear={selectedYear}
-            availableYears={availableYears}
-            onYearChange={handleYearChange}
-            showAllOption={true}
-            isLoading={yearsLoading}
-            compact={true}
-          />
           <CreateButton onClick={() => setShowCreateModal(true)}>
             + New Shipment
           </CreateButton>

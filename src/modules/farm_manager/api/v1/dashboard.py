@@ -29,7 +29,9 @@ from ...models.dashboard import (
     FarmBlockSummary,
     FarmHarvestSummary,
     FarmingYearContext,
-    CropBreakdownItem
+    CropBreakdownItem,
+    FarmYieldKpi,
+    CropYieldKpi
 )
 from ...models.block import Block, BlockStatus
 from ...services.farm.farm_repository import FarmRepository
@@ -126,6 +128,7 @@ async def get_dashboard_summary(
         ]
         farms = await db.farms.aggregate(farms_pipeline).to_list(None)
         farm_ids = [farm["farmId"] for farm in farms]
+        farm_name_map = {f["farmId"]: f["name"] for f in farms}
 
         # Apply farmIds filter: restrict to the requested subset
         if farmIds:
@@ -303,7 +306,7 @@ async def get_dashboard_summary(
         # Step 7: Count pending tasks (if task system exists)
         pending_tasks_count = 0  # Placeholder - implement when task system is ready
 
-        # Step 8: Crop breakdown - top 20 crops by block count
+        # Step 8: Crop breakdown - per farm, so the frontend can filter by farm
         crops_pipeline = [
             {
                 "$match": {
@@ -312,17 +315,144 @@ async def get_dashboard_summary(
                 }
             },
             {"$group": {
-                "_id": "$targetCropName",
+                "_id": {"farmId": "$farmId", "cropName": "$targetCropName"},
                 "blockCount": {"$sum": 1}
             }},
             {"$sort": {"blockCount": -1}},
-            {"$limit": 20}
         ]
         crops_result = await db.blocks.aggregate(crops_pipeline).to_list(None)
         crop_breakdown = [
-            CropBreakdownItem(cropName=item["_id"], blockCount=item["blockCount"])
+            CropBreakdownItem(
+                cropName=item["_id"]["cropName"],
+                blockCount=item["blockCount"],
+                farmId=item["_id"]["farmId"],
+                farmName=farm_name_map.get(item["_id"]["farmId"], "Unknown"),
+            )
             for item in crops_result
         ]
+
+        # Step 9: Yield KPI per farm
+        # Actual yield: from block_harvests (same source as harvestsByFarm)
+        # so the numbers match the Harvest by Farm chart and include
+        # completed/archived cycles, not just what's currently on the field.
+        actual_by_farm: dict[str, float] = {}
+        for h in harvests_by_farm:
+            actual_by_farm[str(h.farmId)] = h.totalKg
+
+        # Predicted yield: sum from active blocks + archived cycles
+        predicted_pipeline = [
+            {"$match": block_match_criteria},
+            {"$group": {
+                "_id": "$farmId",
+                "predictedYieldKg": {"$sum": {"$ifNull": ["$kpi.predictedYieldKg", 0]}},
+            }},
+        ]
+        predicted_result = await db.blocks.aggregate(predicted_pipeline).to_list(None)
+        predicted_by_farm: dict[str, float] = {
+            item["_id"]: item["predictedYieldKg"] for item in predicted_result
+        }
+
+        # Also include predicted yield from archived cycles (completed blocks
+        # whose predicted yield is no longer on an active block document).
+        archive_match: dict = {"farmId": {"$in": farm_ids}}
+        if farmingYear is not None:
+            archive_match["farmingYearPlanted"] = farmingYear
+        archive_predicted_pipeline = [
+            {"$match": archive_match},
+            {"$group": {
+                "_id": "$farmId",
+                "predictedYieldKg": {"$sum": {"$ifNull": ["$predictedYieldKg", 0]}},
+            }},
+        ]
+        archive_predicted_result = await db.block_archives.aggregate(archive_predicted_pipeline).to_list(None)
+        for item in archive_predicted_result:
+            predicted_by_farm[item["_id"]] = predicted_by_farm.get(item["_id"], 0) + item["predictedYieldKg"]
+
+        # Merge into per-farm KPI
+        all_farm_ids_for_yield = set(list(actual_by_farm.keys()) + list(predicted_by_farm.keys()))
+        yield_by_farm = []
+        for fid in all_farm_ids_for_yield:
+            actual = actual_by_farm.get(fid, 0)
+            predicted = predicted_by_farm.get(fid, 0)
+            efficiency = round((actual / predicted * 100) if predicted > 0 else 0, 1)
+            yield_by_farm.append(FarmYieldKpi(
+                farmId=fid,
+                farmName=farm_name_map.get(fid, "Unknown"),
+                actualYieldKg=actual,
+                predictedYieldKg=predicted,
+                efficiencyPercent=efficiency,
+            ))
+        yield_by_farm.sort(key=lambda x: x.efficiencyPercent, reverse=True)
+
+        # Step 10: Yield KPI per crop (per farm, so frontend can filter)
+        # Actual yield: $lookup from block_harvests → blocks to get cropName
+        crop_actual_pipeline = [
+            {"$match": harvest_match_criteria},
+            {"$lookup": {
+                "from": "blocks",
+                "localField": "blockId",
+                "foreignField": "blockId",
+                "as": "block",
+            }},
+            {"$unwind": {"path": "$block", "preserveNullAndEmptyArrays": True}},
+            {"$group": {
+                "_id": {
+                    "farmId": "$farmId",
+                    "cropName": {"$ifNull": ["$block.targetCropName", "Unknown"]},
+                },
+                "actualYieldKg": {"$sum": "$quantityKg"},
+            }},
+        ]
+        crop_actual_result = await db.block_harvests.aggregate(crop_actual_pipeline).to_list(None)
+        crop_actual: dict[tuple, float] = {
+            (item["_id"]["farmId"], item["_id"]["cropName"]): item["actualYieldKg"]
+            for item in crop_actual_result
+        }
+
+        # Predicted yield per crop: active blocks + archives
+        crop_predicted_pipeline = [
+            {"$match": {**block_match_criteria, "targetCropName": {"$ne": None}}},
+            {"$group": {
+                "_id": {"farmId": "$farmId", "cropName": "$targetCropName"},
+                "predictedYieldKg": {"$sum": {"$ifNull": ["$kpi.predictedYieldKg", 0]}},
+            }},
+        ]
+        crop_predicted_result = await db.blocks.aggregate(crop_predicted_pipeline).to_list(None)
+        crop_predicted: dict[tuple, float] = {
+            (item["_id"]["farmId"], item["_id"]["cropName"]): item["predictedYieldKg"]
+            for item in crop_predicted_result
+        }
+
+        # Add archived cycles' predicted yield
+        archive_crop_pipeline = [
+            {"$match": {**archive_match, "targetCropName": {"$ne": None}}},
+            {"$group": {
+                "_id": {"farmId": "$farmId", "cropName": "$targetCropName"},
+                "predictedYieldKg": {"$sum": {"$ifNull": ["$predictedYieldKg", 0]}},
+            }},
+        ]
+        archive_crop_result = await db.block_archives.aggregate(archive_crop_pipeline).to_list(None)
+        for item in archive_crop_result:
+            key = (item["_id"]["farmId"], item["_id"]["cropName"])
+            crop_predicted[key] = crop_predicted.get(key, 0) + item["predictedYieldKg"]
+
+        # Merge into per-crop-per-farm KPI
+        all_crop_keys = set(list(crop_actual.keys()) + list(crop_predicted.keys()))
+        yield_by_crop = []
+        for key in all_crop_keys:
+            fid, crop_name = key
+            actual = crop_actual.get(key, 0)
+            predicted = crop_predicted.get(key, 0)
+            efficiency = round((actual / predicted * 100) if predicted > 0 else 0, 1)
+            yield_by_crop.append(CropYieldKpi(
+                cropName=crop_name,
+                actualYieldKg=actual,
+                predictedYieldKg=predicted,
+                efficiencyPercent=efficiency,
+                farmId=fid,
+                farmName=farm_name_map.get(fid, "Unknown"),
+            ))
+        yield_by_crop.sort(key=lambda x: x.efficiencyPercent, reverse=True)
 
         # Calculate overview metrics
         total_blocks = sum(blocks_by_state_dict.values())
@@ -369,7 +499,9 @@ async def get_dashboard_summary(
                 activeAlerts=active_alerts_count
             ),
             farmingYearContext=farming_year_context,
-            cropBreakdown=crop_breakdown
+            cropBreakdown=crop_breakdown,
+            yieldByFarm=yield_by_farm,
+            yieldByCrop=yield_by_crop
         )
 
         farming_year_str = f" (farmingYear={farmingYear})" if farmingYear else ""

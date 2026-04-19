@@ -27,6 +27,7 @@ import { farmApi } from '../../services/farmApi';
 import { apiClient } from '../../services/api';
 import { GlobalFarmAnalyticsModal } from './GlobalFarmAnalyticsModal';
 import { formatNumber } from '../../utils';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
 
 // ============================================================================
 // TYPES
@@ -201,43 +202,6 @@ const HeaderRight = styled.div`
 // ============================================================================
 // STYLED COMPONENTS — YEAR FILTER
 // ============================================================================
-
-const YearFilterWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const YearFilterLabel = styled.label`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  white-space: nowrap;
-`;
-
-const YearSelect = styled.select`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: 6px ${({ theme }) => theme.spacing.sm};
-  cursor: pointer;
-  appearance: none;
-  padding-right: ${({ theme }) => theme.spacing.lg};
-  transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[400]};
-  }
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
-  }
-`;
 
 // ============================================================================
 // STYLED COMPONENTS — TABS
@@ -980,9 +944,8 @@ export function FarmDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [globalAnalyticsOpen, setGlobalAnalyticsOpen] = useState(false);
 
-  // Farming year filter
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [availableYears, setAvailableYears] = useState<Array<{ year: number; display: string }>>([]);
+  // Farming year from global sidebar selector
+  const { selectedYear } = useFarmingYearStore();
 
   // Filter bar state
   const [showFilters, setShowFilters] = useState(false);
@@ -996,17 +959,6 @@ export function FarmDashboard() {
   // Farm breakdown table sorting
   const [sortKey, setSortKey] = useState<SortKey>('farmName');
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
-
-  // Load available farming years once
-  useEffect(() => {
-    farmApi.getFarmingYearsList().then((result) => {
-      if (result.years && result.years.length > 0) {
-        setAvailableYears(result.years.map((y) => ({ year: y.year, display: y.display })));
-      }
-    }).catch(() => {
-      // Years list is non-critical — silently ignore
-    });
-  }, []);
 
   // Load available crops for the crop filter dropdown
   useEffect(() => {
@@ -1186,27 +1138,6 @@ export function FarmDashboard() {
           <Title>Farm Manager Dashboard</Title>
           <Subtitle>Overview of your farming operations</Subtitle>
         </HeaderLeft>
-        <HeaderRight>
-          <YearFilterWrapper>
-            <YearFilterLabel htmlFor="dashboard-year-select">Year:</YearFilterLabel>
-            <YearSelect
-              id="dashboard-year-select"
-              value={selectedYear === null ? 'all' : String(selectedYear)}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedYear(val === 'all' ? null : parseInt(val, 10));
-              }}
-              aria-label="Filter by farming year"
-            >
-              <option value="all">All Years</option>
-              {availableYears.map((y) => (
-                <option key={y.year} value={y.year}>
-                  {y.display}
-                </option>
-              ))}
-            </YearSelect>
-          </YearFilterWrapper>
-        </HeaderRight>
       </PageHeader>
 
       {/* Tab Bar */}

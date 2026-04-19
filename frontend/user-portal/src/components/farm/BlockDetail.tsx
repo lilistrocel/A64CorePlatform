@@ -6,8 +6,10 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
+import { queryKeys } from '../../config/react-query.config';
 import { Breadcrumb } from '@a64core/shared';
 import type { BreadcrumbItem } from '@a64core/shared';
 import type { Block, BlockSummary } from '../../types/farm';
@@ -425,6 +427,7 @@ type TabType = 'overview' | 'alerts' | 'automation' | 'harvests' | 'archives';
 export function BlockDetail() {
   const { farmId, blockId } = useParams<{ farmId: string; blockId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [block, setBlock] = useState<Block | null>(null);
   const [summary, setSummary] = useState<BlockSummary | null>(null);
@@ -796,6 +799,16 @@ export function BlockDetail() {
             onClose={() => setShowEmptyVirtualModal(false)}
             block={block}
             onSuccess={() => {
+              // Wipe the farm subtree from the cache so FarmDetail re-mounts
+              // with no stale data to serve. The QueryClient is configured with
+              // `refetchOnMount: false`, so plain `invalidateQueries` only marks
+              // the cache stale without forcing a refetch on remount; the
+              // deleted virtual block would keep showing until staleTime (30s)
+              // expired or another observer kicked off a refetch. `removeQueries`
+              // forces FarmDetail's useQuery hooks to do a clean fetch.
+              if (farmId) {
+                queryClient.removeQueries({ queryKey: queryKeys.farms.detail(farmId) });
+              }
               // Navigate back to farm since block will be deleted
               navigate(`/farm/farms/${farmId}`);
             }}

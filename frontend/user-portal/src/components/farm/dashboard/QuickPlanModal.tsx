@@ -38,7 +38,11 @@ export function QuickPlanModal({ isOpen, onClose, block, mode, onConfirm }: Quic
         setPlantCount(0);
       }
     }
-  }, [isOpen, block, mode]);
+    // Depend on block.blockId rather than the whole block object: the parent
+    // Block Monitor auto-refreshes every 30s, producing a new `block` object
+    // reference each tick. If we depended on the whole object, this effect
+    // would fire every refresh and wipe whatever the user was typing.
+  }, [isOpen, block.blockId, mode]);
 
   const loadPlants = async () => {
     try {

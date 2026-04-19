@@ -251,7 +251,13 @@ const Input = styled.input`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -267,7 +273,13 @@ const Textarea = styled.textarea`
   min-height: 80px;
   resize: vertical;
   font-family: inherit;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -280,6 +292,8 @@ const Select = styled.select`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
 
   &:focus {

@@ -164,11 +164,12 @@ const FiltersRow = styled.div`
 
 const FilterSelect = styled.select`
   padding: 10px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 0.875rem;
   min-width: 180px;
   background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
 
   &:focus {
     outline: none;
@@ -179,10 +180,16 @@ const FilterSelect = styled.select`
 
 const SearchInput = styled.input`
   padding: 10px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 0.875rem;
   min-width: 200px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -444,19 +451,27 @@ const FormLabel = styled.label`
 const FormSelect = styled.select`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 0.875rem;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const FormTextarea = styled.textarea`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 0.875rem;
   min-height: 80px;
   resize: vertical;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 `;
 
 const ModalActions = styled.div`

@@ -5,6 +5,146 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-04-15
+
+**Type:** Minor Release — Dashboard Redesign, Global Farming Year Selector, PlantData Modal Unification, Virtual Block Management, Dark Mode Pass (selects + inputs), Block Monitor Silent Refresh, CRM Edit Route, Misc Theme Fixes
+
+### Added
+
+#### Global Farming Year Selector (Frontend)
+
+New Zustand store (`stores/farmingYear.store.ts`) provides a single `selectedYear` / `setYear(null|number)` / `initialize(currentYear)` state, persisted to `localStorage`. A custom dropdown rendered in `MainLayout.tsx` (between DivisionSwitcher and Nav) exposes year selection to the entire app with a pulsing green LED dot on the current year and click-outside-to-close behaviour. Dark-mode aware.
+
+Nine pages migrated from local farming year state to the global store: `FarmDashboardPage`, `OperationsDashboard`, `InventoryDashboard`, `Dashboard`, `SalesDashboardPage`, `LogisticsDashboardPage`, `ShipmentTrackingPage`, `FarmDashboard`, `FarmDetail`. All per-page `FarmingYearSelector` instances removed except `BlockHarvestsTab` (per-block drill-down remains local).
+
+**New files:**
+- `frontend/user-portal/src/stores/farmingYear.store.ts`
+
+#### PlantDataFormModal — Unified Add/Edit Modal (Frontend)
+
+Merged `AddPlantDataModal.tsx` and `EditPlantDataModal.tsx` into a single `PlantDataFormModal.tsx` (1,566 lines, down from 2,489 combined). Mode is driven by whether the `plantData` prop is present. Growth Cycle section: Total Cycle Days is now read-only and auto-computed from the five stage duration fields. All stage fields use `positiveIntegerInputProps` guard. `PlantDataLibrary.tsx` updated to use the unified modal.
+
+**New files:**
+- `frontend/user-portal/src/components/farm/PlantDataFormModal.tsx`
+
+**Deleted files:**
+- `frontend/user-portal/src/components/farm/AddPlantDataModal.tsx`
+- `frontend/user-portal/src/components/farm/EditPlantDataModal.tsx`
+
+#### Dashboard — Crop Yield Performance Leaderboard (Frontend + Backend)
+
+New per-crop KPI leaderboard on the farm dashboard: farm filter, search-to-compare (select crops as chips for side-by-side comparison), top-5 default with "Show all" toggle.
+
+**Backend — new models and pipeline:**
+- `FarmYieldKpi` and `CropYieldKpi` Pydantic models added to `src/modules/farm_manager/models/dashboard.py`.
+- Yield pipeline updated to use `block_harvests` for actuals (consistent with harvest data) and `blocks`+archives for predicted.
+- Crop pipeline uses `$lookup` to join harvests to blocks for crop names. `yieldByFarm` and `yieldByCrop` added to `DashboardSummaryData`. Crop breakdown is now per-farm (includes `farmId`).
+
+**Files changed:**
+- `src/modules/farm_manager/models/dashboard.py`
+- `src/modules/farm_manager/api/v1/dashboard.py`
+
+#### Block Monitor — Silent Auto-Refresh (Frontend)
+
+`useDashboardData` hook gained a `silent` boolean parameter. The 30-second auto-refresh interval now fetches silently — no loading flash, no data wipe, open modals stay mounted. Effect dependencies narrowed in `QuickPlanModal`, `PlantDataFormModal`, and `EditFarmModal` from whole prop objects to `.blockId`/`.plantDataId`/`.farmId` scalars so auto-refresh does not reset open form fields.
+
+**Files changed:**
+- `frontend/user-portal/src/hooks/farm/useDashboardData.ts`
+- `frontend/user-portal/src/components/farm/dashboard/QuickPlanModal.tsx`
+- `frontend/user-portal/src/components/farm/EditFarmModal.tsx`
+
+### Changed
+
+#### Dashboard — Single-Page Redesign (Frontend)
+
+Removed 3-tab system (Overview/Operations/Business). Replaced with a single scrollable page.
+
+- **Hero metrics row:** 5 key cards — Farms, Active Blocks, Total Yield, Pending Orders, Active Alerts. Total Yield uses `yieldByFarm` sum (consistent with KPI chart, not the inflated `block_harvests` total).
+- **Pie charts** (Block Status + Crop Distribution): kept with farm filters, drag-scroll legends, hover-to-filter. Year badge added to all chart headers. Consistent layout: `Title | Year Badge | spacer | Farm Filter`.
+- **Farm Yield vs Predicted:** leaderboard table with ranked progress bars, color-coded by efficiency. Year badge from global selector.
+- **Insights + Orders:** compact cards at bottom.
+- `useDragScroll` hook upgraded: native event listeners on `window` for reliable drag tracking. Applied to all 3 legend rows.
+- `ChartRow` grid changed to `minmax(0, 1fr)` to prevent overflow from nowrap legends.
+- `ScrollableLegend`: removed `mask-image` (was clipping edges), centered via `width: fit-content; margin: 0 auto`.
+- Harvest by Farm bar chart replaced with Crop Yield Performance leaderboard.
+
+**Files changed:**
+- `frontend/user-portal/src/pages/dashboard/Dashboard.tsx`
+
+#### Virtual Block Management — Unified Modal + Cascade Delete Fix (Frontend + Backend)
+
+`EmptyVirtualBlockModal` extended with a mode toggle: "End cycle & archive" (default) vs "Delete without archiving". `VirtualBlockItem`'s trash icon now opens this unified modal instead of `window.confirm` + direct `deleteBlock`. `BlockDetail` uses `queryClient.removeQueries` to clear stale cache before navigating back to farm detail after an empty/delete action.
+
+`FarmDetail` default tab changed from `'overview'` to `'blocks'`.
+
+**Backend — cascade delete service fixed:**
+- When deleting a virtual block, the service now returns allocated area to the parent, removes the child from `childBlockIds`, and transitions the parent to empty when appropriate.
+- Two corrupt block records (F015-019, F012-035) patched directly in MongoDB.
+
+**Files changed:**
+- `frontend/user-portal/src/components/farm/EmptyVirtualBlockModal.tsx`
+- `frontend/user-portal/src/components/farm/VirtualBlockItem.tsx`
+- `frontend/user-portal/src/components/farm/BlockDetail.tsx`
+- `frontend/user-portal/src/components/farm/FarmDetail.tsx`
+- `src/modules/farm_manager/services/cascade_deletion_service.py`
+
+#### Dark Mode — Second + Third Pass: Form Inputs, Selects, Status Pastels (Frontend)
+
+Comprehensive sweep of `styled.input` / `styled.textarea` / `styled.select` elements across 43+ files to add missing `background` / `color` / `::placeholder` theme tokens.
+
+- All `styled.select` elements that had `background` but no `color` patched (16 files via automated script + 2 manual).
+- Remaining hardcoded status pastels in `EmptyVirtualBlockModal`, `RoomDetailsModal`, and `WasteInventoryList` replaced with semantic BG tokens (`warningBg`, `errorBg`, `successBg`, `infoBg`).
+- `ResolveAlertModal` `AlertTitle` color fixed for dark `warningBg` context.
+
+**Representative files affected:**
+- `frontend/user-portal/src/components/crm/CustomerForm.tsx`
+- `frontend/user-portal/src/components/farm/AddVirtualCropModal.tsx`
+- `frontend/user-portal/src/components/farm/BlockAlertsTab.tsx`
+- `frontend/user-portal/src/components/farm/BlockHarvestsTab.tsx`
+- `frontend/user-portal/src/components/farm/CreateBlockModal.tsx`
+- `frontend/user-portal/src/components/farm/CreateFarmModal.tsx`
+- `frontend/user-portal/src/components/farm/EditBlockModal.tsx`
+- `frontend/user-portal/src/components/farm/PlantAssignmentModal.tsx`
+- `frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx`
+- `frontend/user-portal/src/components/hr/ContractTab.tsx`, `EmployeeForm.tsx`, `InsuranceTab.tsx`, `PerformanceTab.tsx`, `VisaTab.tsx`
+- `frontend/user-portal/src/components/logistics/RouteForm.tsx`, `ShipmentForm.tsx`
+- `frontend/user-portal/src/components/map/MapSearchBar.tsx`
+- `frontend/user-portal/src/components/marketing/BudgetForm.tsx`, `CampaignForm.tsx`, `ChannelForm.tsx`, `EventForm.tsx`
+- `frontend/user-portal/src/components/mushroom/HarvestEntryModal.tsx`, `RoomDetailsModal.tsx`
+- `frontend/user-portal/src/components/operations/HarvestEntryModal.tsx`, `ReportAlertModal.tsx`, `TaskCompletionModal.tsx`
+- `frontend/user-portal/src/components/sales/InventoryForm.tsx`, `OrderForm.tsx`, `PurchaseOrderForm.tsx`
+- `frontend/user-portal/src/components/settings/TelegramBotSettings.tsx`
+- `frontend/user-portal/src/pages/admin/UserManagementPage.tsx`
+- `frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx`
+- `frontend/user-portal/src/pages/hr/EmployeeListPage.tsx`
+- `frontend/user-portal/src/pages/inventory/` (all 5 list/dashboard pages)
+- `frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx`, `ShipmentTrackingPage.tsx`, `VehicleManagementPage.tsx`
+- `frontend/user-portal/src/pages/marketing/` (all 4 management pages)
+- `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx`, `MushroomStrainLibrary.tsx`
+- `frontend/user-portal/src/pages/operations/OperationsDashboard.tsx`
+- `frontend/user-portal/src/pages/sales/` (all 5 pages)
+- `frontend/user-portal/src/pages/settings/Settings.tsx`
+
+#### CompactBlockCard — Full Theme Token Migration (Frontend)
+
+All hardcoded text colors (`#212121`, `#616161`, `#757575`, `#9e9e9e`) replaced with theme tokens. Alert badges use semantic BG tokens. QuickActions overlay uses `theme.colors.surface` with alpha. ProgressBar track uses `neutral[300]`. AlertsSection border uses `neutral[200]`.
+
+#### CRMPage + EmployeeListPage — SearchInput Theme Fix (Frontend)
+
+`CRMPage` and `EmployeeListPage` SearchInput components now carry theme-aware `background`, `color`, and `::placeholder` styles for dark mode.
+
+#### BlockAnalyticsModal — Height Stability Fix (Frontend)
+
+Changed from `max-height: 90vh` to `height: 90vh` to prevent flash-grow on modal open.
+
+**Compatibility:**
+- No breaking API changes. All new backend fields (`yieldByCrop`, `FarmYieldKpi`, `CropYieldKpi`) are purely additive to the dashboard response.
+- `PlantDataFormModal` is a drop-in replacement for the deleted `AddPlantDataModal` + `EditPlantDataModal`; no other consumers exist outside `PlantDataLibrary.tsx`.
+- Global farming year store is additive; per-page state removed without public interface changes.
+- Fully backward compatible with v1.11.0.
+
+---
+
 ## [1.11.0] - 2026-04-14
 
 **Type:** Minor Release — Task API Enrichment, Harvest Modal Context Cards, Dark Mode Pass, Input Guards, CRM Routing

@@ -2,13 +2,14 @@
  * CCM Dashboard Page
  *
  * Executive overview across all platform modules.
- * Static tabbed layout — no drag-and-drop, no widget system.
+ * Single-page scrollable layout — no tabs.
  * Data fetched from:
- *   GET /api/v1/dashboard/summary      (module counts)
- *   GET /api/v1/farm/dashboard/summary  (farm analytics — optional, may fail gracefully)
+ *   GET /api/v1/dashboard/summary               (module counts)
+ *   GET /api/v1/farm/dashboard/summary           (farm analytics — optional, may fail gracefully)
+ *   GET /api/v1/farm/config/farming-years-list   (farming year options for KPI chart filter)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import {
   PieChart,
@@ -20,10 +21,11 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import { apiClient } from '../../services/api';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
+import { useFarmingYearsList } from '../../hooks/queries/useFarmingYears';
 
 // ============================================================================
 // TYPES
@@ -72,6 +74,29 @@ interface FarmBlocksByFarm {
 interface FarmCropBreakdown {
   cropName: string;
   blockCount: number;
+  farmId?: string;
+  farmName?: string;
+}
+
+/**
+ * Per-farm yield KPI data from the backend summary endpoint.
+ * Powered by the new `yieldByFarm` array added in the backend update.
+ */
+interface FarmYieldKpi {
+  farmId: string;
+  farmName: string;
+  actualYieldKg: number;
+  predictedYieldKg: number;
+  efficiencyPercent: number;
+}
+
+interface CropYieldKpi {
+  cropName: string;
+  actualYieldKg: number;
+  predictedYieldKg: number;
+  efficiencyPercent: number;
+  farmId?: string;
+  farmName?: string;
 }
 
 interface FarmSummaryData {
@@ -102,6 +127,8 @@ interface FarmSummaryData {
     activeAlerts: number;
   };
   cropBreakdown: FarmCropBreakdown[];
+  yieldByFarm?: FarmYieldKpi[];
+  yieldByCrop?: CropYieldKpi[];
 }
 
 interface FarmSummaryResponse {
@@ -115,15 +142,6 @@ interface Insight {
   title: string;
   description: string;
   type: InsightType;
-}
-
-type TabId = 'overview' | 'operations' | 'business';
-
-interface KpiCardConfig {
-  label: string;
-  borderColor: string;
-  getValue: (data: DashboardSummary) => number;
-  getSubtitle: (data: DashboardSummary) => string;
 }
 
 // ============================================================================
@@ -164,105 +182,6 @@ const CROP_PALETTE: string[] = [
   '#06B6D4',
   '#6366F1',
   '#84CC16',
-];
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'operations', label: 'Operations' },
-  { id: 'business', label: 'Business' },
-];
-
-const KPI_CARDS: KpiCardConfig[] = [
-  {
-    label: 'Farms',
-    borderColor: MODULE_COLORS.farms,
-    getValue: (d) => d.farms.total,
-    getSubtitle: (d) =>
-      d.farms.active !== null ? `${d.farms.active} active` : `${d.farms.total} total`,
-  },
-  {
-    label: 'Blocks',
-    borderColor: MODULE_COLORS.blocks,
-    getValue: (d) => d.blocks.total,
-    getSubtitle: (d) => {
-      const det = d.blocks.details;
-      if (det) {
-        const parts: string[] = [];
-        if (det.growing) parts.push(`${det.growing} growing`);
-        if (det.harvesting) parts.push(`${det.harvesting} harvesting`);
-        return parts.join(', ') || `${d.blocks.active ?? d.blocks.total} active`;
-      }
-      return d.blocks.active !== null ? `${d.blocks.active} active` : '';
-    },
-  },
-  {
-    label: 'Employees',
-    borderColor: MODULE_COLORS.employees,
-    getValue: (d) => d.employees.total,
-    getSubtitle: (d) =>
-      d.employees.active !== null ? `${d.employees.active} active` : `${d.employees.total} total`,
-  },
-  {
-    label: 'Customers',
-    borderColor: MODULE_COLORS.customers,
-    getValue: (d) => d.customers.total,
-    getSubtitle: (d) =>
-      d.customers.active !== null ? `${d.customers.active} active` : `${d.customers.total} total`,
-  },
-  {
-    label: 'Orders',
-    borderColor: MODULE_COLORS.orders,
-    getValue: (d) => d.orders.total,
-    getSubtitle: (d) => {
-      const det = d.orders.details;
-      if (det) {
-        const parts: string[] = [];
-        if (det.processing) parts.push(`${det.processing} processing`);
-        if (det.delivered) parts.push(`${det.delivered} delivered`);
-        return parts.join(', ') || `${d.orders.total} total`;
-      }
-      return `${d.orders.total} total`;
-    },
-  },
-  {
-    label: 'Vehicles',
-    borderColor: MODULE_COLORS.vehicles,
-    getValue: (d) => d.vehicles.total,
-    getSubtitle: (d) => {
-      const det = d.vehicles.details;
-      if (det) {
-        const parts: string[] = [];
-        if (det.available !== undefined) parts.push(`${det.available} available`);
-        if (det.in_use) parts.push(`${det.in_use} in use`);
-        return parts.join(', ') || `${d.vehicles.active ?? d.vehicles.total} active`;
-      }
-      return d.vehicles.active !== null ? `${d.vehicles.active} active` : '';
-    },
-  },
-  {
-    label: 'Shipments',
-    borderColor: MODULE_COLORS.shipments,
-    getValue: (d) => d.shipments.total,
-    getSubtitle: (d) => {
-      const det = d.shipments.details;
-      if (det?.delivered) return `${det.delivered} delivered`;
-      return `${d.shipments.total} total`;
-    },
-  },
-  {
-    label: 'Campaigns',
-    borderColor: MODULE_COLORS.campaigns,
-    getValue: (d) => d.campaigns.total,
-    getSubtitle: (d) =>
-      d.campaigns.active !== null ? `${d.campaigns.active} active` : `${d.campaigns.total} total`,
-  },
-  {
-    label: 'Users',
-    borderColor: MODULE_COLORS.users,
-    getValue: (d) => d.users.total,
-    getSubtitle: (d) =>
-      d.users.active !== null ? `${d.users.active} active` : `${d.users.total} total`,
-  },
 ];
 
 // ============================================================================
@@ -430,6 +349,65 @@ function generateInsights(
 }
 
 // ============================================================================
+// useDragScroll HOOK
+// ============================================================================
+
+/**
+ * Hook that adds click-and-drag horizontal scrolling to a container.
+ * Uses native event listeners (via useEffect) rather than React synthetic
+ * events so we can reliably preventDefault on mousedown before the browser
+ * starts a text-selection or native drag that swallows subsequent moves.
+ */
+function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
+  const ref = useRef<T>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let isDragging = false;
+    let startX = 0;
+    let scrollStart = 0;
+
+    const onDown = (e: MouseEvent) => {
+      isDragging = true;
+      startX = e.clientX;
+      scrollStart = el.scrollLeft;
+      el.style.cursor = 'grabbing';
+      el.style.userSelect = 'none';
+      // Prevent text selection / native drag from stealing the gesture
+      e.preventDefault();
+    };
+
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const walk = e.clientX - startX;
+      el.scrollLeft = scrollStart - walk;
+    };
+
+    const onUp = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      el.style.cursor = 'grab';
+      el.style.userSelect = '';
+    };
+
+    el.addEventListener('mousedown', onDown);
+    // Listen on window so dragging past the element edge still tracks
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+
+    return () => {
+      el.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
+  return { ref };
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -438,22 +416,49 @@ export function Dashboard() {
   const [farmData, setFarmData] = useState<FarmSummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+
+  // Pie chart hover/filter state
+  const [hoveredBlockIndex, setHoveredBlockIndex] = useState<number | null>(null);
+  const [hoveredCropIndex, setHoveredCropIndex] = useState<number | null>(null);
+  const [selectedBlockFarm, setSelectedBlockFarm] = useState<string>('all');
+  const [selectedCropFarm, setSelectedCropFarm] = useState<string>('all');
+  const [selectedCropKpiFarm, setSelectedCropKpiFarm] = useState<string>('all');
+
+  // Global farming year from sidebar — controls all farm data fetching
+  const { selectedYear } = useFarmingYearStore();
+  const { data: farmingYearsData } = useFarmingYearsList(5, true);
+  const selectedYearDisplay = selectedYear !== null
+    ? farmingYearsData?.years?.find((y) => y.year === selectedYear)?.display ?? `Year ${selectedYear}`
+    : null;
+
+  // Yield KPI data derived from the main farm summary fetch
+  const [yieldKpiData, setYieldKpiData] = useState<FarmYieldKpi[] | null>(null);
+
+  // Drag-to-scroll for the chip legend rows
+  const blockLegendDrag = useDragScroll();
+  const cropLegendDrag = useDragScroll();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
+      const farmParams: Record<string, string | number> = {};
+      if (selectedYear !== null) farmParams.farmingYear = selectedYear;
+
       const [summaryRes, farmRes] = await Promise.all([
         apiClient.get<DashboardSummary>('/v1/dashboard/summary'),
         apiClient
-          .get<FarmSummaryResponse>('/v1/farm/dashboard/summary')
+          .get<FarmSummaryResponse>('/v1/farm/dashboard/summary', { params: farmParams })
           .catch(() => null),
       ]);
 
       setData(summaryRes.data);
       if (farmRes?.data?.success && farmRes.data.data) {
-        setFarmData(farmRes.data.data);
+        const fd = farmRes.data.data;
+        setFarmData(fd);
+        if (fd.yieldByFarm) {
+          setYieldKpiData(fd.yieldByFarm);
+        }
       } else {
         setFarmData(null);
       }
@@ -462,7 +467,7 @@ export function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedYear]);
 
   useEffect(() => {
     fetchData();
@@ -480,16 +485,6 @@ export function Dashboard() {
         }))
     : [];
 
-  const orderChartData = data?.orders.details
-    ? Object.entries(data.orders.details)
-        .filter(([, value]) => value > 0)
-        .map(([key, value]) => ({
-          name: key.charAt(0).toUpperCase() + key.slice(1),
-          count: value,
-          fill: key === 'delivered' ? '#10B981' : key === 'processing' ? '#F59E0B' : '#3B82F6',
-        }))
-    : [];
-
   // Farm-sourced chart data — only populated when farmData is available
 
   const harvestByFarmData = farmData
@@ -504,41 +499,107 @@ export function Dashboard() {
         }))
     : [];
 
-  const cropDistributionData = farmData
-    ? farmData.cropBreakdown
-        .filter((c) => c.blockCount > 0)
-        .sort((a, b) => b.blockCount - a.blockCount)
-        .map((c, i) => ({
-          name: c.cropName,
-          value: c.blockCount,
-          color: CROP_PALETTE[i % CROP_PALETTE.length],
-        }))
-    : [];
-
-  // Stacked bar chart: blocks by state per farm
-  const farmBlockDistributionData = farmData
-    ? farmData.blocksByFarm
-        .filter((f) => f.totalBlocks > 0)
-        .map((f) => ({
-          name: f.farmName,
-          Growing: f.growing,
-          Fruiting: f.fruiting,
-          Harvesting: f.harvesting,
-          Planned: f.planned,
-          Empty: f.empty,
-          Cleaning: f.cleaning,
-          Alert: f.alert,
-          Partial: f.partial,
-        }))
-    : [];
+  // Aggregate per-farm crop entries into a single "All Farms" view by summing
+  // blockCount per cropName. The raw API now returns one entry per (farm, crop).
+  const cropDistributionData = (() => {
+    if (!farmData) return [];
+    const totals = new Map<string, number>();
+    for (const c of farmData.cropBreakdown) {
+      if (c.blockCount <= 0) continue;
+      totals.set(c.cropName, (totals.get(c.cropName) ?? 0) + c.blockCount);
+    }
+    return [...totals.entries()]
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, value], i) => ({
+        name,
+        value,
+        color: CROP_PALETTE[i % CROP_PALETTE.length],
+      }));
+  })();
 
   const insights = data ? generateInsights(data, farmData) : [];
 
+  // Build farm list for the pie chart dropdown filters
+  const farmOptions = farmData?.blocksByFarm
+    ?.filter((f) => f.totalBlocks > 0)
+    .sort((a, b) => a.farmName.localeCompare(b.farmName)) ?? [];
+
+  // Filter Block Status pie data by selected farm
+  const filteredBlockChartData = (() => {
+    if (selectedBlockFarm === 'all') return blockChartData;
+    const farm = farmData?.blocksByFarm?.find((f) => f.farmId === selectedBlockFarm);
+    if (!farm) return blockChartData;
+    return Object.entries({
+      Growing: farm.growing,
+      Fruiting: farm.fruiting,
+      Harvesting: farm.harvesting,
+      Planned: farm.planned,
+      Cleaning: farm.cleaning,
+      Alert: farm.alert,
+      Partial: farm.partial,
+      Empty: farm.empty,
+    })
+      .filter(([, v]) => v > 0)
+      .map(([name, value]) => ({
+        name,
+        value,
+        color: BLOCK_STATE_COLORS[name.toLowerCase()] ?? '#9E9E9E',
+      }));
+  })();
+
+  // Filter Crop Distribution pie data by selected farm
+  const filteredCropData = (() => {
+    if (selectedCropFarm === 'all') return cropDistributionData;
+    const farmCrops = farmData?.cropBreakdown
+      ?.filter((c) => c.farmId === selectedCropFarm && c.blockCount > 0)
+      .sort((a, b) => b.blockCount - a.blockCount)
+      .map((c, i) => ({
+        name: c.cropName,
+        value: c.blockCount,
+        color: CROP_PALETTE[i % CROP_PALETTE.length],
+      }));
+    return farmCrops ?? cropDistributionData;
+  })();
+
+  // Hero metric values derived from data + farmData
+  const heroMetrics = data
+    ? [
+        {
+          label: 'Farms',
+          value: data.farms.total,
+          borderColor: MODULE_COLORS.farms,
+        },
+        {
+          label: 'Active Blocks',
+          value: farmData?.overview.activePlantings ?? (data.blocks.active ?? data.blocks.total),
+          borderColor: MODULE_COLORS.blocks,
+        },
+        {
+          label: 'Total Yield',
+          value: farmData?.yieldByFarm?.reduce((sum, f) => sum + f.actualYieldKg, 0) ?? 0,
+          borderColor: MODULE_COLORS.shipments,
+          suffix: ' kg',
+        },
+        {
+          label: 'Pending Orders',
+          value: data.orders.details?.pending ?? 0,
+          borderColor: MODULE_COLORS.orders,
+        },
+        {
+          label: 'Active Alerts',
+          value: farmData?.recentActivity.activeAlerts ?? 0,
+          borderColor: '#EF4444',
+        },
+      ]
+    : [];
+
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  const hasFarmData = farmData !== null;
 
   return (
     <PageContainer>
-      {/* Header */}
+      {/* ── Section 1: Page header ─────────────────────────────────────────── */}
       <PageHeader>
         <HeaderLeft>
           <PageTitle>Dashboard</PageTitle>
@@ -576,555 +637,515 @@ export function Dashboard() {
         </ErrorContainer>
       )}
 
-      {/* Content */}
+      {/* Content — single scrollable page */}
       {!isLoading && !error && data && (
-        <>
-          {/* Tab Bar */}
-          <TabList role="tablist" aria-label="Dashboard sections">
-            {TABS.map((tab) => (
-              <TabButton
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                aria-controls={`tabpanel-${tab.id}`}
-                id={`tab-${tab.id}`}
-                $active={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-              </TabButton>
-            ))}
-          </TabList>
+        <PageContent>
 
-          {/* Tab Panels */}
-          <div
-            id="tabpanel-overview"
-            role="tabpanel"
-            aria-labelledby="tab-overview"
-            hidden={activeTab !== 'overview'}
-          >
-            {activeTab === 'overview' && (
-              <OverviewTab data={data} insights={insights} />
-            )}
-          </div>
+          {/* ── Section 2: Hero metrics row (5 cards) ─────────────────────── */}
+          <PageSection>
+            <HeroGrid>
+              {heroMetrics.map((metric) => (
+                <HeroCard key={metric.label} $borderColor={metric.borderColor}>
+                  <KpiValue>
+                    {formatNumber(metric.value)}
+                    {metric.suffix ?? ''}
+                  </KpiValue>
+                  <KpiLabel>{metric.label}</KpiLabel>
+                </HeroCard>
+              ))}
+            </HeroGrid>
+          </PageSection>
 
-          <div
-            id="tabpanel-operations"
-            role="tabpanel"
-            aria-labelledby="tab-operations"
-            hidden={activeTab !== 'operations'}
-          >
-            {activeTab === 'operations' && (
-              <OperationsTab
-                data={data}
-                blockChartData={blockChartData}
-                harvestByFarmData={harvestByFarmData}
-                cropDistributionData={cropDistributionData}
-                farmBlockDistributionData={farmBlockDistributionData}
-                hasFarmData={farmData !== null}
-              />
-            )}
-          </div>
+          <SectionDivider />
 
-          <div
-            id="tabpanel-business"
-            role="tabpanel"
-            aria-labelledby="tab-business"
-            hidden={activeTab !== 'business'}
-          >
-            {activeTab === 'business' && (
-              <BusinessTab data={data} orderChartData={orderChartData} />
-            )}
-          </div>
-        </>
+          {/* ── Section 3: Two pie charts side by side ────────────────────── */}
+          <PageSection>
+            <ChartRow>
+              {/* Block Status Donut Chart */}
+              <ChartCard>
+                <ChartCardHeader>
+                  <CardTitle>Block Status Distribution</CardTitle>
+                  {selectedYearDisplay && <ChartYearBadge>{selectedYearDisplay}</ChartYearBadge>}
+                  <ChartHeaderSpacer />
+                  {hasFarmData && farmOptions.length > 1 && (
+                    <ChartFilterSelect
+                      value={selectedBlockFarm}
+                      onChange={(e) => {
+                        setSelectedBlockFarm(e.target.value);
+                        setHoveredBlockIndex(null);
+                      }}
+                    >
+                      <option value="all">All Farms</option>
+                      {farmOptions.map((f) => (
+                        <option key={f.farmId} value={f.farmId}>{f.farmName}</option>
+                      ))}
+                    </ChartFilterSelect>
+                  )}
+                </ChartCardHeader>
+                {filteredBlockChartData.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie
+                          data={filteredBlockChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={70}
+                          outerRadius={110}
+                          paddingAngle={2}
+                          dataKey="value"
+                          onMouseEnter={(_, index) => setHoveredBlockIndex(index)}
+                          onMouseLeave={() => setHoveredBlockIndex(null)}
+                        >
+                          {filteredBlockChartData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number, name: string) => [
+                            `${formatNumber(value)} Blocks`,
+                            name,
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <ScrollableLegend ref={blockLegendDrag.ref}>
+                      {(hoveredBlockIndex !== null && filteredBlockChartData[hoveredBlockIndex]
+                        ? [filteredBlockChartData[hoveredBlockIndex]]
+                        : filteredBlockChartData
+                      ).map((entry) => (
+                        <LegendChip key={entry.name}>
+                          <LegendSwatch $color={entry.color} />
+                          <LegendLabel>{entry.name}</LegendLabel>
+                        </LegendChip>
+                      ))}
+                    </ScrollableLegend>
+                  </>
+                ) : (
+                  <NoDataText>No block status data available</NoDataText>
+                )}
+              </ChartCard>
+
+              {/* Crop Distribution Donut */}
+              {hasFarmData && (
+                <ChartCard>
+                  <ChartCardHeader>
+                    <CardTitle>Crop Distribution</CardTitle>
+                    {selectedYearDisplay && <ChartYearBadge>{selectedYearDisplay}</ChartYearBadge>}
+                    <ChartHeaderSpacer />
+                    {farmOptions.length > 1 && (
+                      <ChartFilterSelect
+                        value={selectedCropFarm}
+                        onChange={(e) => {
+                          setSelectedCropFarm(e.target.value);
+                          setHoveredCropIndex(null);
+                        }}
+                      >
+                        <option value="all">All Farms</option>
+                        {farmOptions.map((f) => (
+                          <option key={f.farmId} value={f.farmId}>{f.farmName}</option>
+                        ))}
+                      </ChartFilterSelect>
+                    )}
+                  </ChartCardHeader>
+                  {filteredCropData.length > 0 ? (
+                    <>
+                      <ResponsiveContainer width="100%" height={280}>
+                        <PieChart>
+                          <Pie
+                            data={filteredCropData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={70}
+                            outerRadius={110}
+                            paddingAngle={2}
+                            dataKey="value"
+                            onMouseEnter={(_, index) => setHoveredCropIndex(index)}
+                            onMouseLeave={() => setHoveredCropIndex(null)}
+                          >
+                            {filteredCropData.map((entry) => (
+                              <Cell key={entry.name} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number, name: string) => [
+                              `${formatNumber(value)} Blocks`,
+                              name,
+                            ]}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      {/* Custom scrollable legend. Collapses to the hovered slice only. */}
+                      <ScrollableLegend ref={cropLegendDrag.ref}>
+                        {(hoveredCropIndex !== null && filteredCropData[hoveredCropIndex]
+                          ? [filteredCropData[hoveredCropIndex]]
+                          : filteredCropData
+                        ).map((entry) => (
+                          <LegendChip key={entry.name}>
+                            <LegendSwatch $color={entry.color} />
+                            <LegendLabel>{entry.name}</LegendLabel>
+                          </LegendChip>
+                        ))}
+                      </ScrollableLegend>
+                    </>
+                  ) : (
+                    <NoDataText>No crop data available</NoDataText>
+                  )}
+                </ChartCard>
+              )}
+            </ChartRow>
+          </PageSection>
+
+          <SectionDivider />
+
+          {/* ── Section 4: Farm Yield KPI chart (progress-bar style) ──────── */}
+          {hasFarmData && (
+            <PageSection>
+              <ChartCard>
+                <ChartCardHeader>
+                  <CardTitle>Farm Yield vs Predicted</CardTitle>
+                  {selectedYearDisplay && <ChartYearBadge>{selectedYearDisplay}</ChartYearBadge>}
+                  <ChartHeaderSpacer />
+                </ChartCardHeader>
+
+                {yieldKpiData && yieldKpiData.length > 0 ? (
+                  <YieldKpiChart data={yieldKpiData} />
+                ) : (
+                  <NoDataText>No yield KPI data available for the selected period</NoDataText>
+                )}
+              </ChartCard>
+            </PageSection>
+          )}
+
+          {hasFarmData && <SectionDivider />}
+
+          {/* ── Section 5: Crop Yield KPI (leaderboard with farm filter) ──── */}
+          {hasFarmData && farmData?.yieldByCrop && farmData.yieldByCrop.length > 0 && (
+            <PageSection>
+              <ChartCard>
+                <ChartCardHeader>
+                  <CardTitle>Crop Yield Performance</CardTitle>
+                  {selectedYearDisplay && <ChartYearBadge>{selectedYearDisplay}</ChartYearBadge>}
+                  <ChartHeaderSpacer />
+                  {farmOptions.length > 1 && (
+                    <ChartFilterSelect
+                      value={selectedCropKpiFarm}
+                      onChange={(e) => setSelectedCropKpiFarm(e.target.value)}
+                    >
+                      <option value="all">All Farms</option>
+                      {farmOptions.map((f) => (
+                        <option key={f.farmId} value={f.farmId}>{f.farmName}</option>
+                      ))}
+                    </ChartFilterSelect>
+                  )}
+                </ChartCardHeader>
+                <CropYieldKpiChart
+                  data={farmData.yieldByCrop}
+                  selectedFarm={selectedCropKpiFarm}
+                />
+              </ChartCard>
+            </PageSection>
+          )}
+
+          <SectionDivider />
+
+          {/* ── Section 6: Insights + Orders (two-column) ────────────────── */}
+          <PageSection>
+            <TwoColumnLayout>
+              {/* Left: Key Insights */}
+              <ChartCard>
+                <CardTitle>Key Insights</CardTitle>
+                {insights.length > 0 ? (
+                  <InsightsGrid>
+                    {insights.map((insight, i) => (
+                      <InsightCard key={i} $type={insight.type} role="article">
+                        <InsightTitle>{insight.title}</InsightTitle>
+                        <InsightDescription>{insight.description}</InsightDescription>
+                      </InsightCard>
+                    ))}
+                  </InsightsGrid>
+                ) : (
+                  <NoDataText>No insights available yet</NoDataText>
+                )}
+              </ChartCard>
+
+              {/* Right: Orders Overview — compact status list */}
+              <ChartCard>
+                <CardTitle>Orders Overview</CardTitle>
+                <OrdersOverviewList data={data} />
+              </ChartCard>
+            </TwoColumnLayout>
+          </PageSection>
+
+        </PageContent>
       )}
     </PageContainer>
   );
 }
 
 // ============================================================================
-// TAB: OVERVIEW
+// YIELD KPI CHART (progress-bar style — recharts vertical BarChart)
 // ============================================================================
 
-interface OverviewTabProps {
-  data: DashboardSummary;
-  insights: Insight[];
+interface YieldKpiChartProps {
+  data: FarmYieldKpi[];
 }
 
-function OverviewTab({ data, insights }: OverviewTabProps) {
-  return (
-    <TabContent>
-      <SectionTitle>Key Performance Indicators</SectionTitle>
-      <KpiGrid>
-        {KPI_CARDS.map((card) => (
-          <KpiCard key={card.label} $borderColor={card.borderColor}>
-            <KpiLabel>{card.label}</KpiLabel>
-            <KpiValue>{formatNumber(card.getValue(data))}</KpiValue>
-            <KpiSubtitle>{card.getSubtitle(data)}</KpiSubtitle>
-          </KpiCard>
-        ))}
-      </KpiGrid>
+function YieldKpiChart({ data }: YieldKpiChartProps) {
+  const sorted = [...data].sort((a, b) => b.efficiencyPercent - a.efficiencyPercent);
 
-      {insights.length > 0 && (
-        <InsightsSection aria-label="Key insights">
-          <SectionTitle>Key Insights</SectionTitle>
-          <InsightsGrid>
-            {insights.map((insight, i) => (
-              <InsightCard key={i} $type={insight.type} role="article">
-                <InsightTitle>{insight.title}</InsightTitle>
-                <InsightDescription>{insight.description}</InsightDescription>
-              </InsightCard>
-            ))}
-          </InsightsGrid>
-        </InsightsSection>
-      )}
-    </TabContent>
+  return (
+    <LeaderboardTable>
+      <LeaderboardHeader>
+        <LbRankCol>#</LbRankCol>
+        <LbFarmCol>Farm</LbFarmCol>
+        <LbKpiCol>KPI</LbKpiCol>
+        <LbBarCol>Progress</LbBarCol>
+        <LbYieldCol>Yield</LbYieldCol>
+      </LeaderboardHeader>
+      {sorted.map((farm, i) => {
+        const pct = farm.efficiencyPercent;
+        const barColor = pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444';
+        return (
+          <LeaderboardRow key={farm.farmId}>
+            <LbRankCol>
+              <LbRank>{i + 1}</LbRank>
+            </LbRankCol>
+            <LbFarmCol>
+              <LbFarmName>{farm.farmName}</LbFarmName>
+            </LbFarmCol>
+            <LbKpiCol>
+              <LbKpiValue $color={barColor}>{pct}%</LbKpiValue>
+            </LbKpiCol>
+            <LbBarCol>
+              <LbProgressTrack>
+                <LbProgressFill $pct={Math.min(pct, 100)} $color={barColor} />
+              </LbProgressTrack>
+            </LbBarCol>
+            <LbYieldCol>
+              <LbYieldText>
+                {formatNumber(Math.round(farm.actualYieldKg))} / {formatNumber(Math.round(farm.predictedYieldKg))} kg
+              </LbYieldText>
+            </LbYieldCol>
+          </LeaderboardRow>
+        );
+      })}
+    </LeaderboardTable>
   );
 }
 
 // ============================================================================
-// TAB: OPERATIONS
+// CROP YIELD KPI (leaderboard with farm filter)
 // ============================================================================
 
-interface ChartEntry {
-  name: string;
-  value: number;
-  color: string;
+const CROP_KPI_DEFAULT_VISIBLE = 5;
+
+interface CropYieldKpiChartProps {
+  data: CropYieldKpi[];
+  selectedFarm: string;
 }
 
-interface HarvestByFarmEntry {
-  name: string;
-  kg: number;
-  harvests: number;
-}
+function CropYieldKpiChart({ data, selectedFarm }: CropYieldKpiChartProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCrops, setSelectedCrops] = useState<Set<string>>(new Set());
 
-interface FarmBlockEntry {
-  name: string;
-  [state: string]: string | number;
-}
+  // Filter by farm, then aggregate by cropName
+  const filtered = selectedFarm === 'all' ? data : data.filter((c) => c.farmId === selectedFarm);
 
-interface OperationsTabProps {
-  data: DashboardSummary;
-  blockChartData: ChartEntry[];
-  harvestByFarmData: HarvestByFarmEntry[];
-  cropDistributionData: ChartEntry[];
-  farmBlockDistributionData: FarmBlockEntry[];
-  hasFarmData: boolean;
-}
-
-function OperationsTab({
-  data,
-  blockChartData,
-  harvestByFarmData,
-  cropDistributionData,
-  farmBlockDistributionData,
-  hasFarmData,
-}: OperationsTabProps) {
-  return (
-    <TabContent>
-      {/* Row 1: Block Status Donut + Crop Distribution */}
-      <ChartRow>
-        {/* Block Status Donut Chart */}
-        <ChartCard>
-          <CardTitle>Block Status Distribution</CardTitle>
-          {blockChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={blockChartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={110}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {blockChartData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number) => [formatNumber(value), 'Blocks']}
-                />
-                <Legend
-                  formatter={(value) => <LegendLabel>{value}</LegendLabel>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <NoDataText>No block status data available</NoDataText>
-          )}
-        </ChartCard>
-
-        {/* Crop Distribution Donut */}
-        {hasFarmData && (
-          <ChartCard>
-            <CardTitle>Crop Distribution</CardTitle>
-            {cropDistributionData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={cropDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={110}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {cropDistributionData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [formatNumber(value), 'Blocks']}
-                  />
-                  <Legend
-                    formatter={(value) => <LegendLabel>{value}</LegendLabel>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <NoDataText>No crop data available</NoDataText>
-            )}
-          </ChartCard>
-        )}
-      </ChartRow>
-
-      {/* Row 2: Harvest by Farm (full width) */}
-      {hasFarmData && (
-        <ChartCard>
-          <CardTitle>Harvest by Farm (kg)</CardTitle>
-          {harvestByFarmData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={Math.max(200, harvestByFarmData.length * 48)}>
-              <BarChart
-                data={harvestByFarmData}
-                layout="vertical"
-                margin={{ top: 8, right: 32, left: 16, bottom: 8 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis
-                  type="number"
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(v: number) => formatNumber(v)}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tick={{ fontSize: 13 }}
-                  width={120}
-                />
-                <Tooltip
-                  formatter={(value: number, name: string) => {
-                    if (name === 'kg') return [formatKg(value), 'Total Harvested'];
-                    return [formatNumber(value), 'Harvests'];
-                  }}
-                />
-                <Bar dataKey="kg" fill="#10B981" radius={[0, 4, 4, 0]} name="kg" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <NoDataText>No harvest data available across farms</NoDataText>
-          )}
-        </ChartCard>
-      )}
-
-      {/* Row 3: Farm Block Distribution stacked bar (full width) */}
-      {hasFarmData && farmBlockDistributionData.length > 0 && (
-        <ChartCard>
-          <CardTitle>Block Distribution by Farm</CardTitle>
-          <ResponsiveContainer
-            width="100%"
-            height={Math.max(240, farmBlockDistributionData.length * 52)}
-          >
-            <BarChart
-              data={farmBlockDistributionData}
-              layout="vertical"
-              margin={{ top: 8, right: 32, left: 16, bottom: 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 12 }} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 13 }}
-                width={120}
-              />
-              <Tooltip formatter={(value: number) => [formatNumber(value), 'Blocks']} />
-              <Legend formatter={(value) => <LegendLabel>{value}</LegendLabel>} />
-              {['Growing', 'Fruiting', 'Harvesting', 'Planned', 'Cleaning', 'Alert', 'Partial', 'Empty'].map(
-                (state) => (
-                  <Bar
-                    key={state}
-                    dataKey={state}
-                    stackId="blocks"
-                    fill={BLOCK_STATE_COLORS[state.toLowerCase()] ?? '#9E9E9E'}
-                  />
-                )
-              )}
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      )}
-
-      {/* Row 4: Detail summary cards */}
-      <OperationsSummaryGrid>
-        <SummaryCard>
-          <SummaryCardTitle>Farms</SummaryCardTitle>
-          <SummaryRow>
-            <SummaryLabel>Total</SummaryLabel>
-            <SummaryValue>{formatNumber(data.farms.total)}</SummaryValue>
-          </SummaryRow>
-          {data.farms.active !== null && (
-            <SummaryRow>
-              <SummaryLabel>Active</SummaryLabel>
-              <SummaryValue $accent={MODULE_COLORS.farms}>
-                {formatNumber(data.farms.active)}
-              </SummaryValue>
-            </SummaryRow>
-          )}
-        </SummaryCard>
-
-        <SummaryCard>
-          <SummaryCardTitle>Blocks</SummaryCardTitle>
-          <SummaryRow>
-            <SummaryLabel>Total</SummaryLabel>
-            <SummaryValue>{formatNumber(data.blocks.total)}</SummaryValue>
-          </SummaryRow>
-          {data.blocks.active !== null && (
-            <SummaryRow>
-              <SummaryLabel>Active</SummaryLabel>
-              <SummaryValue $accent={MODULE_COLORS.blocks}>
-                {formatNumber(data.blocks.active)}
-              </SummaryValue>
-            </SummaryRow>
-          )}
-          {data.blocks.details &&
-            Object.entries(data.blocks.details).map(([key, val]) => (
-              <SummaryRow key={key}>
-                <SummaryLabel>
-                  <StatusDot $color={BLOCK_STATE_COLORS[key] ?? '#9E9E9E'} />
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </SummaryLabel>
-                <SummaryValue>{formatNumber(val)}</SummaryValue>
-              </SummaryRow>
-            ))}
-        </SummaryCard>
-
-        <SummaryCard>
-          <SummaryCardTitle>Vehicles</SummaryCardTitle>
-          <SummaryRow>
-            <SummaryLabel>Total</SummaryLabel>
-            <SummaryValue>{formatNumber(data.vehicles.total)}</SummaryValue>
-          </SummaryRow>
-          {data.vehicles.details?.available !== undefined && (
-            <SummaryRow>
-              <SummaryLabel>Available</SummaryLabel>
-              <SummaryValue $accent={MODULE_COLORS.vehicles}>
-                {formatNumber(data.vehicles.details.available)}
-              </SummaryValue>
-            </SummaryRow>
-          )}
-          {data.vehicles.details?.in_use !== undefined && (
-            <SummaryRow>
-              <SummaryLabel>In Use</SummaryLabel>
-              <SummaryValue>{formatNumber(data.vehicles.details.in_use)}</SummaryValue>
-            </SummaryRow>
-          )}
-        </SummaryCard>
-
-        <SummaryCard>
-          <SummaryCardTitle>Shipments</SummaryCardTitle>
-          <SummaryRow>
-            <SummaryLabel>Total</SummaryLabel>
-            <SummaryValue>{formatNumber(data.shipments.total)}</SummaryValue>
-          </SummaryRow>
-          {data.shipments.details &&
-            Object.entries(data.shipments.details).map(([key, val]) => (
-              <SummaryRow key={key}>
-                <SummaryLabel>{key.charAt(0).toUpperCase() + key.slice(1)}</SummaryLabel>
-                <SummaryValue $accent={MODULE_COLORS.shipments}>
-                  {formatNumber(val)}
-                </SummaryValue>
-              </SummaryRow>
-            ))}
-        </SummaryCard>
-      </OperationsSummaryGrid>
-    </TabContent>
-  );
-}
-
-// ============================================================================
-// TAB: BUSINESS
-// ============================================================================
-
-interface OrderChartEntry {
-  name: string;
-  count: number;
-  fill: string;
-}
-
-interface BusinessTabProps {
-  data: DashboardSummary;
-  orderChartData: OrderChartEntry[];
-}
-
-function BusinessTab({ data, orderChartData }: BusinessTabProps) {
-  // Derive workforce insights from summary data
-  const workforceInsights: Insight[] = [];
-
-  if (data.employees.active !== null && data.employees.active < data.employees.total) {
-    const inactive = data.employees.total - data.employees.active;
-    workforceInsights.push({
-      title: 'Inactive Employees',
-      description: `${formatNumber(inactive)} of ${formatNumber(data.employees.total)} employees are currently inactive.`,
-      type: 'warning',
-    });
+  const byCrop = new Map<string, { actual: number; predicted: number }>();
+  for (const c of filtered) {
+    const existing = byCrop.get(c.cropName) ?? { actual: 0, predicted: 0 };
+    existing.actual += c.actualYieldKg;
+    existing.predicted += c.predictedYieldKg;
+    byCrop.set(c.cropName, existing);
   }
 
-  if (data.campaigns.active !== null && data.campaigns.active > 0) {
-    workforceInsights.push({
-      title: 'Active Marketing Campaigns',
-      description: `${formatNumber(data.campaigns.active)} marketing ${
-        data.campaigns.active === 1 ? 'campaign is' : 'campaigns are'
-      } currently running.`,
-      type: 'success',
+  const allSorted = [...byCrop.entries()]
+    .map(([cropName, { actual, predicted }]) => ({
+      cropName,
+      actualYieldKg: actual,
+      predictedYieldKg: predicted,
+      efficiencyPercent: predicted > 0 ? Math.round((actual / predicted) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.efficiencyPercent - a.efficiencyPercent);
+
+  // When specific crops are selected, show only those (for comparison).
+  // Otherwise show top N or all (if expanded).
+  const displayList = selectedCrops.size > 0
+    ? allSorted.filter((c) => selectedCrops.has(c.cropName))
+    : expanded
+      ? allSorted
+      : allSorted.slice(0, CROP_KPI_DEFAULT_VISIBLE);
+
+  const hasMore = selectedCrops.size === 0 && allSorted.length > CROP_KPI_DEFAULT_VISIBLE;
+
+  // Search results for the crop picker
+  const searchResults = searchQuery.trim().length > 0
+    ? allSorted.filter((c) =>
+        c.cropName.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !selectedCrops.has(c.cropName)
+      ).slice(0, 8)
+    : [];
+
+  const toggleCrop = (cropName: string) => {
+    setSelectedCrops((prev) => {
+      const next = new Set(prev);
+      if (next.has(cropName)) {
+        next.delete(cropName);
+      } else {
+        next.add(cropName);
+      }
+      return next;
     });
+    setSearchQuery('');
+  };
+
+  const clearSelection = () => {
+    setSelectedCrops(new Set());
+    setSearchQuery('');
+  };
+
+  if (allSorted.length === 0) {
+    return <NoDataText>No crop yield data available</NoDataText>;
   }
 
   return (
-    <TabContent>
-      <TwoColumnLayout>
-        {/* Order Status Chart */}
-        <ChartCard>
-          <CardTitle>Order Status Distribution</CardTitle>
-          {orderChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart
-                data={orderChartData}
-                layout="vertical"
-                margin={{ top: 8, right: 24, left: 16, bottom: 8 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 13 }} width={90} />
-                <Tooltip formatter={(value: number) => [formatNumber(value), 'Orders']} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                  {orderChartData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <NoDataText>No order status data available</NoDataText>
-          )}
-        </ChartCard>
-
-        {/* Business Summary */}
-        <SummaryColumn>
-          <SummaryCard>
-            <SummaryCardTitle>Customers</SummaryCardTitle>
-            <SummaryRow>
-              <SummaryLabel>Total</SummaryLabel>
-              <SummaryValue>{formatNumber(data.customers.total)}</SummaryValue>
-            </SummaryRow>
-            {data.customers.active !== null && (
-              <SummaryRow>
-                <SummaryLabel>Active</SummaryLabel>
-                <SummaryValue $accent={MODULE_COLORS.customers}>
-                  {formatNumber(data.customers.active)}
-                </SummaryValue>
-              </SummaryRow>
-            )}
-          </SummaryCard>
-
-          <SummaryCard>
-            <SummaryCardTitle>Orders</SummaryCardTitle>
-            <SummaryRow>
-              <SummaryLabel>Total</SummaryLabel>
-              <SummaryValue>{formatNumber(data.orders.total)}</SummaryValue>
-            </SummaryRow>
-            {data.orders.details &&
-              Object.entries(data.orders.details).map(([key, val]) => (
-                <SummaryRow key={key}>
-                  <SummaryLabel>{key.charAt(0).toUpperCase() + key.slice(1)}</SummaryLabel>
-                  <SummaryValue>{formatNumber(val)}</SummaryValue>
-                </SummaryRow>
+    <>
+      {/* Crop search/filter bar */}
+      <CropFilterBar>
+        <CropSearchWrapper>
+          <CropSearchInput
+            type="text"
+            placeholder="Search crops to compare..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchResults.length > 0 && (
+            <CropSearchDropdown>
+              {searchResults.map((c) => (
+                <CropSearchItem key={c.cropName} onClick={() => toggleCrop(c.cropName)}>
+                  <span>{c.cropName}</span>
+                  <CropSearchItemKpi $color={c.efficiencyPercent >= 80 ? '#10B981' : c.efficiencyPercent >= 40 ? '#F59E0B' : '#EF4444'}>
+                    {c.efficiencyPercent}%
+                  </CropSearchItemKpi>
+                </CropSearchItem>
               ))}
-          </SummaryCard>
-
-          <SummaryCard>
-            <SummaryCardTitle>Campaigns</SummaryCardTitle>
-            <SummaryRow>
-              <SummaryLabel>Total</SummaryLabel>
-              <SummaryValue>{formatNumber(data.campaigns.total)}</SummaryValue>
-            </SummaryRow>
-            {data.campaigns.active !== null && (
-              <SummaryRow>
-                <SummaryLabel>Active</SummaryLabel>
-                <SummaryValue $accent={MODULE_COLORS.campaigns}>
-                  {formatNumber(data.campaigns.active)}
-                </SummaryValue>
-              </SummaryRow>
-            )}
-          </SummaryCard>
-        </SummaryColumn>
-      </TwoColumnLayout>
-
-      {/* Workforce Insights */}
-      {workforceInsights.length > 0 && (
-        <WorkforceInsightsSection aria-label="Workforce insights">
-          <SectionTitle>Workforce Insights</SectionTitle>
-          <InsightsGrid>
-            {workforceInsights.map((insight, i) => (
-              <InsightCard key={i} $type={insight.type} role="article">
-                <InsightTitle>{insight.title}</InsightTitle>
-                <InsightDescription>{insight.description}</InsightDescription>
-              </InsightCard>
+            </CropSearchDropdown>
+          )}
+        </CropSearchWrapper>
+        {selectedCrops.size > 0 && (
+          <CropChipsRow>
+            {[...selectedCrops].map((name) => (
+              <CropChip key={name}>
+                {name}
+                <CropChipRemove onClick={() => toggleCrop(name)}>×</CropChipRemove>
+              </CropChip>
             ))}
-          </InsightsGrid>
-        </WorkforceInsightsSection>
+            <CropChipClear onClick={clearSelection}>Clear all</CropChipClear>
+          </CropChipsRow>
+        )}
+      </CropFilterBar>
+
+      {/* Leaderboard */}
+      <LeaderboardTable>
+        <LeaderboardHeader>
+          <LbRankCol>#</LbRankCol>
+          <LbFarmCol>Crop</LbFarmCol>
+          <LbKpiCol>KPI</LbKpiCol>
+          <LbBarCol>Progress</LbBarCol>
+          <LbYieldCol>Yield</LbYieldCol>
+        </LeaderboardHeader>
+        {displayList.map((crop, i) => {
+          const pct = crop.efficiencyPercent;
+          const barColor = pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444';
+          return (
+            <LeaderboardRow key={crop.cropName}>
+              <LbRankCol>
+                <LbRank>{i + 1}</LbRank>
+              </LbRankCol>
+              <LbFarmCol>
+                <LbFarmName>{crop.cropName}</LbFarmName>
+              </LbFarmCol>
+              <LbKpiCol>
+                <LbKpiValue $color={barColor}>{pct}%</LbKpiValue>
+              </LbKpiCol>
+              <LbBarCol>
+                <LbProgressTrack>
+                  <LbProgressFill $pct={Math.min(pct, 100)} $color={barColor} />
+                </LbProgressTrack>
+              </LbBarCol>
+              <LbYieldCol>
+                <LbYieldText>
+                  {formatNumber(Math.round(crop.actualYieldKg))} / {formatNumber(Math.round(crop.predictedYieldKg))} kg
+                </LbYieldText>
+              </LbYieldCol>
+            </LeaderboardRow>
+          );
+        })}
+      </LeaderboardTable>
+
+      {/* Show more / less toggle */}
+      {hasMore && (
+        <ShowMoreButton onClick={() => setExpanded((v) => !v)}>
+          {expanded ? 'Show top 5 only' : `Show all ${allSorted.length} crops`}
+        </ShowMoreButton>
       )}
+    </>
+  );
+}
 
-      {/* Workforce & Users Section */}
-      <WorkforceSection>
-        <SectionTitle>Workforce &amp; Users</SectionTitle>
-        <WorkforceGrid>
-          <SummaryCard>
-            <SummaryCardTitle>Employees</SummaryCardTitle>
-            <SummaryRow>
-              <SummaryLabel>Total</SummaryLabel>
-              <SummaryValue>{formatNumber(data.employees.total)}</SummaryValue>
-            </SummaryRow>
-            {data.employees.active !== null && (
-              <SummaryRow>
-                <SummaryLabel>Active</SummaryLabel>
-                <SummaryValue $accent={MODULE_COLORS.employees}>
-                  {formatNumber(data.employees.active)}
-                </SummaryValue>
-              </SummaryRow>
-            )}
-          </SummaryCard>
+// ============================================================================
+// ORDERS OVERVIEW (compact list)
+// ============================================================================
 
-          <SummaryCard>
-            <SummaryCardTitle>System Users</SummaryCardTitle>
-            <SummaryRow>
-              <SummaryLabel>Total</SummaryLabel>
-              <SummaryValue>{formatNumber(data.users.total)}</SummaryValue>
-            </SummaryRow>
-            {data.users.active !== null && (
-              <SummaryRow>
-                <SummaryLabel>Active</SummaryLabel>
-                <SummaryValue $accent={MODULE_COLORS.users}>
-                  {formatNumber(data.users.active)}
-                </SummaryValue>
-              </SummaryRow>
-            )}
-          </SummaryCard>
-        </WorkforceGrid>
-      </WorkforceSection>
-    </TabContent>
+interface OrdersOverviewListProps {
+  data: DashboardSummary;
+}
+
+function OrdersOverviewList({ data }: OrdersOverviewListProps) {
+  const statusColors: Record<string, string> = {
+    pending: MODULE_COLORS.orders,
+    processing: '#F59E0B',
+    delivered: '#10B981',
+  };
+
+  const rows: { key: string; label: string; count: number }[] = [
+    { key: 'pending', label: 'Pending', count: data.orders.details?.pending ?? 0 },
+    { key: 'processing', label: 'Processing', count: data.orders.details?.processing ?? 0 },
+    { key: 'delivered', label: 'Delivered', count: data.orders.details?.delivered ?? 0 },
+  ];
+
+  // Also add any extra statuses from details not covered above
+  const knownKeys = new Set(['pending', 'processing', 'delivered']);
+  if (data.orders.details) {
+    for (const [key, val] of Object.entries(data.orders.details)) {
+      if (!knownKeys.has(key) && val > 0) {
+        rows.push({
+          key,
+          label: key.charAt(0).toUpperCase() + key.slice(1),
+          count: val,
+        });
+      }
+    }
+  }
+
+  return (
+    <OrdersListWrapper>
+      <OrdersTotalRow>
+        <OrdersTotalLabel>Total Orders</OrdersTotalLabel>
+        <OrdersTotalValue>{formatNumber(data.orders.total)}</OrdersTotalValue>
+      </OrdersTotalRow>
+      {rows.map((row) => (
+        <OrderStatusRow key={row.key}>
+          <OrderStatusLeft>
+            <StatusDot $color={statusColors[row.key] ?? '#9E9E9E'} />
+            <OrderStatusLabel>{row.label}</OrderStatusLabel>
+          </OrderStatusLeft>
+          <OrderStatusCount>{formatNumber(row.count)}</OrderStatusCount>
+        </OrderStatusRow>
+      ))}
+    </OrdersListWrapper>
   );
 }
 
@@ -1245,128 +1266,203 @@ const LastUpdatedText = styled.p`
   white-space: nowrap;
 `;
 
-// ── Tab Navigation ─────────────────────────────────────────────────────────
+// ── Page content wrapper ────────────────────────────────────────────────────
 
-const TabList = styled.div`
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-`;
-
-const TabButton = styled.button<{ $active: boolean }>`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.lg}`};
-  background: none;
-  border: none;
-  border-bottom: 3px solid
-    ${({ theme, $active }) => ($active ? theme.colors.primary[500] : 'transparent')};
-  margin-bottom: -2px;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme, $active }) =>
-    $active
-      ? theme.typography.fontWeight.semibold
-      : theme.typography.fontWeight.regular};
-  color: ${({ theme, $active }) =>
-    $active ? theme.colors.primary[500] : theme.colors.textSecondary};
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color 150ms ease-in-out, border-color 150ms ease-in-out;
-
-  &:hover:not([aria-selected='true']) {
-    color: ${({ theme }) => theme.colors.textPrimary};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
-    outline-offset: -2px;
-    border-radius: ${({ theme }) => theme.borderRadius.sm} ${({ theme }) => theme.borderRadius.sm} 0 0;
-  }
-`;
-
-// ── Tab Content ────────────────────────────────────────────────────────────
-
-const TabContent = styled.section`
+const PageContent = styled.main`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
-  animation: fadeIn 200ms ease-in-out;
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+  gap: 0;
 `;
 
-// ── Section ────────────────────────────────────────────────────────────────
-
-const SectionTitle = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
+const PageSection = styled.section`
+  padding: ${({ theme }) => theme.spacing.xl} 0;
 `;
 
-// ── KPI Cards ──────────────────────────────────────────────────────────────
+const SectionDivider = styled.hr`
+  border: none;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  margin: 0;
+`;
 
-const KpiGrid = styled.div`
+// ── Hero metric cards ───────────────────────────────────────────────────────
+
+const HeroGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
   gap: ${({ theme }) => theme.spacing.md};
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 
   @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 `;
 
-const KpiCard = styled.article<{ $borderColor: string }>`
+const HeroCard = styled.article<{ $borderColor: string }>`
   background: ${({ theme }) => theme.colors.background};
   border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.md};
+  padding: ${({ theme }) => theme.spacing.xl};
+  box-shadow: ${({ theme }) => theme.shadows.sm};
   border-left: 4px solid ${({ $borderColor }) => $borderColor};
   transition: box-shadow 150ms ease-in-out;
 
   &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.lg};
+    box-shadow: ${({ theme }) => theme.shadows.md};
   }
 `;
 
-const KpiLabel = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
-`;
-
 const KpiValue = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
+  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
   line-height: ${({ theme }) => theme.typography.lineHeight.tight};
 `;
 
-const KpiSubtitle = styled.p`
+const KpiLabel = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   color: ${({ theme }) => theme.colors.textSecondary};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   margin: 0;
 `;
 
-// ── Insights ───────────────────────────────────────────────────────────────
+// ── Chart layouts ───────────────────────────────────────────────────────────
+
+const ChartRow = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: ${({ theme }) => theme.spacing.lg};
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    /* minmax(0, 1fr) prevents grid items from expanding past their share
+       when their content has a large intrinsic min-width — e.g. the
+       nowrap scrollable crop-distribution legend below. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+`;
+
+const TwoColumnLayout = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${({ theme }) => theme.spacing.lg};
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+`;
+
+// ── Chart card ──────────────────────────────────────────────────────────────
+
+const ChartCard = styled.div`
+  background: ${({ theme }) => theme.colors.background};
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  padding: ${({ theme }) => theme.spacing.xl};
+  box-shadow: ${({ theme }) => theme.shadows.sm};
+`;
+
+const CardTitle = styled.h3`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
+`;
+
+const ChartCardHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  flex-wrap: wrap;
+
+  & > h3 {
+    margin-bottom: 0;
+  }
+`;
+
+const ChartHeaderSpacer = styled.div`
+  flex: 1;
+  min-width: ${({ theme }) => theme.spacing.sm};
+`;
+
+const ChartYearBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[700]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+`;
+
+const ChartFilterSelect = styled.select`
+  padding: 6px 12px;
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+`;
+
+// ── Scrollable chip legend ──────────────────────────────────────────────────
+
+const ScrollableLegend = styled.div`
+  display: flex;
+  flex-wrap: nowrap;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.sm} 0;
+  overflow-x: auto;
+  cursor: grab;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  /* Hide scrollbar entirely — users scroll via trackpad / shift+wheel. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const LegendChip = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: 999px;
+  white-space: nowrap;
+`;
+
+const LegendSwatch = styled.span<{ $color: string }>`
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: ${({ $color }) => $color};
+  flex-shrink: 0;
+`;
+
+const LegendLabel = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+// ── Insights grid ───────────────────────────────────────────────────────────
 
 const INSIGHT_BORDER_COLORS: Record<InsightType, string> = {
   success: '#10B981',
@@ -1382,8 +1478,6 @@ const INSIGHT_BG_COLORS: Record<InsightType, string> = {
   critical: 'rgba(239, 68, 68, 0.06)',
 };
 
-const InsightsSection = styled.section``;
-
 const InsightsGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
@@ -1391,10 +1485,6 @@ const InsightsGrid = styled.div`
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    grid-template-columns: repeat(3, 1fr);
   }
 `;
 
@@ -1420,118 +1510,342 @@ const InsightDescription = styled.p`
   line-height: ${({ theme }) => theme.typography.lineHeight.normal};
 `;
 
-// ── Chart layouts ──────────────────────────────────────────────────────────
+// ── Yield KPI chart ─────────────────────────────────────────────────────────
 
-const ChartRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${({ theme }) => theme.spacing.lg};
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-`;
-
-// ── Two-column Layout ──────────────────────────────────────────────────────
-
-const TwoColumnLayout = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${({ theme }) => theme.spacing.lg};
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-`;
-
-// ── Charts ─────────────────────────────────────────────────────────────────
-
-const ChartCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.md};
-`;
-
-const CardTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
-`;
-
-const LegendLabel = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
-
-// ── Operations Summary Grid ─────────────────────────────────────────────────
-
-const OperationsSummaryGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${({ theme }) => theme.spacing.md};
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    grid-template-columns: repeat(4, 1fr);
-  }
-`;
-
-// ── Summary Cards ──────────────────────────────────────────────────────────
-
-const SummaryColumn = styled.div`
+const CropFilterBar = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.spacing.sm};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 
-const SummaryCard = styled.div`
+const CropSearchWrapper = styled.div`
+  position: relative;
+`;
+
+const CropSearchInput = styled.input`
+  width: 100%;
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
   background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  transition: border-color 0.15s ease;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
 `;
 
-const SummaryCardTitle = styled.h3`
+const CropSearchDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+  z-index: ${({ theme }) => theme.zIndex.dropdown};
+  max-height: 200px;
+  overflow-y: auto;
+`;
+
+const CropSearchItem = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface};
+  }
+`;
+
+const CropSearchItemKpi = styled.span<{ $color: string }>`
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ $color }) => $color};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+`;
+
+const CropChipsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+`;
+
+const CropChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.primary[700]};
+  background: ${({ theme }) => theme.colors.infoBg};
+  border-radius: 999px;
+`;
+
+const CropChipRemove = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.error};
+  }
+`;
+
+const CropChipClear = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.textDisabled};
+  cursor: pointer;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  padding: 2px 6px;
+  text-decoration: underline;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.textSecondary};
+  }
+`;
+
+const ShowMoreButton = styled.button`
+  display: block;
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.sm};
+  margin-top: ${({ theme }) => theme.spacing.sm};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.primary[500]};
+  background: transparent;
+  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface};
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+`;
+
+const LeaderboardTable = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const LeaderboardHeader = styled.div`
+  display: grid;
+  grid-template-columns: 36px 1fr 64px 1fr 140px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textDisabled};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 28px 1fr 48px 1fr;
+  }
+`;
+
+const LeaderboardRow = styled.div`
+  display: grid;
+  grid-template-columns: 36px 1fr 64px 1fr 140px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  transition: background 150ms ease-in-out;
+
+  &:nth-child(even) {
+    background: ${({ theme }) => theme.colors.neutral[50]};
+  }
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface};
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 28px 1fr 48px 1fr;
+  }
+`;
+
+const LbRankCol = styled.div`
+  text-align: center;
+`;
+
+const LbFarmCol = styled.div`
+  overflow: hidden;
+`;
+
+const LbKpiCol = styled.div`
+  text-align: right;
+`;
+
+const LbBarCol = styled.div``;
+
+const LbYieldCol = styled.div`
+  text-align: right;
+
+  @media (max-width: 640px) {
+    display: none;
+  }
+`;
+
+const LbRank = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+`;
+
+const LbFarmName = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const LbKpiValue = styled.span<{ $color: string }>`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ $color }) => $color};
+`;
+
+const LbProgressTrack = styled.div`
+  width: 100%;
+  height: 8px;
+  background: ${({ theme }) => theme.colors.neutral[200]};
+  border-radius: 4px;
+  overflow: hidden;
+`;
+
+const LbProgressFill = styled.div<{ $pct: number; $color: string }>`
+  height: 100%;
+  width: ${({ $pct }) => $pct}%;
+  background: ${({ $color }) => $color};
+  border-radius: 4px;
+  transition: width 500ms ease-in-out;
+`;
+
+const LbYieldText = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  white-space: nowrap;
+`;
+
+const YieldChartWrapper = styled.div`
+  width: 100%;
+  overflow-x: auto;
+`;
+
+const YieldLoadingRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.xl} 0;
+`;
+
+const SmallSpinner = styled.div`
+  width: 20px;
+  height: 20px;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
+  animation: ${spinnerAnimation} 1s linear infinite;
+  flex-shrink: 0;
+`;
+
+// ── Orders overview ─────────────────────────────────────────────────────────
+
+const OrdersListWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+`;
+
+const OrdersTotalRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${({ theme }) => theme.spacing.sm} 0;
+  margin-bottom: ${({ theme }) => theme.spacing.sm};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+`;
+
+const OrdersTotalLabel = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin: 0 0 ${({ theme }) => theme.spacing.sm} 0;
-  padding-bottom: ${({ theme }) => theme.spacing.sm};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
 
-const SummaryRow = styled.div`
+const OrdersTotalValue = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const OrderStatusRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: ${({ theme }) => `${theme.spacing.xs} 0`};
+  padding: ${({ theme }) => `${theme.spacing.sm} 0`};
 
   & + & {
     border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   }
 `;
 
-const SummaryLabel = styled.span`
+const OrderStatusLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const OrderStatusLabel = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
-const SummaryValue = styled.span<{ $accent?: string }>`
+const OrderStatusCount = styled.span`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme, $accent }) => $accent ?? theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StatusDot = styled.span<{ $color: string }>`
@@ -1543,23 +1857,7 @@ const StatusDot = styled.span<{ $color: string }>`
   flex-shrink: 0;
 `;
 
-// ── Workforce Section ──────────────────────────────────────────────────────
-
-const WorkforceInsightsSection = styled.section``;
-
-const WorkforceSection = styled.section``;
-
-const WorkforceGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: ${({ theme }) => theme.spacing.md};
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-`;
-
-// ── Loading & Error ────────────────────────────────────────────────────────
+// ── Loading & Error ─────────────────────────────────────────────────────────
 
 const LoadingContainer = styled.div`
   display: flex;

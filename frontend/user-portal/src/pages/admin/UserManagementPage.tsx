@@ -417,6 +417,12 @@ const SearchInput = styled.input`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 6px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -430,6 +436,7 @@ const FilterSelect = styled.select`
   border-radius: 6px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   min-width: 140px;
 
@@ -586,6 +593,8 @@ const RoleSelect = styled.select`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 4px;
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const SmallButton = styled.button`

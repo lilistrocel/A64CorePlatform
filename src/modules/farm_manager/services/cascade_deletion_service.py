@@ -200,6 +200,44 @@ class CascadeDeletionService:
         await db.blocks.delete_one({"blockId": block_id_str})
         logger.info(f"[Cascade Delete] Deleted block: {block_id}")
 
+        # 9. If this was a virtual child, return allocated area to its parent and
+        # remove the dangling childBlockIds reference. Without this, the parent
+        # is left "fully allocated" with no real children, blocking new plantings.
+        # Mirrors the behaviour of VirtualBlockService.empty_virtual_block.
+        parent_id_str = block.get("parentBlockId")
+        if parent_id_str and block.get("blockCategory") == "virtual":
+            returned_area = block.get("area") or 0.0
+            await db.blocks.update_one(
+                {"blockId": parent_id_str},
+                {
+                    "$inc": {"availableArea": returned_area},
+                    "$pull": {"childBlockIds": block_id_str},
+                    "$set": {"updatedAt": datetime.utcnow()},
+                },
+            )
+            logger.info(
+                f"[Cascade Delete] Returned {returned_area} area to parent {parent_id_str}, "
+                f"removed child {block_id_str} from childBlockIds"
+            )
+
+            # Clamp availableArea to area (in case of floating-point drift) and
+            # transition parent to EMPTY when it has no more children and no
+            # direct crop. Do this after the $inc so we have the fresh doc.
+            parent = await db.blocks.find_one({"blockId": parent_id_str})
+            if parent:
+                update: Dict[str, Any] = {}
+                total_area = parent.get("area")
+                current_avail = parent.get("availableArea") or 0.0
+                if total_area is not None and current_avail > total_area:
+                    update["availableArea"] = total_area
+                has_children = bool(parent.get("childBlockIds"))
+                has_direct_crop = parent.get("targetCrop") is not None
+                if not has_children and not has_direct_crop and parent.get("state") != "empty":
+                    update["state"] = "empty"
+                if update:
+                    update["updatedAt"] = datetime.utcnow()
+                    await db.blocks.update_one({"blockId": parent_id_str}, {"$set": update})
+
         return {
             "success": True,
             "blockId": block_id_str,

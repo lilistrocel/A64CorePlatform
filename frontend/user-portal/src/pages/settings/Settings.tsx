@@ -1388,6 +1388,8 @@ const TotpCodeInput = styled.input`
   letter-spacing: 0.5rem;
   border: 2px solid ${({ theme }: any) => theme.colors.neutral[300]};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  background: ${({ theme }: any) => theme.colors.background};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
@@ -1397,7 +1399,7 @@ const TotpCodeInput = styled.input`
   }
 
   &::placeholder {
-    color: ${({ theme }: any) => theme.colors.neutral[300]};
+    color: ${({ theme }: any) => theme.colors.textDisabled};
     letter-spacing: 0.5rem;
   }
 `;
@@ -1407,7 +1409,13 @@ const PasswordInput = styled.input`
   font-size: ${({ theme }: any) => theme.typography.fontSize.base};
   border: 2px solid ${({ theme }: any) => theme.colors.neutral[300]};
   border-radius: ${({ theme }: any) => theme.borderRadius.md};
+  background: ${({ theme }: any) => theme.colors.background};
+  color: ${({ theme }: any) => theme.colors.textPrimary};
   transition: border-color 0.2s, box-shadow 0.2s;
+
+  &::placeholder {
+    color: ${({ theme }: any) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;

@@ -81,7 +81,13 @@ const Input = styled.input`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: border-color 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
@@ -100,6 +106,7 @@ const Select = styled.select`
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 

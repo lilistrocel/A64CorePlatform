@@ -5,10 +5,9 @@
  * Provides real-time visibility into block states, harvest progress, and performance metrics.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import styled from 'styled-components';
 import { FarmSelector } from '../../components/farm/dashboard/FarmSelector';
-import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
 import { DashboardHeader } from '../../components/farm/dashboard/DashboardHeader';
 import { DashboardFilters } from '../../components/farm/dashboard/DashboardFilters';
 import { BlockGrid } from '../../components/farm/dashboard/BlockGrid';
@@ -17,7 +16,7 @@ import { FarmAnalyticsModal } from '../../components/farm/FarmAnalyticsModal';
 import { useDashboardData } from '../../hooks/farm/useDashboardData';
 import { useDashboardConfig } from '../../hooks/farm/useDashboardConfig';
 import { useDashboardFilters } from '../../hooks/farm/useDashboardFilters';
-import { getAvailableFarmingYears, type FarmingYearItem } from '../../services/farmApi';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
 import type { DashboardBlockStatus, PerformanceCategory } from '../../types/farm';
 
 export function FarmDashboardPage() {
@@ -25,35 +24,8 @@ export function FarmDashboardPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
 
-  // Farming year filter state
-  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(null);
-  const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
-  const [loadingFarmingYears, setLoadingFarmingYears] = useState(false);
-
-  // Load available farming years when farm is selected
-  useEffect(() => {
-    const loadFarmingYears = async () => {
-      if (!selectedFarmId) {
-        setAvailableFarmingYears([]);
-        return;
-      }
-      try {
-        setLoadingFarmingYears(true);
-        const response = await getAvailableFarmingYears(selectedFarmId);
-        setAvailableFarmingYears(response.years || []);
-        // Default to current year if available
-        if (!selectedFarmingYear && response.currentFarmingYear) {
-          setSelectedFarmingYear(response.currentFarmingYear);
-        }
-      } catch (error) {
-        console.error('Error loading farming years:', error);
-        setAvailableFarmingYears([]);
-      } finally {
-        setLoadingFarmingYears(false);
-      }
-    };
-    loadFarmingYears();
-  }, [selectedFarmId]);
+  // Use the global farming year from sidebar
+  const { selectedYear: selectedFarmingYear } = useFarmingYearStore();
 
   // Configuration
   const { config, updateConfig } = useDashboardConfig();
@@ -123,10 +95,10 @@ export function FarmDashboardPage() {
           <Title>🌾 Farm Dashboard</Title>
           <Subtitle>
             Real-time block monitoring and management
-            {selectedFarmingYear && availableFarmingYears.length > 0 && (
+            {selectedFarmingYear && (
               <FarmingYearContext>
-                {' • Showing: '}
-                {availableFarmingYears.find(y => y.year === selectedFarmingYear)?.display || `Year ${selectedFarmingYear}`}
+                {' • Farming Year: '}
+                {selectedFarmingYear}
               </FarmingYearContext>
             )}
           </Subtitle>
@@ -134,17 +106,6 @@ export function FarmDashboardPage() {
 
         <Controls>
           <FarmSelector selectedFarmId={selectedFarmId} onFarmSelect={setSelectedFarmId} />
-
-          {selectedFarmId && (
-            <FarmingYearSelector
-              selectedYear={selectedFarmingYear}
-              availableYears={availableFarmingYears}
-              onYearChange={setSelectedFarmingYear}
-              showAllOption={true}
-              label="Farming Year"
-              isLoading={loadingFarmingYears}
-            />
-          )}
 
           <StatsButton onClick={() => setShowAnalytics(true)} disabled={!selectedFarmId}>
             📊 Farm Stats

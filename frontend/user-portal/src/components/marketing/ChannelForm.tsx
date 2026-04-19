@@ -11,8 +11,8 @@ const Title = styled.h2`font-size: 24px; font-weight: 600; color: ${({ theme }) 
 const Form = styled.form``;
 const FormGroup = styled.div`margin-bottom: 20px;`;
 const Label = styled.label`display: block; font-size: 14px; font-weight: 500; color: ${({ theme }) => theme.colors.textPrimary}; margin-bottom: 8px;`;
-const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; &:focus { outline: none; border-color: #3B82F6; }`;
-const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; &:focus { outline: none; border-color: #3B82F6; }`;
+const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; } &:focus { outline: none; border-color: #3B82F6; }`;
+const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.neutral[300]}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.textPrimary}; &:focus { outline: none; border-color: #3B82F6; }`;
 const CheckboxLabel = styled.label`display: flex; align-items: center; gap: 8px; cursor: pointer;`;
 const Checkbox = styled.input`width: 20px; height: 20px; cursor: pointer;`;
 const ButtonRow = styled.div`display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;`;

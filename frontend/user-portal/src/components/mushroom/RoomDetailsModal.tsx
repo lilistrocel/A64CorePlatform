@@ -1375,7 +1375,7 @@ const ResolveButton = styled.button`
   padding: 5px 12px;
   border: 1px solid #10B981;
   border-radius: 6px;
-  background: white;
+  background: ${({ theme }) => theme.colors.background};
   color: #10B981;
   font-size: 12px;
   font-weight: 600;
@@ -1383,7 +1383,7 @@ const ResolveButton = styled.button`
   transition: all 150ms;
 
   &:hover:not(:disabled) {
-    background: #d1fae5;
+    background: ${({ theme }) => theme.colors.successBg};
   }
   &:disabled {
     opacity: 0.5;

@@ -39,10 +39,10 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ## Current Versions
 
-**Last Updated:** 2026-04-14
+**Last Updated:** 2026-04-15
 
 ### Platform Version
-**A64 Core Platform:** `1.11.0` (Unreleased)
+**A64 Core Platform:** `1.12.0` (Unreleased)
 
 ### API Versions
 | API Component | Version | Status | Supported Until |
@@ -88,6 +88,34 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 ## Version History
 
 ### Platform Version History
+
+#### v1.12.0 - 2026-04-15 (Unreleased)
+**Type:** Minor Release — Dashboard Redesign, Global Farming Year Selector, PlantData Modal Unification, Virtual Block Management, Dark Mode Pass (selects/inputs), Block Monitor Silent Refresh, Misc Theme Fixes
+
+**Added:**
+- **Global Farming Year Selector**: New Zustand store (`farmingYear.store.ts`) with localStorage persistence. Dropdown in `MainLayout` sidebar. Nine pages migrated from local state to global store.
+- **PlantDataFormModal**: Merged `AddPlantDataModal` + `EditPlantDataModal` into single unified component. Total Cycle Days auto-computed. Mode driven by `plantData` prop.
+- **Dashboard — Crop Yield Performance Leaderboard**: New per-crop KPI widget with search-to-compare chips, farm filter, top-5 default. Backend: `FarmYieldKpi` + `CropYieldKpi` models, `yieldByFarm` + `yieldByCrop` in `DashboardSummaryData`.
+- **Block Monitor — Silent Auto-Refresh**: `useDashboardData` `silent` param; 30s interval no longer causes loading flash or resets open forms.
+
+**Changed:**
+- **Dashboard**: Removed 3-tab system. Single scrollable page with hero metrics row, pie charts with drag-scroll legends, Farm Yield leaderboard, Crop Yield leaderboard, Insights + Orders cards.
+- **Virtual Block Management**: `EmptyVirtualBlockModal` unified with end-cycle vs delete-without-archive toggle. Cascade delete service fixed to return area to parent and transition parent to empty. Two corrupt records patched.
+- **Dark Mode — second + third pass**: `styled.select` color patched across 16+ files; hardcoded status pastels replaced with semantic BG tokens; `ResolveAlertModal` alert title color corrected.
+- **CompactBlockCard**: All hardcoded text colors, alert badges, QuickActions overlay, ProgressBar track, AlertsSection border migrated to theme tokens.
+- **CRMPage + EmployeeListPage**: SearchInput dark-mode styles applied.
+
+**Compatibility:**
+- No breaking changes. All backend additions are additive to the dashboard response.
+- Fully backward compatible with v1.11.0.
+
+**Files Changed (summary):**
+- Backend: `dashboard.py` (models + api), `cascade_deletion_service.py`
+- Frontend (new): `PlantDataFormModal.tsx`, `farmingYear.store.ts`
+- Frontend (deleted): `AddPlantDataModal.tsx`, `EditPlantDataModal.tsx`
+- Frontend (modified): `Dashboard.tsx`, `MainLayout.tsx`, `useDashboardData.ts`, `FarmDetail.tsx`, `EmptyVirtualBlockModal.tsx`, `VirtualBlockItem.tsx`, `BlockDetail.tsx`, `PlantDataLibrary.tsx`, `FarmDashboardPage.tsx`, and 40+ files for dark-mode selects/inputs pass
+
+---
 
 #### v1.11.0 - 2026-04-14 (Unreleased)
 **Type:** Minor Release — Task API Enrichment, Harvest Modal Context Cards, Dark Mode Pass, Input Guards, CRM Routing

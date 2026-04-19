@@ -9,8 +9,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { PlantDataCard } from '../../components/farm/PlantDataCard';
 import { PlantDataDetail } from '../../components/farm/PlantDataDetail';
-import { AddPlantDataModal } from '../../components/farm/AddPlantDataModal';
-import { EditPlantDataModal } from '../../components/farm/EditPlantDataModal';
+import { PlantDataFormModal } from '../../components/farm/PlantDataFormModal';
 import { plantDataEnhancedApi, type CSVImportResult } from '../../services/plantDataEnhancedApi';
 import { useAuthStore } from '../../stores/auth.store';
 import type {
@@ -156,6 +155,8 @@ const SearchInput = styled.input`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
   transition: all 150ms ease-in-out;
 
   &:focus {
@@ -890,18 +891,18 @@ export function PlantDataLibrary() {
         />
       )}
 
-      {/* Add Plant Data Modal - Conditional Rendering */}
+      {/* Create Plant Data Modal */}
       {showAddModal && (
-        <AddPlantDataModal
+        <PlantDataFormModal
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onSuccess={handleAddSuccess}
         />
       )}
 
-      {/* Edit Plant Data Modal - Conditional Rendering */}
+      {/* Edit Plant Data Modal */}
       {showEditModal && plantToEdit && (
-        <EditPlantDataModal
+        <PlantDataFormModal
           isOpen={showEditModal}
           plantData={plantToEdit}
           onClose={() => {

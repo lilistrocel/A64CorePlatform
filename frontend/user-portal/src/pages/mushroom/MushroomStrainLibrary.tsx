@@ -877,9 +877,14 @@ const Input = styled.input`
   border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   outline: none;
   transition: border-color 150ms;
   width: 100%;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     border-color: #2196f3;
@@ -922,10 +927,15 @@ const TextArea = styled.textarea`
   border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   font-family: inherit;
   outline: none;
   transition: border-color 150ms;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     border-color: #2196f3;

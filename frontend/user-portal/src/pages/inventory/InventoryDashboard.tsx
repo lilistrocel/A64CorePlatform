@@ -11,27 +11,15 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import { getInventorySummary, getAvailableFarmingYears } from '../../services/inventoryApi';
+import { getInventorySummary } from '../../services/inventoryApi';
 import { formatNumber, formatCurrency } from '../../utils';
-import type { InventorySummary, InventoryFarmingYearItem } from '../../types/inventory';
+import type { InventorySummary } from '../../types/inventory';
 import { HarvestInventoryList } from './HarvestInventoryList';
 import { InputInventoryList } from './InputInventoryList';
 import { AssetInventoryList } from './AssetInventoryList';
-import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
-import type { FarmingYearItem } from '../../services/farmApi';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
 
 const WasteInventoryList = lazy(() => import('./WasteInventoryList'));
-
-// Helper to convert inventory farming year items to FarmingYearItem format
-const toFarmingYearItems = (items: InventoryFarmingYearItem[]): FarmingYearItem[] => {
-  return items.map((item) => ({
-    year: item.year,
-    display: item.display,
-    isCurrent: item.isCurrent,
-    hasHarvests: item.hasInventory,
-    hasBlocks: item.hasInventory,
-  }));
-};
 
 export function InventoryDashboard() {
   const [summary, setSummary] = useState<InventorySummary | null>(null);
@@ -39,15 +27,8 @@ export function InventoryDashboard() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Farming year filter state
-  const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(null);
-  const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
-  const [farmingYearsLoading, setFarmingYearsLoading] = useState(true);
-
-  // Load farming years on mount
-  useEffect(() => {
-    loadFarmingYears();
-  }, []);
+  // Use the global farming year from sidebar
+  const { selectedYear: selectedFarmingYear } = useFarmingYearStore();
 
   // Reload summary when farming year changes
   useEffect(() => {
@@ -61,18 +42,6 @@ export function InventoryDashboard() {
     }
   }, [location.pathname, navigate]);
 
-  const loadFarmingYears = async () => {
-    setFarmingYearsLoading(true);
-    try {
-      const response = await getAvailableFarmingYears();
-      setAvailableFarmingYears(toFarmingYearItems(response.years));
-    } catch (error) {
-      console.error('Failed to load farming years:', error);
-    } finally {
-      setFarmingYearsLoading(false);
-    }
-  };
-
   const loadSummary = async () => {
     try {
       setLoading(true);
@@ -85,17 +54,6 @@ export function InventoryDashboard() {
     }
   };
 
-  const handleFarmingYearChange = (year: number | null) => {
-    setSelectedFarmingYear(year);
-  };
-
-  // Get display string for current filter
-  const getFarmingYearDisplay = () => {
-    if (selectedFarmingYear === null) return null;
-    const yearItem = availableFarmingYears.find((y) => y.year === selectedFarmingYear);
-    return yearItem?.display || `${selectedFarmingYear}`;
-  };
-
   return (
     <Container>
       <Header>
@@ -103,7 +61,7 @@ export function InventoryDashboard() {
           <Title>
             Inventory Management
             {selectedFarmingYear && (
-              <FarmingYearBadge>{getFarmingYearDisplay()}</FarmingYearBadge>
+              <FarmingYearBadge>Year {selectedFarmingYear}</FarmingYearBadge>
             )}
           </Title>
           <Subtitle>
@@ -112,16 +70,6 @@ export function InventoryDashboard() {
               : 'Manage harvest, inputs, farm assets, and waste tracking'}
           </Subtitle>
         </HeaderLeft>
-        <HeaderRight>
-          <FarmingYearSelector
-            selectedYear={selectedFarmingYear}
-            availableYears={availableFarmingYears}
-            onYearChange={handleFarmingYearChange}
-            isLoading={farmingYearsLoading}
-            showAllOption={true}
-            compact={true}
-          />
-        </HeaderRight>
       </Header>
 
       {/* Summary Cards */}
@@ -249,12 +197,6 @@ const Header = styled.div`
 
 const HeaderLeft = styled.div`
   flex: 1;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
 `;
 
 const FarmingYearBadge = styled.span`

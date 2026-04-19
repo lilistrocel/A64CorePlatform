@@ -250,6 +250,7 @@ const Textarea = styled.textarea`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-family: inherit;
   color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   resize: vertical;
   transition: border-color 0.2s ease;
 
@@ -259,7 +260,7 @@ const Textarea = styled.textarea`
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[500]};
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 `;
 

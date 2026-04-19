@@ -321,7 +321,7 @@ const AlertDetails = styled.div`
 const AlertTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #92400e;
+  color: ${({ theme }) => theme.colors.warning};
 `;
 
 const AlertSeverity = styled.span<{ $severity: string }>`

@@ -202,6 +202,25 @@ class FarmHarvestSummary(BaseModel):
     harvestCount: int
 
 
+class FarmYieldKpi(BaseModel):
+    """Yield KPI for a single farm — actual vs predicted"""
+    farmId: UUID
+    farmName: str
+    actualYieldKg: float = 0.0
+    predictedYieldKg: float = 0.0
+    efficiencyPercent: float = 0.0
+
+
+class CropYieldKpi(BaseModel):
+    """Yield KPI for a single crop — actual vs predicted, optionally per farm"""
+    cropName: str
+    actualYieldKg: float = 0.0
+    predictedYieldKg: float = 0.0
+    efficiencyPercent: float = 0.0
+    farmId: Optional[str] = None
+    farmName: Optional[str] = None
+
+
 class DashboardOverview(BaseModel):
     """High-level dashboard overview metrics"""
     totalFarms: int = 0
@@ -242,9 +261,11 @@ class FarmingYearContext(BaseModel):
 
 
 class CropBreakdownItem(BaseModel):
-    """Crop distribution item - block count for a single crop name"""
+    """Crop distribution item - block count for a single crop, per farm"""
     cropName: str
     blockCount: int
+    farmId: Optional[str] = None
+    farmName: Optional[str] = None
 
 
 class DashboardSummaryData(BaseModel):
@@ -258,6 +279,14 @@ class DashboardSummaryData(BaseModel):
     cropBreakdown: List[CropBreakdownItem] = Field(
         default_factory=list,
         description="Block counts grouped by crop name (top 20, descending)"
+    )
+    yieldByFarm: List[FarmYieldKpi] = Field(
+        default_factory=list,
+        description="Actual vs predicted yield KPI per farm"
+    )
+    yieldByCrop: List['CropYieldKpi'] = Field(
+        default_factory=list,
+        description="Actual vs predicted yield KPI per crop (per farm for filtering)"
     )
 
 

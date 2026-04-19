@@ -219,12 +219,12 @@ const SearchInput = styled.input`
   border: none;
   outline: none;
   font-size: 14px;
-  color: #374151;
+  color: ${({ theme }) => theme.colors.textPrimary};
   background: transparent;
   min-width: 0;
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 `;
 

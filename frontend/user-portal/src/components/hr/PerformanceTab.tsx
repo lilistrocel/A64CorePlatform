@@ -275,6 +275,12 @@ const Input = styled.input`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 `;
 
 const Textarea = styled.textarea`
@@ -285,6 +291,12 @@ const Textarea = styled.textarea`
   min-height: 80px;
   resize: vertical;
   font-family: inherit;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 `;
 
 const FormActions = styled.div`

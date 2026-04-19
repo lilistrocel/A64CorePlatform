@@ -167,7 +167,12 @@ const Input = styled.input`
   border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
   transition: border-color 150ms ease-in-out;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textDisabled};
+  }
 
   &:focus {
     outline: none;
