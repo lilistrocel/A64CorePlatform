@@ -334,17 +334,18 @@ class PlantingService:
                     block_state=_block_for_sync.state,
                 )
 
-                await sync.set_crop_data(
+                result = await sync.set_crop_data(
                     block=_block_for_sync,
                     planting_id=_planting_id_for_sync,
                     current_stage=initial_stage,
                     plant_data_enhanced=plant_data,
                 )
-                logger.info(
-                    "[SenseHub] set_crop_data succeeded for block %s planting %s",
-                    block_id_str,
-                    _planting_id_for_sync,
-                )
+                if result is not None:
+                    logger.info(
+                        "[SenseHub] set_crop_data succeeded for block %s planting %s",
+                        block_id_str,
+                        _planting_id_for_sync,
+                    )
             except Exception as exc:
                 logger.error(
                     "[SenseHub] set_crop_data task failed | operation=mark_as_planted "

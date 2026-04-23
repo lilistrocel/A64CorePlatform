@@ -122,21 +122,22 @@ async def _sensehub_update_growth_stage_task(
         now = datetime.utcnow()
         days_since = (now - planted_date).days
 
-        await sync.update_growth_stage(
+        ok = await sync.update_growth_stage(
             block=snapshot_block,
             stage=stage_after,
             transitioned_at=now,
             days_since_planting=days_since,
         )
-        logger.info(
-            "[SenseHub] update_growth_stage succeeded | block_id=%s "
-            "transition=%s→%s stage=%s days=%d",
-            block_id_str,
-            prev_state.value,
-            next_state.value,
-            stage_after.value,
-            days_since,
-        )
+        if ok:
+            logger.info(
+                "[SenseHub] update_growth_stage succeeded | block_id=%s "
+                "transition=%s→%s stage=%s days=%d",
+                block_id_str,
+                prev_state.value,
+                next_state.value,
+                stage_after.value,
+                days_since,
+            )
 
     except Exception as exc:
         logger.error(
@@ -205,21 +206,22 @@ async def _sensehub_complete_crop_task(snapshot_block: "Block") -> None:
         else:
             average_quality_grade = raw_grade
 
-        await sync.complete_crop(
+        ok = await sync.complete_crop(
             block=snapshot_block,
             harvested_at=harvested_at,
             total_yield_kg=summary.totalQuantityKg,
             average_quality_grade=average_quality_grade,
             harvest_count=summary.totalHarvests,
         )
-        logger.info(
-            "[SenseHub] complete_crop succeeded | block_id=%s "
-            "yield_kg=%.2f harvest_count=%d grade=%s",
-            block_id_str,
-            summary.totalQuantityKg,
-            summary.totalHarvests,
-            average_quality_grade,
-        )
+        if ok:
+            logger.info(
+                "[SenseHub] complete_crop succeeded | block_id=%s "
+                "yield_kg=%.2f harvest_count=%d grade=%s",
+                block_id_str,
+                summary.totalQuantityKg,
+                summary.totalHarvests,
+                average_quality_grade,
+            )
 
     except Exception as exc:
         logger.error(
