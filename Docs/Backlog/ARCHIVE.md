@@ -1,13 +1,37 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 2 tasks
+> **Total completed:** 3 tasks
 
 ## 2026-04
 
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
 | T-002 | SenseHub MCP crop-data sync integration | Backend | 2026-04-20 | ✅ |
+| T-003 | Planting flow reads from empty legacy `plant_data` collection | Backend | 2026-04-23 | ✅ |
 | T-004 | Missing `await` on `recalculate_future_dates` corrupts block status dates | Backend | 2026-04-23 | ✅ |
+
+### T-003 | Planting flow reads from empty legacy `plant_data` collection
+- **Category:** Backend · **Priority:** P2
+- **Completed:** 2026-04-23
+- **Description:** Pre-existing bug. `PlantingService.create_planting_plan` called
+  `PlantDataService.get_plant_data()` which reads from the legacy `plant_data` collection
+  (0 documents in dev). Every UI planting attempt returned HTTP 404 in ~1ms.
+  Planting had never worked in dev against any UI-created plant record.
+- **Result (Option A implemented):**
+  - `PlantingService.create_planting_plan` now reads from `PlantDataEnhancedService.get_plant_data`.
+    Snapshot attribute paths adapted to nested enhanced model fields; all 8 snapshot dict keys
+    are unchanged — downstream consumers (SenseHub trigger, harvest flow) unaffected.
+  - Three additional pre-existing bugs uncovered and fixed during verification:
+    1. `PlantingRepository` used `farm_db.db.plantings` (`.db` does not exist on
+       `FarmDatabaseManager`) → fixed to `farm_db.get_database().plantings`.
+    2. `BlockService.get_block_by_id` → corrected to `BlockService.get_block` (new API).
+    3. `BlockService.update_block_state` → replaced with `BlockRepository.update_status` (new API).
+  - Integration test mocks updated for renamed methods; 81/81 SenseHub regression tests pass.
+  - Verified end-to-end: HTTP 201 on `POST /api/v1/plantings`; MongoDB doc has all 8 snapshot
+    keys (Potato, growthCycleDays: 70, expectedYieldPerPlant: 1.575 kg, 15–40°C).
+    Block transitioned EMPTY→PLANNED.
+  - Released as v1.13.2 (PATCH bump).
+- **Surfaced during:** T-002 Phase 4 e2e testing.
 
 ### T-004 | Missing `await` on `recalculate_future_dates` corrupts block status dates
 - **Category:** Backend · **Priority:** P0

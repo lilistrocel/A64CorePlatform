@@ -5,6 +5,60 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.2] - 2026-04-23
+
+**Type:** Patch Release — T-003 planting flow migrated to `plant_data_enhanced` + 3 bonus bug fixes
+
+### Fixed
+
+#### Planting flow now reads from `plant_data_enhanced` instead of empty legacy `plant_data` (Backend)
+
+`PlantingService.create_planting_plan` at
+`src/modules/farm_manager/services/planting/planting_service.py` was calling
+`PlantDataService.get_plant_data()`, which reads from the legacy `plant_data` collection.
+That collection contains 0 documents in dev — every UI planting attempt returned HTTP 404 in ~1ms.
+
+Fix (T-003 Option A): Switched to `PlantDataEnhancedService.get_plant_data()` and adapted
+snapshot-building attribute paths for the nested enhanced model. Snapshot dict keys are
+unchanged — downstream consumers (including the SenseHub trigger) are unaffected.
+
+Attribute path changes (keys identical):
+- `growthCycleDays` ← `growthCycle.totalCycleDays`
+- `expectedYieldPerPlant` ← `yieldInfo.yieldPerPlant`
+- `yieldUnit` ← `yieldInfo.yieldUnit`
+- `minTemperatureCelsius` ← `environmentalRequirements.temperature.minCelsius`
+- `maxTemperatureCelsius` ← `environmentalRequirements.temperature.maxCelsius`
+
+The SenseHub trigger (`_sync_set_crop_data_on_planted`) was already reading
+`plant_data_enhanced` directly via `PlantDataEnhancedRepository` and is unaffected.
+
+#### `PlantingRepository` accessed non-existent `.db` attribute on `FarmDatabaseManager` (Backend)
+
+`src/modules/farm_manager/services/planting/planting_repository.py` referenced
+`farm_db.db.plantings` — `.db` does not exist on `FarmDatabaseManager`. Fixed to
+`farm_db.get_database().plantings`. This would have crashed every planting read/write operation
+in production, masking the T-003 404 that hit first.
+
+#### `BlockService.get_block_by_id` — method does not exist on new `BlockService` API (Backend)
+
+`PlantingService` called `BlockService.get_block_by_id(...)` in both `create_planting_plan`
+and `mark_as_planted`. The new `block_service_new.BlockService` only exposes `get_block()`.
+Fixed both call sites.
+
+#### `BlockService.update_block_state` — method does not exist on new `BlockService` API (Backend)
+
+`PlantingService` called `BlockService.update_block_state(...)`. The new API requires
+`BlockRepository.update_status(...)` (which also handles status history and farming-year
+tracking). Fixed to the proper new API call.
+
+#### SenseHub trigger wiring tests updated for renamed `BlockService`/`BlockRepository` methods (Tests)
+
+`tests/integration/test_sensehub_trigger_wiring.py` used `patch.object` targeting the old
+`get_block_by_id` / `update_block_state` stubs. Switched to string-path patches for
+`BlockService.get_block` and `BlockRepository.update_status`. 81/81 tests pass.
+
+---
+
 ## [1.13.1] - 2026-04-23
 
 **Type:** Patch Release — T-004 block expected-date corruption fix
