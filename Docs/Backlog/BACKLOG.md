@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-04-23
-> **Tasks:** 1 active · 1 ready · 0 blocked · 0 completed
+> **Tasks:** 1 active · 0 ready · 0 blocked · 0 completed
 
 ## Rules for Agents
 
@@ -91,24 +91,7 @@
 
 ## 🟢 Ready
 
-### T-005 | SenseHub trigger wrappers log "succeeded" even when MCP call fails
-- **Category:** Backend · **Priority:** P3
-- **Depends on:** —
-- **Blocks:** —
-- **Description:** `_sensehub_update_growth_stage_task` and `_sensehub_complete_crop_task`
-  in `src/modules/farm_manager/services/block/sensehub_block_service_triggers.py`
-  (lines ~131 and ~215) call `await sync.update_growth_stage(...)` / `await sync.complete_crop(...)`
-  which return `True`/`False`. The wrappers log `INFO "[SenseHub] ... succeeded"` regardless of
-  the return value. ERROR from the MCP client layer always precedes the "succeeded" INFO when
-  the MCP call fails, but the success line is still misleading for ops scanning logs.
-- **Steps:**
-  1. Check the return value of `update_growth_stage` / `complete_crop` in both wrappers.
-  2. Log `INFO "... succeeded"` only if the call returned truthy; log nothing extra otherwise
-     (the upstream ERROR already covers the failure).
-  3. Similar check for `planting_service.py:_sync_set_crop_data_on_planted` — `set_crop_data`
-     returns a dict or None; log success only on non-None return.
-  4. Update any integration tests that assert the current behavior.
-  5. Change Guardian commit + CHANGELOG (PATCH bump).
+_No ready tasks._
 
 ---
 

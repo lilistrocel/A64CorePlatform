@@ -1,6 +1,6 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 3 tasks
+> **Total completed:** 4 tasks
 
 ## 2026-04
 
@@ -9,6 +9,26 @@
 | T-002 | SenseHub MCP crop-data sync integration | Backend | 2026-04-20 | ✅ |
 | T-003 | Planting flow reads from empty legacy `plant_data` collection | Backend | 2026-04-23 | ✅ |
 | T-004 | Missing `await` on `recalculate_future_dates` corrupts block status dates | Backend | 2026-04-23 | ✅ |
+| T-005 | SenseHub trigger wrappers log "succeeded" even when MCP call fails | Backend | 2026-04-23 | ✅ |
+
+### T-005 | SenseHub trigger wrappers log "succeeded" even when MCP call fails
+- **Category:** Backend · **Priority:** P3
+- **Completed:** 2026-04-23
+- **Description:** Three fire-and-forget asyncio trigger wrappers in
+  `sensehub_block_service_triggers.py` and `planting_service.py` emitted
+  `INFO "[SenseHub] <method> succeeded"` unconditionally after the MCP call,
+  even when the call had failed. The upstream `SenseHubCropSync` layer already
+  logs an ERROR on failure — the trailing success INFO was misleading for ops
+  scanning logs.
+- **Result:**
+  - `_sensehub_update_growth_stage_task`: `if ok:` guard added around success log.
+  - `_sensehub_complete_crop_task`: `if ok:` guard added around success log.
+  - `_sync_set_crop_data_on_planted`: `if result is not None:` guard corrected
+    (was `if result:` which would false-negative on empty dict).
+  - No behavior change for callers or downstream state — log output only.
+  - 81/81 SenseHub regression tests pass; no assertions relied on old unconditional
+    behavior.
+  - Released as v1.13.3 (PATCH bump).
 
 ### T-003 | Planting flow reads from empty legacy `plant_data` collection
 - **Category:** Backend · **Priority:** P2

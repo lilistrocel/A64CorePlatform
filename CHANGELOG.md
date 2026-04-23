@@ -5,6 +5,38 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.3] - 2026-04-23
+
+**Type:** Patch Release — T-005 SenseHub trigger wrappers no longer emit false success logs
+
+### Fixed
+
+#### SenseHub trigger wrappers now check return value before logging success (Backend)
+
+Three fire-and-forget asyncio trigger wrappers unconditionally logged
+`INFO "[SenseHub] <method> succeeded"` after awaiting the MCP call, even when the
+underlying call had failed. The upstream `SenseHubCropSync` layer already logs an ERROR
+on failure; the trailing success INFO was misleading for operators scanning logs.
+
+**`sensehub_block_service_triggers.py`** — `_sensehub_update_growth_stage_task` and
+`_sensehub_complete_crop_task`:
+- Both wrappers already captured the `bool` return value of `update_growth_stage` /
+  `complete_crop` into `ok`.
+- Added `if ok:` guard so the `INFO "... succeeded"` line is emitted only when the call
+  returned `True`. On failure the upstream ERROR covers the event; no duplicate or
+  contradictory log line is emitted.
+
+**`planting_service.py`** — `_sync_set_crop_data_on_planted`:
+- `set_crop_data` returns a `dict` on success or `None` on failure.
+- Added `if result is not None:` guard (was `if result:`; corrected to explicit None
+  check to avoid false-negative on an empty-dict edge case).
+
+No behavior change for the caller or downstream state — only the log output is affected.
+81/81 SenseHub regression tests pass (unit + two integration suites); no test
+assertions relied on the old unconditional-succeeded behavior.
+
+---
+
 ## [1.13.2] - 2026-04-23
 
 **Type:** Patch Release — T-003 planting flow migrated to `plant_data_enhanced` + 3 bonus bug fixes
