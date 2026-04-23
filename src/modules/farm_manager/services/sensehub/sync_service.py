@@ -10,6 +10,10 @@ Follows the WeatherCacheService / WatchdogScheduler singleton pattern:
   - Redis distributed lock to prevent duplicate runs across Uvicorn workers
   - Per-block error isolation (one failure doesn't stop the full sync)
   - 90-day TTL on all cached data
+
+Also runs crop-data reconciliation at the end of each sync cycle (and on
+startup) via _reconcile_crop_data().  Reconciliation compares A64Core's
+authoritative block state against what SenseHub holds and repushes on drift.
 """
 
 import asyncio
@@ -56,6 +60,105 @@ SNAPSHOT_STORAGE_DIR = Path("data/sensehub_images")
 # Max snapshots to fetch per camera per sync (last 24h worth at 4h intervals = 6)
 SNAPSHOTS_PER_CAMERA = 6
 
+# Concurrency cap for crop-data reconciliation — SenseHub confirmed no rate
+# limits but advised 5 concurrent sessions (SQLite WAL mode serialises writes).
+RECONCILE_CONCURRENCY = 5
+
+# Block states that indicate an active crop is expected on SenseHub.
+# CLEANING means the harvest cycle just ended (complete_crop already fired in
+# Phase 4's HARVESTING→CLEANING trigger); treat as no-active-crop here.
+_ACTIVE_CROP_STATES = frozenset(["growing", "fruiting", "harvesting"])
+
+# Marker string matching the operator-facing error logged by SenseHubCropSync
+# when SenseHub returns HTTP 422 "No primary crop zone configured".
+_ZONE_NOT_CONFIGURED_MARKER = "No primary crop zone configured"
+
+
+# =============================================================================
+# Module-level helpers used by _reconcile_crop_data's inner coroutine
+# =============================================================================
+
+
+def _record_error(counters: Dict[str, Any], sample: str) -> None:
+    """
+    Increment the error counter and append a sample (capped at 5).
+
+    Args:
+        counters: Mutable counters dict from _reconcile_crop_data.
+        sample: Short human-readable description of the error.
+    """
+    counters["errors"] += 1
+    if len(counters["error_samples"]) < 5:
+        counters["error_samples"].append(sample)
+
+
+def _zone_error_sample(block_id_str: str, tool: str) -> str:
+    """
+    Return the canonical error sample string for a primary-zone-not-configured
+    failure so operators can identify it in the reconcile result.
+
+    Args:
+        block_id_str: UUID string of the affected block.
+        tool: SenseHub MCP tool name that returned the 422.
+
+    Returns:
+        Error sample string containing the PRIMARY_ZONE_NOT_CONFIGURED marker.
+    """
+    return f"block={block_id_str} tool={tool} PRIMARY_ZONE_NOT_CONFIGURED"
+
+
+async def _safe_set_crop_data(
+    sync: Any,
+    block: Any,
+    planting_id: UUID,
+    stage: Any,
+    plant_data: Any,
+    counters: Dict[str, Any],
+    block_id_str: str,
+) -> bool:
+    """
+    Call set_crop_data with timeout and unified error accounting.
+
+    Returns True on success, False on any failure (error already recorded
+    in counters).
+
+    Args:
+        sync: SenseHubCropSync instance.
+        block: Block model instance.
+        planting_id: A64Core planting UUID.
+        stage: SenseHubStage enum value.
+        plant_data: PlantDataEnhanced instance.
+        counters: Mutable counters dict.
+        block_id_str: UUID string for log context.
+
+    Returns:
+        True if set_crop_data returned a non-None result, False otherwise.
+    """
+    try:
+        result = await asyncio.wait_for(
+            sync.set_crop_data(
+                block=block,
+                planting_id=planting_id,
+                current_stage=stage,
+                plant_data_enhanced=plant_data,
+            ),
+            timeout=MCP_CALL_TIMEOUT,
+        )
+    except Exception as exc:
+        _record_error(
+            counters,
+            f"block={block_id_str} set_crop_data failed: {str(exc)[:200]}",
+        )
+        return False
+
+    if result is None:
+        # set_crop_data returned None — either zone-not-configured (already
+        # logged as WARNING by SenseHubCropSync) or another transient failure.
+        _record_error(counters, _zone_error_sample(block_id_str, "set_crop_data"))
+        return False
+
+    return True
+
 
 class SenseHubSyncService:
     """
@@ -76,6 +179,7 @@ class SenseHubSyncService:
     _is_running: bool = False
     _last_sync: Optional[datetime] = None
     _last_sync_result: Optional[dict] = None
+    _last_reconcile_result: Optional[dict] = None
 
     @classmethod
     def get_instance(cls) -> "SenseHubSyncService":
@@ -357,6 +461,11 @@ class SenseHubSyncService:
             f"{blocks_succeeded}/{len(iot_blocks)} blocks, "
             f"eq={total_equipment}, alerts={total_alerts}, lab={total_lab_readings}, snapshots={total_snapshots}"
         )
+
+        # Run crop-data reconciliation as a second pass over the same block list.
+        # We reuse the already-fetched iot_blocks to avoid a duplicate DB query.
+        reconcile_result = await self._reconcile_crop_data(iot_blocks)
+        result["reconcile"] = reconcile_result
 
         return result
 
@@ -751,6 +860,353 @@ class SenseHubSyncService:
             logger.error(f"[SenseHubSync] Failed to write sync log: {e}")
 
     # =========================================================================
+    # Crop-data reconciliation
+    # =========================================================================
+
+    async def _reconcile_crop_data(
+        self, iot_blocks: List[Dict[str, Any]]
+    ) -> dict:
+        """
+        Compare A64Core's authoritative block state against SenseHub's stored
+        crop data and repush on drift.
+
+        Called at the end of each sync cycle (and therefore on startup, since
+        run_sync is invoked after STARTUP_DELAY).  Uses option (a): runs as a
+        second sequential pass over the same block list already fetched by
+        run_sync, avoiding a duplicate DB query.
+
+        Drift cases handled
+        -------------------
+        1. A64Core expects active crop, SenseHub has None       → set_crop_data
+        2. A64Core expects active crop, SenseHub matches        → check stage;
+           update_growth_stage if stages differ, no-op otherwise
+        3. A64Core expects active crop, SenseHub has stale id   → set_crop_data
+        4. A64Core expects no active crop, SenseHub has None    → no-op
+        5. A64Core expects no active crop, SenseHub has orphan  → complete_crop
+
+        Concurrency: up to RECONCILE_CONCURRENCY (5) blocks run in parallel.
+        SenseHub confirmed no rate limits and no 429s.
+
+        Args:
+            iot_blocks: List of raw block dicts already retrieved from MongoDB
+                by the surrounding run_sync call.  Each dict has at minimum
+                'blockId', 'farmId', 'state', 'plantedDate', 'targetCrop',
+                and 'iotController'.
+
+        Returns:
+            Aggregated result dict with counts and timing.
+        """
+        # Import here to avoid circular imports at module load time.
+        from ...models.block import Block, BlockStatus
+        from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+        from ..planting.planting_repository import PlantingRepository
+        from .sensehub_crop_sync import SenseHubCropSync
+        from .sensehub_stage_mapper import compute_stage
+
+        started_at = datetime.utcnow()
+        logger.info(
+            "[SenseHubSync:Reconcile] Starting crop-data reconciliation "
+            "for %d IoT block(s)",
+            len(iot_blocks),
+        )
+
+        counters: Dict[str, Any] = {
+            "blocks_checked": 0,
+            "in_sync": 0,
+            "drift_resolved_by_repush": 0,
+            "drift_resolved_by_stage_update": 0,
+            "drift_resolved_by_complete": 0,
+            "errors": 0,
+            "error_samples": [],
+        }
+
+        semaphore = asyncio.Semaphore(RECONCILE_CONCURRENCY)
+
+        async def _reconcile_one(raw_block: Dict[str, Any]) -> None:
+            """
+            Reconcile a single block's crop data against SenseHub.
+
+            Never raises — any exception is caught, counted as an error, and
+            the loop continues with the next block.
+            """
+            block_id_str = raw_block.get("blockId", "<unknown>")
+
+            async with semaphore:
+                try:
+                    # Parse raw MongoDB dict into a typed Block model so we can
+                    # reuse the same SenseHubCropSync.from_block() factory.
+                    # _id is not a valid Block field so we strip it first.
+                    block_doc = {k: v for k, v in raw_block.items() if k != "_id"}
+                    block = Block(**block_doc)
+                except Exception as exc:
+                    _record_error(
+                        counters,
+                        f"block={block_id_str} parse_error={str(exc)[:200]}",
+                    )
+                    return
+
+                counters["blocks_checked"] += 1
+                block_id_str = str(block.blockId)
+
+                # ── 1. Determine A64Core's expected state ────────────────────
+                block_state_value = block.state.value if block.state else ""
+                active_crop_expected = (
+                    block_state_value in _ACTIVE_CROP_STATES
+                    and block.plantedDate is not None
+                    and block.targetCrop is not None
+                )
+
+                # ── 2. Build crop-sync client (returns None when no MCP) ─────
+                sync = SenseHubCropSync.from_block(block)
+                if sync is None:
+                    # No iotController or missing mcpApiKey — from_block already
+                    # logged a WARNING; we count this as in-sync (nothing to do).
+                    counters["in_sync"] += 1
+                    return
+
+                # ── 3. Query SenseHub for current crop ───────────────────────
+                try:
+                    sh_crop = await asyncio.wait_for(
+                        sync.get_crop_data(block), timeout=MCP_CALL_TIMEOUT
+                    )
+                except Exception as exc:
+                    _record_error(
+                        counters,
+                        f"block={block_id_str} get_crop_data failed: {str(exc)[:200]}",
+                    )
+                    return
+
+                # ── 4. No-op: both sides agree there is no active crop ───────
+                if not active_crop_expected and sh_crop is None:
+                    counters["in_sync"] += 1
+                    return
+
+                # ── 5. Orphan on SenseHub: complete it ──────────────────────
+                if not active_crop_expected and sh_crop is not None:
+                    logger.warning(
+                        "[SenseHubSync:Reconcile] drift resolved: SenseHub has "
+                        "orphan active crop on block %s (block state=%s) — "
+                        "marking complete with zero yield",
+                        block_id_str,
+                        block_state_value,
+                    )
+                    # Reason: During reconciliation we don't have historical
+                    # harvest data readily available.  We use zero yield and "A"
+                    # grade as a safe best-effort to close the orphan record.
+                    # Phase 4 triggers handle the real complete_crop call when
+                    # the operator transitions HARVESTING→CLEANING in normal flow.
+                    try:
+                        ok = await asyncio.wait_for(
+                            sync.complete_crop(
+                                block=block,
+                                harvested_at=datetime.utcnow(),
+                                total_yield_kg=0.0,
+                                average_quality_grade="A",
+                                harvest_count=0,
+                            ),
+                            timeout=MCP_CALL_TIMEOUT,
+                        )
+                    except Exception as exc:
+                        _record_error(
+                            counters,
+                            f"block={block_id_str} complete_crop(orphan) failed: {str(exc)[:200]}",
+                        )
+                        return
+
+                    if ok:
+                        counters["drift_resolved_by_complete"] += 1
+                    else:
+                        # complete_crop returned False — already logged inside
+                        # SenseHubCropSync.  Check if it was a zone-config error.
+                        _record_error(
+                            counters,
+                            _zone_error_sample(block_id_str, "complete_crop"),
+                        )
+                    return
+
+                # ── 6. Active crop expected — resolve deps ───────────────────
+                # Resolve planting record to get the stable a64core_planting_id.
+                try:
+                    planting = await PlantingRepository.get_by_block_id(block.blockId)
+                except Exception as exc:
+                    _record_error(
+                        counters,
+                        f"block={block_id_str} planting_lookup failed: {str(exc)[:200]}",
+                    )
+                    return
+
+                if planting is None:
+                    logger.warning(
+                        "[SenseHubSync:Reconcile] block %s has state=%s with "
+                        "plantedDate set but no active planting record found — "
+                        "skipping reconciliation for this block",
+                        block_id_str,
+                        block_state_value,
+                    )
+                    # Do not count as error — this is a data-integrity edge case
+                    # (T-003 planting flow bug may contribute).
+                    counters["in_sync"] += 1
+                    return
+
+                # Resolve plant data to compute current stage.
+                try:
+                    plant_data = await PlantDataEnhancedRepository.get_by_id(
+                        block.targetCrop  # type: ignore[arg-type]
+                    )
+                except Exception as exc:
+                    _record_error(
+                        counters,
+                        f"block={block_id_str} plant_data_lookup failed: {str(exc)[:200]}",
+                    )
+                    return
+
+                if plant_data is None:
+                    logger.warning(
+                        "[SenseHubSync:Reconcile] block %s targetCrop=%s not found "
+                        "in plant_data_enhanced — skipping",
+                        block_id_str,
+                        block.targetCrop,
+                    )
+                    counters["in_sync"] += 1
+                    return
+
+                # Compute A64Core's current stage.
+                try:
+                    a64_stage = compute_stage(
+                        planted_date=block.plantedDate,  # type: ignore[arg-type]
+                        plant_data_enhanced=plant_data,
+                        block_state=block.state,
+                    )
+                except Exception as exc:
+                    _record_error(
+                        counters,
+                        f"block={block_id_str} compute_stage failed: {str(exc)[:200]}",
+                    )
+                    return
+
+                planting_id_str = str(planting.plantingId)
+
+                # ── 7. SenseHub has no record → repush full crop data ────────
+                if sh_crop is None:
+                    logger.info(
+                        "[SenseHubSync:Reconcile] drift resolved: SenseHub had "
+                        "no crop record for block %s — repushing",
+                        block_id_str,
+                    )
+                    ok = await _safe_set_crop_data(
+                        sync, block, planting.plantingId, a64_stage, plant_data,
+                        counters, block_id_str,
+                    )
+                    if ok:
+                        counters["drift_resolved_by_repush"] += 1
+                    return
+
+                # ── 8. SenseHub has a record — check planting_id correlation ─
+                sh_planting_id = sh_crop.get("a64core_planting_id", "")
+
+                if sh_planting_id != planting_id_str:
+                    # Stale planting_id on SenseHub — atomic replace via set_crop_data.
+                    logger.warning(
+                        "[SenseHubSync:Reconcile] drift resolved: SenseHub had "
+                        "stale a64core_planting_id=%s for block %s, repushing "
+                        "with current id=%s",
+                        sh_planting_id,
+                        block_id_str,
+                        planting_id_str,
+                    )
+                    ok = await _safe_set_crop_data(
+                        sync, block, planting.plantingId, a64_stage, plant_data,
+                        counters, block_id_str,
+                    )
+                    if ok:
+                        counters["drift_resolved_by_repush"] += 1
+                    return
+
+                # ── 9. Planting_id matches — check stage drift ───────────────
+                sh_stage = sh_crop.get("current_stage", "")
+                if sh_stage == a64_stage.value:
+                    counters["in_sync"] += 1
+                    return
+
+                # Stage drift — push correction.
+                logger.info(
+                    "[SenseHubSync:Reconcile] drift resolved: SenseHub stage=%s "
+                    "differs from A64Core stage=%s for block %s — updating",
+                    sh_stage,
+                    a64_stage.value,
+                    block_id_str,
+                )
+                try:
+                    now = datetime.utcnow()
+                    days_since = (
+                        (now - block.plantedDate).days  # type: ignore[operator]
+                        if block.plantedDate
+                        else 0
+                    )
+                    ok = await asyncio.wait_for(
+                        sync.update_growth_stage(
+                            block=block,
+                            stage=a64_stage,
+                            transitioned_at=now,
+                            days_since_planting=days_since,
+                        ),
+                        timeout=MCP_CALL_TIMEOUT,
+                    )
+                except Exception as exc:
+                    _record_error(
+                        counters,
+                        f"block={block_id_str} update_growth_stage failed: {str(exc)[:200]}",
+                    )
+                    return
+
+                if ok:
+                    counters["drift_resolved_by_stage_update"] += 1
+                else:
+                    _record_error(
+                        counters,
+                        _zone_error_sample(block_id_str, "update_growth_stage"),
+                    )
+
+        # ── Execute all reconciliations with bounded concurrency ─────────────
+        await asyncio.gather(*[_reconcile_one(b) for b in iot_blocks])
+
+        finished_at = datetime.utcnow()
+        duration = (finished_at - started_at).total_seconds()
+
+        result: dict = {
+            "reconcile_started_at": started_at.isoformat(),
+            "reconcile_finished_at": finished_at.isoformat(),
+            "blocks_checked": counters["blocks_checked"],
+            "in_sync": counters["in_sync"],
+            "drift_resolved_by_repush": counters["drift_resolved_by_repush"],
+            "drift_resolved_by_stage_update": counters["drift_resolved_by_stage_update"],
+            "drift_resolved_by_complete": counters["drift_resolved_by_complete"],
+            "errors": counters["errors"],
+            "error_samples": counters["error_samples"][:5],
+        }
+
+        self._last_reconcile_result = result
+
+        total_drift = (
+            counters["drift_resolved_by_repush"]
+            + counters["drift_resolved_by_stage_update"]
+            + counters["drift_resolved_by_complete"]
+        )
+        logger.info(
+            "[SenseHubSync:Reconcile] Reconciliation completed in %.1fs: "
+            "checked=%d in_sync=%d drift_repush=%d drift_stage=%d drift_complete=%d errors=%d",
+            duration,
+            result["blocks_checked"],
+            result["in_sync"],
+            result["drift_resolved_by_repush"],
+            result["drift_resolved_by_stage_update"],
+            result["drift_resolved_by_complete"],
+            result["errors"],
+        )
+
+        return result
+
+    # =========================================================================
     # Status
     # =========================================================================
 
@@ -759,4 +1215,5 @@ class SenseHubSyncService:
             "isRunning": self._is_running,
             "lastSync": self._last_sync.isoformat() if self._last_sync else None,
             "lastSyncResult": self._last_sync_result,
+            "lastReconcileResult": self._last_reconcile_result,
         }
