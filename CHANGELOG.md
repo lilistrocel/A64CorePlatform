@@ -5,6 +5,32 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-04-23
+
+**Type:** Patch Release — T-004 block expected-date corruption fix
+
+### Fixed
+
+#### Missing `await` on `BlockService.recalculate_future_dates` (Backend)
+
+`BlockService.change_status` at `src/modules/farm_manager/services/block/block_service_new.py:703`
+was calling `recalculate_future_dates` (an async coroutine returning `Dict[str, datetime]`) without
+`await` on the else-branch that handles all normal status transitions (non-planting,
+non-harvest-complete). The unresolved coroutine object was forwarded as `expected_status_changes`
+to `BlockRepository.update_status()`; motor silently stored null instead of the resolved date dict.
+
+Effect: every normal block status transition (e.g. GROWING→HARVESTING) produced corrupted or
+missing `expectedStatusChanges` data in MongoDB. Stderr emitted
+`RuntimeWarning: coroutine 'BlockService.recalculate_future_dates' was never awaited` on each
+transition.
+
+Fix: single `await` added at line 703 (else-branch). Verified via mongosh after GROWING→HARVESTING
+transition — field now persists as proper BSON ISODate objects. No `RuntimeWarning` in logs
+post-fix. 81/81 SenseHub tests pass; no regression. Audit confirmed no other missing awaits in
+block service files. Pre-existing bug first surfaced during T-002 step 8 e2e testing.
+
+---
+
 ## [1.13.0] - 2026-04-20
 
 **Type:** Minor Release — SenseHub MCP crop-data sync integration (T-002)

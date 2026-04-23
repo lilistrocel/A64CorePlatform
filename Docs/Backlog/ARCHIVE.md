@@ -1,12 +1,31 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 1 task
+> **Total completed:** 2 tasks
 
 ## 2026-04
 
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
 | T-002 | SenseHub MCP crop-data sync integration | Backend | 2026-04-20 | ✅ |
+| T-004 | Missing `await` on `recalculate_future_dates` corrupts block status dates | Backend | 2026-04-23 | ✅ |
+
+### T-004 | Missing `await` on `recalculate_future_dates` corrupts block status dates
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-04-23
+- **Description:** Pre-existing bug. `BlockService.change_status` at
+  `src/modules/farm_manager/services/block/block_service_new.py:703` called
+  `BlockService.recalculate_future_dates()` (async coroutine) without `await`. The unresolved
+  coroutine object was forwarded to `BlockRepository.update_status()` as `expected_status_changes`;
+  motor silently stored null instead of the resolved `Dict[str, datetime]`. Every normal block
+  status transition (non-planting, non-harvest-complete) corrupted block `expectedStatusChanges`.
+- **Result:**
+  - Single `await` added at `block_service_new.py:703` (else-branch of `change_status`).
+  - Verified via mongosh: GROWING→HARVESTING transition now persists `expectedStatusChanges` as
+    proper BSON ISODate objects. No `RuntimeWarning: coroutine ... was never awaited` post-fix.
+  - Audit confirmed no other missing awaits in block service files.
+  - 81/81 SenseHub regression tests pass. No data backfill needed (dev data was null/clean).
+  - Released as v1.13.1 (PATCH bump). Follow-up data-cleanup task T-006 deemed unnecessary.
+- **Surfaced during:** T-002 step 8 e2e Playwright testing.
 
 ### T-002 | SenseHub MCP crop-data sync integration
 - **Category:** Backend · **Priority:** P1

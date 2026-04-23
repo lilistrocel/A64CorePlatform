@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-04-20
-> **Tasks:** 1 active · 3 ready · 0 blocked · 0 completed
+> **Updated:** 2026-04-23
+> **Tasks:** 1 active · 2 ready · 0 blocked · 0 completed
 
 ## Rules for Agents
 
@@ -90,29 +90,6 @@
 ---
 
 ## 🟢 Ready
-
-### T-004 | Missing `await` on `recalculate_future_dates` corrupts block status dates
-- **Category:** Backend · **Priority:** P0
-- **Depends on:** —
-- **Blocks:** —
-- **Description:** Pre-existing bug discovered during T-002 step 8 Playwright verification.
-  `BlockService.change_status` at `src/modules/farm_manager/services/block/block_service_new.py:703`
-  calls `BlockService.recalculate_future_dates()` (an async coroutine) **without `await`**.
-  The coroutine object (not the resolved dict) is then passed to `BlockRepository.update_status()`
-  as the `expected_status_changes` argument. Every normal block status transition silently
-  corrupts the block's expected harvest/status-change dates. Stderr shows
-  `RuntimeWarning: coroutine 'BlockService.recalculate_future_dates' was never awaited`.
-  High severity — affects date accuracy across the farm management module.
-- **Steps:**
-  1. Add `await` to the call at `block_service_new.py:703`.
-  2. Verify with a status transition via UI → mongosh-check `expectedStatusChanges` on the block.
-  3. Regression pass through existing block service tests.
-  4. Audit for other missing `await`s in the same file (grep for `def .*async def`
-     patterns and cross-check callers).
-  5. Change Guardian commit + CHANGELOG (PATCH bump).
-- **Context notes:**
-  - Not caused by T-002; existed before trigger wiring was added. Surfaced during e2e test.
-  - Playwright agent confirmed the warning appears on every non-planting status transition.
 
 ### T-005 | SenseHub trigger wrappers log "succeeded" even when MCP call fails
 - **Category:** Backend · **Priority:** P3
