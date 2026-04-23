@@ -700,7 +700,7 @@ class BlockService:
             updated_expected_dates = None
             if current_block.expectedStatusChanges:
                 actual_transition_date = datetime.utcnow()
-                updated_expected_dates = BlockService.recalculate_future_dates(
+                updated_expected_dates = await BlockService.recalculate_future_dates(
                     new_status,
                     current_block.expectedStatusChanges,
                     actual_transition_date
