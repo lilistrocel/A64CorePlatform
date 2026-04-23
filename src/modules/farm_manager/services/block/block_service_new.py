@@ -5,6 +5,7 @@ Handles all business logic for blocks including status transitions,
 expected dates calculation, and automatic archival.
 """
 
+import asyncio
 from typing import List, Optional, Dict, Tuple
 from uuid import UUID
 from datetime import datetime, timedelta
@@ -725,6 +726,62 @@ class BlockService:
 
         # Invalidate dashboard caches after block status change
         await BlockService._invalidate_dashboard_caches()
+
+        # -----------------------------------------------------------------------
+        # SenseHub MCP triggers (fire-and-log; detached tasks; never block caller)
+        # -----------------------------------------------------------------------
+
+        _prev_state = current_block.state
+        _next_state = new_status
+        _snapshot_block = current_block  # snapshot before state overwrite
+
+        # Trigger 1: update_growth_stage — when the block's computed SenseHub stage
+        # crosses a boundary as a result of the status change.
+        # Only applicable when a plantedDate exists (i.e. crop is in the ground).
+        if _snapshot_block.plantedDate is not None:
+            async def _sync_update_growth_stage() -> None:
+                """
+                Background task: push update_growth_stage to SenseHub when the
+                block's computed SenseHub stage changes as a result of a status
+                transition.
+
+                Skip conditions (all logged, never raise):
+                  - Block has no iotController
+                  - targetCrop is None
+                  - plant_data_enhanced not found
+                  - Stage would not change (before == after)
+                  - New state is CLEANING or EMPTY: cycle-end is handled by
+                    complete_crop (fired in Trigger 2 on HARVESTING→CLEANING).
+                """
+                from .sensehub_block_service_triggers import _sensehub_update_growth_stage_task
+                await _sensehub_update_growth_stage_task(
+                    snapshot_block=_snapshot_block,
+                    prev_state=_prev_state,
+                    next_state=_next_state,
+                )
+
+            asyncio.create_task(_sync_update_growth_stage())
+
+        # Trigger 2: complete_crop — fired exactly once when the operator finalises
+        # the harvest cycle by transitioning HARVESTING → CLEANING.
+        # At this point current_block still holds all crop metadata (targetCrop,
+        # plantedDate, kpi) before the DB update clears them.
+        if _prev_state == BlockStatus.HARVESTING and _next_state == BlockStatus.CLEANING:
+            async def _sync_complete_crop() -> None:
+                """
+                Background task: push complete_crop to SenseHub when a crop cycle
+                ends (HARVESTING → CLEANING).
+
+                Aggregates all harvest records for this block to compute:
+                  - total_yield_kg
+                  - average_quality_grade (mode/weighted from qualityA/B/C kg)
+                  - harvest_count
+                  - harvested_at (most recent harvestDate, or utcnow)
+                """
+                from .sensehub_block_service_triggers import _sensehub_complete_crop_task
+                await _sensehub_complete_crop_task(snapshot_block=_snapshot_block)
+
+            asyncio.create_task(_sync_complete_crop())
 
         return block
 

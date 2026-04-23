@@ -4,6 +4,7 @@ Planting Service
 Business logic for planting operations.
 """
 
+import asyncio
 from typing import List, Optional, Tuple
 from uuid import UUID, uuid4
 from datetime import datetime, timedelta
@@ -248,6 +249,78 @@ class PlantingService:
             f"[Planting Service] Marked planting {planting_id} as planted "
             f"by user {farmer_user_id}. Estimated harvest: {estimated_harvest_start.date()}"
         )
+
+        # 7. Fire SenseHub MCP sync (fire-and-log; never blocks the primary response).
+        # Resolved block from the DB update is used so plantedDate is already set.
+        _planting_id_for_sync = updated_planting.plantingId
+        _block_for_sync = updated_block
+
+        async def _sync_set_crop_data_on_planted() -> None:
+            """
+            Background task: push set_crop_data to SenseHub after mark_as_planted.
+
+            Uses plant_data_enhanced (not the legacy plantDataSnapshot) per T-002 design.
+            Skips silently when block has no iotController or plant data is unavailable.
+            """
+            from ..sensehub.sensehub_crop_sync import SenseHubCropSync
+            from ..sensehub.sensehub_stage_mapper import compute_stage
+            from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
+
+            block_id_str = str(_block_for_sync.blockId)
+            try:
+                sync = SenseHubCropSync.from_block(_block_for_sync)
+                if sync is None:
+                    # No iotController — already logged inside from_block.
+                    return
+
+                # Resolve plant data fresh from plant_data_enhanced (bypasses T-003 legacy bug).
+                if _block_for_sync.targetCrop is None:
+                    logger.warning(
+                        "[SenseHub] block %s has no targetCrop set after mark_as_planted — "
+                        "skipping set_crop_data",
+                        block_id_str,
+                    )
+                    return
+
+                plant_data = await PlantDataEnhancedRepository.get_by_id(_block_for_sync.targetCrop)
+                if plant_data is None:
+                    logger.warning(
+                        "[SenseHub] plant_data_enhanced not found for id=%s (block %s) — "
+                        "skipping set_crop_data",
+                        _block_for_sync.targetCrop,
+                        block_id_str,
+                    )
+                    return
+
+                # Compute initial stage from planting date (just set to now on this block).
+                planted_date = _block_for_sync.plantedDate or planted_at
+                initial_stage = compute_stage(
+                    planted_date=planted_date,
+                    plant_data_enhanced=plant_data,
+                    block_state=_block_for_sync.state,
+                )
+
+                await sync.set_crop_data(
+                    block=_block_for_sync,
+                    planting_id=_planting_id_for_sync,
+                    current_stage=initial_stage,
+                    plant_data_enhanced=plant_data,
+                )
+                logger.info(
+                    "[SenseHub] set_crop_data succeeded for block %s planting %s",
+                    block_id_str,
+                    _planting_id_for_sync,
+                )
+            except Exception as exc:
+                logger.error(
+                    "[SenseHub] set_crop_data task failed | operation=mark_as_planted "
+                    "block_id=%s planting_id=%s | error: %s",
+                    block_id_str,
+                    _planting_id_for_sync,
+                    str(exc)[:500],
+                )
+
+        asyncio.create_task(_sync_set_crop_data_on_planted())
 
         return updated_planting, updated_block.model_dump(mode="json")
 
