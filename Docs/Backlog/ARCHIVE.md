@@ -1,15 +1,39 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 4 tasks
+> **Total completed:** 5 tasks
 
 ## 2026-04
 
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
+| T-006 | `mark_as_planted` doesn't persist crop metadata; SenseHub trigger skips | Backend | 2026-04-23 | ✅ |
 | T-002 | SenseHub MCP crop-data sync integration | Backend | 2026-04-20 | ✅ |
 | T-003 | Planting flow reads from empty legacy `plant_data` collection | Backend | 2026-04-23 | ✅ |
 | T-004 | Missing `await` on `recalculate_future_dates` corrupts block status dates | Backend | 2026-04-23 | ✅ |
 | T-005 | SenseHub trigger wrappers log "succeeded" even when MCP call fails | Backend | 2026-04-23 | ✅ |
+
+### T-006 | `mark_as_planted` doesn't persist crop metadata on block, SenseHub trigger skips
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-04-23
+- **Description:** Discovered during the first live SenseHub integration test. After
+  `POST /plantings/{id}/mark-planted`, `planting_service.mark_as_planted` called
+  `BlockRepository.update_status(block_id, GROWING, ...)` without passing `target_crop` /
+  `target_crop_name` / `actual_plant_count` / `expected_harvest_date`. Block state transitioned
+  correctly but crop metadata fields stayed null. The SenseHub trigger then aborted:
+  `[SenseHub] block X has no targetCrop set after mark_as_planted — skipping set_crop_data`.
+- **Result:**
+  - Added `primary_plant = planting.plants[0]` helper and forwarded all four kwargs to
+    `BlockRepository.update_status` in `mark_as_planted`. Caller bug only — the repository
+    method already accepted these as optional kwargs.
+  - For multi-crop plantings `plants[0]` is used as the primary (block.targetCrop is a single
+    UUID); remaining plants are tracked in `planting.plants[]`.
+  - Verified end-to-end via Playwright against live SenseHub at `100.124.168.35:3001`:
+    `[SenseHub] set_crop_data succeeded` fires automatically ~203ms after mark-planted returns
+    200, with zero manual DB intervention. Reconciliation confirms in-sync.
+  - 81/81 SenseHub regression tests pass. No schema changes. No CodeMap regen needed.
+  - Released as v1.13.4 (PATCH bump).
+- **Surfaced during:** First live SenseHub integration test (2026-04-23). Would have been
+  caught in T-002 step 8 if Playwright had hit a real MCP instead of fake 127.0.0.1:9999.
 
 ### T-005 | SenseHub trigger wrappers log "succeeded" even when MCP call fails
 - **Category:** Backend · **Priority:** P3

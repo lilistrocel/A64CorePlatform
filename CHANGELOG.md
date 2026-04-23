@@ -5,6 +5,43 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.4] - 2026-04-23
+
+**Type:** Patch Release — T-006 `mark_as_planted` now persists crop metadata; SenseHub trigger fires automatically
+
+### Fixed
+
+#### `mark_as_planted` now passes crop metadata to `BlockRepository.update_status` (Backend)
+
+`PlantingService.mark_as_planted` at
+`src/modules/farm_manager/services/planting/planting_service.py` was calling
+`BlockRepository.update_status(block_id, GROWING, ...)` without `target_crop`,
+`target_crop_name`, `actual_plant_count`, or `expected_harvest_date`. The block
+transitioned to GROWING correctly but those four fields stayed null on the block
+document.
+
+The SenseHub background trigger immediately downstream then aborted:
+
+    [SenseHub] block X has no targetCrop set after mark_as_planted — skipping set_crop_data
+
+`BlockRepository.update_status` already accepted these as optional kwargs — the
+omission was in the caller only.
+
+**Fix:** All four kwargs are now forwarded using `planting.plants[0]` as the primary
+crop (`block.targetCrop` is a single UUID; multi-crop plantings push plants[0] to MCP
+and track the rest in `planting.plants[]`).
+
+Verified end-to-end via Playwright against the live SenseHub at `100.124.168.35:3001`:
+`[SenseHub] set_crop_data succeeded` fires automatically ~203ms after
+`mark-planted` returns 200, with zero manual DB intervention. Reconciliation
+confirms in-sync. 81/81 SenseHub regression tests pass.
+
+Surfaced during the first live integration test (2026-04-23); would have been
+caught in T-002 step 8 if Playwright had exercised a real MCP instead of the
+fake `127.0.0.1:9999` stub.
+
+---
+
 ## [1.13.3] - 2026-04-23
 
 **Type:** Patch Release — T-005 SenseHub trigger wrappers no longer emit false success logs
