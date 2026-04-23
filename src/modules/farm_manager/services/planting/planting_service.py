@@ -262,16 +262,24 @@ class PlantingService:
 
         updated_planting = await PlantingRepository.update(planting_id, update_data)
 
-        # 6. Update block state to GROWING.
+        # 6. Update block state to GROWING and persist crop metadata.
         # Reason: Using BlockRepository.update_status directly — PlantingService has
         # already validated PLANNED→GROWING transition above. BlockRepository sets
         # plantedDate automatically when transitioning to GROWING.
+        # target_crop/name/plant_count/harvest_date are required downstream for the
+        # SenseHub trigger and for block-level reads; block.targetCrop is singular
+        # so for multi-crop plantings we persist plants[0] as the primary.
+        primary_plant = planting.plants[0]
         updated_block = await BlockRepository.update_status(
             planting.blockId,
             BlockState.GROWING,
             user_id=farmer_user_id,
             user_email=farmer_email,
-            notes=f"Farmer marked planting {planting_id} as planted"
+            notes=f"Farmer marked planting {planting_id} as planted",
+            target_crop=primary_plant.plantDataId,
+            target_crop_name=primary_plant.plantName,
+            actual_plant_count=planting.totalPlants,
+            expected_harvest_date=estimated_harvest_start,
         )
         if updated_block is None:
             raise HTTPException(
