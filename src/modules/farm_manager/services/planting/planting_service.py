@@ -13,8 +13,8 @@ import logging
 
 from ...models.planting import Planting, PlantingCreate, PlantingItem
 from ...models.block import BlockState
-from ...services.block import BlockService
-from ...services.plant_data import PlantDataService
+from ...services.block import BlockService, BlockRepository
+from ...services.plant_data import PlantDataEnhancedService
 from .planting_repository import PlantingRepository
 
 logger = logging.getLogger(__name__)
@@ -47,12 +47,8 @@ class PlantingService:
             HTTPException: If validation fails or block is not available
         """
         # 1. Validate block exists and is in EMPTY state
-        block = await BlockService.get_block_by_id(planting_data.blockId)
-        if not block:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Block {planting_data.blockId} not found"
-            )
+        # Reason: BlockService.get_block raises HTTP 404 on missing (no None check needed).
+        block = await BlockService.get_block(planting_data.blockId)
 
         if block.state != BlockState.EMPTY:
             raise HTTPException(
@@ -82,41 +78,52 @@ class PlantingService:
         longest_growth_cycle = 0
 
         for plant_item in planting_data.plants:
-            # Fetch plant data
-            plant_data = await PlantDataService.get_plant_data(plant_item.plantDataId)
-            if not plant_data:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Plant data {plant_item.plantDataId} not found"
-                )
+            # Fetch plant data from plant_data_enhanced (the active collection).
+            # PlantDataEnhancedService.get_plant_data raises HTTP 404 on missing,
+            # so no additional None check is needed.
+            plant_data = await PlantDataEnhancedService.get_plant_data(plant_item.plantDataId)
+
+            # Resolve nested fields from the enhanced model.
+            # Reason: enhanced model uses growthCycle.totalCycleDays and yieldInfo.* sub-documents.
+            growth_cycle_days: int = plant_data.growthCycle.totalCycleDays
+            yield_per_plant: float = plant_data.yieldInfo.yieldPerPlant
+            plant_yield_unit: str = plant_data.yieldInfo.yieldUnit
+
+            # Resolve temperature fields defensively — environmentalRequirements is Optional.
+            # Pre-check confirmed all 57 dev docs have this field, but model allows None.
+            env_reqs = plant_data.environmentalRequirements
+            temp = env_reqs.temperature if env_reqs is not None else None
+            min_temperature: float | None = temp.minCelsius if temp is not None else None
+            max_temperature: float | None = temp.maxCelsius if temp is not None else None
 
             # Calculate yield for this plant type
-            plant_yield = plant_data.expectedYieldPerPlant * plant_item.quantity
+            plant_yield = yield_per_plant * plant_item.quantity
             total_predicted_yield += plant_yield
 
             # Track yield unit (all plants should have same unit)
             if yield_unit is None:
-                yield_unit = plant_data.yieldUnit
-            elif yield_unit != plant_data.yieldUnit:
+                yield_unit = plant_yield_unit
+            elif yield_unit != plant_yield_unit:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"All plants must have the same yield unit. Found {yield_unit} and {plant_data.yieldUnit}"
+                    detail=f"All plants must have the same yield unit. Found {yield_unit} and {plant_yield_unit}"
                 )
 
             # Track longest growth cycle for harvest estimation
-            if plant_data.growthCycleDays > longest_growth_cycle:
-                longest_growth_cycle = plant_data.growthCycleDays
+            if growth_cycle_days > longest_growth_cycle:
+                longest_growth_cycle = growth_cycle_days
 
-            # Create snapshot of plant data at planning time
+            # Create snapshot of plant data at planning time.
+            # Snapshot dict keys are IDENTICAL to legacy — downstream consumers are unchanged.
             plant_snapshot = {
                 "plantName": plant_data.plantName,
                 "scientificName": plant_data.scientificName,
-                "growthCycleDays": plant_data.growthCycleDays,
-                "expectedYieldPerPlant": plant_data.expectedYieldPerPlant,
-                "yieldUnit": plant_data.yieldUnit,
+                "growthCycleDays": growth_cycle_days,
+                "expectedYieldPerPlant": yield_per_plant,
+                "yieldUnit": plant_yield_unit,
                 "dataVersion": plant_data.dataVersion,
-                "minTemperatureCelsius": plant_data.minTemperatureCelsius,
-                "maxTemperatureCelsius": plant_data.maxTemperatureCelsius,
+                "minTemperatureCelsius": min_temperature,
+                "maxTemperatureCelsius": max_temperature,
             }
 
             enriched_plants.append(
@@ -150,12 +157,33 @@ class PlantingService:
         # 6. Save planting to database
         created_planting = await PlantingRepository.create(planting)
 
-        # 7. Update block state to PLANNED and store current planting reference
-        updated_block = await BlockService.update_block_state(
+        # 7. Update block state to PLANNED and store current planting reference.
+        # Reason: Using BlockRepository.update_status directly because PlantingService
+        # has already validated the EMPTY→PLANNED transition above and must also set
+        # currentPlantingId as additional context. This bypasses change_status's
+        # pending-task guards (not applicable to a new planting plan creation).
+        updated_block = await BlockRepository.update_status(
             block.blockId,
             BlockState.PLANNED,
-            {"currentPlantingId": str(created_planting.plantingId)}
+            user_id=planner_user_id,
+            user_email=planner_email,
+            notes=f"Planting plan created: {created_planting.plantingId}"
         )
+        if updated_block is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Block {block.blockId} not found during state update"
+            )
+        # Set currentPlantingId separately (not in BlockRepository.update_status signature).
+        # Reason: update_status does not accept arbitrary extra fields; raw $set is needed.
+        from ..database import farm_db as _farm_db
+        _db = _farm_db.get_database()
+        await _db.blocks.update_one(
+            {"blockId": str(block.blockId)},
+            {"$set": {"currentPlantingId": str(created_planting.plantingId)}}
+        )
+        # Re-fetch to reflect currentPlantingId in the returned block
+        updated_block = await BlockRepository.get_by_id(block.blockId)
 
         logger.info(
             f"[Planting Service] Created planting plan {created_planting.plantingId} "
@@ -202,12 +230,8 @@ class PlantingService:
             )
 
         # 3. Validate block is in PLANNED state
-        block = await BlockService.get_block_by_id(planting.blockId)
-        if not block:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Block {planting.blockId} not found"
-            )
+        # Reason: BlockService.get_block raises HTTP 404 on missing (no None check needed).
+        block = await BlockService.get_block(planting.blockId)
 
         if block.state != BlockState.PLANNED:
             raise HTTPException(
@@ -238,12 +262,22 @@ class PlantingService:
 
         updated_planting = await PlantingRepository.update(planting_id, update_data)
 
-        # 6. Update block state to GROWING
-        updated_block = await BlockService.update_block_state(
+        # 6. Update block state to GROWING.
+        # Reason: Using BlockRepository.update_status directly — PlantingService has
+        # already validated PLANNED→GROWING transition above. BlockRepository sets
+        # plantedDate automatically when transitioning to GROWING.
+        updated_block = await BlockRepository.update_status(
             planting.blockId,
             BlockState.GROWING,
-            {"lastPlantedAt": planted_at}
+            user_id=farmer_user_id,
+            user_email=farmer_email,
+            notes=f"Farmer marked planting {planting_id} as planted"
         )
+        if updated_block is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Block {planting.blockId} not found during state update"
+            )
 
         logger.info(
             f"[Planting Service] Marked planting {planting_id} as planted "

@@ -44,7 +44,7 @@ class PlantingRepository:
         for plant in planting_dict["plants"]:
             plant["plantDataId"] = str(plant["plantDataId"])
 
-        await farm_db.db.plantings.insert_one(planting_dict)
+        await farm_db.get_database().plantings.insert_one(planting_dict)
 
         logger.info(f"[Planting Repository] Created planting {planting.plantingId} for block {planting.blockId}")
         return planting
@@ -60,7 +60,7 @@ class PlantingRepository:
         Returns:
             Planting if found, None otherwise
         """
-        result = await farm_db.db.plantings.find_one({"plantingId": str(planting_id)})
+        result = await farm_db.get_database().plantings.find_one({"plantingId": str(planting_id)})
         if not result:
             return None
 
@@ -93,7 +93,7 @@ class PlantingRepository:
         Returns:
             Active planting if found, None otherwise
         """
-        result = await farm_db.db.plantings.find_one({
+        result = await farm_db.get_database().plantings.find_one({
             "blockId": str(block_id),
             "status": {"$in": ["planned", "planted", "harvesting"]}
         })
@@ -133,7 +133,7 @@ class PlantingRepository:
         """
         update_data["updatedAt"] = datetime.utcnow()
 
-        result = await farm_db.db.plantings.find_one_and_update(
+        result = await farm_db.get_database().plantings.find_one_and_update(
             {"plantingId": str(planting_id)},
             {"$set": update_data},
             return_document=True
@@ -186,10 +186,10 @@ class PlantingRepository:
             query["status"] = status
 
         # Get total count
-        total = await farm_db.db.plantings.count_documents(query)
+        total = await farm_db.get_database().plantings.count_documents(query)
 
         # Get paginated results
-        cursor = farm_db.db.plantings.find(query).sort("createdAt", -1).skip((page - 1) * per_page).limit(per_page)
+        cursor = farm_db.get_database().plantings.find(query).sort("createdAt", -1).skip((page - 1) * per_page).limit(per_page)
 
         plantings = []
         async for result in cursor:

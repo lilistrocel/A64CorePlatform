@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-04-23
-> **Tasks:** 1 active · 2 ready · 0 blocked · 0 completed
+> **Tasks:** 1 active · 1 ready · 0 blocked · 0 completed
 
 ## Rules for Agents
 
@@ -109,43 +109,6 @@
      returns a dict or None; log success only on non-None return.
   4. Update any integration tests that assert the current behavior.
   5. Change Guardian commit + CHANGELOG (PATCH bump).
-
-### T-003 | Planting flow reads from empty legacy `plant_data` collection
-- **Category:** Backend · **Priority:** P2
-- **Depends on:** —
-- **Blocks:** — (T-002 Phase 3 routes around this by reading enhanced directly)
-- **Description:** Pre-existing bug discovered during T-002 investigation. The UI creates/edits
-  plant records in `plant_data_enhanced` (57 docs in dev). But `PlantingService.create_planting_plan`
-  at `src/modules/farm_manager/services/planting/planting_service.py:85` calls
-  `PlantDataService.get_plant_data()` which reads from the legacy `plant_data` collection —
-  which has **0 documents** in dev. This means any planting attempt against a UI-created plant
-  should fail with 404, OR there's an undocumented fallback path somewhere.
-  Need to investigate whether planting is actually broken in dev today, or if something else
-  bridges the two collections. Either way, the planting flow should read from
-  `plant_data_enhanced` (the live collection) or go through `PlantDataMigrationMapper`.
-- **Steps:**
-  1. **Reproduce:** via Playwright MCP, create a new plant in the UI (goes to `plant_data_enhanced`),
-     then try to plant it on a block. Confirm whether it succeeds or 404s.
-  2. **Investigate fallback:** grep for any code path that bridges `plant_data_enhanced` →
-     `plant_data` at read time. Check `PlantDataRepository.get_by_id`, any shared service, any
-     middleware. Document findings.
-  3. **Decide the fix approach:**
-     - Option A: Migrate `PlantingService` to read from `PlantDataEnhancedService` and adapt the
-       snapshot whitelist to the enhanced nested structure.
-     - Option B: Populate `plant_data` from `plant_data_enhanced` on write (dual-write via the
-       existing `PlantDataMigrationMapper`).
-     - Option C: Deprecate the legacy `plant_data` collection entirely; migrate references.
-  4. **Implement chosen approach.**
-  5. **Regression test** (testing-backend-specialist): verify all existing planting/harvest flows still work.
-  6. **CodeMap regeneration** if service wiring changes.
-  7. **Change Guardian:** commit + CHANGELOG.
-- **Context notes:**
-  - Found during T-002 when extending `plant_data.py` initially — the extension surfaced the
-    collection mismatch because no UI path reached the legacy model.
-  - `PlantDataMigrationMapper` in `src/modules/farm_manager/utils/plant_data_mapper.py` already
-    exists and handles legacy ↔ enhanced conversion — reuse it rather than writing custom mapping.
-  - T-002 Phase 3 (SenseHub sync) intentionally bypasses this by reading `plant_data_enhanced`
-    directly, so MCP sync is not blocked by this bug.
 
 ---
 

@@ -215,31 +215,30 @@ class TestMarkAsPlantedSenseHubTrigger:
         mock_sync_instance = MagicMock()
         mock_sync_instance.set_crop_data = mock_set_crop_data
 
+        _BLOCK_SVC_PATH = "src.modules.farm_manager.services.block.block_service_new.BlockService"
+        _BLOCK_REPO_PATH = "src.modules.farm_manager.services.block.block_repository_new.BlockRepository"
         with (
             patch.object(
                 ps_module.PlantingRepository,
                 "get_by_id",
                 new=AsyncMock(return_value=fake_planting),
             ),
-            # create=True because planting_service references legacy BlockService methods
-            # (get_block_by_id / update_block_state) that may not exist on block_service_new.
-            patch.object(
-                ps_module.BlockService,
-                "get_block_by_id",
+            # T-003 Option A: planting_service now calls BlockService.get_block (new API).
+            # Use string path to reliably patch @staticmethod.
+            patch(
+                f"{_BLOCK_SVC_PATH}.get_block",
                 new=AsyncMock(return_value=block_planned),
-                create=True,
             ),
             patch.object(
                 ps_module.PlantingRepository,
                 "update",
                 new=AsyncMock(return_value=fake_planting),
             ),
-            patch.object(
-                ps_module.BlockService,
-                "update_block_state",
+            # T-003 Option A: planting_service now calls BlockRepository.update_status (new API).
+            patch(
+                f"{_BLOCK_REPO_PATH}.update_status",
                 # Returns GROWING block — this is what the trigger sees.
                 new=AsyncMock(return_value=block_growing),
-                create=True,
             ),
             # Patch SenseHubCropSync.from_block to return our mock
             patch(
@@ -294,28 +293,28 @@ class TestMarkAsPlantedSenseHubTrigger:
 
         mock_set_crop_data = AsyncMock()
 
+        _BLOCK_SVC_PATH = "src.modules.farm_manager.services.block.block_service_new.BlockService"
+        _BLOCK_REPO_PATH = "src.modules.farm_manager.services.block.block_repository_new.BlockRepository"
         with (
             patch.object(
                 ps_module.PlantingRepository,
                 "get_by_id",
                 new=AsyncMock(return_value=fake_planting),
             ),
-            patch.object(
-                ps_module.BlockService,
-                "get_block_by_id",
+            # T-003 Option A: planting_service now calls BlockService.get_block (new API).
+            patch(
+                f"{_BLOCK_SVC_PATH}.get_block",
                 new=AsyncMock(return_value=block_planned),
-                create=True,
             ),
             patch.object(
                 ps_module.PlantingRepository,
                 "update",
                 new=AsyncMock(return_value=fake_planting),
             ),
-            patch.object(
-                ps_module.BlockService,
-                "update_block_state",
+            # T-003 Option A: planting_service now calls BlockRepository.update_status (new API).
+            patch(
+                f"{_BLOCK_REPO_PATH}.update_status",
                 new=AsyncMock(return_value=block_growing),
-                create=True,
             ),
             patch(
                 "src.modules.farm_manager.services.sensehub.sensehub_crop_sync"
@@ -361,28 +360,28 @@ class TestMarkAsPlantedSenseHubTrigger:
         mock_sync_instance = MagicMock()
         mock_sync_instance.set_crop_data = mock_set_crop_data
 
+        _BLOCK_SVC_PATH = "src.modules.farm_manager.services.block.block_service_new.BlockService"
+        _BLOCK_REPO_PATH = "src.modules.farm_manager.services.block.block_repository_new.BlockRepository"
         with (
             patch.object(
                 ps_module.PlantingRepository,
                 "get_by_id",
                 new=AsyncMock(return_value=fake_planting),
             ),
-            patch.object(
-                ps_module.BlockService,
-                "get_block_by_id",
+            # T-003 Option A: planting_service now calls BlockService.get_block (new API).
+            patch(
+                f"{_BLOCK_SVC_PATH}.get_block",
                 new=AsyncMock(return_value=block_planned),
-                create=True,
             ),
             patch.object(
                 ps_module.PlantingRepository,
                 "update",
                 new=AsyncMock(return_value=fake_planting),
             ),
-            patch.object(
-                ps_module.BlockService,
-                "update_block_state",
+            # T-003 Option A: planting_service now calls BlockRepository.update_status (new API).
+            patch(
+                f"{_BLOCK_REPO_PATH}.update_status",
                 new=AsyncMock(return_value=block_growing),
-                create=True,
             ),
             patch(
                 "src.modules.farm_manager.services.sensehub.sensehub_crop_sync"
