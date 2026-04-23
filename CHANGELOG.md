@@ -5,6 +5,115 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-04-20
+
+**Type:** Minor Release — SenseHub MCP crop-data sync integration (T-002)
+
+### Added
+
+#### SenseHub Crop-Data Sync Service (Backend)
+
+New `SenseHubCropSync` service (`src/modules/farm_manager/services/sensehub/sensehub_crop_sync.py`)
+wraps the existing `SenseHubMCPClient` and exposes the four crop tools as typed async methods:
+`set_crop_data(block)`, `update_growth_stage(block, stage)`, `complete_crop(block, totals)`,
+`get_crop_data(block)`.
+
+Payload builder maps `plant_data_enhanced` nested fields to the flat `optimal_ranges` shape
+defined in the SenseHub contract. Each `optimal_ranges` key is emitted only when all of its
+sub-fields are non-null, enabling graceful degradation — a plant record with only `plantName` and
+`growthCycleDays` produces a valid payload with `optimal_ranges: {}`. EC is parsed from
+`soilRequirements.ecRangeMs`; water from `wateringRequirements.amountPerPlantLiters` (already in L).
+Fire-and-log error handling; HTTP 422 "No primary crop zone configured" surfaces as an operator
+WARNING and is not retried automatically.
+
+**New files:**
+- `src/modules/farm_manager/services/sensehub/sensehub_crop_sync.py`
+- `src/modules/farm_manager/services/sensehub/sensehub_stage_mapper.py`
+
+#### SenseHub Growth-Stage Mapper (Backend)
+
+Pure function stage mapper (`sensehub_stage_mapper.py`) translates A64Core block state and elapsed
+cycle fraction into SenseHub stage vocabulary: germination, seedling, vegetative, flowering,
+fruiting, ripening, harvested. The last 15 % of fruiting days cross into ripening; HARVESTING
+state maps to ripening; CLEANING/EMPTY map to harvested.
+
+#### SenseHub MCP Trigger Wiring (Backend)
+
+Three service-layer hooks fire SenseHub MCP calls as detached `asyncio.create_task()` so the
+primary operation is never blocked or failed due to MCP availability:
+
+- `PlantingService.mark_as_planted()` → `set_crop_data` (plant data resolved fresh from
+  `plant_data_enhanced` at trigger time)
+- `BlockService.change_status()` → `update_growth_stage` when the computed SenseHub stage crosses
+  a boundary relative to the previous block state
+- `BlockService.change_status()` on HARVESTING→CLEANING → `complete_crop` with recorded yield totals
+
+Trigger helper module isolated in
+`src/modules/farm_manager/services/block/sensehub_block_service_triggers.py`.
+
+**New files:**
+- `src/modules/farm_manager/services/block/sensehub_block_service_triggers.py`
+
+#### SenseHub Crop-Data Reconciliation (Backend)
+
+`SenseHubSyncService` extended to run a crop reconciliation pass at the end of each 3h sync cycle.
+Resolves five drift cases: missing-on-SenseHub (repush), stale `a64core_planting_id` (atomic
+replace), stage-drift (`update_growth_stage`), orphan-active-on-SenseHub (`complete_crop` with
+zero yield), and primary-zone-not-configured (operator WARNING + error sample). Global
+`asyncio.Semaphore(5)` caps concurrent block sessions. Aggregated result exposed via `get_status()`.
+
+#### Test Suite — SenseHub Crop Sync (Backend)
+
+81 new tests across unit and integration suites:
+- 61 unit tests (`tests/unit/test_sensehub_crop_sync.py`): full/partial/empty payload shape,
+  null sub-field exclusion, EC string parsing, stage boundary transitions, HARVESTING/CLEANING/EMPTY
+  state paths.
+- 10 integration tests (`tests/integration/test_sensehub_trigger_wiring.py`): planting trigger,
+  stage boundary crossing, complete_crop on HARVESTING→CLEANING, no-controller skip path,
+  MCP failure isolation from primary operation.
+- 10 integration tests (`tests/integration/test_sensehub_reconciliation.py`): all 5 drift cases,
+  concurrency semaphore, per-block error isolation, in-sync no-op path.
+
+**New files:**
+- `tests/__init__.py`
+- `tests/unit/__init__.py`
+- `tests/unit/test_sensehub_crop_sync.py`
+- `tests/integration/__init__.py`
+- `tests/integration/test_sensehub_trigger_wiring.py`
+- `tests/integration/test_sensehub_reconciliation.py`
+
+#### SenseHub Contract and Negotiation History (Docs)
+
+Six working-progress documents capture the full A64Core ↔ SenseHub contract negotiation for
+crop-data sync: initial contract (v1), SenseHub implementation confirmation, two follow-up
+clarification rounds (EC source, partial `optimal_ranges`, correlation key semantics), and the
+zone-binding negotiation that eliminated `zone_id` from the external interface.
+
+**New files:**
+- `Docs/2-Working-Progress/SenseHub-MCP-Crop-Sync-Contract.md`
+- `Docs/2-Working-Progress/SenseHub-MCP-Crop-Sync-Reply.md`
+- `Docs/2-Working-Progress/SenseHub-MCP-Crop-Sync-Followup.md`
+- `Docs/2-Working-Progress/SenseHub-MCP-Crop-Sync-Followup-Reply.md`
+- `Docs/2-Working-Progress/SenseHub-MCP-Zone-Binding-Request.md`
+- `Docs/2-Working-Progress/SenseHub-MCP-Zone-Binding-Reply.md`
+
+### Changed
+
+- `src/modules/farm_manager/services/sensehub/__init__.py` — exports for `SenseHubCropSync`
+  and stage mapper added.
+- `src/modules/farm_manager/services/sensehub/sync_service.py` — reconciliation pass appended
+  to the 3h sync cycle.
+- `src/modules/farm_manager/services/planting/planting_service.py` — `mark_as_planted` wired
+  to fire `set_crop_data` as a detached task.
+- `src/modules/farm_manager/services/block/block_service_new.py` — `change_status` wired to
+  fire `update_growth_stage` and `complete_crop` as detached tasks.
+
+### Fixed
+
+_No bug fixes in this release. T-003, T-004, and T-005 are tracked as separate backlog items._
+
+---
+
 ## [1.12.0] - 2026-04-15
 
 **Type:** Minor Release — Dashboard Redesign, Global Farming Year Selector, PlantData Modal Unification, Virtual Block Management, Dark Mode Pass (selects + inputs), Block Monitor Silent Refresh, CRM Edit Route, Misc Theme Fixes
