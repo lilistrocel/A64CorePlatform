@@ -22,13 +22,16 @@ imports and must be run as part of the src package
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID
 
 from .sensehub_mcp_client import SenseHubMCPClient
 from .sensehub_stage_mapper import SenseHubStage
-from ...models.block import Block
+from ...models.block import Block, IoTController
 from ...models.plant_data_enhanced import PlantDataEnhanced
+
+if TYPE_CHECKING:
+    pass  # BlockRepository imported lazily inside from_block to avoid circular imports.
 
 logger = logging.getLogger(__name__)
 
@@ -329,42 +332,82 @@ class SenseHubCropSync:
     # -------------------------------------------------------------------------
 
     @classmethod
-    def from_block(cls, block: Block) -> Optional["SenseHubCropSync"]:
+    async def from_block(cls, block: Block) -> Optional["SenseHubCropSync"]:
         """
         Construct a SenseHubCropSync from a Block's iotController settings.
 
-        Returns None (logged at WARNING) if the block has no iotController or
-        the MCP credentials are incomplete.
+        Checks the block's own iotController first.  If the block has no
+        iotController (typical for virtual children), walks up the parentBlockId
+        chain until it finds an ancestor with iotController.enabled and a valid
+        mcpApiKey, or until the chain is exhausted.
+
+        This is the T-007 architectural correction: virtual child blocks inherit
+        MCP credentials from their physical parent, but are pushed to SenseHub
+        using their own block_id (not the parent's).
 
         Args:
-            block: Block document with populated iotController.
+            block: Block document (may be a virtual child with no iotController).
 
         Returns:
-            SenseHubCropSync instance, or None if block is not MCP-capable.
+            SenseHubCropSync instance configured with the resolved iotController,
+            or None if no enabled iotController is found in the chain.
         """
-        iot = block.iotController
-        if iot is None:
+        # Reason: Lazy import to avoid circular dependency at module load time.
+        from ..block.block_repository_new import BlockRepository
+
+        def _build_from_iot(iot: IoTController) -> Optional["SenseHubCropSync"]:
+            """Return a SenseHubCropSync from an IoTController object, or None if incomplete."""
+            if not iot.enabled:
+                return None
+            mcp_api_key = iot.mcpApiKey
+            if not mcp_api_key:
+                return None
+            mcp_port = iot.mcpPort or 3001
+            client = SenseHubMCPClient(
+                address=iot.address,
+                mcp_port=mcp_port,
+                api_key=mcp_api_key,
+            )
+            return cls(client=client, mcp_address=f"{iot.address}:{mcp_port}")
+
+        # ── 1. Try direct iotController on this block ────────────────────────
+        if block.iotController is not None:
+            result = _build_from_iot(block.iotController)
+            if result is not None:
+                return result
+            # iotController present but disabled or missing mcpApiKey — log and
+            # fall through to parent walk so we don't silently stop here.
             logger.warning(
-                "[SenseHub] Block %s has no iotController — skipping MCP crop sync",
+                "[SenseHub] Block %s iotController is disabled or missing mcpApiKey"
+                " — walking parent chain",
                 block.blockId,
             )
-            return None
 
-        mcp_port = iot.mcpPort or 3001
-        mcp_api_key = iot.mcpApiKey
-        if not mcp_api_key:
-            logger.warning(
-                "[SenseHub] Block %s iotController has no mcpApiKey — skipping MCP crop sync",
-                block.blockId,
-            )
-            return None
+        # ── 2. Walk parentBlockId chain ──────────────────────────────────────
+        current = block
+        while current.parentBlockId is not None:
+            parent = await BlockRepository.get_by_id(current.parentBlockId)
+            if parent is None:
+                logger.warning(
+                    "[SenseHub] block %s has parentBlockId=%s but parent not found"
+                    " — cannot resolve iotController",
+                    block.blockId,
+                    current.parentBlockId,
+                )
+                return None
+            if parent.iotController is not None:
+                result = _build_from_iot(parent.iotController)
+                if result is not None:
+                    return result
+            current = parent
 
-        client = SenseHubMCPClient(
-            address=iot.address,
-            mcp_port=mcp_port,
-            api_key=mcp_api_key,
+        # ── 3. No iotController anywhere in chain ────────────────────────────
+        logger.warning(
+            "[SenseHub] Block %s (and all ancestors) have no enabled iotController"
+            " with mcpApiKey — skipping MCP crop sync",
+            block.blockId,
         )
-        return cls(client=client, mcp_address=f"{iot.address}:{mcp_port}")
+        return None
 
     # -------------------------------------------------------------------------
     # Error handling helpers

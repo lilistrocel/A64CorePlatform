@@ -67,9 +67,10 @@ async def _sensehub_update_growth_stage_task(
         if next_state in (BlockStatus.CLEANING, BlockStatus.EMPTY):
             return
 
-        sync = SenseHubCropSync.from_block(snapshot_block)
+        # Reason: from_block is async (T-007) — walks parentBlockId chain for virtual children.
+        sync = await SenseHubCropSync.from_block(snapshot_block)
         if sync is None:
-            # No iotController — already logged inside from_block.
+            # No iotController in block or any ancestor — already logged inside from_block.
             return
 
         if snapshot_block.targetCrop is None:
@@ -180,9 +181,10 @@ async def _sensehub_complete_crop_task(snapshot_block: "Block") -> None:
     block_id_str = str(snapshot_block.blockId)
 
     try:
-        sync = SenseHubCropSync.from_block(snapshot_block)
+        # Reason: from_block is async (T-007) — walks parentBlockId chain for virtual children.
+        sync = await SenseHubCropSync.from_block(snapshot_block)
         if sync is None:
-            # No iotController — already logged inside from_block.
+            # No iotController in block or any ancestor — already logged inside from_block.
             return
 
         # Aggregate all harvests for this block's current cycle.

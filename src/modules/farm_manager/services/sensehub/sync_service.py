@@ -898,6 +898,7 @@ class SenseHubSyncService:
         """
         # Import here to avoid circular imports at module load time.
         from ...models.block import Block, BlockStatus
+        from ..block.block_repository_new import BlockRepository
         from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
         from ..planting.planting_repository import PlantingRepository
         from .sensehub_crop_sync import SenseHubCropSync
@@ -908,6 +909,60 @@ class SenseHubSyncService:
             "[SenseHubSync:Reconcile] Starting crop-data reconciliation "
             "for %d IoT block(s)",
             len(iot_blocks),
+        )
+
+        # ── T-007: Expand iot_parents → virtual children where they exist ────
+        # Physical parents hold the iotController but crops live on virtual
+        # children.  For each iot_parent that has virtual children, substitute
+        # those children into the reconcile list; skip the parent itself (it
+        # should never hold a crop directly).  Parents with NO virtual children
+        # are reconciled as-is (preserves T-006 direct-planting flow).
+        reconcile_blocks: List[Dict[str, Any]] = []
+        for raw_parent in iot_blocks:
+            parent_id_str = raw_parent.get("blockId", "")
+            try:
+                parent_uuid = UUID(parent_id_str)
+            except (ValueError, AttributeError):
+                reconcile_blocks.append(raw_parent)
+                continue
+
+            try:
+                virtual_children = await BlockRepository.get_children_by_parent(parent_uuid)
+            except Exception as exc:
+                logger.warning(
+                    "[SenseHubSync:Reconcile] Could not fetch virtual children of"
+                    " parent %s: %s — reconciling parent directly",
+                    parent_id_str,
+                    str(exc)[:200],
+                )
+                virtual_children = []
+
+            if virtual_children:
+                # Expand parent → children.  Each child will resolve MCP creds
+                # via from_block's parent-walk (T-007 from_block change).
+                for child in virtual_children:
+                    child_dict = {k: v for k, v in child.model_dump(mode="json").items() if k != "_id"}
+                    # Ensure UUID fields are strings (MongoDB stores them as str in our schema).
+                    for field in ("blockId", "farmId", "parentBlockId", "targetCrop"):
+                        if child_dict.get(field) is not None:
+                            child_dict[field] = str(child_dict[field])
+                    reconcile_blocks.append(child_dict)
+                logger.debug(
+                    "[SenseHubSync:Reconcile] Parent %s has %d virtual child(ren)"
+                    " — reconciling children only",
+                    parent_id_str,
+                    len(virtual_children),
+                )
+            else:
+                # No virtual children — reconcile parent directly (T-006 flow).
+                reconcile_blocks.append(raw_parent)
+
+        logger.info(
+            "[SenseHubSync:Reconcile] Expanded to %d block(s) for reconciliation"
+            " (%d iot_parent(s) → %d with children expanded)",
+            len(reconcile_blocks),
+            len(iot_blocks),
+            len(reconcile_blocks),
         )
 
         counters: Dict[str, Any] = {
@@ -957,10 +1012,11 @@ class SenseHubSyncService:
                 )
 
                 # ── 2. Build crop-sync client (returns None when no MCP) ─────
-                sync = SenseHubCropSync.from_block(block)
+                # Reason: from_block is async (T-007) — walks parentBlockId chain.
+                sync = await SenseHubCropSync.from_block(block)
                 if sync is None:
-                    # No iotController or missing mcpApiKey — from_block already
-                    # logged a WARNING; we count this as in-sync (nothing to do).
+                    # No iotController or missing mcpApiKey in block or any ancestor —
+                    # from_block already logged a WARNING; count as in-sync (nothing to do).
                     counters["in_sync"] += 1
                     return
 
@@ -1168,7 +1224,10 @@ class SenseHubSyncService:
                     )
 
         # ── Execute all reconciliations with bounded concurrency ─────────────
-        await asyncio.gather(*[_reconcile_one(b) for b in iot_blocks])
+        # Reason: iot_blocks has been expanded to reconcile_blocks (T-007): parents
+        # with virtual children are replaced by those children; parents without
+        # virtual children remain in the list unchanged.
+        await asyncio.gather(*[_reconcile_one(b) for b in reconcile_blocks])
 
         finished_at = datetime.utcnow()
         duration = (finished_at - started_at).total_seconds()

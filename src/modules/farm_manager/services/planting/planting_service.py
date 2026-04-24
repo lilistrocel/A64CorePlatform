@@ -310,9 +310,10 @@ class PlantingService:
 
             block_id_str = str(_block_for_sync.blockId)
             try:
-                sync = SenseHubCropSync.from_block(_block_for_sync)
+                # Reason: from_block is async (T-007) — walks parentBlockId chain for virtual children.
+                sync = await SenseHubCropSync.from_block(_block_for_sync)
                 if sync is None:
-                    # No iotController — already logged inside from_block.
+                    # No iotController in block or any ancestor — already logged inside from_block.
                     return
 
                 # Resolve plant data fresh from plant_data_enhanced (bypasses T-003 legacy bug).
