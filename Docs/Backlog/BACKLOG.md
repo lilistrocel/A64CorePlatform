@@ -1,6 +1,6 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-04-23
+> **Updated:** 2026-04-24
 > **Tasks:** 1 active · 0 ready · 0 blocked · 0 completed
 
 ## Rules for Agents

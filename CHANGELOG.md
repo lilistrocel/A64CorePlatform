@@ -5,6 +5,58 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.5] - 2026-04-24
+
+**Type:** Patch Release — T-007 architectural correction: SenseHub crop sync now pushes per virtual child block, resolves MCP credentials via parent chain
+
+### Fixed
+
+#### Virtual-block SenseHub sync: push crop data per virtual child, resolve MCP via `parentBlockId` chain (Backend)
+
+The SenseHub MCP integration (T-002) keyed crop data on physical parent blocks, which hold
+`iotController` (the MCP connector). But in A64Core's domain model, crops live on virtual
+child blocks created via `addVirtualCrop` — the UI's only planting path. Production data
+confirmed: 169/170 virtual blocks have `targetCrop`; only 1/271 physical blocks does
+(test artifact F010-002). SenseHub natively supports multiple `block_id`s per zone, so
+pushing each virtual child as its own `block_id` is the correct architecture and requires
+no SenseHub schema changes.
+
+**Code changes:**
+
+1. `SenseHubCropSync.from_block()` is now `async`. When the target block has no
+   `iotController`, the method walks up the `parentBlockId` chain via
+   `await BlockRepository.get_by_id()` until it finds an ancestor with
+   `iotController.enabled=True` and a valid `mcpApiKey`. Returns `None` if no such
+   ancestor exists. Four call sites updated with `await`:
+   `sensehub_block_service_triggers.py` (×2), `planting_service.py`, `sync_service.py`.
+
+2. `_reconcile_crop_data` in `sync_service.py` now expands each iot-parent into its
+   virtual children via `BlockRepository.get_children_by_parent` before the reconcile
+   loop. Parents that have children are skipped; reconciliation iterates the children
+   directly. Parents without children are still reconciled directly, preserving the
+   T-006 flow for direct plantings on childless blocks.
+
+**Live SenseHub cleanup (not a code change, documented for history):**
+
+- `complete_crop` fired for F010-002 on SenseHub, archiving the wrongly-pushed
+  parent-level Capsicum (old `sensehub_crop_id=8`).
+- F010-002 in A64Core reset: `state=partial`, all `targetCrop`/`name`/`plantedDate`/
+  `actualPlantCount`/`currentPlantingId` → null.
+- F010-002/001 (virtual child) pushed to SenseHub with its own `block_id`,
+  `stage=ripening`, new `sensehub_crop_id=9`.
+- Result: SenseHub dashboard shows Capsicum-Green on Greenhouse 1 at ripening stage,
+  sourced from the virtual child.
+
+**Tests:** 90/90 pass — 81 regression + 9 new integration tests in
+`tests/integration/test_sensehub_crop_sync_virtual.py` covering: `from_block` parent
+walk, multi-level ancestor walk, missing ancestor returns None, reconciliation iterates
+virtual children, reconciliation preserves T-006 for childless parents.
+
+No schema changes. No CodeMap regeneration needed (method signature change and
+reconcile logic refactor — no new structural nodes or edges).
+
+---
+
 ## [1.13.4] - 2026-04-23
 
 **Type:** Patch Release — T-006 `mark_as_planted` now persists crop metadata; SenseHub trigger fires automatically
