@@ -4724,3 +4724,156 @@ POST /api/v1/farm/inventory/returned/{inventoryId}/mark-waste
 - [ ] All possible status codes
 - [ ] Error responses
 - [ ] Example requests/responses
+
+---
+
+## Farm Tools — Fertilizer Cost Calculator
+
+**Base path:** `/api/v1/farm/tools`  
+**Status:** ✅ Implemented (v1.13.6+)  
+**Authentication:** Required (Bearer Token) for all endpoints
+
+### Chemicals Catalog (`/api/v1/farm/tools/chemicals`)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/` | Any user | List all chemicals (`?archived=true` includes soft-deleted) |
+| POST | `/` | agronomist | Create a new chemical in the catalog |
+| PATCH | `/{chemicalId}` | agronomist | Partially update a chemical (pass `archivedAt: null` to unarchive) |
+| DELETE | `/{chemicalId}` | agronomist | Soft-delete (archive) a chemical (`?force=true` bypasses dependency check) |
+| POST | `/discover` | **admin / agronomist only** | Auto-discover chemicals from all plant_data_enhanced fertigation schedules |
+
+**Role gate on POST /discover:** This endpoint is restricted to `admin`, `super_admin`, and `moderator` roles
+(mapped to the "agronomist" permission). Users with `user` or `guest` role receive `403 Forbidden`.
+
+**Archive-aware discovery:** `POST /discover` does NOT auto-create chemicals for ingredient names that
+match an archived (soft-deleted) chemical. The archive is intentional and will not be silently defeated.
+To re-enable an ingredient, either unarchive the chemical via `PATCH /{chemicalId}` with `{"archivedAt": null}`
+or update the plant's fertigation schedule to use a different name.
+
+**Unarchiving a chemical:** `PATCH /{chemicalId}` accepts `archivedAt` as an optional field. Pass
+`"archivedAt": null` to restore a soft-deleted chemical. Omit the field to leave archive status unchanged.
+
+**409 on DELETE** (without `?force=true`) when the chemical is referenced by plant schedules:
+```json
+{
+  "detail": {
+    "message": "Chemical referenced by plants",
+    "dependents": [{"plantDataId": "...", "plantName": "Tomato"}]
+  }
+}
+```
+
+**Chemical object:**
+```json
+{
+  "chemicalId": "uuid",
+  "name": "Urea",
+  "aliases": ["Urea 46%"],
+  "category": "macro_npk",
+  "defaultUnit": "kg",
+  "notes": null,
+  "archivedAt": null,
+  "organizationId": "uuid",
+  "createdBy": "uuid",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+---
+
+### Price Book (`/api/v1/farm/tools/fertilizer-cost/prices`)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/prices` | Any user | List all chemicals with resolved prices (override → inventory → none) |
+| PATCH | `/prices/{chemicalId}` | agronomist | Upsert a price override (AED per defaultUnit) |
+| DELETE | `/prices/{chemicalId}` | agronomist | Remove a price override |
+
+---
+
+### Calculator (`/api/v1/farm/tools/fertilizer-cost`)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/calculate` | Any user | Run calculation for a list of crops + irrigation points |
+| POST | `/export` | Any user | Run calculation and return `.xlsx` file |
+| POST | `/import` | Any user | Parse uploaded `.xlsx` and return crop list |
+
+**POST /calculate request:**
+```json
+{
+  "items": [
+    {"plantDataId": "uuid", "points": 100}
+  ]
+}
+```
+
+**POST /calculate response (CalculateResponse):**
+```json
+{
+  "perCrop": [
+    {
+      "plantDataId": "uuid",
+      "plantName": "Tomato",
+      "points": 100,
+      "cycleDays": 60,
+      "ingredients": [
+        {
+          "chemicalId": "uuid",
+          "name": "Urea",
+          "qty": 4.5,
+          "unit": "kg",
+          "unitPrice": 2.5,
+          "totalCost": 11.25
+        }
+      ],
+      "subtotalCost": 11.25
+    }
+  ],
+  "grandTotalCost": 11.25,
+  "warnings": [],
+  "discoveredChemicals": []
+}
+```
+
+**Archive-aware semantics for POST /calculate:**
+
+When an ingredient name in a crop's fertigation schedule matches an **archived** chemical:
+- The ingredient is still included in the response with `qty` computed normally.
+- `unitPrice` and `totalCost` are returned as `null` (cannot price an archived chemical).
+- The crop's `subtotalCost` and the `grandTotalCost` are `null`.
+- A warning is appended to the `warnings` list:
+  `"Ingredient 'X' in 'PlantName' references archived chemical 'CanonicalName' — restore the chemical or update the plant's fertigation schedule."`
+- The archived chemical is **NOT** auto-created or resurrected. `discoveredChemicals` only contains
+  truly new chemicals (no archived matches).
+
+To resolve: find the archived chemical via `GET /chemicals?archived=true`, then either:
+1. Restore it: `PATCH /chemicals/{chemicalId}` with `{"archivedAt": null}`, or
+2. Update the plant's fertigation schedule to reference a different chemical name.
+
+**POST /export** returns `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`  
+with `Content-Disposition: attachment; filename="fertilizer-cost-{date}.xlsx"`
+
+**POST /import** accepts `multipart/form-data` with a `.xlsx` file field named `file`.  
+Expected sheet: header row with "Crop Name" and "Points" columns.  
+Returns:
+```json
+{
+  "items": [{"plantDataId": "uuid", "plantName": "Tomato", "points": 100}],
+  "skipped": [{"rowIndex": 3, "name": "Unknown Plant", "reason": "Unknown crop"}],
+  "warnings": ["1 row(s) were skipped — see the 'skipped' list for details"]
+}
+```
+
+---
+
+### Saved Lists (`/api/v1/farm/tools/fertilizer-cost/lists`)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/lists` | Any user | List all saved calculation lists for the organisation |
+| POST | `/lists` | Any user | Save a new named list |
+| PATCH | `/lists/{listId}` | Any user | Update list name or items |
+| DELETE | `/lists/{listId}` | Any user | Hard-delete a saved list |

@@ -28,6 +28,10 @@ from .ai_hub import router as ai_hub_router
 from .sensehub_cache import router as sensehub_cache_router
 from .cameras import router as cameras_router
 
+# Fertilizer Cost Calculator tool routers
+from src.api.v1.tools.chemicals import router as chemicals_tool_router
+from src.api.v1.tools.fertilizer_cost import router as fertilizer_cost_router
+
 api_router = APIRouter()
 
 # Include route modules
@@ -57,3 +61,7 @@ api_router.include_router(watchdog_router, tags=["watchdog"])  # Watchdog monito
 api_router.include_router(ai_hub_router, tags=["ai-hub"])  # Unified AI Hub (super admin only: Control, Monitor, Report, Advise)
 api_router.include_router(sensehub_cache_router, tags=["sensehub-cache"])  # SenseHub data cache & sync
 api_router.include_router(cameras_router, tags=["cameras"])  # Camera snapshots from SenseHub MCP hubs
+
+# Fertilizer Cost Calculator — tools sub-routers
+api_router.include_router(chemicals_tool_router, prefix="/tools", tags=["tools-chemicals"])
+api_router.include_router(fertilizer_cost_router, prefix="/tools", tags=["tools-fertilizer-cost"])

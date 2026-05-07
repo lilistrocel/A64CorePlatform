@@ -123,4 +123,20 @@ export const queryKeys = {
     setup: () => [...queryKeys.mfa.all, 'setup'] as const,
     status: () => [...queryKeys.mfa.all, 'status'] as const,
   },
+
+  // Tools queries (Fertilizer Cost Calculator + Chemicals Catalog)
+  tools: {
+    all: ['tools'] as const,
+    chemicals: {
+      all: () => [...queryKeys.tools.all, 'chemicals'] as const,
+      list: (archived?: boolean) =>
+        [...queryKeys.tools.chemicals.all(), { archived }] as const,
+    },
+    prices: {
+      all: () => [...queryKeys.tools.all, 'prices'] as const,
+    },
+    savedLists: {
+      all: () => [...queryKeys.tools.all, 'savedLists'] as const,
+    },
+  },
 } as const;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useContext, useCallback } from 'react';
+import { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
@@ -14,10 +14,12 @@ import { DivisionSwitcher } from './DivisionSwitcher';
 // ─── Navigation item definitions ────────────────────────────────────────────
 
 interface NavItemDef {
-  to: string;
+  to?: string;              // optional — parent groups don't navigate
   icon: string;
   label: string;
   showBadge?: boolean;
+  children?: NavItemDef[];  // group children
+  defaultExpanded?: boolean;
 }
 
 // Navigation shown for every industry type
@@ -51,6 +53,17 @@ const MUSHROOM_NAV: NavItemDef[] = [
   { to: '/mushroom/strains', icon: '🧬', label: 'Strain Library' },
 ];
 
+// Tools group — shared across all industry types
+const TOOLS_NAV_GROUP: NavItemDef = {
+  icon: '🧰',
+  label: 'Tools',
+  defaultExpanded: false,
+  children: [
+    { to: '/tools/fertilizer-calculator', icon: '💧', label: 'Fertilizer Calculator' },
+    { to: '/tools/chemicals', icon: '🧪', label: 'Chemicals Catalog' },
+  ],
+};
+
 // Admin-only navigation (super_admin role required)
 const ADMIN_NAV_ITEMS: NavItemDef[] = [
   { to: '/admin/users', icon: '🛡️', label: 'User Management' },
@@ -69,6 +82,42 @@ export function MainLayout() {
   const unsavedChanges = useContext(UnsavedChangesContext);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pendingTaskCount, setPendingTaskCount] = useState(0);
+
+  // ── Sidebar group expanded state ────────────────────────────────────────────
+  // Persisted per-user in localStorage. Key: sidebar.expanded.{userId}
+  const storageKey = `sidebar.expanded.${user?.userId ?? 'anon'}`;
+
+  const getInitialExpanded = useCallback((): Record<string, boolean> => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) return JSON.parse(raw) as Record<string, boolean>;
+    } catch {
+      // ignore parse errors
+    }
+    // Default: honour defaultExpanded on each group
+    return {
+      Tools: TOOLS_NAV_GROUP.defaultExpanded ?? false,
+    };
+  }, [storageKey]);
+
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    getInitialExpanded
+  );
+
+  const toggleGroup = useCallback(
+    (label: string) => {
+      setExpandedGroups((prev) => {
+        const next = { ...prev, [label]: !prev[label] };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch {
+          // storage full — non-fatal
+        }
+        return next;
+      });
+    },
+    [storageKey]
+  );
 
   // Initialize global year to the current farming year on first load
   useEffect(() => {
@@ -135,16 +184,21 @@ export function MainLayout() {
     currentDivision?.industryType === 'mushroom' ? MUSHROOM_NAV : VEGETABLE_FRUITS_NAV;
 
   // Build the full ordered navigation list
-  const navItems: NavItemDef[] = [
-    ...SHARED_NAV_ITEMS,
-    ...industryNavItems,
-    // AI Hub is super_admin only
-    ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
-      if (item.to === '/ai') return user?.role === 'super_admin';
-      return true;
-    }),
-    ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
-  ];
+  const navItems: NavItemDef[] = useMemo(
+    () => [
+      ...SHARED_NAV_ITEMS,
+      ...industryNavItems,
+      // Tools group — available to all users
+      TOOLS_NAV_GROUP,
+      // AI Hub is super_admin only
+      ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
+        if (item.to === '/ai') return user?.role === 'super_admin';
+        return true;
+      }),
+      ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
+    ],
+    [industryNavItems, user?.role]
+  );
 
   return (
     <LayoutContainer>
@@ -207,23 +261,63 @@ export function MainLayout() {
         />
 
         <Nav aria-label="Main navigation">
-          {navItems.map((item) => (
-            <NavItem
-              key={item.to}
-              to={item.to}
-              onClick={(e) => handleNavClick(e, item.to)}
-            >
-              <NavIcon>{item.icon}</NavIcon>
-              {item.showBadge ? (
-                <NavContent>
+          {navItems.map((item) => {
+            // ── Group item (no `to`, has `children`) ──────────────────────
+            if (item.children) {
+              const isExpanded = expandedGroups[item.label] ?? (item.defaultExpanded ?? false);
+              // "child-active" highlight: any child route is active
+              const hasActiveChild = item.children.some(
+                (child) => child.to && location.pathname.startsWith(child.to)
+              );
+              return (
+                <div key={item.label}>
+                  <NavGroupHeader
+                    $childActive={hasActiveChild}
+                    onClick={() => toggleGroup(item.label)}
+                    aria-expanded={isExpanded}
+                    aria-label={`${item.label} navigation group`}
+                  >
+                    <NavIcon>{item.icon}</NavIcon>
+                    <NavGroupLabel>{item.label}</NavGroupLabel>
+                    <NavGroupCaret $expanded={isExpanded} aria-hidden="true">▾</NavGroupCaret>
+                  </NavGroupHeader>
+                  {isExpanded && (
+                    <NavGroupChildren>
+                      {item.children.map((child) => (
+                        <NavItem
+                          key={child.to}
+                          to={child.to!}
+                          onClick={(e) => handleNavClick(e, child.to!)}
+                        >
+                          <NavChildIcon>{child.icon}</NavChildIcon>
+                          <span>{child.label}</span>
+                        </NavItem>
+                      ))}
+                    </NavGroupChildren>
+                  )}
+                </div>
+              );
+            }
+
+            // ── Regular item ──────────────────────────────────────────────
+            return (
+              <NavItem
+                key={item.to}
+                to={item.to!}
+                onClick={(e) => handleNavClick(e, item.to!)}
+              >
+                <NavIcon>{item.icon}</NavIcon>
+                {item.showBadge ? (
+                  <NavContent>
+                    <span>{item.label}</span>
+                    {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
+                  </NavContent>
+                ) : (
                   <span>{item.label}</span>
-                  {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
-                </NavContent>
-              ) : (
-                <span>{item.label}</span>
-              )}
-            </NavItem>
-          ))}
+                )}
+              </NavItem>
+            );
+          })}
         </Nav>
 
       </Sidebar>
@@ -754,6 +848,65 @@ const GreenLed = styled.span`
   background: #10B981;
   flex-shrink: 0;
   animation: ${ledPulse} 2s ease-in-out infinite;
+`;
+
+// ── Group nav styled components ───────────────────────────────────────────────
+
+interface NavGroupHeaderProps {
+  $childActive: boolean;
+}
+
+const NavGroupHeader = styled.button<NavGroupHeaderProps>`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.md};
+  min-height: 36px;
+  width: 100%;
+  border: none;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ $childActive, theme }) =>
+    $childActive ? `${theme.colors.primary[500]}0d` : 'transparent'};
+  color: ${({ $childActive, theme }) =>
+    $childActive ? theme.colors.primary[500] : theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[100]};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+  }
+`;
+
+const NavGroupLabel = styled.span`
+  flex: 1;
+`;
+
+const NavGroupCaret = styled.span<{ $expanded: boolean }>`
+  font-size: 12px;
+  transition: transform 0.15s ease;
+  transform: ${({ $expanded }) => ($expanded ? 'rotate(0deg)' : 'rotate(-90deg)')};
+  color: ${({ theme }) => theme.colors.textDisabled};
+`;
+
+const NavGroupChildren = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 16px;
+`;
+
+const NavChildIcon = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
 `;
 
 const BackToTopButton = styled.button<{ $visible: boolean }>`

@@ -1,6 +1,6 @@
 # Module Map
 
-> Generated: 2026-05-07 10:22 UTC  
+> Generated: 2026-05-07 12:06 UTC  
 > Source: MongoDB `mapper_nodes` (grouped by module)
 
 ## Backend Module Architecture

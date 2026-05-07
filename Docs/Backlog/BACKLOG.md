@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-05-07
-> **Tasks:** 1 active · 0 ready · 0 blocked · 0 completed
+> **Tasks:** 1 active · 0 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011 completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -67,8 +67,6 @@
 ---
 
 ## 🔵 Active
-
-
 
 ### T-001 | Supabase 2026-04-07 reimport — User runs stages
 - **Category:** Database · **Priority:** P0

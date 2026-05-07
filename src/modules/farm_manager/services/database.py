@@ -255,6 +255,33 @@ class FarmDatabaseManager:
             await db.block_archives.create_index([("farmId", 1), ("farmingYearHarvested", 1)])
             await db.block_archives.create_index([("blockId", 1), ("farmingYearPlanted", 1)])
 
+            # ---------------------------------------------------------------
+            # Fertilizer Cost Calculator collections
+            # ---------------------------------------------------------------
+
+            # fertilizer_chemicals — master chemical catalog
+            await db.fertilizer_chemicals.create_index("chemicalId", unique=True)
+            await db.fertilizer_chemicals.create_index("organizationId")
+            await db.fertilizer_chemicals.create_index(
+                [("organizationId", 1), ("archivedAt", 1), ("name", 1)],
+                collation={"locale": "en", "strength": 2},  # case-insensitive
+            )
+            await db.fertilizer_chemicals.create_index("archivedAt")
+            await db.fertilizer_chemicals.create_index([("createdAt", -1)])
+
+            # fertilizer_price_overrides — per-org price per chemical
+            await db.fertilizer_price_overrides.create_index("overrideId", unique=True)
+            await db.fertilizer_price_overrides.create_index("organizationId")
+            await db.fertilizer_price_overrides.create_index(
+                [("chemicalId", 1), ("organizationId", 1)],
+                unique=True,
+            )
+
+            # fertilizer_calculation_lists — saved lists
+            await db.fertilizer_calculation_lists.create_index("listId", unique=True)
+            await db.fertilizer_calculation_lists.create_index("organizationId")
+            await db.fertilizer_calculation_lists.create_index([("organizationId", 1), ("createdAt", -1)])
+
             logger.info("[Farm Module] MongoDB indexes created successfully")
         except Exception as e:
             logger.error(f"[Farm Module] Error creating MongoDB indexes: {e}")

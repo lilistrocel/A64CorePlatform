@@ -96,6 +96,14 @@ const MushroomRoomMonitor = lazy(() =>
   import('./pages/mushroom/MushroomRoomMonitor').then(m => ({ default: m.MushroomRoomMonitor }))
 );
 
+// Tools module (Fertilizer Cost Calculator + Chemicals Catalog)
+const FertilizerCostCalculator = lazy(() =>
+  import('./pages/tools/FertilizerCostCalculator').then(m => ({ default: m.FertilizerCostCalculator }))
+);
+const ChemicalsCatalog = lazy(() =>
+  import('./pages/tools/ChemicalsCatalog').then(m => ({ default: m.ChemicalsCatalog }))
+);
+
 // Admin pages
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
 
@@ -192,6 +200,11 @@ function App() {
                 <Route path="/mushroom/strains" element={<MushroomStrainLibrary />} />
                 <Route path="/mushroom/rooms" element={<MushroomRoomMonitor />} />
                 <Route path="/mushroom" element={<MushroomDashboardPage />} />
+
+                {/* Tools module */}
+                <Route path="/tools" element={<Navigate to="/tools/fertilizer-calculator" replace />} />
+                <Route path="/tools/fertilizer-calculator" element={<FertilizerCostCalculator />} />
+                <Route path="/tools/chemicals" element={<ChemicalsCatalog />} />
 
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />

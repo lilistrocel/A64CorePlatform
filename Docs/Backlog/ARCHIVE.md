@@ -1,12 +1,133 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 7 tasks
+> **Total completed:** 13 tasks
 
 ## 2026-05
 
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
+| T-002 | Fertilizer Cost Calculator — Backend (Viet Anh) | Backend | 2026-05-07 | ✅ |
+| T-003 | Fertilizer Cost Calculator — Frontend (Viet Anh) | Frontend | 2026-05-07 | ⏳ awaiting user verification |
+| T-011 | Fertilizer Calculator UI — Price Book → modal (Viet Anh) | Frontend | 2026-05-07 | ⏳ awaiting user verification |
+| T-004 | Fertilizer Calculator — archive-aware discovery + role gate (Viet Anh) | Backend | 2026-05-07 | ✅ |
 | T-008 | Farm Detail + Block Monitor merge; Inventory/Stock split; Sales Order lifecycle (v1.14.0 session) | Frontend + Backend | 2026-05-07 | ✅ |
+| T-009 | Fertilizer Calculator UI — unarchive + role gate (Viet Anh) | Frontend | 2026-05-07 | ⏳ awaiting user verification |
+| T-010 | Fertilizer Calculator UI — slim Price Book panel (Viet Anh) | Frontend | 2026-05-07 | ⏳ awaiting user verification |
+
+### T-010 | Fertilizer Calculator UI — slim Price Book panel (Viet Anh)
+- **Category:** Frontend · **Priority:** P2
+- **Completed:** 2026-05-07
+- **Author:** Viet Anh
+- **Description:** Removed duplicate "Add Chemical" and "Discover from Plant Library" actions from
+  the Price Book panel in `FertilizerCostCalculator.tsx`, enforcing single-responsibility: those
+  actions now live exclusively in `ChemicalsCatalog.tsx`.
+- **Result:**
+  - **Removed from `PricebookPanel`**: `+ Add Chemical` button, `Discover from Plant Library`
+    button (role-gated), `addOpen` state, `handleAddSave` handler, `createChemMutation`
+    (`useCreateChemical`), `discoverMutation` (`useDiscoverChemicals`), `canDiscover` role-check,
+    `useAuthStore` import.
+  - **Removed from file**: `AddChemicalModal` component function and its `AddChemicalModalProps`
+    interface (~88 lines of component code).
+  - **Removed imports**: `useAuthStore`, `useCreateChemical`, `useDiscoverChemicals`,
+    `CreateChemicalRequest`, `AxiosError` (was already unused in this file), `useChemicals`,
+    `FertilizerChemical`.
+  - **Kept**: search/filter input (hidden when no chemicals exist), the chemicals table with
+    editable price column, the inline `Reset` link per override row, the `Source` badge column,
+    and the "Manage Catalog →" `RouterLink` in the panel header.
+  - **Added empty-state**: when `entries.length === 0`, renders a centred `PricebookEmptyState`
+    block with the message "No chemicals catalogued yet — go to the Chemicals Catalog to add some
+    or run Discover from Plant Library." and a `RouterLink $asButton` styled as a primary button
+    navigating to `/tools/chemicals`.
+  - **Added `$asButton` transient prop** to `RouterLink` styled component so the same component
+    renders as either a text link or a full primary button without passing a DOM prop.
+  - **Net change**: 1803 → 1716 lines (−87 lines).
+  - **TypeScript**: `tsc --noEmit` passes with zero errors, zero unused imports.
+
+### T-011 | Fertilizer Calculator UI — Price Book → modal (Viet Anh)
+- **Category:** Frontend · **Priority:** P2
+- **Completed:** 2026-05-07
+- **Author:** Viet Anh
+- **Description:** Restructured `FertilizerCostCalculator.tsx` so the Price Book becomes a modal
+  (opened by a header button) and the Crop List is promoted to the primary hero content.
+- **Result:**
+  - **Renamed** `PricebookPanel` → `PricebookContent` (renders just the inner content, no Panel shell).
+  - **Added** `PricebookModal` component — wraps `PricebookContent` in the existing `Modal` shell
+    with `maxWidth="960px"` to give the 7-column table enough horizontal room.
+  - **Added** `priceBookOpen: boolean` state at the `FertilizerCostCalculator` page level.
+  - **Added** "Price Book" `OutlineBtn` in the page header (right side). Modal opens on click,
+    closes only via the X button (no backdrop-click close — enforced by existing `Modal` shell).
+  - **Updated** `PageHeader` styled component: now `display: flex; justify-content: space-between`
+    so title stays left and button sits right.
+  - **Removed** inline `<PricebookPanel />` from the page body. Crop List panel is now the first
+    and largest content block.
+  - **Added** `PricebookModalFooterLink` styled component — renders "Manage Catalog →" link at the
+    bottom of the modal body (was previously in the collapsible panel header).
+  - **Removed** `CollapseIcon` styled component (only used by old collapsible panel header, now
+    unused).
+  - **Updated** stale "Price Book above" copy in the InfoBanner to "Price Book button".
+  - **Layout before:** 3 stacked panels — Price Book (top, collapsible) → Crop List → Output.
+  - **Layout after:** Header row (title + Price Book button) → Crop List hero → Output.
+  - **Net change:** ~1717 → ~1720 lines (+3 lines net; removed ~60, added ~63 for modal wrapper
+    and footer link).
+  - **TypeScript:** `tsc --noEmit` passes with zero errors.
+
+### T-009 | Fertilizer Calculator UI — unarchive + role gate (Viet Anh)
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-07
+- **Author:** Viet Anh
+- **Description:** Two follow-up UI additions to the Fertilizer Calculator frontend.
+- **Result:**
+  - **Change 1 — Restore button on archived chemicals**: In `ChemicalsCatalog.tsx`, archived rows now show a "Restore" `LinkBtn` instead of the "Archive" `DangerLinkBtn`. Clicking calls `useUpdateChemical` with `{ archivedAt: null }`, which triggers `PATCH /api/v1/farm/tools/chemicals/{id}`. On success the hook invalidates both the chemicals and prices queries, showing the restored row in its active state (or removing it from view if "Show archived" is off). The `UpdateChemicalRequest` type was widened to an `interface` with an optional `archivedAt?: string | null` field.
+  - **Change 2 — Role gate on Discover button**: The "Discover from Plant Library" `OutlineBtn` is now conditionally rendered behind `canDiscover = currentUser?.role === 'admin' || currentUser?.role === 'agronomist'` in both `ChemicalsCatalog.tsx` (top-of-page button) and `FertilizerCostCalculator.tsx` (Price Book panel button). Button is fully hidden — not disabled — for other roles.
+- **Role-check pattern source:** `MainLayout.tsx` line 195 — `user?.role === 'super_admin'` direct string comparison on the Zustand `useAuthStore` `user` field.
+- **TypeScript:** `tsc --noEmit` passes with zero errors.
+
+### T-004 | Fertilizer Calculator — archive-aware discovery + role gate (Viet Anh)
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-05-07
+- **Author: Viet Anh**
+- **Description:** Two follow-up fixes to the Fertilizer Cost Calculator backend.
+- **Result:**
+  - **Fix 1 — Role gate confirmed on `POST /chemicals/discover`**: endpoint already used `require_permission("agronomist")` mapping to admin/super_admin/moderator roles. Confirmed + added integration test verifying `user` role gets 403.
+  - **Fix 2 — Archive-aware auto-discovery and calculator warnings:**
+    - `ChemicalsService.discover_from_plant_library` now fetches ALL chemicals (including archived) and skips auto-creation for names matching archived chemicals. A new `build_chemical_lookup()` static method builds two dicts: active → FertilizerChemical, archived → ArchivedChemicalMatch sentinel.
+    - `fertilizer_calculator.calculate_for_crops` Phase 2 uses archive-aware lookup: truly unknown names still auto-create, archived matches emit a per-ingredient warning and return `unitPrice/totalCost = None`.
+    - `ChemicalUpdate` model gains optional `archivedAt` field; repository `update()` uses `model_fields_set` to distinguish explicit `null` (unarchive) from omitted field.
+  - **Tests:** 9 new tests added (4 unit, 3 integration + 1 role-gate + 1 unarchive). 47 total tests pass (38 prior + 9 new).
+  - **Docs:** `API-Structure.md` updated with role gate note, archive-aware semantics, unarchive PATCH description.
+
+### T-002 | Fertilizer Cost Calculator — Backend (Viet Anh)
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-05-07
+- **Author: Viet Anh**
+- **Description:** Built full backend for the Fertilizer Cost Calculator tool.
+- **Result:**
+  - 3 new MongoDB collections: `fertilizer_chemicals`, `fertilizer_price_overrides`, `fertilizer_calculation_lists` with all required indexes.
+  - 7 Pydantic model files under `src/modules/farm_manager/models/tools/`.
+  - 6 service files under `src/modules/farm_manager/services/tools/`: ChemicalsRepository, ChemicalsService, PriceBook, FertilizerCalculator, ExcelHandler, CalculationListsRepository.
+  - 2 API router files under `src/api/v1/tools/`: chemicals.py (5 endpoints), fertilizer_cost.py (10 endpoints).
+  - Routers mounted at `/api/v1/farm/tools/chemicals` and `/api/v1/farm/tools/fertilizer-cost`.
+  - 25 unit tests (all pass) + 13 integration tests (all pass).
+  - API-Structure.md updated with all new endpoints.
+  - CodeMaps regeneration needed (structural change — 3 new collections, new API routes, new service modules).
+
+### T-003 | Fertilizer Cost Calculator — Frontend (Viet Anh)
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-07
+- **Author: Viet Anh**
+- **Description:** Built full frontend for the Fertilizer Cost Calculator tool and Chemicals Catalog.
+- **Result:**
+  - Extended `NavItemDef` in `MainLayout.tsx` to support `children[]`, `defaultExpanded`, and group rendering with collapsible chevron, child-active parent highlighting, and per-user localStorage persistence (`sidebar.expanded.{userId}`).
+  - Added "Tools" sidebar group with two children: Fertilizer Cost Calculator and Chemicals Catalog.
+  - New routes in `App.tsx`: `/tools` → redirect, `/tools/fertilizer-calculator`, `/tools/chemicals`.
+  - New file `frontend/user-portal/src/types/tools.ts`: full TypeScript interfaces for all API shapes.
+  - New file `frontend/user-portal/src/services/toolsApi.ts`: service layer for all `/api/v1/farm/tools/` endpoints.
+  - New file `frontend/user-portal/src/hooks/queries/useTools.ts`: TanStack Query hooks for chemicals, prices, calculate, export, import, saved lists.
+  - Extended `react-query.config.ts` with `queryKeys.tools` namespace.
+  - New page `frontend/user-portal/src/pages/tools/FertilizerCostCalculator.tsx`: Price Book panel (collapsible, inline price edit, reset, add/discover), Crop List panel (typeahead with no-schedule greyed state, points edit, import/export XLSX, saved lists), Output panel (per-crop collapsible ingredient tables, grand total, warnings, discovered chemicals notice).
+  - New page `frontend/user-portal/src/pages/tools/ChemicalsCatalog.tsx`: full CRUD table, add/edit modal, archive with 409 dependent-plants modal, show-archived toggle, search.
+  - Updated `Docs/1-Main-Documentation/User-Structure.md` with Tools group documentation.
+  - CodeMaps need regeneration (new pages, new sidebar pattern).
 
 ### T-008 | v1.14.0 development session — Farm, Inventory, Sales Order overhaul
 - **Category:** Frontend + Backend · **Priority:** P1

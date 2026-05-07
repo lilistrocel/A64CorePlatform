@@ -521,7 +521,25 @@ CREATE TABLE refresh_tokens (
 
 ---
 
+## Sidebar Navigation
+
+### Tools Group (v1.14.0)
+
+A new collapsible "Tools" sidebar group has been added, visible to all authenticated users regardless of industry type. It contains two child pages:
+
+**Fertilizer Cost Calculator** (`/tools/fertilizer-calculator`): Allows users to build a crop-and-points list, run a fertigation cost calculation against the plant library schedules, view per-crop ingredient breakdowns with prices in AED, and export/import via XLSX. Includes a collapsible Price Book panel showing all chemicals with inline price editing, and a Saved Lists feature for re-using common crop configurations.
+
+**Chemicals Catalog** (`/tools/chemicals`): Full CRUD management for the master chemicals list used by the Fertilizer Cost Calculator. Supports adding chemicals with name/aliases/category/unit, editing, archiving (with a dependent-plants confirmation flow when the chemical is referenced by plant data), and auto-discovery of chemicals from fertigation schedules in the Plant Library.
+
+The sidebar group uses an expandable row pattern with a chevron indicator. Expanded state is persisted per-user in `localStorage` under the key `sidebar.expanded.{userId}`. If any child route is active, the group header receives a subtle "child-active" highlight. This is the first use of the nested `NavItemDef` (with `children[]` field) in `MainLayout.tsx`.
+
+---
+
 ## Change Log
+
+### v1.14.0 - 2026-05-07
+- Added Tools sidebar group with Fertilizer Cost Calculator and Chemicals Catalog pages
+- Extended `NavItemDef` in `MainLayout.tsx` to support `children[]` and `defaultExpanded`
 
 ### v1.0.0 - 2025-10-16
 - Initial user structure definition

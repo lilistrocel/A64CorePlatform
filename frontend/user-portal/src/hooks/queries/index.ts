@@ -38,3 +38,22 @@ export {
   useOrdersByStatus,
   useBlocksByFarm,
 } from './useDashboard';
+
+// Tools hooks (Fertilizer Cost Calculator + Chemicals Catalog)
+export {
+  useChemicals,
+  useCreateChemical,
+  useUpdateChemical,
+  useArchiveChemical,
+  useDiscoverChemicals,
+  usePrices,
+  useUpdatePrice,
+  useDeletePriceOverride,
+  useCalculate,
+  useExportXlsx,
+  useImportXlsx,
+  useSavedLists,
+  useCreateSavedList,
+  useUpdateSavedList,
+  useDeleteSavedList,
+} from './useTools';
