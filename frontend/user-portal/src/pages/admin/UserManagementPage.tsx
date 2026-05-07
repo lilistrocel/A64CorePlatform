@@ -80,7 +80,7 @@ export function UserManagementPage() {
 
   const handleRoleChange = async (userId: string, role: string) => {
     try {
-      await apiClient.put(`/v1/users/${userId}/role`, { role });
+      await apiClient.patch(`/v1/users/${userId}/role`, { role });
       addToast('success', 'User role updated successfully');
       fetchUsers();
       setEditingUser(null);

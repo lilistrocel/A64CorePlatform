@@ -21,6 +21,8 @@ interface PnlFiltersBarProps {
   farms: FarmOption[];
   farmsLoading: boolean;
   onChange: (next: Partial<PnlFilters>) => void;
+  /** When true, hides the Farming Year dropdown (used when a global year selector controls it). */
+  hideFarmingYear?: boolean;
 }
 
 // ─── Styled Components ────────────────────────────────────────────────────────
@@ -155,8 +157,15 @@ const FARMING_YEAR_OPTIONS = [
   { value: 'custom', label: 'Custom Range' },
 ];
 
-export function PnlFiltersBar({ filters, farms, farmsLoading, onChange }: PnlFiltersBarProps) {
-  const showCustomDates = filters.farmingYear === 'custom';
+export function PnlFiltersBar({
+  filters,
+  farms,
+  farmsLoading,
+  onChange,
+  hideFarmingYear = false,
+}: PnlFiltersBarProps) {
+  // Custom date range only makes sense when the year dropdown is visible
+  const showCustomDates = !hideFarmingYear && filters.farmingYear === 'custom';
 
   return (
     <FiltersBar role="search" aria-label="P&L filter controls">
@@ -179,22 +188,24 @@ export function PnlFiltersBar({ filters, farms, farmsLoading, onChange }: PnlFil
         </Select>
       </FilterGroup>
 
-      {/* Farming Year */}
-      <FilterGroup>
-        <FilterLabel htmlFor="pnl-year-select">Farming Year</FilterLabel>
-        <Select
-          id="pnl-year-select"
-          value={filters.farmingYear}
-          onChange={(e) => onChange({ farmingYear: e.target.value, startDate: '', endDate: '' })}
-          aria-label="Select farming year"
-        >
-          {FARMING_YEAR_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-      </FilterGroup>
+      {/* Farming Year (hidden when a global year selector is in charge) */}
+      {!hideFarmingYear && (
+        <FilterGroup>
+          <FilterLabel htmlFor="pnl-year-select">Farming Year</FilterLabel>
+          <Select
+            id="pnl-year-select"
+            value={filters.farmingYear}
+            onChange={(e) => onChange({ farmingYear: e.target.value, startDate: '', endDate: '' })}
+            aria-label="Select farming year"
+          >
+            {FARMING_YEAR_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+        </FilterGroup>
+      )}
 
       {/* Custom date range (only shown when "custom" is selected) */}
       {showCustomDates && (

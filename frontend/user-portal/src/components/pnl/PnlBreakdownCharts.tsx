@@ -8,6 +8,7 @@
  * Clicking a bar fires onFarmClick / onCropClick to update page filters.
  */
 
+import { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import {
   ResponsiveContainer,
@@ -48,6 +49,7 @@ const Row = styled.div`
   grid-template-columns: 1fr 1fr;
   gap: ${({ theme }) => theme.spacing.lg};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
+  align-items: stretch;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     grid-template-columns: 1fr;
@@ -62,6 +64,11 @@ const Panel = styled.section`
   box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
+const FarmPanel = styled(Panel)`
+  display: flex;
+  flex-direction: column;
+`;
+
 const PanelTitle = styled.h2`
   font-size: ${({ theme }) => theme.typography.fontSize.lg};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
@@ -71,6 +78,11 @@ const PanelTitle = styled.h2`
 
 const ChartContainer = styled.div`
   height: 280px;
+`;
+
+const FarmChartContainer = styled.div`
+  flex: 1;
+  min-height: 280px;
 `;
 
 const SkeletonBar = styled.div`
@@ -121,6 +133,27 @@ const RetryButton = styled.button`
   }
 `;
 
+const ShowMoreBtn = styled.button`
+  display: block;
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.sm};
+  margin-top: ${({ theme }) => theme.spacing.sm};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.primary[500]};
+  background: transparent;
+  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface};
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+`;
+
 const Hint = styled.p`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
   color: ${({ theme }) => theme.colors.textSecondary};
@@ -157,6 +190,8 @@ function BarTooltip({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const FARM_DEFAULT_VISIBLE = 5;
+
 interface PnlBreakdownChartsProps {
   farms?: PnlFarmDataPoint[];
   farmsLoading: boolean;
@@ -164,10 +199,12 @@ interface PnlBreakdownChartsProps {
   crops?: PnlCropDataPoint[];
   cropsLoading: boolean;
   cropsError: boolean;
-  onFarmClick: (farmId: string) => void;
-  onCropClick: (cropName: string) => void;
+  onFarmClick?: (farmId: string) => void;
+  onCropClick?: (cropName: string) => void;
   onFarmsRetry: () => void;
   onCropsRetry: () => void;
+  cropHeader?: React.ReactNode;
+  cropFooter?: React.ReactNode;
 }
 
 export function PnlBreakdownCharts({
@@ -181,14 +218,19 @@ export function PnlBreakdownCharts({
   onCropClick,
   onFarmsRetry,
   onCropsRetry,
+  cropHeader,
+  cropFooter,
 }: PnlBreakdownChartsProps) {
-  const topFarms = farms ? [...farms].sort((a, b) => b.revenue - a.revenue).slice(0, 8) : [];
+  const [farmsExpanded, setFarmsExpanded] = useState(false);
+  const allFarmsSorted = farms ? [...farms].sort((a, b) => b.revenue - a.revenue) : [];
+  const topFarms = farmsExpanded ? allFarmsSorted : allFarmsSorted.slice(0, FARM_DEFAULT_VISIBLE);
+  const hasMoreFarms = allFarmsSorted.length > FARM_DEFAULT_VISIBLE;
   const topCrops = crops ? [...crops].sort((a, b) => b.revenue - a.revenue).slice(0, 10) : [];
 
   return (
     <Row>
       {/* Revenue by Farm */}
-      <Panel aria-labelledby="farm-chart-title">
+      <FarmPanel aria-labelledby="farm-chart-title">
         <PanelTitle id="farm-chart-title">Revenue by Farm</PanelTitle>
 
         {farmsLoading && <SkeletonBar aria-label="Loading farm revenue chart" />}
@@ -205,56 +247,58 @@ export function PnlBreakdownCharts({
         )}
 
         {!farmsLoading && !farmsError && topFarms.length > 0 && (
-          <>
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={topFarms}
-                  margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
+          <FarmChartContainer>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                layout="vertical"
+                data={topFarms}
+                margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e0e0e0" />
+                <XAxis
+                  type="number"
+                  tickFormatter={formatAed}
+                  tick={{ fontSize: 11, fill: '#616161' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="farmName"
+                  width={120}
+                  tick={{ fontSize: 11, fill: '#424242' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip content={<BarTooltip />} />
+                <Bar
+                  dataKey="revenue"
+                  radius={[0, 4, 4, 0]}
+                  cursor={onFarmClick ? 'pointer' : 'default'}
+                  onClick={onFarmClick ? (data: PnlFarmDataPoint) => onFarmClick(data.farmId) : undefined}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e0e0e0" />
-                  <XAxis
-                    type="number"
-                    tickFormatter={formatAed}
-                    tick={{ fontSize: 11, fill: '#616161' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="farmName"
-                    width={90}
-                    tick={{ fontSize: 11, fill: '#424242' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip content={<BarTooltip />} />
-                  <Bar
-                    dataKey="revenue"
-                    radius={[0, 4, 4, 0]}
-                    cursor="pointer"
-                    onClick={(data: PnlFarmDataPoint) => onFarmClick(data.farmId)}
-                    aria-label="Click to filter by this farm"
-                  >
-                    {topFarms.map((_, index) => (
-                      <Cell
-                        key={`farm-cell-${index}`}
-                        fill={FARM_COLORS[index % FARM_COLORS.length]}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-            <Hint>Click a bar to filter by that farm.</Hint>
-          </>
+                  {topFarms.map((_, index) => (
+                    <Cell
+                      key={`farm-cell-${index}`}
+                      fill={FARM_COLORS[index % FARM_COLORS.length]}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </FarmChartContainer>
         )}
-      </Panel>
+        {hasMoreFarms && (
+          <ShowMoreBtn onClick={() => setFarmsExpanded((v) => !v)}>
+            {farmsExpanded ? 'Show top 5 only' : `Show all ${allFarmsSorted.length} farms`}
+          </ShowMoreBtn>
+        )}
+      </FarmPanel>
 
       {/* Revenue by Crop */}
       <Panel aria-labelledby="crop-chart-title">
-        <PanelTitle id="crop-chart-title">Revenue by Crop (Top 10)</PanelTitle>
+        <PanelTitle id="crop-chart-title">Revenue by Crop</PanelTitle>
+        {cropHeader}
 
         {cropsLoading && <SkeletonBar aria-label="Loading crop revenue chart" />}
 
@@ -289,7 +333,7 @@ export function PnlBreakdownCharts({
                   <YAxis
                     type="category"
                     dataKey="cropName"
-                    width={90}
+                    width={120}
                     tick={{ fontSize: 11, fill: '#424242' }}
                     tickLine={false}
                     axisLine={false}
@@ -312,9 +356,9 @@ export function PnlBreakdownCharts({
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
-            <Hint>Click a bar to filter by that crop.</Hint>
           </>
         )}
+        {cropFooter}
       </Panel>
     </Row>
   );

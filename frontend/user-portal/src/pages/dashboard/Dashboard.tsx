@@ -9,7 +9,7 @@
  *   GET /api/v1/farm/config/farming-years-list   (farming year options for KPI chart filter)
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import {
   PieChart,
@@ -23,9 +23,30 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../services/api';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
 import { useFarmingYearsList } from '../../hooks/queries/useFarmingYears';
+import { useAuthStore } from '../../stores/auth.store';
+import { getFarms } from '../../services/farmApi';
+import {
+  useFinancePnlSummary,
+  useFinancePnlByMonth,
+  useFinancePnlByFarm,
+  useFinancePnlByCrop,
+  useFinancePnlArAging,
+  useFinanceRevenueSources,
+} from '../../hooks/useFinancePnl';
+import { PnlFiltersBar } from '../../components/pnl/PnlFiltersBar';
+import { PnlKpiCards } from '../../components/pnl/PnlKpiCards';
+import { PnlRevenueTrendChart } from '../../components/pnl/PnlRevenueTrendChart';
+import { PnlBreakdownCharts } from '../../components/pnl/PnlBreakdownCharts';
+import { PnlStatementTable } from '../../components/pnl/PnlStatementTable';
+import { PnlArAging } from '../../components/pnl/PnlArAging';
+import { PnlRevenueConfidence } from '../../components/pnl/PnlRevenueConfidence';
+import type { PnlFilters } from '../pnl/PnLPage';
+import type { PnlFilterParams } from '../../types/finance';
+import type { Farm } from '../../types/farm';
 
 // ============================================================================
 // TYPES
@@ -349,6 +370,45 @@ function generateInsights(
 }
 
 // ============================================================================
+// P&L TAB HELPERS
+// ============================================================================
+
+/** Mirror of the same guard in PnLPage — no import needed, keep it local. */
+function hasFinanceAccess(user: ReturnType<typeof useAuthStore>['user']): boolean {
+  if (!user) return false;
+  if (user.role === 'super_admin') return true;
+  const perms = (user as unknown as { permissions?: string[] }).permissions;
+  if (Array.isArray(perms) && perms.includes('finance.view')) return true;
+  return false;
+}
+
+/**
+ * Convert a numeric farming year from the global sidebar store (e.g. 2025)
+ * to the string format the P&L API expects (e.g. 'FY2025').
+ * Returns an empty string when no year is selected (meaning "all time").
+ */
+function yearNumberToFyString(year: number | null): string {
+  if (year === null) return '';
+  return `FY${year}`;
+}
+
+/** Mirror of filtersToApiParams from PnLPage. */
+function pnlFiltersToApiParams(filters: PnlFilters): PnlFilterParams {
+  const params: PnlFilterParams = {};
+  if (filters.farmId) params.farmId = filters.farmId;
+  if (filters.farmingYear && filters.farmingYear !== 'custom') {
+    params.farmingYear = filters.farmingYear;
+  }
+  if (filters.farmingYear === 'custom') {
+    if (filters.startDate) params.startDate = filters.startDate;
+    if (filters.endDate) params.endDate = filters.endDate;
+  }
+  if (!filters.includeImputed) params.includeImputed = false;
+  if (filters.cropName) params.cropName = filters.cropName;
+  return params;
+}
+
+// ============================================================================
 // useDragScroll HOOK
 // ============================================================================
 
@@ -416,6 +476,11 @@ export function Dashboard() {
   const [farmData, setFarmData] = useState<FarmSummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Tab state — only shown when user has finance access
+  const { user } = useAuthStore();
+  const canViewPnl = hasFinanceAccess(user);
+  const [activeTab, setActiveTab] = useState<'farm' | 'pnl'>('farm');
 
   // Pie chart hover/filter state
   const [hoveredBlockIndex, setHoveredBlockIndex] = useState<number | null>(null);
@@ -597,12 +662,16 @@ export function Dashboard() {
 
   const hasFarmData = farmData !== null;
 
+
   return (
     <PageContainer>
       {/* ── Section 1: Page header ─────────────────────────────────────────── */}
       <PageHeader>
         <HeaderLeft>
-          <PageTitle>Dashboard</PageTitle>
+          <PageTitleRow>
+            <PageTitle>Dashboard</PageTitle>
+            {selectedYearDisplay && <ChartYearBadge>{selectedYearDisplay}</ChartYearBadge>}
+          </PageTitleRow>
           <PageSubtitle>Executive overview across all modules</PageSubtitle>
         </HeaderLeft>
         <HeaderRight>
@@ -620,6 +689,42 @@ export function Dashboard() {
         </HeaderRight>
       </PageHeader>
 
+      {/* ── Tab bar (only rendered when user has P&L access) ───────────────── */}
+      {canViewPnl && (
+        <TabBar role="tablist" aria-label="Dashboard sections">
+          <TabPill
+            role="tab"
+            aria-selected={activeTab === 'farm'}
+            $active={activeTab === 'farm'}
+            onClick={() => setActiveTab('farm')}
+          >
+            <TabIcon>🌾</TabIcon>
+            <TabLabelGroup>
+              <TabLabel>Farm Overview</TabLabel>
+              <TabHint>Blocks, crops, yield performance</TabHint>
+            </TabLabelGroup>
+          </TabPill>
+          <TabPill
+            role="tab"
+            aria-selected={activeTab === 'pnl'}
+            $active={activeTab === 'pnl'}
+            onClick={() => setActiveTab('pnl')}
+          >
+            <TabIcon>📊</TabIcon>
+            <TabLabelGroup>
+              <TabLabel>Profit &amp; Loss</TabLabel>
+              <TabHint>Revenue, margins, receivables</TabHint>
+            </TabLabelGroup>
+          </TabPill>
+        </TabBar>
+      )}
+
+      {/* ── P&L tab content (lazily mounted — hooks only fire when active) ── */}
+      {canViewPnl && activeTab === 'pnl' && <PnLTab />}
+
+      {/* ── Farm Overview tab content ────────────────────────────────────── */}
+      {activeTab === 'farm' && (
+        <>
       {/* Loading */}
       {isLoading && (
         <LoadingContainer role="status" aria-live="polite" aria-label="Loading dashboard">
@@ -879,7 +984,217 @@ export function Dashboard() {
 
         </PageContent>
       )}
+        </>
+      )}
     </PageContainer>
+  );
+}
+
+// ============================================================================
+// P&L TAB SUB-COMPONENT
+// Mounted only when the P&L tab is active — prevents wasted API calls while
+// the user is on Farm Overview. Reads farming year from the global sidebar
+// store and injects it into filter state so the global year selector drives
+// all P&L queries, matching the Farm Overview behaviour.
+// ============================================================================
+
+const REVENUE_CROP_DEFAULT_VISIBLE = 5;
+
+function PnLTab() {
+  const { selectedYear } = useFarmingYearStore();
+  const { data: pnlFarmingYearsData } = useFarmingYearsList(5, true);
+  const selectedYearDisplay = selectedYear !== null
+    ? pnlFarmingYearsData?.years?.find((y) => y.year === selectedYear)?.display ?? `Year ${selectedYear}`
+    : null;
+
+  // Local filter state — resets when the user navigates away and comes back
+  const [filters, setFilters] = useState<PnlFilters>({
+    farmId: '',
+    // Derive the FY string from the global numeric year (e.g. 2025 -> 'FY2025')
+    farmingYear: yearNumberToFyString(selectedYear),
+    startDate: '',
+    endDate: '',
+    includeImputed: true,
+    cropName: '',
+  });
+
+  // Keep farmingYear in sync when the global sidebar year changes
+  const farmingYearFromStore = yearNumberToFyString(selectedYear);
+  const prevFarmingYearRef = useRef(farmingYearFromStore);
+  useEffect(() => {
+    if (prevFarmingYearRef.current !== farmingYearFromStore) {
+      prevFarmingYearRef.current = farmingYearFromStore;
+      setFilters((prev) => ({ ...prev, farmingYear: farmingYearFromStore, startDate: '', endDate: '' }));
+    }
+  }, [farmingYearFromStore]);
+
+  const apiParams = useMemo(() => pnlFiltersToApiParams(filters), [filters]);
+
+  const handleFilterChange = useCallback((next: Partial<PnlFilters>) => {
+    setFilters((prev) => ({ ...prev, ...next }));
+  }, []);
+
+  const farmsQuery = useQuery({
+    queryKey: ['farms', 'all-for-pnl-dashboard'],
+    queryFn: () => getFarms(1, 100),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const farmOptions = useMemo(
+    () =>
+      (farmsQuery.data?.items as Farm[] ?? []).map((f) => ({
+        farmId: f.farmId,
+        farmName: f.name,
+      })),
+    [farmsQuery.data]
+  );
+
+  const summaryQuery = useFinancePnlSummary(apiParams);
+  const byMonthQuery = useFinancePnlByMonth(apiParams);
+  const byFarmQuery = useFinancePnlByFarm(apiParams);
+  const byCropQuery = useFinancePnlByCrop(apiParams);
+  const arAgingQuery = useFinancePnlArAging(apiParams);
+  const revenueSourcesQuery = useFinanceRevenueSources(apiParams);
+
+  const handleCropClick = useCallback(
+    (cropName: string) => handleFilterChange({ cropName }),
+    [handleFilterChange]
+  );
+
+  // Crop search/filter + show-more for Revenue by Crop
+  const [pnlCropSearch, setPnlCropSearch] = useState('');
+  const [selectedPnlCrops, setSelectedPnlCrops] = useState<Set<string>>(new Set());
+  const [pnlCropExpanded, setPnlCropExpanded] = useState(false);
+
+  const allPnlCrops = byCropQuery.data?.crops ?? [];
+
+  const filteredPnlCrops = (() => {
+    if (selectedPnlCrops.size > 0) {
+      return allPnlCrops.filter((c) => selectedPnlCrops.has(c.cropName));
+    }
+    return pnlCropExpanded ? allPnlCrops : allPnlCrops.slice(0, REVENUE_CROP_DEFAULT_VISIBLE);
+  })();
+
+  const pnlCropSearchResults = pnlCropSearch.trim().length > 0
+    ? allPnlCrops
+        .filter((c) => c.cropName.toLowerCase().includes(pnlCropSearch.toLowerCase()) && !selectedPnlCrops.has(c.cropName))
+        .slice(0, 8)
+    : [];
+
+  const togglePnlCrop = (cropName: string) => {
+    setSelectedPnlCrops((prev) => {
+      const next = new Set(prev);
+      if (next.has(cropName)) next.delete(cropName);
+      else next.add(cropName);
+      return next;
+    });
+    setPnlCropSearch('');
+  };
+
+  const clearPnlCropSelection = () => {
+    setSelectedPnlCrops(new Set());
+    setPnlCropSearch('');
+  };
+
+  return (
+    <PnLTabContainer>
+      {/* Filters bar — farming year hidden; global sidebar controls it */}
+      <PnlFiltersBar
+        filters={filters}
+        farms={farmOptions}
+        farmsLoading={farmsQuery.isLoading}
+        onChange={handleFilterChange}
+        hideFarmingYear
+      />
+
+      <PnlKpiCards
+        summary={summaryQuery.data}
+        isLoading={summaryQuery.isLoading}
+        isError={summaryQuery.isError}
+        onRetry={() => summaryQuery.refetch()}
+      />
+
+      <PnlRevenueTrendChart
+        months={byMonthQuery.data?.months}
+        isLoading={byMonthQuery.isLoading}
+        isError={byMonthQuery.isError}
+        onRetry={() => byMonthQuery.refetch()}
+      />
+
+      <PnlBreakdownCharts
+        farms={byFarmQuery.data?.farms}
+        farmsLoading={byFarmQuery.isLoading}
+        farmsError={byFarmQuery.isError}
+        crops={filteredPnlCrops}
+        cropsLoading={byCropQuery.isLoading}
+        cropsError={byCropQuery.isError}
+        onFarmClick={undefined}
+        onCropClick={handleCropClick}
+        onFarmsRetry={() => byFarmQuery.refetch()}
+        onCropsRetry={() => byCropQuery.refetch()}
+        cropHeader={byCropQuery.data?.crops && byCropQuery.data.crops.length > REVENUE_CROP_DEFAULT_VISIBLE ? (
+          <CropFilterBar>
+            <CropSearchWrapper>
+              <CropSearchInput
+                type="text"
+                placeholder="Search crops to compare revenue..."
+                value={pnlCropSearch}
+                onChange={(e) => setPnlCropSearch(e.target.value)}
+              />
+              {pnlCropSearchResults.length > 0 && (
+                <CropSearchDropdown>
+                  {pnlCropSearchResults.map((c) => (
+                    <CropSearchItem key={c.cropName} onClick={() => togglePnlCrop(c.cropName)}>
+                      <span>{c.cropName}</span>
+                      <CropSearchItemKpi $color="#10B981">
+                        {c.revenue.toLocaleString('en-US', { maximumFractionDigits: 0 })} AED
+                      </CropSearchItemKpi>
+                    </CropSearchItem>
+                  ))}
+                </CropSearchDropdown>
+              )}
+            </CropSearchWrapper>
+            {selectedPnlCrops.size > 0 && (
+              <CropChipsRow>
+                {[...selectedPnlCrops].map((name) => (
+                  <CropChip key={name}>
+                    {name}
+                    <CropChipRemove onClick={() => togglePnlCrop(name)}>×</CropChipRemove>
+                  </CropChip>
+                ))}
+                <CropChipClear onClick={clearPnlCropSelection}>Clear all</CropChipClear>
+              </CropChipsRow>
+            )}
+          </CropFilterBar>
+        ) : undefined}
+        cropFooter={byCropQuery.data?.crops && byCropQuery.data.crops.length > REVENUE_CROP_DEFAULT_VISIBLE && selectedPnlCrops.size === 0 ? (
+          <ShowMoreButton onClick={() => setPnlCropExpanded((v) => !v)}>
+            {pnlCropExpanded ? 'Show top 5 only' : `Show all ${byCropQuery.data.crops.length} crops`}
+          </ShowMoreButton>
+        ) : undefined}
+      />
+
+      <PnlStatementTable
+        summary={summaryQuery.data}
+        isLoading={summaryQuery.isLoading}
+        isError={summaryQuery.isError}
+        onRetry={() => summaryQuery.refetch()}
+      />
+
+      <PnlArAging
+        data={arAgingQuery.data}
+        isLoading={arAgingQuery.isLoading}
+        isError={arAgingQuery.isError}
+        onRetry={() => arAgingQuery.refetch()}
+      />
+
+      <PnlRevenueConfidence
+        data={revenueSourcesQuery.data}
+        isLoading={revenueSourcesQuery.isLoading}
+        isError={revenueSourcesQuery.isError}
+        onRetry={() => revenueSourcesQuery.refetch()}
+      />
+    </PnLTabContainer>
   );
 }
 
@@ -1199,11 +1514,18 @@ const HeaderLeft = styled.div`
   flex: 1;
 `;
 
+const PageTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+`;
+
 const PageTitle = styled.h1`
   font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
+  margin: 0;
   line-height: ${({ theme }) => theme.typography.lineHeight.tight};
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -1933,5 +2255,108 @@ const NoDataText = styled.p`
   color: ${({ theme }) => theme.colors.textSecondary};
   text-align: center;
   padding: ${({ theme }) => theme.spacing.xl} 0;
+  margin: 0;
+`;
+
+// ── Tab bar ─────────────────────────────────────────────────────────────────
+
+const TabBar = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.sm};
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+`;
+
+const TabPill = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => `${theme.spacing.md} ${theme.spacing.lg}`};
+  border: 2px solid ${({ $active, theme }) =>
+    $active ? theme.colors.primary[500] : 'transparent'};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  text-align: left;
+
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.background : 'transparent'};
+  box-shadow: ${({ $active, theme }) =>
+    $active ? theme.shadows.md : 'none'};
+
+  &:hover:not([aria-selected='true']) {
+    background: ${({ theme }) => theme.colors.neutral[100]};
+    border-color: ${({ theme }) => theme.colors.neutral[300]};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+  }
+`;
+
+const TabIcon = styled.span`
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+`;
+
+const TabLabelGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const TabLabel = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const TabHint = styled.span`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+// ── P&L tab content wrapper ──────────────────────────────────────────────────
+
+const PnLTabContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const PnLTabHeader = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
+`;
+
+const PnLTabTitle = styled.h2`
+  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  flex-wrap: wrap;
+`;
+
+const PnLPeriodBadge = styled.span`
+  display: inline-block;
+  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
+  color: ${({ theme }) => theme.colors.primary[700]};
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+`;
+
+const PnLTabSubtitle = styled.p`
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
