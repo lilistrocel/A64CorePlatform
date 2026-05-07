@@ -4286,7 +4286,273 @@ Current implementation uses mock data generators for development/testing:
 
 ---
 
+---
+
+## Sales Order Lifecycle Endpoints (v1.14.0)
+
+**Base path:** `/api/v1/sales/orders`
+**Authentication:** Required (Bearer Token) for all endpoints.
+**Author:** Viet Anh
+
+### Delete Preview
+
+```
+GET /api/v1/sales/orders/{orderId}/delete-preview
+```
+**Purpose:** Returns the current inventory state of every allocated batch before the caller confirms deletion. Allows the frontend to present per-batch disposal choices.
+**Response:** 200 OK
+```json
+{
+  "orderId": "uuid",
+  "batches": [
+    {
+      "inventoryId": "uuid",
+      "inventorySource": "harvest",
+      "farmName": "Greenhouse 1",
+      "quantity": 50.0,
+      "state": "active"
+    },
+    {
+      "inventoryId": "uuid",
+      "inventorySource": "harvest",
+      "farmName": "Greenhouse 1",
+      "quantity": 20.0,
+      "state": "expired"
+    }
+  ]
+}
+```
+`state` values: `active` | `expired` | `missing`
+
+---
+
+### Soft Delete Order with Batch Decisions
+
+```
+POST /api/v1/sales/orders/{orderId}/delete
+```
+**Purpose:** Soft-deletes an order. Caller must specify what to do with each allocated batch (especially expired ones).
+**Request Body:**
+```json
+{
+  "decisions": [
+    {
+      "inventoryId": "uuid",
+      "inventorySource": "harvest",
+      "action": "restore"
+    },
+    {
+      "inventoryId": "uuid",
+      "inventorySource": "harvest",
+      "action": "revive",
+      "expiryDate": "2026-08-01T00:00:00Z"
+    },
+    {
+      "inventoryId": "uuid",
+      "inventorySource": "harvest",
+      "action": "waste"
+    }
+  ]
+}
+```
+`action` values: `restore` (return quantity to available) | `revive` (un-expire batch, requires future `expiryDate`) | `waste` (write to `inventory_waste`)
+**Response:** 200 OK — order `deletedAt` timestamp set.
+**Errors:**
+- 400: `expiryDate` is in the past (for revive action)
+- 404: Order not found or already deleted
+- 422: Decision list missing entries for expired batches
+
+---
+
+### Report Return
+
+```
+POST /api/v1/sales/orders/{orderId}/report-return
+```
+**Purpose:** Records a customer return for one or more order items. Sellable returns re-enter `inventory_returned`; spoiled returns are written to `inventory_waste`.
+**Request Body:**
+```json
+{
+  "items": [
+    {
+      "orderItemId": "uuid",
+      "quantity": 10.0,
+      "containerCount": null,
+      "containerSize": null,
+      "condition": "sellable",
+      "reason": "Overstock",
+      "disposalMethod": null
+    },
+    {
+      "orderItemId": "uuid",
+      "quantity": 5.0,
+      "containerCount": null,
+      "containerSize": null,
+      "condition": "spoiled",
+      "reason": "Damaged in transit",
+      "disposalMethod": "discard"
+    }
+  ]
+}
+```
+`condition` values: `sellable` | `spoiled`
+**Response:** 201 Created
+```json
+{
+  "returnId": "uuid",
+  "orderId": "uuid",
+  "itemsProcessed": 2,
+  "inventoryReturnedIds": ["uuid"],
+  "inventoryWasteIds": ["uuid"]
+}
+```
+**Side effects:**
+- Sellable items: inserts `inventory_returned` row with `harvestDate` preserved from source batch for FIFO.
+- Spoiled items: inserts `inventory_waste` row with `sourceType=return`.
+- Appends `ReturnSummary` to `order.returns[]`.
+- Writes summary record into `return_orders` collection.
+
+---
+
+## Inventory Harvest — Expire / Revive Endpoints (v1.14.0)
+
+**Base path:** `/api/v1/farm/inventory/harvest`
+**Authentication:** Required (Bearer Token).
+**Author:** Viet Anh
+
+### Manual Expire Batch
+
+```
+POST /api/v1/farm/inventory/harvest/{inventoryId}/expire
+```
+**Purpose:** Manually marks a harvest batch as expired. Zeroes `quantity`, writes `inventory_waste` record with `sourceType=expired`, writes audit inventory movement.
+**Request Body:** None required (optional `reason` string).
+**Response:** 200 OK — updated `HarvestInventory` document with `quantity=0` and `status=expired`.
+**Errors:**
+- 404: Inventory record not found
+- 409: Batch is already expired
+
+---
+
+### Revive Expired Batch
+
+```
+POST /api/v1/farm/inventory/harvest/{inventoryId}/revive
+```
+**Purpose:** Reverses a manual expire. Restores `quantity`, soft-deletes the corresponding waste record, writes audit movement. Requires a future expiry date so the batch does not immediately expire again.
+**Request Body:**
+```json
+{
+  "expiryDate": "2026-08-01T00:00:00Z"
+}
+```
+**Response:** 200 OK — updated `HarvestInventory` document with quantity restored.
+**Errors:**
+- 400: `expiryDate` is not in the future
+- 404: Inventory record not found or no linked waste record to soft-delete
+- 409: Batch is not in expired state
+
+---
+
+## Returned Inventory CRUD Endpoints (v1.14.0)
+
+**Base path:** `/api/v1/farm/inventory/returned`
+**Authentication:** Required (Bearer Token).
+**Author:** Viet Anh
+**Collection:** `inventory_returned`
+
+### List Returned Inventory
+
+```
+GET /api/v1/farm/inventory/returned
+```
+**Query params:** `farmId`, `status` (`available` | `reserved` | `sold` | `expired`), `page`, `pageSize`
+**Response:** 200 OK — paginated list of `ReturnedInventory` documents.
+
+---
+
+### Create Returned Inventory Entry
+
+```
+POST /api/v1/farm/inventory/returned
+```
+**Purpose:** Manually create a returned inventory record (also called internally by Report Return).
+**Request Body:**
+```json
+{
+  "farmId": "uuid",
+  "plantName": "Capsicum Green",
+  "grade": "A",
+  "quantity": 15.0,
+  "originalQuantity": 15.0,
+  "availableQuantity": 15.0,
+  "reservedQuantity": 0.0,
+  "harvestDate": "2026-04-01T00:00:00Z",
+  "sourceOrderId": "uuid",
+  "sourceOrderItemId": "uuid",
+  "sourceInventoryHarvestId": "uuid"
+}
+```
+**Response:** 201 Created — `ReturnedInventory` document.
+
+---
+
+### Get Returned Inventory Entry
+
+```
+GET /api/v1/farm/inventory/returned/{inventoryId}
+```
+**Response:** 200 OK — single `ReturnedInventory` document.
+
+---
+
+### Update Returned Inventory Entry
+
+```
+PATCH /api/v1/farm/inventory/returned/{inventoryId}
+```
+**Request Body:** Partial `ReturnedInventoryUpdate` (any subset of mutable fields).
+**Response:** 200 OK — updated document.
+
+---
+
+### Delete Returned Inventory Entry
+
+```
+DELETE /api/v1/farm/inventory/returned/{inventoryId}
+```
+**Response:** 204 No Content (soft delete).
+
+---
+
+### Mark Returned Inventory as Waste
+
+```
+POST /api/v1/farm/inventory/returned/{inventoryId}/mark-waste
+```
+**Purpose:** Writes the remaining `availableQuantity` to `inventory_waste` with `sourceType=returned` and sets the returned inventory status to `wasted`.
+**Request Body:**
+```json
+{
+  "reason": "Quality deteriorated beyond acceptable threshold"
+}
+```
+**Response:** 200 OK — updated `ReturnedInventory` document with status `wasted`.
+
+---
+
 ## API Changelog
+
+### v1.14.0 - 2026-05-07
+- ✅ **Sales Order — two-step delete** with batch-decision restore/revive/waste (`GET .../delete-preview` + `POST .../delete`)
+- ✅ **Sales Order — Report Return** flow: per-item sellable/spoiled routing to `inventory_returned` / `inventory_waste` (`POST .../report-return`)
+- ✅ **Harvest batch — manual expire/revive** (`POST .../expire`, `POST .../revive`)
+- ✅ **Returned inventory CRUD** — 6 new endpoints (`GET/POST /returned`, `GET/PATCH/DELETE /returned/{id}`, `POST /returned/{id}/mark-waste`)
+- ✅ **Farm summary `farmingYear` param** — `GET /farm/farms/{id}/summary?farmingYear=...` scopes yield totals to a farming year
+- ✅ **Order schema additions** — `allocations`, `containerCount`, `containerSize`, `deletedAt`, `returns` (all backward-compatible)
+- ✅ **Order lifecycle wiring** — reservation on confirm, deduction on ship, restoration on cancel via `MovementType.RESERVATION/SHIPMENT/RESTORATION`
+- ✅ **Sales-side inventory endpoints retired** — routes under sales module removed; stock UI reads farm-side endpoints directly
+- Author: Viet Anh
 
 ### v1.10.0 - 2026-01-22
 - ✅ **Default Inventory System** implemented - Organization-level centralized inventory

@@ -39,10 +39,10 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ## Current Versions
 
-**Last Updated:** 2026-04-15
+**Last Updated:** 2026-05-07
 
 ### Platform Version
-**A64 Core Platform:** `1.12.0` (Unreleased)
+**A64 Core Platform:** `1.14.0` (Unreleased)
 
 ### API Versions
 | API Component | Version | Status | Supported Until |
@@ -88,6 +88,56 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 ## Version History
 
 ### Platform Version History
+
+#### v1.14.0 - 2026-05-07 (Unreleased)
+**Type:** Minor Release — Farm Detail + Block Monitor merge, Inventory/Stock split, per-batch harvest model, returned-inventory CRUD, sales order lifecycle (reservations, two-step delete, Report Return), Add Item modal with FIFO allocation, customer typeahead.
+
+**Author: Viet Anh**
+
+**Added:**
+- Block Monitor fully merged into Farm Detail: `FarmQuickSwitcher`, `BlockMonitorHero`, `BlockViewToggle`, `VirtualBlocksView`, `PhysicalBlockPlantingsModal`, `useBlockViewMode` hook.
+- Farm Card redesigned with Yield Achievement progress bar, all-states pill row, responsive metric grid.
+- Farm Manager Dashboard: new "View Farms" tab, Plant Library sidebar entry.
+- Backend: `farmingYear` query param on farm summary endpoints; `FarmSummary.physicalBlocks/virtualBlocks/actualYield`.
+- New `/sales/stock` page (Sellable / Returned / Waste tabs) replacing the old sales inventory page.
+- Per-batch `inventory_harvest` rows: `originalQuantity` immutable field, FIFO-safe.
+- Manual expire (`POST .../expire`) and revive (`POST .../revive`) endpoints for harvest batches.
+- Daily expiry cron disabled (function preserved).
+- Full `inventory_returned` CRUD: 6 new endpoints + `mark-waste`. New `ReturnedInventoryList` frontend component.
+- `BlockHarvestEntryModal` Waste grade: dual-path submit (harvest vs waste endpoint), hidden yield context cards.
+- `CustomerCombobox` typeahead in `OrderForm` with address auto-fill.
+- `AddOrderItemModal`: FIFO allocation across `inventory_harvest` + `inventory_returned`, container mode, duplicate detection, portaled crop dropdown.
+- Sales order schema: `allocations`, `containerCount`, `containerSize`, `deletedAt`, `returns` fields — all backward-compatible.
+- Order lifecycle: reservation on confirm, deduction on ship, restoration on cancel.
+- Two-step order delete: `GET .../delete-preview` + `POST .../delete` with `BatchDecision[]` (restore/revive/waste per expired batch).
+- `ReportReturnModal` with per-item dual-mode (kg/containers), sellable → `inventory_returned`, spoiled → `inventory_waste`.
+
+**Changed:**
+- Farm Detail title restyled; farming-year chip, manager line, status badge.
+- Farm Manager Dashboard tabs reorganised; Farm Breakdown merged into Overview.
+- Sales-side inventory backend retired; stock UI reads farm-side endpoints directly.
+
+**Removed:**
+- Block Monitor route and sidebar entry (`/farm/block-monitor`).
+- Old `FarmDashboardPage.tsx`, `DashboardHeader.tsx`, `FarmSelector.tsx` files.
+- Sales `InventoryPage`, `InventoryTable`, `InventoryForm` components.
+- Edit button from sales order action cell.
+- Empty `harvest_inventory` collection.
+
+**Fixed:**
+- `Farm` TypeScript type now includes `farmCode`, `managerName`, `managerEmail`.
+- `getAvailableFarmingYears` URL corrected.
+- `productId` forwarded in `useFieldArray.append()`.
+- Allocation UUID serialisation fixed (was 500 on first allocated order).
+- Nginx DNS flush after API restart.
+- `inventory_harvest` rows backfilled with `farmingYear`.
+
+**Compatibility:**
+- BREAKING (internal route): `/farm/block-monitor` route removed. Any direct bookmarks or external links to the Block Monitor page are broken; navigation now reaches the same functionality via Farm Detail > Blocks tab > Virtual Only view.
+- No API breaking changes. All new API fields are optional/additive. Retired sales-side inventory endpoints were internal only with no external consumers documented.
+- Fully backward-compatible with v1.13.x for all documented public endpoints.
+
+---
 
 #### v1.12.0 - 2026-04-15 (Unreleased)
 **Type:** Minor Release — Dashboard Redesign, Global Farming Year Selector, PlantData Modal Unification, Virtual Block Management, Dark Mode Pass (selects/inputs), Block Monitor Silent Refresh, Misc Theme Fixes

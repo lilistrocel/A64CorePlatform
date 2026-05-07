@@ -1884,4 +1884,83 @@ logs/
 
 ---
 
+## Inventory & Stock Architecture (v1.14.0)
+
+**Author: Viet Anh — added 2026-05-07**
+
+### Module Responsibility Split
+
+The platform separates two conceptually distinct inventory concerns into two different navigation modules:
+
+| Module | Route | Collections | Purpose |
+|--------|-------|-------------|---------|
+| Inventory module | `/inventory` | `inventory_inputs`, `inventory_assets` | Farm inputs (fertiliser, pesticide, water, energy) and capital assets |
+| Sales Stock module | `/sales/stock` | `inventory_harvest`, `inventory_returned`, `inventory_waste` | Sellable harvest produce, returned goods, and waste records |
+
+The old Sales-side inventory service (`src/modules/sales/`) which duplicated harvest data has been retired. The Sales Stock UI now reads the farm-side `inventory_harvest` and `inventory_returned` endpoints directly.
+
+---
+
+### Per-Batch Harvest Model (FIFO)
+
+Prior to v1.14.0, `HarvestService._add_to_inventory` merged new harvests into existing `inventory_harvest` rows by crop/grade/farm combination. This destroyed per-batch dating, making FIFO allocation and accurate shelf-life tracking impossible.
+
+**Current model (v1.14.0+):**
+
+Each harvest event creates a new `inventory_harvest` document. The key fields are:
+
+| Field | Behaviour |
+|-------|-----------|
+| `originalQuantity` | Set at creation from the harvest amount. Immutable — never decremented. Used as the FIFO denominator for calculating "how much of this batch has been sold". |
+| `quantity` | Current remaining quantity. Decremented on sale deduction or manual expire. |
+| `availableQuantity` | Subset of `quantity` not currently reserved by an open order. |
+| `reservedQuantity` | Quantity locked by one or more confirmed orders pending shipment. `availableQuantity + reservedQuantity = quantity` at all times. |
+| `farmingYear` | Computed from `harvestDate` at write time. Used for year-scoped yield reporting. |
+| `harvestDate` | The original harvest date. Preserved on returns so FIFO ordering is maintained when returned stock re-enters the sellable pool. |
+
+---
+
+### Reservation Lifecycle
+
+Sales orders that interact with harvest or returned inventory go through a three-phase lifecycle:
+
+```
+DRAFT          → no inventory changes
+CONFIRMED      → RESERVATION: availableQuantity -= alloc.quantity; reservedQuantity += alloc.quantity
+SHIPPED        → DEDUCTION:   quantity -= alloc.quantity; reservedQuantity -= alloc.quantity
+CANCELLED      → RESTORATION: availableQuantity += alloc.quantity; reservedQuantity -= alloc.quantity
+```
+
+Each transition writes an audit record to `inventory_movements` with the appropriate `MovementType` enum value (`RESERVATION`, `SHIPMENT`, or `RESTORATION`).
+
+Order allocations are stored as `OrderItemAllocation[]` on each order item. Each allocation references:
+- `inventorySource`: `'harvest'` | `'returned'`
+- `inventoryId`: ObjectId of the source document
+- `farmId` / `farmName`: denormalised for display
+- `quantity`: kg allocated from this specific batch
+
+FIFO is enforced at allocation time in the frontend (`AddOrderItemModal`): batches are sorted by `harvestDate` ascending and filled oldest-first.
+
+---
+
+### Returned Inventory (`inventory_returned`)
+
+When a customer returns goods, the return is classified at the item level:
+
+- **Sellable condition**: inserts a new `inventory_returned` document, preserving `harvestDate` from the original harvest batch so FIFO ordering is maintained when the returned stock is re-sold.
+- **Spoiled condition**: inserts an `inventory_waste` document with `sourceType=return`.
+
+The `inventory_returned` collection follows the same `availableQuantity` / `reservedQuantity` / `originalQuantity` pattern as `inventory_harvest` and participates in the same reservation lifecycle.
+
+---
+
+### Manual Expire / Revive
+
+The daily automatic expiry cron is disabled (function preserved at `cron/expiry_cron.py`). Expiry is now manual:
+
+- `POST /api/v1/farm/inventory/harvest/{id}/expire` — operator-initiated expire: zeroes `quantity`, writes waste record with `sourceType=expired`.
+- `POST /api/v1/farm/inventory/harvest/{id}/revive` — reverses expire with a required future `expiryDate`: restores quantity, soft-deletes the waste record.
+
+---
+
 **REMEMBER: Always update this file when making architectural changes!**

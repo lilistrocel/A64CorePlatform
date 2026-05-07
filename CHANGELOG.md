@@ -5,6 +5,169 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-05-07
+
+**Type:** Minor Release — Farm Detail + Block Monitor merge, Inventory/Stock split, per-batch harvest model, returned-inventory CRUD, sales order lifecycle (reservations, two-step delete, Report Return), Add Item modal with FIFO allocation, sales customer typeahead.
+
+**Author: Viet Anh**
+
+### Added
+
+#### A. Farm Detail — Block Monitor merged in (Frontend)
+
+- New `FarmQuickSwitcher` component: compact cross-farm navigation dropdown at top of `FarmDetail`.
+- New `BlockMonitorHero` component: 4-stat hero card (Total Blocks split Physical/Virtual with explicit labels, Active Plantings, Avg Yield Efficiency, Predicted Yield with thousands separator). Shared between `FarmDetail` and legacy `FarmDashboardPage` during migration.
+- New `BlockViewToggle` segmented control on the Blocks tab: switches between "Physical Layout" and "Virtual Only" views.
+- New `VirtualBlocksView` component: encapsulates the former Block Monitor experience (filters, settings, compact grid, quick-plan). Embedded in `FarmDetail`'s Blocks tab.
+- New `PhysicalBlockPlantingsModal`: opened from each physical block card's "View Active Plantings (N)" button; shows virtual children as a square-card grid with FIFO ordering; includes per-card trash button to mark waste.
+- New `useBlockViewMode` hook: persists Blocks tab view-mode preference (`physical` | `virtual`) to localStorage.
+- Trash icon wired to virtual block cards in both the modal and Virtual Only views.
+
+#### B. Farm Manager Dashboard restructure (Frontend)
+
+- New "View Farms" tab (second position) in Farm Manager Dashboard; embeds `FarmList` with new `embedded` prop to suppress doubled padding.
+- Tab animation: sliding underline `::after` pseudo-element with cubic-bezier easing.
+- New sidebar entry "Plant Library" routing to `/farm/plants`.
+
+#### C. Farm Card redesign (Frontend)
+
+- Polished header: 56×56 icon badge, `FarmCodeChip` (e.g. "F010"), manager line, location line.
+- 3-stat metric grid (`auto-fit minmax`) for Total Area / Blocks (P · V) / Active Plantings; collapses gracefully on mobile.
+- New **Yield Achievement** progress bar replacing the old "Predicted Yield" number: color-banded (emerald ≥ 90%, amber 70–89%, red < 70%, grey when no data) with overflow chip when exceeded, captions for actual/predicted kg.
+- All-states pill row (Empty · Planned · Planted · Harvesting · Alert) with greyed-out zeros for stable layout.
+
+#### D. Backend yield aggregation — `farmingYear` param on summary endpoints (Backend)
+
+- `FarmSummary` extended with `physicalBlocks`, `virtualBlocks`, `actualYield` fields.
+- `GET /api/v1/farm/farms/{id}/summary` now accepts optional `farmingYear` query param; predicted yield and actual yield are scoped to that year when set.
+- `GET /api/v1/farm/dashboard/farms/{id}` returns year-agnostic physical block counts and year-filtered virtual block counts; `summary.physicalBlocks` / `summary.virtualBlocks` reflect structural totals correctly.
+
+#### E. Inventory/Stock architectural split (Frontend + Backend)
+
+- New `/sales/stock` page (`StockPage`) with three tabs: Sellable · Returned · Waste. URL deep-link via `?tab=`. Status filter chips (Available · Reserved · Sold · Expired) gated to Sellable tab.
+- `SalesActionTiles` "Inventory" tile renamed to "Stock", route updated to `/sales/stock`.
+- Inventory module (`/inventory`) slimmed to Inputs and Assets tabs only. Harvest and Waste sub-routes removed; redirect added to `/sales/stock?tab=...` for back-compat.
+
+#### F. Per-batch harvest inventory rows (Backend)
+
+- `HarvestService._add_to_inventory` no longer merges into existing rows. Each harvest event now creates a new `inventory_harvest` row, preserving per-batch dating for FIFO.
+- New immutable field `originalQuantity` on `HarvestInventory`: set at creation, never mutated; used as the FIFO denominator.
+- `farmingYear` now computed from `harvestDate` at write time.
+- Backfill applied to existing rows: `originalQuantity = quantity`, `farmingYear` derived from `harvestDate`.
+
+#### G. Manual expire / revive endpoints (Backend)
+
+- `POST /api/v1/farm/inventory/harvest/{id}/expire` — manually marks a batch expired: zeroes `quantity`, writes an `inventory_waste` record with `sourceType=expired`, writes audit movement.
+- `POST /api/v1/farm/inventory/harvest/{id}/revive` — reverses expire: requires a future `expiryDate`, restores `quantity`, soft-deletes the corresponding waste record, writes audit movement.
+- Daily expiry cron disabled in `cron/crontab` (commented out). `process_expired_harvest_inventory` function preserved in `expiry_cron.py` for easy re-enable.
+
+#### H. Returned inventory collection + CRUD (Backend + Frontend)
+
+- New `inventory_returned` MongoDB collection.
+- New Pydantic models: `ReturnedInventoryBase`, `ReturnedInventoryCreate`, `ReturnedInventoryUpdate`, `ReturnedInventory` with `originalQuantity`, `availableQuantity`, `reservedQuantity`, `sourceOrderId`, `sourceOrderItemId`, `sourceInventoryHarvestId`, `containerCodes: List[str]`, and `harvestDate` for FIFO.
+- New endpoints: `GET /api/v1/farm/inventory/returned`, `POST /api/v1/farm/inventory/returned`, `GET /api/v1/farm/inventory/returned/{id}`, `PATCH /api/v1/farm/inventory/returned/{id}`, `DELETE /api/v1/farm/inventory/returned/{id}`, `POST /api/v1/farm/inventory/returned/{id}/mark-waste`.
+- New `returned_repository.py` at `src/modules/farm_manager/services/inventory/`.
+- New `ReturnedInventoryList` frontend component: paginated table, search, sort, status badge, mark-as-waste action.
+
+#### I. Harvest entry modal — Waste grade (Frontend)
+
+- `BlockHarvestEntryModal` now exposes 4 grade options: A / B / C / Waste.
+- Conditional reason textarea appears only when Waste is selected (auto-filled, editable, max 500 chars).
+- Yield context cards hidden when Waste grade is selected (waste does not count toward KPI).
+- Dual-endpoint submit: A/B/C grades use existing `recordBlockHarvest` path; Waste grade hits `POST /api/v1/farm/inventory/waste` with `sourceType=harvest`. KPI not bumped on Waste.
+
+#### J. Sales Order — customer typeahead (Frontend)
+
+- New `CustomerCombobox` component: typeahead searching CRM customers via `crmApi.searchCustomers`, debounced with AbortController, ARIA-compliant, keyboard-navigable.
+- Selected state renders as a chip with X button to clear.
+- On selection: auto-fills `customerId`, `customerName`, and 5 shipping address fields when `customer.address` is present. Shipping fields remain editable.
+- Edit-mode broken-link warning when saved `customerId` no longer exists in CRM.
+
+#### K. Sales Order — Add Item modal with FIFO allocation (Frontend)
+
+- New `AddOrderItemModal` component: crop typeahead pulling from both `inventory_harvest` and `inventory_returned`, grade chips A/B/C, per-source rows (farms grouped + returned individual), Recommended badge on oldest single-farm source, Auto-fill (FIFO, farm-only).
+- Container-mode toggle: `count × size = computed kg total`. Auto-fill works in container mode. localStorage remembers `containerSize` per `plantName` per user.
+- Crops with no stock greyed out (visible, disabled).
+- Live selected summary with per-source breakdown.
+- Duplicate detection: same crop + grade prompts merge.
+- Allocations stored per-batch (`OrderItemAllocation[]`) with `inventorySource: 'harvest' | 'returned'`, `inventoryId`, `farmId`, `farmName`, `quantity`.
+- Crop dropdown portaled to `document.body` to escape modal `overflow: hidden`, with flip-up behavior.
+- `OrderForm` items section converted to read-only display cards; empty state shown for 0 items.
+- Default tax set to `5`, default discount to `0` for new orders.
+
+#### L. Sales Order schema additions (Backend)
+
+- `OrderItem.allocations: List[OrderItemAllocation]` — optional, backward-compatible.
+- `OrderItem.containerCount`, `OrderItem.containerSize` — optional, backward-compatible.
+- New `OrderItemAllocation` model: `inventorySource: Literal['harvest', 'returned']`, `inventoryId`, `farmId`, `farmName`, `quantity`.
+- `SalesOrder.deletedAt: Optional[datetime]` — soft-delete support.
+- `SalesOrder.returns: List[ReturnSummary]` — return history embedded on the order document.
+
+#### M. Sales Order lifecycle — reservation / deduction / restoration (Backend)
+
+- Reservation wired on order save when `status >= confirmed`: validates `availableQuantity >= alloc.quantity` per allocation, decrements available, increments reserved, writes audit movement.
+- Deduction wired on status transition to `shipped`: decrements `quantity` + `reservedQuantity`, writes shipment audit.
+- Restoration wired on status transition to `cancelled`: reverses reservation, writes restoration audit.
+- New enum values: `MovementType.RESERVATION`, `MovementType.SHIPMENT`, `MovementType.RESTORATION`, `WasteSourceType.ORDER_DELETION`.
+- DRAFT orders skip inventory lifecycle entirely.
+
+#### N. Sales Order — two-step delete with revive option (Backend + Frontend)
+
+- `GET /api/v1/sales/orders/{id}/delete-preview` — returns per-allocation state (active / expired / missing) before confirming delete.
+- `POST /api/v1/sales/orders/{id}/delete` — accepts `decisions: BatchDecision[]` (action: `restore` / `revive` / `waste`, optional `expiryDate` for revive). Soft-deletes the order on success.
+- New `DeleteOrderConfirmModal` frontend component: per-batch radio choices for expired batches; revive requires a future `expiryDate` to be entered.
+
+#### O. Sales Order — Report Return (Backend + Frontend)
+
+- `POST /api/v1/sales/orders/{id}/report-return` — per-item return report with `quantity`, container info, `condition` (sellable / spoiled), `reason`, `disposalMethod`. Sellable returns insert an `inventory_returned` row preserving `harvestDate` from the source batch. Spoiled returns insert an `inventory_waste` row with `sourceType=return`. Writes summary into `return_orders` collection and appends `ReturnSummary` to `order.returns[]`.
+- New `ReportReturnModal` frontend component: per-item dual-mode (kg / containers), defaults to order placement mode, container size pre-filled from order item, validates against original-minus-already-returned.
+
+### Changed
+
+#### Farm Detail polish (Frontend)
+
+- Title section restyled as a card with icon badge, farming-year chip (formatted timeframe e.g. "Aug 2025 – Jul 2026"), manager line, status badge.
+- "Farm Stats" button moved from `VirtualBlocksView` toolbar to `FarmDetail`'s HeaderActions.
+- Refresh and Settings buttons moved into `VirtualBlocksView`'s per-view header alongside the toggle.
+- Physical layout grid changed to `auto-fit minmax(min(400px, 100%), 1fr)` for graceful narrow-screen scaling.
+- `useDashboardData` integrated into `FarmDetail` for richer hero summary (avgYieldEfficiency etc.).
+
+#### Farm Manager Dashboard (Frontend)
+
+- Farm Breakdown tab content merged into Overview tab; standalone Farm Breakdown tab removed.
+- Quick Actions cleanup: removed "Manage Farms" (replaced by View Farms tab), "Plant Data Library" (moved to sidebar), "View Plantings" (no clear purpose). "View All Farms Statistics" remains.
+
+#### Sales — inventory backend retired (Backend)
+
+- Sales-side inventory service/repository/model removed: `src/modules/sales/api/v1/inventory.py`, `services/sales/inventory_repository.py`, `services/sales/inventory_service.py`, `models/inventory.py` (sales side). Router registration removed. Sales module no longer imports inventory symbols.
+- Stock UI reads `inventory_harvest` and `inventory_returned` directly via farm-side endpoints.
+
+### Removed
+
+- Block Monitor route `/farm/block-monitor` and sidebar entry retired. Files deleted: `FarmDashboardPage.tsx` (old standalone page), `FarmDashboardPage.tsx.bak`, `DashboardHeader.tsx`, `FarmSelector.tsx`.
+- Breadcrumb at top of `FarmDetail` removed.
+- "Total Area" stats grid in `FarmDetail` removed.
+- Standalone `BlocksTabHeader` component removed (toggle merged into per-view headers).
+- `InventoryPage`, `InventoryTable`, `InventoryForm` components in the sales module deleted; replaced by `StockPage` + `HarvestInventoryList` + `ReturnedInventoryList` + `WasteInventoryList`.
+- Edit button removed from sales order action cell; all `editingOrder` / `handleEditOrder` state purged.
+- Empty `harvest_inventory` MongoDB collection dropped (superseded by `inventory_harvest`).
+
+### Fixed
+
+- `Farm.farmCode`, `Farm.managerName`, `Farm.managerEmail` added to the TypeScript `Farm` type to match the runtime API response.
+- `getAvailableFarmingYears` URL corrected from `/v1/farm/farming-years` to `/v1/farm/config/farming-years-list`.
+- `productId` now forwarded during `useFieldArray.append()` in `OrderForm` (was being silently dropped).
+- `OrderRepository.create` and `update` now stringify nested allocation UUIDs (was causing HTTP 500 on first allocated order save).
+- Nginx DNS cache flush triggered after API container recreation to prevent stale upstream.
+- Sales-side `inventory_harvest` translator removed after sales-side inventory was retired.
+- `inventory_harvest` rows backfilled with `farmingYear` field (derived from `harvestDate`).
+- "View Farms" tab padding deduplication fixed via `embedded` prop on `FarmList`.
+- "PC Farm" data restored after accidental deletion (mongosh restore; `farmCode` field added to `Farm` model to prevent recurrence).
+- `useFieldArray.update(index, ...)` used instead of `remove + append` in `OrderForm` to preserve item position during edits.
+- Modal close-on-overlay-click removed from `BlockHarvestEntryModal` and all new modals, complying with the standing data-entry modal rule.
+
+---
+
 ## [1.13.5] - 2026-04-24
 
 **Type:** Patch Release — T-007 architectural correction: SenseHub crop sync now pushes per virtual child block, resolves MCP credentials via parent chain

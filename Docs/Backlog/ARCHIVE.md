@@ -1,6 +1,36 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 6 tasks
+> **Total completed:** 7 tasks
+
+## 2026-05
+
+| ID | Task | Category | Completed | Verified |
+|----|------|----------|-----------|----------|
+| T-008 | Farm Detail + Block Monitor merge; Inventory/Stock split; Sales Order lifecycle (v1.14.0 session) | Frontend + Backend | 2026-05-07 | ✅ |
+
+### T-008 | v1.14.0 development session — Farm, Inventory, Sales Order overhaul
+- **Category:** Frontend + Backend · **Priority:** P1
+- **Completed:** 2026-05-07
+- **Author: Viet Anh**
+- **Description:** Large multi-area session covering Farm Manager UI restructure, Inventory/Stock architectural split, per-batch harvest FIFO model, returned inventory, manual expire/revive, sales order lifecycle (reservations, two-step delete, Report Return), Add Item modal with FIFO allocation, and customer typeahead.
+- **Result:**
+  - Block Monitor route retired; all functionality merged into Farm Detail Blocks tab via `FarmQuickSwitcher`, `BlockMonitorHero`, `BlockViewToggle`, `VirtualBlocksView`, `PhysicalBlockPlantingsModal`, `useBlockViewMode` hook.
+  - Farm Card redesigned with Yield Achievement progress bar, all-states pill row, `FarmCodeChip`, responsive metric grid.
+  - Farm Manager Dashboard: new "View Farms" tab (embeds `FarmList`), Plant Library sidebar entry, tab sliding animation. Farm Breakdown tab merged into Overview.
+  - Backend: `FarmSummary` extended with `physicalBlocks`/`virtualBlocks`/`actualYield`; `farmingYear` optional query param on `/farms/{id}/summary` and `/dashboard/farms/{id}`.
+  - Inventory/Stock split: `/inventory` now Inputs + Assets only; `/sales/stock` (new) has Sellable / Returned / Waste tabs. Sales-side inventory service/repository/model retired.
+  - Per-batch harvest model: `originalQuantity` immutable field, `farmingYear` computed at write, no more merging rows.
+  - Manual expire (`POST .../expire`) and revive (`POST .../revive`) endpoints. Daily cron disabled.
+  - Full `inventory_returned` CRUD (6 endpoints + `mark-waste`). `ReturnedInventoryList` frontend component.
+  - `BlockHarvestEntryModal` Waste grade: dual-path submit to harvest vs waste endpoint.
+  - `CustomerCombobox` typeahead with CRM address auto-fill in `OrderForm`.
+  - `AddOrderItemModal`: FIFO multi-source allocation, container mode, duplicate detection, portaled dropdown.
+  - Order schema: `allocations`, `containerCount`, `containerSize`, `deletedAt`, `returns` fields (backward-compatible).
+  - Order lifecycle wired: reservation on confirm, deduction on ship, restoration on cancel.
+  - Two-step order delete: `GET .../delete-preview` + `POST .../delete` with `BatchDecision[]`.
+  - `ReportReturnModal` + `POST .../report-return` endpoint.
+  - Numerous bug fixes: Farm TS type fields, URL correction, productId forwarding, UUID serialisation, nginx DNS flush, inventory backfill.
+  - Released as v1.14.0 (MINOR bump). CodeMaps regenerated (structural changes).
 
 ## 2026-04
 
