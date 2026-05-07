@@ -5,10 +5,11 @@
  * Groups virtual blocks under their parent physical blocks.
  */
 
+import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { PhysicalBlockCard } from './PhysicalBlockCard';
-import type { Block } from '../../types/farm';
+import type { Block, DashboardBlock } from '../../types/farm';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -20,6 +21,10 @@ export interface PhysicalBlockGridProps {
   farmId: string;
   onRefresh?: () => void;
   onCreateBlock?: () => void;
+  /** Richer DashboardBlock[] for virtual blocks — forwarded to PhysicalBlockCard for the plantings modal */
+  virtualDashboardBlocks?: DashboardBlock[];
+  /** Optional content rendered on the right of the header (e.g., a view-mode toggle). */
+  headerActions?: ReactNode;
 }
 
 // ============================================================================
@@ -56,6 +61,13 @@ const BlockCount = styled.span`
   font-weight: 500;
   margin-top: 4px;
   display: block;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 `;
 
 const ControlsBar = styled.div`
@@ -132,12 +144,8 @@ const FilterButton = styled.button<{ $active: boolean }>`
 
 const GridContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
   gap: 24px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
 `;
 
 const EmptyState = styled.div`
@@ -197,6 +205,8 @@ export function PhysicalBlockGrid({
   farmId,
   onRefresh,
   onCreateBlock,
+  virtualDashboardBlocks,
+  headerActions,
 }: PhysicalBlockGridProps) {
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortField, setSortField] = useState<SortField>('name');
@@ -215,6 +225,20 @@ export function PhysicalBlockGrid({
 
     return grouped;
   }, [virtualBlocks]);
+
+  // Group richer DashboardBlock[] by parentBlockId for the plantings modal
+  const virtualDashboardBlocksByParent = useMemo(() => {
+    const grouped = new Map<string, DashboardBlock[]>();
+
+    (virtualDashboardBlocks ?? []).forEach((db) => {
+      if (db.parentBlockId) {
+        const existing = grouped.get(db.parentBlockId) ?? [];
+        grouped.set(db.parentBlockId, [...existing, db]);
+      }
+    });
+
+    return grouped;
+  }, [virtualDashboardBlocks]);
 
   // Apply filters and sorting
   const filteredPhysicalBlocks = useMemo(() => {
@@ -284,12 +308,19 @@ export function PhysicalBlockGrid({
             {totalPhysicalBlocks} physical blocks · {virtualBlocks.length} total plantings
           </BlockCount>
         </div>
-        {onCreateBlock && (
-          <CreateButton onClick={onCreateBlock}>
-            <span>+</span>
-            <span>Create Block</span>
-          </CreateButton>
-        )}
+        {/* Order matters: CreateButton on the left, headerActions (toggle) on
+            the right so the toggle stays anchored to the rightmost edge in
+            both Physical and Virtual modes — it doesn't shift when CreateButton
+            disappears. */}
+        <HeaderRight>
+          {onCreateBlock && (
+            <CreateButton onClick={onCreateBlock}>
+              <span>+</span>
+              <span>Create Block</span>
+            </CreateButton>
+          )}
+          {headerActions}
+        </HeaderRight>
       </Header>
 
       <ControlsBar>
@@ -330,6 +361,7 @@ export function PhysicalBlockGrid({
         <GridContainer>
           {filteredPhysicalBlocks.map((physicalBlock) => {
             const children = virtualBlocksByParent.get(physicalBlock.blockId) || [];
+            const dashboardChildren = virtualDashboardBlocksByParent.get(physicalBlock.blockId) || [];
             return (
               <PhysicalBlockCard
                 key={physicalBlock.blockId}
@@ -337,6 +369,7 @@ export function PhysicalBlockGrid({
                 virtualBlocks={children}
                 farmId={farmId}
                 onRefresh={onRefresh}
+                virtualDashboardBlocks={dashboardChildren}
               />
             );
           })}

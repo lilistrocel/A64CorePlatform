@@ -9,11 +9,11 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { VirtualBlockItem } from './VirtualBlockItem';
 import { PlantAssignmentModal } from './PlantAssignmentModal';
+import { PhysicalBlockPlantingsModal } from './PhysicalBlockPlantingsModal';
 import { deleteBlock } from '../../services/farmApi';
 import { formatNumber } from '../../utils';
-import type { Block } from '../../types/farm';
+import type { Block, DashboardBlock } from '../../types/farm';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -24,6 +24,8 @@ export interface PhysicalBlockCardProps {
   virtualBlocks: Block[];
   farmId: string;
   onRefresh?: () => void;
+  /** Richer DashboardBlock[] for the same virtual children — shown in the plantings modal */
+  virtualDashboardBlocks?: DashboardBlock[];
 }
 
 // ============================================================================
@@ -139,12 +141,6 @@ const PlantingsSectionTitle = styled.div`
   margin-bottom: 12px;
 `;
 
-const VirtualBlocksList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
 const EmptyPlantingsMessage = styled.div`
   padding: 24px;
   text-align: center;
@@ -153,6 +149,33 @@ const EmptyPlantingsMessage = styled.div`
   border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
   color: ${({ theme }) => theme.colors.textDisabled};
   font-size: 14px;
+`;
+
+const ViewPlantingsButton = styled.button`
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.infoBg};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+  }
 `;
 
 const Actions = styled.div`
@@ -294,9 +317,11 @@ export function PhysicalBlockCard({
   virtualBlocks,
   farmId,
   onRefresh,
+  virtualDashboardBlocks,
 }: PhysicalBlockCardProps) {
   const navigate = useNavigate();
   const [showPlantModal, setShowPlantModal] = useState(false);
+  const [showPlantingsModal, setShowPlantingsModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const activePlantings = virtualBlocks.filter(
@@ -432,18 +457,13 @@ export function PhysicalBlockCard({
           </PhysicalBlockPlantingInfo>
         )}
 
-        {/* Show virtual block plantings */}
+        {/* Button to open the plantings modal for virtual block children */}
         {activePlantings.length > 0 && (
-          <VirtualBlocksList>
-            {activePlantings.map((virtualBlock) => (
-              <VirtualBlockItem
-                key={virtualBlock.blockId}
-                virtualBlock={virtualBlock}
-                farmId={farmId}
-                onRefresh={onRefresh}
-              />
-            ))}
-          </VirtualBlocksList>
+          <ViewPlantingsButton onClick={() => setShowPlantingsModal(true)}>
+            <span>🌱</span>
+            <span>View Active Plantings ({activePlantings.length})</span>
+            <span>→</span>
+          </ViewPlantingsButton>
         )}
 
         {/* Show empty/cleaning state messages */}
@@ -510,6 +530,16 @@ export function PhysicalBlockCard({
         />,
         document.body
       )}
+
+      {/* Active Plantings Modal — shows virtual block children in CompactBlockCard grid */}
+      <PhysicalBlockPlantingsModal
+        isOpen={showPlantingsModal}
+        onClose={() => setShowPlantingsModal(false)}
+        physicalBlockName={physicalBlock.name || physicalBlock.blockCode || 'Block'}
+        farmId={farmId}
+        virtualBlocks={virtualDashboardBlocks ?? []}
+        onBlockUpdate={onRefresh}
+      />
     </Card>
   );
 }

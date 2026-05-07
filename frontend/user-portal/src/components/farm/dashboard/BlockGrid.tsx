@@ -5,9 +5,11 @@
  * Adapts card count per row based on screen size.
  */
 
+import { useState } from 'react';
 import styled from 'styled-components';
 import { CompactBlockCard } from './CompactBlockCard';
-import type { DashboardBlock } from '../../../types/farm';
+import { EmptyVirtualBlockModal } from '../EmptyVirtualBlockModal';
+import type { Block, DashboardBlock } from '../../../types/farm';
 import type { DashboardConfig } from '../../../hooks/farm/useDashboardConfig';
 
 interface BlockGridProps {
@@ -18,6 +20,9 @@ interface BlockGridProps {
 }
 
 export function BlockGrid({ blocks, farmId, config, onBlockUpdate }: BlockGridProps) {
+  // Tracks which virtual block (if any) the user is archiving/deleting.
+  const [blockToArchive, setBlockToArchive] = useState<DashboardBlock | null>(null);
+
   if (blocks.length === 0) {
     return (
       <EmptyState>
@@ -30,21 +35,52 @@ export function BlockGrid({ blocks, farmId, config, onBlockUpdate }: BlockGridPr
 
   return (
     <Container>
-      <Grid $cardsPerRow={config.layout.cardsPerRow}>
+      <Grid>
         {blocks.map((block) => (
-          <CompactBlockCard
-            key={block.blockId}
-            block={block}
-            farmId={farmId}
-            config={config}
-            onUpdate={onBlockUpdate}
-          />
+          <CardWrapper key={block.blockId}>
+            <CompactBlockCard
+              block={block}
+              farmId={farmId}
+              config={config}
+              onUpdate={onBlockUpdate}
+            />
+            {/* Trash icon only on virtual blocks — physical blocks have their
+                own management flow on the FarmDetail Physical layout. */}
+            {block.blockCategory === 'virtual' && (
+              <TrashButton
+                type="button"
+                aria-label={`Archive or delete ${block.name || block.blockCode}`}
+                title="Archive / delete planting"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setBlockToArchive(block);
+                }}
+              >
+                🗑️
+              </TrashButton>
+            )}
+          </CardWrapper>
         ))}
       </Grid>
 
       <Summary>
         Displaying {blocks.length} block{blocks.length !== 1 ? 's' : ''}
       </Summary>
+
+      {/* Archive/delete confirmation. EmptyVirtualBlockModal expects a Block
+          shape; DashboardBlock supplies all the fields it reads (blockId,
+          blockCode, name, blockCategory) plus we add farmId. */}
+      {blockToArchive && (
+        <EmptyVirtualBlockModal
+          isOpen={blockToArchive !== null}
+          onClose={() => setBlockToArchive(null)}
+          block={{ ...blockToArchive, farmId } as unknown as Block}
+          onSuccess={() => {
+            setBlockToArchive(null);
+            onBlockUpdate?.();
+          }}
+        />
+      )}
     </Container>
   );
 }
@@ -57,40 +93,47 @@ const Container = styled.div`
   width: 100%;
 `;
 
-const Grid = styled.div<{ $cardsPerRow: number }>`
+const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(
-    ${(props) => props.$cardsPerRow},
-    minmax(0, 1fr)
-  );
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
+  justify-content: start;
+`;
 
-  /* Responsive breakpoints */
-  @media (max-width: 1920px) {
-    grid-template-columns: repeat(
-      ${(props) => Math.min(props.$cardsPerRow, 8)},
-      minmax(0, 1fr)
-    );
+/* Wraps each CompactBlockCard so we can absolutely-position a trash button
+   on top of it without modifying CompactBlockCard itself (which is shared
+   across views). */
+const CardWrapper = styled.div`
+  position: relative;
+`;
+
+const TrashButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  z-index: 2;
+
+  &:hover {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: #dc2626;
   }
 
-  @media (max-width: 1440px) {
-    grid-template-columns: repeat(
-      ${(props) => Math.min(props.$cardsPerRow, 6)},
-      minmax(0, 1fr)
-    );
-  }
-
-  @media (max-width: 1024px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+  &:focus-visible {
+    outline: 2px solid #dc2626;
+    outline-offset: 2px;
   }
 `;
 

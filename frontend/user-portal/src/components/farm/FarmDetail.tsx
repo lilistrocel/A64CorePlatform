@@ -9,7 +9,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useFarm, useFarmSummary, useFarmBlocks } from '../../hooks/queries';
-import { BlockGrid } from './BlockGrid';
 import { PhysicalBlockGrid } from './PhysicalBlockGrid';
 import { CreateBlockModal } from './CreateBlockModal';
 import { EditBlockModal } from './EditBlockModal';
@@ -18,12 +17,45 @@ import { EditFarmBoundaryModal } from './EditFarmBoundaryModal';
 import { FarmHistoryTab } from './FarmHistoryTab';
 import { FarmMapView } from './FarmMapView';
 import { AgriDataTab, SensorFusionTab } from './weather';
+import { FarmQuickSwitcher } from './FarmQuickSwitcher';
+import { BlockMonitorHero } from './BlockMonitorHero';
+import { BlockViewToggle } from './BlockViewToggle';
+import { VirtualBlocksView } from './VirtualBlocksView';
+import { FarmAnalyticsModal } from './FarmAnalyticsModal';
+import { useBlockViewMode } from '../../hooks/farm/useBlockViewMode';
+import { useDashboardData } from '../../hooks/farm/useDashboardData';
+import { useFarmingYearsList } from '../../hooks/queries/useFarmingYears';
 import { farmApi } from '../../services/farmApi';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
 import { Breadcrumb } from '@a64core/shared';
-import type { BreadcrumbItem } from '@a64core/shared';
-import type { Farm, FarmSummary, Block, BlockCreate, BlockUpdate, FarmUpdate } from '../../types/farm';
+import type { FarmSummary, DashboardSummary, Block, BlockCreate, BlockUpdate, FarmUpdate } from '../../types/farm';
 import { formatNumber } from '../../utils';
+
+/**
+ * Adapts the lighter FarmSummary (from useFarmSummary) into a DashboardSummary
+ * shape so BlockMonitorHero can consume it without a separate API call.
+ *
+ * TODO: avgYieldEfficiency is not present in FarmSummary — defaulting to 0 (N/A)
+ *       until the /farm/farms/:id/summary endpoint includes it.
+ * TODO: totalActualYieldKg is not present in FarmSummary — defaulting to 0.
+ */
+function adaptToDashboardSummary(s: FarmSummary): DashboardSummary {
+  // FarmSummary.blocksByState uses strict interface keys, but the actual API
+  // response may include extra keys (e.g. "planted"). Cast to a wider type
+  // so the mapping works without breaking the DashboardSummary contract.
+  const blocksByState = s.blocksByState as Record<string, number>;
+  return {
+    totalBlocks: s.totalBlocks,
+    physicalBlocks: s.physicalBlocks,
+    virtualBlocks: s.virtualBlocks,
+    blocksByState,
+    totalActivePlantings: s.activePlantings,
+    totalPredictedYieldKg: s.predictedYield,
+    totalActualYieldKg: 0, // TODO: not in FarmSummary
+    avgYieldEfficiency: 0, // TODO: not in FarmSummary
+    activeAlerts: {},
+  };
+}
 
 // LocalStorage key for mobile view preference
 const MOBILE_VIEW_PREF_KEY = 'farm-detail-mobile-view';
@@ -72,6 +104,7 @@ const TitleRow = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
+  gap: 16px;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -79,26 +112,80 @@ const TitleRow = styled.div`
   }
 `;
 
-const TitleSection = styled.div``;
+/** Horizontal flex: icon badge on the left, content column on the right. */
+const TitleSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+  flex: 1;
+`;
 
+/** Square icon badge with subtle accent background — replaces the inline emoji. */
 const FarmIcon = styled.div`
-  font-size: 48px;
-  margin-bottom: 12px;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+`;
+
+/** Vertical stack to the right of the icon: title row + metadata row. */
+const TitleContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 `;
 
 const FarmTitle = styled.h1`
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 8px 0;
+  margin: 0;
+  line-height: 1.2;
+`;
+
+/** Inline row for the farm title + farming year chip */
+const TitleNameRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+const FarmingYearChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.primary[50]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  border-radius: 20px;
+  padding: 4px 12px;
+  white-space: nowrap;
 `;
 
 const Location = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 14px;
   color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+/** Divider between the title/actions row and the hero stats. */
+const HeaderDivider = styled.hr`
+  border: none;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  margin: 0 0 24px 0;
 `;
 
 const StatusBadge = styled.span<{ $isActive: boolean }>`
@@ -136,38 +223,30 @@ const EditButton = styled.button`
   }
 `;
 
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-  padding-top: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-`;
-
-const StatCard = styled.div`
+/** Secondary-styled action button used for "Farm Stats" in the header. */
+const StatsButton = styled.button`
   display: flex;
-  flex-direction: column;
-`;
-
-const StatLabel = styled.span`
-  font-size: 12px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-`;
-
-const StatValue = styled.span`
-  font-size: 32px;
-  font-weight: 600;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
   color: ${({ theme }) => theme.colors.textPrimary};
-`;
-
-const StatSubtext = styled.span`
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface};
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+  }
 `;
 
 const TabsContainer = styled.div`
@@ -439,7 +518,7 @@ export function FarmDetail() {
     isLoading: summaryLoading,
     error: summaryError,
     refetch: refetchSummary,
-  } = useFarmSummary(farmId);
+  } = useFarmSummary(farmId, selectedFarmingYear);
 
   const {
     data: physicalBlocks = [],
@@ -455,6 +534,31 @@ export function FarmDetail() {
     refetch: refetchVirtualBlocks,
   } = useFarmBlocks(farmId, 'virtual');
 
+  // Richer dashboard summary (includes avgYieldEfficiency, activeAlerts, etc.)
+  // Used by BlockMonitorHero. VirtualBlocksView calls useDashboardData independently
+  // when the Blocks tab toggle is "Virtual only" — TanStack/internal state will dedupe
+  // the underlying request via TanStack Query / React state where applicable.
+  const { data: dashboardData, refetch: refetchDashboard } = useDashboardData({
+    farmId: farmId ?? null,
+    farmingYear: selectedFarmingYear,
+    autoRefresh: false,
+  });
+
+  // Fetch the farming-years list so we can render the formatted timeframe
+  // ("Aug 2025 - Jul 2026") next to the farm title instead of just "FY 2025".
+  const { data: farmingYearsListData } = useFarmingYearsList();
+  const selectedFarmingYearDisplay = selectedFarmingYear !== null
+    ? farmingYearsListData?.years.find((y) => y.year === selectedFarmingYear)?.display
+      ?? `FY ${selectedFarmingYear}`
+    : null;
+
+  // Derive the richer virtual DashboardBlock[] for the physical-block plantings modal.
+  // Using blockCategory === 'virtual' as the canonical filter (parentBlockId !== null
+  // is equivalent for well-formed data but blockCategory is more explicit).
+  const virtualDashboardBlocks = dashboardData?.blocks?.filter(
+    (b) => b.blockCategory === 'virtual'
+  ) ?? [];
+
   // Combine blocks for backward compatibility with map view
   const blocks = [...physicalBlocks, ...virtualBlocks];
 
@@ -467,6 +571,10 @@ export function FarmDetail() {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
   const [showBoundaryModal, setShowBoundaryModal] = useState(false);
   const [showEditFarmModal, setShowEditFarmModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+
+  // Blocks tab view mode: physical layout or virtual-only (persisted to localStorage)
+  const [blocksViewMode, setBlocksViewMode] = useBlockViewMode();
 
   // Mobile view state - persisted to localStorage
   const [mobileView, setMobileView] = useState<MobileViewType>(() => {
@@ -502,13 +610,16 @@ export function FarmDetail() {
     localStorage.setItem(MOBILE_VIEW_PREF_KEY, 'list');
   };
 
-  // Refetch all data (used after mutations)
+  // Refetch all data (used after mutations).
+  // Includes refetchDashboard so the BlockMonitorHero stats and the
+  // PhysicalBlockPlantingsModal (which renders DashboardBlock data) stay in sync.
   const loadFarmData = async () => {
     await Promise.all([
       refetchFarm(),
       refetchSummary(),
       refetchPhysicalBlocks(),
       refetchVirtualBlocks(),
+      refetchDashboard(),
     ]);
   };
 
@@ -575,13 +686,6 @@ export function FarmDetail() {
     );
   }
 
-  // Breadcrumb items for navigation
-  const breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-    { label: 'Farms', path: '/farm/farms', icon: '🏞️' },
-    { label: farm?.name || 'Farm Details' },
-  ];
-
   if (error) {
     return (
       <Container>
@@ -618,21 +722,39 @@ export function FarmDetail() {
     .filter(Boolean)
     .join(', ') || 'No location specified';
 
+  // Prefer the richer DashboardSummary from useDashboardData (includes avgYieldEfficiency,
+  // activeAlerts). Fall back to adapting the lighter FarmSummary while dashboardData is
+  // still loading so the hero renders immediately on navigation.
+  const dashboardSummary: DashboardSummary =
+    dashboardData?.summary ?? adaptToDashboardSummary(summary as unknown as FarmSummary);
+
   return (
     <Container>
-      <Breadcrumb items={breadcrumbItems} />
+      {/* Quick farm switcher — allows navigating to another farm without going back to list */}
+      <FarmQuickSwitcher currentFarmId={farmId!} currentFarmName={farm.name} />
 
       <Header>
         <TitleRow>
           <TitleSection>
-            <FarmIcon>🏞️</FarmIcon>
-            <FarmTitle>{farm.name}</FarmTitle>
-            <Location>
-              <span>📍</span>
-              <span>{locationText}</span>
-            </Location>
+            <FarmIcon aria-hidden="true">🏞️</FarmIcon>
+            <TitleContent>
+              <TitleNameRow>
+                <FarmTitle>{farm.name}</FarmTitle>
+                {selectedFarmingYearDisplay && (
+                  <FarmingYearChip>📅 {selectedFarmingYearDisplay}</FarmingYearChip>
+                )}
+              </TitleNameRow>
+              <Location>
+                <span aria-hidden="true">📍</span>
+                <span>{locationText}</span>
+              </Location>
+            </TitleContent>
           </TitleSection>
           <HeaderActions>
+            <StatsButton type="button" onClick={() => setShowAnalyticsModal(true)}>
+              <span>📊</span>
+              <span>Farm Stats</span>
+            </StatsButton>
             <EditButton onClick={() => setShowEditFarmModal(true)}>
               <span>✏️</span>
               <span>Edit Farm</span>
@@ -643,31 +765,10 @@ export function FarmDetail() {
           </HeaderActions>
         </TitleRow>
 
-        <StatsGrid>
-          <StatCard>
-            <StatLabel>Total Area</StatLabel>
-            <StatValue>{formatNumber(farm.totalArea ?? 0, { decimals: 2 })}</StatValue>
-            <StatSubtext>hectares</StatSubtext>
-          </StatCard>
+        <HeaderDivider />
 
-          <StatCard>
-            <StatLabel>Total Blocks</StatLabel>
-            <StatValue>{formatNumber(summary.totalBlocks ?? 0)}</StatValue>
-            <StatSubtext>{formatNumber(summary.totalBlockArea ?? 0, { decimals: 2 })} ha total</StatSubtext>
-          </StatCard>
-
-          <StatCard>
-            <StatLabel>Active Plantings</StatLabel>
-            <StatValue>{formatNumber(summary.activePlantings ?? 0)}</StatValue>
-            <StatSubtext>{formatNumber(summary.totalPlantedPlants ?? 0)} plants</StatSubtext>
-          </StatCard>
-
-          <StatCard>
-            <StatLabel>Predicted Yield</StatLabel>
-            <StatValue>{formatNumber(summary.predictedYield ?? 0)}</StatValue>
-            <StatSubtext>units expected</StatSubtext>
-          </StatCard>
-        </StatsGrid>
+        {/* 4-stat hero: Total Blocks, Active Plantings, Avg Yield Efficiency, Predicted Yield */}
+        <BlockMonitorHero summary={dashboardSummary} />
       </Header>
 
       <TabsContainer>
@@ -751,65 +852,85 @@ export function FarmDetail() {
 
           {activeTab === 'blocks' && (
             <>
-              {/* Mobile View Toggle */}
-              <MobileViewToggle>
-                <MobileToggleButton
-                  $active={mobileView === 'list'}
-                  onClick={() => handleMobileViewChange('list')}
-                >
-                  <MobileToggleIcon>📋</MobileToggleIcon>
-                  List View
-                </MobileToggleButton>
-                <MobileToggleButton
-                  $active={mobileView === 'map'}
-                  onClick={() => handleMobileViewChange('map')}
-                >
-                  <MobileToggleIcon>🗺️</MobileToggleIcon>
-                  Map View
-                </MobileToggleButton>
-              </MobileViewToggle>
 
-              {/* Mobile Full-Screen Map */}
-              {isMobile && isMapFullScreen && (
-                <MobileMapContainer $isFullScreen={true}>
-                  <MobileMapHeader>
-                    <MobileMapTitle>🗺️ Farm Map</MobileMapTitle>
-                    <MobileCloseButton onClick={handleCloseMapFullScreen}>
-                      ✕
-                    </MobileCloseButton>
-                  </MobileMapHeader>
-                  <FarmMapView
-                    farm={farm}
-                    blocks={blocks}
-                    onBlockClick={(block) => {
-                      handleCloseMapFullScreen();
-                      setEditingBlock(block);
-                    }}
-                    onEditFarmBoundary={() => setShowBoundaryModal(true)}
-                    height="calc(100vh - 60px)"
-                  />
-                </MobileMapContainer>
+              {/* Physical layout view (existing behaviour, untouched) */}
+              {blocksViewMode === 'physical' && (
+                <>
+                  {/* Mobile View Toggle */}
+                  <MobileViewToggle>
+                    <MobileToggleButton
+                      $active={mobileView === 'list'}
+                      onClick={() => handleMobileViewChange('list')}
+                    >
+                      <MobileToggleIcon>📋</MobileToggleIcon>
+                      List View
+                    </MobileToggleButton>
+                    <MobileToggleButton
+                      $active={mobileView === 'map'}
+                      onClick={() => handleMobileViewChange('map')}
+                    >
+                      <MobileToggleIcon>🗺️</MobileToggleIcon>
+                      Map View
+                    </MobileToggleButton>
+                  </MobileViewToggle>
+
+                  {/* Mobile Full-Screen Map */}
+                  {isMobile && isMapFullScreen && (
+                    <MobileMapContainer $isFullScreen={true}>
+                      <MobileMapHeader>
+                        <MobileMapTitle>🗺️ Farm Map</MobileMapTitle>
+                        <MobileCloseButton onClick={handleCloseMapFullScreen}>
+                          ✕
+                        </MobileCloseButton>
+                      </MobileMapHeader>
+                      <FarmMapView
+                        farm={farm}
+                        blocks={blocks}
+                        onBlockClick={(block) => {
+                          handleCloseMapFullScreen();
+                          setEditingBlock(block);
+                        }}
+                        onEditFarmBoundary={() => setShowBoundaryModal(true)}
+                        height="calc(100vh - 60px)"
+                      />
+                    </MobileMapContainer>
+                  )}
+
+                  {/* List View (or desktop) */}
+                  {(!isMobile || !isMapFullScreen) && (
+                    <MobileListContainer>
+                      <PhysicalBlockGrid
+                        physicalBlocks={physicalBlocks}
+                        virtualBlocks={virtualBlocks}
+                        farmId={farmId!}
+                        onRefresh={loadFarmData}
+                        onCreateBlock={() => setShowCreateModal(true)}
+                        virtualDashboardBlocks={virtualDashboardBlocks}
+                        headerActions={
+                          <BlockViewToggle value={blocksViewMode} onChange={setBlocksViewMode} />
+                        }
+                      />
+                    </MobileListContainer>
+                  )}
+
+                  {/* Floating Map Button (visible on mobile in list view) */}
+                  {isMobile && !isMapFullScreen && (
+                    <FloatingMapButton onClick={() => handleMobileViewChange('map')}>
+                      <span>🗺️</span>
+                      <span>View Map</span>
+                    </FloatingMapButton>
+                  )}
+                </>
               )}
 
-              {/* List View (or desktop) */}
-              {(!isMobile || !isMapFullScreen) && (
-                <MobileListContainer>
-                  <PhysicalBlockGrid
-                    physicalBlocks={physicalBlocks}
-                    virtualBlocks={virtualBlocks}
-                    farmId={farmId!}
-                    onRefresh={loadFarmData}
-                    onCreateBlock={() => setShowCreateModal(true)}
-                  />
-                </MobileListContainer>
-              )}
-
-              {/* Floating Map Button (visible on mobile in list view) */}
-              {isMobile && !isMapFullScreen && (
-                <FloatingMapButton onClick={() => handleMobileViewChange('map')}>
-                  <span>🗺️</span>
-                  <span>View Map</span>
-                </FloatingMapButton>
+              {/* Virtual-only view — Block Monitor experience embedded */}
+              {blocksViewMode === 'virtual' && farmId && (
+                <VirtualBlocksView
+                  farmId={farmId}
+                  headerActions={
+                    <BlockViewToggle value={blocksViewMode} onChange={setBlocksViewMode} />
+                  }
+                />
               )}
             </>
           )}
@@ -889,6 +1010,18 @@ export function FarmDetail() {
           isOpen={showEditFarmModal}
           onClose={() => setShowEditFarmModal(false)}
           onSuccess={loadFarmData}
+        />
+      )}
+
+      {/* Farm analytics modal — moved out of VirtualBlocksView so it's reachable
+          from the page header in both Physical and Virtual modes. */}
+      {farm && farmId && (
+        <FarmAnalyticsModal
+          isOpen={showAnalyticsModal}
+          onClose={() => setShowAnalyticsModal(false)}
+          farmId={farmId}
+          farmName={farm.name}
+          farmingYear={selectedFarmingYear}
         />
       )}
     </Container>

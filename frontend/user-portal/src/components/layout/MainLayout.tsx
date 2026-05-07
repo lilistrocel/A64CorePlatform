@@ -30,7 +30,6 @@ const SHARED_BOTTOM_NAV_ITEMS: NavItemDef[] = [
   { to: '/hr', icon: '👔', label: 'HR' },
   { to: '/logistics', icon: '🚚', label: 'Logistics' },
   { to: '/sales', icon: '💰', label: 'Sales' },
-  { to: '/pnl', icon: '📈', label: 'P&L' },
   { to: '/marketing', icon: '📢', label: 'Marketing' },
   { to: '/ai', icon: '🤖', label: 'AI Hub' },
   { to: '/profile', icon: '👤', label: 'Profile' },
@@ -40,7 +39,7 @@ const SHARED_BOTTOM_NAV_ITEMS: NavItemDef[] = [
 // Industry-specific navigation items
 const VEGETABLE_FRUITS_NAV: NavItemDef[] = [
   { to: '/farm/dashboard', icon: '🏞️', label: 'Farm Manager' },
-  { to: '/farm/block-monitor', icon: '🌾', label: 'Block Monitor' },
+  { to: '/farm/plants', icon: '🌿', label: 'Plant Library' },
   { to: '/operations', icon: '📋', label: 'Operations', showBadge: true },
   { to: '/inventory', icon: '📦', label: 'Inventory' },
 ];
@@ -119,6 +118,18 @@ export function MainLayout() {
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
+  // Back-to-top button — listens to window scroll (LayoutContainer uses
+  // min-height:100vh so the body is the actual scroll container, not <main>).
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 300);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Determine which industry-specific nav items to show
   const industryNavItems: NavItemDef[] =
     currentDivision?.industryType === 'mushroom' ? MUSHROOM_NAV : VEGETABLE_FRUITS_NAV;
@@ -127,14 +138,9 @@ export function MainLayout() {
   const navItems: NavItemDef[] = [
     ...SHARED_NAV_ITEMS,
     ...industryNavItems,
-    // AI Hub is super_admin only; P&L requires super_admin or finance.view permission
+    // AI Hub is super_admin only
     ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
       if (item.to === '/ai') return user?.role === 'super_admin';
-      if (item.to === '/pnl') {
-        if (user?.role === 'super_admin') return true;
-        const perms = (user as unknown as { permissions?: string[] })?.permissions;
-        return Array.isArray(perms) && perms.includes('finance.view');
-      }
       return true;
     }),
     ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
@@ -163,12 +169,29 @@ export function MainLayout() {
           <Logo>
             <LogoImg src="/a64logo_dark.png" alt="A64 Core" />
           </Logo>
-          <UserInfo>
-            <UserName>
-              {user?.firstName} {user?.lastName}
-            </UserName>
-            <UserRole>{user?.role || 'User'}</UserRole>
-          </UserInfo>
+          <UserCard>
+            <UserCardTop>
+              <UserAvatar>
+                {user?.firstName?.[0] || ''}{user?.lastName?.[0] || ''}
+              </UserAvatar>
+              <UserCardInfo>
+                <UserName>{user?.firstName} {user?.lastName}</UserName>
+                <UserRole>{user?.role?.replace(/_/g, ' ') || 'User'}</UserRole>
+              </UserCardInfo>
+            </UserCardTop>
+            <UserCardActions>
+              <ThemeToggleSmall
+                onClick={toggleTheme}
+                aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {mode === 'dark' ? '☀️' : '🌙'}
+              </ThemeToggleSmall>
+              <LogoutSmall onClick={handleLogout} title="Logout">
+                Logout
+              </LogoutSmall>
+            </UserCardActions>
+          </UserCard>
 
           {/* Division switcher sits between user info and the main nav */}
           <DivisionSwitcherWrapper>
@@ -203,21 +226,6 @@ export function MainLayout() {
           ))}
         </Nav>
 
-        <SidebarFooter>
-          <ThemeToggleButton
-            onClick={toggleTheme}
-            aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            <ThemeToggleIcon aria-hidden="true">
-              {mode === 'dark' ? '☀️' : '🌙'}
-            </ThemeToggleIcon>
-            <span>{mode === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-          </ThemeToggleButton>
-          <Button variant="outline" fullWidth onClick={handleLogout}>
-            Logout
-          </Button>
-        </SidebarFooter>
       </Sidebar>
 
       {/* Overlay for mobile menu */}
@@ -227,6 +235,16 @@ export function MainLayout() {
       <MainContent>
         <Outlet />
       </MainContent>
+
+      {/* Back to top — outside MainContent so position:fixed isn't clipped by overflow:auto */}
+      <BackToTopButton
+        $visible={showBackToTop}
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+        title="Back to top"
+      >
+        ↑
+      </BackToTopButton>
     </LayoutContainer>
   );
 }
@@ -327,12 +345,12 @@ const Overlay = styled.div`
 `;
 
 const SidebarHeader = styled.div`
-  padding: ${({ theme }) => theme.spacing.xl};
+  padding: ${({ theme }) => theme.spacing.md};
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.spacing.sm};
 `;
 
 const Logo = styled.div`
@@ -346,32 +364,112 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 48px;
+  height: 36px;
   width: auto;
   display: block;
   margin: 0 auto;
 
   @media (min-width: 1024px) {
-    height: 60px;
+    height: 44px;
   }
 `;
 
-const UserInfo = styled.div`
+const UserCard = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  padding: ${({ theme }) => theme.spacing.md};
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const UserCardTop = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const UserAvatar = styled.div`
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: white;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const UserCardInfo = styled.div`
+  flex: 1;
+  min-width: 0;
 `;
 
 const UserName = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
   color: ${({ theme }) => theme.colors.textPrimary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const UserRole = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: capitalize;
+`;
+
+const UserCardActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+  padding-top: ${({ theme }) => theme.spacing.xs};
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+`;
+
+const ThemeToggleSmall = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[300]};
+  }
+`;
+
+const LogoutSmall = styled.button`
+  flex: 1;
+  padding: 6px 0;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  border: none;
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 150ms ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.error};
+  }
 `;
 
 const DivisionSwitcherWrapper = styled.div`
@@ -380,19 +478,19 @@ const DivisionSwitcherWrapper = styled.div`
 
 const Nav = styled.nav`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: 2px;
   overflow-y: auto;
 `;
 
 const NavItem = styled(NavLink)`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => theme.spacing.md};
-  min-height: 44px; /* WCAG touch target minimum */
+  min-height: 36px;
   border-radius: ${({ theme }) => theme.borderRadius.md};
   color: ${({ theme }) => theme.colors.textSecondary};
   text-decoration: none;
@@ -544,7 +642,7 @@ function FarmingYearDropdown({ years, selectedYear, onSelect }: FarmingYearDropd
 // ── Farming Year Dropdown Styles ──────────────────────────────────────────
 
 const FyWrapper = styled.div`
-  padding: ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-shrink: 0;
   position: relative;
@@ -564,8 +662,8 @@ const FyTrigger = styled.button<{ $open: boolean }>`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.md};
-  min-height: 44px;
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  min-height: 36px;
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   color: ${({ theme }) => theme.colors.textPrimary};
@@ -656,6 +754,44 @@ const GreenLed = styled.span`
   background: #10B981;
   flex-shrink: 0;
   animation: ${ledPulse} 2s ease-in-out infinite;
+`;
+
+const BackToTopButton = styled.button<{ $visible: boolean }>`
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: white;
+  font-size: 20px;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  cursor: pointer;
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+  z-index: ${({ theme }) => theme.zIndex.sticky};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 200ms ease, transform 200ms ease;
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  transform: ${({ $visible }) => ($visible ? 'translateY(0)' : 'translateY(16px)')};
+  pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary[700]};
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 640px) {
+    bottom: 20px;
+    right: 20px;
+  }
 `;
 
 const MainContent = styled.main`

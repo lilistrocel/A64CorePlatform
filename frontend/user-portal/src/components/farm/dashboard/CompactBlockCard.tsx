@@ -11,7 +11,6 @@ import styled from 'styled-components';
 import { useBlockActions } from '../../../hooks/farm/useBlockActions';
 import { QuickPlanModal } from './QuickPlanModal';
 import { ResolveAlertModal } from './ResolveAlertModal';
-import { BlockDetailsModal } from '../BlockDetailsModal';
 import { BlockHarvestEntryModal } from '../BlockHarvestEntryModal';
 import { BlockAnalyticsModal } from '../BlockAnalyticsModal';
 import type { DashboardBlock, DashboardBlockStatus } from '../../../types/farm';
@@ -29,7 +28,6 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
   const [showActions, setShowActions] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showResolveAlertModal, setShowResolveAlertModal] = useState(false);
-  const [showBlockDetailsModal, setShowBlockDetailsModal] = useState(false);
   const [showHarvestModal, setShowHarvestModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [planMode, setPlanMode] = useState<'plan' | 'plant'>('plan');
@@ -95,17 +93,10 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
   };
 
   /**
-   * Handle card click - open block details modal
-   */
-  const handleCardClick = () => {
-    setShowBlockDetailsModal(true);
-  };
-
-  /**
    * Handle harvest button click - open harvest entry modal
    */
   const handleHarvestClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click from firing
+    e.stopPropagation();
     setShowHarvestModal(true);
   };
 
@@ -121,11 +112,10 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
     <>
       <Card
       $stateColor={stateColor}
-      onClick={handleCardClick}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         // Don't hide actions if any modal is open
-        if (!showPlanModal && !showResolveAlertModal && !showBlockDetailsModal && !showHarvestModal && !showAnalyticsModal) {
+        if (!showPlanModal && !showResolveAlertModal && !showHarvestModal && !showAnalyticsModal) {
           setShowActions(false);
         }
       }}
@@ -445,9 +435,8 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
       )}
     </Card>
 
-    {/* Modals rendered outside the Card in the React tree so their events do
-        not bubble up into Card.onClick (which would re-trigger handleCardClick
-        and open BlockDetailsModal on top of the intended modal). */}
+    {/* Modals rendered outside the Card via portal so they're not constrained
+        by the card's overflow/aspect-ratio styling. */}
     {createPortal(
       <>
         {/* Quick Plan Modal (for Plan and Plant actions) */}
@@ -471,14 +460,6 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
             setShowResolveAlertModal(false);
             onUpdate?.();
           }}
-        />
-
-        {/* Block Details Modal */}
-        <BlockDetailsModal
-          isOpen={showBlockDetailsModal}
-          onClose={() => setShowBlockDetailsModal(false)}
-          block={block}
-          farmId={farmId}
         />
 
         {/* Block Harvest Entry Modal */}
@@ -525,10 +506,11 @@ const Card = styled.div<{ $stateColor: string }>`
   border-left: 4px solid ${(props) => props.$stateColor};
   transition: all 200ms ease-in-out;
   position: relative;
-  min-height: 180px;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  cursor: pointer;
+  overflow: hidden;
 
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
