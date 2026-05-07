@@ -1,9 +1,18 @@
 /**
  * FarmCard Component
  *
- * Displays a single farm in a card layout with key information and actions.
+ * Displays a single farm in a rich card layout with:
+ * - Icon badge + title block + status badge header
+ * - 3-stat metric grid (area, blocks, active plantings)
+ * - Yield achievement progress bar (actual vs predicted)
+ * - Block state pill row (all states, always visible)
+ * - Action button row (mobile 2-up layout)
+ *
+ * Self-contained: same props used in FarmList and dashboard View Farms tab.
+ * Mobile-ready down to 280px width.
  */
 
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import type { Farm, FarmSummary } from '../../types/farm';
@@ -22,6 +31,50 @@ export interface FarmCardProps {
 }
 
 // ============================================================================
+// YIELD ACHIEVEMENT HELPERS
+// ============================================================================
+
+/** Band thresholds and their accent colors (fixed, not theme tokens) */
+const YIELD_COLORS = {
+  onTrack: '#10B981',  // emerald — >= 90%
+  warning: '#F59E0B',  // amber  — 70–89%
+  behind:  '#EF4444',  // red    — < 70%
+  neutral: '#9CA3AF',  // grey   — no data
+} as const;
+
+type YieldColor = typeof YIELD_COLORS[keyof typeof YIELD_COLORS];
+
+function getYieldColor(ratio: number, hasData: boolean): YieldColor {
+  if (!hasData) return YIELD_COLORS.neutral;
+  if (ratio >= 0.9) return YIELD_COLORS.onTrack;
+  if (ratio >= 0.7) return YIELD_COLORS.warning;
+  return YIELD_COLORS.behind;
+}
+
+// ============================================================================
+// BLOCK STATE PILL DEFINITIONS
+// ============================================================================
+
+interface StatePillDef {
+  key: keyof FarmSummary['blocksByState'];
+  label: string;
+  color: string;
+}
+
+/**
+ * Ordered list of states to always render in the pill row.
+ * Maps the FarmSummary.blocksByState keys to display info.
+ * Note: FarmSummary uses "growing" for what the UI calls "Planted".
+ */
+const STATE_PILL_DEFS: StatePillDef[] = [
+  { key: 'empty',      label: 'Empty',      color: '#6B7280' },
+  { key: 'planned',    label: 'Planned',    color: '#3B82F6' },
+  { key: 'growing',    label: 'Planted',    color: '#10B981' },
+  { key: 'harvesting', label: 'Harvesting', color: '#F59E0B' },
+  { key: 'alert',      label: 'Alert',      color: '#EF4444' },
+];
+
+// ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
 
@@ -33,7 +86,10 @@ const Card = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   transition: all 150ms ease-in-out;
   cursor: pointer;
-  overflow: hidden; /* Prevent content overflow */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 
   &:hover {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -42,35 +98,104 @@ const Card = styled.div`
 
   @media (max-width: 480px) {
     padding: 16px;
+    gap: 14px;
   }
 `;
+
+/* ---- Header ---- */
 
 const CardHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
 `;
 
-const FarmIcon = styled.div`
-  font-size: 32px;
-  margin-bottom: 8px;
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+  flex: 1 1 0;
+`;
+
+const IconBadge = styled.div`
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1;
 
   @media (max-width: 480px) {
-    font-size: 28px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    font-size: 24px;
+    border-radius: 10px;
   }
+`;
+
+const TitleBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+`;
+
+const TitleRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 `;
 
 const FarmTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 8px 0;
-  word-break: break-word; /* Handle long farm names */
+  margin: 0;
+  /* Allow wrapping at narrow widths — more readable than ellipsis at 280px */
+  word-break: break-word;
+  line-height: 1.3;
 
   @media (max-width: 480px) {
     font-size: 18px;
   }
+`;
+
+const FarmCodeChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 4px;
+  padding: 2px 6px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+`;
+
+
+const MetaLine = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  flex-wrap: wrap;
+  min-width: 0;
 `;
 
 const StatusBadge = styled.span<{ $isActive: boolean }>`
@@ -81,95 +206,175 @@ const StatusBadge = styled.span<{ $isActive: boolean }>`
   font-weight: 500;
   background: ${({ $isActive }) => ($isActive ? '#10B981' : '#6B7280')};
   color: white;
+  flex-shrink: 0;
+  white-space: nowrap;
+  align-self: flex-start;
 `;
 
-const Location = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: 16px;
-  word-break: break-word; /* Handle long location text */
+/* ---- Metric grid ---- */
 
-  @media (max-width: 480px) {
-    font-size: 13px;
-  }
-`;
-
-const LocationIcon = styled.span`
-  font-size: 16px;
-`;
-
-const StatsGrid = styled.div`
+const MetricGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
-  margin-bottom: 16px;
 `;
 
-const StatItem = styled.div`
-  display: flex;
-  flex-direction: column;
+const MetricCard = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 0;
 `;
 
-const StatLabel = styled.span`
-  font-size: 12px;
+const MetricLabel = styled.span`
+  display: block;
+  font-size: 11px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textDisabled};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
-
-  @media (max-width: 480px) {
-    font-size: 11px; /* Slightly smaller on mobile for labels */
-  }
 `;
 
-const StatValue = styled.span`
+const MetricValue = styled.span`
+  display: block;
   font-size: 18px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
+  word-break: break-word;
 
   @media (max-width: 480px) {
     font-size: 16px;
   }
 `;
 
-const BlockStats = styled.div`
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-  padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+const MetricSubValue = styled.span`
+  font-size: 13px;
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
-const BlockStatBadge = styled.span<{ $color: string }>`
+/* ---- Yield achievement bar ---- */
+
+const YieldSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const YieldTopRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const YieldLabel = styled.span`
+  font-size: 12px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const YieldPercentGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+`;
+
+const YieldPercent = styled.span`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const OverflowChip = styled.span<{ $color: string }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: ${({ $color }) => $color}22;
+  color: ${({ $color }) => $color};
+  font-size: 11px;
+  font-weight: 600;
+`;
+
+const BarTrack = styled.div`
+  height: 8px;
+  border-radius: 9999px;
+  background: ${({ theme }) => theme.colors.neutral[200]};
+  overflow: hidden;
+`;
+
+const BarFill = styled.div<{ $width: number; $color: string }>`
+  height: 100%;
+  width: ${({ $width }) => $width}%;
+  border-radius: 9999px;
+  background: ${({ $color }) => $color};
+  transition: width 250ms ease-out;
+`;
+
+const YieldBottomRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  flex-wrap: wrap;
+`;
+
+const NoYieldText = styled.span`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.textDisabled};
+  font-style: italic;
+`;
+
+/* ---- Block state pill row ---- */
+
+const StatePillRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+`;
+
+const StatePill = styled.span<{ $color: string; $active: boolean }>`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $color }) => $color}20;
-  color: ${({ $color }) => $color};
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  background: ${({ $color, $active }) => ($active ? `${$color}18` : 'transparent')};
+  color: ${({ $color, $active, theme }) =>
+    $active ? $color : theme.colors.textDisabled};
+  border: 1px solid ${({ $color, $active, theme }) =>
+    $active ? `${$color}44` : theme.colors.neutral[200]};
+  transition: all 150ms ease-in-out;
 `;
 
-const Actions = styled.div`
+const StateDot = styled.span<{ $color: string; $active: boolean }>`
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  border-radius: 50%;
+  background: ${({ $color, $active, theme }) =>
+    $active ? $color : theme.colors.neutral[400]};
+`;
+
+/* ---- Action row ---- */
+
+const ActionsRow = styled.div`
   display: flex;
   gap: 8px;
-  justify-content: flex-end;
   flex-wrap: wrap;
-
-  @media (max-width: 480px) {
-    justify-content: stretch;
-    gap: 8px;
-
-    /* Make buttons stack and fill width on mobile */
-    flex-direction: column;
-  }
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
@@ -191,9 +396,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
       return `
         background: ${theme.colors.primary[500]};
         color: white;
-        &:hover {
-          background: ${theme.colors.primary[700]};
-        }
+        &:hover { background: ${theme.colors.primary[700]}; }
       `;
     }
     if ($variant === 'danger') {
@@ -201,18 +404,14 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         background: transparent;
         color: #EF4444;
         border: 1px solid #EF4444;
-        &:hover {
-          background: ${theme.colors.errorBg};
-        }
+        &:hover { background: ${theme.colors.errorBg}; }
       `;
     }
     return `
       background: transparent;
       color: ${theme.colors.primary[500]};
       border: 1px solid ${theme.colors.primary[500]};
-      &:hover {
-        background: ${theme.colors.infoBg};
-      }
+      &:hover { background: ${theme.colors.infoBg}; }
     `;
   }}
 
@@ -225,10 +424,16 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     transform: scale(0.98);
   }
 
+  /* Under 360px: pair up 2-per-row */
+  @media (max-width: 360px) {
+    flex: 1 1 calc(50% - 4px);
+    min-height: 44px;
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
   @media (max-width: 480px) {
-    width: 100%;
-    min-height: 44px; /* Touch-friendly height */
-    padding: 12px 16px;
+    min-height: 44px;
   }
 `;
 
@@ -239,12 +444,22 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: FarmCardProps) {
   const navigate = useNavigate();
 
+  // --- Event handlers (stopPropagation keeps button clicks from triggering card nav) ---
+
   const handleCardClick = (e: React.MouseEvent) => {
-    // Don't navigate if clicking on action buttons
     const target = e.target as HTMLElement;
     if (target.closest('button')) return;
-
     navigate(`/farm/farms/${farm.farmId}`);
+  };
+
+  const handleView = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/farm/farms/${farm.farmId}`);
+  };
+
+  const handleStatistics = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewStatistics?.(farm.farmId, farm.name);
   };
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -259,79 +474,147 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
     }
   };
 
-  const handleView = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/farm/farms/${farm.farmId}`);
-  };
-
-  const handleStatistics = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onViewStatistics?.(farm.farmId, farm.name);
-  };
-
+  // --- Location string ---
   const locationText = [farm.location?.city, farm.location?.state, farm.location?.country]
     .filter(Boolean)
     .join(', ');
 
+  // --- Manager / staff meta line ---
+  const managerDisplay = farm.owner ?? null;
+  const staffCount = farm.numberOfStaff ?? 0;
+  const managerLine =
+    managerDisplay
+      ? `${managerDisplay}${staffCount > 0 ? ` · ${staffCount} staff` : ''}`
+      : staffCount > 0
+        ? `${staffCount} staff`
+        : null;
+
+  // --- Yield achievement computations ---
+  const predicted = summary?.predictedYield ?? 0;
+  const actual    = summary?.actualYield    ?? 0;
+  const hasYieldData = predicted > 0 || actual > 0;
+  const ratio = predicted > 0 ? actual / predicted : 0;
+  const cappedPercent = Math.min(100, ratio * 100);
+  const displayPercent = Math.round(ratio * 100);
+  const overflowPercent = ratio > 1 ? Math.round((ratio - 1) * 100) : 0;
+  const yieldColor = getYieldColor(ratio, hasYieldData);
+
+  // --- Block counts ---
+  const physicalCount = summary?.physicalBlocks ?? summary?.totalBlocks;
+  const virtualCount  = summary?.virtualBlocks;
+
   return (
     <Card onClick={handleCardClick}>
+
+      {/* 1. Header row */}
       <CardHeader>
-        <div>
-          <FarmIcon>🏞️</FarmIcon>
-          <FarmTitle>{farm.name}</FarmTitle>
-        </div>
+        <HeaderLeft>
+          <IconBadge aria-hidden="true">🏞️</IconBadge>
+          <TitleBlock>
+            <TitleRow>
+              <FarmTitle>{farm.name}</FarmTitle>
+              {farm.farmCode && <FarmCodeChip>{farm.farmCode}</FarmCodeChip>}
+            </TitleRow>
+            {locationText && (
+              <MetaLine>
+                <span aria-hidden="true">📍</span>
+                <span>{locationText}</span>
+              </MetaLine>
+            )}
+            {managerLine && (
+              <MetaLine>
+                <span aria-hidden="true">👤</span>
+                <span>{managerLine}</span>
+              </MetaLine>
+            )}
+          </TitleBlock>
+        </HeaderLeft>
         <StatusBadge $isActive={farm.isActive}>
           {farm.isActive ? 'Active' : 'Inactive'}
         </StatusBadge>
       </CardHeader>
 
-      <Location>
-        <LocationIcon>📍</LocationIcon>
-        <span>{locationText}</span>
-      </Location>
+      {/* 2. Metric grid */}
+      <MetricGrid>
+        <MetricCard>
+          <MetricLabel>Total Area</MetricLabel>
+          <MetricValue>
+            {farm.totalArea ? `${formatNumber(farm.totalArea, { decimals: 1 })} ha` : '—'}
+          </MetricValue>
+        </MetricCard>
 
-      <StatsGrid>
-        <StatItem>
-          <StatLabel>Total Area</StatLabel>
-          <StatValue>{formatNumber(farm.totalArea, { decimals: 1 })} ha</StatValue>
-        </StatItem>
-        <StatItem>
-          <StatLabel>Blocks</StatLabel>
-          <StatValue>{formatNumber(summary?.totalBlocks)}</StatValue>
-        </StatItem>
-      </StatsGrid>
+        <MetricCard>
+          <MetricLabel>Blocks</MetricLabel>
+          <MetricValue>
+            {physicalCount !== undefined ? formatNumber(physicalCount) : '—'}
+            {virtualCount !== undefined && (
+              <MetricSubValue> ({formatNumber(virtualCount)})</MetricSubValue>
+            )}
+          </MetricValue>
+        </MetricCard>
 
+        <MetricCard>
+          <MetricLabel>Active Plantings</MetricLabel>
+          <MetricValue>
+            {formatNumber(summary?.activePlantings ?? 0)}
+          </MetricValue>
+        </MetricCard>
+      </MetricGrid>
+
+      {/* 3. Yield achievement bar */}
+      <YieldSection>
+        <YieldTopRow>
+          <YieldLabel>Yield Achievement</YieldLabel>
+          <YieldPercentGroup>
+            {hasYieldData && (
+              <YieldPercent>{displayPercent}%</YieldPercent>
+            )}
+            {overflowPercent > 0 && (
+              <OverflowChip $color={yieldColor}>
+                ▴ +{overflowPercent}% over
+              </OverflowChip>
+            )}
+          </YieldPercentGroup>
+        </YieldTopRow>
+
+        <BarTrack aria-label={`Yield achievement: ${displayPercent}%`}>
+          <BarFill $width={cappedPercent} $color={yieldColor} />
+        </BarTrack>
+
+        {hasYieldData ? (
+          <YieldBottomRow>
+            <span>{formatNumber(actual, { decimals: 0 })} kg actual</span>
+            <span>{formatNumber(predicted, { decimals: 0 })} kg predicted</span>
+          </YieldBottomRow>
+        ) : (
+          <NoYieldText>No yield data — start a planting to see this</NoYieldText>
+        )}
+      </YieldSection>
+
+      {/* 4. Block state pill row — always rendered, greyed when count is 0 */}
       {summary && (
-        <BlockStats>
-          {summary.blocksByState.empty > 0 && (
-            <BlockStatBadge $color="#6B7280">
-              {formatNumber(summary.blocksByState.empty)} Empty
-            </BlockStatBadge>
-          )}
-          {summary.blocksByState.planned > 0 && (
-            <BlockStatBadge $color="#3B82F6">
-              {formatNumber(summary.blocksByState.planned)} Planned
-            </BlockStatBadge>
-          )}
-          {summary.blocksByState.planted > 0 && (
-            <BlockStatBadge $color="#10B981">
-              {formatNumber(summary.blocksByState.planted)} Planted
-            </BlockStatBadge>
-          )}
-          {summary.blocksByState.harvesting > 0 && (
-            <BlockStatBadge $color="#F59E0B">
-              {formatNumber(summary.blocksByState.harvesting)} Harvesting
-            </BlockStatBadge>
-          )}
-          {summary.blocksByState.alert > 0 && (
-            <BlockStatBadge $color="#EF4444">
-              {formatNumber(summary.blocksByState.alert)} Alert
-            </BlockStatBadge>
-          )}
-        </BlockStats>
+        <StatePillRow role="list" aria-label="Blocks by state">
+          {STATE_PILL_DEFS.map(({ key, label, color }) => {
+            const count = summary.blocksByState[key] ?? 0;
+            const active = count > 0;
+            return (
+              <StatePill
+                key={key}
+                $color={color}
+                $active={active}
+                role="listitem"
+                aria-label={`${label}: ${count}`}
+              >
+                <StateDot $color={color} $active={active} aria-hidden="true" />
+                {count} {label}
+              </StatePill>
+            );
+          })}
+        </StatePillRow>
       )}
 
-      <Actions>
+      {/* 5. Action row */}
+      <ActionsRow>
         <ActionButton $variant="primary" onClick={handleView}>
           View
         </ActionButton>
@@ -350,7 +633,7 @@ export function FarmCard({ farm, summary, onEdit, onDelete, onViewStatistics }: 
             Delete
           </ActionButton>
         )}
-      </Actions>
+      </ActionsRow>
     </Card>
   );
 }

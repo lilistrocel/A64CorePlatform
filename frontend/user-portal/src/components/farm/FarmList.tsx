@@ -14,6 +14,7 @@ import { EditFarmModal } from './EditFarmModal';
 import { FarmAnalyticsModal } from './FarmAnalyticsModal';
 import { farmApi } from '../../services/farmApi';
 import { useDeleteFarm } from '../../hooks/queries/useFarms';
+import { useFarmingYearStore } from '../../stores/farmingYear.store';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import type { Farm, FarmSummary } from '../../types/farm';
 
@@ -24,24 +25,29 @@ import type { Farm, FarmSummary } from '../../types/farm';
 export interface FarmListProps {
   onCreateFarm?: () => void;
   onEditFarm?: (farmId: string) => void;
+  /**
+   * When true, FarmList renders without its outer page padding / max-width
+   * so it sits naturally inside another container (e.g. as a dashboard tab).
+   */
+  embedded?: boolean;
 }
 
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
 
-const Container = styled.div`
-  padding: 32px;
-  max-width: 1440px;
+const Container = styled.div<{ $embedded?: boolean }>`
+  padding: ${({ $embedded }) => ($embedded ? '0' : '32px')};
+  max-width: ${({ $embedded }) => ($embedded ? 'none' : '1440px')};
   margin: 0 auto;
   overflow-x: hidden; /* Prevent horizontal scroll from card content */
 
   @media (max-width: 768px) {
-    padding: 16px;
+    padding: ${({ $embedded }) => ($embedded ? '0' : '16px')};
   }
 
   @media (max-width: 480px) {
-    padding: 16px;
+    padding: ${({ $embedded }) => ($embedded ? '0' : '16px')};
   }
 `;
 
@@ -457,7 +463,7 @@ const DEFAULT_PAGE_SIZE = 10;
 
 type FilterType = 'all' | 'active' | 'inactive';
 
-export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
+export function FarmList({ onCreateFarm, onEditFarm, embedded = false }: FarmListProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [summaries, setSummaries] = useState<Record<string, FarmSummary>>({});
@@ -466,6 +472,10 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
 
   // Use mutation hook for proper cache invalidation
   const deleteFarmMutation = useDeleteFarm();
+
+  // Global farming year — passed to summary calls so the Yield Achievement
+  // bar reflects the current cycle, not lifetime cumulative yield.
+  const { selectedYear: selectedFarmingYear } = useFarmingYearStore();
 
   // Get filter values from URL params with defaults
   const searchTerm = searchParams.get('search') || '';
@@ -520,7 +530,9 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
   // Load farms
   useEffect(() => {
     loadFarms();
-  }, [page, perPage]);
+    // Reload when the global farming year changes so per-farm yield numbers
+    // reflect the selected year.
+  }, [page, perPage, selectedFarmingYear]);
 
   const loadFarms = async () => {
     try {
@@ -531,9 +543,10 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
       setTotalPages(response.totalPages);
       setTotal(response.total);
 
-      // Load summaries for each farm
+      // Load summaries for each farm — pass the global farming year so
+      // predicted/actual yield are scoped to the current cycle.
       const summaryPromises = response.items.map((farm) =>
-        farmApi.getFarmSummary(farm.farmId).catch(() => null)
+        farmApi.getFarmSummary(farm.farmId, selectedFarmingYear).catch(() => null)
       );
       const summaryResults = await Promise.all(summaryPromises);
 
@@ -589,7 +602,7 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
 
   if (loading) {
     return (
-      <Container>
+      <Container $embedded={embedded}>
         <LoadingContainer>
           <Spinner />
         </LoadingContainer>
@@ -599,7 +612,7 @@ export function FarmList({ onCreateFarm, onEditFarm }: FarmListProps) {
 
   if (error) {
     return (
-      <Container>
+      <Container $embedded={embedded}>
         <ErrorContainer>{error}</ErrorContainer>
       </Container>
     );

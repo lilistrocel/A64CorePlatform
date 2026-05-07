@@ -72,11 +72,17 @@ export interface FarmLocation {
 export interface Farm {
   farmId: string;
   name: string;
+  /** Human-readable farm code (e.g., "F010"). Returned by the backend, optional in API. */
+  farmCode?: string | null;
   owner?: string;
   location: FarmLocation;
   totalArea: number;
   numberOfStaff?: number;
   managerId: string;
+  /** Manager's display name, when populated. */
+  managerName?: string | null;
+  /** Manager's email, when populated. */
+  managerEmail?: string | null;
   isActive: boolean;
   metadata?: Record<string, unknown>;
   boundary?: FarmBoundary; // Geo-fence polygon boundary
@@ -111,6 +117,10 @@ export interface FarmUpdate {
 export interface FarmSummary {
   farmId: string;
   totalBlocks: number;
+  /** Count of physical container blocks (blockCategory: 'physical'). */
+  physicalBlocks?: number;
+  /** Count of virtual planting blocks (blockCategory: 'virtual'). */
+  virtualBlocks?: number;
   totalBlockArea: number;
   blocksByState: {
     empty: number;
@@ -124,6 +134,8 @@ export interface FarmSummary {
   activePlantings: number;
   totalPlantedPlants: number;
   predictedYield: number;
+  /** Total actual harvested yield in kg across the farm. */
+  actualYield?: number;
 }
 
 // ============================================================================
@@ -1146,6 +1158,10 @@ export interface FarmInfo {
 
 export interface DashboardSummary {
   totalBlocks: number;
+  /** Count of physical container blocks (blockCategory: 'physical'). */
+  physicalBlocks?: number;
+  /** Count of virtual planting blocks (blockCategory: 'virtual'). */
+  virtualBlocks?: number;
   blocksByState: Record<string, number>;
   totalActivePlantings: number;
   totalPredictedYieldKg: number;

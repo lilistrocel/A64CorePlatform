@@ -101,15 +101,21 @@ export async function deleteFarm(farmId: string) {
 /**
  * Get farm summary statistics
  */
-export async function getFarmSummary(farmId: string) {
-  const response = await apiClient.get<any>(`/v1/farm/farms/${farmId}/summary`);
+export async function getFarmSummary(farmId: string, farmingYear?: number | null) {
+  const params: Record<string, number> = {};
+  if (farmingYear !== null && farmingYear !== undefined) {
+    params.farmingYear = farmingYear;
+  }
+  const response = await apiClient.get<any>(`/v1/farm/farms/${farmId}/summary`, { params });
 
-  // Backend response format: { data: { farmId, totalBlocks, totalBlockArea, blocksByState: {...}, activePlantings, totalPlantedPlants, predictedYield }, message }
+  // Backend response format: { data: { farmId, totalBlocks, physicalBlocks, virtualBlocks, totalBlockArea, blocksByState: {...}, activePlantings, totalPlantedPlants, predictedYield, actualYield }, message }
   const data = response.data.data;
 
   return {
     farmId: data.farmId || farmId,
     totalBlocks: data.totalBlocks || 0,
+    physicalBlocks: data.physicalBlocks ?? undefined,
+    virtualBlocks: data.virtualBlocks ?? undefined,
     totalBlockArea: data.totalBlockArea || 0,
     blocksByState: {
       empty: data.blocksByState?.empty || 0,
@@ -121,6 +127,7 @@ export async function getFarmSummary(farmId: string) {
     activePlantings: data.activePlantings || 0,
     totalPlantedPlants: data.totalPlantedPlants || 0,
     predictedYield: data.predictedYield || 0,
+    actualYield: data.actualYield ?? 0,
   };
 }
 
@@ -477,6 +484,47 @@ export async function recordBlockHarvest(farmId: string, blockId: string, data: 
     data
   );
   return response.data.data;
+}
+
+/**
+ * Payload for recording harvest-time waste directly to inventory_waste.
+ * Does NOT write to block_harvests — waste is excluded from KPI / yield tracking.
+ */
+export interface RecordBlockWastePayload {
+  /** Quantity in kilograms (plain number) */
+  quantityKg: number;
+  /** Free-text reason; auto-filled by the modal but user-editable */
+  wasteReason: string;
+  /** ISO datetime; falls back to now if not provided */
+  wasteDate?: string;
+  /** Display name of the crop (block.targetCropName) */
+  plantName: string;
+}
+
+/**
+ * Record harvest-time waste for a block.
+ * Writes to inventory_waste via POST /v1/farm/inventory/waste.
+ * organizationId is set from auth on the backend — not sent here.
+ * disposalMethod defaults to "pending" on the backend.
+ * originalGrade intentionally omitted — no prior grade for harvest-time waste.
+ */
+export async function recordBlockWaste(
+  farmId: string,
+  blockId: string,
+  payload: RecordBlockWastePayload
+) {
+  const body = {
+    farmId,
+    sourceType: 'harvest',
+    sourceBlockId: blockId,
+    plantName: payload.plantName,
+    quantity: payload.quantityKg,
+    unit: 'kg',
+    wasteReason: payload.wasteReason,
+    wasteDate: payload.wasteDate ?? new Date().toISOString(),
+  };
+  const response = await apiClient.post('/v1/farm/inventory/waste', body);
+  return response.data;
 }
 
 /**

@@ -604,25 +604,31 @@ async def get_farm_dashboard(
         farm_info = FarmInfo(
             farmId=farm.farmId,
             name=farm.name,
-            code=farm.farmCode if hasattr(farm, 'farmCode') else f"F{str(farm.farmId)[:3].upper()}",
+            # Pydantic Optional fields always have the attribute; fall back when
+            # the value itself is None/empty so FarmInfo.code (str) gets a valid value.
+            code=farm.farmCode or f"F{str(farm.farmId)[:3].upper()}",
             totalArea=farm.totalArea,
             areaUnit=farm.areaUnit,
             managerName=farm.managerName if hasattr(farm, 'managerName') else None,
             managerEmail=farm.managerEmail if hasattr(farm, 'managerEmail') else None
         )
 
-        # Get virtual blocks for farm (filtered by farming year if provided)
+        # Get virtual blocks for farm (filtered by farming year if provided).
+        # Virtuals are crop cycles, so a year filter is meaningful for them.
         virtual_blocks, virtual_total = await BlockRepository.get_by_farm(
             farmId, skip=0, limit=1000, block_category='virtual', farming_year=farmingYear
         )
 
-        # Also get physical blocks that have active plantings (not empty or cleaning)
-        # This handles the case where a planting is made directly on a physical block
+        # Get physical blocks WITHOUT a year filter — physicals are containers,
+        # not crop cycles. Their farmingYearPlanted is usually null (the year
+        # lives on the virtual children). Year-filtering them would zero out
+        # the physical count for any farm that uses virtual-block plantings.
         physical_blocks, _ = await BlockRepository.get_by_farm(
-            farmId, skip=0, limit=1000, block_category='physical', farming_year=farmingYear
+            farmId, skip=0, limit=1000, block_category='physical'
         )
 
         # Filter physical blocks to only include those with active plantings
+        # for the dashboard render (the grid only shows actively-planted blocks).
         # Exclude: EMPTY (no planting), CLEANING (between cycles), PARTIAL (has virtual children instead)
         active_physical_blocks = [
             pb for pb in physical_blocks
@@ -633,10 +639,16 @@ async def get_farm_dashboard(
         blocks = list(virtual_blocks) + active_physical_blocks
         total = len(blocks)
 
-        logger.info(f"[Dashboard] Found {total} blocks for farm {farmId} ({virtual_total} virtual, {len(active_physical_blocks)} active physical, farmingYear={farmingYear})")
+        logger.info(f"[Dashboard] Found {total} blocks for farm {farmId} ({virtual_total} virtual, {len(active_physical_blocks)} active physical of {len(physical_blocks)} total, farmingYear={farmingYear})")
 
-        # Calculate summary statistics
+        # Calculate summary statistics from the rendered blocks list
         summary_dict = calculate_farm_summary(blocks)
+        # Override the breakdown counts so they reflect the FULL physical/virtual
+        # counts on the farm (not just what's rendered in the grid). The hero's
+        # "Total Blocks" should show structural totals, independent of state filters.
+        summary_dict["physicalBlocks"] = len(physical_blocks)
+        summary_dict["virtualBlocks"] = len(virtual_blocks)
+        summary_dict["totalBlocks"] = len(physical_blocks) + len(virtual_blocks)
         summary = DashboardSummary(**summary_dict)
 
         # Enhance blocks with calculated fields and alerts

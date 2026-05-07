@@ -43,10 +43,12 @@ export function useFarm(farmId: string | undefined) {
  * Caches farm summary data separately from farm details
  * This allows independent refetching of summary vs details
  */
-export function useFarmSummary(farmId: string | undefined) {
+export function useFarmSummary(farmId: string | undefined, farmingYear?: number | null) {
   return useQuery({
-    queryKey: queryKeys.farms.summary(farmId!),
-    queryFn: () => farmApi.getFarmSummary(farmId!),
+    // Cache key includes year so summaries are scoped per (farm, year) and
+    // don't cross-pollinate when the global year selector changes.
+    queryKey: [...queryKeys.farms.summary(farmId!), farmingYear ?? null],
+    queryFn: () => farmApi.getFarmSummary(farmId!, farmingYear),
     enabled: !!farmId,
   });
 }

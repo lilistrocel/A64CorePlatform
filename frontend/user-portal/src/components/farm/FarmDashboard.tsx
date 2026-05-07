@@ -8,7 +8,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import {
   BarChart,
@@ -26,6 +25,7 @@ import {
 import { farmApi } from '../../services/farmApi';
 import { apiClient } from '../../services/api';
 import { GlobalFarmAnalyticsModal } from './GlobalFarmAnalyticsModal';
+import { FarmList } from './FarmList';
 import { formatNumber } from '../../utils';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
 
@@ -86,7 +86,7 @@ interface DashboardSummaryResponse {
   };
 }
 
-type ActiveTab = 'overview' | 'breakdown' | 'activity';
+type ActiveTab = 'overview' | 'activity' | 'farms';
 
 type SortKey = 'farmName' | 'totalBlocks' | 'activePlantings' | 'totalKg';
 type SortDirection = 'asc' | 'desc';
@@ -122,7 +122,7 @@ const STATE_LABELS: Record<string, string> = {
 
 const TABS: Array<{ id: ActiveTab; label: string }> = [
   { id: 'overview', label: 'Overview' },
-  { id: 'breakdown', label: 'Farm Breakdown' },
+  { id: 'farms', label: 'View Farms' },
   { id: 'activity', label: 'Activity & Alerts' },
 ];
 
@@ -220,6 +220,7 @@ const TabBar = styled.div`
 `;
 
 const TabButton = styled.button<{ $active: boolean }>`
+  position: relative;
   padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.lg}`};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ $active, theme }) =>
@@ -230,16 +231,38 @@ const TabButton = styled.button<{ $active: boolean }>`
     $active ? theme.colors.primary[600] : theme.colors.textSecondary};
   background: none;
   border: none;
-  border-bottom: 2px solid
-    ${({ $active, theme }) =>
-      $active ? theme.colors.primary[500] : 'transparent'};
+  /* Pull the button down 2px so its ::after underline overlays the TabBar's
+     own gray border-bottom instead of sitting just above it. */
   margin-bottom: -2px;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 150ms ease-in-out, border-color 150ms ease-in-out;
+  transition: color 150ms ease-in-out;
+
+  /* Sliding underline indicator: scales horizontally from 0 → 1 when the
+     tab becomes active. Sits exactly on top of the TabBar's gray
+     border-bottom so it visually replaces it for the active tab. */
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: ${({ theme }) => theme.colors.primary[500]};
+    transform: scaleX(${({ $active }) => ($active ? 1 : 0)});
+    transform-origin: center;
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
 
   &:hover {
     color: ${({ theme }) => theme.colors.primary[600]};
+  }
+
+  &:hover::after {
+    transform: scaleX(${({ $active }) => ($active ? 1 : 0.4)});
+    background: ${({ $active, theme }) =>
+      $active ? theme.colors.primary[500] : theme.colors.primary[300]};
   }
 
   &:focus-visible {
@@ -936,7 +959,6 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 // ============================================================================
 
 export function FarmDashboard() {
-  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [summary, setSummary] = useState<DashboardSummaryResponse['data'] | null>(null);
@@ -1363,42 +1385,17 @@ export function FarmDashboard() {
               <PanelTitle>Quick Actions</PanelTitle>
               <QuickActionsRow>
                 <ActionBtn
-                  $variant="primary"
-                  onClick={() => navigate('/farm/farms')}
-                  aria-label="Go to Manage Farms"
-                >
-                  Manage Farms
-                </ActionBtn>
-                <ActionBtn
-                  $variant="secondary"
-                  onClick={() => navigate('/farm/plants')}
-                  aria-label="Go to Plant Data Library"
-                >
-                  Plant Data Library
-                </ActionBtn>
-                <ActionBtn
                   $variant="outline"
                   onClick={() => setGlobalAnalyticsOpen(true)}
                   aria-label="Open All Farms Statistics"
                 >
                   View All Farms Statistics
                 </ActionBtn>
-                <ActionBtn
-                  $variant="outline"
-                  onClick={() => navigate('/farm/plantings')}
-                  aria-label="Go to Plantings"
-                >
-                  View Plantings
-                </ActionBtn>
               </QuickActionsRow>
             </Panel>
           </ChartGrid>
-        </TabContent>
-      )}
 
-      {/* ── Tab: Farm Breakdown ───────────────────────────────────────────────── */}
-      {activeTab === 'breakdown' && (
-        <TabContent role="tabpanel" aria-label="Farm Breakdown">
+          {/* Per-farm breakdown — formerly the Farm Breakdown tab. */}
           <ChartGrid>
             {/* Stacked Bar — Block distribution per farm */}
             <PanelFull>
@@ -1587,6 +1584,13 @@ export function FarmDashboard() {
               system events will appear here in a future release.
             </PlaceholderText>
           </FuturePlaceholder>
+        </TabContent>
+      )}
+
+      {/* ── Tab: View Farms ──────────────────────────────────────────────────── */}
+      {activeTab === 'farms' && (
+        <TabContent role="tabpanel" aria-label="View Farms">
+          <FarmList embedded />
         </TabContent>
       )}
 

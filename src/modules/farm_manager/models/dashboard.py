@@ -112,6 +112,8 @@ class FarmInfo(BaseModel):
 class DashboardSummary(BaseModel):
     """Aggregated farm statistics"""
     totalBlocks: int = 0
+    physicalBlocks: int = 0
+    virtualBlocks: int = 0
     blocksByState: Dict[str, int] = Field(default_factory=dict)  # {empty: 4, planned: 2, ...}
     totalActivePlantings: int = 0
     totalPredictedYieldKg: float = 0.0

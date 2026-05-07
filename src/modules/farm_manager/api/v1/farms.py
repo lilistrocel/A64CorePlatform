@@ -238,6 +238,10 @@ async def delete_farm(
 )
 async def get_farm_summary(
     farm_id: UUID,
+    farmingYear: Optional[int] = Query(
+        None,
+        description="Filter by farming year (e.g., 2025). When set, predicted yield is summed across blocks planted in that year and actual yield comes from harvests recorded in that year.",
+    ),
     current_user: CurrentUser = Depends(get_current_active_user),
     service: FarmService = Depends()
 ):
@@ -245,15 +249,19 @@ async def get_farm_summary(
     Get farm summary with statistics
 
     - **farm_id**: Farm UUID
+    - **farmingYear**: optional year filter for yield comparison
 
     Returns:
     - farmId: Farm UUID
     - totalBlocks: Total number of blocks
+    - physicalBlocks: count of physical container blocks (year-agnostic)
+    - virtualBlocks: count of virtual planting blocks (year-filtered when farmingYear is set)
     - totalBlockArea: Sum of all block areas
     - blocksByState: Count of blocks by state (empty, planned, planted, harvesting, alert)
     - activePlantings: Number of blocks currently planted
     - totalPlantedPlants: Total plants across all blocks
-    - predictedYield: Total predicted yield in kg
+    - predictedYield: Predicted yield in kg (current cycle when farmingYear is set, else all-time)
+    - actualYield: Actual harvested yield in kg (current farming year when set, else all-time)
     """
     # Get farm
     farm = await service.get_farm(farm_id)
@@ -266,14 +274,28 @@ async def get_farm_summary(
                 detail="Access denied: Not assigned to this farm"
             )
 
-    # Get all blocks for this farm
     from ...services.block.block_repository_new import BlockRepository
     from ...models.block import BlockStatus
 
-    blocks, total_count = await BlockRepository.get_by_farm(farm_id, skip=0, limit=1000)
+    # Get blocks. Physicals are year-agnostic containers; virtuals are
+    # crop-cycle-bound so we filter them by farmingYear when provided.
+    physical_block_objs, _ = await BlockRepository.get_by_farm(
+        farm_id, skip=0, limit=1000, block_category='physical'
+    )
+    virtual_block_objs, _ = await BlockRepository.get_by_farm(
+        farm_id, skip=0, limit=1000, block_category='virtual', farming_year=farmingYear
+    )
+
+    # Render-side block list: virtuals (year-filtered) + all physicals.
+    # Note: yield aggregations below use a separate, year-aware union so the
+    # numbers match the user's farming-year selection without distorting the
+    # structural counts (which always show the farm's actual block topology).
+    blocks = list(physical_block_objs) + list(virtual_block_objs)
 
     # Calculate statistics
     total_blocks = len(blocks)
+    physical_blocks = len(physical_block_objs)
+    virtual_blocks = len(virtual_block_objs)
 
     # Convert all block areas to hectares for consistent summing
     def convert_to_hectares(area: float, unit: str) -> float:
@@ -297,7 +319,52 @@ async def get_farm_summary(
         for block in blocks
     )
     total_planted_plants = sum(block.actualPlantCount or 0 for block in blocks)
-    predicted_yield = sum(block.kpi.predictedYieldKg for block in blocks)
+
+    # Yield Achievement compares the CURRENT cycle's predicted vs actual.
+    # "Currently on the field" = blocks with an active cycle (PLANNED / GROWING
+    # / FRUITING / HARVESTING). Cleaning, empty, partial (= container) are
+    # excluded so harvests from past archived cycles don't pollute the totals.
+    active_cycle_states = {
+        BlockStatus.PLANNED,
+        BlockStatus.GROWING,
+        BlockStatus.FRUITING,
+        BlockStatus.HARVESTING,
+    }
+    current_cycle_blocks = [b for b in blocks if b.state in active_cycle_states]
+
+    # If a year is selected, narrow further to blocks planted in that year.
+    if farmingYear is not None:
+        current_cycle_blocks = [
+            b for b in current_cycle_blocks
+            if getattr(b, "farmingYearPlanted", None) == farmingYear
+        ]
+
+    # Predicted: sum across the current-cycle blocks only.
+    predicted_yield = sum(b.kpi.predictedYieldKg for b in current_cycle_blocks)
+
+    # Actual: harvests on the SAME current-cycle blocks. Virtual blocks are
+    # deleted on cycle-end so any harvest on a still-existing virtual block is
+    # by definition this cycle. Physical blocks survive across cycles, so we
+    # additionally constrain harvestDate >= plantedDate for those.
+    actual_yield = 0.0
+    if current_cycle_blocks:
+        from ...services.database import farm_db
+        db = farm_db.get_database()
+        or_clauses = []
+        for b in current_cycle_blocks:
+            clause: dict = {"blockId": str(b.blockId)}
+            if (
+                getattr(b, "blockCategory", None) == "physical"
+                and getattr(b, "plantedDate", None) is not None
+            ):
+                clause["harvestDate"] = {"$gte": b.plantedDate}
+            or_clauses.append(clause)
+        harvest_pipeline = [
+            {"$match": {"farmId": str(farm_id), "$or": or_clauses}},
+            {"$group": {"_id": None, "totalKg": {"$sum": "$quantityKg"}}},
+        ]
+        harvest_result = await db.block_harvests.aggregate(harvest_pipeline).to_list(1)
+        actual_yield = harvest_result[0]["totalKg"] if harvest_result else 0
 
     # Count blocks by state (map new status system to old state system)
     blocks_by_state = {
@@ -329,11 +396,14 @@ async def get_farm_summary(
     summary = {
         "farmId": str(farm.farmId),
         "totalBlocks": total_blocks,
+        "physicalBlocks": physical_blocks,
+        "virtualBlocks": virtual_blocks,
         "totalBlockArea": total_block_area,
         "blocksByState": blocks_by_state,
         "activePlantings": active_plantings,
         "totalPlantedPlants": total_planted_plants,
-        "predictedYield": predicted_yield
+        "predictedYield": predicted_yield,
+        "actualYield": actual_yield
     }
 
     return SuccessResponse(data=summary)

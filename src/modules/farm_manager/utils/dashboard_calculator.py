@@ -220,6 +220,8 @@ def calculate_farm_summary(blocks: list[Block]) -> Dict:
     """
     summary = {
         "totalBlocks": len(blocks),
+        "physicalBlocks": sum(1 for b in blocks if getattr(b, "blockCategory", None) == "physical"),
+        "virtualBlocks": sum(1 for b in blocks if getattr(b, "blockCategory", None) == "virtual"),
         "blocksByState": {},
         "totalActivePlantings": 0,
         "totalPredictedYieldKg": 0.0,
