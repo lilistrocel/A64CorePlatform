@@ -10,31 +10,31 @@ import { PurchaseOrderTable } from '../../components/sales/PurchaseOrderTable';
 import { PurchaseOrderForm } from '../../components/sales/PurchaseOrderForm';
 import { salesService } from '../../services/salesService';
 import type { PurchaseOrder, PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderSearchParams } from '../../types/sales';
+import { SalesActionTiles } from '../../components/sales/SalesActionTiles';
 
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
 
 const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1400px;
+  padding: 32px;
+  max-width: 1440px;
   margin: 0 auto;
 `;
 
 const PageHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
 `;
 
 const PageTitle = styled.h1`
   font-size: 32px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 8px 0;
-`;
-
-const PageDescription = styled.p`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -281,8 +281,12 @@ export function PurchaseOrdersPage() {
     <PageContainer>
       <PageHeader>
         <PageTitle>Purchase Orders</PageTitle>
-        <PageDescription>Manage supplier purchase orders and procurement</PageDescription>
+        <Button $variant="primary" onClick={handleCreate}>
+          + Create PO
+        </Button>
       </PageHeader>
+
+      <SalesActionTiles activeKey="purchase-orders" />
 
       {error && <ErrorState>{error}</ErrorState>}
 
@@ -313,10 +317,6 @@ export function PurchaseOrdersPage() {
             Reset
           </Button>
         </FiltersGroup>
-
-        <Button $variant="primary" onClick={handleCreate}>
-          + Create PO
-        </Button>
       </Actions>
 
       {loading ? (

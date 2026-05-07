@@ -11,6 +11,7 @@ import { salesApi } from '../../services/salesService';
 import { formatNumber, formatCurrency } from '../../utils';
 import type { SalesDashboardStats } from '../../types/sales';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
+import { SalesActionTiles } from '../../components/sales/SalesActionTiles';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -51,12 +52,6 @@ const Title = styled.h1`
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 8px 0;
-`;
-
-const Subtitle = styled.p`
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0;
 `;
 
 const StatsGrid = styled.div`
@@ -187,29 +182,6 @@ const ExpiryDate = styled.span`
   color: #92400E;
 `;
 
-const QuickActions = styled.div`
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 24px;
-`;
-
-const ActionButton = styled.button`
-  padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease-in-out;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
-  }
-`;
-
 const LoadingContainer = styled.div`
   display: flex;
   justify-content: center;
@@ -296,13 +268,10 @@ export function SalesDashboardPage() {
               <FarmingYearBadge>Year {selectedFarmingYear}</FarmingYearBadge>
             )}
           </Title>
-          <Subtitle>
-            {selectedFarmingYear
-              ? `Filtered statistics for farming year ${selectedFarmingYear}`
-              : 'Orders, inventory, and purchase order tracking'}
-          </Subtitle>
         </HeaderLeft>
       </Header>
+
+      <SalesActionTiles />
 
       <StatsGrid>
         <StatCard>
@@ -391,11 +360,6 @@ export function SalesDashboardPage() {
         </Widget>
       </WidgetsRow>
 
-      <QuickActions>
-        <ActionButton onClick={() => navigate('/sales/orders')}>Manage Orders</ActionButton>
-        <ActionButton onClick={() => navigate('/sales/inventory')}>View Inventory</ActionButton>
-        <ActionButton onClick={() => navigate('/sales/purchase-orders')}>Purchase Orders</ActionButton>
-      </QuickActions>
     </Container>
   );
 }
