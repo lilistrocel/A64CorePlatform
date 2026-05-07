@@ -16,6 +16,10 @@ COPY crontab /etc/crontabs/root
 COPY run-harvest-aggregation.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/run-harvest-aggregation.sh
 
+# Copy expiry inventory script
+COPY run-expiry-inventory.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/run-expiry-inventory.sh
+
 # Create log directory
 RUN mkdir -p /var/log/cron
 

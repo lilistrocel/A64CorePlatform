@@ -263,6 +263,9 @@ class MovementType(str, Enum):
     WASTE = "waste"
     USAGE = "usage"
     RETURN = "return"
+    RESTORATION = "restoration"   # Reviving a previously-expired batch
+    RESERVATION = "reservation"   # Stock reserved for a confirmed order
+    SHIPMENT = "shipment"         # Stock physically leaves when order ships
 
 
 # ============================================================================
@@ -404,6 +407,13 @@ class HarvestInventory(HarvestInventoryBase):
     # Reserved for orders
     reservedQuantity: float = Field(0.0, ge=0, description="Quantity reserved for orders")
     availableQuantity: float = Field(..., ge=0, description="Available for sale")
+
+    # Immutable reference to the originally-recorded quantity at creation.
+    # Set once when the row is inserted and NEVER mutated afterwards.
+    # `quantity` decrements as stock ships; the row is "depleted" when
+    # `quantity == 0`. originalQuantity preserves the batch's true size for
+    # FIFO traceability, audit, and reporting.
+    originalQuantity: float = Field(..., ge=0, description="Original recorded quantity at creation (immutable)")
 
     # Source tracking (links to block harvest if auto-created)
     sourceHarvestId: Optional[UUID] = Field(None, description="Reference to block harvest (if auto-created from harvest)")
@@ -838,6 +848,7 @@ class WasteSourceType(str, Enum):
     DAMAGED = "damaged"       # Items damaged in storage/transport
     QUALITY_REJECT = "quality_reject"  # Failed quality inspection
     OTHER = "other"
+    ORDER_DELETION = "order_deletion"  # Stock reserved for an order that expired before the order was deleted
 
 
 class DisposalMethod(str, Enum):
@@ -952,3 +963,179 @@ class WasteSummary(BaseModel):
     bySourceType: dict = Field(default_factory=dict, description="Breakdown by source type")
     byDisposalMethod: dict = Field(default_factory=dict, description="Breakdown by disposal method")
     pendingDisposal: int = Field(0, description="Count of items pending disposal")
+
+
+# ============================================================================
+# MANUAL EXPIRE / REVIVE REQUEST MODELS
+# ============================================================================
+
+class ReviveHarvestRequest(BaseModel):
+    """
+    Request body for POST /inventory/harvest/{id}/revive.
+
+    The caller must supply a new expiry date (must be in the future) so the
+    revived batch has a defined shelf life rather than sitting open-ended.
+    """
+    expiryDate: datetime = Field(
+        ...,
+        description="New expiry date for the revived batch — must be in the future"
+    )
+    notes: Optional[str] = Field(None, max_length=1000, description="Optional notes for the audit trail")
+
+
+class MarkWasteRequest(BaseModel):
+    """
+    Request body for POST /inventory/returned/{id}/mark-waste.
+
+    Converts a returned-inventory row into an inventory_waste record.
+    """
+    wasteReason: Optional[str] = Field(None, max_length=500, description="Reason for waste")
+    disposalMethod: Optional[str] = Field(
+        None,
+        max_length=50,
+        description="Disposal method (compost, animal_feed, discard, sold_discount, donated, pending)"
+    )
+
+
+# ============================================================================
+# RETURNED INVENTORY
+# ============================================================================
+
+class ReturnedInventoryBase(BaseModel):
+    """
+    Base schema for inventory_returned collection.
+
+    Tracks goods returned by customers.  Unlike inventory_harvest (farm-origin),
+    a returned batch always references the sales order it came from.  The
+    farmId is optional because the goods arrived from the customer, not from
+    a specific farm block.
+    """
+    organizationId: UUID = Field(..., description="Organisation this return belongs to")
+    farmId: Optional[UUID] = Field(
+        None,
+        description="Farm the goods originally came from — null if unknown/not tracked"
+    )
+    plantDataId: UUID = Field(..., description="Reference to plant data catalogue entry")
+    plantName: str = Field(..., min_length=1, max_length=200, description="Product name")
+    productType: HarvestProductType = Field(
+        HarvestProductType.FRESH,
+        description="Type of product (fresh, processed, etc.)"
+    )
+    variety: Optional[str] = Field(None, max_length=100, description="Plant variety / cultivar")
+    qualityGrade: QualityGrade = Field(QualityGrade.GRADE_A, description="Quality grade on receipt")
+
+    quantity: float = Field(..., ge=0, description="Current quantity available")
+    unit: str = Field(..., min_length=1, max_length=20, description="Unit of measurement")
+
+    # Dates
+    harvestDate: datetime = Field(
+        ...,
+        description="Original harvest date — preserved from source batch for FIFO age ordering"
+    )
+    expiryDate: Optional[datetime] = Field(None, description="Expected expiry / best-before date")
+    returnDate: datetime = Field(..., description="When this return was recorded in the system")
+
+    # Source traceability
+    sourceOrderId: UUID = Field(..., description="Sales order that generated this return")
+    sourceOrderItemId: Optional[UUID] = Field(
+        None,
+        description="Specific line-item on the sales order (optional if not tracked)"
+    )
+    sourceInventoryHarvestId: Optional[UUID] = Field(
+        None,
+        description="The original inventory_harvest batch this stock came from (audit)"
+    )
+    sourceBlockId: Optional[UUID] = Field(None, description="Block the goods originally grew in")
+
+    returnReason: Optional[str] = Field(None, max_length=500, description="Reason given for the return")
+    conditionNotes: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Condition of goods on receipt"
+    )
+
+    # Container traceability — placeholder for a future enhancement
+    containerCodes: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional codes/IDs for physical containers (boxes, bags). "
+            "Empty for now; a future enhancement will populate during return entry."
+        )
+    )
+
+    notes: Optional[str] = Field(None, max_length=1000, description="Additional notes")
+
+
+class ReturnedInventoryCreate(ReturnedInventoryBase):
+    """
+    Schema for creating a returned-inventory row.
+
+    organizationId is overridden to optional; it will be set automatically
+    from the authenticated user's organisation context.
+    """
+    organizationId: Optional[UUID] = Field(
+        None,
+        description="Organisation ID — set automatically from auth context"
+    )
+
+
+class ReturnedInventoryUpdate(BaseModel):
+    """Schema for partial updates to a returned-inventory row."""
+    quantity: Optional[float] = Field(None, ge=0)
+    qualityGrade: Optional[QualityGrade] = None
+    expiryDate: Optional[datetime] = None
+    returnReason: Optional[str] = Field(None, max_length=500)
+    conditionNotes: Optional[str] = Field(None, max_length=1000)
+    notes: Optional[str] = Field(None, max_length=1000)
+    containerCodes: Optional[List[str]] = None
+
+
+class ReturnedInventory(ReturnedInventoryBase):
+    """
+    Complete returned-inventory document stored in inventory_returned.
+
+    originalQuantity is set at creation and never mutated afterwards,
+    mirroring the immutability contract on inventory_harvest.
+    """
+    inventoryId: UUID = Field(default_factory=uuid4, description="Unique identifier")
+
+    originalQuantity: float = Field(
+        ...,
+        ge=0,
+        description="Immutable batch size at creation — mirrors inventory_harvest contract"
+    )
+    reservedQuantity: float = Field(0.0, ge=0, description="Quantity reserved for pending orders")
+    availableQuantity: float = Field(..., ge=0, description="Quantity available for re-allocation")
+
+    farmingYear: Optional[int] = Field(
+        None,
+        description="Farming year derived from harvestDate"
+    )
+    divisionId: Optional[str] = Field(None, description="Division scope")
+
+    createdBy: UUID = Field(..., description="User who created this entry")
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "inventoryId": "ret-inv-001",
+                "organizationId": "org-001",
+                "farmId": "farm-001",
+                "plantDataId": "plant-001",
+                "plantName": "Roma Tomatoes",
+                "productType": "fresh",
+                "variety": "Roma VF",
+                "qualityGrade": "grade_a",
+                "quantity": 25.0,
+                "unit": "kg",
+                "harvestDate": "2026-04-10T00:00:00Z",
+                "returnDate": "2026-04-20T10:00:00Z",
+                "sourceOrderId": "order-001",
+                "returnReason": "Customer over-ordered",
+                "originalQuantity": 25.0,
+                "reservedQuantity": 0.0,
+                "availableQuantity": 25.0
+            }
+        }

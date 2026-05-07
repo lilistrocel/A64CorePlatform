@@ -1,4 +1,7 @@
 # Run harvest aggregation at 11 PM (23:00) UTC every day
 0 23 * * * /usr/local/bin/run-harvest-aggregation.sh >> /var/log/cron/harvest-aggregation.log 2>&1
 
+# Expiry cron disabled — manual expiry via POST /v1/farm/inventory/harvest/{id}/expire
+# 0 2 * * * /usr/local/bin/run-expiry-inventory.sh >> /var/log/cron/expiry-inventory.log 2>&1
+
 # Empty line at end of file (required by cron)

@@ -638,8 +638,19 @@ class BlockRepository:
             notes="Virtual block created"
         )
 
+        # Derive a human-friendly name from parent.name + the counter suffix
+        # in block_code (e.g., parent "A-01" + code ".../008" -> "A-01-008").
+        # Falls back to None when parent has no name.
+        counter_suffix = block_code.rsplit("/", 1)[-1] if "/" in block_code else None
+        derived_name = (
+            f"{parent.name}-{counter_suffix}"
+            if parent.name and counter_suffix
+            else None
+        )
+
         # Create virtual block document
         virtual_block = Block(
+            name=derived_name,
             blockCode=block_code,
             farmId=parent.farmId,
             farmCode=parent.farmCode,

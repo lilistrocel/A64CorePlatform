@@ -18,6 +18,7 @@ from ...models.block_harvest import (
 from ...models.inventory import (
     HarvestInventory, InventoryType, QualityGrade, MovementType, InventoryMovement, InventoryScope
 )
+from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
 from .harvest_repository import HarvestRepository
 from .block_repository_new import BlockRepository
 from ..database import farm_db
@@ -99,9 +100,14 @@ class HarvestService:
         """
         Add a harvest record to the inventory system.
 
-        Aggregates harvests by farm + plant + quality grade + product type.
-        If an existing inventory item matches, updates the quantity.
-        Otherwise, creates a new inventory entry.
+        Each harvest event creates ONE new inventory_harvest row (no merging
+        with prior harvests). This preserves per-batch dating so the FIFO
+        allocation in the sales-order flow can walk batches accurately —
+        oldest harvestDate first, deplete, move to the next.
+
+        The batch's originalQuantity is set on creation and never modified;
+        `quantity` decrements as stock ships. A row is "depleted" when
+        quantity == 0.
         """
         db = farm_db.get_database()
 
@@ -113,110 +119,72 @@ class HarvestService:
         plant_data_id = getattr(block, 'targetCrop', None)
         product_type = "fresh"  # Default to fresh
 
-        # Check if an existing inventory item matches (same farm + plant + grade + productType)
-        existing_item = await db.inventory_harvest.find_one({
-            "farmId": str(harvest.farmId),
-            "plantDataId": str(plant_data_id) if plant_data_id else str(harvest.blockId),
-            "qualityGrade": inventory_grade.value,
-            "productType": product_type
-        })
+        # Use passed organization_id, or try to get from block/farm
+        org_id = organization_id
+        if not org_id:
+            org_id = getattr(block, 'organizationId', None)
+        if not org_id:
+            # Fallback: try to get from farm
+            farm_doc = await db.farms.find_one({"farmId": str(harvest.farmId)})
+            if farm_doc:
+                org_id = farm_doc.get("organizationId")
 
-        if existing_item:
-            # Aggregate: Update existing inventory item
-            old_quantity = existing_item.get("quantity", 0)
-            old_available = existing_item.get("availableQuantity", 0)
-            new_quantity = old_quantity + harvest.quantityKg
-            new_available = old_available + harvest.quantityKg
+        # Compute farmingYear from the harvest date so the Inventory module's
+        # year filter matches new rows out of the box.
+        harvest_date_dt = harvest.harvestDate
+        if not isinstance(harvest_date_dt, datetime):
+            harvest_date_dt = datetime.fromisoformat(str(harvest_date_dt))
+        farming_year = get_farming_year(harvest_date_dt, DEFAULT_FARMING_YEAR_START_MONTH)
 
-            await db.inventory_harvest.update_one(
-                {"inventoryId": existing_item["inventoryId"]},
-                {
-                    "$set": {
-                        "quantity": new_quantity,
-                        "availableQuantity": new_available,
-                        "updatedAt": datetime.utcnow().isoformat()
-                    }
-                }
-            )
+        # TODO: Once plant_data exposes a `shelfLifeDays` field, set
+        # `expiryDate = harvest_date_dt + timedelta(days=shelfLifeDays)` here.
+        # Currently expiryDate stays None until manually set on the row.
+        inventory_item = HarvestInventory(
+            farmId=harvest.farmId,
+            organizationId=org_id,
+            inventoryScope=InventoryScope.FARM,  # Farm-specific inventory
+            blockId=harvest.blockId,
+            plantDataId=plant_data_id if plant_data_id else harvest.blockId,  # Use blockId as fallback
+            plantName=plant_name,
+            productType=product_type,
+            quantity=harvest.quantityKg,
+            originalQuantity=harvest.quantityKg,  # Immutable batch size
+            unit="kg",
+            reservedQuantity=0,
+            availableQuantity=harvest.quantityKg,
+            qualityGrade=inventory_grade,
+            harvestDate=harvest.harvestDate.isoformat() if isinstance(harvest.harvestDate, datetime) else harvest.harvestDate,
+            farmingYear=farming_year,
+            currency="AED",
+            notes=f"Auto-added from block harvest {harvest.harvestId}. {harvest.notes or ''}".strip(),
+            createdBy=user_id,
+            sourceHarvestId=harvest.harvestId  # Link back to original harvest
+        )
 
-            inventory_id = existing_item["inventoryId"]
+        # Insert into inventory
+        doc = inventory_item.model_dump(mode="json")
+        await db.inventory_harvest.insert_one(doc)
 
-            # Record movement for the addition
-            movement = InventoryMovement(
-                inventoryId=inventory_id,
-                inventoryType=InventoryType.HARVEST,
-                movementType=MovementType.ADDITION,
-                quantityBefore=old_quantity,
-                quantityChange=harvest.quantityKg,
-                quantityAfter=new_quantity,
-                organizationId=organization_id,
-                reason=f"Harvest from block {block.blockCode}",
-                referenceId=str(harvest.harvestId),
-                performedBy=user_id,
-                performedAt=datetime.utcnow()
-            )
-            await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
+        # Record movement (audit row for traceability)
+        movement = InventoryMovement(
+            inventoryId=inventory_item.inventoryId,
+            inventoryType=InventoryType.HARVEST,
+            movementType=MovementType.ADDITION,
+            quantityBefore=0,
+            quantityChange=harvest.quantityKg,
+            quantityAfter=harvest.quantityKg,
+            organizationId=org_id,
+            reason=f"Harvest from block {block.blockCode}",
+            referenceId=str(harvest.harvestId),
+            performedBy=user_id,
+            performedAt=datetime.utcnow()
+        )
+        await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
 
-            logger.info(
-                f"[Harvest Service] Aggregated harvest to existing inventory: {inventory_id} "
-                f"(+{harvest.quantityKg}kg, total now {new_quantity}kg of {plant_name})"
-            )
-        else:
-            # Create new inventory entry
-            # Use passed organization_id, or try to get from block/farm
-            org_id = organization_id
-            if not org_id:
-                org_id = getattr(block, 'organizationId', None)
-            if not org_id:
-                # Fallback: try to get from farm
-                farm_doc = await db.farms.find_one({"farmId": str(harvest.farmId)})
-                if farm_doc:
-                    org_id = farm_doc.get("organizationId")
-
-            inventory_item = HarvestInventory(
-                farmId=harvest.farmId,
-                organizationId=org_id,
-                inventoryScope=InventoryScope.FARM,  # Farm-specific inventory
-                blockId=harvest.blockId,
-                plantDataId=plant_data_id if plant_data_id else harvest.blockId,  # Use blockId as fallback
-                plantName=plant_name,
-                productType=product_type,
-                quantity=harvest.quantityKg,
-                unit="kg",
-                reservedQuantity=0,
-                availableQuantity=harvest.quantityKg,
-                qualityGrade=inventory_grade,
-                harvestDate=harvest.harvestDate.isoformat() if isinstance(harvest.harvestDate, datetime) else harvest.harvestDate,
-                currency="AED",
-                notes=f"Auto-added from block harvest {harvest.harvestId}. {harvest.notes or ''}".strip(),
-                createdBy=user_id,
-                sourceHarvestId=harvest.harvestId  # Link back to original harvest
-            )
-
-            # Insert into inventory
-            doc = inventory_item.model_dump(mode="json")
-            await db.inventory_harvest.insert_one(doc)
-
-            # Record movement
-            movement = InventoryMovement(
-                inventoryId=inventory_item.inventoryId,
-                inventoryType=InventoryType.HARVEST,
-                movementType=MovementType.ADDITION,
-                quantityBefore=0,
-                quantityChange=harvest.quantityKg,
-                quantityAfter=harvest.quantityKg,
-                organizationId=org_id,
-                reason=f"Harvest from block {block.blockCode}",
-                referenceId=str(harvest.harvestId),
-                performedBy=user_id,
-                performedAt=datetime.utcnow()
-            )
-            await db.inventory_movements.insert_one(movement.model_dump(mode="json"))
-
-            logger.info(
-                f"[Harvest Service] Created new harvest inventory: {inventory_item.inventoryId} "
-                f"({harvest.quantityKg}kg of {plant_name})"
-            )
+        logger.info(
+            f"[Harvest Service] Created new harvest inventory batch: {inventory_item.inventoryId} "
+            f"({harvest.quantityKg}kg of {plant_name})"
+        )
 
     @staticmethod
     async def get_harvest(harvest_id: UUID) -> BlockHarvest:

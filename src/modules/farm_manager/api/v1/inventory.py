@@ -9,7 +9,7 @@ CRUD operations for the three inventory types:
 
 from datetime import datetime
 from typing import Optional, List
-from uuid import UUID
+from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -17,8 +17,9 @@ import csv
 from io import StringIO
 
 from ...services.database import farm_db
-from ...middleware.auth import get_current_active_user, CurrentUser
+from ...middleware.auth import get_current_active_user, CurrentUser, require_permission
 from ...models.farming_year_config import get_farming_year, DEFAULT_FARMING_YEAR_START_MONTH
+from ...services.inventory.returned_repository import ReturnedInventoryRepository
 
 from src.modules.farm_manager.models.inventory import (
     # Enums
@@ -63,6 +64,13 @@ from src.modules.farm_manager.models.inventory import (
     WasteSummary,
     # Summary
     InventorySummary,
+    # Returned inventory
+    ReturnedInventory,
+    ReturnedInventoryCreate,
+    ReturnedInventoryUpdate,
+    # Expire / revive / mark-waste request bodies
+    ReviveHarvestRequest,
+    MarkWasteRequest,
     # Unit conversion functions
     get_base_unit_for_category,
     convert_to_base_unit,
@@ -541,6 +549,7 @@ async def create_harvest_inventory(
         **inventory_data,
         inventoryScope=inventory_scope,
         availableQuantity=data.quantity,
+        originalQuantity=data.quantity,  # Immutable batch size set on creation
         farmingYear=farming_year,
         createdBy=UUID(current_user.userId)
     )
@@ -2320,3 +2329,537 @@ async def delete_waste_inventory(
     result = await db.inventory_waste.delete_one({"wasteId": str(waste_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Waste inventory item not found")
+
+
+# ============================================================================
+# ADMIN — EXPIRY CRON ENDPOINT
+# ============================================================================
+
+@router.post(
+    "/admin/process-expired",
+    response_model=dict,
+    summary="[Admin] Move expired harvest inventory to waste",
+    description=(
+        "Daily cron endpoint (02:00 UTC). Finds all inventory_harvest rows "
+        "whose expiryDate has passed and availableQuantity > 0, creates matching "
+        "inventory_waste records with sourceType=expired, zeroes the harvest rows, "
+        "and writes audit movements. Requires farm.manage permission."
+    ),
+)
+async def admin_process_expired_inventory(
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+):
+    """
+    Run the expiry cron job on demand (or via the cron service at 02:00 UTC).
+
+    This is the farm.manage-gated endpoint called by:
+      cron/run-expiry-inventory.sh → POST /api/v1/farm/inventory/admin/process-expired
+
+    Returns:
+        Dict with moved, skipped, errors counts.
+    """
+    from ...services.block.expiry_cron import process_expired_harvest_inventory
+
+    stats = await process_expired_harvest_inventory(db)
+
+    return {
+        "success": True,
+        "message": (
+            f"Expiry cron completed: {stats['moved']} moved to waste, "
+            f"{stats['skipped']} skipped, {stats['errors']} errors"
+        ),
+        "data": stats,
+    }
+
+
+# ============================================================================
+# HARVEST EXPIRE / REVIVE (Deliverables 2 & 3)
+# ============================================================================
+
+@router.post(
+    "/harvest/{inventory_id}/expire",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Manually expire a harvest inventory batch",
+    description=(
+        "Move a single inventory_harvest row to inventory_waste with "
+        "sourceType=expired.  Blocked if any quantity is currently reserved "
+        "for unfulfilled orders.  Requires farm.manage permission."
+    ),
+)
+async def expire_harvest_inventory(
+    inventory_id: UUID,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+):
+    """
+    Manually expire a specific harvest inventory batch.
+
+    Returns:
+        Dict with success, wasteId, quantityMoved.
+
+    Raises:
+        404: Row not found.
+        403: Organisation mismatch.
+        409: Already depleted, or quantity is reserved.
+    """
+    org_id = await get_organization_id(current_user)
+    user_id = UUID(current_user.userId)
+    now = datetime.utcnow()
+    now_iso = now.isoformat()
+
+    # Lookup the harvest row
+    row = await db.inventory_harvest.find_one({"inventoryId": str(inventory_id)})
+    if not row:
+        raise HTTPException(status_code=404, detail="Harvest inventory item not found")
+
+    # Organisation guard
+    if row.get("organizationId") != str(org_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Inventory item does not belong to your organisation"
+        )
+
+    qty = row.get("quantity", 0)
+    reserved = row.get("reservedQuantity", 0)
+
+    # Already empty?
+    if qty <= 0:
+        raise HTTPException(status_code=409, detail="Already depleted")
+
+    # Cannot expire while stock is reserved
+    if reserved > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Cannot expire — {reserved} {row.get('unit', 'kg')} is reserved "
+                "for unfulfilled orders. Cancel those orders first."
+            ),
+        )
+
+    # qty_to_waste = full available quantity (reserved == 0 here)
+    qty_to_waste = qty
+
+    waste_id = str(uuid4())
+
+    # 1. Insert inventory_waste record
+    waste_doc = {
+        "wasteId": waste_id,
+        "organizationId": str(org_id),
+        "farmId": row.get("farmId"),
+        "sourceType": WasteSourceType.EXPIRED.value,
+        "sourceInventoryId": str(inventory_id),
+        "sourceOrderId": None,
+        "sourceReturnId": None,
+        "sourceBlockId": row.get("blockId"),
+        "plantName": row.get("plantName", "Unknown"),
+        "variety": row.get("variety"),
+        "quantity": qty_to_waste,
+        "unit": row.get("unit", "kg"),
+        "originalGrade": row.get("qualityGrade"),
+        "wasteReason": (
+            f"Manually marked expired by {current_user.email} on {now.strftime('%Y-%m-%d %H:%M')} UTC"
+        ),
+        "wasteDate": now_iso,
+        "disposalMethod": DisposalMethod.PENDING.value,
+        "disposalDate": None,
+        "disposalNotes": None,
+        "estimatedValue": None,
+        "currency": row.get("currency", "AED"),
+        "notes": None,
+        "recordedBy": str(user_id),
+        "divisionId": row.get("divisionId"),
+        "createdAt": now_iso,
+        "updatedAt": now_iso,
+    }
+    await db.inventory_waste.insert_one(waste_doc)
+
+    # 2. Zero out the harvest row
+    await db.inventory_harvest.update_one(
+        {"inventoryId": str(inventory_id)},
+        {"$set": {
+            "quantity": 0,
+            "availableQuantity": 0,
+            "updatedAt": now_iso,
+        }},
+    )
+
+    # 3. Audit movement
+    movement_doc = {
+        "movementId": str(uuid4()),
+        "inventoryId": str(inventory_id),
+        "inventoryType": InventoryType.HARVEST.value,
+        "movementType": MovementType.WASTE.value,
+        "quantityBefore": qty_to_waste,
+        "quantityChange": -qty_to_waste,
+        "quantityAfter": 0,
+        "organizationId": str(org_id),
+        "reason": "Manually expired",
+        "referenceId": waste_id,
+        "performedBy": str(user_id),
+        "performedAt": now_iso,
+    }
+    await db.inventory_movements.insert_one(movement_doc)
+
+    return {
+        "success": True,
+        "wasteId": waste_id,
+        "quantityMoved": qty_to_waste,
+    }
+
+
+@router.post(
+    "/harvest/{inventory_id}/revive",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Revive a previously expired harvest batch",
+    description=(
+        "Reverse a prior manual expiry: restore the quantity from the matching "
+        "inventory_waste row back to the inventory_harvest row and set a new "
+        "expiry date.  The waste row is soft-deleted (quantity zeroed) for audit. "
+        "Requires farm.manage permission."
+    ),
+)
+async def revive_harvest_inventory(
+    inventory_id: UUID,
+    body: ReviveHarvestRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+):
+    """
+    Revive a previously expired harvest inventory batch.
+
+    Returns:
+        Dict with success, quantityRestored, newExpiryDate.
+
+    Raises:
+        404: Row not found, or no expired waste record found.
+        403: Organisation mismatch.
+        422: Supplied expiryDate is not in the future.
+    """
+    org_id = await get_organization_id(current_user)
+    user_id = UUID(current_user.userId)
+    now = datetime.utcnow()
+    now_iso = now.isoformat()
+
+    # Lookup the harvest row
+    row = await db.inventory_harvest.find_one({"inventoryId": str(inventory_id)})
+    if not row:
+        raise HTTPException(status_code=404, detail="Harvest inventory item not found")
+
+    # Organisation guard
+    if row.get("organizationId") != str(org_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Inventory item does not belong to your organisation"
+        )
+
+    # Find the matching expired waste row — most recent one for this batch
+    waste_row = await db.inventory_waste.find_one(
+        {
+            "sourceType": WasteSourceType.EXPIRED.value,
+            "sourceInventoryId": str(inventory_id),
+            "quantity": {"$gt": 0},
+        },
+        sort=[("createdAt", -1)],
+    )
+    if not waste_row:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No expired waste record exists for this batch — nothing to revive"
+            ),
+        )
+
+    # expiryDate must be in the future
+    expiry_dt = body.expiryDate
+    if expiry_dt.tzinfo is not None:
+        # Strip timezone for naive datetime comparison
+        expiry_dt = expiry_dt.replace(tzinfo=None)
+    if expiry_dt <= now:
+        raise HTTPException(
+            status_code=422,
+            detail="expiryDate must be in the future"
+        )
+
+    qty_to_restore = waste_row.get("quantity", 0)
+    waste_id = str(waste_row.get("wasteId", ""))
+
+    # 1. Restore harvest row
+    current_qty = row.get("quantity", 0)
+    current_available = row.get("availableQuantity", 0)
+    reserved = row.get("reservedQuantity", 0)
+
+    await db.inventory_harvest.update_one(
+        {"inventoryId": str(inventory_id)},
+        {"$set": {
+            "quantity": current_qty + qty_to_restore,
+            "availableQuantity": current_available + qty_to_restore,
+            "expiryDate": expiry_dt.isoformat(),
+            "updatedAt": now_iso,
+        }},
+    )
+
+    # 2. Soft-delete the waste row (preserve audit — set qty = 0)
+    await db.inventory_waste.update_one(
+        {"wasteId": waste_id},
+        {"$set": {
+            "quantity": 0,
+            "revertedAt": now_iso,
+            "revertedBy": str(user_id),
+            "updatedAt": now_iso,
+        }},
+    )
+
+    # 3. Audit movement (RESTORATION)
+    movement_doc = {
+        "movementId": str(uuid4()),
+        "inventoryId": str(inventory_id),
+        "inventoryType": InventoryType.HARVEST.value,
+        "movementType": MovementType.RESTORATION.value,
+        "quantityBefore": current_qty,
+        "quantityChange": qty_to_restore,
+        "quantityAfter": current_qty + qty_to_restore,
+        "organizationId": str(org_id),
+        "reason": body.notes or "Batch revived — expiry reversed",
+        "referenceId": waste_id,
+        "performedBy": str(user_id),
+        "performedAt": now_iso,
+    }
+    await db.inventory_movements.insert_one(movement_doc)
+
+    return {
+        "success": True,
+        "quantityRestored": qty_to_restore,
+        "newExpiryDate": expiry_dt.isoformat(),
+    }
+
+
+# ============================================================================
+# RETURNED INVENTORY ENDPOINTS (Deliverable 4)
+# ============================================================================
+
+@router.get(
+    "/returned",
+    response_model=dict,
+    summary="List returned inventory",
+    description="Paginated list of inventory_returned rows for the caller's organisation.",
+)
+async def list_returned_inventory(
+    farm_id: Optional[UUID] = Query(None, description="Filter by farm ID"),
+    quality_grade: Optional[QualityGrade] = Query(None, alias="qualityGrade"),
+    farming_year: Optional[int] = Query(None, alias="farmingYear"),
+    search: Optional[str] = Query(None, max_length=100),
+    sort_by: str = Query("returnDate", description="Sort field: returnDate, harvestDate, plantName, quantity, createdAt"),
+    sort_order: str = Query("desc", description="Sort order: asc or desc"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """List returned inventory items with pagination and filters."""
+    org_id = await get_organization_id(current_user)
+
+    return await ReturnedInventoryRepository.list_paginated(
+        db=db,
+        organization_id=org_id,
+        farm_id=farm_id,
+        quality_grade=quality_grade,
+        farming_year=farming_year,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        per_page=per_page,
+    )
+
+
+@router.post(
+    "/returned",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a returned-inventory row",
+    description=(
+        "Record goods returned by a customer.  The row is linked to the "
+        "originating sales order via sourceOrderId (required)."
+    ),
+)
+async def create_returned_inventory(
+    data: ReturnedInventoryCreate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """
+    Create a new returned-inventory record.
+
+    Args:
+        data: Validated creation payload.
+
+    Returns:
+        Inserted document dict.
+    """
+    org_id = await get_organization_id(current_user)
+    user_id = UUID(current_user.userId)
+
+    return await ReturnedInventoryRepository.create(
+        db=db,
+        data=data,
+        organization_id=org_id,
+        user_id=user_id,
+    )
+
+
+# NOTE: Static sub-paths (/returned/...) must come before dynamic /{id} routes
+@router.get(
+    "/returned/{inventory_id}",
+    response_model=dict,
+    summary="Get a single returned-inventory row",
+)
+async def get_returned_inventory(
+    inventory_id: UUID,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """Retrieve a specific returned-inventory item by ID."""
+    org_id = await get_organization_id(current_user)
+
+    item = await ReturnedInventoryRepository.get_by_id(
+        db=db,
+        inventory_id=inventory_id,
+        organization_id=org_id,
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Returned inventory item not found")
+
+    return item
+
+
+@router.patch(
+    "/returned/{inventory_id}",
+    response_model=dict,
+    summary="Update a returned-inventory row",
+)
+async def update_returned_inventory(
+    inventory_id: UUID,
+    data: ReturnedInventoryUpdate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """
+    Partially update mutable fields on a returned-inventory row.
+
+    Args:
+        data: Fields to update.
+
+    Returns:
+        Updated document dict.
+    """
+    org_id = await get_organization_id(current_user)
+    user_id = UUID(current_user.userId)
+
+    updated = await ReturnedInventoryRepository.update(
+        db=db,
+        inventory_id=inventory_id,
+        organization_id=org_id,
+        data=data,
+        user_id=user_id,
+    )
+    if updated is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Returned inventory item not found or does not belong to your organisation"
+        )
+
+    return updated
+
+
+@router.delete(
+    "/returned/{inventory_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Soft-delete a returned-inventory row",
+)
+async def delete_returned_inventory(
+    inventory_id: UUID,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """
+    Soft-delete a returned-inventory row (zeroes quantity, stamps deletedAt).
+
+    The row is preserved for audit.  Returns 204 on success, 404 if not found.
+    """
+    org_id = await get_organization_id(current_user)
+    user_id = UUID(current_user.userId)
+
+    found = await ReturnedInventoryRepository.soft_delete(
+        db=db,
+        inventory_id=inventory_id,
+        organization_id=org_id,
+        user_id=user_id,
+    )
+    if not found:
+        raise HTTPException(status_code=404, detail="Returned inventory item not found")
+
+
+@router.post(
+    "/returned/{inventory_id}/mark-waste",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Move a returned-inventory row to waste",
+    description=(
+        "Convenience endpoint that routes a returned batch to inventory_waste "
+        "with sourceType=return, zeroes out the returned row, and writes an "
+        "audit movement."
+    ),
+)
+async def mark_returned_as_waste(
+    inventory_id: UUID,
+    body: MarkWasteRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: CurrentUser = Depends(get_current_active_user),
+):
+    """
+    Convert a returned-inventory row to waste.
+
+    Returns:
+        Dict with wasteId and quantityMoved.
+
+    Raises:
+        404: Row not found.
+        409: Row already depleted.
+        403: Organisation mismatch.
+    """
+    org_id = await get_organization_id(current_user)
+    user_id = UUID(current_user.userId)
+
+    # Verify the row exists and belongs to this org before delegating
+    row = await db.inventory_returned.find_one({"inventoryId": str(inventory_id)})
+    if not row:
+        raise HTTPException(status_code=404, detail="Returned inventory item not found")
+    if row.get("organizationId") != str(org_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Returned inventory item does not belong to your organisation"
+        )
+
+    try:
+        result = await ReturnedInventoryRepository.mark_as_waste(
+            db=db,
+            inventory_id=inventory_id,
+            organization_id=org_id,
+            user_id=user_id,
+            waste_reason=body.wasteReason,
+            disposal_method_str=body.disposalMethod,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Returned inventory item not found")
+
+    return {
+        "success": True,
+        "wasteId": result["wasteId"],
+        "quantityMoved": result["quantityMoved"],
+    }

@@ -509,6 +509,53 @@ export const PRODUCT_TYPE_LABELS: Record<HarvestProductType, string> = {
 };
 
 // ============================================================================
+// RETURNED INVENTORY (Phase 1 — sales-order ↔ stock integration)
+// ============================================================================
+
+/**
+ * Mirrors the backend `ReturnedInventory` Pydantic model from
+ * `src/modules/farm_manager/models/inventory.py`.
+ * Records goods returned by customers that are available for re-allocation.
+ */
+export interface ReturnedInventory {
+  inventoryId: string;
+  organizationId: string;
+  /** Farm the goods originally came from — null if unknown/not tracked. */
+  farmId: string | null;
+  plantDataId: string;
+  plantName: string;
+  productType: HarvestProductType;
+  variety?: string | null;
+  qualityGrade: QualityGrade;
+  /** Current total quantity (kg). */
+  quantity: number;
+  unit: string;
+  /** Original harvest date — used for FIFO age ordering. */
+  harvestDate: string;
+  expiryDate?: string | null;
+  /** When this return was recorded in the system. */
+  returnDate: string;
+  /** Sales order that generated this return. */
+  sourceOrderId: string;
+  sourceOrderItemId?: string | null;
+  sourceInventoryHarvestId?: string | null;
+  sourceBlockId?: string | null;
+  returnReason?: string | null;
+  conditionNotes?: string | null;
+  containerCodes: string[];
+  notes?: string | null;
+  originalQuantity: number;
+  reservedQuantity: number;
+  /** Quantity available for re-allocation to new orders. */
+  availableQuantity: number;
+  farmingYear?: number | null;
+  divisionId?: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
 // UNIT CONFIGURATION
 // ============================================================================
 

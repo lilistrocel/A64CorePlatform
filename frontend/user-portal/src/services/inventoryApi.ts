@@ -27,6 +27,7 @@ import type {
   AssetStatus,
   QualityGrade,
   InventoryFarmingYearsResponse,
+  ReturnedInventory,
 } from '../types/inventory';
 
 const BASE_URL = '/v1/farm/inventory';
@@ -135,6 +136,58 @@ export async function exportHarvestInventoryCSV(params: {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+}
+
+// ============================================================================
+// RETURNED INVENTORY (Phase 1 — sales-order ↔ stock integration)
+// ============================================================================
+
+/**
+ * List returned inventory rows available for re-allocation to new sales orders.
+ * Mirrors the harvest inventory list shape — backend: GET /v1/farm/inventory/returned
+ */
+export async function listReturnedInventory(params: {
+  farmId?: string;
+  qualityGrade?: QualityGrade;
+  search?: string;
+  sortBy?: 'returnDate' | 'harvestDate' | 'plantName' | 'quantity' | 'createdAt';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  perPage?: number;
+  farmingYear?: number | null;
+}): Promise<PaginatedResponse<ReturnedInventory>> {
+  const queryParams: Record<string, unknown> = {
+    farm_id: params.farmId,
+    qualityGrade: params.qualityGrade,
+    search: params.search,
+    sort_by: params.sortBy || 'returnDate',
+    sort_order: params.sortOrder || 'desc',
+    page: params.page || 1,
+    per_page: params.perPage || 20,
+  };
+
+  if (params.farmingYear !== undefined && params.farmingYear !== null) {
+    queryParams.farmingYear = params.farmingYear;
+  }
+
+  const response = await apiClient.get(`${BASE_URL}/returned`, { params: queryParams });
+  return response.data;
+}
+
+/**
+ * Move a returned-inventory row to waste.
+ * Calls POST /v1/farm/inventory/returned/{id}/mark-waste
+ * Returns { wasteId, quantityMoved }
+ */
+export async function markReturnedAsWaste(
+  inventoryId: string,
+  body?: { wasteReason?: string; disposalMethod?: string }
+): Promise<{ wasteId: string; quantityMoved: number }> {
+  const response = await apiClient.post(
+    `${BASE_URL}/returned/${inventoryId}/mark-waste`,
+    body ?? {}
+  );
+  return response.data;
 }
 
 // ============================================================================
@@ -415,6 +468,8 @@ export const inventoryApi = {
 
   // Harvest Inventory
   listHarvestInventory,
+  listReturnedInventory,
+  markReturnedAsWaste,
   getHarvestInventory,
   createHarvestInventory,
   updateHarvestInventory,
