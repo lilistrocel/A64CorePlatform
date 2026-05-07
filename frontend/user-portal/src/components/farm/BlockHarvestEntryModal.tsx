@@ -1,14 +1,16 @@
 /**
  * Block Harvest Entry Modal
  *
- * Simplified modal for recording block-level quick harvest entries.
- * Used for quick harvest actions from CompactBlockCard.
- * Only supports quality grades A, B, C (no D or Waste).
+ * Modal for recording block-level quick harvest entries.
+ * Used for quick harvest actions from CompactBlockCard and BlockHarvestsTab.
+ *
+ * Grades A/B/C → writes to block_harvests (counted in KPI/yield).
+ * Grade Waste   → writes to inventory_waste only (excluded from KPI/yield).
  */
 
 import { useState, useRef } from 'react';
 import styled from 'styled-components';
-import { recordBlockHarvest } from '../../services/farmApi';
+import { recordBlockHarvest, recordBlockWaste } from '../../services/farmApi';
 import { positiveNumberInputProps } from '../../utils';
 
 interface BlockHarvestEntryModalProps {
@@ -31,21 +33,35 @@ interface BlockHarvestEntryModalProps {
   onComplete: () => void;
 }
 
-type QualityGrade = 'A' | 'B' | 'C';
+// Local-only type — Waste intentionally excluded from the global QualityGrade
+// used by block_harvests to avoid polluting KPI/yield metrics.
+type QualityGrade = 'A' | 'B' | 'C' | 'Waste';
 
-const GRADE_OPTIONS: QualityGrade[] = ['A', 'B', 'C'];
+const GRADE_OPTIONS: QualityGrade[] = ['A', 'B', 'C', 'Waste'];
 
 const GRADE_COLORS: Record<QualityGrade, string> = {
   A: '#10B981',
   B: '#3B82F6',
   C: '#F59E0B',
+  Waste: '#9CA3AF',
 };
+
+/** Accent used for the Waste chip border/dot — subtle red to signal rejected. */
+const WASTE_ACCENT = '#EF4444';
 
 const GRADE_LABELS: Record<QualityGrade, string> = {
   A: 'Premium',
   B: 'Good',
   C: 'Standard',
+  Waste: 'Waste',
 };
+
+/** Build the one-time auto-fill text for the waste reason field. */
+function buildWasteAutoFill(cropName: string | null | undefined, code: string, blockId: string): string {
+  const crop = cropName ?? 'Unknown crop';
+  const displayCode = code || blockId.slice(0, 6);
+  return `Recorded as waste from harvest of ${crop} on ${displayCode}`;
+}
 
 export function BlockHarvestEntryModal({
   isOpen,
@@ -64,23 +80,48 @@ export function BlockHarvestEntryModal({
   const [quantityKg, setQuantityKg] = useState('');
   const [qualityGrade, setQualityGrade] = useState<QualityGrade>('A');
   const [notes, setNotes] = useState('');
+  const [wasteReason, setWasteReason] = useState('');
+  // Track whether we have already auto-filled the waste reason this session,
+  // so we don't clobber a user-typed value if they toggle away and back.
+  const wasteAutoFilledRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  const isWaste = qualityGrade === 'Waste';
+
+  const handleGradeChange = (grade: QualityGrade) => {
+    setQualityGrade(grade);
+    setError(null);
+
+    // Auto-fill waste reason on first selection of Waste.
+    // Never overwrite if the user has already typed something.
+    if (grade === 'Waste' && !wasteAutoFilledRef.current) {
+      const autoText = buildWasteAutoFill(targetCropName, blockCode, blockId);
+      setWasteReason(autoText);
+      wasteAutoFilledRef.current = true;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
+    // Quantity validation — applies to both sellable grades and waste.
     const quantity = parseFloat(quantityKg);
     if (isNaN(quantity) || quantity <= 0) {
       setError('Please enter a valid quantity (kg)');
       return;
     }
 
-    // Synchronous ref guard prevents concurrent submissions (double-click protection)
+    // Waste reason is required when grade is Waste.
+    if (isWaste && !wasteReason.trim()) {
+      setError('Please enter a reason for the waste');
+      return;
+    }
+
+    // Synchronous ref guard prevents concurrent submissions (double-click protection).
     if (submittingRef.current) return;
     submittingRef.current = true;
 
@@ -88,26 +129,39 @@ export function BlockHarvestEntryModal({
       setSubmitting(true);
       setError(null);
 
-      await recordBlockHarvest(farmId, blockId, {
-        blockId: blockId,
-        harvestDate: new Date().toISOString(),
-        quantityKg: quantity,
-        qualityGrade: qualityGrade,
-        notes: notes.trim() || undefined,
-      });
+      if (isWaste) {
+        // Waste path: writes to inventory_waste only — does not affect KPI/yield.
+        await recordBlockWaste(farmId, blockId, {
+          quantityKg: quantity,
+          wasteReason: wasteReason.trim(),
+          wasteDate: new Date().toISOString(),
+          plantName: targetCropName ?? 'Unknown crop',
+        });
+      } else {
+        // Sellable path: writes to block_harvests and auto-aggregates into inventory_harvest.
+        await recordBlockHarvest(farmId, blockId, {
+          blockId: blockId,
+          harvestDate: new Date().toISOString(),
+          quantityKg: quantity,
+          qualityGrade: qualityGrade,
+          notes: notes.trim() || undefined,
+        });
+      }
 
-      // Reset form
+      // Reset form state.
       setQuantityKg('');
       setQualityGrade('A');
       setNotes('');
+      setWasteReason('');
+      wasteAutoFilledRef.current = false;
 
       onComplete();
-    } catch (err: any) {
-      console.error('Failed to record harvest:', err);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string; detail?: string } } };
       const errorMessage =
-        err?.response?.data?.message ||
-        err?.response?.data?.detail ||
-        'Failed to record harvest. Please try again.';
+        axiosErr?.response?.data?.message ||
+        axiosErr?.response?.data?.detail ||
+        (isWaste ? 'Failed to record waste. Please try again.' : 'Failed to record harvest. Please try again.');
       setError(errorMessage);
     } finally {
       submittingRef.current = false;
@@ -115,26 +169,32 @@ export function BlockHarvestEntryModal({
     }
   };
 
+  // Submit is disabled if quantity is invalid OR if waste grade and reason is empty.
+  const parsedQty = parseFloat(quantityKg);
+  const quantityInvalid = isNaN(parsedQty) || parsedQty <= 0 || quantityKg === '';
+  const isSubmitDisabled = submitting || quantityInvalid || (isWaste && !wasteReason.trim());
+
   return (
+    // Overlay intentionally has NO onClick — data-entry modal must close only
+    // via the X button or Cancel button (standing project UX rule).
     <Overlay
-      onClick={onClose}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
     >
       <Modal
-        onClick={(e) => e.stopPropagation()}
         onMouseEnter={(e) => e.stopPropagation()}
         onMouseLeave={(e) => e.stopPropagation()}
       >
         <Header>
           <Title>Quick Harvest Entry</Title>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton type="button" onClick={onClose} aria-label="Close modal">×</CloseButton>
         </Header>
 
         <Content>
+          {/* Block/crop identity card — always visible */}
           <BlockInfo>
             <BlockLine>
-              <LineIcon aria-hidden>📍</LineIcon>
+              <LineIcon aria-hidden="true">📍</LineIcon>
               <BlockIdentity>
                 {blockCode}
                 {blockName && <BlockNameInline> — {blockName}</BlockNameInline>}
@@ -143,7 +203,7 @@ export function BlockHarvestEntryModal({
 
             {targetCropName && (
               <CropLine>
-                <LineIcon aria-hidden>🌱</LineIcon>
+                <LineIcon aria-hidden="true">🌱</LineIcon>
                 <CropName>{targetCropName}</CropName>
               </CropLine>
             )}
@@ -159,7 +219,8 @@ export function BlockHarvestEntryModal({
               </ChipRow>
             )}
 
-            {!!totalHarvests && totalHarvests > 0 && (
+            {/* Yield progress chips — hidden when grade is Waste (they'd be misleading) */}
+            {!isWaste && !!totalHarvests && totalHarvests > 0 && (
               <ChipRow>
                 <Chip $variant="progress">
                   {totalHarvests.toLocaleString('en-US')} harvest{totalHarvests === 1 ? '' : 's'} so far
@@ -175,8 +236,9 @@ export function BlockHarvestEntryModal({
 
           <Form onSubmit={handleSubmit}>
             <FormGroup>
-              <Label>Quantity (kg) *</Label>
+              <Label htmlFor="harvest-quantity">Quantity (kg) *</Label>
               <Input
+                id="harvest-quantity"
                 {...positiveNumberInputProps}
                 step="0.01"
                 min="0.01"
@@ -196,35 +258,70 @@ export function BlockHarvestEntryModal({
                     key={grade}
                     type="button"
                     $selected={qualityGrade === grade}
-                    $color={GRADE_COLORS[grade]}
-                    onClick={() => setQualityGrade(grade)}
+                    $color={grade === 'Waste' ? WASTE_ACCENT : GRADE_COLORS[grade]}
+                    $isWaste={grade === 'Waste'}
+                    onClick={() => handleGradeChange(grade)}
+                    aria-pressed={qualityGrade === grade}
                   >
-                    <GradeIcon>{grade}</GradeIcon>
+                    <GradeIcon $color={grade === 'Waste' && qualityGrade !== 'Waste' ? GRADE_COLORS.Waste : undefined}>
+                      {grade}
+                    </GradeIcon>
                     <GradeLabel>{GRADE_LABELS[grade]}</GradeLabel>
                   </GradeButton>
                 ))}
               </GradeGrid>
-              <GradeNote>Only A, B, C grades for quick harvest</GradeNote>
+              {/* Note only shown when A/B/C is selected — Waste has its own indicator below */}
+              {!isWaste && (
+                <GradeNote>A, B, C grades are recorded to block harvest history</GradeNote>
+              )}
+              {isWaste && (
+                <GradeNote $warn>Waste is excluded from yield KPIs and harvest history</GradeNote>
+              )}
             </FormGroup>
 
-            <FormGroup>
-              <Label>Notes (Optional)</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any notes about this harvest..."
-                rows={3}
-              />
-            </FormGroup>
+            {/* Waste reason — conditional, required when grade=Waste */}
+            {isWaste && (
+              <FormGroup>
+                <Label htmlFor="waste-reason">Reason *</Label>
+                <Textarea
+                  id="waste-reason"
+                  value={wasteReason}
+                  onChange={(e) => setWasteReason(e.target.value)}
+                  placeholder="Enter reason for waste..."
+                  rows={3}
+                  maxLength={500}
+                  required
+                />
+                <CharCount $over={wasteReason.length > 450}>
+                  {wasteReason.length} / 500
+                </CharCount>
+              </FormGroup>
+            )}
 
-            {error && <ErrorMessage>{error}</ErrorMessage>}
+            {/* Notes — only for sellable grades */}
+            {!isWaste && (
+              <FormGroup>
+                <Label htmlFor="harvest-notes">Notes (Optional)</Label>
+                <Textarea
+                  id="harvest-notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add any notes about this harvest..."
+                  rows={3}
+                />
+              </FormGroup>
+            )}
+
+            {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
 
             <ButtonGroup>
               <CancelButton type="button" onClick={onClose} disabled={submitting}>
                 Cancel
               </CancelButton>
-              <SubmitButton type="submit" disabled={submitting}>
-                {submitting ? 'Recording...' : 'Record Harvest'}
+              <SubmitButton type="submit" disabled={isSubmitDisabled} $isWaste={isWaste}>
+                {submitting
+                  ? isWaste ? 'Recording waste...' : 'Recording...'
+                  : isWaste ? 'Record Waste' : 'Record Harvest'}
               </SubmitButton>
             </ButtonGroup>
           </Form>
@@ -338,7 +435,7 @@ const BlockIdentity = styled.span`
 `;
 
 const BlockNameInline = styled.span`
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  font-family: ${({ theme }) => theme.typography.fontFamily.primary};
   font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
@@ -405,35 +502,50 @@ const Input = styled.input`
   }
 `;
 
+/** 4-column grid to accommodate A / B / C / Waste chips in a single row. */
 const GradeGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: ${({ theme }) => theme.spacing.sm};
 `;
 
-const GradeButton = styled.button<{ $selected: boolean; $color: string }>`
+const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: ${({ theme }) => theme.spacing.md};
   border: 2px solid
-    ${({ $selected, $color, theme }) => ($selected ? $color : theme.colors.neutral[300])};
+    ${({ $selected, $color, $isWaste, theme }) =>
+      $selected
+        ? $isWaste
+          ? $color /* solid red border when Waste selected */
+          : $color
+        : $isWaste
+        ? theme.colors.neutral[300] /* muted when not selected */
+        : theme.colors.neutral[300]};
   border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ $selected, $color }) => ($selected ? `${$color}15` : 'transparent')};
+  background: ${({ $selected, $color, $isWaste }) =>
+    $selected
+      ? $isWaste
+        ? 'rgba(239, 68, 68, 0.08)' /* subtle rose tint for Waste */
+        : `${$color}15`
+      : 'transparent'};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
     border-color: ${({ $color }) => $color};
-    background: ${({ $color }) => `${$color}10`};
+    background: ${({ $color, $isWaste }) =>
+      $isWaste ? 'rgba(239, 68, 68, 0.06)' : `${$color}10`};
   }
 `;
 
-const GradeIcon = styled.div`
+const GradeIcon = styled.div<{ $color?: string }>`
   font-size: ${({ theme }) => theme.typography.fontSize.xl};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
+  color: ${({ $color, theme }) => $color ?? theme.colors.textPrimary};
 `;
 
 const GradeLabel = styled.div`
@@ -442,9 +554,9 @@ const GradeLabel = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
-const GradeNote = styled.div`
+const GradeNote = styled.div<{ $warn?: boolean }>`
   font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ $warn, theme }) => ($warn ? '#B91C1C' : theme.colors.textSecondary)};
   font-style: italic;
   text-align: center;
 `;
@@ -467,6 +579,12 @@ const Textarea = styled.textarea`
   &::placeholder {
     color: ${({ theme }) => theme.colors.neutral[500]};
   }
+`;
+
+const CharCount = styled.div<{ $over: boolean }>`
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  color: ${({ $over, theme }) => ($over ? theme.colors.error : theme.colors.textSecondary)};
+  text-align: right;
 `;
 
 const ErrorMessage = styled.div`
@@ -505,10 +623,10 @@ const CancelButton = styled.button`
   }
 `;
 
-const SubmitButton = styled.button`
+const SubmitButton = styled.button<{ $isWaste: boolean }>`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.warning};
+  background: ${({ $isWaste, theme }) => ($isWaste ? '#9CA3AF' : theme.colors.warning)};
   color: white;
   border: none;
   border-radius: ${({ theme }) => theme.borderRadius.md};
