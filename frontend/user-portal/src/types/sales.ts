@@ -11,6 +11,23 @@
 export type OrderStatus = 'draft' | 'confirmed' | 'processing' | 'assigned' | 'in_transit' | 'shipped' | 'delivered' | 'partially_returned' | 'returned' | 'cancelled';
 export type PaymentStatus = 'pending' | 'partial' | 'paid';
 
+/**
+ * Phase 1 inventory-allocation types — mirrors the backend OrderItem Pydantic model
+ * (Phase 1 of the sales-order ↔ stock work).
+ */
+export interface OrderItemAllocation {
+  /** Which inventory collection this batch came from. */
+  inventorySource: 'harvest' | 'returned';
+  /** MongoDB _inventoryId_ string for the source row. */
+  inventoryId: string;
+  /** Farm the batch originated from (null for returned stock with no farm link). */
+  farmId?: string | null;
+  /** Resolved display name for the farm (null for returned stock). */
+  farmName?: string | null;
+  /** Kilograms allocated from this specific batch. */
+  quantity: number;
+}
+
 export interface OrderItem {
   productId?: string;
   productName: string;
@@ -21,6 +38,11 @@ export interface OrderItem {
   inventoryId?: string;
   qualityGrade?: string;
   sourceType?: 'fresh' | 'returned';
+  // Phase 1: per-batch allocation traceability
+  allocations?: OrderItemAllocation[];
+  // Phase 1: container-based quantity expression
+  containerCount?: number | null;
+  containerSize?: number | null;
 }
 
 export interface ShippingAddress {
@@ -29,6 +51,19 @@ export interface ShippingAddress {
   state?: string;
   country?: string;
   postalCode?: string;
+}
+
+/**
+ * Phase 4: per-item return record embedded in SalesOrder.
+ * Aggregated by the Report Return modal to compute previouslyReturned per item.
+ */
+export interface SalesOrderReturnRecord {
+  orderItemIndex: number;
+  quantity: number;
+  condition: 'sellable' | 'spoiled';
+  reason?: string;
+  disposalMethod?: string;
+  returnedAt?: string;
 }
 
 export interface SalesOrder {
@@ -47,6 +82,11 @@ export interface SalesOrder {
   shippingAddress?: ShippingAddress;
   notes?: string;
   shipmentId?: string;
+  /**
+   * Phase 4: embedded return records. Optional — may be absent on older orders.
+   * Use `order.returns ?? []` when accessing.
+   */
+  returns?: SalesOrderReturnRecord[];
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -93,77 +133,6 @@ export interface SalesOrderSearchParams {
 
 export interface PaginatedSalesOrders {
   items: SalesOrder[];
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-}
-
-// ============================================================================
-// INVENTORY TYPES
-// ============================================================================
-
-export type InventoryStatus = 'available' | 'reserved' | 'sold' | 'expired';
-export type QualityGrade = 'A' | 'B' | 'C';
-export type InventoryUnit = 'kg' | 'pieces' | 'bunches';
-
-export interface HarvestInventory {
-  inventoryId: string;
-  productName: string;
-  category?: string;
-  farmId?: string;
-  blockId?: string;
-  harvestDate?: string;
-  quantity: number;
-  unit: InventoryUnit;
-  quality?: QualityGrade;
-  status: InventoryStatus;
-  expiryDate?: string;
-  storageLocation?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface HarvestInventoryCreate {
-  productName: string;
-  category?: string;
-  farmId?: string;
-  blockId?: string;
-  harvestDate?: string;
-  quantity: number;
-  unit: InventoryUnit;
-  quality?: QualityGrade;
-  status?: InventoryStatus;
-  expiryDate?: string;
-  storageLocation?: string;
-}
-
-export interface HarvestInventoryUpdate {
-  productName?: string;
-  category?: string;
-  farmId?: string;
-  blockId?: string;
-  harvestDate?: string;
-  quantity?: number;
-  unit?: InventoryUnit;
-  quality?: QualityGrade;
-  status?: InventoryStatus;
-  expiryDate?: string;
-  storageLocation?: string;
-}
-
-export interface InventorySearchParams {
-  page?: number;
-  perPage?: number;
-  search?: string;
-  status?: InventoryStatus;
-  category?: string;
-  quality?: QualityGrade;
-}
-
-export interface PaginatedInventory {
-  items: HarvestInventory[];
   total: number;
   page: number;
   perPage: number;
@@ -242,6 +211,15 @@ export interface PaginatedPurchaseOrders {
 // DASHBOARD TYPES
 // ============================================================================
 
+/** Minimal stock item shape used inside dashboard widgets */
+export interface DashboardStockItem {
+  inventoryId: string;
+  productName: string;
+  expiryDate?: string;
+  quantity?: number;
+  unit?: string;
+}
+
 export interface SalesDashboardStats {
   totalOrders: number;
   confirmedOrders: number;
@@ -258,8 +236,8 @@ export interface SalesDashboardStats {
   confirmedPurchaseOrders: number;
   receivedPurchaseOrders: number;
   recentOrders?: SalesOrder[];
-  lowStockItems?: HarvestInventory[];
-  expiringItems?: HarvestInventory[];
+  lowStockItems?: DashboardStockItem[];
+  expiringItems?: DashboardStockItem[];
   farmingYearContext?: FarmingYearContext;
 }
 
@@ -405,8 +383,6 @@ export interface FarmingYearItem {
   year: number;
   display: string;
   isCurrent: boolean;
-  hasInventory?: boolean;
-  itemCount?: number;
   hasOrders?: boolean;
   orderCount?: number;
 }
@@ -417,18 +393,4 @@ export interface FarmingYearItem {
 export interface FarmingYearContext {
   farmingYear: number | null;
   isFiltered: boolean;
-}
-
-/**
- * Response for sales inventory farming years endpoint
- */
-export interface SalesInventoryFarmingYearsResponse {
-  years: FarmingYearItem[];
-  count: number;
-  currentFarmingYear: number;
-  totalItems: number;
-  config: {
-    startMonth: number;
-    startMonthName: string;
-  };
 }

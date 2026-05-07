@@ -5,10 +5,22 @@ Represents a sales order in the Sales system.
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 from enum import Enum
+
+
+class ReturnSummary(BaseModel):
+    """
+    Thin summary appended to a SalesOrder's returns list when a Report Return
+    is processed.  The full record lives in return_orders collection.
+    """
+    returnId: UUID = Field(..., description="Return order ID in return_orders collection")
+    returnDate: datetime = Field(..., description="When the return was processed")
+    sellableKg: float = Field(0.0, ge=0, description="Quantity returned to inventory_returned (sellable)")
+    spoiledKg: float = Field(0.0, ge=0, description="Quantity recorded as waste (spoiled)")
+    notes: Optional[str] = Field(None, max_length=1000)
 
 
 class SalesOrderStatus(str, Enum):
@@ -32,6 +44,32 @@ class PaymentStatus(str, Enum):
     PAID = "paid"
 
 
+class OrderItemAllocation(BaseModel):
+    """
+    Per-batch allocation binding one line item to a specific inventory row.
+
+    Used for FIFO allocation across inventory_harvest and inventory_returned.
+    Empty list for orders created before the linked-stock flow was introduced.
+    """
+    inventorySource: Literal["harvest", "returned"] = Field(
+        ...,
+        description="Which collection the allocated row lives in"
+    )
+    inventoryId: UUID = Field(
+        ...,
+        description="Row ID in inventory_harvest or inventory_returned"
+    )
+    farmId: Optional[UUID] = Field(
+        None,
+        description="Farm that owns the batch (null for returned-source rows)"
+    )
+    farmName: Optional[str] = Field(
+        None,
+        description="Denormalised farm name for display"
+    )
+    quantity: float = Field(..., gt=0, description="Quantity allocated from this batch")
+
+
 class OrderItem(BaseModel):
     """Order item information"""
     productId: UUID = Field(..., description="Product ID from inventory")
@@ -44,6 +82,29 @@ class OrderItem(BaseModel):
     inventoryId: Optional[UUID] = Field(None, description="Link to harvest inventory item")
     qualityGrade: Optional[str] = Field(None, description="Quality grade being sold (e.g., grade_a, grade_b)")
     sourceType: str = Field("fresh", description="Source type: 'fresh' or 'returned'")
+
+    # Phase 2 linked-stock fields — all optional so legacy orders deserialise cleanly
+    allocations: List[OrderItemAllocation] = Field(
+        default_factory=list,
+        description=(
+            "Per-batch FIFO allocation of this line item across "
+            "inventory_harvest + inventory_returned rows. "
+            "Empty list for orders created before the linked-stock flow."
+        ),
+    )
+    containerCount: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Number of containers ordered (container-mode orders only)."
+    )
+    containerSize: Optional[float] = Field(
+        None,
+        gt=0,
+        description=(
+            "Quantity per container in `unit` (container-mode orders only). "
+            "Invariant: containerCount * containerSize == quantity."
+        ),
+    )
 
 
 class ShippingAddress(BaseModel):
@@ -108,6 +169,20 @@ class SalesOrder(SalesOrderBase):
     divisionId: Optional[str] = Field(None, description="Division scope")
     organizationId: Optional[str] = Field(None, description="Organization scope")
 
+    # Soft-delete support — set on delete-confirm; CANCELLED orders are filtered
+    # from the default list view unless ?include_deleted=true is passed.
+    deletedAt: Optional[datetime] = Field(
+        None,
+        description="Timestamp when the order was soft-deleted (status→cancelled via delete flow)"
+    )
+
+    # Report Return summaries appended each time a partial/full return is processed.
+    # Full detail lives in return_orders collection; this is for order-level display.
+    returns: List[ReturnSummary] = Field(
+        default_factory=list,
+        description="Summary of returns processed against this order"
+    )
+
     # Tracking information
     createdBy: UUID = Field(..., description="User ID who created this order")
     createdAt: datetime = Field(default_factory=datetime.utcnow)
@@ -153,3 +228,127 @@ class SalesOrder(SalesOrderBase):
                 "updatedAt": "2025-01-20T10:00:00Z"
             }
         }
+
+
+# ============================================================================
+# DELETE-PREVIEW / DELETE-CONFIRM REQUEST-RESPONSE SCHEMAS
+# ============================================================================
+
+class AllocationPreview(BaseModel):
+    """
+    Per-allocation row returned by GET /orders/{id}/delete-preview.
+
+    state:
+      "active"  — source row exists and has quantity (auto-restored on confirm)
+      "expired" — source row was already moved to waste by the expiry cron
+      "missing" — source row cannot be found at all (data anomaly)
+    """
+    lineItemIndex: int = Field(..., description="Index of the order item in order.items")
+    inventorySource: Literal["harvest", "returned"] = Field(...)
+    inventoryId: UUID = Field(...)
+    farmName: Optional[str] = Field(None)
+    plantName: Optional[str] = Field(None)
+    quantity: float = Field(...)
+    state: Literal["active", "expired", "missing"] = Field(...)
+    # Set when state == "expired"
+    expiredWasteId: Optional[str] = Field(None)
+    expiredOn: Optional[datetime] = Field(None)
+
+
+class DeletePreviewResponse(BaseModel):
+    """Response from GET /orders/{id}/delete-preview."""
+    orderId: UUID
+    orderCode: Optional[str] = None
+    canDelete: bool
+    blockingReason: Optional[str] = Field(
+        None,
+        description="Populated when canDelete is False"
+    )
+    allocations: List[AllocationPreview] = Field(default_factory=list)
+
+
+class BatchDecision(BaseModel):
+    """
+    Per-allocation decision supplied to POST /orders/{id}/delete.
+
+    action:
+      "restore" — bump quantity back to source row (default for active batches)
+      "revive"  — un-expire the matching waste record, restore source row quantity,
+                  then set a new expiryDate.  Requires expiryDate > now.
+      "waste"   — create a new inventory_waste record with sourceType=order_deletion.
+                  Used when the caller accepts the loss.
+    """
+    lineItemIndex: int
+    inventoryId: UUID = Field(..., description="Disambiguates allocation within a line item")
+    action: Literal["restore", "revive", "waste"]
+    expiryDate: Optional[datetime] = Field(
+        None,
+        description="Required when action=='revive'. Must be in the future."
+    )
+
+
+class DeleteOrderRequest(BaseModel):
+    """
+    Body for POST /orders/{id}/delete.
+
+    Only allocations flagged as 'expired' or 'missing' in the preview require an
+    explicit decision.  Active allocations are auto-restored.
+    """
+    decisions: List[BatchDecision] = Field(
+        default_factory=list,
+        description="One entry per allocation that requires an explicit decision"
+    )
+
+
+class DeleteOrderResponse(BaseModel):
+    """Summary returned after a confirmed order deletion."""
+    success: bool = True
+    restoredKg: float = 0.0
+    revivedBatches: List[str] = Field(default_factory=list, description="inventoryIds revived")
+    wastedKg: float = 0.0
+    orderStatus: str = "cancelled"
+
+
+# ============================================================================
+# REPORT-RETURN REQUEST-RESPONSE SCHEMAS
+# ============================================================================
+
+class ReportReturnItem(BaseModel):
+    """
+    Single line in a Report Return request.
+
+    Quantity is in kg (the canonical unit used throughout the linked-stock flow).
+    """
+    orderItemIndex: int = Field(..., description="Index of the order item in order.items")
+    quantity: float = Field(..., gt=0, description="Quantity being returned (kg)")
+    containerCount: Optional[int] = Field(None, gt=0)
+    containerSize: Optional[float] = Field(None, gt=0)
+    condition: Literal["sellable", "spoiled"] = Field(
+        ...,
+        description="'sellable' → inventory_returned; 'spoiled' → inventory_waste"
+    )
+    reason: Optional[str] = Field(None, max_length=500)
+    disposalMethod: Optional[str] = Field(
+        None,
+        max_length=50,
+        description="Required / recommended when condition=='spoiled'"
+    )
+
+
+class ReportReturnRequest(BaseModel):
+    """Body for POST /orders/{id}/report-return."""
+    items: List[ReportReturnItem] = Field(..., min_length=1)
+    notes: Optional[str] = Field(None, max_length=1000)
+
+
+class ReportReturnStockChanges(BaseModel):
+    addedToReturned: float = Field(0.0, description="kg added to inventory_returned")
+    addedToWaste: float = Field(0.0, description="kg added to inventory_waste")
+
+
+class ReportReturnResponse(BaseModel):
+    """Summary returned by POST /orders/{id}/report-return."""
+    success: bool = True
+    returnId: str = Field(..., description="ID of the new return_orders record")
+    itemsReturned: List[dict] = Field(default_factory=list)
+    stockChanges: ReportReturnStockChanges = Field(default_factory=ReportReturnStockChanges)

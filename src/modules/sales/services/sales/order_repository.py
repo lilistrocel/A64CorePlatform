@@ -153,6 +153,14 @@ class OrderRepository:
             item["productId"] = str(item["productId"])
             if item.get("inventoryId"):
                 item["inventoryId"] = str(item["inventoryId"])
+            # Phase 2: stringify the per-batch allocation UUIDs as well so
+            # pymongo can encode them. allocations is a list of dicts with
+            # inventoryId (UUID, required) and optional farmId (UUID).
+            for alloc in item.get("allocations", []) or []:
+                if alloc.get("inventoryId") is not None:
+                    alloc["inventoryId"] = str(alloc["inventoryId"])
+                if alloc.get("farmId") is not None:
+                    alloc["farmId"] = str(alloc["farmId"])
 
         await collection.insert_one(order_doc)
 
@@ -184,23 +192,26 @@ class OrderRepository:
         limit: int = 20,
         status: Optional[SalesOrderStatus] = None,
         customer_id: Optional[UUID] = None,
-        farming_year: Optional[int] = None
+        farming_year: Optional[int] = None,
+        include_deleted: bool = False,
     ) -> tuple[List[SalesOrder], int]:
         """
-        Get all sales orders with pagination and filters
+        Get all sales orders with pagination and filters.
 
         Args:
-            skip: Number of records to skip
-            limit: Maximum number of records to return
-            status: Filter by order status (optional)
-            customer_id: Filter by customer ID (optional)
-            farming_year: Filter by farming year (optional)
+            skip: Number of records to skip.
+            limit: Maximum number of records to return.
+            status: Filter by order status (optional).
+            customer_id: Filter by customer ID (optional).
+            farming_year: Filter by farming year (optional).
+            include_deleted: When False (default), orders with deletedAt set
+                             are excluded from results.
 
         Returns:
-            Tuple of (list of orders, total count)
+            Tuple of (list of orders, total count).
         """
         collection = self._get_collection()
-        query = {}
+        query: dict = {}
 
         if status:
             query["status"] = status.value
@@ -208,6 +219,10 @@ class OrderRepository:
             query["customerId"] = str(customer_id)
         if farming_year:
             query["farmingYear"] = farming_year
+        if not include_deleted:
+            # Reason: soft-deleted orders (cancelled via delete flow) should be
+            # hidden from the default list view to reduce clutter.
+            query["deletedAt"] = {"$exists": False}
 
         # Get total count
         total = await collection.count_documents(query)
@@ -249,6 +264,12 @@ class OrderRepository:
                 item["productId"] = str(item["productId"])
                 if item.get("inventoryId"):
                     item["inventoryId"] = str(item["inventoryId"])
+                # Phase 2: stringify nested allocation UUIDs (same fix as create).
+                for alloc in item.get("allocations", []) or []:
+                    if alloc.get("inventoryId") is not None:
+                        alloc["inventoryId"] = str(alloc["inventoryId"])
+                    if alloc.get("farmId") is not None:
+                        alloc["farmId"] = str(alloc["farmId"])
 
         update_dict["updatedAt"] = datetime.utcnow()
 

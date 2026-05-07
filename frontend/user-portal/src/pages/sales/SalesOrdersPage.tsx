@@ -2,16 +2,25 @@
  * SalesOrdersPage Component
  *
  * Main page for managing sales orders with search, filtering, and CRUD operations.
+ *
+ * Phase 4 changes:
+ *  - Edit mode removed (orders cannot be edited after save).
+ *  - Delete now uses a two-step preview-then-confirm flow via DeleteOrderConfirmModal.
+ *  - "Report Return" action added for shipped/delivered orders via ReportReturnModal.
  */
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { salesApi } from '../../services/salesService';
+import type { DeleteOrderPreview } from '../../services/salesService';
 import { crmApi } from '../../services/crmService';
+import { SalesActionTiles } from '../../components/sales/SalesActionTiles';
 import type { SalesOrder, OrderStatus, PaymentStatus, FarmingYearItem } from '../../types/sales';
 import type { Customer } from '../../types/crm';
 import { OrderTable } from '../../components/sales/OrderTable';
 import { OrderForm } from '../../components/sales/OrderForm';
+import { DeleteOrderConfirmModal } from '../../components/sales/DeleteOrderConfirmModal';
+import { ReportReturnModal } from '../../components/sales/ReportReturnModal';
 import { FarmingYearSelector } from '../../components/farm/FarmingYearSelector';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 
@@ -241,18 +250,26 @@ export function SalesOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Create order modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Farming year filter state
   const [selectedFarmingYear, setSelectedFarmingYear] = useState<number | null>(null);
   const [availableFarmingYears, setAvailableFarmingYears] = useState<FarmingYearItem[]>([]);
   const [farmingYearsLoading, setFarmingYearsLoading] = useState(true);
 
+  // Phase 4: two-step delete state
+  const [deletePreviewOrderId, setDeletePreviewOrderId] = useState<string | null>(null);
+  const [deletePreview, setDeletePreview] = useState<DeleteOrderPreview | null>(null);
+  const [isLoadingDeletePreview, setIsLoadingDeletePreview] = useState(false);
+
+  // Phase 4: report return state
+  const [returnOrder, setReturnOrder] = useState<SalesOrder | null>(null);
+
   const perPage = 20;
 
-  // Load customers and farming years for filter dropdowns on mount
   useEffect(() => {
     loadCustomers();
     loadFarmingYears();
@@ -262,7 +279,6 @@ export function SalesOrdersPage() {
     setFarmingYearsLoading(true);
     try {
       const response = await salesApi.getAvailableFarmingYears();
-      // Map the response years to FarmingYearItem format
       setAvailableFarmingYears(response.years);
     } catch (err) {
       console.error('Failed to load farming years:', err);
@@ -300,9 +316,10 @@ export function SalesOrdersPage() {
       setOrders(response.items);
       setTotal(response.total);
       setTotalPages(response.totalPages);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
       console.error('Failed to load orders:', err);
-      setError(err.response?.data?.message || 'Failed to load sales orders');
+      setError(axiosErr?.response?.data?.message || 'Failed to load sales orders');
     } finally {
       setLoading(false);
     }
@@ -334,40 +351,65 @@ export function SalesOrdersPage() {
   };
 
   const handleCreateOrder = () => {
-    setSelectedOrder(null);
-    setShowModal(true);
+    setShowCreateModal(true);
   };
 
-  const handleEditOrder = (order: SalesOrder) => {
-    setSelectedOrder(order);
-    setShowModal(true);
-  };
-
-  const handleDeleteOrder = async (orderId: string) => {
-    if (!window.confirm('Are you sure you want to delete this order?')) return;
-
+  /**
+   * Phase 4: Delete button click — fetch preview then open confirm modal.
+   * If the preview fetch fails, show an error toast and don't open the modal.
+   */
+  const handleDeleteClick = async (orderId: string) => {
+    setIsLoadingDeletePreview(true);
     try {
-      await salesApi.deleteSalesOrder(orderId);
-      loadOrders();
-    } catch (err: any) {
-      console.error('Failed to delete order:', err);
-      alert(err.response?.data?.message || 'Failed to delete order');
+      const preview = await salesApi.getOrderDeletePreview(orderId);
+      setDeletePreview(preview);
+      setDeletePreviewOrderId(orderId);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string; detail?: string } } };
+      showErrorToast(
+        axiosErr?.response?.data?.message ??
+        axiosErr?.response?.data?.detail ??
+        'Failed to load delete preview. Please try again.',
+      );
+    } finally {
+      setIsLoadingDeletePreview(false);
     }
+  };
+
+  const handleDeleteModalClose = () => {
+    setDeletePreview(null);
+    setDeletePreviewOrderId(null);
+  };
+
+  const handleDeleteSuccess = () => {
+    showSuccessToast('Order deleted successfully');
+    loadOrders();
+  };
+
+  /**
+   * Phase 4: Report Return button click — open the return modal for the order.
+   */
+  const handleReportReturnClick = (order: SalesOrder) => {
+    setReturnOrder(order);
+  };
+
+  const handleReturnModalClose = () => {
+    setReturnOrder(null);
+  };
+
+  const handleReturnSuccess = () => {
+    showSuccessToast('Return reported successfully');
+    loadOrders();
   };
 
   const handleFormSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      if (selectedOrder) {
-        await salesApi.updateSalesOrder(selectedOrder.orderId, data);
-        showSuccessToast('Sales order updated successfully');
-      } else {
-        await salesApi.createSalesOrder(data);
-        showSuccessToast('Sales order created successfully');
-      }
-      setShowModal(false);
+      await salesApi.createSalesOrder(data);
+      showSuccessToast('Sales order created successfully');
+      setShowCreateModal(false);
       loadOrders();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to save order:', err);
       throw err;
     } finally {
@@ -384,10 +426,14 @@ export function SalesOrdersPage() {
       <Header>
         <Title>Sales Orders</Title>
         <Actions>
-          <Button $variant="secondary" onClick={loadOrders}>Refresh</Button>
+          <Button $variant="secondary" onClick={loadOrders} disabled={isLoadingDeletePreview}>
+            Refresh
+          </Button>
           <Button $variant="primary" onClick={handleCreateOrder}>+ New Order</Button>
         </Actions>
       </Header>
+
+      <SalesActionTiles activeKey="orders" />
 
       <FiltersRow>
         <SearchInput
@@ -437,8 +483,8 @@ export function SalesOrdersPage() {
         <>
           <OrderTable
             orders={orders}
-            onEdit={handleEditOrder}
-            onDelete={handleDeleteOrder}
+            onDelete={handleDeleteClick}
+            onReportReturn={handleReportReturnClick}
           />
 
           <Pagination>
@@ -476,21 +522,44 @@ export function SalesOrdersPage() {
         </>
       )}
 
-      {showModal && (
+      {/* Create Order modal (no overlay-click close per UX rules) */}
+      {showCreateModal && (
         <Modal>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
-              <ModalTitle>{selectedOrder ? 'Edit Order' : 'Create Order'}</ModalTitle>
-              <CloseButton onClick={() => setShowModal(false)}>&times;</CloseButton>
+              <ModalTitle>Create Order</ModalTitle>
+              <CloseButton onClick={() => setShowCreateModal(false)} aria-label="Close modal">
+                &times;
+              </CloseButton>
             </ModalHeader>
             <OrderForm
-              order={selectedOrder || undefined}
               onSubmit={handleFormSubmit}
-              onCancel={() => setShowModal(false)}
+              onCancel={() => setShowCreateModal(false)}
               isSubmitting={isSubmitting}
             />
           </ModalContent>
         </Modal>
+      )}
+
+      {/* Phase 4: Two-step delete confirm modal */}
+      {deletePreview && deletePreviewOrderId && (
+        <DeleteOrderConfirmModal
+          isOpen={Boolean(deletePreview)}
+          onClose={handleDeleteModalClose}
+          orderId={deletePreviewOrderId}
+          preview={deletePreview}
+          onSuccess={handleDeleteSuccess}
+        />
+      )}
+
+      {/* Phase 4: Report Return modal */}
+      {returnOrder && (
+        <ReportReturnModal
+          isOpen={Boolean(returnOrder)}
+          onClose={handleReturnModalClose}
+          order={returnOrder}
+          onSuccess={handleReturnSuccess}
+        />
       )}
     </Container>
   );

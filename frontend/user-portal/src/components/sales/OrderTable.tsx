@@ -16,8 +16,10 @@ import { formatCurrency, formatNumber } from '../../utils/formatNumber';
 export interface OrderTableProps {
   orders: SalesOrder[];
   onView?: (orderId: string) => void;
-  onEdit?: (orderId: string) => void;
+  /** Delete is now a two-step flow — the parent fetches preview then opens the confirm modal. */
   onDelete?: (orderId: string) => void;
+  /** Report Return is visible only for shipped/delivered orders. */
+  onReportReturn?: (order: SalesOrder) => void;
   onUpdateStatus?: (orderId: string, status: string) => void;
 }
 
@@ -219,7 +221,7 @@ const EmptyState = styled.div`
 // COMPONENT
 // ============================================================================
 
-export function OrderTable({ orders, onView, onEdit, onDelete, onUpdateStatus }: OrderTableProps) {
+export function OrderTable({ orders, onView, onDelete, onReportReturn, onUpdateStatus }: OrderTableProps) {
   const [sortField, setSortField] = useState<SortField>('orderDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -340,21 +342,25 @@ export function OrderTable({ orders, onView, onEdit, onDelete, onUpdateStatus }:
                       View
                     </ActionButton>
                   )}
-                  {onEdit && order.status === 'draft' && (
-                    <ActionButton $variant="secondary" onClick={() => onEdit(order.orderId)}>
-                      Edit
-                    </ActionButton>
-                  )}
-                  {onDelete && order.status === 'draft' && (
+                  {/* Delete: two-step flow — parent fetches preview then opens confirm modal.
+                      Only available for pre-shipment orders (draft, confirmed, processing). */}
+                  {onDelete && !['shipped', 'delivered', 'cancelled', 'returned', 'partially_returned'].includes(order.status) && (
                     <ActionButton
                       $variant="danger"
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to delete order "${order.orderCode}"?`)) {
-                          onDelete(order.orderId);
-                        }
-                      }}
+                      onClick={() => onDelete(order.orderId)}
+                      aria-label={`Delete order ${order.orderCode}`}
                     >
                       Delete
+                    </ActionButton>
+                  )}
+                  {/* Report Return: only for shipped or delivered orders. */}
+                  {onReportReturn && (order.status === 'shipped' || order.status === 'delivered') && (
+                    <ActionButton
+                      $variant="secondary"
+                      onClick={() => onReportReturn(order)}
+                      aria-label={`Report return for order ${order.orderCode}`}
+                    >
+                      Report Return
                     </ActionButton>
                   )}
                 </Actions>
