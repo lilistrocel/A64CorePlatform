@@ -8,18 +8,15 @@
  * - Waste Inventory
  */
 
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { getInventorySummary } from '../../services/inventoryApi';
-import { formatNumber, formatCurrency } from '../../utils';
+import { formatNumber } from '../../utils';
 import type { InventorySummary } from '../../types/inventory';
-import { HarvestInventoryList } from './HarvestInventoryList';
 import { InputInventoryList } from './InputInventoryList';
 import { AssetInventoryList } from './AssetInventoryList';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
-
-const WasteInventoryList = lazy(() => import('./WasteInventoryList'));
 
 export function InventoryDashboard() {
   const [summary, setSummary] = useState<InventorySummary | null>(null);
@@ -35,10 +32,10 @@ export function InventoryDashboard() {
     loadSummary();
   }, [selectedFarmingYear]);
 
-  // If at /inventory root, redirect to /inventory/harvest
+  // If at /inventory root, redirect to /inventory/input
   useEffect(() => {
     if (location.pathname === '/inventory') {
-      navigate('/inventory/harvest', { replace: true });
+      navigate('/inventory/input', { replace: true });
     }
   }, [location.pathname, navigate]);
 
@@ -67,24 +64,13 @@ export function InventoryDashboard() {
           <Subtitle>
             {selectedFarmingYear
               ? `Filtered statistics for farming year ${selectedFarmingYear}`
-              : 'Manage harvest, inputs, farm assets, and waste tracking'}
+              : 'Manage farm inputs and assets'}
           </Subtitle>
         </HeaderLeft>
       </Header>
 
-      {/* Summary Cards */}
+      {/* Summary Cards — Inputs and Assets only (Harvest & Waste moved to Sales > Stock) */}
       <SummaryGrid>
-        <SummaryCard $variant="harvest">
-          <CardIcon>📦</CardIcon>
-          <CardContent>
-            <CardLabel>Harvest Inventory</CardLabel>
-            <CardValue>{loading ? '...' : formatNumber(summary?.harvestInventory.totalItems || 0)}</CardValue>
-            <CardSubtext>
-              Value: {loading ? '...' : formatCurrency(summary?.totalHarvestValue || 0, 'AED')}
-            </CardSubtext>
-          </CardContent>
-        </SummaryCard>
-
         <SummaryCard $variant="input">
           <CardIcon>🧪</CardIcon>
           <CardContent>
@@ -115,21 +101,6 @@ export function InventoryDashboard() {
           </CardContent>
         </SummaryCard>
 
-        <SummaryCard $variant="waste">
-          <CardIcon>🗑️</CardIcon>
-          <CardContent>
-            <CardLabel>Waste Inventory</CardLabel>
-            <CardValue>{loading ? '...' : formatNumber(summary?.wasteInventory?.totalItems || 0)}</CardValue>
-            <CardSubtext>
-              {summary?.wasteInventory?.pendingDisposal ? (
-                <AlertText>{formatNumber(summary.wasteInventory.pendingDisposal)} pending disposal</AlertText>
-              ) : (
-                `Value: ${formatCurrency(summary?.totalWasteValue || 0, 'AED')}`
-              )}
-            </CardSubtext>
-          </CardContent>
-        </SummaryCard>
-
         <SummaryCard $variant="alerts">
           <CardIcon>⚠️</CardIcon>
           <CardContent>
@@ -144,12 +115,8 @@ export function InventoryDashboard() {
         </SummaryCard>
       </SummaryGrid>
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs — Inputs and Assets only */}
       <TabNav>
-        <TabLink to="/inventory/harvest">
-          <TabIcon>📦</TabIcon>
-          Harvest
-        </TabLink>
         <TabLink to="/inventory/input">
           <TabIcon>🧪</TabIcon>
           Inputs
@@ -158,20 +125,14 @@ export function InventoryDashboard() {
           <TabIcon>🚜</TabIcon>
           Assets
         </TabLink>
-        <TabLink to="/inventory/waste">
-          <TabIcon>🗑️</TabIcon>
-          Waste
-        </TabLink>
       </TabNav>
 
       {/* Content Area */}
       <ContentArea>
         <Suspense fallback={<LoadingText>Loading...</LoadingText>}>
           <Routes>
-            <Route path="harvest" element={<HarvestInventoryList onUpdate={loadSummary} farmingYear={selectedFarmingYear} />} />
             <Route path="input" element={<InputInventoryList onUpdate={loadSummary} />} />
             <Route path="assets" element={<AssetInventoryList onUpdate={loadSummary} />} />
-            <Route path="waste" element={<WasteInventoryList />} />
           </Routes>
         </Suspense>
       </ContentArea>
@@ -231,7 +192,7 @@ const SummaryGrid = styled.div`
 `;
 
 interface SummaryCardProps {
-  $variant: 'harvest' | 'input' | 'asset' | 'waste' | 'alerts';
+  $variant: 'input' | 'asset' | 'alerts';
 }
 
 const SummaryCard = styled.div<SummaryCardProps>`
@@ -244,10 +205,8 @@ const SummaryCard = styled.div<SummaryCardProps>`
   box-shadow: ${({ theme }) => theme.shadows.sm};
   border-left: 4px solid ${({ theme, $variant }) => {
     switch ($variant) {
-      case 'harvest': return theme.colors.success;
       case 'input': return theme.colors.primary[500];
       case 'asset': return theme.colors.warning;
-      case 'waste': return theme.colors.neutral[500] || '#6b7280';
       case 'alerts': return theme.colors.error;
       default: return theme.colors.neutral[300];
     }

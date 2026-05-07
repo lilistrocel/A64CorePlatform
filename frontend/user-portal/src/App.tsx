@@ -71,12 +71,9 @@ const ShipmentTrackingPage = lazy(() => import('./pages/logistics/ShipmentTracki
 // Sales module
 const SalesDashboardPage = lazy(() => import('./pages/sales/SalesDashboardPage').then(m => ({ default: m.SalesDashboardPage })));
 const SalesOrdersPage = lazy(() => import('./pages/sales/SalesOrdersPage').then(m => ({ default: m.SalesOrdersPage })));
-const InventoryPage = lazy(() => import('./pages/sales/InventoryPage').then(m => ({ default: m.InventoryPage })));
+const StockPage = lazy(() => import('./pages/sales/StockPage').then(m => ({ default: m.StockPage })));
 const PurchaseOrdersPage = lazy(() => import('./pages/sales/PurchaseOrdersPage').then(m => ({ default: m.PurchaseOrdersPage })));
 const ReturnsPage = lazy(() => import('./pages/sales/ReturnsPage').then(m => ({ default: m.ReturnsPage })));
-
-// Waste Inventory (default export)
-const WasteInventoryList = lazy(() => import('./pages/inventory/WasteInventoryList'));
 
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
@@ -84,9 +81,6 @@ const CampaignManagementPage = lazy(() => import('./pages/marketing/CampaignMana
 const BudgetManagementPage = lazy(() => import('./pages/marketing/BudgetManagementPage').then(m => ({ default: m.BudgetManagementPage })));
 const EventManagementPage = lazy(() => import('./pages/marketing/EventManagementPage').then(m => ({ default: m.EventManagementPage })));
 const ChannelManagementPage = lazy(() => import('./pages/marketing/ChannelManagementPage').then(m => ({ default: m.ChannelManagementPage })));
-
-// Finance / P&L module
-const PnLPage = lazy(() => import('./pages/pnl/PnLPage').then(m => ({ default: m.PnLPage })));
 
 // Mushroom farming module pages
 const MushroomDashboardPage = lazy(() =>
@@ -179,10 +173,14 @@ function App() {
                 <Route path="/logistics/shipments" element={<ShipmentTrackingPage />} />
                 <Route path="/sales" element={<SalesDashboardPage />} />
                 <Route path="/sales/orders" element={<SalesOrdersPage />} />
-                <Route path="/sales/inventory" element={<InventoryPage />} />
+                <Route path="/sales/stock" element={<StockPage />} />
+                {/* Back-compat redirect: old /sales/inventory → new /sales/stock */}
+                <Route path="/sales/inventory" element={<Navigate to="/sales/stock" replace />} />
                 <Route path="/sales/purchase-orders" element={<PurchaseOrdersPage />} />
                 <Route path="/sales/returns" element={<ReturnsPage />} />
-                <Route path="/inventory/waste" element={<WasteInventoryList />} />
+                {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
+                <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
+                <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />
                 <Route path="/marketing" element={<MarketingDashboardPage />} />
                 <Route path="/marketing/campaigns" element={<CampaignManagementPage />} />
                 <Route path="/marketing/budgets" element={<BudgetManagementPage />} />
@@ -195,7 +193,6 @@ function App() {
                 <Route path="/mushroom/rooms" element={<MushroomRoomMonitor />} />
                 <Route path="/mushroom" element={<MushroomDashboardPage />} />
 
-                <Route path="/pnl" element={<PnLPage />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/admin/users" element={<UserManagementPage />} />

@@ -8,7 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { salesApi } from '../../services/salesService';
 import { queryKeys } from '../../config/react-query.config';
-import type { SalesOrderSearchParams, InventorySearchParams } from '../../types/sales';
+import type { SalesOrderSearchParams } from '../../types/sales';
 
 /**
  * Get sales dashboard statistics
@@ -46,26 +46,3 @@ export function useSalesOrder(orderId: string | undefined) {
   });
 }
 
-/**
- * Get inventory items with filters
- *
- * Caches inventory based on filter parameters
- */
-export function useInventory(params?: InventorySearchParams) {
-  return useQuery({
-    queryKey: queryKeys.sales.inventory.list(params),
-    queryFn: () => salesApi.getInventory(params),
-  });
-}
-
-/**
- * Get available inventory items
- *
- * Specialized query for available-only inventory
- */
-export function useAvailableInventory() {
-  return useQuery({
-    queryKey: [...queryKeys.sales.inventory.all(), 'available'],
-    queryFn: () => salesApi.getAvailableInventory(),
-  });
-}

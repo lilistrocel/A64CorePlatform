@@ -12,11 +12,6 @@ import type {
   SalesOrderUpdate,
   SalesOrderSearchParams,
   PaginatedSalesOrders,
-  HarvestInventory,
-  HarvestInventoryCreate,
-  HarvestInventoryUpdate,
-  InventorySearchParams,
-  PaginatedInventory,
   PurchaseOrder,
   PurchaseOrderCreate,
   PurchaseOrderUpdate,
@@ -27,7 +22,7 @@ import type {
   ReturnOrderCreate,
   ReturnStatus,
   PaginatedReturns,
-  SalesInventoryFarmingYearsResponse,
+  FarmingYearItem,
 } from '../types/sales';
 
 // ============================================================================
@@ -103,74 +98,6 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
  */
 export async function deleteSalesOrder(orderId: string): Promise<{ message: string }> {
   const response = await apiClient.delete<{ message: string }>(`/v1/sales/orders/${orderId}`);
-  return response.data;
-}
-
-// ============================================================================
-// INVENTORY ENDPOINTS
-// ============================================================================
-
-/**
- * Get all inventory items with search and pagination
- */
-export async function getInventory(params?: InventorySearchParams): Promise<PaginatedInventory> {
-  const response = await apiClient.get<any>('/v1/sales/inventory', {
-    params: {
-      page: params?.page || 1,
-      perPage: params?.perPage || 20,
-      search: params?.search,
-      status: params?.status,
-      category: params?.category,
-      quality: params?.quality,
-    },
-  });
-
-  return {
-    items: response.data.data || [],
-    total: response.data.meta?.total || 0,
-    page: response.data.meta?.page || 1,
-    perPage: response.data.meta?.perPage || 20,
-    totalPages: response.data.meta?.totalPages || 1,
-  };
-}
-
-/**
- * Get available inventory items
- */
-export async function getAvailableInventory(): Promise<HarvestInventory[]> {
-  const response = await apiClient.get<{ data: HarvestInventory[] }>('/v1/sales/inventory/available');
-  return response.data.data;
-}
-
-/**
- * Get a single inventory item by ID
- */
-export async function getInventoryItem(inventoryId: string): Promise<HarvestInventory> {
-  const response = await apiClient.get<{ data: HarvestInventory }>(`/v1/sales/inventory/${inventoryId}`);
-  return response.data.data;
-}
-
-/**
- * Create new inventory item
- */
-export async function createInventoryItem(data: HarvestInventoryCreate): Promise<HarvestInventory> {
-  const response = await apiClient.post<{ data: HarvestInventory }>('/v1/sales/inventory', data);
-  return response.data.data;
-}
-
-/**
- * Update existing inventory item
- */
-export async function updateInventoryItem(inventoryId: string, data: HarvestInventoryUpdate): Promise<HarvestInventory> {
-  const response = await apiClient.patch<{ data: HarvestInventory }>(`/v1/sales/inventory/${inventoryId}`, data);
-  return response.data.data;
-}
-
-/**
- * Delete inventory item
- */
-export async function deleteInventoryItem(inventoryId: string): Promise<{ message: string }> {
-  const response = await apiClient.delete<{ message: string }>(`/v1/sales/inventory/${inventoryId}`);
   return response.data;
 }
 
@@ -265,23 +192,16 @@ export async function getDashboardStats(farmingYear?: number | null): Promise<Sa
 // ============================================================================
 
 /**
- * Get available farming years for sales inventory
- * Returns list of farming years with inventory data, sorted newest first
- * @param farmId - Optional farm ID to filter inventory by
+ * Get available farming years for sales order filtering.
+ * NOTE: Previously sourced from /v1/sales/inventory/farming-years (retired).
+ * Now sourced from the global farming-year config endpoint, which returns
+ * `{ years, count }` directly (no `data` envelope).
  */
-export async function getAvailableFarmingYears(
-  farmId?: string
-): Promise<SalesInventoryFarmingYearsResponse> {
-  const params: Record<string, any> = {};
-  if (farmId) {
-    params.farmId = farmId;
-  }
-
-  const response = await apiClient.get<{ data: SalesInventoryFarmingYearsResponse }>(
-    '/v1/sales/inventory/farming-years',
-    { params }
+export async function getAvailableFarmingYears(): Promise<{ years: FarmingYearItem[] }> {
+  const response = await apiClient.get<{ years: FarmingYearItem[]; count: number }>(
+    '/v1/farm/config/farming-years-list'
   );
-  return response.data.data;
+  return { years: response.data.years };
 }
 
 // ============================================================================
@@ -363,6 +283,94 @@ export async function processReturnOrder(
 export async function deleteReturnOrder(returnId: string): Promise<{ message: string }> {
   const response = await apiClient.delete<{ message: string }>(`/v1/sales/returns/${returnId}`);
   return response.data;
+}
+
+// ============================================================================
+// PHASE 4: TWO-STEP DELETE + REPORT RETURN ENDPOINTS
+// ============================================================================
+
+/**
+ * A single allocation row returned in the delete preview.
+ */
+export interface DeleteOrderAllocationPreview {
+  lineItemIndex: number;
+  inventorySource: 'harvest' | 'returned';
+  inventoryId: string;
+  farmName?: string | null;
+  plantName: string;
+  quantity: number;
+  state: 'active' | 'expired' | 'missing';
+  expiredWasteId?: string | null;
+  expiredOn?: string | null;
+}
+
+/**
+ * Full delete preview returned by GET /v1/sales/orders/{id}/delete-preview.
+ */
+export interface DeleteOrderPreview {
+  orderId: string;
+  orderCode: string;
+  canDelete: boolean;
+  allocations: DeleteOrderAllocationPreview[];
+}
+
+/**
+ * Fetch the two-step delete preview for an order.
+ * Tolerates both enveloped ({ data: ... }) and raw response shapes.
+ */
+export async function getOrderDeletePreview(orderId: string): Promise<DeleteOrderPreview> {
+  const r = await apiClient.get<{ data: DeleteOrderPreview } | DeleteOrderPreview>(
+    `/v1/sales/orders/${orderId}/delete-preview`,
+  );
+  // Tolerate envelope or raw
+  const payload = (r.data as { data?: DeleteOrderPreview }).data ?? r.data as DeleteOrderPreview;
+  return payload;
+}
+
+/**
+ * Decision entry in the confirm-delete body.
+ */
+export interface DeleteOrderDecision {
+  lineItemIndex: number;
+  inventoryId: string;
+  action: 'restore' | 'revive' | 'waste';
+  expiryDate?: string;
+}
+
+/**
+ * POST /v1/sales/orders/{id}/delete — confirm delete with per-batch decisions.
+ */
+export async function deleteOrderConfirm(
+  orderId: string,
+  decisions: DeleteOrderDecision[],
+): Promise<any> {
+  const r = await apiClient.post(`/v1/sales/orders/${orderId}/delete`, { decisions });
+  return r.data;
+}
+
+/**
+ * Single item entry in the report-return request body.
+ */
+export interface ReportReturnItem {
+  orderItemIndex: number;
+  quantity: number;
+  containerCount?: number;
+  containerSize?: number;
+  condition: 'sellable' | 'spoiled';
+  reason?: string;
+  disposalMethod?: string;
+}
+
+/**
+ * POST /v1/sales/orders/{id}/report-return — record a partial or full return.
+ */
+export async function reportOrderReturn(
+  orderId: string,
+  items: ReportReturnItem[],
+  notes?: string,
+): Promise<any> {
+  const r = await apiClient.post(`/v1/sales/orders/${orderId}/report-return`, { items, notes });
+  return r.data;
 }
 
 // ============================================================================
@@ -502,13 +510,10 @@ export const salesApi = {
   updateOrderStatus,
   deleteSalesOrder,
 
-  // Inventory
-  getInventory,
-  getAvailableInventory,
-  getInventoryItem,
-  createInventoryItem,
-  updateInventoryItem,
-  deleteInventoryItem,
+  // Phase 4: two-step delete + report return
+  getOrderDeletePreview,
+  deleteOrderConfirm,
+  reportOrderReturn,
 
   // Purchase Orders
   getPurchaseOrders,

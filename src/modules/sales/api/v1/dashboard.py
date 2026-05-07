@@ -8,7 +8,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 import logging
 
-from src.modules.sales.services.sales import OrderService, InventoryService, PurchaseOrderService
+from src.modules.sales.services.sales import OrderService, PurchaseOrderService
+from src.modules.sales.services.database import sales_db
 from src.modules.sales.middleware.auth import require_permission, CurrentUser
 from src.modules.sales.utils.responses import SuccessResponse
 from src.modules.sales.models import SalesOrderStatus
@@ -17,6 +18,62 @@ from src.core.cache import cache_response
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+async def _get_harvest_inventory_stats(farming_year: Optional[int] = None) -> dict:
+    """
+    Aggregate sellable-stock stats directly from the farm-side inventory_harvest
+    collection.  The Sales-side InventoryService has been retired; this helper
+    replaces the single stats call that the dashboard needs.
+
+    Args:
+        farming_year: Optional farming year filter.
+
+    Returns:
+        Dict with total, available (availableQuantity > 0), reserved, sold keys.
+    """
+    db = sales_db.get_database()
+
+    match_stage: dict = {}
+    if farming_year is not None:
+        match_stage["farmingYear"] = farming_year
+
+    pipeline = []
+    if match_stage:
+        pipeline.append({"$match": match_stage})
+
+    pipeline.append({
+        "$group": {
+            "_id": None,
+            "total": {"$sum": 1},
+            # Rows with available stock are those whose availableQuantity > 0
+            "available": {
+                "$sum": {
+                    "$cond": [{"$gt": ["$availableQuantity", 0]}, 1, 0]
+                }
+            },
+            # Reserved rows carry reservedQuantity > 0
+            "reserved": {
+                "$sum": {
+                    "$cond": [{"$gt": ["$reservedQuantity", 0]}, 1, 0]
+                }
+            },
+        }
+    })
+
+    results = await db.inventory_harvest.aggregate(pipeline).to_list(length=1)
+    if not results:
+        return {"total": 0, "available": 0, "reserved": 0, "sold": 0}
+
+    row = results[0]
+    return {
+        "total": row.get("total", 0),
+        "available": row.get("available", 0),
+        "reserved": row.get("reserved", 0),
+        # Sales-side "sold" tracking lives on sales_orders; inventory rows don't
+        # carry a "sold" flag in the farm-side schema — report 0 here.
+        "sold": 0,
+    }
 
 
 @router.get(
@@ -33,7 +90,6 @@ async def get_dashboard_stats(
     ),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     order_service: OrderService = Depends(),
-    inventory_service: InventoryService = Depends(),
     po_service: PurchaseOrderService = Depends()
 ):
     """
@@ -58,8 +114,9 @@ async def get_dashboard_stats(
     total_revenue = revenue_stats.get("totalRevenue", 0)
     pending_payments = revenue_stats.get("pendingPayments", 0)
 
-    # Get inventory statistics using aggregation (filtered by farming year if specified)
-    inventory_stats = await inventory_service.get_inventory_stats(farming_year=farmingYear)
+    # Get inventory statistics from farm-side inventory_harvest collection
+    # (Sales-side InventoryService has been retired; Stock UI reads farm-side directly)
+    inventory_stats = await _get_harvest_inventory_stats(farming_year=farmingYear)
     total_inventory = inventory_stats.get("total", 0)
     available_inventory = inventory_stats.get("available", 0)
     reserved_inventory = inventory_stats.get("reserved", 0)
@@ -135,7 +192,6 @@ async def get_dashboard_stats_alias(
     ),
     current_user: CurrentUser = Depends(require_permission("sales.view")),
     order_service: OrderService = Depends(),
-    inventory_service: InventoryService = Depends(),
     po_service: PurchaseOrderService = Depends()
 ):
     """Get sales dashboard stats - alias endpoint for /dashboard/stats"""
@@ -143,6 +199,5 @@ async def get_dashboard_stats_alias(
         farmingYear=farmingYear,
         current_user=current_user,
         order_service=order_service,
-        inventory_service=inventory_service,
         po_service=po_service
     )

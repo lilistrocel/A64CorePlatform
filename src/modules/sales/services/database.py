@@ -19,10 +19,10 @@ class SalesDatabaseManager:
 
     Manages MongoDB collections for sales and inventory management:
     - sales_orders
-    - harvest_inventory
     - purchase_orders
 
-    Note: This delegates to the core MongoDB manager for actual connection management.
+    Note: harvest_inventory is now owned exclusively by the farm_manager module.
+    This delegates to the core MongoDB manager for actual connection management.
     The core manager handles connection pooling, health checks, and shutdown.
     """
 
@@ -74,33 +74,7 @@ class SalesDatabaseManager:
                 name="sales_order_search_text"
             )
 
-            # Harvest Inventory collection
-            await db.harvest_inventory.create_index("inventoryId", unique=True)
-            await db.harvest_inventory.create_index("productName")
-            await db.harvest_inventory.create_index("category")
-            await db.harvest_inventory.create_index("farmId")
-            await db.harvest_inventory.create_index("blockId")
-            await db.harvest_inventory.create_index("status")
-            await db.harvest_inventory.create_index("quality")
-            await db.harvest_inventory.create_index("harvestDate")
-            await db.harvest_inventory.create_index("expiryDate")
-            await db.harvest_inventory.create_index("createdBy")
-            await db.harvest_inventory.create_index([("createdAt", -1)])
-            # Farming year indexes for year-based filtering
-            await db.harvest_inventory.create_index("farmingYear")
-            await db.harvest_inventory.create_index(
-                [("farmId", 1), ("farmingYear", 1)],
-                name="inventory_farm_farming_year"
-            )
-            await db.harvest_inventory.create_index(
-                [("farmingYear", 1), ("status", 1)],
-                name="inventory_farming_year_status"
-            )
-            # Text search index for product name and category
-            await db.harvest_inventory.create_index(
-                [("productName", "text"), ("category", "text")],
-                name="inventory_search_text"
-            )
+            # Note: inventory_harvest indexes are now owned by farm_manager module.
 
             # Purchase Orders collection
             await db.purchase_orders.create_index("purchaseOrderId", unique=True)

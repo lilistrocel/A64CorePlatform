@@ -20,20 +20,33 @@ import type {
   HarvestInventory,
   HarvestInventoryCreate,
   QualityGrade,
-  PaginatedResponse,
 } from '../../types/inventory';
 import type { Farm, PlantDataEnhanced } from '../../types/farm';
 import { QUALITY_GRADE_LABELS, PRODUCT_TYPE_LABELS } from '../../types/inventory';
 
+// Status derived client-side from quantity fields
+export type HarvestStockStatus = 'available' | 'reserved' | 'sold' | 'expired';
+
+function deriveStatus(item: HarvestInventory): HarvestStockStatus {
+  if (item.expiryDate && new Date(item.expiryDate) < new Date()) return 'expired';
+  if (item.availableQuantity > 0) return 'available';
+  if (item.reservedQuantity > 0) return 'reserved';
+  return 'sold';
+}
+
 interface Props {
   onUpdate?: () => void;
   farmingYear?: number | null;
+  /** When true, suppresses the outer Container padding so the Stock page wraps it */
+  embedded?: boolean;
+  /** When set, only rows matching this derived status are shown */
+  statusFilter?: HarvestStockStatus | null;
 }
 
 type SortField = 'harvestDate' | 'createdAt' | 'plantName' | 'quantity' | 'qualityGrade';
 type SortOrder = 'asc' | 'desc';
 
-export function HarvestInventoryList({ onUpdate, farmingYear }: Props) {
+export function HarvestInventoryList({ onUpdate, farmingYear, embedded = false, statusFilter = null }: Props) {
   const [inventory, setInventory] = useState<HarvestInventory[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [plantDataList, setPlantDataList] = useState<PlantDataEnhanced[]>([]);
@@ -140,8 +153,13 @@ export function HarvestInventoryList({ onUpdate, farmingYear }: Props) {
     }
   };
 
+  // Apply status filter to the fetched items (client-side derived status)
+  const visibleInventory = statusFilter
+    ? inventory.filter((item) => deriveStatus(item) === statusFilter)
+    : inventory;
+
   return (
-    <Container>
+    <Container $embedded={embedded}>
       <Toolbar>
         <SearchInput
           type="text"
@@ -159,7 +177,7 @@ export function HarvestInventoryList({ onUpdate, farmingYear }: Props) {
 
       {loading ? (
         <LoadingMessage>Loading inventory...</LoadingMessage>
-      ) : inventory.length === 0 ? (
+      ) : visibleInventory.length === 0 ? (
         <EmptyMessage>
           <EmptyIcon>📦</EmptyIcon>
           <EmptyText>No harvest inventory items found</EmptyText>
@@ -209,7 +227,7 @@ export function HarvestInventoryList({ onUpdate, farmingYear }: Props) {
               </tr>
             </thead>
             <tbody>
-              {inventory.map((item) => (
+              {visibleInventory.map((item) => (
                 <Tr key={item.inventoryId}>
                   <Td>
                     <ProductInfo>
@@ -628,7 +646,13 @@ function EditHarvestModal({
 }
 
 // Styled Components
-const Container = styled.div``;
+interface ContainerProps {
+  $embedded?: boolean;
+}
+
+const Container = styled.div<ContainerProps>`
+  ${({ $embedded, theme }) => !$embedded && `padding: ${theme.spacing.lg};`}
+`;
 
 const Toolbar = styled.div`
   display: flex;

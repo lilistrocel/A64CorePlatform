@@ -29,8 +29,6 @@ export {
   useSalesDashboard,
   useSalesOrders,
   useSalesOrder,
-  useInventory,
-  useAvailableInventory,
 } from './useSales';
 
 // Dashboard hooks

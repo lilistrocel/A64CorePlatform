@@ -11,7 +11,6 @@
   },
   "database_collections": [
     "sales_orders",
-    "harvest_inventory",
     "purchase_orders"
   ],
   "permissions": [

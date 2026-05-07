@@ -104,8 +104,12 @@ const Loading = () => (
 );
 
 // Styled Components
-const PageContainer = styled.div`
-  padding: 24px;
+interface PageContainerProps {
+  $embedded?: boolean;
+}
+
+const PageContainer = styled.div<PageContainerProps>`
+  padding: ${({ $embedded }) => ($embedded ? '0' : '24px')};
   max-width: 1400px;
   margin: 0 auto;
 `;
@@ -481,8 +485,13 @@ const ModalActions = styled.div`
   margin-top: 20px;
 `;
 
+interface WasteInventoryListProps {
+  /** When true, suppresses outer page padding so the Stock page can wrap it */
+  embedded?: boolean;
+}
+
 // Component
-const WasteInventoryList: React.FC = () => {
+const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = false }) => {
   const [wasteItems, setWasteItems] = useState<WasteInventory[]>([]);
   const [summary, setSummary] = useState<WasteSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -634,10 +643,12 @@ const WasteInventoryList: React.FC = () => {
   }
 
   return (
-    <PageContainer>
-      <PageHeader>
-        <PageTitle>Waste Inventory</PageTitle>
-      </PageHeader>
+    <PageContainer $embedded={embedded}>
+      {!embedded && (
+        <PageHeader>
+          <PageTitle>Waste Inventory</PageTitle>
+        </PageHeader>
+      )}
 
       {summary && (
         <SummaryGrid>
