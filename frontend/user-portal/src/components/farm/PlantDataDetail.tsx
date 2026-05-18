@@ -9,6 +9,8 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import type { PlantDataEnhanced } from '../../types/farm';
 import { formatFarmType, getFarmTypeColor } from '../../services/plantDataEnhancedApi';
+import { useAuthStore } from '../../stores/auth.store';
+import { FertigationScheduleEditorModal } from './FertigationScheduleEditorModal';
 
 // ============================================================================
 // COMPONENT PROPS
@@ -20,6 +22,8 @@ export interface PlantDataDetailProps {
   onEdit?: (id: string) => void;
   onClone?: (id: string) => void;
   onDelete?: (id: string) => void;
+  /** Called after fertigation schedule is saved so caller can refetch plant data. */
+  onSaved?: () => void;
 }
 
 // ============================================================================
@@ -365,10 +369,17 @@ const DayRange = styled.span`
 // COMPONENT
 // ============================================================================
 
-export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: PlantDataDetailProps) {
+export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onSaved }: PlantDataDetailProps) {
+  const { user: currentUser } = useAuthStore();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     basic: true, // Open by default
   });
+  const [showFertigationEditor, setShowFertigationEditor] = useState(false);
+
+  // Roles that can create/edit the fertigation schedule
+  const canEditFertigation = ['admin', 'agronomist', 'super_admin', 'moderator'].includes(
+    currentUser?.role ?? ''
+  );
 
   const toggleSection = (sectionId: string) => {
     setOpenSections((prev) => ({
@@ -390,9 +401,10 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
     return iconMap[plant.plantType] || '🌱';
   };
 
+  // Reason: Overlay click intentionally NOT wired to onClose — modal must close via X button only.
   return (
-    <Overlay onClick={onClose}>
-      <Modal onClick={(e) => e.stopPropagation()}>
+    <Overlay>
+      <Modal>
         <Header>
           <HeaderLeft>
             <PlantIcon>{getPlantIcon()}</PlantIcon>
@@ -852,94 +864,150 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete }: P
           </Section>
 
           {/* Section 11: Fertigation Schedule */}
-          {plant.fertigationSchedule?.cards && plant.fertigationSchedule.cards.length > 0 && (
+          {/* Always render for privileged users so they can bootstrap a schedule. */}
+          {(canEditFertigation || (plant.fertigationSchedule?.cards && plant.fertigationSchedule.cards.length > 0)) && (
             <Section>
               <SectionHeader $isOpen={!!openSections.fertigation} onClick={() => toggleSection('fertigation')}>
-                <SectionTitle>11. Fertigation Schedule</SectionTitle>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <SectionTitle>11. Fertigation Schedule</SectionTitle>
+                  {canEditFertigation && (
+                    <ActionButton
+                      $variant="edit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowFertigationEditor(true);
+                      }}
+                      style={{ fontSize: 12, padding: '4px 12px' }}
+                    >
+                      {plant.fertigationSchedule?.cards && plant.fertigationSchedule.cards.length > 0
+                        ? 'Edit Schedule'
+                        : 'Create Fertigation Schedule'}
+                    </ActionButton>
+                  )}
+                </div>
                 <SectionIcon $isOpen={!!openSections.fertigation}>›</SectionIcon>
               </SectionHeader>
               <SectionContent $isOpen={!!openSections.fertigation}>
-                <FieldGrid>
-                  <Field>
-                    <FieldLabel>Total Fertigation Days</FieldLabel>
-                    <FieldValue>{plant.fertigationSchedule.totalFertilizationDays} days</FieldValue>
-                  </Field>
-                  <Field>
-                    <FieldLabel>Source</FieldLabel>
-                    <FieldValue>{plant.fertigationSchedule.source}</FieldValue>
-                  </Field>
-                </FieldGrid>
-                <Divider />
-                {plant.fertigationSchedule.cards.map((card, cardIdx) => (
-                  <ArrayItem key={cardIdx}>
-                    <CardHeader>
-                      <CardTitle>{card.cardName}</CardTitle>
-                      <StageBadge>{card.growthStage}</StageBadge>
-                      <DayRange>Day {card.dayStart} - {card.dayEnd}</DayRange>
-                      {!card.isActive && <Badge $color="#EF4444">Inactive</Badge>}
-                    </CardHeader>
-                    {card.rules.map((rule, ruleIdx) => (
-                      <RuleCard key={ruleIdx}>
-                        <RuleHeader>
-                          <RuleName>{rule.name}</RuleName>
-                          {rule.type === 'interval' && rule.frequencyDays && (
-                            <FrequencyBadge>Every {rule.frequencyDays} days</FrequencyBadge>
-                          )}
-                          {rule.type === 'custom' && (
-                            <FrequencyBadge>Custom schedule</FrequencyBadge>
-                          )}
-                          {rule.activeDayStart != null && rule.activeDayEnd != null && (
-                            <DayRange>Day {rule.activeDayStart}-{rule.activeDayEnd}</DayRange>
-                          )}
-                        </RuleHeader>
-                        {/* Interval rule ingredients */}
-                        {rule.type === 'interval' && rule.ingredients && rule.ingredients.length > 0 && (
-                          <div>
-                            {rule.ingredients.map((ing, ingIdx) => (
-                              <IngredientRow key={ingIdx}>
-                                <IngredientName>{ing.name}</IngredientName>
-                                <IngredientDosage>{ing.dosagePerPoint} {ing.unit}/point</IngredientDosage>
-                              </IngredientRow>
-                            ))}
-                          </div>
-                        )}
-                        {/* Custom rule applications */}
-                        {rule.type === 'custom' && rule.applications && rule.applications.length > 0 && (
-                          <div>
-                            {rule.applications.map((app, appIdx) => (
-                              <div key={appIdx} style={{ marginBottom: appIdx < rule.applications!.length - 1 ? '8px' : '0' }}>
-                                <FieldLabel>Day {app.day}</FieldLabel>
-                                {app.ingredients.map((ing, ingIdx) => (
+                {!plant.fertigationSchedule?.cards || plant.fertigationSchedule.cards.length === 0 ? (
+                  <EmptyText>
+                    No fertigation schedule defined yet.
+                    {canEditFertigation && (
+                      <span>
+                        {' '}
+                        Click{' '}
+                        <button
+                          style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontSize: 14, textDecoration: 'underline', padding: 0 }}
+                          onClick={() => setShowFertigationEditor(true)}
+                        >
+                          Create Fertigation Schedule
+                        </button>
+                        {' '}to add one.
+                      </span>
+                    )}
+                  </EmptyText>
+                ) : (
+                  <>
+                    <FieldGrid>
+                      <Field>
+                        <FieldLabel>Total Fertigation Days</FieldLabel>
+                        <FieldValue>{plant.fertigationSchedule.totalFertilizationDays} days</FieldValue>
+                      </Field>
+                      <Field>
+                        <FieldLabel>Source</FieldLabel>
+                        <FieldValue>{plant.fertigationSchedule.source || '—'}</FieldValue>
+                      </Field>
+                    </FieldGrid>
+                    <Divider />
+                    {plant.fertigationSchedule.cards.map((card, cardIdx) => (
+                      <ArrayItem key={cardIdx}>
+                        <CardHeader>
+                          <CardTitle>{card.cardName}</CardTitle>
+                          <StageBadge>{card.growthStage}</StageBadge>
+                          <DayRange>Day {card.dayStart} - {card.dayEnd}</DayRange>
+                          {!card.isActive && <Badge $color="#EF4444">Inactive</Badge>}
+                        </CardHeader>
+                        {card.rules.map((rule, ruleIdx) => (
+                          <RuleCard key={ruleIdx}>
+                            <RuleHeader>
+                              <RuleName>{rule.name}</RuleName>
+                              {rule.type === 'interval' && rule.frequencyDays && (
+                                <FrequencyBadge>Every {rule.frequencyDays} days</FrequencyBadge>
+                              )}
+                              {rule.type === 'custom' && (
+                                <FrequencyBadge>Custom schedule</FrequencyBadge>
+                              )}
+                              {rule.activeDayStart != null && rule.activeDayEnd != null && (
+                                <DayRange>Day {rule.activeDayStart}-{rule.activeDayEnd}</DayRange>
+                              )}
+                            </RuleHeader>
+                            {/* Interval rule ingredients */}
+                            {rule.type === 'interval' && rule.ingredients && rule.ingredients.length > 0 && (
+                              <div>
+                                {rule.ingredients.map((ing, ingIdx) => (
                                   <IngredientRow key={ingIdx}>
                                     <IngredientName>{ing.name}</IngredientName>
                                     <IngredientDosage>{ing.dosagePerPoint} {ing.unit}/point</IngredientDosage>
                                   </IngredientRow>
                                 ))}
                               </div>
-                            ))}
-                          </div>
+                            )}
+                            {/* Custom rule applications */}
+                            {rule.type === 'custom' && rule.applications && rule.applications.length > 0 && (
+                              <div>
+                                {rule.applications.map((app, appIdx) => (
+                                  <div key={appIdx} style={{ marginBottom: appIdx < rule.applications!.length - 1 ? '8px' : '0' }}>
+                                    <FieldLabel>Day {app.day}</FieldLabel>
+                                    {app.ingredients.map((ing, ingIdx) => (
+                                      <IngredientRow key={ingIdx}>
+                                        <IngredientName>{ing.name}</IngredientName>
+                                        <IngredientDosage>{ing.dosagePerPoint} {ing.unit}/point</IngredientDosage>
+                                      </IngredientRow>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </RuleCard>
+                        ))}
+                        {card.notes && (
+                          <>
+                            <Divider />
+                            <Field>
+                              <FieldLabel>Notes</FieldLabel>
+                              <FieldValue>{card.notes}</FieldValue>
+                            </Field>
+                          </>
                         )}
-                      </RuleCard>
+                      </ArrayItem>
                     ))}
-                    {card.notes && (
-                      <>
-                        <Divider />
-                        <Field>
-                          <FieldLabel>Notes</FieldLabel>
-                          <FieldValue>{card.notes}</FieldValue>
-                        </Field>
-                      </>
-                    )}
-                  </ArrayItem>
-                ))}
+                  </>
+                )}
               </SectionContent>
             </Section>
+          )}
+
+          {/* Fertigation Schedule Editor Modal */}
+          {showFertigationEditor && (
+            <FertigationScheduleEditorModal
+              plantDataId={plant.plantDataId}
+              plantName={plant.plantName}
+              initialSchedule={plant.fertigationSchedule}
+              onClose={() => setShowFertigationEditor(false)}
+              onSaved={() => {
+                setShowFertigationEditor(false);
+                onSaved?.();
+              }}
+            />
           )}
 
           {/* Section 12: Additional Information */}
           <Section>
             <SectionHeader $isOpen={!!openSections.additional} onClick={() => toggleSection('additional')}>
-              <SectionTitle>{plant.fertigationSchedule?.cards?.length ? '12' : '11'}. Additional Information</SectionTitle>
+              <SectionTitle>
+                {(canEditFertigation || (plant.fertigationSchedule?.cards && plant.fertigationSchedule.cards.length > 0))
+                  ? '12'
+                  : '11'}. Additional Information
+              </SectionTitle>
               <SectionIcon $isOpen={!!openSections.additional}>›</SectionIcon>
             </SectionHeader>
             <SectionContent $isOpen={!!openSections.additional}>

@@ -888,6 +888,16 @@ export function PlantDataLibrary() {
             setShowDetailModal(false);
             await handleDeletePlant(id);
           } : undefined}
+          onSaved={async () => {
+            // Refetch the selected plant so fertigation section renders updated data
+            try {
+              const refreshed = await plantDataEnhancedApi.getPlantDataEnhancedById(selectedPlant.plantDataId);
+              setSelectedPlant(refreshed);
+            } catch {
+              // Non-fatal: the list will still reload on close
+            }
+            loadPlants();
+          }}
         />
       )}
 

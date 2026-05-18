@@ -535,7 +535,76 @@ The sidebar group uses an expandable row pattern with a chevron indicator. Expan
 
 ---
 
+### Plant Library — Fertigation Schedule Editor (v1.15.0)
+
+Privileged roles (`admin`, `agronomist`, `super_admin`, `moderator`) can create and edit the fertigation schedule attached to each Plant Library entry directly from the detail view.
+
+**Entry point**: `PlantDataDetail` Section 11 ("Fertigation Schedule"). For users with the above roles, an "Edit Schedule" button appears next to the section header. If no schedule exists yet, the section always renders (for privileged users) with a "Create Fertigation Schedule" call-to-action. For non-privileged users the section is still shown if a schedule exists (read-only), and hidden when no schedule is present.
+
+**Editor component**: `FertigationScheduleEditorModal` (`frontend/user-portal/src/components/farm/FertigationScheduleEditorModal.tsx`). This modal manages a full local draft of the `FertigationSchedule` structure:
+
+- **Cards** — each card covers a growth-stage day range with a name, growth stage label, `dayStart`/`dayEnd`, active flag, optional notes, and one or more rules.
+- **Rules** — each rule can be `interval` (frequency + optional active-day window + ingredients list) or `custom` (one or more applications, each with a day number + ingredients). Switching types with existing data shows an inline confirmation warning.
+- **Ingredients** — each ingredient has a chemical name (typeahead against the Chemicals Catalog), category, dosage-per-point, and unit. Selecting a chemical from the catalog locks the name; an inline "Add to Chemicals Catalog" form is available when a typed name doesn't match any existing chemical.
+- **Save flow** — on save, `totalFertilizationDays` is auto-derived as `max(card.dayEnd)` across all cards. The full schedule is submitted via `PATCH /api/v1/farm/plant-data-enhanced/{id}` (`updatePlantDataEnhanced`). On success the parent detail view refetches the plant record. The modal never closes on overlay click; X button only.
+
+**Role gate implementation** (matches the pattern used in `ChemicalsCatalog.tsx`):
+```typescript
+const canEditFertigation = ['admin', 'agronomist', 'super_admin', 'moderator'].includes(
+  currentUser?.role ?? ''
+);
+```
+
+**Type changes**: `PlantDataEnhancedUpdate` now includes `fertigationSchedule?: FertigationSchedule`. `CustomApplication` now includes `notes?: string` to mirror the backend model.
+
+---
+
 ## Change Log
+
+### v1.16.0 - 2026-05-11
+
+#### Fertilizer Cost Calculator — Dripper Mode / Yield Mode Toggle
+
+The Crop List panel in the Fertilizer Cost Calculator (`/tools/fertilizer-calculator`) now supports
+two input modes, switchable via a segmented toggle at the top of the panel:
+
+**Dripper Mode** (default, unchanged behaviour):
+- Users enter dripper/point counts per crop directly.
+- A new read-only "Est. Yield" column shows the equivalent yield computed as
+  `points × yieldPerDripper`, where `yieldPerDripper = yieldPerPlant × seedsPerPlantingPoint × (1 − expectedWastePercentage / 100)`.
+- Yield is shown greyed-out, formatted with commas and up to 2 decimal places, next to the plant's `yieldUnit`.
+
+**Yield Mode**:
+- The Points/Drippers input is replaced by a "Target Yield" input. The unit (e.g. `kg`) is shown
+  per row from the plant's `yieldInfo.yieldUnit`, not as a global header label.
+- A read-only "Drippers (auto)" column shows `ceil(targetYield / yieldPerDripper)`.
+- Plants with missing or zero yieldInfo show "— no yield data" with a tooltip.
+
+**Mode switching converts row values in place:**
+- Dripper → Yield: pre-populates target yield from current point count (1 decimal place).
+- Yield → Dripper: recalculates drippers from current target yield (ceiling).
+
+**Persistence:**
+- The selected mode is stored per user in `localStorage` under key `fertCalc.mode.<userId>`.
+  Default is `dripper` if no preference is stored.
+- `targetYield` is included in the per-user draft stored at `fertCalc.draft.<userId>`, so
+  in-progress yield entries survive a page refresh.
+- Saved lists on the backend always store drippers only (`points`). `targetYield` is UI-only.
+
+**Yield data hydration (strategy A):**
+- `yieldInfo` is embedded into each `CropListRow` at typeahead-pick time (from the
+  `/v1/farm/plant-data-enhanced` search response).
+- When loading a saved list, the existing `hydratePlantNames` `Promise.all` also pulls
+  `yieldInfo` from `getPlantDataEnhancedById`, adding zero extra network round-trips.
+
+**Calculate / Export / Save** always read `points`, which is always kept up-to-date.
+No backend changes are required by this feature.
+
+### v1.15.0 - 2026-05-08
+- Added Fertigation Schedule editor modal for Plant Library (FertigationScheduleEditorModal)
+- Edit/Create entry point wired into PlantDataDetail Section 11 with agronomist role gate
+- PlantDataEnhancedUpdate type extended with fertigationSchedule field
+- CustomApplication type extended with optional notes field
 
 ### v1.14.0 - 2026-05-07
 - Added Tools sidebar group with Fertilizer Cost Calculator and Chemicals Catalog pages

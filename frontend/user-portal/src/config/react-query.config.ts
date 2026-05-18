@@ -137,6 +137,8 @@ export const queryKeys = {
     },
     savedLists: {
       all: () => [...queryKeys.tools.all, 'savedLists'] as const,
+      list: (query: { page?: number; size?: number; search?: string }) =>
+        [...queryKeys.tools.savedLists.all(), query] as const,
     },
   },
 } as const;

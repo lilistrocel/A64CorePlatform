@@ -18,6 +18,7 @@ import type {
   CalculateRequest,
   CreateSavedListRequest,
   UpdateSavedListRequest,
+  SavedListsQuery,
 } from '../../types/tools';
 
 // ─── Chemicals ────────────────────────────────────────────────────────────────
@@ -170,10 +171,11 @@ export function useDownloadImportTemplate() {
 
 // ─── Saved Lists ─────────────────────────────────────────────────────────────
 
-export function useSavedLists() {
+export function useSavedLists(query: SavedListsQuery = {}) {
   return useQuery({
-    queryKey: queryKeys.tools.savedLists.all(),
-    queryFn: () => toolsApi.getSavedLists(),
+    queryKey: queryKeys.tools.savedLists.list(query),
+    queryFn: () => toolsApi.getSavedLists(query),
+    placeholderData: (prev) => prev,
   });
 }
 

@@ -39,10 +39,10 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 
 ## Current Versions
 
-**Last Updated:** 2026-05-07
+**Last Updated:** 2026-05-18
 
 ### Platform Version
-**A64 Core Platform:** `1.14.0` (Unreleased)
+**A64 Core Platform:** `1.15.0` (Unreleased)
 
 ### API Versions
 | API Component | Version | Status | Supported Until |
@@ -88,6 +88,47 @@ Optional build information: `1.0.0+20251016` or `1.0.0+build.123`
 ## Version History
 
 ### Platform Version History
+
+#### v1.15.0 - 2026-05-18 (Unreleased)
+**Type:** Minor Release — Fertilizer Cost Calculator (new Tools module), Plant Library Fertigation Schedule Editor, Yield Mode toggle, P&L Dashboard integration, and extensive UX polish/bug fixes.
+
+**Author: Viet Anh**
+
+**Added:**
+- **Fertilizer Cost Calculator — Backend**: 3 new MongoDB collections (`fertilizer_chemicals`, `fertilizer_price_overrides`, `fertilizer_calculation_lists`), 7 model files, 6 service files, 2 API routers (15 endpoints total) at `/api/v1/farm/tools/chemicals` and `/api/v1/farm/tools/fertilizer-cost`. Archive-aware chemical discovery and calculation engine. 38 tests (all pass).
+- **Fertilizer Cost Calculator — Frontend**: New `Tools` sidebar group with nested nav (`MainLayout.tsx` `NavItemDef.children[]`), `FertilizerCostCalculator.tsx` page, `ChemicalsCatalog.tsx` page, `toolsApi.ts` service, `useTools.ts` hooks, `types/tools.ts` types. Price Book as modal, Crop List as hero panel, tabbed Output, Saved Lists with search+pagination, per-user draft persistence via `localStorage`.
+- **Plant Library — Fertigation Schedule Editor**: New `FertigationScheduleEditorModal.tsx` component with nested CRUD for cards → rules → ingredients. Role-gated entry point in `PlantDataDetail` Section 11 for `admin|agronomist|super_admin|moderator`.
+- **Yield Mode Toggle**: Segmented toggle in Crop List panel to switch between dripper-count input and target-yield input; in-place row conversion; mode persisted per user. `YieldInput` component with live formatting. Excel import extended to accept "Net Yield (kg)" column; export includes Est. Yield column and TOTAL YIELD row.
+- **P&L Dashboard Integration**: Full P&L component family embedded in `Dashboard.tsx`. `PnlFiltersBar` gains optional `hideFarmingYear` prop.
+
+**Changed:**
+- Price Book promoted from inline collapsible panel to standalone modal.
+- "Add Chemical" and "Discover" actions removed from Price Book (live only in Chemicals Catalog).
+- Saved Lists modal UX tightened; "New list" button added; Load action moved to per-row button.
+- Per Crop output row extended with estimated yield. Grand total split into two side-by-side cards.
+- `UserManagementPage` PUT → PATCH on user role endpoint.
+
+**Fixed:**
+- MongoDB `$in`+`$regex` nesting error in `price_book.py` / `chemicals_repository.py`.
+- `toolsApi.ts` envelope double-unwrap (`response.data` → `response.data.data`).
+- `user?.id` → `user?.userId` across all draft-persistence logic.
+- Draft race condition: `draftLoadedForUser` string guard replaces boolean `draftLoaded`.
+- Fertigation editor: JSX comment-as-sibling parse error; missing `useEffect` import; dosage buffered input.
+- "Update list" stuck disabled; discard warning false positive on fresh rules; Excel `#,##0.##` number format.
+
+**Compatibility:**
+- No breaking changes to any documented public API. All new API fields and endpoints are purely additive.
+- New MongoDB collections add no migration burden to existing data.
+- Sidebar nested-nav is backward-compatible: existing flat `NavItemDef` entries are unaffected.
+- Fully backward-compatible with v1.14.0 for all documented public endpoints.
+
+**CodeMaps:** Regeneration required — 3 new MongoDB collections, 6+ new backend service files, 4+ new model files, 2 new API routers, 3 new frontend pages, ~10 new component/service/hook files, new `NavItemDef.children[]` sidebar pattern.
+```bash
+bash scripts/codebase_mapper/rerun.sh   # or
+python3 scripts/codebase_mapper/map_generator.py all
+```
+
+---
 
 #### v1.14.0 - 2026-05-07 (Unreleased)
 **Type:** Minor Release — Farm Detail + Block Monitor merge, Inventory/Stock split, per-batch harvest model, returned-inventory CRUD, sales order lifecycle (reservations, two-step delete, Report Return), Add Item modal with FIFO allocation, customer typeahead.

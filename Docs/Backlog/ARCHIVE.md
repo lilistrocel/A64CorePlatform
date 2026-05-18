@@ -1,18 +1,94 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 13 tasks
+> **Total completed:** 18 tasks
 
 ## 2026-05
 
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
 | T-002 | Fertilizer Cost Calculator — Backend (Viet Anh) | Backend | 2026-05-07 | ✅ |
-| T-003 | Fertilizer Cost Calculator — Frontend (Viet Anh) | Frontend | 2026-05-07 | ⏳ awaiting user verification |
-| T-011 | Fertilizer Calculator UI — Price Book → modal (Viet Anh) | Frontend | 2026-05-07 | ⏳ awaiting user verification |
+| T-003 | Fertilizer Cost Calculator — Frontend (Viet Anh) | Frontend | 2026-05-07 | ✅ |
+| T-011 | Fertilizer Calculator UI — Price Book → modal (Viet Anh) | Frontend | 2026-05-07 | ✅ |
 | T-004 | Fertilizer Calculator — archive-aware discovery + role gate (Viet Anh) | Backend | 2026-05-07 | ✅ |
 | T-008 | Farm Detail + Block Monitor merge; Inventory/Stock split; Sales Order lifecycle (v1.14.0 session) | Frontend + Backend | 2026-05-07 | ✅ |
-| T-009 | Fertilizer Calculator UI — unarchive + role gate (Viet Anh) | Frontend | 2026-05-07 | ⏳ awaiting user verification |
-| T-010 | Fertilizer Calculator UI — slim Price Book panel (Viet Anh) | Frontend | 2026-05-07 | ⏳ awaiting user verification |
+| T-009 | Fertilizer Calculator UI — unarchive + role gate (Viet Anh) | Frontend | 2026-05-07 | ✅ |
+| T-010 | Fertilizer Calculator UI — slim Price Book panel (Viet Anh) | Frontend | 2026-05-07 | ✅ |
+| T-015 | P&L Dashboard integration + PnlFiltersBar hideFarmingYear + UserManagement PATCH fix (Viet Anh) | Frontend | 2026-05-07 | ✅ |
+| T-012 | Plant Library — Fertigation Schedule editor (Viet Anh) | Frontend | 2026-05-08 | ✅ |
+| T-014 | Fert Calculator — Yield Mode (UI) (Viet Anh) | Frontend | 2026-05-11 | ✅ |
+| T-013 | Fert Calculator — Yield Mode (Excel) (Viet Anh) | Backend | 2026-05-11 | ✅ |
+
+### T-014 | Fert Calculator — Yield Mode (UI) (Viet Anh)
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-11
+- **Author:** Viet Anh
+- **Description:** Added Dripper Mode / Yield Mode toggle to FertilizerCostCalculator CropListPanel.
+- **Result:**
+  - **Modified**: `frontend/user-portal/src/types/tools.ts` — `CropListRow` extended with
+    `yieldInfo?: YieldWasteInfo` and `targetYield?: number`; new `CropInputMode` type added.
+  - **Modified**: `frontend/user-portal/src/pages/tools/FertilizerCostCalculator.tsx`:
+    - `PlantDataOption` extended with `yieldInfo`.
+    - Typeahead maps `yieldInfo` from search response at pick time.
+    - `hydratePlantNames` also pulls `yieldInfo` from `getPlantDataEnhancedById`.
+    - Conversion helpers: `computeYieldPerDripper`, `drippersToYield`, `yieldToDrippers`.
+    - `CropListPanel` props extended with `mode`, `onModeChange`, `onUpdateTargetYield`.
+    - Mode toggle segmented control in panel header, persisted to `localStorage` under
+      `fertCalc.mode.<userId>`.
+    - Dripper Mode: unchanged input + new read-only "Est. Yield" column.
+    - Yield Mode: Target Yield input + per-row unit label + read-only "Drippers (auto)" column.
+    - Mode switching converts all row values in place.
+    - `points` always kept in sync; Calculate/Export/Save unchanged.
+  - **Modified**: `Docs/1-Main-Documentation/User-Structure.md` — v1.16.0 changelog entry.
+
+### T-013 | Fert Calculator — Yield Mode (Excel) (Viet Anh)
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-05-11
+- **Author:** Viet Anh
+- **Description:** Extended the Fertilizer Cost Calculator Excel import to support a "Net Yield (kg)"
+  column alongside "Points". Users can now upload a spreadsheet with either dripper counts or target
+  yield values; the backend auto-converts yield → points using each plant's yieldInfo.
+- **Result:**
+  - **Modified**: `src/modules/farm_manager/services/tools/excel_handler.py`
+    - `build_import_template()`: new column C "Net Yield (kg)", column widths A=36 B=12 C=18,
+      updated placeholder rows demonstrating both modes, italic instruction note at row 4.
+    - `import_crops()`: reads optional Net Yield column (case-insensitive regex header match);
+      if Net Yield is positive, computes `points = ceil(netYield / yieldPerDripper)` where
+      `yieldPerDripper = yieldPerPlant × seedsPerPlantingPoint × (1 − waste%)`. Points clamped
+      to 10,000,000 with warning (not skipped). Non-numeric Net Yield → skip with reason.
+      Zero/negative Net Yield → falls through to Points column. Non-kg yieldUnit → informational
+      warning. Old 2-column files still work unchanged (backward compatible).
+    - New helpers: `_is_net_yield_header()`, `_try_parse_positive_float()`.
+  - **New file**: `tests/unit/test_excel_handler.py` — 30 unit tests (all pass):
+    Points-only (regression), Net Yield-only, both columns (Net Yield wins), invalid yield rate,
+    clamp, round-trip template parse, old-format compatibility, non-numeric, zero fallthrough, non-kg.
+  - **Modified**: `Docs/1-Main-Documentation/API-Structure.md` — Calculator endpoint table updated
+    (added GET /import-template row), expanded POST /import docs with column behaviour, skip reasons
+    table, clamping, and unit warning details.
+
+### T-012 | Plant Library — Fertigation Schedule editor (Viet Anh)
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-08
+- **Author:** Viet Anh
+- **Description:** Built full fertigation schedule editor modal for the Plant Library.
+- **Result:**
+  - **New file**: `FertigationScheduleEditorModal.tsx` — full CRUD editor for `FertigationSchedule`
+    with card/rule/ingredient CRUD, move-up/down reorder, chemical typeahead (useChemicals),
+    inline new-chemical creation, interval↔custom type-switch warning, live validation,
+    auto-derived `totalFertilizationDays`, save via `updatePlantDataEnhanced`.
+  - **Modified**: `PlantDataDetail.tsx` — Section 11 always renders for privileged roles;
+    "Edit Schedule" / "Create Fertigation Schedule" button with role gate
+    (`admin|agronomist|super_admin|moderator`); overlay no longer closes on backdrop click.
+  - **Modified**: `PlantDataLibrary.tsx` — wired `onSaved` callback to refetch the selected plant
+    and refresh the list after a schedule save.
+  - **Modified**: `types/farm.ts` — `PlantDataEnhancedUpdate` now includes
+    `fertigationSchedule?: FertigationSchedule`; `CustomApplication` now has `notes?: string`.
+  - **Modified**: `Docs/1-Main-Documentation/User-Structure.md` — added Fertigation Schedule
+    editor section and v1.15.0 changelog entry.
+  - TypeScript: `tsc --noEmit` passes with zero errors.
+  - No Docker rebuild required — pure frontend TS/JSX change, hot reload sufficient.
+  - CodeMaps flagged for regeneration (1 new component file added).
+
+---
 
 ### T-010 | Fertilizer Calculator UI — slim Price Book panel (Viet Anh)
 - **Category:** Frontend · **Priority:** P2
@@ -42,6 +118,19 @@
     renders as either a text link or a full primary button without passing a DOM prop.
   - **Net change**: 1803 → 1716 lines (−87 lines).
   - **TypeScript**: `tsc --noEmit` passes with zero errors, zero unused imports.
+
+### T-015 | P&L Dashboard integration + PnlFiltersBar hideFarmingYear + UserManagement PATCH fix (Viet Anh)
+- **Category:** Frontend · **Priority:** P2
+- **Completed:** 2026-05-07
+- **Author:** Viet Anh
+- **Description:** Integrated the full P&L component family into the main Dashboard page; added `hideFarmingYear` prop to `PnlFiltersBar`; polished `PnlBreakdownCharts` layout; fixed `UserManagementPage` HTTP method.
+- **Result:**
+  - **Modified**: `frontend/user-portal/src/pages/dashboard/Dashboard.tsx` — imported and rendered `PnlFiltersBar`, `PnlKpiCards`, `PnlRevenueTrendChart`, `PnlBreakdownCharts`, `PnlStatementTable`, `PnlArAging`, `PnlRevenueConfidence` with finance hooks (`useFinancePnlSummary`, `useFinancePnlByMonth`, `useFinancePnlByFarm`, `useFinancePnlByCrop`, `useFinancePnlArAging`, `useFinanceRevenueSources`).
+  - **Modified**: `frontend/user-portal/src/components/pnl/PnlFiltersBar.tsx` — new optional `hideFarmingYear` prop suppresses the farming-year filter row when a global year selector is already present higher up the tree.
+  - **Modified**: `frontend/user-portal/src/components/pnl/PnlBreakdownCharts.tsx` — `Row` uses `align-items: stretch`; new `FarmPanel` wrapper keeps adjacent panels at equal heights.
+  - **Modified**: `frontend/user-portal/src/pages/admin/UserManagementPage.tsx` — corrected HTTP method from `PUT` to `PATCH` on `/v1/users/{id}/role` (was returning 405).
+
+---
 
 ### T-011 | Fertilizer Calculator UI — Price Book → modal (Viet Anh)
 - **Category:** Frontend · **Priority:** P2

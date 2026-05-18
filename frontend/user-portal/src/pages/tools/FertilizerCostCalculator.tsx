@@ -32,13 +32,16 @@ import {
   useDeleteSavedList,
 } from '../../hooks/queries/useTools';
 import { showSuccessToast, showWarningToast } from '../../stores/toast.store';
+import { useAuthStore } from '../../stores/auth.store';
 import { apiClient } from '../../services/api';
 import { getPlantDataEnhancedById } from '../../services/plantDataEnhancedApi';
 import type {
   CropListRow,
+  CropInputMode,
   CalculateResponse,
   SavedList,
 } from '../../types/tools';
+import type { YieldWasteInfo } from '../../types/farm';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,6 +49,8 @@ interface PlantDataOption {
   plantDataId: string;
   plantName: string;
   hasFertigationSchedule: boolean;
+  /** Yield data from plant_data_enhanced, embedded at pick time for Yield Mode conversion. */
+  yieldInfo?: YieldWasteInfo;
 }
 
 // ─── Shared styled atoms used across panels ───────────────────────────────────
@@ -209,7 +214,6 @@ function SaveListModal({ initial = '', onClose, onSave, isSaving }: SaveListModa
 // ─── Manage Saved Lists Modal ─────────────────────────────────────────────────
 
 interface ManageSavedListsModalProps {
-  lists: SavedList[];
   onClose: () => void;
   onRename: (listId: string, newName: string) => void;
   onDelete: (listId: string) => void;
@@ -217,16 +221,51 @@ interface ManageSavedListsModalProps {
   isWorking: boolean;
 }
 
-function ManageSavedListsModal({ lists, onClose, onRename, onDelete, onLoad, isWorking }: ManageSavedListsModalProps) {
+const SAVED_LISTS_PAGE_SIZE = 20;
+
+function ManageSavedListsModal({ onClose, onRename, onDelete, onLoad, isWorking }: ManageSavedListsModalProps) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Debounce search input to avoid query-per-keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Reset to first page whenever search term changes
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
+
+  const { data, isLoading } = useSavedLists({
+    page,
+    size: SAVED_LISTS_PAGE_SIZE,
+    search: debouncedSearch || undefined,
+  });
+  const lists = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / SAVED_LISTS_PAGE_SIZE));
 
   return (
-    <Modal title="Manage saved lists" onClose={onClose} footer={
+    <Modal title="Saved lists" onClose={onClose} footer={
       <OutlineBtn type="button" onClick={onClose}>Close</OutlineBtn>
     }>
-      {lists.length === 0 ? (
-        <EmptyText>No saved lists yet.</EmptyText>
+      <SearchInput
+        type="search"
+        placeholder="Search lists by name…"
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
+        style={{ margin: '0 0 12px 0', display: 'block', width: '100%' }}
+      />
+
+      {isLoading && lists.length === 0 ? (
+        <EmptyText>Loading…</EmptyText>
+      ) : lists.length === 0 ? (
+        <EmptyText>
+          {debouncedSearch ? `No lists match "${debouncedSearch}".` : 'No saved lists yet.'}
+        </EmptyText>
       ) : (
         <ListTable>
           {lists.map((l) => (
@@ -259,6 +298,26 @@ function ManageSavedListsModal({ lists, onClose, onRename, onDelete, onLoad, isW
             </ListRow>
           ))}
         </ListTable>
+      )}
+
+      {total > SAVED_LISTS_PAGE_SIZE && (
+        <PaginationBar>
+          <LinkBtn
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+          >
+            ← Prev
+          </LinkBtn>
+          <span style={{ fontSize: '13px', color: '#666' }}>
+            Page {page} of {totalPages} · {total.toLocaleString('en-US')} list{total !== 1 ? 's' : ''}
+          </span>
+          <LinkBtn
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+          >
+            Next →
+          </LinkBtn>
+        </PaginationBar>
       )}
     </Modal>
   );
@@ -452,6 +511,8 @@ function PlantTypeahead({ onSelect, usedIds }: PlantTypeaheadProps) {
         plantDataId: p.plantDataId ?? p._id,
         plantName: p.plantName,
         hasFertigationSchedule: !!(p.fertigationSchedule && (Array.isArray(p.fertigationSchedule) ? p.fertigationSchedule.length > 0 : true)),
+        // Embed yieldInfo at pick time so Yield Mode conversion works without extra fetches
+        yieldInfo: p.yieldInfo ?? undefined,
       }));
       setOptions(items);
       setOpen(true);
@@ -522,6 +583,119 @@ function PlantTypeahead({ onSelect, usedIds }: PlantTypeaheadProps) {
   );
 }
 
+// ─── Yield conversion helpers ─────────────────────────────────────────────────
+
+/**
+ * Compute yieldPerDripper (net, accounting for waste) for a plant.
+ *
+ * Formula: yieldPerPlant × seedsPerPlantingPoint × (1 - expectedWastePercentage / 100)
+ *
+ * All plants currently have expectedWastePercentage = 0, so net == gross in practice.
+ * The formula is written correctly so future waste data flows through automatically.
+ */
+function computeYieldPerDripper(yieldInfo: YieldWasteInfo): number {
+  const waste = yieldInfo.expectedWastePercentage ?? 0;
+  const seeds = yieldInfo.seedsPerPlantingPoint ?? 1;
+  return yieldInfo.yieldPerPlant * seeds * (1 - waste / 100);
+}
+
+/**
+ * Convert dripper count to equivalent target yield (one decimal place).
+ * Returns null if yieldInfo is missing or yieldPerDripper is zero/negative.
+ */
+function drippersToYield(points: number, yieldInfo: YieldWasteInfo | undefined): number | null {
+  if (!yieldInfo) return null;
+  const ypd = computeYieldPerDripper(yieldInfo);
+  if (ypd <= 0) return null;
+  return Math.round(points * ypd * 10) / 10;
+}
+
+/**
+ * Convert target yield to dripper count (always rounded up, minimum 1).
+ * Returns null if yieldInfo is missing or yieldPerDripper is zero/negative.
+ */
+function yieldToDrippers(targetYield: number, yieldInfo: YieldWasteInfo | undefined): number | null {
+  if (!yieldInfo) return null;
+  const ypd = computeYieldPerDripper(yieldInfo);
+  if (ypd <= 0) return null;
+  return Math.max(1, Math.ceil(targetYield / ypd));
+}
+
+/**
+ * Format a yield value for display: comma-separated thousands, up to 2 decimals.
+ */
+function fmtYield(n: number): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+// Reason: numeric controlled inputs lose mid-edit precision (typing "." after
+// "1500" parses to 1500 and the dot disappears) and don't render thousands
+// separators. Buffer the raw string locally; format with commas at the integer
+// part while preserving the typed decimal.
+interface YieldInputProps {
+  value: number;
+  onChange: (next: number) => void;
+  ariaLabel: string;
+}
+
+function formatYieldRaw(s: string): string {
+  // Strip everything except digits and a single decimal point
+  const cleaned = s.replace(/[^0-9.]/g, '');
+  const parts = cleaned.split('.');
+  const intPart = parts[0] ?? '';
+  const decimalPart = parts.length > 1 ? parts.slice(1).join('').replace(/\./g, '') : null;
+  // Drop leading zeros on the integer part unless followed by "."
+  const intNoLeadZeros = intPart.replace(/^0+(?=\d)/, '');
+  // Format integer with commas
+  const intWithCommas = intNoLeadZeros === ''
+    ? ''
+    : parseInt(intNoLeadZeros, 10).toLocaleString('en-US');
+  return decimalPart !== null ? `${intWithCommas}.${decimalPart}` : intWithCommas;
+}
+
+function YieldInput({ value, onChange, ariaLabel }: YieldInputProps) {
+  const [raw, setRaw] = useState<string>(
+    value === 0 ? '' : value.toLocaleString('en-US', { maximumFractionDigits: 6 })
+  );
+
+  // Sync from external changes (e.g., mode-switch converting points → yield)
+  useEffect(() => {
+    const parsedFromRaw = parseFloat(raw.replace(/,/g, ''));
+    const numericFromRaw = isNaN(parsedFromRaw) ? 0 : parsedFromRaw;
+    if (numericFromRaw !== value) {
+      setRaw(value === 0 ? '' : value.toLocaleString('en-US', { maximumFractionDigits: 6 }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <PointsInput
+      type="text"
+      inputMode="decimal"
+      value={raw}
+      onChange={(e) => {
+        const formatted = formatYieldRaw(e.target.value);
+        setRaw(formatted);
+        const numeric = parseFloat(formatted.replace(/,/g, ''));
+        if (!isNaN(numeric) && numeric >= 0 && numeric <= 100_000_000) {
+          onChange(numeric);
+        } else if (formatted === '' || formatted === '.') {
+          onChange(0);
+        }
+      }}
+      onBlur={() => {
+        const numeric = parseFloat(raw.replace(/,/g, ''));
+        if (isNaN(numeric) || numeric < 0) {
+          setRaw('');
+          onChange(0);
+        }
+      }}
+      aria-label={ariaLabel}
+      style={{ width: '120px' }}
+    />
+  );
+}
+
 // ─── Panel B: Crop List ───────────────────────────────────────────────────────
 
 interface CropListPanelProps {
@@ -529,11 +703,16 @@ interface CropListPanelProps {
   onAddRow: (plant: PlantDataOption) => void;
   onRemoveRow: (plantDataId: string) => void;
   onUpdatePoints: (plantDataId: string, points: number) => void;
+  onUpdateTargetYield: (plantDataId: string, targetYield: number) => void;
   onCalculate: () => void;
   isCalculating: boolean;
+  // Mode toggle
+  mode: CropInputMode;
+  onModeChange: (mode: CropInputMode) => void;
   // Saved lists
-  savedLists: SavedList[];
+  totalSavedLists: number;
   activeListId: string | null;
+  activeListName: string | null;
   onSaveList: (name: string) => void;
   onManageLists: () => void;
   onNewList: () => void;
@@ -553,10 +732,14 @@ function CropListPanel({
   onAddRow,
   onRemoveRow,
   onUpdatePoints,
+  onUpdateTargetYield,
   onCalculate,
   isCalculating,
-  savedLists,
+  mode,
+  onModeChange,
+  totalSavedLists,
   activeListId,
+  activeListName,
   onSaveList,
   onManageLists,
   onNewList,
@@ -573,7 +756,10 @@ function CropListPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const usedIds = useMemo(() => new Set(rows.map((r) => r.plantDataId)), [rows]);
 
-  const activeList = savedLists.find((l) => l.listId === activeListId);
+  // Reason: keep activeList shape for downstream code; pull from props (paginated lists)
+  const activeList = activeListId && activeListName
+    ? { listId: activeListId, name: activeListName }
+    : null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -591,6 +777,27 @@ function CropListPanel({
     <Panel>
       <PanelHeader>
         <PanelTitle>Crop List</PanelTitle>
+
+        {/* Mode toggle — between title and action buttons */}
+        <ModeToggle role="group" aria-label="Input mode">
+          <ModeToggleBtn
+            type="button"
+            $active={mode === 'dripper'}
+            onClick={() => onModeChange('dripper')}
+            aria-pressed={mode === 'dripper'}
+          >
+            Dripper Mode
+          </ModeToggleBtn>
+          <ModeToggleBtn
+            type="button"
+            $active={mode === 'yield'}
+            onClick={() => onModeChange('yield')}
+            aria-pressed={mode === 'yield'}
+          >
+            Yield Mode
+          </ModeToggleBtn>
+        </ModeToggle>
+
         <PanelHeaderRight>
           <OutlineBtn
             type="button"
@@ -612,7 +819,7 @@ function CropListPanel({
           </OutlineBtn>
 
           <LinkBtn type="button" onClick={onManageLists} style={{ fontSize: '13px' }}>
-            {savedLists.length === 0 ? 'Saved lists' : `Saved lists (${savedLists.length})`}
+            {totalSavedLists === 0 ? 'Saved lists' : `Saved lists (${totalSavedLists.toLocaleString('en-US')})`}
           </LinkBtn>
 
           <VisuallyHidden>
@@ -621,7 +828,7 @@ function CropListPanel({
               accept=".xlsx"
               ref={fileInputRef}
               onChange={handleFileChange}
-              aria-label="Import Excel file"
+              aria-label="Import sheet file"
             />
           </VisuallyHidden>
           <OutlineBtn
@@ -631,7 +838,7 @@ function CropListPanel({
             style={{ fontSize: '13px', padding: '7px 14px' }}
             title="Download a blank .xlsx template"
           >
-            {isDownloadingTemplate ? 'Preparing…' : 'Download sample'}
+            {isDownloadingTemplate ? 'Preparing…' : 'Import Template'}
           </OutlineBtn>
           <OutlineBtn
             type="button"
@@ -639,7 +846,7 @@ function CropListPanel({
             disabled={isImporting}
             style={{ fontSize: '13px', padding: '7px 14px' }}
           >
-            {isImporting ? 'Importing…' : 'Import Excel'}
+            {isImporting ? 'Importing…' : 'Import Sheet'}
           </OutlineBtn>
           <OutlineBtn
             type="button"
@@ -648,7 +855,7 @@ function CropListPanel({
             style={{ fontSize: '13px', padding: '7px 14px' }}
             title={exportDisabled ? 'Run Calculate first' : undefined}
           >
-            {isExporting ? 'Exporting…' : 'Export Excel'}
+            {isExporting ? 'Exporting…' : 'Export Sheet'}
           </OutlineBtn>
         </PanelHeaderRight>
       </PanelHeader>
@@ -660,58 +867,141 @@ function CropListPanel({
           <EmptyText style={{ padding: '32px 0' }}>
             Add a crop to start calculating.
           </EmptyText>
-        ) : (
+        ) : mode === 'dripper' ? (
+          /* ── Dripper Mode table ── */
           <CropTable>
             <thead>
               <tr>
                 <Th>Crop</Th>
-                <Th style={{ width: '120px' }}>Points</Th>
+                <Th style={{ width: '140px' }}>Points / Drippers</Th>
+                <Th style={{ width: '180px' }}>Est. Yield</Th>
                 <Th style={{ width: '48px' }}></Th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr key={row.plantDataId}>
-                  <Td>{row.plantName}</Td>
-                  <Td>
-                    <PointsInput
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9,]*"
-                      value={row.points === 0 ? '' : row.points.toLocaleString('en-US')}
-                      onChange={(e) => {
-                        // Reason: keep keystrokes responsive — strip non-digits but
-                        // allow temporary empty/zero state so backspace and cursor
-                        // movement work normally. Validation happens on blur.
-                        const cleaned = e.target.value.replace(/[^0-9]/g, '');
-                        if (cleaned === '') {
-                          onUpdatePoints(row.plantDataId, 0);
-                          return;
-                        }
-                        const val = parseInt(cleaned, 10);
-                        if (!isNaN(val) && val <= 10_000_000) {
-                          onUpdatePoints(row.plantDataId, val);
-                        }
-                      }}
-                      onBlur={() => {
-                        // Reason: snap empty/zero back to 1 once the user finishes editing
-                        if (row.points < 1) onUpdatePoints(row.plantDataId, 1);
-                      }}
-                      aria-label={`Points for ${row.plantName}`}
-                    />
-                  </Td>
-                  <Td>
-                    <IconBtn
-                      type="button"
-                      onClick={() => onRemoveRow(row.plantDataId)}
-                      aria-label={`Remove ${row.plantName}`}
-                      title="Remove"
-                    >
-                      🗑️
-                    </IconBtn>
-                  </Td>
-                </tr>
-              ))}
+              {rows.map((row) => {
+                // Compute estimated yield for read-only column
+                const estYield = drippersToYield(row.points, row.yieldInfo);
+                const yieldUnit = row.yieldInfo?.yieldUnit ?? '';
+                return (
+                  <tr key={row.plantDataId}>
+                    <Td>{row.plantName}</Td>
+                    <Td>
+                      <PointsInput
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9,]*"
+                        value={row.points === 0 ? '' : row.points.toLocaleString('en-US')}
+                        onChange={(e) => {
+                          // Reason: keep keystrokes responsive — strip non-digits but
+                          // allow temporary empty/zero state so backspace and cursor
+                          // movement work normally. Validation happens on blur.
+                          const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                          if (cleaned === '') {
+                            onUpdatePoints(row.plantDataId, 0);
+                            return;
+                          }
+                          const val = parseInt(cleaned, 10);
+                          if (!isNaN(val) && val <= 10_000_000) {
+                            onUpdatePoints(row.plantDataId, val);
+                          }
+                        }}
+                        onBlur={() => {
+                          // Reason: snap empty/zero back to 1 once the user finishes editing
+                          if (row.points < 1) onUpdatePoints(row.plantDataId, 1);
+                        }}
+                        aria-label={`Points for ${row.plantName}`}
+                      />
+                    </Td>
+                    <Td>
+                      <ConversionHint>
+                        {estYield !== null
+                          ? `~${fmtYield(estYield)}${yieldUnit ? ` ${yieldUnit}` : ''}`
+                          : '—'}
+                      </ConversionHint>
+                    </Td>
+                    <Td>
+                      <IconBtn
+                        type="button"
+                        onClick={() => onRemoveRow(row.plantDataId)}
+                        aria-label={`Remove ${row.plantName}`}
+                        title="Remove"
+                      >
+                        🗑️
+                      </IconBtn>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </CropTable>
+        ) : (
+          /* ── Yield Mode table ── */
+          <CropTable>
+            <thead>
+              <tr>
+                <Th>Crop</Th>
+                <Th style={{ width: '200px' }}>Target Yield</Th>
+                <Th style={{ width: '160px' }}>Drippers (auto)</Th>
+                <Th style={{ width: '48px' }}></Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const hasYieldData = !!(
+                  row.yieldInfo &&
+                  computeYieldPerDripper(row.yieldInfo) > 0
+                );
+                const yieldUnit = row.yieldInfo?.yieldUnit ?? '';
+                // Compute the dripper count from the current targetYield
+                const computedDrippers = hasYieldData && row.yieldInfo
+                  ? yieldToDrippers(row.targetYield ?? 0, row.yieldInfo)
+                  : null;
+                // Display value in the yield input: empty string when zero so
+                return (
+                  <tr key={row.plantDataId}>
+                    <Td>{row.plantName}</Td>
+                    <Td>
+                      {hasYieldData ? (
+                        <YieldInputWrapper>
+                          <YieldInput
+                            value={row.targetYield ?? 0}
+                            onChange={(v) => onUpdateTargetYield(row.plantDataId, v)}
+                            ariaLabel={`Target yield for ${row.plantName}`}
+                          />
+                          {yieldUnit && (
+                            <YieldUnitLabel>{yieldUnit}</YieldUnitLabel>
+                          )}
+                        </YieldInputWrapper>
+                      ) : (
+                        <ConversionHint
+                          title="Plant has no yield data"
+                          style={{ cursor: 'help' }}
+                        >
+                          — no yield data
+                        </ConversionHint>
+                      )}
+                    </Td>
+                    <Td>
+                      <ConversionHint>
+                        {computedDrippers !== null
+                          ? `${computedDrippers.toLocaleString('en-US')} drippers`
+                          : '—'}
+                      </ConversionHint>
+                    </Td>
+                    <Td>
+                      <IconBtn
+                        type="button"
+                        onClick={() => onRemoveRow(row.plantDataId)}
+                        aria-label={`Remove ${row.plantName}`}
+                        title="Remove"
+                      >
+                        🗑️
+                      </IconBtn>
+                    </Td>
+                  </tr>
+                );
+              })}
             </tbody>
           </CropTable>
         )}
@@ -743,6 +1033,12 @@ function CropListPanel({
 
 interface OutputPanelProps {
   result: CalculateResponse | null;
+  /**
+   * Maps plantDataId → yieldInfo so the result panel can compute per-crop
+   * estimated yield and a grand-total yield from the calculation rows.
+   * Sourced from `rows` at calculate time (backend response doesn't carry it).
+   */
+  yieldInfoByPlant: Record<string, YieldWasteInfo | undefined>;
 }
 
 /**
@@ -794,7 +1090,7 @@ function aggregatePerInput(result: CalculateResponse): PerInputAgg[] {
   );
 }
 
-function OutputPanel({ result }: OutputPanelProps) {
+function OutputPanel({ result, yieldInfoByPlant }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<'perCrop' | 'perInput'>('perCrop');
   const [openCrops, setOpenCrops] = useState<Set<string>>(new Set());
 
@@ -898,6 +1194,9 @@ function OutputPanel({ result }: OutputPanelProps) {
         {/* Per-crop results */}
         {activeTab === 'perCrop' && result.perCrop.map((crop) => {
           const isOpen = openCrops.has(crop.plantDataId);
+          const yi = yieldInfoByPlant[crop.plantDataId];
+          const estYield = drippersToYield(crop.points, yi);
+          const yieldUnit = yi?.yieldUnit ?? '';
           return (
             <CropResultBlock key={crop.plantDataId}>
               <CropResultHeader
@@ -909,6 +1208,9 @@ function OutputPanel({ result }: OutputPanelProps) {
                   <strong>{crop.plantName}</strong>
                   <CropMeta>
                     <span>{crop.points.toLocaleString('en-US')} point{crop.points !== 1 ? 's' : ''}</span>
+                    <span>
+                      {estYield !== null ? `~${fmtYield(estYield)} ${yieldUnit}` : '—'}
+                    </span>
                     <span>{crop.cycleDays} days</span>
                     <CropSubtotal>
                       {crop.subtotalCost != null
@@ -954,20 +1256,47 @@ function OutputPanel({ result }: OutputPanelProps) {
           );
         })}
 
-        {/* Grand Total */}
-        <GrandTotalRow>
-          <GrandTotalLabel>Grand Total</GrandTotalLabel>
-          <GrandTotalValue>
-            {hasNoPrices ? (
-              <span title="Set prices in the Price Book to see total cost">
-                —{' '}
-                <NoPriceNote>Set prices to see cost</NoPriceNote>
-              </span>
-            ) : (
-              `AED ${fmtUpTo2(grandTotal!)}`
-            )}
-          </GrandTotalValue>
-        </GrandTotalRow>
+        {/* Grand Totals — two side-by-side boxes */}
+        {(() => {
+          // Reason: sum estimated yield across crops, grouped by yieldUnit.
+          // Today every plant is kg so this collapses to a single line, but
+          // the grouping keeps the display sane if a non-kg plant ever appears.
+          const yieldByUnit: Record<string, number> = {};
+          for (const crop of result.perCrop) {
+            const yi = yieldInfoByPlant[crop.plantDataId];
+            const est = drippersToYield(crop.points, yi);
+            if (est === null || !yi) continue;
+            yieldByUnit[yi.yieldUnit] = (yieldByUnit[yi.yieldUnit] ?? 0) + est;
+          }
+          const yieldParts = Object.entries(yieldByUnit)
+            .map(([unit, total]) => `~${fmtYield(total)} ${unit}`)
+            .join(' + ');
+          return (
+            <GrandTotalsGrid>
+              <GrandTotalBox $variant="yield">
+                <GrandTotalBoxLabel>Total Yield</GrandTotalBoxLabel>
+                <GrandTotalBoxValue $variant="yield">
+                  {yieldParts || '—'}
+                </GrandTotalBoxValue>
+              </GrandTotalBox>
+              <GrandTotalBox $variant="cost">
+                <GrandTotalBoxLabel>Total Fertigation Cost</GrandTotalBoxLabel>
+                <GrandTotalBoxValue $variant="cost">
+                  {hasNoPrices ? (
+                    <span title="Set prices in the Price Book to see total cost">
+                      —
+                    </span>
+                  ) : (
+                    `AED ${fmtUpTo2(grandTotal!)}`
+                  )}
+                </GrandTotalBoxValue>
+                {hasNoPrices && (
+                  <NoPriceNote>Set prices to see cost</NoPriceNote>
+                )}
+              </GrandTotalBox>
+            </GrandTotalsGrid>
+          );
+        })()}
       </PanelBody>
     </Panel>
   );
@@ -975,26 +1304,141 @@ function OutputPanel({ result }: OutputPanelProps) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+// Reason: per-user keys so multiple users on the same browser don't share state
+const draftKey = (userId: string) => `fertCalc.draft.${userId}`;
+const modeKey = (userId: string) => `fertCalc.mode.${userId}`;
+
 export function FertilizerCostCalculator() {
+  const { user } = useAuthStore();
   const [rows, setRows] = useState<CropListRow[]>([]);
   const [result, setResult] = useState<CalculateResponse | null>(null);
   const [activeListId, setActiveListId] = useState<string | null>(null);
+  const [activeListName, setActiveListName] = useState<string | null>(null);
   const [manageListsOpen, setManageListsOpen] = useState(false);
   const [priceBookOpen, setPriceBookOpen] = useState(false);
+  // Reason: tracks which user.userId we have *finished* loading the draft for.
+  // The save effect must not run until this matches the current user, otherwise
+  // stale empty state from initial render would clobber the just-loaded draft
+  // in the same commit cycle (same-render effect ordering race).
+  const [draftLoadedForUser, setDraftLoadedForUser] = useState<string | null>(null);
+
+  // Mode preference — loaded immediately from localStorage (no async needed)
+  const [mode, setMode] = useState<CropInputMode>(() => {
+    if (!user?.userId) return 'dripper';
+    try {
+      const stored = localStorage.getItem(modeKey(user.userId));
+      return stored === 'yield' ? 'yield' : 'dripper';
+    } catch {
+      return 'dripper';
+    }
+  });
+
+  // Restore draft on mount (per-user). Re-runs if user.userId transitions.
+  useEffect(() => {
+    if (!user?.userId) {
+      setDraftLoadedForUser(null);
+      return;
+    }
+    // Reload mode preference in case user changed since initial render
+    try {
+      const stored = localStorage.getItem(modeKey(user.userId));
+      setMode(stored === 'yield' ? 'yield' : 'dripper');
+    } catch {
+      // ignore
+    }
+    try {
+      const raw = localStorage.getItem(draftKey(user.userId));
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (Array.isArray(draft.rows)) setRows(draft.rows);
+        if (typeof draft.activeListId === 'string' || draft.activeListId === null) {
+          setActiveListId(draft.activeListId);
+        }
+        if (typeof draft.activeListName === 'string' || draft.activeListName === null) {
+          setActiveListName(draft.activeListName);
+        }
+      } else {
+        // Reason: no draft for this user — explicitly clear any leftover state
+        // (e.g., from a prior session of a different user on the same browser)
+        setRows([]);
+        setActiveListId(null);
+        setActiveListName(null);
+      }
+    } catch {
+      // Reason: corrupt draft — discard, no-op
+    }
+    setDraftLoadedForUser(user.userId);
+  }, [user?.userId]);
+
+  // Persist draft on rows / activeListId change.
+  // Gate: only run AFTER load has completed for the current user.userId, otherwise
+  // the same-commit ordering race could clobber the just-loaded draft with empty state.
+  useEffect(() => {
+    if (!user?.userId || draftLoadedForUser !== user.userId) return;
+    const key = draftKey(user.userId);
+    if (rows.length === 0 && activeListId === null) {
+      localStorage.removeItem(key);
+      return;
+    }
+    try {
+      localStorage.setItem(key, JSON.stringify({ rows, activeListId, activeListName }));
+    } catch {
+      // Reason: localStorage quota or disabled — silently ignore
+    }
+  }, [rows, activeListId, activeListName, draftLoadedForUser, user?.userId]);
 
   const calculateMutation = useCalculate();
   const exportMutation = useExportXlsx();
   const importMutation = useImportXlsx();
   const downloadTemplateMutation = useDownloadImportTemplate();
-  const { data: savedListsData } = useSavedLists();
+  // Reason: page-level only needs the total count for the badge — fetch a tiny first page.
+  const { data: savedListsData } = useSavedLists({ page: 1, size: 1 });
   const createListMutation = useCreateSavedList();
   const updateListMutation = useUpdateSavedList();
   const deleteListMutation = useDeleteSavedList();
 
-  const savedLists = savedListsData ?? [];
+  const totalSavedLists = savedListsData?.total ?? 0;
+
+  // Persist mode preference per user and convert all rows in place.
+  const handleModeChange = (nextMode: CropInputMode) => {
+    if (!user?.userId) return;
+    try {
+      localStorage.setItem(modeKey(user.userId), nextMode);
+    } catch {
+      // ignore
+    }
+    setRows((prev) =>
+      prev.map((row) => {
+        if (nextMode === 'yield') {
+          // Dripper → Yield: pre-populate targetYield from current points
+          const equiv = drippersToYield(row.points, row.yieldInfo);
+          return { ...row, targetYield: equiv ?? undefined };
+        } else {
+          // Yield → Dripper: convert current targetYield back to points
+          if (row.targetYield !== undefined && row.yieldInfo) {
+            const drippers = yieldToDrippers(row.targetYield, row.yieldInfo);
+            return { ...row, points: drippers ?? row.points, targetYield: undefined };
+          }
+          return { ...row, targetYield: undefined };
+        }
+      })
+    );
+    setMode(nextMode);
+  };
 
   const handleAddRow = (plant: PlantDataOption) => {
-    setRows((prev) => [...prev, { ...plant, points: 1 }]);
+    // Embed yieldInfo at pick time — used by Yield Mode for conversion without extra fetches.
+    setRows((prev) => [
+      ...prev,
+      {
+        plantDataId: plant.plantDataId,
+        plantName: plant.plantName,
+        hasFertigationSchedule: plant.hasFertigationSchedule,
+        yieldInfo: plant.yieldInfo,
+        points: 1,
+        targetYield: undefined,
+      },
+    ]);
   };
 
   const handleRemoveRow = (plantDataId: string) => {
@@ -1003,7 +1447,27 @@ export function FertilizerCostCalculator() {
 
   const handleUpdatePoints = (plantDataId: string, points: number) => {
     setRows((prev) =>
-      prev.map((r) => (r.plantDataId === plantDataId ? { ...r, points } : r))
+      prev.map((r) => {
+        if (r.plantDataId !== plantDataId) return r;
+        // Keep targetYield in sync so switching back to Yield Mode reflects the edit
+        const newTarget = drippersToYield(points, r.yieldInfo) ?? r.targetYield;
+        return { ...r, points, targetYield: newTarget };
+      })
+    );
+  };
+
+  const handleUpdateTargetYield = (plantDataId: string, targetYield: number) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.plantDataId !== plantDataId) return r;
+        // Recompute points immediately so Calculate/Export/Save always read correct value
+        const drippers = yieldToDrippers(targetYield, r.yieldInfo);
+        return {
+          ...r,
+          targetYield,
+          points: drippers !== null ? drippers : r.points,
+        };
+      })
     );
   };
 
@@ -1030,26 +1494,37 @@ export function FertilizerCostCalculator() {
     });
     setRows(merged);
     setActiveListId(list.listId);
+    setActiveListName(list.name);
     // Hydrate names asynchronously
     hydratePlantNames(merged);
   };
 
   const hydratePlantNames = async (current: CropListRow[]) => {
-    const missing = current.filter((r) => r.plantName === r.plantDataId);
+    // Reason: hydrate rows that only have plantDataId as their name (just loaded from a
+    // saved list). Also pull yieldInfo from the same response so Yield Mode works without
+    // any extra fetches — one call per row, all in parallel.
+    const missing = current.filter((r) => r.plantName === r.plantDataId || !r.yieldInfo);
     if (missing.length === 0) return;
-    // Reason: parallel lookup. Each call goes through plantDataEnhancedApi which
-    // correctly unwraps the SuccessResponse envelope.
     const results = await Promise.all(
       missing.map((row) =>
         getPlantDataEnhancedById(row.plantDataId)
-          .then((p) => ({ plantDataId: row.plantDataId, plantName: p.plantName }))
+          .then((p) => ({
+            plantDataId: row.plantDataId,
+            plantName: p.plantName,
+            yieldInfo: p.yieldInfo,
+          }))
           .catch(() => null)
       )
     );
     setRows((prev) =>
       prev.map((r) => {
         const hit = results.find((x) => x && x.plantDataId === r.plantDataId);
-        return hit ? { ...r, plantName: hit.plantName } : r;
+        if (!hit) return r;
+        return {
+          ...r,
+          plantName: hit.plantName,
+          yieldInfo: hit.yieldInfo ?? r.yieldInfo,
+        };
       })
     );
   };
@@ -1057,16 +1532,22 @@ export function FertilizerCostCalculator() {
   const handleNewList = () => {
     setRows([]);
     setActiveListId(null);
+    setActiveListName(null);
     setResult(null);
   };
 
   const handleSaveList = (name: string) => {
     const items = rows.map((r) => ({ plantDataId: r.plantDataId, points: r.points }));
     if (activeListId) {
-      updateListMutation.mutate({ listId: activeListId, data: { name, items } });
+      updateListMutation.mutate({ listId: activeListId, data: { name, items } }, {
+        onSuccess: (updated) => setActiveListName(updated.name),
+      });
     } else {
       createListMutation.mutate({ name, items }, {
-        onSuccess: (newList) => setActiveListId(newList.listId),
+        onSuccess: (newList) => {
+          setActiveListId(newList.listId);
+          setActiveListName(newList.name);
+        },
       });
     }
   };
@@ -1121,7 +1602,10 @@ export function FertilizerCostCalculator() {
   const handleDeleteList = (listId: string) => {
     deleteListMutation.mutate(listId, {
       onSuccess: () => {
-        if (activeListId === listId) setActiveListId(null);
+        if (activeListId === listId) {
+          setActiveListId(null);
+          setActiveListName(null);
+        }
       },
     });
   };
@@ -1144,10 +1628,14 @@ export function FertilizerCostCalculator() {
         onAddRow={handleAddRow}
         onRemoveRow={handleRemoveRow}
         onUpdatePoints={handleUpdatePoints}
+        onUpdateTargetYield={handleUpdateTargetYield}
         onCalculate={handleCalculate}
         isCalculating={calculateMutation.isPending}
-        savedLists={savedLists}
+        mode={mode}
+        onModeChange={handleModeChange}
+        totalSavedLists={totalSavedLists}
         activeListId={activeListId}
+        activeListName={activeListName}
         onSaveList={handleSaveList}
         onManageLists={() => setManageListsOpen(true)}
         onNewList={handleNewList}
@@ -1161,15 +1649,23 @@ export function FertilizerCostCalculator() {
         isExporting={exportMutation.isPending}
       />
 
-      <OutputPanel result={result} />
+      <OutputPanel
+        result={result}
+        yieldInfoByPlant={Object.fromEntries(
+          rows.map((r) => [r.plantDataId, r.yieldInfo])
+        )}
+      />
 
       {manageListsOpen && (
         <ManageSavedListsModal
-          lists={savedLists}
           onClose={() => setManageListsOpen(false)}
-          onRename={(listId, name) =>
-            updateListMutation.mutate({ listId, data: { name } })
-          }
+          onRename={(listId, name) => {
+            updateListMutation.mutate({ listId, data: { name } }, {
+              onSuccess: () => {
+                if (activeListId === listId) setActiveListName(name);
+              },
+            });
+          }}
           onDelete={handleDeleteList}
           onLoad={handleLoadList}
           isWorking={deleteListMutation.isPending || updateListMutation.isPending}
@@ -1660,28 +2156,50 @@ const IngTd = styled.td`
   tr:last-child & { border-bottom: none; }
 `;
 
-const GrandTotalRow = styled.div`
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
+const GrandTotalsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-top: 24px;
   padding-top: 16px;
   border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
-const GrandTotalLabel = styled.span`
-  font-size: 16px;
+const GrandTotalBox = styled.div<{ $variant: 'yield' | 'cost' }>`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 22px;
+  border-radius: 12px;
+  background: ${({ $variant, theme }) =>
+    $variant === 'yield'
+      ? `${theme.colors.success}11`
+      : `${theme.colors.primary[500]}11`};
+  border: 1px solid
+    ${({ $variant, theme }) =>
+      $variant === 'yield'
+        ? `${theme.colors.success}33`
+        : `${theme.colors.primary[500]}33`};
+`;
+
+const GrandTotalBoxLabel = styled.span`
+  font-size: 13px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
-const GrandTotalValue = styled.span`
-  font-size: 28px;
+const GrandTotalBoxValue = styled.span<{ $variant: 'yield' | 'cost' }>`
+  font-size: 26px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ $variant, theme }) =>
+    $variant === 'yield' ? theme.colors.success : theme.colors.primary[500]};
+  line-height: 1.1;
 `;
 
 const NoPriceNote = styled.span`
@@ -1727,6 +2245,16 @@ const InlineRename = styled.div`
   flex: 1;
 `;
 
+const PaginationBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 0;
+  margin-top: 8px;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  gap: 12px;
+`;
+
 // ── Modal shared ───────────────────────────────────────────────────────────
 
 const Backdrop = styled.div`
@@ -1756,7 +2284,7 @@ const ModalHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 14px 24px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-shrink: 0;
 `;
@@ -1789,7 +2317,7 @@ const CloseButton = styled.button`
 `;
 
 const ModalBody = styled.div`
-  padding: 24px;
+  padding: 14px 24px 20px;
   overflow-y: auto;
   flex: 1;
 `;
@@ -1902,4 +2430,68 @@ const VisuallyHidden = styled.span`
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+`;
+
+// ── Mode toggle ────────────────────────────────────────────────────────────
+
+const ModeToggle = styled.div`
+  display: inline-flex;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+`;
+
+interface ModeToggleBtnProps {
+  $active: boolean;
+}
+
+const ModeToggleBtn = styled.button<ModeToggleBtnProps>`
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  border-right: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  font-family: inherit;
+  transition: background 150ms, color 150ms;
+  white-space: nowrap;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.primary[500] : 'transparent'};
+  color: ${({ $active, theme }) =>
+    $active ? '#fff' : theme.colors.textSecondary};
+
+  &:hover:not([aria-pressed='true']) {
+    background: ${({ theme }) => theme.colors.neutral[100]};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+`;
+
+// ── Yield mode row helpers ─────────────────────────────────────────────────
+
+/**
+ * Read-only hint shown next to the editable input in both modes.
+ * Renders the auto-computed value (e.g. "~12.5 kg" or "250 drippers").
+ */
+const ConversionHint = styled.span`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  white-space: nowrap;
+`;
+
+const YieldInputWrapper = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const YieldUnitLabel = styled.span`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  white-space: nowrap;
 `;

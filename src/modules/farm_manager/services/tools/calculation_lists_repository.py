@@ -6,9 +6,10 @@ Each list belongs to an organisation and was created by a user.
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from uuid import UUID, uuid4
 import logging
+import re
 
 from ...services.database import farm_db
 from ...models.tools.calculation_list import (
@@ -66,22 +67,44 @@ class CalculationListsRepository:
         return calc_list
 
     @staticmethod
-    async def list_all(organization_id: UUID) -> List[CalculationList]:
+    async def list_paginated(
+        organization_id: UUID,
+        page: int = 1,
+        size: int = 20,
+        search: Optional[str] = None,
+    ) -> Tuple[List[CalculationList], int]:
         """
-        List all saved lists for an organisation, newest first.
+        List saved lists for an organisation, newest first, paginated and
+        optionally filtered by case-insensitive substring on `name`.
 
         Args:
             organization_id: Organisation scope.
+            page: 1-indexed page number.
+            size: Page size (max 200).
+            search: Optional case-insensitive name substring filter.
 
         Returns:
-            List of CalculationList objects.
+            (items_for_page, total_match_count)
         """
         db = farm_db.get_database()
-        cursor = db[COLLECTION].find(
-            {"organizationId": str(organization_id)}
-        ).sort("createdAt", -1)
-        docs = await cursor.to_list(length=None)
-        return [_from_doc(d) for d in docs]
+        query: Dict[str, Any] = {"organizationId": str(organization_id)}
+        if search and search.strip():
+            query["name"] = {
+                "$regex": re.escape(search.strip()),
+                "$options": "i",
+            }
+
+        total = await db[COLLECTION].count_documents(query)
+        skip = max(0, (page - 1) * size)
+        cursor = (
+            db[COLLECTION]
+            .find(query)
+            .sort("createdAt", -1)
+            .skip(skip)
+            .limit(size)
+        )
+        docs = await cursor.to_list(length=size)
+        return [_from_doc(d) for d in docs], total
 
     @staticmethod
     async def get_by_id(

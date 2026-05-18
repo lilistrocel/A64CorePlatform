@@ -655,6 +655,7 @@ export interface FertigationIngredient {
 export interface CustomApplication {
   day: number;
   ingredients: FertigationIngredient[];
+  notes?: string;
 }
 
 export interface FertigationRule {
@@ -794,6 +795,8 @@ export interface PlantDataEnhancedUpdate {
   // 12. Data Attribution
   contributor?: string;
   targetRegion?: string;
+  // 13. Fertigation Schedule (editor modal uses this field)
+  fertigationSchedule?: FertigationSchedule;
   // Note: isActive is NOT updatable - only set at creation
 }
 

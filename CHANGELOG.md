@@ -5,6 +5,119 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-05-18
+
+**Type:** Minor Release — Fertilizer Cost Calculator (new Tools module), Plant Library Fertigation Schedule Editor, Yield Mode toggle, P&L Dashboard integration, and extensive UX polish/bug fixes.
+
+**Author: Viet Anh**
+
+### Added
+
+#### A. Fertilizer Cost Calculator — New Tools Module (Backend)
+
+- 3 new MongoDB collections with indexes: `fertilizer_chemicals`, `fertilizer_price_overrides`, `fertilizer_calculation_lists`.
+- 7 new Pydantic model files under `src/modules/farm_manager/models/tools/`: `FertilizerChemical`, `PriceOverride`, `ResolvedPrice`, `CalculationList`, `CalculateRequest`, `CalculateResponse`, `ParsedImport`.
+- 6 new service files under `src/modules/farm_manager/services/tools/`: `ChemicalsRepository`, `ChemicalsService` (archive-aware discovery), `PriceBook`, `FertilizerCalculator` (calculation engine), `ExcelHandler`, `CalculationListsRepository`.
+- New API router `src/api/v1/tools/chemicals.py` mounted at `/api/v1/farm/tools/chemicals`:
+  - `GET /chemicals` — paginated list, `?archived=true` includes soft-deleted rows.
+  - `POST /chemicals` — create a chemical (agronomist role).
+  - `PATCH /chemicals/{id}` — partial update; pass `archivedAt: null` to unarchive.
+  - `DELETE /chemicals/{id}` — soft-delete with 409 + dependents list when referenced by plant schedules; `?force=true` bypasses check.
+  - `POST /chemicals/discover` — admin/agronomist only; scans `plant_data_enhanced` fertigation schedules and auto-creates missing chemicals; archive-aware (will not resurrect archived names).
+- New API router `src/api/v1/tools/fertilizer_cost.py` mounted at `/api/v1/farm/tools/fertilizer-cost`:
+  - `GET /prices` — list all chemicals with resolved prices (override → inventory_input → none).
+  - `PATCH /prices/{id}` — upsert a price override (AED per unit).
+  - `DELETE /prices/{id}` — remove a price override.
+  - `POST /calculate` — runs cost calculation for a `[{plantDataId, points}]` list; walks fertigationSchedule (cards × rules × ingredients), aggregates by chemical, converts units (g→kg, ml→L), resolves prices, returns per-crop breakdown + grand total with warnings.
+  - `POST /export` — runs calculation and returns an `.xlsx` download (three sheets: Per Crop, Per Input, Warnings).
+  - `POST /import` — Excel upload; accepts "Points" or "Net Yield (kg)" column; converts yield → points using `yieldInfo`.
+  - `GET /import-template` — sample `.xlsx` demonstrating both import modes.
+  - `GET /lists` — paginated saved lists with `?page&size&search` (case-insensitive substring filter).
+  - `POST /lists` — save a new named calculation list.
+  - `PATCH /lists/{id}` — update list name or items.
+  - `DELETE /lists/{id}` — hard-delete a saved list.
+- Archive-aware calculation: ingredients referencing archived chemicals return `unitPrice/totalCost: null` and emit a per-ingredient warning rather than silently creating/skipping.
+- 25 unit tests + 13 integration tests for the backend tools module (all pass).
+
+#### B. Fertilizer Cost Calculator — Frontend (Frontend)
+
+- Sidebar nesting support added to `MainLayout.tsx`: `NavItemDef` now supports `children[]`, `defaultExpanded`, collapsible group rendering with chevron indicator, child-active parent highlighting, and per-user expansion state persisted in `localStorage` under `sidebar.expanded.{userId}`. This is the first use of the nested sidebar pattern.
+- New "Tools" sidebar group (visible to all authenticated users) containing two child routes:
+  - `/tools/fertilizer-calculator` — Fertilizer Cost Calculator.
+  - `/tools/chemicals` — Chemicals Catalog (CRUD gated to admin/agronomist/super_admin/moderator via `canDiscover`).
+- New file `frontend/user-portal/src/types/tools.ts`: full TypeScript interfaces for all tools API shapes.
+- New file `frontend/user-portal/src/services/toolsApi.ts`: service layer for all `/api/v1/farm/tools/` endpoints with proper `SuccessResponse` envelope unwrapping.
+- New file `frontend/user-portal/src/hooks/queries/useTools.ts`: TanStack Query hooks — `useChemicals`, `useDiscoverChemicals`, `usePrices`, `useUpdatePrice`, `useCalculate`, `useExportXlsx`, `useImportXlsx`, `useDownloadImportTemplate`, `useSavedLists`, `useCreateSavedList`, `useUpdateSavedList`, `useDeleteSavedList`.
+- New page `frontend/user-portal/src/pages/tools/ChemicalsCatalog.tsx`: full CRUD table, add/edit modal, archive with dependent-plants confirmation flow, show-archived toggle, search.
+- New page `frontend/user-portal/src/pages/tools/FertilizerCostCalculator.tsx`:
+  - Price Book opens as a wide modal from a dedicated header button (not inline); modal contains all chemicals with inline price editing and a "Manage Catalog" link.
+  - Crop List is the primary hero panel: crop typeahead (plants with no fertigation schedule greyed out), per-row points input, XLSX import/export.
+  - Tabbed Output panel: Per Crop tab (per-ingredient breakdown) and Per Input tab (aggregated by chemical across all crops).
+  - Grand total split into two side-by-side cards: Total Yield (dripper-weighted) and Total Fertigation Cost (AED) with distinct tints.
+  - Per-user draft persistence via `localStorage` keyed by `user.userId`.
+  - Saved Lists modal with debounced search + pagination + Load action per row.
+- Points input converted from `type="number"` to `type="text" inputMode="numeric"` for proper backspace/cursor behavior; cap raised to 10,000,000.
+- Result numbers formatted with `toLocaleString('en-US')` for thousands separators across qty, unit price, total cost, subtotals, and grand total.
+
+#### C. Plant Library — Fertigation Schedule Editor (Frontend)
+
+- New component `frontend/user-portal/src/components/farm/FertigationScheduleEditorModal.tsx`: nested CRUD editor for the full `FertigationSchedule` structure.
+  - **Cards**: name, growthStage, dayStart, dayEnd, isActive, notes, rules[]. Move-up/Move-down reorder arrows.
+  - **Rules**: name, type select (Interval ↔ Custom with discard confirmation warning), and type-specific fields.
+  - **Interval rule**: frequencyDays, activeDayStart/End, ingredients[].
+  - **Custom rule**: applications[] each with day + ingredients[] + notes.
+  - **Ingredients**: chemical name typeahead against the Chemicals Catalog with inline "+ Add to Catalog" form; category, defaultUnit, dosage-per-point (buffered text input supporting backspace + decimals + leading-zero stripping), unit select.
+  - Per-field validation; Save disabled when any field is invalid.
+  - `totalFertilizationDays` auto-derived on save as `max(card.dayEnd)`.
+  - Single `PATCH /api/v1/farm/plant-data-enhanced/{id}` on Save; cancel/X discards without saving.
+- `PlantDataDetail.tsx` Section 11 (Fertigation Schedule) now always renders for privileged roles (`admin`, `agronomist`, `super_admin`, `moderator`) with "Edit Schedule" or "Create Fertigation Schedule" CTA, regardless of whether a schedule exists. Non-privileged users see the section only when a schedule is already present (read-only).
+- `PlantDataLibrary.tsx` wired `onSaved` callback to refetch the selected plant and refresh the list grid after a schedule save.
+- `PlantDataEnhancedUpdate` type extended with `fertigationSchedule?: FertigationSchedule`. `CustomApplication` type extended with `notes?: string`.
+- Backdrop-click close on `PlantDataDetail` modal fixed to match the project's data-entry modal rule (X button only).
+
+#### D. Yield Mode Toggle (Frontend + Backend)
+
+- Frontend: `CropListPanel` segmented toggle switches between **Dripper Mode** (enter point counts directly; read-only Est. Yield column) and **Yield Mode** (enter target yield in kg; read-only Drippers column auto-computed from `yieldInfo`). Mode persisted per user in `localStorage` under `fertCalc.mode.<userId>`.
+- Mode switching converts all row values in place using `yieldPerDripper = yieldPerPlant × seedsPerPlantingPoint × (1 − waste/100)`.
+- `YieldInput` component: live thousands separators while typing, decimals preserved mid-edit.
+- `yieldInfo` hydrated on typeahead-pick and saved-list load (no extra HTTP round-trips).
+- Backend: `ExcelHandler.import_crops()` now accepts an optional "Net Yield (kg)" column. If Net Yield is positive, `points = ceil(netYield / yieldPerDripper)`. Both columns can coexist; Net Yield takes precedence. Old 2-column files (Crop Name + Points) remain fully backward-compatible.
+- `ExcelHandler.build_import_template()` updated to demonstrate both modes (Points column and Net Yield column with example rows and italic instructions).
+- `POST /export` Excel response includes an Est. Yield column on the Per Crop sheet and a TOTAL YIELD row. All numeric cells use the `#,##0.##` Excel number format for thousands separators.
+- 30 new unit tests for `ExcelHandler` (all pass), covering Points-only, Net Yield-only, both columns, clamp, old-format compatibility, and edge cases.
+
+#### E. P&L Dashboard Integration (Frontend)
+
+- `Dashboard.tsx` now surfaces the full P&L component family inline: `PnlFiltersBar`, `PnlKpiCards`, `PnlRevenueTrendChart`, `PnlBreakdownCharts`, `PnlStatementTable`, `PnlArAging`, `PnlRevenueConfidence`.
+- `PnlFiltersBar`: new optional `hideFarmingYear` prop so the embedded filter row can defer to a global year selector.
+
+### Changed
+
+- **Price Book UX**: Removed "Add Chemical" and "Discover from Plant Library" buttons from the Price Book panel; those actions live exclusively in the Chemicals Catalog. Added an empty-state message with a direct link to the Catalog when no chemicals exist yet.
+- **Price Book layout**: Promoted from an inline collapsible panel to a standalone modal opened by a "Price Book" button in the Fertilizer Calculator page header. Crop List panel becomes the primary hero content.
+- **Saved Lists modal**: tightened header padding (20 → 14 px) and body top padding (24 → 14 px). Added "New list" button to detach from a loaded list. Removed inline "Load a list" dropdown; modal has a Load action per row instead.
+- **Per Crop output**: added estimated yield slot between dripper count and cycle days.
+- **Grand total display**: split into two side-by-side boxes with distinct tints (Total Yield + Total Fertigation Cost).
+- **`PnlBreakdownCharts`** layout: `Row` uses `align-items: stretch` and a new `FarmPanel` wrapper for flush equal-height panels.
+- `UserManagementPage`: corrected HTTP method from `PUT` to `PATCH` on `/v1/users/{id}/role` (was returning 405).
+
+### Fixed
+
+- **MongoDB `$in` + `$regex` query error**: `$regex` objects cannot be nested inside `$in`. Fixed in `services/tools/price_book.py` and `chemicals_repository.py` to use `$or` with individual case-insensitive regex clauses.
+- **API envelope mismatch**: `services/toolsApi.ts` was reading `response.data` instead of `response.data.data`. All tools endpoints now unwrap the `SuccessResponse` envelope consistently, matching the codebase pattern used in `tasksApi`, `crmService`, and `plantDataEnhancedApi`.
+- **User identity field**: `useAuthStore` exposes `user.userId` at runtime, not `user.id`. All `user?.id` references in the Fertilizer Calculator draft persistence logic corrected to `user?.userId`. Applies to draft load, draft save, and mode persistence keys.
+- **Draft race condition**: When `user.userId` transitioned from `undefined` → known value, the save effect fired with stale empty state, erasing the just-loaded draft. Replaced boolean `draftLoaded` flag with `draftLoadedForUser: string | null` guard so the save effect only fires after the correct user's draft has been loaded.
+- **Dosage input UX in Fertigation editor**: switched from `type="number"` to a buffered text input so backspace clears the field, decimals can be entered mid-value, and leading zeros are stripped on blur.
+- **Fertigation editor parse error**: JSX comment placed as a sibling of the root `<Overlay>` element is invalid JSX. Converted to a JavaScript comment.
+- **Fertigation editor blank page**: missing `useEffect` import after adding `DosageInput`. Added to import list.
+- **"Update list" button stuck disabled**: when the user emptied a loaded list's items, the update button remained disabled with no way to clear the association. Fixed by adding a "New list" button that detaches from the loaded list state.
+- **Discard warning false positive on new custom rules**: `emptyRule()` was seeding a placeholder ingredient so switching a freshly-created rule from Interval to Custom would incorrectly warn about discarding 1 ingredient. Placeholder removed; warning text rewritten for clarity.
+- **Saved lists pagination**: `GET /fertilizer-cost/lists` extended with `?page&size&search` query params; the modal now manages search + page state locally.
+- **Plant data hydration on saved-list load**: `yieldInfo` is now hydrated alongside `plantName` in the same parallel `Promise.all` batch — no additional HTTP calls.
+- **Excel export number formatting**: all numeric cells in the exported `.xlsx` use the `#,##0.##` Excel number format so values render with thousands separators in Excel/LibreOffice.
+
+---
+
 ## [1.14.0] - 2026-05-07
 
 **Type:** Minor Release — Farm Detail + Block Monitor merge, Inventory/Stock split, per-batch harvest model, returned-inventory CRUD, sales order lifecycle (reservations, two-step delete, Report Return), Add Item modal with FIFO allocation, sales customer typeahead.

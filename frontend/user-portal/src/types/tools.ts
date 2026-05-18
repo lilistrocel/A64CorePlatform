@@ -4,6 +4,8 @@
  * These types mirror the backend Pydantic models served at /api/v1/farm/tools/.
  */
 
+import type { YieldWasteInfo } from './farm';
+
 // ─── Chemicals ───────────────────────────────────────────────────────────────
 
 export type ChemicalUnit = 'kg' | 'L';
@@ -117,6 +119,19 @@ export interface CreateSavedListRequest {
 
 export type UpdateSavedListRequest = Partial<CreateSavedListRequest>;
 
+export interface SavedListsQuery {
+  page?: number;
+  size?: number;
+  search?: string;
+}
+
+export interface PaginatedSavedLists {
+  items: SavedList[];
+  total: number;
+  page: number;
+  size: number;
+}
+
 // ─── UI-only: Crop typeahead entry ───────────────────────────────────────────
 
 export interface CropOption {
@@ -129,4 +144,19 @@ export interface CropOption {
 /** Row in the Crop List panel before calculation */
 export interface CropListRow extends CropOption {
   points: number;
+  /**
+   * Yield data hydrated from PlantDataEnhanced at typeahead-pick time or during
+   * saved-list hydration. Optional — older drafts / import rows may not have it.
+   * Used exclusively for Yield Mode conversion; never sent to the backend.
+   */
+  yieldInfo?: YieldWasteInfo;
+  /**
+   * Transient Yield-mode value. Stored in the localStorage draft so the user's
+   * in-progress yield entries survive a refresh. NOT persisted to saved lists on
+   * the backend — Calculate/Export/Save always read `points` instead.
+   */
+  targetYield?: number;
 }
+
+/** Panel-level input mode for the Crop List. */
+export type CropInputMode = 'dripper' | 'yield';

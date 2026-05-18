@@ -4730,7 +4730,7 @@ POST /api/v1/farm/inventory/returned/{inventoryId}/mark-waste
 ## Farm Tools — Fertilizer Cost Calculator
 
 **Base path:** `/api/v1/farm/tools`  
-**Status:** ✅ Implemented (v1.13.6+)  
+**Status:** ✅ Implemented (v1.15.0)  
 **Authentication:** Required (Bearer Token) for all endpoints
 
 ### Chemicals Catalog (`/api/v1/farm/tools/chemicals`)
@@ -4799,7 +4799,8 @@ or update the plant's fertigation schedule to use a different name.
 |--------|------|------|-------------|
 | POST | `/calculate` | Any user | Run calculation for a list of crops + irrigation points |
 | POST | `/export` | Any user | Run calculation and return `.xlsx` file |
-| POST | `/import` | Any user | Parse uploaded `.xlsx` and return crop list |
+| GET  | `/import-template` | Any user | Download sample `.xlsx` template with Crop Name / Points / Net Yield (kg) columns |
+| POST | `/import` | Any user | Parse uploaded `.xlsx` and return crop list (supports Points and/or Net Yield columns) |
 
 **POST /calculate request:**
 ```json
@@ -4857,7 +4858,40 @@ To resolve: find the archived chemical via `GET /chemicals?archived=true`, then 
 with `Content-Disposition: attachment; filename="fertilizer-cost-{date}.xlsx"`
 
 **POST /import** accepts `multipart/form-data` with a `.xlsx` file field named `file`.  
-Expected sheet: header row with "Crop Name" and "Points" columns.  
+Expected sheet: header row with "Crop Name" and "Points" columns, plus an optional
+"Net Yield (kg)" column (case-insensitive; unit suffix in parentheses is optional, e.g.
+"Net Yield", "net yield", "NET YIELD (KG)" are all accepted).
+
+**Column behaviour:**
+- **Points only** (classic mode): fill column B with a positive integer dripper count.
+- **Net Yield only** (yield mode): fill column C with a positive number (kg). The parser
+  auto-computes dripper points using the plant's `yieldInfo`:
+  `yieldPerDripper = yieldPerPlant × seedsPerPlantingPoint × (1 − expectedWastePercentage/100)`
+  `points = ceil(netYield / yieldPerDripper)`
+- **Both columns filled**: Net Yield takes precedence; the Points value is ignored.
+- **Neither column filled** (or both are blank/zero/negative): the row is skipped.
+
+**Row skip reasons:**
+| Reason | Trigger |
+|--------|---------|
+| `Unknown crop` | Crop name not found in plant_data_enhanced |
+| `Empty crop name` | Column A is blank |
+| `Net Yield is not a number` | Column C is a non-numeric string |
+| `Plant has invalid yield rate` | yieldPerDripper ≤ 0 (e.g. yieldPerPlant = 0 or waste = 100%) |
+| `Row has neither Points nor Net Yield` | Both columns absent/zero/negative |
+| `Points is not a number` | Column B is a non-numeric string (and Net Yield not usable) |
+| `Invalid points value: '...' (must be a positive integer)` | Points is a number but < 1 |
+
+**Clamping:** If computed or explicit points exceed 10,000,000 the value is clamped to
+10,000,000 and a warning is added. The row is NOT skipped.
+
+**Non-kg unit warning:** If a plant's `yieldInfo.yieldUnit` is not `"kg"`, an informational
+warning is appended (e.g. `"Crop 'X' has yieldUnit='lbs' — Net Yield input was interpreted as lbs"`).
+
+**Old-format files** (two columns only: Crop Name + Points) continue to work unchanged.
+
+Use `GET /import-template` to download a pre-filled sample file that demonstrates both modes.
+
 Returns:
 ```json
 {

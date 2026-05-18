@@ -1,6 +1,6 @@
 # Database Map
 
-> Generated: 2026-05-07 12:06 UTC  
+> Generated: 2026-05-18 11:32 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=db_model, layer=model)
 
 ## Overview

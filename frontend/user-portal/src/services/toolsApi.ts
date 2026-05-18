@@ -22,6 +22,8 @@ import type {
   SavedList,
   CreateSavedListRequest,
   UpdateSavedListRequest,
+  SavedListsQuery,
+  PaginatedSavedLists,
 } from '../types/tools';
 
 const BASE = '/v1/farm/tools';
@@ -154,9 +156,12 @@ export async function importCalculationXlsx(file: File): Promise<ImportResponse>
 
 // ─── Saved Lists ─────────────────────────────────────────────────────────────
 
-export async function getSavedLists(): Promise<SavedList[]> {
-  const response = await apiClient.get<Envelope<SavedList[]>>(
-    `${BASE}/fertilizer-cost/lists`
+export async function getSavedLists(
+  query?: SavedListsQuery
+): Promise<PaginatedSavedLists> {
+  const response = await apiClient.get<Envelope<PaginatedSavedLists>>(
+    `${BASE}/fertilizer-cost/lists`,
+    { params: query }
   );
   return response.data.data;
 }

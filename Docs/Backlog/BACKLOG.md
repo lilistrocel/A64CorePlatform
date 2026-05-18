@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-05-07
-> **Tasks:** 1 active · 0 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011 completed, moved to ARCHIVE.md)
+> **Updated:** 2026-05-11
+> **Tasks:** 1 active · 0 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014 completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -86,8 +86,6 @@
   7. User runs `stage7_finalize.py` → verify farm assignments, financial_summary
   8. Regenerate CodeMaps (new collections: sales_order_lines, sales_unmatched, purchase_register, financial_summary)
   9. Move task to ARCHIVE.md
-
----
 
 ## 🟢 Ready
 

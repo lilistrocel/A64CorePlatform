@@ -87,6 +87,15 @@ class ChemicalWithPrice(BaseModel):
     source: str
 
 
+class PaginatedSavedLists(BaseModel):
+    """Paginated saved-lists response for /lists."""
+
+    items: List[CalculationList]
+    total: int
+    page: int
+    size: int
+
+
 # ---------------------------------------------------------------------------
 # Price Book endpoints
 # ---------------------------------------------------------------------------
@@ -288,7 +297,23 @@ async def export_to_excel(
     """
     org_id = _require_org(current_user)
     calc_response = await calculate_for_crops(body.items, org_id)
-    xlsx_bytes = export_calculation(calc_response)
+
+    # Reason: load yieldInfo for each plantDataId in the calculation so the
+    # export can include estimated yield per crop + total yield row.
+    db = farm_db.get_database()
+    plant_ids = [str(c.plantDataId) for c in calc_response.perCrop]
+    yield_info_by_plant: dict = {}
+    if plant_ids:
+        cursor = db.plant_data_enhanced.find(
+            {"plantDataId": {"$in": plant_ids}},
+            {"plantDataId": 1, "yieldInfo": 1},
+        )
+        async for doc in cursor:
+            yi = doc.get("yieldInfo")
+            if yi:
+                yield_info_by_plant[doc["plantDataId"]] = yi
+
+    xlsx_bytes = export_calculation(calc_response, yield_info_by_plant)
     filename = f"fertilizer-cost-{date.today().isoformat()}.xlsx"
 
     return Response(
@@ -388,24 +413,35 @@ async def import_from_excel(
 
 @router.get(
     "/lists",
-    response_model=SuccessResponse[List[CalculationList]],
-    summary="List saved calculation lists",
+    response_model=SuccessResponse[PaginatedSavedLists],
+    summary="List saved calculation lists (paginated, searchable)",
 )
 async def list_saved_lists(
+    page: int = Query(1, ge=1, description="1-indexed page number"),
+    size: int = Query(20, ge=1, le=200, description="Page size (max 200)"),
+    search: Optional[str] = Query(None, description="Case-insensitive name substring filter"),
     current_user: CurrentUser = Depends(get_current_active_user),
 ) -> SuccessResponse:
     """
-    Return all saved fertilizer-cost lists for the authenticated user's organisation.
+    Return paginated saved fertilizer-cost lists for the authenticated user's org.
 
     Args:
+        page: 1-indexed page number.
+        size: Page size (1-200).
+        search: Optional name substring filter (case-insensitive).
         current_user: Authenticated user.
 
     Returns:
-        SuccessResponse with a list of CalculationList objects.
+        SuccessResponse with PaginatedSavedLists (items + total + page + size).
     """
     org_id = _require_org(current_user)
-    lists = await CalculationListsRepository.list_all(org_id)
-    return SuccessResponse(data=lists, message=f"{len(lists)} list(s) found")
+    items, total = await CalculationListsRepository.list_paginated(
+        org_id, page=page, size=size, search=search
+    )
+    return SuccessResponse(
+        data=PaginatedSavedLists(items=items, total=total, page=page, size=size),
+        message=f"{len(items)} of {total} list(s) returned",
+    )
 
 
 @router.post(
