@@ -32,6 +32,9 @@ COPY src/ ./src/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
+# Make the finance package importable as a top-level module
+ENV PYTHONPATH=/app/src
+
 # Run as non-root user
 RUN adduser --disabled-password --gecos "" financeuser && \
     chown -R financeuser:financeuser /app

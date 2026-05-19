@@ -23,12 +23,12 @@ services:
     image: mysql:8.0
     container_name: a64-mysql
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-finance_db}
-      - MYSQL_USER=${MYSQL_USER:-finance_user}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-finance_password}
+      - MYSQL_ROOT_PASSWORD=${FINANCE_MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${FINANCE_MYSQL_DATABASE:-finance_db}
+      - MYSQL_USER=${FINANCE_MYSQL_USER:-finance_user}
+      - MYSQL_PASSWORD=${FINANCE_MYSQL_PASSWORD:-finance_password}
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${FINANCE_MYSQL_PORT:-3307}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -43,7 +43,7 @@ services:
           "localhost",
           "-u",
           "root",
-          "--password=${MYSQL_ROOT_PASSWORD:-rootpassword}",
+          "--password=${FINANCE_MYSQL_ROOT_PASSWORD:-rootpassword}",
         ]
       interval: 10s
       timeout: 5s
@@ -71,9 +71,9 @@ services:
       - DEBUG=${DEBUG:-True}
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-finance_db}
-      - MYSQL_USER=${MYSQL_USER:-finance_user}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-finance_password}
+      - MYSQL_DATABASE=${FINANCE_MYSQL_DATABASE:-finance_db}
+      - MYSQL_USER=${FINANCE_MYSQL_USER:-finance_user}
+      - MYSQL_PASSWORD=${FINANCE_MYSQL_PASSWORD:-finance_password}
       # Must match main app SECRET_KEY exactly so JWT tokens are accepted
       - SECRET_KEY=${SECRET_KEY:-dev_secret_key_change_in_production}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -100,7 +100,7 @@ services:
 
 networks:
   a64core-network:
-    external: true
+    driver: bridge
 
 volumes:
   mysql_data:
