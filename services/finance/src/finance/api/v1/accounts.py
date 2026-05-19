@@ -129,6 +129,7 @@ async def create_account(
     account = GLAccount(**body.model_dump())
     db.add(account)
     await db.flush()
+    await db.refresh(account)
 
     return success(GLAccountResponse.model_validate(account))
 

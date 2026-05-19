@@ -82,6 +82,7 @@ async def create_cost_center(
     center = CostCenter(**body.model_dump())
     db.add(center)
     await db.flush()
+    await db.refresh(center)
 
     return success(CostCenterResponse.model_validate(center))
 

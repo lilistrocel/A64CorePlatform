@@ -94,4 +94,5 @@ async def upsert_customer_ext(
         message = "Customer finance extension updated."
 
     await db.flush()
+    await db.refresh(ext)
     return success(CustomerFinanceExtResponse.model_validate(ext), message=message)

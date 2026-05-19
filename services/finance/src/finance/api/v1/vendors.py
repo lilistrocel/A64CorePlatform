@@ -97,6 +97,7 @@ async def create_vendor(
     vendor = Vendor(**body.model_dump())
     db.add(vendor)
     await db.flush()
+    await db.refresh(vendor)
 
     return success(VendorResponse.model_validate(vendor))
 

@@ -97,6 +97,7 @@ async def create_period(
     period = FiscalPeriod(**body.model_dump())
     db.add(period)
     await db.flush()
+    await db.refresh(period)
 
     return success(FiscalPeriodResponse.model_validate(period))
 

@@ -86,6 +86,10 @@ async def create_company(
     company = CompanyCode(**body.model_dump())
     db.add(company)
     await db.flush()
+    # Reason: refresh to load server-generated columns (createdAt, updatedAt
+    # via DEFAULT CURRENT_TIMESTAMP) before Pydantic serialization, otherwise
+    # model_validate triggers an async lazy-load and the greenlet bridge errors.
+    await db.refresh(company)
 
     # Seed CoA and tax codes for the organization
     seed_result = await seed_company_defaults(db, body.organizationId, body.companyCode)

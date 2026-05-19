@@ -76,6 +76,7 @@ async def create_tax_code(
     tax_code = TaxCode(**body.model_dump())
     db.add(tax_code)
     await db.flush()
+    await db.refresh(tax_code)
 
     return success(TaxCodeResponse.model_validate(tax_code))
 
