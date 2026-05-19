@@ -1963,4 +1963,88 @@ The daily automatic expiry cron is disabled (function preserved at `cron/expiry_
 
 ---
 
+---
+
+## Finance Service (Week 1 Scaffold — T-016)
+
+### Overview
+
+The Finance Service is a **sibling FastAPI microservice** that runs alongside the main A64 API hub. It is **completely independent** — no Python imports cross between `src/` and `services/finance/`. The two services share only:
+
+1. **JWT secret** — the same `SECRET_KEY` environment variable, so tokens issued by the main app are accepted by the finance service without a MongoDB round-trip.
+2. **Docker network** — both services attach to `a64core-network`.
+
+### Technology
+
+| Component | Choice |
+|---|---|
+| Framework | FastAPI 0.111.1 + Uvicorn |
+| ORM | SQLAlchemy 2.x (async) |
+| MySQL driver | asyncmy |
+| Migrations | Alembic (sync env with pymysql) |
+| JWT | python-jose HS256 |
+| Config | Pydantic BaseSettings, env-vars only |
+
+### Directory Layout
+
+```
+services/finance/
+├── Dockerfile
+├── pyproject.toml
+├── alembic.ini
+├── README.md
+├── src/finance/
+│   ├── main.py          # FastAPI app bootstrap
+│   ├── config.py        # Settings (env-vars only)
+│   ├── api/v1/          # 8 router files
+│   ├── services/        # jwt_verifier.py, seed_loader.py
+│   ├── models/orm/      # SQLAlchemy ORM (8 tables)
+│   ├── models/schemas/  # Pydantic request/response models
+│   ├── db/              # session.py + seeds/default_coa.py
+│   ├── middleware/       # auth.py, error_handler.py, timing.py
+│   └── utils/responses.py
+├── alembic/             # Migration history
+└── tests/               # pytest suite (SQLite in-memory)
+```
+
+### MySQL Tables (8)
+
+| Table | Description |
+|---|---|
+| `company_codes` | Company entities with fiscal calendar |
+| `gl_accounts` | Chart of accounts (self-referential tree, 9 drawers) |
+| `fiscal_periods` | Fiscal periods 1–13 per year |
+| `tax_codes` | UAE VAT tax codes (S/Z/E/N/SR) |
+| `cost_centers` | Cost centre master data |
+| `vendors` | Vendor master with JSON bank details |
+| `customer_finance_ext` | Finance extension for MongoDB customers |
+| `audit_log` | Immutable mutation audit trail |
+
+### Activation
+
+Finance stack is **opt-in** via Docker profile — main services start without it:
+
+```bash
+# Main services only (no finance, no MySQL)
+docker compose up -d
+
+# With finance
+docker compose -f docker-compose.yml -f docker-compose.finance.yml --profile finance up -d
+docker compose -f docker-compose.yml -f docker-compose.finance.yml --profile finance \
+  exec finance alembic upgrade head
+```
+
+### Nginx Routing
+
+Nginx routes `/api/v1/finance/*` → `http://finance:8001/api/v1/finance/*` in both dev and prod configs. The finance upstream block is defined in both `nginx/nginx.dev.conf` and `nginx/nginx.prod.conf`.
+
+### Future Roadmap
+
+- **Week 3**: Posting engine, GL journal entries, `journal_lines` table, outbox event pattern
+- **Week 4**: VAT return reporting, P&L, balance sheet
+- **Week 5**: Accounts payable/receivable aging, vendor payment runs
+- **Week 6**: Consolidated statements, multi-company view
+
+---
+
 **REMEMBER: Always update this file when making architectural changes!**

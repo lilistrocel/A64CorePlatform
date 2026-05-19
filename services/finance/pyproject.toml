@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "finance"
+version = "0.1.0"
+description = "A64 Core Platform — Finance Service (Week 1 scaffold)"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Web framework
+    "fastapi==0.111.1",
+    "uvicorn[standard]==0.30.1",
+    # Database
+    "sqlalchemy==2.0.31",
+    "asyncmy==0.2.9",
+    "pymysql==1.1.1",
+    "alembic==1.13.2",
+    # JWT (same library as main app)
+    "python-jose[cryptography]==3.3.0",
+    # Validation
+    "pydantic==2.8.2",
+    "pydantic-settings==2.3.4",
+    "email-validator==2.2.0",
+    # HTTP client (for health checks)
+    "httpx==0.27.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==8.3.2",
+    "pytest-asyncio==0.23.8",
+    "httpx==0.27.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]

@@ -1,0 +1,107 @@
+# Finance service overlay.
+#
+# Adds two services on the existing a64core-network:
+#   mysql   — MySQL 8.0 primary store for the finance service
+#   finance — Finance FastAPI service (port 8001)
+#
+# Activation (opt-in via profile):
+#   docker compose -f docker-compose.yml -f docker-compose.finance.yml --profile finance up -d
+#
+# Main services start unchanged without this overlay:
+#   docker compose up -d
+#
+# Run migrations after first start:
+#   docker compose -f docker-compose.yml -f docker-compose.finance.yml --profile finance \
+#     exec finance alembic upgrade head
+
+version: '3.8'
+
+services:
+
+  # MySQL 8.0 — primary data store for the finance service
+  mysql:
+    image: mysql:8.0
+    container_name: a64-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-finance_db}
+      - MYSQL_USER=${MYSQL_USER:-finance_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-finance_password}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - a64core-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "--password=${MYSQL_ROOT_PASSWORD:-rootpassword}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    profiles:
+      - finance
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Finance FastAPI service
+  finance:
+    build:
+      context: ./services/finance
+      dockerfile: Dockerfile
+    container_name: a64-finance
+    ports:
+      - "${FINANCE_PORT:-8001}:8001"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=${DEBUG:-True}
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-finance_db}
+      - MYSQL_USER=${MYSQL_USER:-finance_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-finance_password}
+      # Must match main app SECRET_KEY exactly so JWT tokens are accepted
+      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_change_in_production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - a64core-network
+    healthcheck:
+      test:
+        ["CMD", "curl", "-f", "http://localhost:8001/api/v1/finance/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    profiles:
+      - finance
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  a64core-network:
+    external: true
+
+volumes:
+  mysql_data:
+    driver: local

@@ -1,0 +1,1 @@
+"""Finance Pydantic schemas package."""

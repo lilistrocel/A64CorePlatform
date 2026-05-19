@@ -1,11 +1,12 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 18 tasks
+> **Total completed:** 19 tasks
 
 ## 2026-05
 
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
+| T-016 | Finance Service — Week 1 scaffold (Viet Anh) | Backend | 2026-05-19 | ✅ |
 | T-002 | Fertilizer Cost Calculator — Backend (Viet Anh) | Backend | 2026-05-07 | ✅ |
 | T-003 | Fertilizer Cost Calculator — Frontend (Viet Anh) | Frontend | 2026-05-07 | ✅ |
 | T-011 | Fertilizer Calculator UI — Price Book → modal (Viet Anh) | Frontend | 2026-05-07 | ✅ |
@@ -17,6 +18,34 @@
 | T-012 | Plant Library — Fertigation Schedule editor (Viet Anh) | Frontend | 2026-05-08 | ✅ |
 | T-014 | Fert Calculator — Yield Mode (UI) (Viet Anh) | Frontend | 2026-05-11 | ✅ |
 | T-013 | Fert Calculator — Yield Mode (Excel) (Viet Anh) | Backend | 2026-05-11 | ✅ |
+
+### T-016 | Finance Service — Week 1 scaffold (Viet Anh)
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-05-19
+- **Author:** Viet Anh
+- **Description:** Full Week 1 scaffold for the A64 Finance Service — standalone FastAPI microservice with MySQL/Alembic, JWT verification (no MongoDB), master-data CRUD, seed CoA (~208 accounts), and opt-in Docker profile.
+- **Result:**
+  - **New service:** `services/finance/` — 60+ files
+    - `Dockerfile`, `pyproject.toml`, `alembic.ini`, `README.md`
+    - `src/finance/main.py` — FastAPI app, port 8001
+    - `src/finance/config.py` — Pydantic settings, env-vars only, `SECRET_KEY` matches main app
+    - `src/finance/api/v1/` — 8 routers: health, company, accounts, periods, tax_codes, cost_centers, vendors, customer_ext
+    - `src/finance/models/orm/models.py` — 8 SQLAlchemy 2.x ORM tables (company_codes, gl_accounts, fiscal_periods, tax_codes, cost_centers, vendors, customer_finance_ext, audit_log)
+    - `src/finance/models/schemas/` — 7 Pydantic schema files
+    - `src/finance/services/jwt_verifier.py` — token-only JWT verification, no MongoDB
+    - `src/finance/services/seed_loader.py` — idempotent CoA + tax code seeder
+    - `src/finance/db/seeds/default_coa.py` — 208 seed accounts across 9 drawers + 5 tax codes
+    - `alembic/versions/001_initial_master_data.py` — creates all 8 tables
+    - `alembic/versions/002_indexes.py` — covering indexes
+    - `tests/` — 23 tests (pytest + aiosqlite in-memory), all passing
+  - **New file:** `docker-compose.finance.yml` — overlay with mysql:8.0 + finance services, both on `finance` profile
+  - **Updated:** `nginx/nginx.dev.conf` — finance upstream + `/api/v1/finance/` location block
+  - **Updated:** `nginx/nginx.prod.conf` — same updates
+  - **Updated:** `Docs/1-Main-Documentation/System-Architecture.md` — Finance Service section
+  - **Updated:** `Docs/1-Main-Documentation/API-Structure.md` — all finance endpoints
+- **Verification:** 23/23 tests pass (SQLite in-memory). Docker build requires `asyncmy` + `pymysql` deps (in Dockerfile).
+
+---
 
 ### T-014 | Fert Calculator — Yield Mode (UI) (Viet Anh)
 - **Category:** Frontend · **Priority:** P1

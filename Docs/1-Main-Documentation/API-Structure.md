@@ -4911,3 +4911,110 @@ Returns:
 | POST | `/lists` | Any user | Save a new named list |
 | PATCH | `/lists/{listId}` | Any user | Update list name or items |
 | DELETE | `/lists/{listId}` | Any user | Hard-delete a saved list |
+
+---
+
+## Finance Service Endpoints
+
+Base path: `/api/v1/finance`
+
+Service: `finance:8001` (sibling microservice, opt-in via `--profile finance`)
+
+Docs UI: `http://localhost:8001/api/v1/finance/docs`
+
+### Public Endpoints (no auth)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/finance/health` | Liveness probe — always 200 |
+| GET | `/api/v1/finance/ready` | Readiness probe — checks MySQL |
+
+### Companies
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/finance/companies` | finance roles | List all company codes |
+| POST | `/api/v1/finance/companies` | finance_admin | Create company + seed CoA (~208 accounts) + tax codes |
+| GET | `/api/v1/finance/companies/{companyCode}` | finance roles | Get single company |
+| PATCH | `/api/v1/finance/companies/{companyCode}` | finance_admin | Update company |
+
+### GL Accounts (Chart of Accounts)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/finance/accounts` | finance roles | List accounts (paginated, filterable by drawer/org) |
+| POST | `/api/v1/finance/accounts` | finance_admin | Create account |
+| GET | `/api/v1/finance/accounts/{accountId}` | finance roles | Get single account |
+| PATCH | `/api/v1/finance/accounts/{accountId}` | finance_admin | Update account |
+| DELETE | `/api/v1/finance/accounts/{accountId}` | finance_admin | Delete account (409 if control account) |
+
+### Fiscal Periods
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/finance/periods` | finance roles | List periods (filter by companyCode/year) |
+| POST | `/api/v1/finance/periods` | finance_admin | Create fiscal period |
+| PATCH | `/api/v1/finance/periods/{periodId}/close` | finance_admin | Close a period |
+| PATCH | `/api/v1/finance/periods/{periodId}/reopen` | finance_admin | Reopen a closed period |
+
+### Tax Codes
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/finance/tax-codes` | finance roles | List tax codes for an org |
+| POST | `/api/v1/finance/tax-codes` | finance_admin | Create tax code |
+| PATCH | `/api/v1/finance/tax-codes/{taxCode}` | finance_admin | Update tax code |
+
+### Cost Centres
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/finance/cost-centers` | finance roles | List cost centres for an org |
+| POST | `/api/v1/finance/cost-centers` | finance_admin | Create cost centre |
+| PATCH | `/api/v1/finance/cost-centers/{costCenterId}` | finance_admin | Update cost centre |
+
+### Vendors
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/finance/vendors` | finance roles | List vendors (paginated) |
+| POST | `/api/v1/finance/vendors` | finance_admin | Create vendor |
+| GET | `/api/v1/finance/vendors/{vendorId}` | finance roles | Get single vendor |
+| PATCH | `/api/v1/finance/vendors/{vendorId}` | finance_admin | Update vendor |
+
+### Customer Finance Extension
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/finance/customers/{customerId}/finance-ext` | finance roles | Get customer finance extension |
+| PUT | `/api/v1/finance/customers/{customerId}/finance-ext` | finance_admin, accountant | Upsert customer finance extension |
+
+### Role Permission Matrix
+
+| Role | Read | Write master data | Close/reopen periods |
+|------|------|-------------------|----------------------|
+| `auditor` | ✓ | ✗ | ✗ |
+| `accountant` | ✓ | customer-ext only | ✗ |
+| `finance_admin` | ✓ | ✓ | ✓ |
+| `admin` / `super_admin` | ✓ | ✓ | ✓ |
+
+### Finance Response Envelope
+
+Success:
+```json
+{
+  "data": { ... },
+  "message": "Optional message"
+}
+```
+
+Paginated:
+```json
+{
+  "items": [ ... ],
+  "total": 208,
+  "page": 1,
+  "size": 50,
+  "pages": 5
+}
+```
