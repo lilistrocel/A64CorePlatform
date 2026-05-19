@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev_secret_key_change_in_production"
     JWT_ALGORITHM: str = "HS256"
 
+    # Service-to-service shared secret for the outbox ingest endpoint.
+    # The consumer worker sends this in the X-Service-Secret header.
+    # CRITICAL: set a strong random value in production via env var.
+    FINANCE_INGESTION_SECRET: str = "dev-only-secret-change-in-prod"
+
     # Logging
     LOG_LEVEL: str = "INFO"
 
@@ -71,6 +76,10 @@ class Settings(BaseSettings):
             if self.SECRET_KEY == "dev_secret_key_change_in_production":
                 raise ValueError(
                     "SECRET_KEY must be overridden in production via environment variable."
+                )
+            if self.FINANCE_INGESTION_SECRET == "dev-only-secret-change-in-prod":
+                raise ValueError(
+                    "FINANCE_INGESTION_SECRET must be overridden in production via environment variable."
                 )
             if self.DEBUG:
                 raise ValueError("DEBUG must be False in production.")

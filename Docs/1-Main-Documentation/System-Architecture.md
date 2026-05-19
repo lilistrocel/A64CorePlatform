@@ -2038,12 +2038,112 @@ docker compose -f docker-compose.yml -f docker-compose.finance.yml --profile fin
 
 Nginx routes `/api/v1/finance/*` → `http://finance:8001/api/v1/finance/*` in both dev and prod configs. The finance upstream block is defined in both `nginx/nginx.dev.conf` and `nginx/nginx.prod.conf`.
 
+### Outbox Bridge (Week 3 — T-017)
+
+The outbox bridge is the messaging infrastructure between the main A64 app
+(MongoDB) and the finance service (MySQL).  It follows the **transactional
+outbox pattern**: events are written to MongoDB in the same logical write as
+the business document, then a separate consumer worker delivers them to the
+finance service.
+
+#### Flow
+
+```
+Main App (MongoDB)               Consumer Worker              Finance Service (MySQL)
+─────────────────────            ──────────────────           ──────────────────────
+Business Handler
+  │ OutboxWriter.publish()
+  ▼
+finance_outbox collection
+  status=pending
+  │
+  │ [poll every 5s]
+  ▼
+findOneAndUpdate
+  status=processing               POST /finance/events/ingest
+  │                     ──────►  X-Service-Secret header
+  │                               validate envelope + payload
+  │                               check outbox_events_processed
+  │                    ◄──────    200 {status: processed}
+  ▼
+  status=processed
+                                  outbox_events_processed row
+                                  (eventId PK — idempotency key)
+```
+
+#### Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `contracts/` | repo root | Shared Pydantic event schemas (installed in both main app and finance service) |
+| `src/modules/finance_bridge/` | main app | `OutboxWriter`, `OutboxRepository`, feature flag |
+| `services/finance_consumer/` | services/ | Consumer worker container (polls + delivers) |
+| `finance/api/v1/events.py` | finance service | `POST /api/v1/finance/events/ingest` |
+| `outbox_events_processed` | MySQL (finance) | Idempotency table, primary key = eventId |
+
+#### MongoDB collection: `finance_outbox`
+
+```
+{
+  _id, eventId (unique), eventType, organizationId, companyCode,
+  occurredAt, sourceUserId, sourceDocumentId,
+  payload (validated dict),
+  status: pending | processing | processed | failed,
+  attempts, lastError, lastAttemptAt, processedAt, createdAt
+}
+```
+
+Indexes: `(status, createdAt)` for polling; `eventId` unique for deduplication.
+
+#### Feature flag
+
+`FINANCE_OUTBOX_ENABLED=true` must be set on the main app container to
+activate event publishing.  When absent (default), `OutboxWriter.publish()`
+is a no-op — the main app works normally without the finance service.
+
+#### Service-to-service auth
+
+The consumer authenticates to the finance ingest endpoint via the
+`X-Service-Secret` header.  The value must match `FINANCE_INGESTION_SECRET`
+on both containers.  This is NOT a JWT — it never leaves the internal Docker
+network.
+
+Generate a production secret:
+
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
+
+#### Retry / failure handling
+
+| Outcome | Action |
+|---------|--------|
+| 200 processed | `status=processed` |
+| 200 already_processed | `status=processed` (idempotent) |
+| 4xx (bad payload) | `status=failed` immediately (no retry) |
+| 5xx / timeout | `attempts++`, `status=pending` (retry next cycle) |
+| attempts >= MAX_ATTEMPTS | `status=failed` (manual intervention required) |
+
+Default: 5 max attempts, 5-second poll interval, 300-second stale claim recovery.
+
+#### Supported event types (contracts package v0.1.0)
+
+`sales_order_shipped`, `purchase_received`, `harvest_recorded`,
+`inventory_waste`, `customer_payment`, `vendor_payment`, `customer_return`,
+`fertigation_consumed`, `opening_balance`, `manual_journal`
+
+#### Week 3 scope
+
+The ingest endpoint is a **stub** — it validates, deduplicates, and records
+receipt but does **not** create GL journal entries.  The posting engine
+ships in Week 4.
+
 ### Future Roadmap
 
-- **Week 3**: Posting engine, GL journal entries, `journal_lines` table, outbox event pattern
-- **Week 4**: VAT return reporting, P&L, balance sheet
-- **Week 5**: Accounts payable/receivable aging, vendor payment runs
-- **Week 6**: Consolidated statements, multi-company view
+- **Week 4**: Posting engine — wire business handlers to OutboxWriter; GL journal entries for each event type
+- **Week 5**: VAT return reporting, P&L, balance sheet
+- **Week 6**: Accounts payable/receivable aging, vendor payment runs
+- **Week 7**: Consolidated statements, multi-company view
 
 ---
 

@@ -1,14 +1,18 @@
 FROM python:3.11-slim
 
-# Install system dependencies for asyncmy (MySQL C extension not needed for pure-Python asyncmy)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Install contracts package first (shared schemas — must come before finance install)
+COPY contracts/ /app/contracts/
+RUN pip install --no-cache-dir -e /app/contracts
+
 # Copy project metadata first for layer caching
-COPY pyproject.toml ./
+COPY services/finance/pyproject.toml ./pyproject.toml
 
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -25,12 +29,14 @@ RUN pip install --no-cache-dir --upgrade pip && \
         email-validator==2.2.0 \
         httpx==0.27.0 \
         pytest==8.3.2 \
-        pytest-asyncio==0.23.8
+        pytest-asyncio==0.23.8 \
+        pytest-mock==3.14.0 \
+        aiosqlite==0.20.0
 
 # Copy application source
-COPY src/ ./src/
-COPY alembic/ ./alembic/
-COPY alembic.ini ./
+COPY services/finance/src/ ./src/
+COPY services/finance/alembic/ ./alembic/
+COPY services/finance/alembic.ini ./
 
 # Make the finance package importable as a top-level module
 ENV PYTHONPATH=/app/src

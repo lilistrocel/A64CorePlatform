@@ -1,8 +1,9 @@
 # Finance service overlay.
 #
-# Adds two services on the existing a64core-network:
-#   mysql   — MySQL 8.0 primary store for the finance service
-#   finance — Finance FastAPI service (port 8001)
+# Adds three services on the existing a64core-network:
+#   mysql            — MySQL 8.0 primary store for the finance service
+#   finance          — Finance FastAPI service (port 8001)
+#   finance_consumer — Outbox consumer worker (Week 3, no exposed port)
 #
 # Activation (opt-in via profile):
 #   docker compose -f docker-compose.yml -f docker-compose.finance.yml --profile finance up -d
@@ -13,6 +14,11 @@
 # Run migrations after first start:
 #   docker compose -f docker-compose.yml -f docker-compose.finance.yml --profile finance \
 #     exec finance alembic upgrade head
+#
+# Service-to-service secret:
+#   Set FINANCE_INGESTION_SECRET in your .env file.
+#   Default dev value: dev-only-secret-change-in-prod
+#   Generate a strong secret: python3 -c "import secrets; print(secrets.token_hex(32))"
 
 version: '3.8'
 
@@ -61,8 +67,8 @@ services:
   # Finance FastAPI service
   finance:
     build:
-      context: ./services/finance
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/finance/Dockerfile
     container_name: a64-finance
     ports:
       - "${FINANCE_PORT:-8001}:8001"
@@ -76,6 +82,8 @@ services:
       - MYSQL_PASSWORD=${FINANCE_MYSQL_PASSWORD:-finance_password}
       # Must match main app SECRET_KEY exactly so JWT tokens are accepted
       - SECRET_KEY=${SECRET_KEY:-dev_secret_key_change_in_production}
+      # Shared secret for outbox consumer → finance service auth
+      - FINANCE_INGESTION_SECRET=${FINANCE_INGESTION_SECRET:-dev-only-secret-change-in-prod}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
       mysql:
@@ -89,6 +97,39 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    profiles:
+      - finance
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Finance Outbox Consumer Worker (Week 3)
+  # Polls MongoDB finance_outbox → delivers to finance ingest endpoint
+  finance_consumer:
+    build:
+      context: .
+      dockerfile: services/finance_consumer/Dockerfile
+    container_name: a64-finance-consumer
+    environment:
+      - MONGODB_URL=${MONGODB_URL:-mongodb://mongodb:27017/a64core_db}
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-a64core_db}
+      - FINANCE_URL=http://finance:8001
+      - FINANCE_INGESTION_SECRET=${FINANCE_INGESTION_SECRET:-dev-only-secret-change-in-prod}
+      - CONSUMER_POLL_INTERVAL_SECONDS=${CONSUMER_POLL_INTERVAL_SECONDS:-5}
+      - CONSUMER_BATCH_SIZE=${CONSUMER_BATCH_SIZE:-50}
+      - CONSUMER_MAX_ATTEMPTS=${CONSUMER_MAX_ATTEMPTS:-5}
+      - CONSUMER_STALE_CLAIM_SECONDS=${CONSUMER_STALE_CLAIM_SECONDS:-300}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      finance:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks:
+      - a64core-network
     profiles:
       - finance
     restart: unless-stopped

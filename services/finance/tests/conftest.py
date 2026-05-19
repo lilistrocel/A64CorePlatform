@@ -31,6 +31,7 @@ from finance.models.orm.models import (  # noqa: E402, F401
     CustomerFinanceExt,
     FiscalPeriod,
     GLAccount,
+    OutboxEventsProcessed,
     TaxCode,
     Vendor,
 )

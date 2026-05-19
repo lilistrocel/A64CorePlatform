@@ -15,7 +15,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.v1 import accounts, company, cost_centers, customer_ext, health, periods, tax_codes, vendors
+from .api.v1 import accounts, company, cost_centers, customer_ext, events, health, periods, tax_codes, vendors
 from .config import settings
 from .middleware.error_handler import global_exception_handler
 from .middleware.timing import TimingMiddleware
@@ -67,6 +67,8 @@ app.include_router(tax_codes.router, prefix=_PREFIX)
 app.include_router(cost_centers.router, prefix=_PREFIX)
 app.include_router(vendors.router, prefix=_PREFIX)
 app.include_router(customer_ext.router, prefix=_PREFIX)
+# Week 3: Outbox bridge ingest endpoint (service-to-service, X-Service-Secret auth)
+app.include_router(events.router, prefix=_PREFIX)
 
 
 # ---- Startup / Shutdown ----

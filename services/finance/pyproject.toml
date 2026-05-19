@@ -25,13 +25,17 @@ dependencies = [
     "email-validator==2.2.0",
     # HTTP client (for health checks)
     "httpx==0.27.0",
+    # Shared finance event contracts (outbox bridge — installed from /app/contracts)
+    "a64-finance-contracts @ file:///app/contracts",
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest==8.3.2",
     "pytest-asyncio==0.23.8",
+    "pytest-mock==3.14.0",
     "httpx==0.27.0",
+    "aiosqlite==0.20.0",
 ]
 
 [tool.setuptools.packages.find]

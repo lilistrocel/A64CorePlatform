@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "a64-finance-contracts"
+version = "0.1.0"
+description = "A64 Finance — shared event contract schemas (main app ↔ finance service)"
+requires-python = ">=3.11"
+
+dependencies = [
+    "pydantic>=2.8,<3",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["contracts*"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]

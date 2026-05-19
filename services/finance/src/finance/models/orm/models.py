@@ -343,3 +343,43 @@ class AuditLog(Base):
     beforeJson = Column(JSON, nullable=True)
     afterJson = Column(JSON, nullable=True)
     timestamp = Column(DateTime, nullable=False, server_default=func.now(), index=True)
+
+
+class OutboxEventResultEnum(str, enum.Enum):
+    """Processing outcome for an outbox event."""
+
+    SUCCESS = "success"
+    SKIPPED = "skipped"
+    FAILED = "failed"
+
+
+class OutboxEventsProcessed(Base):
+    """
+    Idempotency table for the outbox bridge.
+
+    Every event the finance service receives is recorded here keyed on
+    eventId.  Before processing, the finance ingest endpoint checks this
+    table — if the eventId already exists it returns 'already_processed'
+    without running the posting logic again.
+
+    Rows are insert-only (no updates or deletes).
+    """
+
+    __tablename__ = "outbox_events_processed"
+
+    eventId = Column(String(36), primary_key=True)
+    eventType = Column(String(50), nullable=False)
+    organizationId = Column(String(36), nullable=False)
+    companyCode = Column(String(10), nullable=False)
+    occurredAt = Column(DateTime, nullable=False)
+    processedAt = Column(DateTime, nullable=False, server_default=func.now())
+    result = Column(
+        # Reason: values_callable forces SQLAlchemy to serialize using enum VALUES
+        # (lowercase 'success'/'skipped'/'failed') instead of the default NAMES
+        # ('SUCCESS'/'SKIPPED'/'FAILED'). The MySQL ENUM column was created with
+        # lowercase values in migration 003.
+        Enum(OutboxEventResultEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=OutboxEventResultEnum.SUCCESS,
+    )
+    errorMessage = Column(Text, nullable=True)

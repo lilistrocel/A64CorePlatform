@@ -1,11 +1,12 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 19 tasks
+> **Total completed:** 20 tasks
 
 ## 2026-05
 
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
+| T-017 | Finance Service — Week 3 outbox bridge (Viet Anh) | Backend + DevOps | 2026-05-19 | ✅ |
 | T-016 | Finance Service — Week 1 scaffold (Viet Anh) | Backend | 2026-05-19 | ✅ |
 | T-002 | Fertilizer Cost Calculator — Backend (Viet Anh) | Backend | 2026-05-07 | ✅ |
 | T-003 | Fertilizer Cost Calculator — Frontend (Viet Anh) | Frontend | 2026-05-07 | ✅ |
@@ -18,6 +19,23 @@
 | T-012 | Plant Library — Fertigation Schedule editor (Viet Anh) | Frontend | 2026-05-08 | ✅ |
 | T-014 | Fert Calculator — Yield Mode (UI) (Viet Anh) | Frontend | 2026-05-11 | ✅ |
 | T-013 | Fert Calculator — Yield Mode (Excel) (Viet Anh) | Backend | 2026-05-11 | ✅ |
+
+### T-017 | Finance Service — Week 3 outbox bridge (Viet Anh)
+- **Category:** Backend + DevOps · **Priority:** P1
+- **Completed:** 2026-05-19
+- **Author:** Viet Anh
+- **Description:** End-to-end outbox bridge infrastructure between main app (MongoDB) and finance service (MySQL). Manually triggerable demo event flows from insertion to processed state.
+- **Result:**
+  - **New package:** `contracts/` — shared Pydantic event schemas (10 event types, `EVENT_TYPE_REGISTRY`)
+  - **New module:** `src/modules/finance_bridge/` — `OutboxWriter`, `OutboxRepository`, `feature_flag` (FINANCE_OUTBOX_ENABLED gate)
+  - **New service:** `services/finance_consumer/` — consumer worker container (Motor + httpx, poll loop, exponential backoff, SIGTERM graceful shutdown)
+  - **Finance endpoint:** `POST /api/v1/finance/events/ingest` — service-to-service auth (X-Service-Secret), idempotency via `outbox_events_processed`, Week 3 stub (no GL posting)
+  - **Migration:** `003_outbox_events_processed.py` — `outbox_events_processed` table (eventId PK, 2 indexes)
+  - **ORM:** `OutboxEventsProcessed` model added to `services/finance/src/finance/models/orm/models.py`
+  - **Docker:** `docker-compose.finance.yml` updated — `finance_consumer` service + FINANCE_INGESTION_SECRET on both containers
+  - **Tests:** 7 ingest endpoint tests + 8 poller unit tests + 9 OutboxWriter unit tests = **24 tests, all passing**
+  - **Demo script:** `services/finance_consumer/scripts/demo_publish.py` + mongosh one-liner in README
+  - **Docs:** System-Architecture.md updated with Outbox Bridge subsection + ASCII sequence diagram
 
 ### T-016 | Finance Service — Week 1 scaffold (Viet Anh)
 - **Category:** Backend · **Priority:** P1
