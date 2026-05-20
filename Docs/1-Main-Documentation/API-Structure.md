@@ -5018,3 +5018,101 @@ Paginated:
   "pages": 5
 }
 ```
+
+---
+
+## Purchasing Master Data Endpoints (Phase 1A)
+
+All endpoints mount under `/api/v1/purchasing/`. Authentication via JWT Bearer.
+
+### Vendor Master
+
+| Method | Endpoint | Auth Roles | Description |
+|--------|----------|------------|-------------|
+| GET | `/purchasing/vendors` | All authenticated | Paginated list, search by name/code |
+| POST | `/purchasing/vendors` | procurement_officer+ | Create vendor (auto-generates code) |
+| GET | `/purchasing/vendors/{vendorId}` | All authenticated | Get single vendor |
+| PATCH | `/purchasing/vendors/{vendorId}` | procurement_officer+ | Partial update |
+| DELETE | `/purchasing/vendors/{vendorId}` | procurement_officer+ | Soft delete |
+
+**Query params (GET list):** `organization_id`, `page`, `per_page`, `search`, `is_active`
+
+**Validation rules:**
+- `trn` must be exactly 15 digits if supplied
+- `currencyCode` must be `AED` (v1 lock)
+- `creditLimit` must be ≥ 0
+- `vendorCode` unique per org (auto-generated as `VND-XXXXXX` if omitted)
+
+**Outbox event emitted on every write:** `vendor_changed`
+
+---
+
+### Purchase Item Master
+
+| Method | Endpoint | Auth Roles | Description |
+|--------|----------|------------|-------------|
+| GET | `/purchasing/purchase-items` | All authenticated | Paginated list, filter by itemType |
+| POST | `/purchasing/purchase-items` | procurement_officer+ | Create item |
+| GET | `/purchasing/purchase-items/{itemId}` | All authenticated | Get single item |
+| PATCH | `/purchasing/purchase-items/{itemId}` | procurement_officer+ | Partial update |
+| DELETE | `/purchasing/purchase-items/{itemId}` | procurement_officer+ | Soft delete |
+
+**itemType values:** `raw_material`, `consumable`, `service`, `fixed_asset_acquisition`
+
+**Outbox event emitted:** `purchase_item_changed`
+
+---
+
+### Payment Terms Master
+
+| Method | Endpoint | Auth Roles | Description |
+|--------|----------|------------|-------------|
+| GET | `/purchasing/payment-terms` | All authenticated | List all terms; seeds defaults on first access |
+| POST | `/purchasing/payment-terms` | admin, super_admin, finance_admin | Create custom terms |
+| PATCH | `/purchasing/payment-terms/{termsId}` | admin, super_admin, finance_admin | Update |
+| DELETE | `/purchasing/payment-terms/{termsId}` | admin, super_admin, finance_admin | Soft delete |
+
+**Seeded defaults (9):** NET15, NET30, NET45, NET60, NET90, COD, EOM, EOM15, EOM30
+
+**Outbox event emitted:** `payment_terms_changed` (finance logs receipt only)
+
+---
+
+## Finance Master Data Extension Endpoints (Phase 1A)
+
+All endpoints mount under `/api/v1/finance/master-data/`. JWT Bearer auth.
+
+### Vendor Finance Extension
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/master-data/vendor-ext` | List vendor finance ext records |
+| GET | `/master-data/vendor-ext/by-vendor/{vendorId}` | Get by main-app vendorId |
+| PUT | `/master-data/vendor-ext/by-vendor/{vendorId}` | Upsert (create or update) |
+| DELETE | `/master-data/vendor-ext/by-vendor/{vendorId}` | Detach finance ext |
+
+### Purchase Item Finance Extension
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/master-data/purchase-item-ext` | List item finance ext records |
+| GET | `/master-data/purchase-item-ext/by-item/{itemId}` | Get by main-app itemId |
+| PUT | `/master-data/purchase-item-ext/by-item/{itemId}` | Upsert |
+| DELETE | `/master-data/purchase-item-ext/by-item/{itemId}` | Detach |
+
+### Approval Rules
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/master-data/approval-rules` | List rules; filter by docType/companyCode |
+| POST | `/master-data/approval-rules` | Create rule |
+| PATCH | `/master-data/approval-rules/{ruleId}` | Update rule |
+| DELETE | `/master-data/approval-rules/{ruleId}` | Soft delete (isActive=false) |
+| GET | `/master-data/approval-rules/resolve` | Query: companyCode+docType+amount → returns matching rule |
+
+**Seeded defaults per company (4 rules):**
+- PR: always required → procurement_manager
+- PO: amount ≥ AED 10,000 → procurement_manager
+- AP_INVOICE: amount ≥ AED 10,000 → accountant
+- OUTGOING_PAYMENT: always required → finance_admin
+```

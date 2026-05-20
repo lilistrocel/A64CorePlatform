@@ -6,6 +6,7 @@
 
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
+| T-018 | Purchasing — Phase 1A master data (Viet Anh) | Backend + Frontend + Database | 2026-05-19 | pending Viet Anh |
 | T-017 | Finance Service — Week 3 outbox bridge (Viet Anh) | Backend + DevOps | 2026-05-19 | ✅ |
 | T-016 | Finance Service — Week 1 scaffold (Viet Anh) | Backend | 2026-05-19 | ✅ |
 | T-002 | Fertilizer Cost Calculator — Backend (Viet Anh) | Backend | 2026-05-07 | ✅ |

@@ -22,6 +22,13 @@ class UserRole(str, Enum):
     MODERATOR = "moderator"
     USER = "user"
     GUEST = "guest"
+    # Finance roles
+    ACCOUNTANT = "accountant"
+    FINANCE_ADMIN = "finance_admin"
+    AUDITOR = "auditor"
+    # Purchasing roles (Phase 1A)
+    PROCUREMENT_OFFICER = "procurement_officer"
+    PROCUREMENT_MANAGER = "procurement_manager"
 
 
 class UserBase(BaseModel):

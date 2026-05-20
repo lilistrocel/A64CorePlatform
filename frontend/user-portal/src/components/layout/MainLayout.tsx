@@ -64,6 +64,18 @@ const TOOLS_NAV_GROUP: NavItemDef = {
   ],
 };
 
+// Purchasing group — visible to procurement + admin roles
+const PURCHASING_NAV_GROUP: NavItemDef = {
+  icon: '🛒',
+  label: 'Purchasing',
+  defaultExpanded: false,
+  children: [
+    { to: '/purchasing/vendors', icon: '📋', label: 'Vendors' },
+    { to: '/purchasing/items', icon: '📦', label: 'Purchase Items' },
+    { to: '/purchasing/payment-terms', icon: '💳', label: 'Payment Terms' },
+  ],
+};
+
 // Admin-only navigation (super_admin role required)
 const ADMIN_NAV_ITEMS: NavItemDef[] = [
   { to: '/admin/users', icon: '🛡️', label: 'User Management' },
@@ -97,6 +109,7 @@ export function MainLayout() {
     // Default: honour defaultExpanded on each group
     return {
       Tools: TOOLS_NAV_GROUP.defaultExpanded ?? false,
+      Purchasing: PURCHASING_NAV_GROUP.defaultExpanded ?? false,
     };
   }, [storageKey]);
 
@@ -183,6 +196,15 @@ export function MainLayout() {
   const industryNavItems: NavItemDef[] =
     currentDivision?.industryType === 'mushroom' ? MUSHROOM_NAV : VEGETABLE_FRUITS_NAV;
 
+  // Roles that can see the Purchasing sidebar group
+  const PURCHASING_ROLES = new Set([
+    'procurement_officer',
+    'procurement_manager',
+    'admin',
+    'super_admin',
+    'finance_admin',
+  ]);
+
   // Build the full ordered navigation list
   const navItems: NavItemDef[] = useMemo(
     () => [
@@ -190,6 +212,8 @@ export function MainLayout() {
       ...industryNavItems,
       // Tools group — available to all users
       TOOLS_NAV_GROUP,
+      // Purchasing group — procurement + admin roles only
+      ...(PURCHASING_ROLES.has(user?.role ?? '') ? [PURCHASING_NAV_GROUP] : []),
       // AI Hub is super_admin only
       ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
         if (item.to === '/ai') return user?.role === 'super_admin';

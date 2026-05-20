@@ -14,6 +14,7 @@ Behaviour:
 """
 
 import logging
+import uuid
 from decimal import Decimal
 from typing import Optional
 
@@ -25,7 +26,7 @@ from ..db.seeds.default_coa import (
     DEFAULT_COA,
     DEFAULT_TAX_CODES,
 )
-from ..models.orm.models import GLAccount, TaxCode
+from ..models.orm.models import ApprovalRule, GLAccount, TaxCode
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +193,93 @@ async def seed_tax_codes(
     return inserted
 
 
+async def seed_approval_rules(
+    db: AsyncSession,
+    organization_id: str,
+    company_code: str,
+) -> int:
+    """
+    Seed four default approval rules for a newly created company.
+
+    Idempotent — skips if any rules already exist for (org, company).
+
+    Args:
+        db: Active SQLAlchemy async session.
+        organization_id: Target organisation.
+        company_code: Finance company code.
+
+    Returns:
+        Number of rules inserted (0 if already seeded).
+    """
+    from sqlalchemy import select as sa_select
+
+    # Idempotency: skip if already seeded
+    existing = await db.scalar(
+        sa_select(ApprovalRule.ruleId).where(
+            ApprovalRule.organizationId == organization_id,
+            ApprovalRule.companyCode == company_code,
+        ).limit(1)
+    )
+    if existing:
+        return 0
+
+    defaults = [
+        {
+            "docType": "PR",
+            "thresholdAmount": None,
+            "approverRole": "procurement_manager",
+            "alwaysRequired": True,
+            "priority": 100,
+            "notes": "Default — PRs always require procurement manager approval",
+        },
+        {
+            "docType": "PO",
+            "thresholdAmount": Decimal("10000.00"),
+            "approverRole": "procurement_manager",
+            "alwaysRequired": False,
+            "priority": 100,
+            "notes": "Default — POs over AED 10,000 require procurement manager approval",
+        },
+        {
+            "docType": "AP_INVOICE",
+            "thresholdAmount": Decimal("10000.00"),
+            "approverRole": "accountant",
+            "alwaysRequired": False,
+            "priority": 100,
+            "notes": "Default — AP invoices over AED 10,000 require accountant review",
+        },
+        {
+            "docType": "OUTGOING_PAYMENT",
+            "thresholdAmount": None,
+            "approverRole": "finance_admin",
+            "alwaysRequired": True,
+            "priority": 100,
+            "notes": "Default — all outgoing payments require finance admin approval",
+        },
+    ]
+
+    for rule_data in defaults:
+        rule = ApprovalRule(
+            ruleId=str(uuid.uuid4()),
+            organizationId=organization_id,
+            companyCode=company_code,
+            docType=rule_data["docType"],
+            thresholdAmount=rule_data["thresholdAmount"],
+            approverRole=rule_data["approverRole"],
+            alwaysRequired=rule_data["alwaysRequired"],
+            priority=rule_data["priority"],
+            isActive=True,
+            notes=rule_data["notes"],
+        )
+        db.add(rule)
+
+    logger.info(
+        "Seeded %d default approval rules for company=%s org=%s",
+        len(defaults), company_code, organization_id,
+    )
+    return len(defaults)
+
+
 async def seed_company_defaults(
     db: AsyncSession,
     organization_id: str,
@@ -200,16 +288,16 @@ async def seed_company_defaults(
     """
     Run all seeds for a newly created company.
 
-    Inserts CoA + tax codes in a single logical batch.
+    Inserts CoA + tax codes + approval rules in a single logical batch.
     The caller is responsible for committing the session.
 
     Args:
         db: Active SQLAlchemy async session.
         organization_id: Target organization.
-        company_code: Company code (for future period seeds).
+        company_code: Company code.
 
     Returns:
-        Dict with counts: {accounts_inserted, tax_codes_inserted}.
+        Dict with counts: {accounts_inserted, tax_codes_inserted, approval_rules_inserted}.
     """
     accounts_inserted = await seed_chart_of_accounts(db, organization_id, company_code)
 
@@ -222,8 +310,10 @@ async def seed_company_defaults(
     number_to_id = {row.accountNumber: row.accountId for row in result}
 
     tax_codes_inserted = await seed_tax_codes(db, organization_id, number_to_id)
+    approval_rules_inserted = await seed_approval_rules(db, organization_id, company_code)
 
     return {
         "accounts_inserted": accounts_inserted,
         "tax_codes_inserted": tax_codes_inserted,
+        "approval_rules_inserted": approval_rules_inserted,
     }

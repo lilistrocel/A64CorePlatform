@@ -353,6 +353,167 @@ class OutboxEventResultEnum(str, enum.Enum):
     FAILED = "failed"
 
 
+class AccountLevelEnum(str, enum.Enum):
+    """Hierarchical level of a GL account in the chart of accounts."""
+
+    DRAWER = "drawer"
+    TITLE = "title"
+    ACTIVE = "active"
+
+
+class AccountRoleEnum(str, enum.Enum):
+    """Functional role of a GL account for automated posting rules."""
+
+    POSTING = "posting"
+    BANK = "bank"
+    CASH = "cash"
+    RECONCILIATION = "reconciliation"
+    CLEARING = "clearing"
+    CONTRA = "contra"
+    REVENUE = "revenue"
+    EXPENSE = "expense"
+    OTHER = "other"
+
+
+class ValuationMethodEnum(str, enum.Enum):
+    """Inventory valuation method for purchase items."""
+
+    MOVING_AVERAGE = "MovingAverage"
+    STANDARD = "Standard"
+    FIFO = "FIFO"
+
+
+class ApprovalDocTypeEnum(str, enum.Enum):
+    """Document types that require approval."""
+
+    PR = "PR"
+    PO = "PO"
+    GRPO = "GRPO"
+    AP_INVOICE = "AP_INVOICE"
+    OUTGOING_PAYMENT = "OUTGOING_PAYMENT"
+    AP_CREDIT_NOTE = "AP_CREDIT_NOTE"
+    GOODS_ISSUE = "GOODS_ISSUE"
+
+
+class VendorFinanceExt(Base):
+    """
+    Vendor Finance Extension.
+
+    Finance-side attributes for vendors managed in the main app (MongoDB).
+    Created/updated automatically when vendor_changed events arrive via the
+    outbox bridge.  Finance-specific fields (reconciliationAccountId,
+    defaultExpenseAccountId) are NOT overwritten by subsequent vendor_changed
+    events — only the denormalized vendorCode is updated.
+    """
+
+    __tablename__ = "vendor_finance_ext"
+    __table_args__ = (
+        UniqueConstraint("organizationId", "vendorId", name="uk_vendor_finance_ext"),
+    )
+
+    extId = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organizationId = Column(String(36), nullable=False, index=True)
+    vendorId = Column(String(36), nullable=False)
+    vendorCode = Column(String(20), nullable=False)
+    reconciliationAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    defaultExpenseAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    creditTermsOverride = Column(String(20), nullable=True)
+    isActive = Column(Boolean, nullable=False, default=True)
+    notes = Column(Text, nullable=True)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+    updatedAt = Column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PurchaseItemFinanceExt(Base):
+    """
+    Purchase Item Finance Extension.
+
+    Finance-side attributes for purchase items managed in the main app.
+    Created/updated when purchase_item_changed events arrive.
+    Default account assignments are set at creation time based on itemType;
+    they are not overwritten by subsequent events.
+    """
+
+    __tablename__ = "purchase_item_finance_ext"
+    __table_args__ = (
+        UniqueConstraint("organizationId", "itemId", name="uk_purchase_item_finance_ext"),
+    )
+
+    extId = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organizationId = Column(String(36), nullable=False, index=True)
+    itemId = Column(String(36), nullable=False)
+    itemCode = Column(String(20), nullable=False)
+    inventoryAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    cogsAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    allocationAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+        comment="GRNI clearing account",
+    )
+    valuationMethod = Column(
+        Enum(ValuationMethodEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=ValuationMethodEnum.MOVING_AVERAGE,
+    )
+    taxCodeDefault = Column(String(5), nullable=True)
+    ifrsTag = Column(String(10), nullable=True)
+    isActive = Column(Boolean, nullable=False, default=True)
+    notes = Column(Text, nullable=True)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+    updatedAt = Column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ApprovalRule(Base):
+    """
+    Approval Rules.
+
+    Defines who must approve which document types and at what amount thresholds.
+    Seeded with four defaults per company code at company creation time.
+    """
+
+    __tablename__ = "approval_rules"
+
+    ruleId = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organizationId = Column(String(36), nullable=False, index=True)
+    companyCode = Column(String(10), nullable=False)
+    docType = Column(
+        Enum(ApprovalDocTypeEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+    )
+    thresholdAmount = Column(Numeric(15, 2), nullable=True)
+    """Null + alwaysRequired=True → always requires approval."""
+    approverRole = Column(String(50), nullable=False)
+    alwaysRequired = Column(Boolean, nullable=False, default=False)
+    priority = Column(Integer, nullable=False, default=100)
+    isActive = Column(Boolean, nullable=False, default=True)
+    notes = Column(Text, nullable=True)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+    updatedAt = Column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class OutboxEventsProcessed(Base):
     """
     Idempotency table for the outbox bridge.

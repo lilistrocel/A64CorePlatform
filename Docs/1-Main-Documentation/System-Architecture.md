@@ -2126,17 +2126,33 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 
 Default: 5 max attempts, 5-second poll interval, 300-second stale claim recovery.
 
-#### Supported event types (contracts package v0.1.0)
+#### Supported event types (contracts package v0.2.0)
 
+Original events:
 `sales_order_shipped`, `purchase_received`, `harvest_recorded`,
 `inventory_waste`, `customer_payment`, `vendor_payment`, `customer_return`,
 `fertigation_consumed`, `opening_balance`, `manual_journal`
 
+Phase 1A master data events:
+`vendor_changed`, `purchase_item_changed`, `payment_terms_changed`
+
+- `vendor_changed`: Emitted by main-app Purchasing module on every vendor create/update/soft-delete. Finance service creates/updates `vendor_finance_ext` with default AP reconciliation account (221000-001). Finance-specific fields (reconciliationAccountId, defaultExpenseAccountId) are NEVER overwritten by sync events — only the denormalized `vendorCode` is refreshed.
+- `purchase_item_changed`: Same pattern. Finance creates `purchase_item_finance_ext` with default inventory account from itemType mapping. GRNI clearing account (221000-099) set as `allocationAccountId`.
+- `payment_terms_changed`: Operations holds the master. Finance service logs receipt only; no ext table exists for payment terms.
+
+#### Master Data Extension Pattern (Phase 1A)
+
+The Purchasing module uses an **Option D split** architecture:
+- **Operations master (MongoDB)**: `vendors`, `purchase_items`, `payment_terms` collections in the main app hold all operational attributes.
+- **Finance ext (MySQL)**: `vendor_finance_ext`, `purchase_item_finance_ext` tables in the finance service hold finance-only attributes (GL account mappings, valuation method).
+- **Sync direction**: One-way only — Main app → Finance via outbox events. Finance-side fields can be edited directly via `/api/v1/finance/master-data/` endpoints.
+- **Non-overwrite rule**: When a `vendor_changed` event arrives for an existing vendor, only the denormalized `vendorCode` is updated. GL account assignments made by the accountant are preserved.
+
 #### Week 3 scope
 
-The ingest endpoint is a **stub** — it validates, deduplicates, and records
-receipt but does **not** create GL journal entries.  The posting engine
-ships in Week 4.
+The ingest endpoint is a **stub** for original event types — it validates, deduplicates, and records receipt but does **not** create GL journal entries.  The posting engine ships in Week 4.
+
+**Phase 1A master data handlers are ACTIVE** — `vendor_changed` and `purchase_item_changed` events create/update the finance ext tables immediately when processed by the consumer.
 
 ### Future Roadmap
 

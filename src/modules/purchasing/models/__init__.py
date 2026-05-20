@@ -1,0 +1,1 @@
+"""Purchasing Pydantic models."""

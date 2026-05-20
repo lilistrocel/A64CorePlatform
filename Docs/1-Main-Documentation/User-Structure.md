@@ -606,6 +606,17 @@ No backend changes are required by this feature.
 - PlantDataEnhancedUpdate type extended with fertigationSchedule field
 - CustomApplication type extended with optional notes field
 
+### v1.15.x - 2026-05-19 (Phase 1A Purchasing)
+
+New roles: `procurement_officer` (read/write vendor+item master), `procurement_manager` (same + designated PR/PO approver).
+
+New Purchasing sidebar group (visible to procurement + admin roles):
+- Vendors → `/purchasing/vendors` — paginated vendor list with search, create/edit modals, soft-delete
+- Purchase Items → `/purchasing/items` — paginated item list with type-filter chips, create/edit modals
+- Payment Terms → `/purchasing/payment-terms` — flat list, admin-only write, seeded on first visit
+
+Payment terms seeded automatically: NET15, NET30, NET45, NET60, NET90, COD, EOM, EOM15, EOM30.
+
 ### v1.14.0 - 2026-05-07
 - Added Tools sidebar group with Fertilizer Cost Calculator and Chemicals Catalog pages
 - Extended `NavItemDef` in `MainLayout.tsx` to support `children[]` and `defaultExpanded`

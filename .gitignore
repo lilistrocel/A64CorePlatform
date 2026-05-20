@@ -143,6 +143,9 @@ swagger-*.txt
 # SenseHub camera snapshots (synced from MCP hubs)
 data/sensehub_images/
 
+# MongoDB bind-mount data (migrated 2026-05-19 from named volume — never commit DB files)
+data/mongodb/
+
 # Database backups (local)
 backups/
 

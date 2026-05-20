@@ -15,7 +15,7 @@ The endpoint simply validates the event, checks idempotency, inserts into
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import ValidationError
@@ -24,7 +24,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...config import settings
 from ...db.session import get_db
-from ...models.orm.models import OutboxEventsProcessed, OutboxEventResultEnum
+from ...models.orm.models import (
+    GLAccount,
+    OutboxEventResultEnum,
+    OutboxEventsProcessed,
+    PurchaseItemFinanceExt,
+    VendorFinanceExt,
+)
 
 # Import shared contracts — both the envelope and the registry
 from contracts.finance_events import BaseFinanceEvent, EVENT_TYPE_REGISTRY
@@ -60,6 +66,184 @@ async def verify_service_secret(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing X-Service-Secret",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Phase 1A master data event handlers
+# ---------------------------------------------------------------------------
+
+
+async def _resolve_account_id(
+    db: AsyncSession, organization_id: str, account_number: str
+) -> Optional[str]:
+    """
+    Resolve a GL account number to its accountId UUID for an organisation.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        organization_id: Organisation to scope the lookup.
+        account_number: Account number string (e.g. '221000-001').
+
+    Returns:
+        accountId string, or None if not found.
+    """
+    result = await db.execute(
+        select(GLAccount.accountId).where(
+            GLAccount.organizationId == organization_id,
+            GLAccount.accountNumber == account_number,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def _handle_vendor_changed(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle vendor_changed outbox events.
+
+    - If isDeleted=True: mark vendor_finance_ext.isActive=False.
+    - If new vendor: create vendor_finance_ext with default reconciliation
+      account (221000-001 AP Control if it exists).
+    - If existing vendor: update denormalized vendorCode only.
+      Finance-specific fields are NOT overwritten.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope.
+    """
+    payload = event.payload
+    vendor_id = str(payload["vendorId"])
+    org_id = str(event.organizationId)
+
+    # Look up existing ext row
+    existing = await db.execute(
+        select(VendorFinanceExt).where(
+            VendorFinanceExt.organizationId == org_id,
+            VendorFinanceExt.vendorId == vendor_id,
+        )
+    )
+    ext_row = existing.scalar_one_or_none()
+
+    if payload.get("isDeleted"):
+        # Soft delete: mark inactive
+        if ext_row:
+            ext_row.isActive = False
+            logger.info(
+                "[Finance/Events] marked vendor_finance_ext inactive vendorId=%s", vendor_id
+            )
+        return
+
+    if ext_row is None:
+        # New vendor: create ext row with default reconciliation account
+        recon_account_id = await _resolve_account_id(db, org_id, "221000-001")
+        ext_row = VendorFinanceExt(
+            organizationId=org_id,
+            vendorId=vendor_id,
+            vendorCode=str(payload["vendorCode"]),
+            reconciliationAccountId=recon_account_id,
+            defaultExpenseAccountId=None,
+            isActive=True,
+        )
+        db.add(ext_row)
+        logger.info(
+            "[Finance/Events] created vendor_finance_ext vendorId=%s recon_account=%s",
+            vendor_id, recon_account_id,
+        )
+    else:
+        # Existing: only update denormalized vendorCode
+        ext_row.vendorCode = str(payload["vendorCode"])
+        ext_row.isActive = True
+        logger.info(
+            "[Finance/Events] updated vendor_finance_ext vendorId=%s", vendor_id
+        )
+
+
+# ---------------------------------------------------------------------------
+# Item type → default inventory account mapping
+# ---------------------------------------------------------------------------
+_ITEM_TYPE_ACCOUNT_MAP = {
+    "raw_material": "121000-002",       # Raw Materials - Fertilisers (generic fallback)
+    "consumable": "121000-004",         # Raw Materials - Packaging (generic fallback)
+    "service": None,                    # Services don't go to inventory
+    "fixed_asset_acquisition": "110000-005",  # Machinery & Equipment
+}
+
+# GRNI Clearing account number
+_GRNI_CLEARING_ACCOUNT = "221000-099"
+
+
+async def _handle_purchase_item_changed(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle purchase_item_changed outbox events.
+
+    - If isDeleted=True: mark purchase_item_finance_ext.isActive=False.
+    - If new item: create ext with default inventory account based on itemType.
+    - If existing: update denormalized itemCode only.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope.
+    """
+    payload = event.payload
+    item_id = str(payload["itemId"])
+    org_id = str(event.organizationId)
+
+    existing = await db.execute(
+        select(PurchaseItemFinanceExt).where(
+            PurchaseItemFinanceExt.organizationId == org_id,
+            PurchaseItemFinanceExt.itemId == item_id,
+        )
+    )
+    ext_row = existing.scalar_one_or_none()
+
+    if payload.get("isDeleted"):
+        if ext_row:
+            ext_row.isActive = False
+            logger.info(
+                "[Finance/Events] marked purchase_item_finance_ext inactive itemId=%s", item_id
+            )
+        return
+
+    if ext_row is None:
+        # Determine default inventory account from itemType
+        item_type = str(payload.get("itemType", "raw_material"))
+        inv_acct_num = _ITEM_TYPE_ACCOUNT_MAP.get(item_type)
+        inv_acct_id = (
+            await _resolve_account_id(db, org_id, inv_acct_num)
+            if inv_acct_num
+            else None
+        )
+
+        # Resolve GRNI clearing account
+        grni_id = await _resolve_account_id(db, org_id, _GRNI_CLEARING_ACCOUNT)
+
+        from ...models.orm.models import ValuationMethodEnum
+
+        ext_row = PurchaseItemFinanceExt(
+            organizationId=org_id,
+            itemId=item_id,
+            itemCode=str(payload["itemCode"]),
+            inventoryAccountId=inv_acct_id,
+            cogsAccountId=None,
+            allocationAccountId=grni_id,
+            valuationMethod=ValuationMethodEnum.MOVING_AVERAGE,
+            isActive=True,
+        )
+        db.add(ext_row)
+        logger.info(
+            "[Finance/Events] created purchase_item_finance_ext itemId=%s inv_acct=%s",
+            item_id, inv_acct_id,
+        )
+    else:
+        # Only update denormalized itemCode
+        ext_row.itemCode = str(payload["itemCode"])
+        ext_row.isActive = True
+        logger.info(
+            "[Finance/Events] updated purchase_item_finance_ext itemId=%s", item_id
         )
 
 
@@ -143,17 +327,30 @@ async def ingest_event(
         }
 
     # ------------------------------------------------------------------
-    # 4. Week 3: posting logic is a NO-OP stub
-    #    Week 4 will replace this with actual GL journal entry creation.
+    # 4a. Phase 1A — Handle master data sync events
     # ------------------------------------------------------------------
-    logger.info(
-        "[Finance/Ingest] received event event_type=%s event_id=%s "
-        "org=%s company=%s",
-        event.eventType,
-        event_id,
-        str(event.organizationId),
-        event.companyCode,
-    )
+    if event.eventType == "vendor_changed":
+        await _handle_vendor_changed(db, event)
+    elif event.eventType == "purchase_item_changed":
+        await _handle_purchase_item_changed(db, event)
+    elif event.eventType == "payment_terms_changed":
+        # Operations holds the master; finance just logs receipt.
+        logger.info(
+            "[Finance/Ingest] payment_terms_changed received org=%s terms_code=%s",
+            str(event.organizationId),
+            event.payload.get("termsCode"),
+        )
+    else:
+        # All other event types: posting logic is a NO-OP stub for now.
+        # Week 4 will implement GL journal entries.
+        logger.info(
+            "[Finance/Ingest] received event event_type=%s event_id=%s "
+            "org=%s company=%s",
+            event.eventType,
+            event_id,
+            str(event.organizationId),
+            event.companyCode,
+        )
 
     # ------------------------------------------------------------------
     # 5. Record in outbox_events_processed (idempotency table)

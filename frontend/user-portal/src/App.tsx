@@ -107,6 +107,11 @@ const ChemicalsCatalog = lazy(() =>
 // Admin pages
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
 
+// Purchasing module pages (Phase 1A master data)
+const VendorsPage = lazy(() => import('./pages/purchasing/VendorsPage').then(m => ({ default: m.VendorsPage })));
+const PurchaseItemsPage = lazy(() => import('./pages/purchasing/PurchaseItemsPage').then(m => ({ default: m.PurchaseItemsPage })));
+const PaymentTermsPage = lazy(() => import('./pages/purchasing/PaymentTermsPage').then(m => ({ default: m.PaymentTermsPage })));
+
 // Division selector (shown after login when user belongs to multiple divisions)
 const DivisionSelector = lazy(() =>
   import('./pages/division/DivisionSelector').then(m => ({ default: m.DivisionSelector }))
@@ -205,6 +210,12 @@ function App() {
                 <Route path="/tools" element={<Navigate to="/tools/fertilizer-calculator" replace />} />
                 <Route path="/tools/fertilizer-calculator" element={<FertilizerCostCalculator />} />
                 <Route path="/tools/chemicals" element={<ChemicalsCatalog />} />
+
+                {/* Purchasing module (Phase 1A) */}
+                <Route path="/purchasing/vendors" element={<VendorsPage />} />
+                <Route path="/purchasing/items" element={<PurchaseItemsPage />} />
+                <Route path="/purchasing/payment-terms" element={<PaymentTermsPage />} />
+                <Route path="/purchasing" element={<Navigate to="/purchasing/vendors" replace />} />
 
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />

@@ -57,3 +57,22 @@ export {
   useUpdateSavedList,
   useDeleteSavedList,
 } from './useTools';
+
+// Purchasing hooks (Phase 1A — vendor master, purchase item master, payment terms)
+export {
+  useVendors,
+  useVendor,
+  useCreateVendor,
+  useUpdateVendor,
+  useDeleteVendor,
+  usePurchaseItems,
+  usePurchaseItem,
+  useCreatePurchaseItem,
+  useUpdatePurchaseItem,
+  useDeletePurchaseItem,
+  usePaymentTerms,
+  useCreatePaymentTerms,
+  useUpdatePaymentTerms,
+  useDeletePaymentTerms,
+  purchasingQueryKeys,
+} from './usePurchasing';

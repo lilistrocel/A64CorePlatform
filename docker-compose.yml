@@ -17,7 +17,7 @@ services:
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
       - LICENSE_ENCRYPTION_KEY=dev-encryption-key-32-chars-minimum-a  # Required for module license encryption (minimum 32 characters)
       - TRUSTED_REGISTRIES=registry.hub.docker.com,ghcr.io,gcr.io,docker.io,localhost,localhost:5000
-      - PYTHONPATH=/app/src
+      - PYTHONPATH=/app/src:/app
       # Google Vertex AI Settings (AI Analytics)
       - GOOGLE_CLOUD_PROJECT=a64core
       - GOOGLE_APPLICATION_CREDENTIALS=/app/.credentials/vertex-ai-service-account.json
@@ -38,8 +38,11 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-SuperAdmin123!}
       # Uvicorn worker configuration (production: 2 * CPU cores + 1)
       - UVICORN_WORKERS=${UVICORN_WORKERS:-4}
+      # Finance outbox bridge — set true when finance service is deployed
+      - FINANCE_OUTBOX_ENABLED=${FINANCE_OUTBOX_ENABLED:-false}
     volumes:
       - ./src:/app/src
+      - ./contracts:/app/contracts  # Shared finance event schemas (read by OutboxWriter)
       - ./public:/app/public  # Admin panel static files
       - ./modules:/app/modules  # Farm management and other modules
       - ./config:/app/config
@@ -91,7 +94,9 @@ services:
     # Default is (RAM - 1GB) / 2, but we explicitly set for container environment
     command: ["mongod", "--wiredTigerCacheSizeGB", "1.5"]
     volumes:
-      - mongodb_data:/data/db
+      # Bind-mount for data (survives compose project rename + visible in repo). Migrated 2026-05-19.
+      # Was: mongodb_data:/data/db (named volume — kept defined below for emergency rollback).
+      - ./data/mongodb:/data/db
       - mongodb_config:/data/configdb
       - ./logs/mongodb:/var/log/mongodb  # MongoDB logs
     networks:

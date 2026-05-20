@@ -289,6 +289,64 @@ class ManualJournalPayload(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Purchasing master data change events (Phase 1A)
+# ---------------------------------------------------------------------------
+
+
+class VendorChangedPayload(BaseModel):
+    """
+    Emitted when a vendor is created, updated, or soft-deleted in the main app.
+
+    Finance action: create/update vendor_finance_ext with default reconciliation
+    account; on isDeleted=True mark ext row inactive.
+    """
+
+    vendorId: UUID
+    vendorCode: str
+    name: str
+    trn: Optional[str] = None
+    isActive: bool
+    paymentTermsCode: Optional[str] = None
+    currencyCode: str = "AED"
+    creditLimit: Optional[Decimal] = None
+    bankDetails: Optional[dict] = None
+    contactInfo: Optional[dict] = None
+    isDeleted: bool = False
+
+
+class PurchaseItemChangedPayload(BaseModel):
+    """
+    Emitted when a purchase item is created, updated, or soft-deleted in the main app.
+
+    Finance action: create/update purchase_item_finance_ext with default inventory
+    account mapping based on itemType; on isDeleted=True mark ext row inactive.
+    """
+
+    itemId: UUID
+    itemCode: str
+    name: str
+    itemType: Literal["raw_material", "consumable", "service", "fixed_asset_acquisition"]
+    uom: str
+    isActive: bool
+    isDeleted: bool = False
+
+
+class PaymentTermsChangedPayload(BaseModel):
+    """
+    Emitted when a payment terms record is created, updated, or soft-deleted.
+
+    Finance action: log receipt only — operations holds the master for payment terms.
+    """
+
+    termsId: UUID
+    termsCode: str
+    description: str
+    netDays: int
+    isActive: bool
+    isDeleted: bool = False
+
+
+# ---------------------------------------------------------------------------
 # Union + registry
 # ---------------------------------------------------------------------------
 
@@ -303,6 +361,9 @@ EventPayload = Union[
     FertigationConsumedPayload,
     OpeningBalancePayload,
     ManualJournalPayload,
+    VendorChangedPayload,
+    PurchaseItemChangedPayload,
+    PaymentTermsChangedPayload,
 ]
 
 EVENT_TYPE_REGISTRY: Dict[str, Type[BaseModel]] = {
@@ -316,6 +377,10 @@ EVENT_TYPE_REGISTRY: Dict[str, Type[BaseModel]] = {
     "fertigation_consumed": FertigationConsumedPayload,
     "opening_balance": OpeningBalancePayload,
     "manual_journal": ManualJournalPayload,
+    # Phase 1A — Purchasing master data change events
+    "vendor_changed": VendorChangedPayload,
+    "purchase_item_changed": PurchaseItemChangedPayload,
+    "payment_terms_changed": PaymentTermsChangedPayload,
 }
 """
 Maps eventType discriminator strings to their payload Pydantic class.
