@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook — fast static checks. Designed to catch the recurring
+# "duplicate identifier" Babel-crash pattern (e.g. PurchaseOrdersPage,
+# QualityGrade) before broken code is committed.
+#
+# Activates after `git config core.hooksPath .githooks` is run in the clone.
+# Bypass with `git commit --no-verify` if you know what you're doing.
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.tsx?$' || true)
+
+if [ -z "$STAGED_TS_FILES" ]; then
+    exit 0
+fi
+
+FAIL=0
+
+# 1. Duplicate top-level const / let / function / class in each staged file.
+#    Catches `const X = lazy(...)` declared twice within one file.
+for f in $STAGED_TS_FILES; do
+    [ -f "$REPO_ROOT/$f" ] || continue
+    DUPS=$(grep -nE '^[[:space:]]*(const|let|function|class|interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)\b' "$REPO_ROOT/$f" 2>/dev/null \
+        | sed -E 's/^([0-9]+):[[:space:]]*(const|let|function|class|interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)\b.*/\3 line:\1/' \
+        | sort -k1,1 \
+        | awk 'BEGIN{prev=""} {if($1==prev){print prev_line; print $0} prev=$1; prev_line=$0}' \
+        | sort -u)
+    if [ -n "$DUPS" ]; then
+        echo "✘  $f — duplicate top-level identifier(s):"
+        echo "$DUPS" | sed 's/^/      /'
+        FAIL=1
+    fi
+done
+
+# 2. Forgotten merge-conflict markers.
+MARKERS=$(echo "$STAGED_TS_FILES" | xargs -r grep -lE '^(<<<<<<<|=======|>>>>>>>) ' 2>/dev/null || true)
+if [ -n "$MARKERS" ]; then
+    echo "✘  Merge conflict markers in:"
+    echo "$MARKERS" | sed 's/^/      /'
+    FAIL=1
+fi
+
+# 3. Stray `debugger;` / `console.log(` only if many — single use is often intentional during dev.
+DEBUGGER=$(echo "$STAGED_TS_FILES" | xargs -r grep -nE '^\s*debugger;' 2>/dev/null || true)
+if [ -n "$DEBUGGER" ]; then
+    echo "✘  Stray debugger statement(s):"
+    echo "$DEBUGGER" | sed 's/^/      /'
+    FAIL=1
+fi
+
+if [ "$FAIL" != "0" ]; then
+    echo ""
+    echo "Pre-commit blocked. Fix the above or bypass with --no-verify (not recommended)."
+    exit 1
+fi
+
+exit 0
