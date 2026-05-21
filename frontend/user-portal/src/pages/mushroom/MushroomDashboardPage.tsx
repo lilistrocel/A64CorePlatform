@@ -399,10 +399,14 @@ interface StatNumberProps {
 }
 
 const StatNumber = styled.div<StatNumberProps>`
-  font-size: 24px;
-  font-weight: 700;
-  color: ${({ $alert, theme }) => ($alert ? '#9E2A2A' : theme.colors.text.primary)};
-  line-height: 1;
+  /* Slate §4: KPI values use Playfair Display, tabular numerals. */
+  font-family: ${({ theme }) => theme.fonts.display};
+  font-size: ${({ theme }) => theme.fontSizes.displaySm};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  color: ${({ $alert, theme }) => ($alert ? theme.colors.status.danger : theme.colors.text.primary)};
+  line-height: ${({ theme }) => theme.lineHeights.tight};
+  letter-spacing: ${({ theme }) => theme.letterSpacings.tight};
+  font-variant-numeric: tabular-nums;
   margin-bottom: 2px;
 `;
 

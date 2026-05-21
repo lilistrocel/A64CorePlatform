@@ -471,16 +471,17 @@ const Header = styled.header`
 const HeaderLeft = styled.div``;
 
 const PageTitle = styled.h1`
-  font-size: 22px;
-  font-weight: 700;
-  color: #EDEAE3;
+  font-family: ${({ theme }) => theme.fonts.display};
+  font-size: ${({ theme }) => theme.fontSizes.h2};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  color: ${({ theme }) => theme.colors.text.inverse};
   margin: 0 0 4px 0;
-  letter-spacing: -0.3px;
+  letter-spacing: ${({ theme }) => theme.letterSpacings.tight};
 `;
 
 const PageSubtitle = styled.p`
-  font-size: 13px;
-  color: #0F6E56;
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.accent.sage};
   margin: 0;
 `;
 
@@ -495,26 +496,31 @@ const StatPill = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #0F0F0F;
-  border: 1px solid #4B4844;
-  border-radius: 10px;
-  padding: 8px 16px;
+  background: ${({ theme }) => theme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border.strong};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
   min-width: 80px;
 `;
 
 const StatPillNumber = styled.span`
-  font-size: 20px;
-  font-weight: 700;
-  color: #EDEAE3;
-  line-height: 1;
+  /* Slate §4: KPI values use Playfair Display, tabular numerals. */
+  font-family: ${({ theme }) => theme.fonts.display};
+  font-size: ${({ theme }) => theme.fontSizes.h3};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  color: ${({ theme }) => theme.colors.text.inverse};
+  line-height: ${({ theme }) => theme.lineHeights.tight};
+  letter-spacing: ${({ theme }) => theme.letterSpacings.tight};
+  font-variant-numeric: tabular-nums;
 `;
 
 const StatPillLabel = styled.span`
-  font-size: 10px;
-  color: #0F6E56;
-  font-weight: 500;
+  font-family: ${({ theme }) => theme.fonts.mono};
+  font-size: ${({ theme }) => theme.fontSizes.monoSm};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: ${({ theme }) => theme.letterSpacings.wide};
   margin-top: 2px;
 `;
 
@@ -522,12 +528,13 @@ const LoadingPill = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: #0F6E56;
-  background: #0F0F0F;
-  border: 1px solid #4B4844;
-  border-radius: 10px;
-  padding: 8px 12px;
+  font-family: ${({ theme }) => theme.fonts.mono};
+  font-size: ${({ theme }) => theme.fontSizes.monoMd};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  background: ${({ theme }) => theme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border.strong};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['3']};
 `;
 
 // ---- Phase Legend ----------------------------------------------------------
@@ -577,11 +584,12 @@ const DistributionSection = styled.div`
 `;
 
 const DistributionLabel = styled.span`
-  font-size: 11px;
-  font-weight: 600;
-  color: #0F6E56;
+  font-family: ${({ theme }) => theme.fonts.mono};
+  font-size: ${({ theme }) => theme.fontSizes.monoSm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.accent.sage};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: ${({ theme }) => theme.letterSpacings.wide};
   white-space: nowrap;
 `;
 
@@ -631,54 +639,55 @@ const FilterGroup = styled.div<FilterGroupProps>`
 `;
 
 const FilterLabel = styled.label`
-  font-size: 10px;
-  font-weight: 600;
-  color: #0F6E56;
+  font-family: ${({ theme }) => theme.fonts.mono};
+  font-size: ${({ theme }) => theme.fontSizes.monoSm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.accent.sage};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: ${({ theme }) => theme.letterSpacings.wide};
 `;
 
 const FilterSelect = styled.select`
   padding: 7px 10px;
-  border: 1px solid #4B4844;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #EDEAE3;
-  background: #0F0F0F;
+  border: 1px solid ${({ theme }) => theme.colors.border.strong};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.inverse};
+  background: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   outline: none;
   min-width: 180px;
-  transition: border-color 150ms;
+  transition: border-color ${({ theme }) => theme.motion.duration.fast};
 
   option {
-    background: #0F0F0F;
-    color: #EDEAE3;
+    background: ${({ theme }) => theme.colors.text.primary};
+    color: ${({ theme }) => theme.colors.text.inverse};
   }
 
   &:focus {
-    border-color: #0F6E56;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: ${({ theme }) => theme.shadows.focus};
   }
 `;
 
 const FilterInput = styled.input`
   padding: 7px 10px;
-  border: 1px solid #4B4844;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #EDEAE3;
-  background: #0F0F0F;
+  border: 1px solid ${({ theme }) => theme.colors.border.strong};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.inverse};
+  background: ${({ theme }) => theme.colors.text.primary};
   outline: none;
   min-width: 160px;
-  transition: border-color 150ms;
+  transition: border-color ${({ theme }) => theme.motion.duration.fast};
 
   &::placeholder {
-    color: #4B4844;
+    color: ${({ theme }) => theme.colors.border.strong};
   }
 
   &:focus {
-    border-color: #0F6E56;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: ${({ theme }) => theme.shadows.focus};
   }
 `;
 

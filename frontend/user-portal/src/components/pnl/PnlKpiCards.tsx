@@ -101,24 +101,27 @@ interface ValueProps {
   $color?: 'positive' | 'negative' | 'neutral' | 'warning';
 }
 
-const VALUE_COLORS = {
-  positive: '#0F6E56',
-  negative: '#9E2A2A',
-  neutral: '#0F0F0F',
-  warning: '#B8842A',
-};
-
 const CardValue = styled.div<ValueProps>`
-  font-size: ${({ theme }) => theme.fontSizes.h2};
-  font-weight: ${({ theme }) => theme.fontWeights.bold};
-  color: ${({ $color = 'neutral', theme }) =>
-    $color === 'neutral' ? theme.colors.text.primary : VALUE_COLORS[$color]};
-  line-height: ${({ theme }) => theme.lineHeights.snug};
+  /* Slate §4: KPI/hero monetary values use Playfair Display, tabular numerals. */
+  font-family: ${({ theme }) => theme.fonts.display};
+  font-size: ${({ theme }) => theme.fontSizes.displaySm};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  color: ${({ $color = 'neutral', theme }) => {
+    switch ($color) {
+      case 'positive': return theme.colors.accent.sage;
+      case 'negative': return theme.colors.status.danger;
+      case 'warning':  return theme.colors.status.warning;
+      default:         return theme.colors.text.primary;
+    }
+  }};
+  line-height: ${({ theme }) => theme.lineHeights.tight};
+  letter-spacing: ${({ theme }) => theme.letterSpacings.tight};
+  font-variant-numeric: tabular-nums;
   margin-bottom: ${({ theme }) => theme.space['1']};
   word-break: break-word;
 
   @media (max-width: 1200px) {
-    font-size: ${({ theme }) => theme.fontSizes.h4};
+    font-size: ${({ theme }) => theme.fontSizes.h2};
   }
 `;
 
@@ -167,15 +170,15 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
           style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px' }}
           role="alert"
         >
-          <p style={{ marginBottom: '16px', color: '#9E2A2A' }}>
+          <p style={{ marginBottom: '16px', color: 'var(--color-danger, #9E2A2A)' }}>
             Failed to load KPI summary.
           </p>
           <button
             onClick={onRetry}
             style={{
               padding: '8px 16px',
-              background: '#0F6E56',
-              color: 'white',
+              background: 'var(--color-sage, #0F6E56)',
+              color: 'var(--color-linen, #EDEAE3)',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -247,7 +250,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
         <CardSub>
           {formatNumber(orderCounts.paid)} paid · {formatNumber(orderCounts.pending)} pending
           {orderCounts.overdue > 0 && (
-            <span style={{ color: '#9E2A2A' }}> · {formatNumber(orderCounts.overdue)} overdue</span>
+            <span style={{ color: 'var(--color-danger, #9E2A2A)' }}> · {formatNumber(orderCounts.overdue)} overdue</span>
           )}
         </CardSub>
       </Card>

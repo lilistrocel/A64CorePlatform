@@ -64,9 +64,14 @@ const StatLabel = styled.div`
 `;
 
 const StatValue = styled.div`
-  font-size: 36px;
-  font-weight: 600;
+  /* Slate §4: KPI values use Playfair Display, tabular numerals. */
+  font-family: ${({ theme }) => theme.fonts.display};
+  font-size: ${({ theme }) => theme.fontSizes.displaySm};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
   color: ${({ theme }) => theme.colors.text.primary};
+  line-height: ${({ theme }) => theme.lineHeights.tight};
+  letter-spacing: ${({ theme }) => theme.letterSpacings.tight};
+  font-variant-numeric: tabular-nums;
 `;
 
 const WidgetsRow = styled.div`

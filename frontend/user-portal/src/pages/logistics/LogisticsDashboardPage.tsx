@@ -77,10 +77,25 @@ const StatLabel = styled.div`
   margin-bottom: 8px;
 `;
 
-const StatValue = styled.div`
-  font-size: 36px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.primary};
+interface StatValueProps {
+  $accent?: boolean;
+  $warning?: boolean;
+}
+
+const StatValue = styled.div<StatValueProps>`
+  /* Slate §4: KPI values use Playfair Display, tabular numerals. */
+  font-family: ${({ theme }) => theme.fonts.display};
+  font-size: ${({ theme }) => theme.fontSizes.displaySm};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  color: ${({ $accent, $warning, theme }) =>
+    $warning
+      ? theme.colors.status.warning
+      : $accent
+        ? theme.colors.accent.sage
+        : theme.colors.text.primary};
+  line-height: ${({ theme }) => theme.lineHeights.tight};
+  letter-spacing: ${({ theme }) => theme.letterSpacings.tight};
+  font-variant-numeric: tabular-nums;
 `;
 
 const WidgetsRow = styled.div`
@@ -130,10 +145,10 @@ const ShipmentItem = styled.div`
 `;
 
 const ShipmentCode = styled.span`
-  font-size: 14px;
-  font-weight: 500;
+  font-family: ${({ theme }) => theme.fonts.mono};
+  font-size: ${({ theme }) => theme.fontSizes.monoLg};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   color: ${({ theme }) => theme.colors.text.primary};
-  font-family: 'JetBrains Mono', monospace;
 `;
 
 const ShipmentDate = styled.span`
@@ -283,17 +298,17 @@ export function LogisticsDashboardPage() {
 
         <StatCard>
           <StatLabel>Available</StatLabel>
-          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.availableVehicles)}</StatValue>
+          <StatValue $accent>{formatNumber(stats.availableVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Use</StatLabel>
-          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.inUseVehicles)}</StatValue>
+          <StatValue $accent>{formatNumber(stats.inUseVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Maintenance</StatLabel>
-          <StatValue style={{ color: '#B8842A' }}>{formatNumber(stats.maintenanceVehicles)}</StatValue>
+          <StatValue $warning>{formatNumber(stats.maintenanceVehicles)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -305,17 +320,17 @@ export function LogisticsDashboardPage() {
 
         <StatCard>
           <StatLabel>Scheduled</StatLabel>
-          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.scheduledShipments)}</StatValue>
+          <StatValue $accent>{formatNumber(stats.scheduledShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Transit</StatLabel>
-          <StatValue style={{ color: '#B8842A' }}>{formatNumber(stats.inTransitShipments)}</StatValue>
+          <StatValue $warning>{formatNumber(stats.inTransitShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Delivered</StatLabel>
-          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.deliveredShipments)}</StatValue>
+          <StatValue $accent>{formatNumber(stats.deliveredShipments)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -341,7 +356,7 @@ export function LogisticsDashboardPage() {
 
         <Widget>
           <WidgetTitle>Active Routes</WidgetTitle>
-          <StatValue style={{ fontSize: '48px', textAlign: 'center', padding: '32px 0' }}>
+          <StatValue style={{ textAlign: 'center', padding: '32px 0' }}>
             {formatNumber(stats.activeRoutes)} / {formatNumber(stats.totalRoutes)}
           </StatValue>
         </Widget>
