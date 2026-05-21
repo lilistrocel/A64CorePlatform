@@ -422,14 +422,14 @@ const ActionBtn = styled.button<{ $variant?: 'primary' | 'secondary' | 'outline'
     if ($variant === 'primary') {
       return `
         background: ${theme.colors.accent.sage};
-        color: #ffffff;
+        color: #FFFFFF;
         &:hover { background: ${theme.colors.accent.sageDeep}; }
       `;
     }
     if ($variant === 'secondary') {
       return `
         background: ${theme.colors.status.success};
-        color: #ffffff;
+        color: #FFFFFF;
         &:hover { background: #0B5644; }
       `;
     }
@@ -676,7 +676,7 @@ const FilterActiveCount = styled.span`
   padding: 0 5px;
   border-radius: ${({ theme }) => theme.radii.pill};
   background: ${({ theme }) => theme.colors.accent.sage};
-  color: #ffffff;
+  color: #FFFFFF;
   font-size: ${({ theme }) => theme.fontSizes.caption};
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
   line-height: 1;
@@ -793,7 +793,7 @@ const FilterChip = styled.button<FilterChipStyledProps>`
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
   background: ${({ $color, $selected }) =>
     $selected ? $color : 'transparent'};
-  color: ${({ $color, $selected }) => ($selected ? '#ffffff' : $color)};
+  color: ${({ $color, $selected }) => ($selected ? '#FFFFFF' : $color)};
 
   &:hover {
     background: ${({ $color, $selected }) =>
@@ -933,7 +933,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
         borderRadius: 8,
         padding: '10px 14px',
         fontSize: 13,
-        color: '#f5f5f5',
+        color: '#F4F2EC',
         boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
         maxWidth: 220,
       }}
@@ -946,7 +946,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
       {payload.map((entry) => (
         <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color, flexShrink: 0, display: 'inline-block' }} />
-          <span style={{ color: '#a3a3a3' }}>{entry.name}:</span>
+          <span style={{ color: '#4B4844' }}>{entry.name}:</span>
           <span style={{ fontWeight: 500 }}>{typeof entry.value === 'number' && entry.name === 'kg' ? `${formatNumber(entry.value)} kg` : formatNumber(entry.value)}</span>
         </div>
       ))}

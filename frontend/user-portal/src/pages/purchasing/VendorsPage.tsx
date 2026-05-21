@@ -155,7 +155,7 @@ const Badge = styled.span<{ $active: boolean }>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
+    $active ? theme.colors.accent.sageSoft || 'rgba(15,110,86,0.06)' : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.status.success || '#0F6E56' : theme.colors.text.tertiary};
 `;
@@ -581,7 +581,7 @@ function VendorFormModal({
                 id="vf-paymentTerms"
                 value={form.paymentTermsCode}
                 onChange={set('paymentTermsCode')}
-                style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #DCD8CF', fontSize: 14 }}
               >
                 <option value="">— Select —</option>
                 {paymentTermsList.map((t) => (

@@ -161,7 +161,7 @@ const slideDown = keyframes`
 const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
   display: none;
   padding: 12px 16px;
-  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#EBF5FF' : theme.colors.surface.raised)};
+  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? 'rgba(15,110,86,0.06)' : theme.colors.surface.raised)};
   color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#0F6E56' : theme.colors.text.secondary)};
   border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 8px;

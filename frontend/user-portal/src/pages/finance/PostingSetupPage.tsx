@@ -251,7 +251,7 @@ const StatusPill = styled.span<StatusPillProps>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $complete, theme }) =>
-    $complete ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.status.warning || 'rgba(184,132,42,0.06)'};
+    $complete ? theme.colors.accent.sageSoft : theme.colors.status.warning};
   color: ${({ $complete, theme }) =>
     $complete ? theme.colors.status.success || '#0F6E56' : theme.colors.status.warning || '#B8842A'};
 `;
@@ -284,12 +284,12 @@ const BannerError = styled(BannerBase)`
 `;
 
 const BannerSuccess = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
   color: ${({ theme }) => theme.colors.status.success || '#0B5644'};
 `;
 
 const BannerWarning = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.status.warning || 'rgba(184,132,42,0.06)'};
+  background: ${({ theme }) => theme.colors.status.warning};
   color: ${({ theme }) => theme.colors.status.warning || '#B8842A'};
 `;
 

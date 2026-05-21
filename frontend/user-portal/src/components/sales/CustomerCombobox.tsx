@@ -214,7 +214,7 @@ const BrokenLinkWarning = styled.div`
   font-size: 12px;
   color: #B8842A; /* amber-800 */
   background: rgba(184,132,42,0.10); /* amber-100 */
-  border: 1px solid #fcd34d; /* amber-300 */
+  border: 1px solid #B8842A; /* amber-300 */
   border-radius: 6px;
   padding: 6px 10px;
   margin-top: 2px;

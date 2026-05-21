@@ -1030,9 +1030,9 @@ const PerformerRank = styled.div<{ $rank: number }>`
   font-size: 18px;
   font-weight: 700;
   background: ${({ $rank, theme }) => {
-    if ($rank === 1) return 'linear-gradient(135deg, #FFD700, #FFA500)';
-    if ($rank === 2) return 'linear-gradient(135deg, #C0C0C0, #A0A0A0)';
-    if ($rank === 3) return 'linear-gradient(135deg, #CD7F32, #8B4513)';
+    if ($rank === 1) return '#B8842A';
+    if ($rank === 2) return '#B8842A';
+    if ($rank === 3) return '#B85C2A';
     return theme.colors.border.subtle;
   }};
   color: white;

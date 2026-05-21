@@ -281,7 +281,7 @@ const PopupLabel = styled.span`
 `;
 
 const PopupValue = styled.span`
-  color: #1f2937;
+  color: #0F0F0F;
   font-weight: 500;
 `;
 
@@ -496,7 +496,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
             'text-allow-overlap': false,
           },
           paint: {
-            'text-color': '#ffffff',
+            'text-color': '#FFFFFF',
             'text-halo-color': '#000000',
             'text-halo-width': 2,
           },
@@ -589,16 +589,16 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           <div style="padding: 12px 16px;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
               <span style="color: #4B4844;">Area</span>
-              <span style="color: #1f2937; font-weight: 500;">${areaHectares} ha</span>
+              <span style="color: #0F0F0F; font-weight: 500;">${areaHectares} ha</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
               <span style="color: #4B4844;">Max Plants</span>
-              <span style="color: #1f2937; font-weight: 500;">${block.maxPlants}</span>
+              <span style="color: #0F0F0F; font-weight: 500;">${block.maxPlants}</span>
             </div>
             ${block.targetCropName ? `
               <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
                 <span style="color: #4B4844;">Crop</span>
-                <span style="color: #1f2937; font-weight: 500;">${block.targetCropName}</span>
+                <span style="color: #0F0F0F; font-weight: 500;">${block.targetCropName}</span>
               </div>
             ` : ''}
             ${onBlockClick ? `

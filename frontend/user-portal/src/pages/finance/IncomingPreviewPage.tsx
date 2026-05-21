@@ -180,7 +180,7 @@ const PendingBadge = styled.span`
   font-weight: 700;
   background: ${({ theme }) => theme.colors.status.warning ?? 'rgba(184,132,42,0.06)'};
   color: ${({ theme }) => theme.colors.status.warning ?? '#B8842A'};
-  border: 1px solid ${({ theme }) => theme.colors.status.warning ?? '#fde68a'};
+  border: 1px solid ${({ theme }) => theme.colors.status.warning ?? 'rgba(184,132,42,0.12)'};
   white-space: nowrap;
   align-self: center;
 `;
@@ -367,7 +367,7 @@ const POPill = styled.span`
   font-size: 11px;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.accent.sageSoft ?? '#ecfdf5'};
+  background: ${({ theme }) => theme.colors.accent.sageSoft ?? 'rgba(15,110,86,0.06)'};
   color: ${({ theme }) => theme.colors.status.success ?? '#0F6E56'};
 `;
 

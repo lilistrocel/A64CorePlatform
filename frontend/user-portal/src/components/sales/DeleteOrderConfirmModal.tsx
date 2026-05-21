@@ -172,7 +172,7 @@ const MissingRow = styled(AllocationRow)`
 `;
 
 const ExpiredPanel = styled(AllocationRow)`
-  background: #FFFBEB;
+  background: rgba(184,132,42,0.06);
   border-color: #B8842A;
 `;
 

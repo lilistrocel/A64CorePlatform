@@ -52,8 +52,8 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 const METHOD_COLORS: Record<PaymentMethod, { bg: string; text: string }> = {
-  bank_transfer: { bg: 'rgba(15,110,86,0.08)', text: '#1e40af' },
-  cheque: { bg: '#fef9c3', text: '#854d0e' },
+  bank_transfer: { bg: 'rgba(15,110,86,0.08)', text: '#0F6E56' },
+  cheque: { bg: 'rgba(184,132,42,0.08)', text: '#B8842A' },
   cash: { bg: '#dcfce7', text: '#0B5644' },
 };
 
@@ -301,7 +301,7 @@ const Tooltip = styled.span`
     top: calc(100% + 4px);
     left: 0;
     z-index: 1050;
-    background: #1f2937;
+    background: #0F0E0C;
     color: white;
     border-radius: 6px;
     padding: 6px 10px;

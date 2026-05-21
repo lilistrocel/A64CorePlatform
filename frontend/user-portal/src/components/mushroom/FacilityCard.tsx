@@ -23,7 +23,7 @@ const STATUS_COLORS: Record<FacilityStatus, string> = {
 
 const STATUS_BG: Record<FacilityStatus, string> = {
   active: 'rgba(15,110,86,0.10)',
-  inactive: '#F5F5F5',
+  inactive: '#F4F2EC',
   maintenance: 'rgba(184,132,42,0.10)',
   construction: 'rgba(15,110,86,0.08)',
 };
@@ -258,7 +258,7 @@ interface UtilizationFillProps {
 const UtilizationFill = styled.div<UtilizationFillProps>`
   height: 100%;
   width: ${({ $percent }) => $percent}%;
-  background: linear-gradient(90deg, #0F6E56, #0F6E56);
+  background: #0F6E56;
   border-radius: 4px;
   transition: width 400ms ease-in-out;
 `;

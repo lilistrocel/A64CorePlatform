@@ -132,7 +132,7 @@ const LogoutButton = styled(HeaderButton)`
   color: #9E2A2A;
 
   &:hover {
-    background: #FEF2F2;
+    background: rgba(158,42,42,0.06);
     color: #9E2A2A;
   }
 `;

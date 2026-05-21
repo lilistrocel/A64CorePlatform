@@ -221,7 +221,7 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #DCD8CF;
 `;
 
 const Title = styled.h2`
@@ -421,7 +421,7 @@ const InfoIcon = styled.span`
 const InfoText = styled.p`
   margin: 0;
   font-size: 13px;
-  color: #1e40af;
+  color: #0F6E56;
   line-height: 1.5;
 `;
 

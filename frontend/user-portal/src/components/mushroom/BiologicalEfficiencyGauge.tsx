@@ -54,7 +54,7 @@ export function BiologicalEfficiencyGauge({
           />
         </Svg>
         <CenterLabel>
-          <ValueText $fontSize={config.fontSize} $color="#bdbdbd">
+          <ValueText $fontSize={config.fontSize} $color="#CFC9BD">
             N/A
           </ValueText>
         </CenterLabel>

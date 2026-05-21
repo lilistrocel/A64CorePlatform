@@ -550,7 +550,7 @@ export function RoomDetailsModal({
                   <ChartTitle>Last {chartData.length} Readings</ChartTitle>
                   <ResponsiveContainer width="100%" height={240}>
                     <LineChart data={chartData} margin={{ top: 5, right: 16, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#DCD8CF" />
                       <XAxis dataKey="time" tick={{ fontSize: 11 }} />
                       <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
                       <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
@@ -1266,14 +1266,14 @@ const Th = styled.th`
 
 const Td = styled.td`
   padding: 10px;
-  border-bottom: 1px solid #f0f0f0;
-  color: #424242;
+  border-bottom: 1px solid #DCD8CF;
+  color: #4B4844;
 `;
 
 const TfootTd = styled.td`
   padding: 10px;
   border-top: 2px solid #DCD8CF;
-  background: #fafafa;
+  background: #F4F2EC;
   color: #0F0F0F;
 `;
 
@@ -1301,7 +1301,7 @@ interface ContamCardProps {
 }
 
 const ContamCard = styled.div<ContamCardProps>`
-  background: ${({ $resolved }) => ($resolved ? '#f9fafb' : '#fff5f5')};
+  background: ${({ $resolved }) => ($resolved ? '#F4F2EC' : 'rgba(158,42,42,0.06)')};
   border: 1px solid ${({ $resolved }) => ($resolved ? '#DCD8CF' : 'rgba(158,42,42,0.12)')};
   border-radius: 10px;
   padding: 14px;
@@ -1332,7 +1332,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: '#0F6E56',
   medium: '#B8842A',
   high: '#9E2A2A',
-  critical: '#7F1D1D',
+  critical: '#9E2A2A',
 };
 
 const SeverityBadge = styled.span<SeverityBadgeProps>`
@@ -1367,7 +1367,7 @@ const ContamMeta = styled.div`
 
 const ContamDesc = styled.div`
   font-size: 13px;
-  color: #424242;
+  color: #4B4844;
   margin-bottom: 8px;
 `;
 
@@ -1407,7 +1407,7 @@ const EmptyTabState = styled.div`
   color: #4B4844;
   text-align: center;
   padding: 32px;
-  background: #f9fafb;
+  background: #F4F2EC;
   border-radius: 10px;
   border: 1px dashed #DCD8CF;
 `;

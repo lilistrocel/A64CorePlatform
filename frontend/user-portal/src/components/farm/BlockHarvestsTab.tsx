@@ -596,7 +596,7 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
           <PhysicalBannerTitle>
             <span>&#x1F4CA;</span> Complete Harvest History
           </PhysicalBannerTitle>
-          <BannerText style={{ color: '#047857' }}>
+          <BannerText style={{ color: '#0B5644' }}>
             This physical block displays all historical harvests across all crop cycles and virtual blocks.
           </BannerText>
         </PhysicalBlockBanner>

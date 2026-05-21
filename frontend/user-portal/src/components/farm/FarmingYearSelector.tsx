@@ -320,13 +320,13 @@ const YearBadge = styled.span<{
     $isCurrent
       ? '#0F6E56'
       : $isNext
-        ? '#d97706'
+        ? '#B8842A'
         : theme.colors.text.secondary};
   border: 1px solid ${({ $isCurrent, $isNext, theme }) =>
     $isCurrent
       ? 'rgba(15, 110, 86, 0.10)'
       : $isNext
-        ? '#fde68a'
+        ? 'rgba(184,132,42,0.12)'
         : theme.colors.border.subtle};
 
   &:hover {
@@ -334,7 +334,7 @@ const YearBadge = styled.span<{
       $isCurrent
         ? 'rgba(15, 110, 86, 0.10)'
         : $isNext
-          ? '#fde68a'
+          ? 'rgba(184,132,42,0.12)'
           : theme.colors.surface.sunken};
   }
 

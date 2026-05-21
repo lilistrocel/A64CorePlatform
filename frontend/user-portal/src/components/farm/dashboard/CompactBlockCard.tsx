@@ -859,15 +859,15 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
         case 'success':
           return '#0B5644';
         case 'plan':
-          return '#1976D2';
+          return '#0F6E56';
         case 'plant':
           return '#0B5644';
         case 'warning':
           return '#B8842A';
         case 'analytics':
-          return '#4F46E5';
+          return '#0F6E56';
         default:
-          return '#1976D2';
+          return '#0F6E56';
       }
     }};
   }

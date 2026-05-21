@@ -517,7 +517,7 @@ const TextareaInput = styled.textarea`
   min-height: 56px;
   max-height: 160px;
   padding: 16px 18px;
-  border: 1.5px solid #d4d4d4;
+  border: 1.5px solid #CFC9BD;
   border-radius: 14px;
   font-size: 18px;
   line-height: 1.4;

@@ -59,7 +59,7 @@ const TILES: TileConfig[] = [
     subtitle: 'Procurement & supplier orders',
     icon: ShoppingCart,
     accent: '#0F6E56',
-    accentHover: '#4F46E5',
+    accentHover: '#0F6E56',
     route: '/sales/purchase-orders',
   },
 ];

@@ -319,7 +319,7 @@ const IngredientRow = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #DCD8CF;
   font-size: 13px;
 
   &:last-child {

@@ -163,7 +163,7 @@ const HeaderLeft = styled.div`
 const FarmingYearBadge = styled.span`
   display: inline-block;
   background: ${({ theme }) => theme.colors.surface.sunken};
-  color: #0369a1;
+  color: #0F6E56;
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 12px;

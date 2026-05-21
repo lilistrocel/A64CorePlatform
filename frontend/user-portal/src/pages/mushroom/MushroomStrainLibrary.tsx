@@ -624,7 +624,7 @@ const AddStrainBtn = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #7C3AED;
+    background: #4B4844;
   }
   &:focus-visible {
     outline: 2px solid #4B4844;
@@ -657,7 +657,7 @@ const SearchInput = styled.input`
   }
 
   &::placeholder {
-    color: #bdbdbd;
+    color: #CFC9BD;
   }
 `;
 
@@ -991,7 +991,7 @@ const SubmitBtn = styled.button`
   transition: background 150ms;
 
   &:hover:not(:disabled) {
-    background: #7C3AED;
+    background: #4B4844;
   }
   &:disabled {
     opacity: 0.6;

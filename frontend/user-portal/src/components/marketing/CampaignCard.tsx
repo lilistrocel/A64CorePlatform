@@ -99,8 +99,8 @@ const TagsContainer = styled.div`
 
 const Tag = styled.span`
   padding: 4px 10px;
-  background: #E0F2FE;
-  color: #0369A1;
+  background: rgba(15,110,86,0.06);
+  color: #0F6E56;
   border-radius: 12px;
   font-size: 12px;
 `;

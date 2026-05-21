@@ -27,7 +27,7 @@ const ActionButton = styled.button`padding: 6px 12px; margin-right: 8px; backgro
 const DeleteButton = styled(ActionButton)`color: #9E2A2A; border-color: #9E2A2A; &:hover { background: rgba(158,42,42,0.08); }`;
 const EmptyText = styled.div`text-align: center; padding: 48px 24px; color: ${({ theme }) => theme.colors.text.tertiary};`;
 const TagsContainer = styled.div`display: flex; flex-wrap: wrap; gap: 4px;`;
-const Tag = styled.span`padding: 2px 8px; background: #E0F2FE; color: #0369A1; border-radius: 4px; font-size: 11px;`;
+const Tag = styled.span`padding: 2px 8px; background: rgba(15,110,86,0.06); color: #0F6E56; border-radius: 4px; font-size: 11px;`;
 
 export function CampaignTable({ campaigns, onEdit, onDelete, loading }: CampaignTableProps) {
   if (loading) return <EmptyText>Loading...</EmptyText>;

@@ -460,7 +460,7 @@ const Chip = styled.span<{ $variant?: 'progress' }>`
   background: ${({ theme, $variant }) =>
     $variant === 'progress' ? 'rgba(16, 185, 129, 0.1)' : theme.colors.surface.raised};
   color: ${({ theme, $variant }) =>
-    $variant === 'progress' ? '#047857' : theme.colors.text.secondary};
+    $variant === 'progress' ? '#0B5644' : theme.colors.text.secondary};
   font-size: ${({ theme }) => theme.fontSizes.caption};
   border-radius: ${({ theme }) => theme.radii.sm};
 `;
@@ -556,7 +556,7 @@ const GradeLabel = styled.div`
 
 const GradeNote = styled.div<{ $warn?: boolean }>`
   font-size: ${({ theme }) => theme.fontSizes.caption};
-  color: ${({ $warn, theme }) => ($warn ? '#B91C1C' : theme.colors.text.secondary)};
+  color: ${({ $warn, theme }) => ($warn ? '#9E2A2A' : theme.colors.text.secondary)};
   font-style: italic;
   text-align: center;
 `;

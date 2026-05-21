@@ -110,7 +110,7 @@ const LoadingContainer = styled.div`
   justify-content: center;
   min-height: 100vh;
   gap: ${({ theme }) => theme.space['6']};
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
+  background: ${({ theme }) => theme.colors.accent.sage};
 `;
 
 const LoadingText = styled.p`

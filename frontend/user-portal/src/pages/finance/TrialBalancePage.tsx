@@ -307,7 +307,7 @@ interface TotalRowProps {
 
 const TotalsTRow = styled.tr<TotalRowProps>`
   border-top: 3px double ${({ $outOfBalance }) =>
-    $outOfBalance ? '#9E2A2A' : '#d1d5db'};
+    $outOfBalance ? '#9E2A2A' : '#CFC9BD'};
   background: ${({ $outOfBalance }) =>
     $outOfBalance ? 'rgba(158,42,42,0.06)' : 'transparent'};
 `;

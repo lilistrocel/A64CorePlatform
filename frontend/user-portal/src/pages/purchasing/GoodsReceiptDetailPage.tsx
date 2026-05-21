@@ -185,8 +185,8 @@ const JELinkBanner = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ecfdf5;
-  border: 1px solid #6ee7b7;
+  background: rgba(15,110,86,0.06);
+  border: 1px solid rgba(15,110,86,0.24);
   border-radius: 8px;
   padding: 14px 18px;
   margin-bottom: 20px;
@@ -205,7 +205,7 @@ const JELinkButton = styled.a`
   color: #0B5644;
   font-weight: 600;
   text-decoration: none;
-  border: 1px solid #6ee7b7;
+  border: 1px solid rgba(15,110,86,0.24);
   border-radius: 6px;
   padding: 6px 14px;
   cursor: pointer;

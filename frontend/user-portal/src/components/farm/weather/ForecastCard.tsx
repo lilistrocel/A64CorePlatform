@@ -109,7 +109,7 @@ const Description = styled.div`
 
 const EvapotranspirationBadge = styled.div`
   font-size: 10px;
-  color: #16A34A;
+  color: #0F6E56;
   background: ${({ theme }) => theme.colors.accent.sageSoft};
   padding: 2px 6px;
   border-radius: 4px;

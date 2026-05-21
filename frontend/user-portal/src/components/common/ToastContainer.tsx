@@ -48,11 +48,11 @@ const Container = styled.div`
 const getToastColors = (type: ToastType) => {
   switch (type) {
     case 'success':
-      return { bg: '#f0fdf4', border: '#22c55e', text: '#15803d', icon: '#22c55e' };
+      return { bg: 'rgba(15,110,86,0.06)', border: '#0F6E56', text: '#0B5644', icon: '#0F6E56' };
     case 'error':
       return { bg: 'rgba(158,42,42,0.06)', border: '#9E2A2A', text: '#9E2A2A', icon: '#9E2A2A' };
     case 'warning':
-      return { bg: 'rgba(184,132,42,0.06)', border: '#B8842A', text: '#b45309', icon: '#B8842A' };
+      return { bg: 'rgba(184,132,42,0.06)', border: '#B8842A', text: '#B8842A', icon: '#B8842A' };
     case 'info':
       return { bg: 'rgba(15,110,86,0.05)', border: '#0F6E56', text: '#0B5644', icon: '#0F6E56' };
   }

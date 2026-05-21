@@ -131,14 +131,14 @@ const ErrorContainer = styled.div`
 `;
 
 const ErrorTitle = styled.h3`
-  color: #B91C1C;
+  color: #9E2A2A;
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 8px 0;
 `;
 
 const ErrorMessage = styled.p`
-  color: #7F1D1D;
+  color: #9E2A2A;
   font-size: 14px;
   margin: 0;
 `;

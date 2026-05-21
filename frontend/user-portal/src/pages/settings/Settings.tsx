@@ -1034,7 +1034,7 @@ const ModifiedBadge = styled.span`
   padding: 4px 8px;
   font-size: ${({ theme }: any) => theme.fontSizes.caption};
   font-weight: ${({ theme }: any) => theme.fontWeights.medium};
-  color: #b45309;
+  color: #B8842A;
   background: ${({ theme }: any) => theme.colors.status.warning};
   border-radius: 4px;
 `;
@@ -1285,7 +1285,7 @@ const MfaPendingBadge = styled.span`
   padding: 4px 12px;
   font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
   font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
-  color: #b45309;
+  color: #B8842A;
   background: ${({ theme }: any) => theme.colors.status.warning};
   border-radius: 4px;
 `;

@@ -103,7 +103,7 @@ const PillButton = styled.button<PillButtonProps>`
     return $isActive ? $activeColor : `${$activeColor}40`;
   }};
   background: ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
-    if ($hasError) return '#FEF2F2';
+    if ($hasError) return 'rgba(158,42,42,0.06)';
     if ($isDisabled) return theme.colors.surface.raised;
     return $isActive ? `${$activeColor}15` : theme.colors.surface.canvas;
   }};

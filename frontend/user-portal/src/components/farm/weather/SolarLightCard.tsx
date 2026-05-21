@@ -100,7 +100,7 @@ const SunTimeBox = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+  background: rgba(184,132,42,0.07);
   border-radius: 8px;
 
   .icon {
@@ -110,7 +110,7 @@ const SunTimeBox = styled.div`
   .text {
     .label {
       font-size: 11px;
-      color: #9A3412;
+      color: #B85C2A;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -118,7 +118,7 @@ const SunTimeBox = styled.div`
     .time {
       font-size: 16px;
       font-weight: 600;
-      color: #C2410C;
+      color: #B85C2A;
     }
   }
 `;
@@ -136,20 +136,20 @@ const UVIndicator = styled.div<{ $level: 'low' | 'moderate' | 'high' | 'very_hig
     switch ($level) {
       case 'low': return 'rgba(15,110,86,0.10)';
       case 'moderate': return 'rgba(184,132,42,0.10)';
-      case 'high': return '#FED7AA';
-      case 'very_high': return '#FECACA';
-      case 'extreme': return '#E9D5FF';
+      case 'high': return 'rgba(184,92,42,0.08)';
+      case 'very_high': return 'rgba(158,42,42,0.08)';
+      case 'extreme': return 'rgba(75,72,68,0.12)';
       default: return '#DCD8CF';
     }
   }};
 
   color: ${({ $level }) => {
     switch ($level) {
-      case 'low': return '#065F46';
+      case 'low': return '#0B5644';
       case 'moderate': return '#B8842A';
-      case 'high': return '#C2410C';
-      case 'very_high': return '#B91C1C';
-      case 'extreme': return '#7C3AED';
+      case 'high': return '#B85C2A';
+      case 'very_high': return '#9E2A2A';
+      case 'extreme': return '#4B4844';
       default: return '#0F0F0F';
     }
   }};
@@ -205,7 +205,7 @@ const DualValueItem = styled.div`
 
   .par-value {
     .value {
-      color: #16A34A;
+      color: #0F6E56;
     }
   }
 `;
@@ -224,8 +224,8 @@ const EstimatedBadge = styled.span`
 `;
 
 const DLIHighlight = styled.div`
-  background: linear-gradient(135deg, #ECFDF5 0%, rgba(15,110,86,0.10) 100%);
-  border: 1px solid #A7F3D0;
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  border: 1px solid ${({ theme }) => theme.colors.border.accent};
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 16px;
@@ -243,7 +243,7 @@ const DLIHighlight = styled.div`
     .title {
       font-size: 13px;
       font-weight: 600;
-      color: #065F46;
+      color: #0B5644;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -257,7 +257,7 @@ const DLIHighlight = styled.div`
     .value {
       font-size: 24px;
       font-weight: 700;
-      color: #047857;
+      color: #0B5644;
     }
 
     .unit {

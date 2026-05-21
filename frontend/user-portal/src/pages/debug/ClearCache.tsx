@@ -10,7 +10,7 @@ import styled from 'styled-components';
 
 const Container = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: ${({ theme }) => theme.colors.surface.canvas};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,7 +99,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
         background: #9E2A2A;
         color: white;
         &:hover {
-          background: #d32f2f;
+          background: #9E2A2A;
         }
       `;
     }
@@ -108,15 +108,15 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
         background: ${props.theme.colors.border.subtle};
         color: ${props.theme.colors.text.primary};
         &:hover {
-          background: #d0d0d0;
+          background: #CFC9BD;
         }
       `;
     }
     return `
-      background: #667eea;
+      background: #0F6E56;
       color: white;
       &:hover {
-        background: #5568d3;
+        background: #0F6E56;
       }
     `;
   }}
@@ -138,14 +138,14 @@ const Message = styled.div<{ $type: 'success' | 'error' | 'info' }>`
     if ($type === 'success') {
       return `
         background: ${theme.colors.accent.sageSoft};
-        color: #2e7d32;
+        color: #0B5644;
         border: 1px solid #0F6E56;
       `;
     }
     if ($type === 'error') {
       return `
         background: ${theme.colors.status.danger};
-        color: #c62828;
+        color: #9E2A2A;
         border: 1px solid #9E2A2A;
       `;
     }

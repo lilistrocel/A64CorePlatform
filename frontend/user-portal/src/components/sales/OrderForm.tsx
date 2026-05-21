@@ -230,7 +230,7 @@ const TotalRow = styled.div`
   &.total {
     font-size: 18px;
     font-weight: 600;
-    border-top: 2px solid #90caf9;
+    border-top: 2px solid #CFC9BD;
     margin-top: 8px;
     padding-top: 12px;
   }

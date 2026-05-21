@@ -50,8 +50,8 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 const METHOD_COLORS: Record<PaymentMethod, { bg: string; text: string }> = {
-  bank_transfer: { bg: 'rgba(15,110,86,0.08)', text: '#1e40af' },
-  cheque: { bg: '#fef9c3', text: '#854d0e' },
+  bank_transfer: { bg: 'rgba(15,110,86,0.08)', text: '#0F6E56' },
+  cheque: { bg: 'rgba(184,132,42,0.08)', text: '#B8842A' },
   cash: { bg: '#dcfce7', text: '#0B5644' },
 };
 
@@ -125,7 +125,7 @@ const ReversedBanner = styled.div`
   border: 1px solid rgba(158,42,42,0.18);
   border-left: 4px solid #9E2A2A;
   border-radius: 8px;
-  color: #7f1d1d;
+  color: #9E2A2A;
   font-size: 14px;
   line-height: 1.5;
 `;

@@ -35,7 +35,7 @@ function formatTooltipValue(value: number): string {
 }
 
 const FARM_COLORS = ['#0F6E56', '#0F6E56', '#0F6E56', '#90caf9', 'rgba(15, 110, 86, 0.10)'];
-const CROP_COLORS = ['#0F6E56', '#34d399', '#6ee7b7', '#a7f3d0', 'rgba(15,110,86,0.10)'];
+const CROP_COLORS = ['#0F6E56', '#34d399', 'rgba(15,110,86,0.24)', '#a7f3d0', 'rgba(15,110,86,0.10)'];
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -266,7 +266,7 @@ export function PnlBreakdownCharts({
                   type="category"
                   dataKey="farmName"
                   width={120}
-                  tick={{ fontSize: 11, fill: '#424242' }}
+                  tick={{ fontSize: 11, fill: '#4B4844' }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -334,7 +334,7 @@ export function PnlBreakdownCharts({
                     type="category"
                     dataKey="cropName"
                     width={120}
-                    tick={{ fontSize: 11, fill: '#424242' }}
+                    tick={{ fontSize: 11, fill: '#4B4844' }}
                     tickLine={false}
                     axisLine={false}
                   />

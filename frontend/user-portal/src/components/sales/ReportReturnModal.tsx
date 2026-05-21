@@ -253,7 +253,7 @@ const NumberInput = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: #F9FAFB;
+    background: #F4F2EC;
     cursor: not-allowed;
   }
 `;
@@ -281,7 +281,7 @@ const SelectInput = styled.select`
   }
 
   &:disabled {
-    background: #F9FAFB;
+    background: #F4F2EC;
     cursor: not-allowed;
   }
 `;
@@ -303,7 +303,7 @@ const TextInput = styled.input`
   }
 
   &:disabled {
-    background: #F9FAFB;
+    background: #F4F2EC;
     cursor: not-allowed;
   }
 `;

@@ -221,12 +221,12 @@ const UrgencyChip = styled.button<{ $active: boolean; $urgency: UrgencyLevel }>`
   padding: 7px 14px;
   border-radius: 99px;
   border: 1px solid ${({ $active, $urgency }) => {
-    if (!$active) return '#d1d5db';
+    if (!$active) return '#DCD8CF';
     return $urgency === 'high' ? '#9E2A2A' : $urgency === 'normal' ? '#B8842A' : '#4B4844';
   }};
   background: ${({ $active, $urgency }) => {
     if (!$active) return 'transparent';
-    return $urgency === 'high' ? 'rgba(158,42,42,0.06)' : $urgency === 'normal' ? 'rgba(184,132,42,0.10)' : '#f9fafb';
+    return $urgency === 'high' ? 'rgba(158,42,42,0.06)' : $urgency === 'normal' ? 'rgba(184,132,42,0.10)' : '#F4F2EC';
   }};
   color: ${({ $active, $urgency }) => {
     if (!$active) return '#4B4844';

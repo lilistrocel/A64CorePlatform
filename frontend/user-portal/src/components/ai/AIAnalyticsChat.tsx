@@ -474,7 +474,7 @@ const MessagesContainer = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #d4d4d4;
+    background: #CFC9BD;
     border-radius: 3px;
   }
 `;
@@ -731,7 +731,7 @@ const InputContainer = styled.div`
 const ChatInput = styled.input`
   flex: 1;
   padding: 10px 16px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid #CFC9BD;
   border-radius: 22px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.text.primary};

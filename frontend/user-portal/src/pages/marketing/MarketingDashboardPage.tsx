@@ -137,7 +137,7 @@ const EventItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: #E0F2FE;
+  background: rgba(15,110,86,0.06);
   border-left: 3px solid #0F6E56;
   border-radius: 4px;
   font-size: 13px;
@@ -150,7 +150,7 @@ const EventName = styled.span`
 
 const EventDate = styled.span`
   font-size: 12px;
-  color: #1E40AF;
+  color: #0F6E56;
 `;
 
 const BudgetList = styled.div`

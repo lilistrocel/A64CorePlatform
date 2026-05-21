@@ -172,7 +172,7 @@ const EfficiencyBadge = styled.span<{ $efficiency: number }>`
   font-weight: 600;
   background: ${({ $efficiency }) => {
     if ($efficiency >= 90) return '#0F6E56';
-    if ($efficiency >= 75) return '#8bc34a';
+    if ($efficiency >= 75) return '#0F6E56';
     if ($efficiency >= 60) return '#B8842A';
     return '#B85C2A';
   }};
@@ -425,7 +425,7 @@ const CancelButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #bdbdbd;
+    background: #CFC9BD;
   }
 
   &:disabled {
@@ -701,7 +701,7 @@ const PerformanceBadge = styled.span<{ $category: string }>`
       case 'exceeding':
         return '#0F6E56';
       case 'excellent':
-        return '#8bc34a';
+        return '#0F6E56';
       case 'good':
         return '#0F6E56';
       case 'acceptable':
@@ -725,13 +725,13 @@ const QualityCard = styled.div<{ $grade: string }>`
   background: ${({ $grade }) => {
     switch ($grade) {
       case 'A':
-        return '#e8f5e9';
+        return 'rgba(15,110,86,0.06)';
       case 'B':
-        return '#fff3e0';
+        return 'rgba(184,132,42,0.06)';
       case 'C':
-        return '#ffebee';
+        return 'rgba(158,42,42,0.06)';
       default:
-        return '#f5f5f5';
+        return '#F4F2EC';
     }
   }};
   border: 2px solid
@@ -740,7 +740,7 @@ const QualityCard = styled.div<{ $grade: string }>`
         case 'A':
           return '#0F6E56';
         case 'B':
-          return '#ff9800';
+          return '#B8842A';
         case 'C':
           return '#9E2A2A';
         default:

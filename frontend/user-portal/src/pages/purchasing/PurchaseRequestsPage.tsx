@@ -154,10 +154,10 @@ const StatusBadge = styled.span<{ $status: PRStatus }>`
     switch ($status) {
       case 'Draft': return theme.colors.surface.raised;
       case 'Pending Approval': return 'rgba(184,132,42,0.10)';
-      case 'Approved': return theme.colors.accent.sageSoft || '#ecfdf5';
+      case 'Approved': return theme.colors.accent.sageSoft || 'rgba(15,110,86,0.06)';
       case 'Rejected': return theme.colors.status.danger || 'rgba(158,42,42,0.06)';
       case 'Cancelled': return theme.colors.surface.raised;
-      case 'Closed': return '#ede9fe';
+      case 'Closed': return 'rgba(75,72,68,0.10)';
       default: return theme.colors.surface.raised;
     }
   }};
@@ -168,7 +168,7 @@ const StatusBadge = styled.span<{ $status: PRStatus }>`
       case 'Approved': return theme.colors.status.success || '#0F6E56';
       case 'Rejected': return theme.colors.status.danger || '#9E2A2A';
       case 'Cancelled': return theme.colors.text.tertiary;
-      case 'Closed': return '#5b21b6';
+      case 'Closed': return '#4B4844';
       default: return theme.colors.text.secondary;
     }
   }};

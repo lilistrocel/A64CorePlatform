@@ -341,7 +341,7 @@ const Tr = styled.tr<TrProps>`
   border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   background: ${({ $warning, $dirty, theme }) => {
     if ($dirty) return (theme.colors.surface.sunken || 'rgba(15,110,86,0.05)') + '55';
-    if ($warning) return (theme.colors.status.warning || 'rgba(184,132,42,0.06)');
+    if ($warning) return (theme.colors.status.warning);
     return 'transparent';
   }};
   transition: background 120ms ease-in-out;
@@ -353,7 +353,7 @@ const Tr = styled.tr<TrProps>`
   &:hover {
     background: ${({ $dirty, $warning, theme }) => {
       if ($dirty) return (theme.colors.surface.sunken || 'rgba(15,110,86,0.05)') + '88';
-      if ($warning) return (theme.colors.status.warning || 'rgba(184,132,42,0.06)') + 'cc';
+      if ($warning) return (theme.colors.status.warning) + 'cc';
       return theme.colors.surface.canvas;
     }};
   }

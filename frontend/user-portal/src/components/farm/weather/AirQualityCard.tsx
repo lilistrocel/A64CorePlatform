@@ -132,19 +132,19 @@ const PollenLevel = styled.div<{ $level: number }>`
   font-weight: 600;
 
   background: ${({ $level }) => {
-    if ($level === 0) return '#E5E7EB';   // None - gray
+    if ($level === 0) return '#DCD8CF';   // None - gray
     if ($level === 1) return 'rgba(15,110,86,0.10)';   // Low - green
     if ($level === 2) return 'rgba(184,132,42,0.10)';   // Moderate - yellow
-    if ($level === 3) return '#FED7AA';   // High - orange
-    return '#FECACA';                      // Very High - red
+    if ($level === 3) return 'rgba(184,92,42,0.08)';   // High - orange
+    return 'rgba(158,42,42,0.08)';                      // Very High - red
   }};
 
   color: ${({ $level }) => {
     if ($level === 0) return '#4B4844';   // None - gray
-    if ($level === 1) return '#065F46';   // Low - green
+    if ($level === 1) return '#0B5644';   // Low - green
     if ($level === 2) return '#B8842A';   // Moderate - yellow
-    if ($level === 3) return '#C2410C';   // High - orange
-    return '#B91C1C';                      // Very High - red
+    if ($level === 3) return '#B85C2A';   // High - orange
+    return '#9E2A2A';                      // Very High - red
   }};
 `;
 

@@ -41,8 +41,8 @@ const STATE_OPTIONS: { value: DashboardBlockStatus; label: string; icon: string;
   { value: 'empty', label: 'Empty', icon: '⚪', color: '#4B4844' },
   { value: 'planned', label: 'Planned', icon: '🔵', color: '#0F6E56' },
   { value: 'planted', label: 'Planted', icon: '🟢', color: '#0F6E56' },
-  { value: 'growing', label: 'Growing', icon: '🌿', color: '#84CC16' },
-  { value: 'fruiting', label: 'Fruiting', icon: '🍇', color: '#FBBF24' },
+  { value: 'growing', label: 'Growing', icon: '🌿', color: '#0F6E56' },
+  { value: 'fruiting', label: 'Fruiting', icon: '🍇', color: '#B8842A' },
   { value: 'harvesting', label: 'Harvesting', icon: '🧺', color: '#B8842A' },
   { value: 'cleaning', label: 'Cleaning', icon: '🧹', color: '#4B4844' },
 ];
@@ -351,7 +351,7 @@ const ClearButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #d32f2f;
+    background: #9E2A2A;
   }
 `;
 

@@ -266,7 +266,7 @@ const VarianceHelpText = styled.p`
   font-size: 12px;
   color: #B8842A;
   background: rgba(184,132,42,0.10);
-  border: 1px solid #fcd34d;
+  border: 1px solid #B8842A;
   border-radius: 6px;
   padding: 8px 12px;
   margin: 12px 0 0;

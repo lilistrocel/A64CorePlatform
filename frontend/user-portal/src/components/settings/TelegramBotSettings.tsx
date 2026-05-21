@@ -553,9 +553,9 @@ const HistoryItem = styled.div`
 
 const severityColors: Record<string, string> = {
   low: '#4B4844',
-  medium: '#d97706',
+  medium: '#B8842A',
   high: '#9E2A2A',
-  critical: '#7c3aed',
+  critical: '#4B4844',
 };
 
 const HistorySeverity = styled.span<{ severity: string }>`

@@ -196,9 +196,9 @@ const StatusBadge = styled.span<{ $status: ReturnStatus }>`
       case 'pending':
         return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'processing':
-        return `background: ${theme.colors.surface.sunken}; color: #1E40AF;`;
+        return `background: ${theme.colors.surface.sunken}; color: #0F6E56;`;
       case 'completed':
-        return `background: ${theme.colors.accent.sageSoft}; color: #065F46;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #0B5644;`;
       case 'rejected':
         return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       default:
@@ -252,7 +252,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'success' | 'danger'
           background: #4B4844;
           color: white;
           &:hover {
-            background: #4B5563;
+            background: #4B4844;
           }
         `;
     }

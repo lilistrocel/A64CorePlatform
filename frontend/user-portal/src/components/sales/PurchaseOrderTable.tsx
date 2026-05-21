@@ -115,11 +115,11 @@ const StatusBadge = styled.span<{ $status: string }>`
       case 'draft':
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
       case 'sent':
-        return `background: ${theme.colors.surface.sunken}; color: #1E40AF;`;
+        return `background: ${theme.colors.surface.sunken}; color: #0F6E56;`;
       case 'confirmed':
         return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'received':
-        return `background: ${theme.colors.accent.sageSoft}; color: #065F46;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #0B5644;`;
       case 'cancelled':
         return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       default:

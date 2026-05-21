@@ -244,7 +244,7 @@ const Tooltip = styled.span`
     top: calc(100% + 4px);
     left: 0;
     z-index: 1050;
-    background: #1f2937;
+    background: #0F0E0C;
     color: white;
     border-radius: 6px;
     padding: 6px 10px;
@@ -323,9 +323,9 @@ const ReversalBadge = styled.span`
   border-radius: 99px;
   font-size: 10px;
   font-weight: 700;
-  background: #f0f4ff;
-  color: #3b4fd9;
-  border: 1px solid #c7d2fe;
+  background: rgba(15,110,86,0.06);
+  color: #0F6E56;
+  border: 1px solid rgba(15,110,86,0.24);
   margin-left: 6px;
   vertical-align: middle;
 `;

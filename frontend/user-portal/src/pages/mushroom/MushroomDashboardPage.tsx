@@ -626,9 +626,9 @@ interface AlertItemProps {
 }
 
 const ALERT_SEVERITY_BG: Record<string, string> = {
-  low: '#f0fdf4',
+  low: 'rgba(15,110,86,0.06)',
   medium: 'rgba(184,132,42,0.06)',
-  high: '#fff5f5',
+  high: 'rgba(158,42,42,0.06)',
   critical: 'rgba(158,42,42,0.06)',
 };
 
@@ -637,10 +637,10 @@ const AlertItem = styled.div<AlertItemProps>`
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: ${({ $severity }) => ALERT_SEVERITY_BG[$severity] ?? '#fff5f5'};
+  background: ${({ $severity }) => ALERT_SEVERITY_BG[$severity] ?? 'rgba(158,42,42,0.06)'};
   border-radius: 8px;
   border: 1px solid ${({ $severity }) =>
-    $severity === 'critical' ? 'rgba(158,42,42,0.12)' : '#f0f0f0'};
+    $severity === 'critical' ? 'rgba(158,42,42,0.12)' : '#DCD8CF'};
 `;
 
 const AlertRoom = styled.span`
@@ -661,7 +661,7 @@ const SEVERITY_BADGE_COLORS: Record<string, string> = {
   low: '#0F6E56',
   medium: '#B8842A',
   high: '#9E2A2A',
-  critical: '#7F1D1D',
+  critical: '#9E2A2A',
 };
 
 interface AlertSeverityBadgeProps {

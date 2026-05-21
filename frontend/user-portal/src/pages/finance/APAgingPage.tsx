@@ -344,7 +344,7 @@ interface TotalTrProps {
 }
 
 const TotalTr = styled.tr<TotalTrProps>`
-  border-top: ${({ $isFooter }) => ($isFooter ? '3px double #d1d5db' : 'none')};
+  border-top: ${({ $isFooter }) => ($isFooter ? '3px double #CFC9BD' : 'none')};
   background: ${({ $isFooter, theme }) =>
     $isFooter ? theme.colors.surface.canvas : 'transparent'};
 `;
@@ -413,22 +413,22 @@ const BUCKET_DEFS: BucketDef[] = [
     key: 'notDue',
     label: 'Not Due',
     sublabel: 'Current',
-    bg: '#f0fdf4',
+    bg: 'rgba(15,110,86,0.06)',
     text: '#0B5644',
   },
   {
     key: 'days1To30',
     label: '1–30 Days',
     sublabel: 'Overdue',
-    bg: '#fefce8',
-    text: '#854d0e',
+    bg: 'rgba(184,132,42,0.08)',
+    text: '#B8842A',
   },
   {
     key: 'days31To60',
     label: '31–60 Days',
     sublabel: 'Overdue',
-    bg: '#fff7ed',
-    text: '#c2410c',
+    bg: 'rgba(184,92,42,0.08)',
+    text: '#B85C2A',
   },
   {
     key: 'days61To90',
@@ -441,14 +441,14 @@ const BUCKET_DEFS: BucketDef[] = [
     key: 'daysOver90',
     label: '> 90 Days',
     sublabel: 'Overdue',
-    bg: '#4c0519',
-    text: '#fce7f3',
+    bg: '#9E2A2A',
+    text: 'rgba(237,234,227,0.12)',
   },
   {
     key: 'total',
     label: 'Grand Total',
     sublabel: 'All vendors',
-    bg: '#1e3a5f',
+    bg: '#4B4844',
     text: 'rgba(15,110,86,0.08)',
   },
 ];

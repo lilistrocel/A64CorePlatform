@@ -94,8 +94,8 @@ const PlantingCountBadge = styled.div<{ $count: number }>`
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $count, theme }) => ($count > 0 ? '#e8f5e9' : theme.colors.surface.raised)};
-  color: ${({ $count, theme }) => ($count > 0 ? '#2e7d32' : theme.colors.text.tertiary)};
+  background: ${({ $count, theme }) => ($count > 0 ? 'rgba(15,110,86,0.06)' : theme.colors.surface.raised)};
+  color: ${({ $count, theme }) => ($count > 0 ? '#0B5644' : theme.colors.text.tertiary)};
   white-space: nowrap;
 `;
 
@@ -281,11 +281,11 @@ const PlantingState = styled.div<{ $state: string }>`
       case 'planned':
         return '#0B5644';
       case 'growing':
-        return '#2e7d32';
+        return '#0B5644';
       case 'fruiting':
-        return '#e65100';
+        return '#B85C2A';
       case 'harvesting':
-        return '#c2185b';
+        return '#9E2A2A';
       default:
         return '#4B4844';
     }

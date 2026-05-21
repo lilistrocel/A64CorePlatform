@@ -151,9 +151,9 @@ const StatusBadge = styled.span<{ $status: POStatus }>`
       case 'Pending Approval': return 'rgba(184,132,42,0.10)';
       case 'Open': return 'rgba(15,110,86,0.08)';
       case 'Sent': return 'rgba(15,110,86,0.10)';
-      case 'Partially Received': return '#e0e7ff';
-      case 'Received': return '#ecfdf5';
-      case 'Closed': return '#ede9fe';
+      case 'Partially Received': return 'rgba(75,72,68,0.08)';
+      case 'Received': return 'rgba(15,110,86,0.06)';
+      case 'Closed': return 'rgba(75,72,68,0.10)';
       case 'Cancelled': return '#DCD8CF';
       default: return '#DCD8CF';
     }
@@ -164,9 +164,9 @@ const StatusBadge = styled.span<{ $status: POStatus }>`
       case 'Pending Approval': return '#B8842A';
       case 'Open': return '#0B5644';
       case 'Sent': return '#0B5644';
-      case 'Partially Received': return '#3730a3';
+      case 'Partially Received': return '#0F6E56';
       case 'Received': return '#0B5644';
-      case 'Closed': return '#5b21b6';
+      case 'Closed': return '#4B4844';
       case 'Cancelled': return '#4B4844';
       default: return '#4B4844';
     }

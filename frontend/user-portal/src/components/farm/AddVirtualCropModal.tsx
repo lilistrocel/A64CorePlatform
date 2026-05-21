@@ -156,7 +156,7 @@ const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
-    background: linear-gradient(90deg, #0F6E56, #0F6E56);
+    background: #0F6E56;
     transition: width 300ms ease-in-out;
   }
 `;
@@ -336,7 +336,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
           background: #0F6E56;
           color: white;
           &:hover:not(:disabled) {
-            background: #388e3c;
+            background: #0F6E56;
           }
         `;
       default:
@@ -394,7 +394,7 @@ const AutoCalculationInfo = styled.div`
   border-radius: 8px;
   margin-top: 8px;
   font-size: 13px;
-  color: #2e7d32;
+  color: #0B5644;
 `;
 
 const AutoCalcIcon = styled.span`
@@ -426,7 +426,7 @@ const NoSpacingWarning = styled.div`
   border-radius: 8px;
   margin-top: 8px;
   font-size: 12px;
-  color: #e65100;
+  color: #B85C2A;
 `;
 
 // ============================================================================
@@ -811,7 +811,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                       </span>
                     )}
                     {isManualOverride && (
-                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#ff9800', fontWeight: 400 }}>
+                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#B8842A', fontWeight: 400 }}>
                         (manual override)
                       </span>
                     )}

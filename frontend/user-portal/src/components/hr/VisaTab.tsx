@@ -104,12 +104,12 @@ const ExpiryWarning = styled.div<{ $type: 'expired' | 'expiring_soon' }>`
       ? `
     background: rgba(158,42,42,0.08);
     color: #9E2A2A;
-    border: 1px solid #FECACA;
+    border: 1px solid rgba(158,42,42,0.08);
   `
       : `
     background: rgba(184,132,42,0.10);
     color: #B8842A;
-    border: 1px solid #FDE68A;
+    border: 1px solid rgba(184,132,42,0.12);
   `}
 `;
 

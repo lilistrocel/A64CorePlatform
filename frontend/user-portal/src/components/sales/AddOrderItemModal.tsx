@@ -603,7 +603,7 @@ const RecommendedBadge = styled.span`
   font-weight: 600;
   color: #B8842A;
   background: rgba(184,132,42,0.10);
-  border: 1px solid #FCD34D;
+  border: 1px solid #B8842A;
   border-radius: 4px;
   padding: 1px 6px;
 `;
@@ -698,15 +698,15 @@ const warningStyle = css`
 
 const WarningBanner = styled.div`
   ${warningStyle}
-  background: #FEF9C3;
-  border: 1px solid #FDE047;
-  color: #713F12;
+  background: rgba(184,132,42,0.08);
+  border: 1px solid #B8842A;
+  color: #B85C2A;
 `;
 
 const ErrorBanner = styled.div`
   ${warningStyle}
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
+  background: rgba(158,42,42,0.06);
+  border: 1px solid rgba(158,42,42,0.08);
   color: #9E2A2A;
 `;
 
@@ -801,7 +801,7 @@ const MergePrompt = styled.div`
 
 const MergeText = styled.p`
   font-size: 13px;
-  color: #1E40AF;
+  color: #0F6E56;
   margin: 0;
 `;
 

@@ -415,7 +415,7 @@ const SetupContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
+  background: ${({ theme }) => theme.colors.accent.sage};
   padding: 0.5rem;
 
   @media (min-width: 360px) {
@@ -671,7 +671,7 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   min-width: 28px;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border-radius: 50%;
   display: flex;
@@ -1025,7 +1025,7 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
   color: white;
   background: ${({ disabled, theme }) =>
-    disabled ? theme.colors.border.subtle : `linear-gradient(135deg, ${theme.colors.accent.sage} 0%, ${theme.colors.accent.sageDeep} 100%)`};
+    disabled ? theme.colors.border.subtle : theme.colors.accent.sage};
   border: none;
   border-radius: ${({ theme }) => theme.radii.md};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};

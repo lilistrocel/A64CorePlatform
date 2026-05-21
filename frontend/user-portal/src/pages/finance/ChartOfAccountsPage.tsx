@@ -345,7 +345,7 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
     }
     // locked
     return `
-      background: ${theme.colors.status.warning || 'rgba(184,132,42,0.06)'};
+      background: ${theme.colors.status.warning};
       color: ${theme.colors.status.warning || '#B8842A'};
     `;
   }}
@@ -444,7 +444,7 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
+    $active ? theme.colors.accent.sageSoft : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.status.success || '#0F6E56' : theme.colors.text.tertiary};
 `;
@@ -480,7 +480,7 @@ const LevelBadge = styled.span<{ $level: AccountLevel }>`
   ${({ $level, theme }) => {
     if ($level === 'active') {
       return `
-        background: ${theme.colors.accent.sageSoft || '#ecfdf5'};
+        background: ${theme.colors.accent.sageSoft};
         color: ${theme.colors.status.success || '#0F6E56'};
       `;
     }
@@ -492,7 +492,7 @@ const LevelBadge = styled.span<{ $level: AccountLevel }>`
     }
     // drawer
     return `
-      background: ${theme.colors.status.warning || 'rgba(184,132,42,0.06)'};
+      background: ${theme.colors.status.warning};
       color: ${theme.colors.status.warning || '#B8842A'};
     `;
   }}
@@ -1538,7 +1538,7 @@ export function ChartOfAccountsPage() {
                 {selectedAccount.isHeader && (
                   <BannerError
                     role="note"
-                    style={{ marginBottom: 20, background: 'rgba(184,132,42,0.06)', color: '#B8842A', borderColor: '#fde68a' }}
+                    style={{ marginBottom: 20, background: 'rgba(184,132,42,0.06)', color: '#B8842A', borderColor: 'rgba(184,132,42,0.12)' }}
                   >
                     This is a header account. It is a section title and cannot be posted to directly.
                   </BannerError>

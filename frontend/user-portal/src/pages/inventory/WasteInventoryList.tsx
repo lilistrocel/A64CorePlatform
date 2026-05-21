@@ -44,21 +44,21 @@ const Button = styled.button<ButtonProps>`
     switch ($variant) {
       case 'primary':
         return `
-          background: #4a90d9;
+          background: #0F6E56;
           color: white;
-          &:hover { background: #3a7bc8; }
+          &:hover { background: #0B5644; }
         `;
       case 'danger':
         return `
-          background: #dc3545;
+          background: #9E2A2A;
           color: white;
-          &:hover { background: #c82333; }
+          &:hover { background: #9E2A2A; }
         `;
       case 'success':
         return `
-          background: #28a745;
+          background: #0F6E56;
           color: white;
-          &:hover { background: #218838; }
+          &:hover { background: #0B5644; }
         `;
       default:
         return `
@@ -91,8 +91,8 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #4a90d9;
+  border: 3px solid #DCD8CF;
+  border-top: 3px solid #0F6E56;
   border-radius: 50%;
   animation: ${spin} 1s linear infinite;
 `;
@@ -126,7 +126,7 @@ const PageHeader = styled.div`
 const PageTitle = styled.h1`
   font-size: 1.75rem;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0F0F0F;
   margin: 0;
 `;
 
@@ -150,7 +150,7 @@ const SummaryCard = styled(Card)<SummaryCardProps>`
 const SummaryValue = styled.div`
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #0F0F0F;
 `;
 
 const SummaryLabel = styled.div`
@@ -177,7 +177,7 @@ const FilterSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #4a90d9;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
   }
 `;
@@ -197,7 +197,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #4a90d9;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
   }
 `;
@@ -261,7 +261,7 @@ const TableRow = styled.tr`
 
 const TableCell = styled.td`
   padding: 14px 16px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid #DCD8CF;
   font-size: 0.875rem;
   color: #333;
 `;
@@ -282,7 +282,7 @@ const SourceBadge = styled.span<SourceBadgeProps>`
   ${({ $type, theme }) => {
     switch ($type) {
       case 'return':
-        return `background: ${theme.colors.surface.sunken}; color: #7C3AED;`;
+        return `background: ${theme.colors.surface.sunken}; color: #4B4844;`;
       case 'expired':
         return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'damaged':
@@ -290,7 +290,7 @@ const SourceBadge = styled.span<SourceBadgeProps>`
       case 'harvest':
         return `background: ${theme.colors.accent.sageSoft}; color: #0B5644;`;
       case 'quality_reject':
-        return `background: ${theme.colors.status.danger}; color: #DB2777;`;
+        return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       default:
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
     }
@@ -317,7 +317,7 @@ const DisposalBadge = styled.span<DisposalBadgeProps>`
       case 'animal_feed':
         return `background: ${theme.colors.surface.sunken}; color: #0B5644;`;
       case 'donated':
-        return `background: ${theme.colors.surface.sunken}; color: #4F46E5;`;
+        return `background: ${theme.colors.surface.sunken}; color: #0F6E56;`;
       case 'sold_discount':
         return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'discard':
@@ -351,11 +351,11 @@ const ActionButton = styled.button<ActionButtonProps>`
   ${({ $variant }) => {
     switch ($variant) {
       case 'primary':
-        return 'background: #4a90d9; color: white; &:hover { background: #3a7bc8; }';
+        return 'background: #0F6E56; color: white; &:hover { background: #0B5644; }';
       case 'success':
-        return 'background: #28a745; color: white; &:hover { background: #218838; }';
+        return 'background: #0F6E56; color: white; &:hover { background: #0B5644; }';
       case 'danger':
-        return 'background: #dc3545; color: white; &:hover { background: #c82333; }';
+        return 'background: #9E2A2A; color: white; &:hover { background: #9E2A2A; }';
       default:
         return 'background: #4B4844; color: white; &:hover { background: #5a6268; }';
     }
@@ -373,7 +373,7 @@ const PaginationContainer = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid #DCD8CF;
 `;
 
 const PaginationInfo = styled.span`
@@ -392,16 +392,16 @@ interface PageButtonProps {
 
 const PageButton = styled.button<PageButtonProps>`
   padding: 8px 14px;
-  border: 1px solid ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 6px;
-  background: ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.surface.canvas)};
+  background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.canvas)};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.primary)};
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? '#3a7bc8' : theme.colors.surface.raised)};
+    background: ${({ $active, theme }) => ($active ? '#0B5644' : theme.colors.surface.raised)};
   }
 
   &:disabled {
@@ -436,7 +436,7 @@ const ModalContent = styled.div`
 const ModalTitle = styled.h2`
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #0F0F0F;
   margin: 0 0 20px 0;
 `;
 
@@ -660,7 +660,7 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
             <SummaryValue>{formatNumber(summary.totalQuantity, { decimals: 2 })}</SummaryValue>
             <SummaryLabel>Total Quantity</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color="#7C3AED">
+          <SummaryCard $color="#4B4844">
             <SummaryValue>{formatCurrency(summary.totalEstimatedValue, 'AED')}</SummaryValue>
             <SummaryLabel>Estimated Value Lost</SummaryLabel>
           </SummaryCard>

@@ -231,7 +231,7 @@ const SearchInput = styled.input`
 const LoadingSpinner = styled.div`
   width: 16px;
   height: 16px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid #DCD8CF;
   border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

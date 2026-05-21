@@ -150,7 +150,7 @@ const AlertItem = styled.div`
 
   .text {
     font-size: 13px;
-    color: #7F1D1D;
+    color: #9E2A2A;
     line-height: 1.4;
   }
 `;
@@ -172,7 +172,7 @@ const RecommendationItem = styled.div`
   .icon {
     font-size: 14px;
     flex-shrink: 0;
-    color: #16A34A;
+    color: #0F6E56;
   }
 
   .text {

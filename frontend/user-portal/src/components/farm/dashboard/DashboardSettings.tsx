@@ -425,7 +425,7 @@ const IconSetOption = styled.div<{ $isSelected: boolean }>`
   padding: 16px;
   border: 2px solid ${(props) => (props.$isSelected ? '#0F6E56' : '#DCD8CF')};
   border-radius: 8px;
-  background: ${(props) => (props.$isSelected ? '#E3F2FD' : 'white')};
+  background: ${(props) => (props.$isSelected ? 'rgba(15,110,86,0.06)' : 'white')};
   cursor: pointer;
   text-align: center;
   transition: all 150ms ease-in-out;

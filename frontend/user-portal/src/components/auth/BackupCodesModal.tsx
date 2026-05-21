@@ -223,7 +223,7 @@ const WarningBanner = styled.div`
 
 const WarningIcon = styled.span`
   font-size: 1.25rem;
-  color: #b45309;
+  color: #B8842A;
   flex-shrink: 0;
 
   @media (min-width: 480px) {

@@ -506,7 +506,7 @@ const VerifyContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
+  background: ${({ theme }) => theme.colors.accent.sage};
   padding: 0.5rem;
 
   @media (min-width: 360px) {
@@ -1145,7 +1145,7 @@ const ExpiredIcon = styled.div`
   width: 70px;
   height: 70px;
   margin: 0.5rem auto 1rem;
-  background: linear-gradient(135deg, #B8842A 0%, #d97706 100%);
+  background: #B8842A;
   color: white;
   border-radius: 50%;
   display: flex;

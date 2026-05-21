@@ -309,7 +309,7 @@ const ConfirmButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #1976D2;
+    background: #0F6E56;
   }
 
   &:disabled {

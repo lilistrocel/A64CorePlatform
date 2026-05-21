@@ -241,7 +241,7 @@ const SuccessButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
+    background: ${({ theme }) => theme.colors.accent.sageSoft};
   }
   &:disabled {
     opacity: 0.5;
@@ -372,7 +372,7 @@ const AlwaysPill = styled.span`
   border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
   color: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
 `;
 
@@ -384,7 +384,7 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   font-size: 11px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
+    $active ? theme.colors.accent.sageSoft : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.status.success || '#0F6E56' : theme.colors.text.tertiary};
 `;
@@ -702,8 +702,8 @@ const TesterResult = styled.div<{ $requiresApproval: boolean | null }>`
   background: ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.surface.canvas;
     return $requiresApproval
-      ? theme.colors.status.warning || 'rgba(184,132,42,0.06)'
-      : theme.colors.accent.sageSoft || '#ecfdf5';
+      ? theme.colors.status.warning
+      : theme.colors.accent.sageSoft;
   }};
   color: ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.text.tertiary;
@@ -714,8 +714,8 @@ const TesterResult = styled.div<{ $requiresApproval: boolean | null }>`
   border: 1px solid ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.surface.sunken;
     return $requiresApproval
-      ? theme.colors.status.warning || '#fde68a'
-      : theme.colors.status.success || '#6ee7b7';
+      ? theme.colors.status.warning
+      : theme.colors.status.success;
   }};
 `;
 

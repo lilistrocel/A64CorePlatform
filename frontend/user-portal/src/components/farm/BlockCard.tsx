@@ -207,7 +207,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         background: #0F6E56;
         color: white;
         &:hover {
-          background: #388E3C;
+          background: #0F6E56;
         }
       `;
     }
@@ -216,7 +216,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         background: #0F6E56;
         color: white;
         &:hover {
-          background: #4F46E5;
+          background: #0F6E56;
         }
       `;
     }

@@ -162,7 +162,7 @@ export function ReportAlertModal({
 
               <SeverityOption
                 $selected={severity === 'medium'}
-                $color="#FF9800"
+                $color="#B8842A"
                 onClick={() => !loading && setSeverity('medium')}
               >
                 <SeverityIcon>⚠️</SeverityIcon>
@@ -172,7 +172,7 @@ export function ReportAlertModal({
 
               <SeverityOption
                 $selected={severity === 'high'}
-                $color="#FF5722"
+                $color="#B85C2A"
                 onClick={() => !loading && setSeverity('high')}
               >
                 <SeverityIcon>🔥</SeverityIcon>
@@ -182,7 +182,7 @@ export function ReportAlertModal({
 
               <SeverityOption
                 $selected={severity === 'critical'}
-                $color="#F44336"
+                $color="#9E2A2A"
                 onClick={() => !loading && setSeverity('critical')}
               >
                 <SeverityIcon>🚨</SeverityIcon>

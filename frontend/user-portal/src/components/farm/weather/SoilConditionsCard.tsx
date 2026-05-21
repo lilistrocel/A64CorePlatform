@@ -82,10 +82,10 @@ const DepthIndicator = styled.div<{ $depth: number }>`
   margin-right: 12px;
   background: ${({ $depth }) => {
     // Color gradient from light to dark based on depth
-    if ($depth === 0) return '#A5D6A7';  // Light green - surface
-    if ($depth === 1) return '#66BB6A';  // Medium green
-    if ($depth === 2) return '#43A047';  // Darker green
-    return '#2E7D32';                     // Dark green - deep
+    if ($depth === 0) return '#DCD8CF';  // Light green - surface
+    if ($depth === 1) return '#0F6E56';  // Medium green
+    if ($depth === 2) return '#0F6E56';  // Darker green
+    return '#0B5644';                     // Dark green - deep
   }};
 `;
 

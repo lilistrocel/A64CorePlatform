@@ -729,7 +729,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                       </span>
                     )}
                     {isManualOverride && (
-                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#ff9800', fontWeight: 400 }}>
+                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#B8842A', fontWeight: 400 }}>
                         (manual override)
                       </span>
                     )}

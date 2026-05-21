@@ -1856,7 +1856,7 @@ const SourceBadge = styled.span<SourceBadgeProps>`
   font-weight: 600;
   text-transform: capitalize;
   ${({ $source, theme }) => {
-    if ($source === 'override') return `background: rgba(15,110,86,0.08); color: #1e40af;`;
+    if ($source === 'override') return `background: rgba(15,110,86,0.08); color: #0F6E56;`;
     if ($source === 'inventory') return `background: rgba(15,110,86,0.10); color: #0B5644;`;
     return `background: ${theme.colors.surface.sunken}; color: ${theme.colors.text.secondary};`;
   }}
@@ -2056,7 +2056,7 @@ const InfoBanner = styled.div`
   border: 1px solid #0F6E56;
   border-radius: 8px;
   font-size: 14px;
-  color: #1e40af;
+  color: #0F6E56;
 `;
 
 const ResultTabs = styled.div`

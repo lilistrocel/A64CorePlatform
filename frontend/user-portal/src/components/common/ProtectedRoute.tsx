@@ -175,7 +175,7 @@ const MfaSetupBanner = styled.div`
   justify-content: center;
   gap: ${({ theme }) => theme.space['2']};
   padding: ${({ theme }) => theme.space['4']};
-  background: linear-gradient(135deg, #B8842A 0%, #d97706 100%);
+  background: #B8842A;
   color: white;
   font-weight: ${({ theme }) => theme.fontWeights.medium};
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);

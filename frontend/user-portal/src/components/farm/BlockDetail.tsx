@@ -103,15 +103,15 @@ const StatusBadge = styled.span<{ $status: string }>`
       case 'planted':
         return '#0F6E56';
       case 'growing':
-        return '#8BC34A';
+        return '#0F6E56';
       case 'fruiting':
-        return '#FF9800';
+        return '#B8842A';
       case 'harvesting':
-        return '#FFC107';
+        return '#B8842A';
       case 'cleaning':
-        return '#03A9F4';
+        return '#0F6E56';
       case 'alert':
-        return '#F44336';
+        return '#9E2A2A';
       default:
         return '#4B4844';
     }
@@ -303,7 +303,7 @@ const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
-    background: linear-gradient(90deg, #0F6E56, #0F6E56);
+    background: #0F6E56;
     transition: width 300ms ease-in-out;
   }
 `;
@@ -328,7 +328,7 @@ const AddCropButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #388e3c;
+    background: #0F6E56;
   }
 `;
 
@@ -731,7 +731,7 @@ export function BlockDetail() {
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>Yield Efficiency</InfoLabel>
-                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? '#0F6E56' : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? '#FF9800' : '#F44336' }}>
+                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? '#0F6E56' : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? '#B8842A' : '#9E2A2A' }}>
                       {formatPercentage(summary.yieldEfficiencyPercent ?? 0, 1)}
                     </InfoValue>
                   </InfoItem>

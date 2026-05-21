@@ -176,9 +176,9 @@ const MODULE_COLORS: Record<string, string> = {
   customers: '#B8842A',
   orders: '#9E2A2A',
   vehicles: '#0F6E56',
-  shipments: '#14B8A6',
-  campaigns: '#EC4899',
-  users: '#64748B',
+  shipments: '#0F6E56',
+  campaigns: '#9E2A2A',
+  users: '#4B4844',
 };
 
 const BLOCK_STATE_COLORS: Record<string, string> = {
@@ -189,7 +189,7 @@ const BLOCK_STATE_COLORS: Record<string, string> = {
   cleaning: '#4B4844',
   alert: '#9E2A2A',
   fruiting: '#B85C2A',
-  partial: '#06B6D4',
+  partial: '#4B4844',
 };
 
 const CROP_PALETTE: string[] = [
@@ -197,12 +197,12 @@ const CROP_PALETTE: string[] = [
   '#0F6E56',
   '#B8842A',
   '#4B4844',
-  '#EC4899',
-  '#14B8A6',
-  '#B85C2A',
-  '#06B6D4',
+  '#9E2A2A',
   '#0F6E56',
-  '#84CC16',
+  '#B85C2A',
+  '#4B4844',
+  '#0F6E56',
+  '#0F6E56',
 ];
 
 // ============================================================================

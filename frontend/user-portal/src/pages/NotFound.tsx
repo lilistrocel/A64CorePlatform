@@ -7,7 +7,7 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 2rem;
   text-align: center;
 `;
@@ -27,7 +27,7 @@ const ErrorCode = styled.h1`
 const Title = styled.h2`
   font-size: 2rem;
   font-weight: 600;
-  color: #1F2937;
+  color: #0F0F0F;
   margin: 1rem 0 0.5rem;
 
   @media (max-width: 640px) {

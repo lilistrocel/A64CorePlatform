@@ -128,13 +128,13 @@ const StatusBadge = styled.span<{ $status: string }>`
       case 'draft':
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
       case 'confirmed':
-        return `background: ${theme.colors.surface.sunken}; color: #1E40AF;`;
+        return `background: ${theme.colors.surface.sunken}; color: #0F6E56;`;
       case 'processing':
         return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'shipped':
-        return `background: ${theme.colors.surface.sunken}; color: #1E40AF;`;
+        return `background: ${theme.colors.surface.sunken}; color: #0F6E56;`;
       case 'delivered':
-        return `background: ${theme.colors.accent.sageSoft}; color: #065F46;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #0B5644;`;
       case 'cancelled':
         return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       default:
@@ -154,7 +154,7 @@ const PaymentBadge = styled.span<{ $status: string }>`
   ${({ $status, theme }) => {
     switch ($status) {
       case 'paid':
-        return `background: ${theme.colors.accent.sageSoft}; color: #065F46;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #0B5644;`;
       case 'partial':
         return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'pending':

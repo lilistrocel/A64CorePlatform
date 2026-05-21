@@ -277,7 +277,7 @@ const CoordinatesHelp = styled.div`
 
   p {
     font-size: 13px;
-    color: #1E40AF;
+    color: #0F6E56;
     margin: 0;
     line-height: 1.5;
   }

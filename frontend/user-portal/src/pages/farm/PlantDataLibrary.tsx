@@ -316,8 +316,8 @@ const ImportFeedback = styled.div<{ $type: 'success' | 'error' }>`
   ${({ $type }) =>
     $type === 'success'
       ? `
-    background: #DCFCE7;
-    border: 1px solid #22C55E;
+    background: rgba(15,110,86,0.08);
+    border: 1px solid #0F6E56;
     color: #0B5644;
   `
       : `
@@ -352,7 +352,7 @@ const HiddenFileInput = styled.input`
 const ProgressContainer = styled.div`
   margin-bottom: 16px;
   padding: 16px 20px;
-  background: #F0F9FF;
+  background: rgba(15,110,86,0.06);
   border: 1px solid #0F6E56;
   border-radius: 8px;
 `;
@@ -367,7 +367,7 @@ const ProgressHeader = styled.div`
 const ProgressLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: #1E40AF;
+  color: #0F6E56;
 `;
 
 const ProgressPercent = styled.span`
@@ -387,7 +387,7 @@ const ProgressBarOuter = styled.div`
 const ProgressBarInner = styled.div<{ $progress: number }>`
   width: ${({ $progress }) => $progress}%;
   height: 100%;
-  background: linear-gradient(90deg, #0F6E56 0%, #0B5644 100%);
+  background: ${({ theme }) => theme.colors.accent.sage};
   border-radius: 4px;
   transition: width 200ms ease-out;
 `;

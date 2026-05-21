@@ -38,7 +38,7 @@ const ModalContent = styled.div`
 const ModalTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #c62828;
+  color: #9E2A2A;
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
@@ -59,7 +59,7 @@ const ModalWarning = styled.div`
   padding: 12px;
   margin: 16px 0;
   font-size: 13px;
-  color: #e65100;
+  color: #B85C2A;
 `;
 
 const ModalButtons = styled.div`
@@ -87,7 +87,7 @@ const CancelButton = styled.button`
 
 const DeleteConfirmButton = styled.button`
   padding: 10px 20px;
-  background: #c62828;
+  background: #9E2A2A;
   color: white;
   border: none;
   border-radius: 8px;
@@ -97,11 +97,11 @@ const DeleteConfirmButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #b71c1c;
+    background: #9E2A2A;
   }
 
   &:disabled {
-    background: #ef9a9a;
+    background: rgba(158,42,42,0.12);
     cursor: not-allowed;
   }
 `;
@@ -212,7 +212,7 @@ const EfficiencyBadge = styled.span<{ $efficiency: number }>`
   font-weight: 600;
   background: ${({ $efficiency }) => {
     if ($efficiency >= 90) return '#0F6E56';
-    if ($efficiency >= 75) return '#8bc34a';
+    if ($efficiency >= 75) return '#0F6E56';
     if ($efficiency >= 60) return '#B8842A';
     return '#B85C2A';
   }};
@@ -274,7 +274,7 @@ const DeleteButton = styled.button`
   gap: 6px;
   padding: 8px 16px;
   background: ${({ theme }) => theme.colors.status.danger};
-  color: #c62828;
+  color: #9E2A2A;
   border: 1px solid #9E2A2A;
   border-radius: 6px;
   font-size: 13px;
@@ -283,8 +283,8 @@ const DeleteButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #ffcdd2;
-    border-color: #c62828;
+    background: rgba(158,42,42,0.08);
+    border-color: #9E2A2A;
   }
 `;
 

@@ -169,7 +169,7 @@ const ErrorState = styled.div`
   border: 1px solid #9E2A2A;
   border-radius: 8px;
   padding: 16px;
-  color: #B91C1C;
+  color: #9E2A2A;
   margin-bottom: 24px;
 `;
 

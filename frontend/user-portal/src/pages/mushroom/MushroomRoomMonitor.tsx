@@ -463,7 +463,7 @@ const Header = styled.header`
   justify-content: space-between;
   gap: 16px;
   padding: 20px 24px 16px;
-  background: #1a2235;
+  background: #252320;
   border-bottom: 1px solid #0F0F0F;
   flex-wrap: wrap;
 `;
@@ -473,7 +473,7 @@ const HeaderLeft = styled.div``;
 const PageTitle = styled.h1`
   font-size: 22px;
   font-weight: 700;
-  color: #f0f6ff;
+  color: #EDEAE3;
   margin: 0 0 4px 0;
   letter-spacing: -0.3px;
 `;
@@ -496,7 +496,7 @@ const StatPill = styled.div`
   flex-direction: column;
   align-items: center;
   background: #0F0F0F;
-  border: 1px solid #2a3d5a;
+  border: 1px solid #4B4844;
   border-radius: 10px;
   padding: 8px 16px;
   min-width: 80px;
@@ -505,7 +505,7 @@ const StatPill = styled.div`
 const StatPillNumber = styled.span`
   font-size: 20px;
   font-weight: 700;
-  color: #e2f0ff;
+  color: #EDEAE3;
   line-height: 1;
 `;
 
@@ -525,7 +525,7 @@ const LoadingPill = styled.div`
   font-size: 12px;
   color: #0F6E56;
   background: #0F0F0F;
-  border: 1px solid #2a3d5a;
+  border: 1px solid #4B4844;
   border-radius: 10px;
   padding: 8px 12px;
 `;
@@ -537,7 +537,7 @@ const LegendBar = styled.div`
   flex-wrap: wrap;
   gap: 6px;
   padding: 12px 24px;
-  background: #16202f;
+  background: #1A1916;
   border-bottom: 1px solid #0F0F0F;
 `;
 
@@ -569,7 +569,7 @@ const LegendCount = styled.span`
 
 const DistributionSection = styled.div`
   padding: 10px 24px;
-  background: #16202f;
+  background: #1A1916;
   border-bottom: 1px solid #0F0F0F;
   display: flex;
   align-items: center;
@@ -613,7 +613,7 @@ const FiltersBar = styled.div`
   align-items: flex-end;
   gap: 16px;
   padding: 12px 24px;
-  background: #1a2235;
+  background: #252320;
   border-bottom: 1px solid #0F0F0F;
   flex-wrap: wrap;
 `;
@@ -640,10 +640,10 @@ const FilterLabel = styled.label`
 
 const FilterSelect = styled.select`
   padding: 7px 10px;
-  border: 1px solid #2a3d5a;
+  border: 1px solid #4B4844;
   border-radius: 8px;
   font-size: 13px;
-  color: #d0e8ff;
+  color: #EDEAE3;
   background: #0F0F0F;
   cursor: pointer;
   outline: none;
@@ -652,7 +652,7 @@ const FilterSelect = styled.select`
 
   option {
     background: #0F0F0F;
-    color: #d0e8ff;
+    color: #EDEAE3;
   }
 
   &:focus {
@@ -663,17 +663,17 @@ const FilterSelect = styled.select`
 
 const FilterInput = styled.input`
   padding: 7px 10px;
-  border: 1px solid #2a3d5a;
+  border: 1px solid #4B4844;
   border-radius: 8px;
   font-size: 13px;
-  color: #d0e8ff;
+  color: #EDEAE3;
   background: #0F0F0F;
   outline: none;
   min-width: 160px;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: #4a6080;
+    color: #4B4844;
   }
 
   &:focus {
@@ -734,7 +734,7 @@ const PhaseChipCount = styled.span<PhaseChipCountProps>`
 
 const ClearBtn = styled.button`
   padding: 7px 14px;
-  border: 1px solid #2a3d5a;
+  border: 1px solid #4B4844;
   border-radius: 8px;
   background: transparent;
   color: #0F6E56;
@@ -747,7 +747,7 @@ const ClearBtn = styled.button`
 
   &:hover {
     background: #0F0F0F;
-    color: #d0e8ff;
+    color: #EDEAE3;
   }
 
   &:focus-visible {
@@ -790,7 +790,7 @@ const FacilityMeta = styled.div`
 const FacilityName = styled.h2`
   font-size: 14px;
   font-weight: 700;
-  color: #c0d8f0;
+  color: #EDEAE3;
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -798,12 +798,12 @@ const FacilityName = styled.h2`
 
 const FacilityLocation = styled.span`
   font-size: 12px;
-  color: #4a6080;
+  color: #4B4844;
 `;
 
 const FacilityRoomCount = styled.span`
   font-size: 12px;
-  color: #4a6080;
+  color: #4B4844;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -811,7 +811,7 @@ const FacilityRoomCount = styled.span`
 `;
 
 const TotalRoomHint = styled.span`
-  color: #3a5070;
+  color: #4B4844;
 `;
 
 const CompactGrid = styled.div`
@@ -825,13 +825,13 @@ const FacilityLoadingRow = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #4a6080;
+  color: #4B4844;
   padding: 16px 0;
 `;
 
 const FacilityEmptyMsg = styled.p`
   font-size: 13px;
-  color: #3a5070;
+  color: #4B4844;
   margin: 0;
   padding: 16px 0;
   font-style: italic;
@@ -850,7 +850,7 @@ const LoadingOverlay = styled.div`
 
 const LoadingMsg = styled.p`
   font-size: 14px;
-  color: #4a6080;
+  color: #4B4844;
   margin: 0;
 `;
 
@@ -866,13 +866,13 @@ const EmptyPage = styled.div`
 const EmptyPageTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #4a6080;
+  color: #4B4844;
   margin: 0 0 8px 0;
 `;
 
 const EmptyPageText = styled.p`
   font-size: 14px;
-  color: #3a5070;
+  color: #4B4844;
   margin: 0;
 `;
 

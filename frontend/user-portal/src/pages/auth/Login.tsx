@@ -548,7 +548,7 @@ const MobileHelperIcon = styled.span`
 `;
 
 const ForgotPasswordLink = styled(Link)`
-  /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
+  /* WCAG AA: primary.700 (#0F6E56) provides 4.60:1 contrast with white background */
   color: ${({ theme }) => theme.colors.accent.sageDeep};
   font-size: 0.875rem;
   text-decoration: none;
@@ -569,7 +569,7 @@ const RegisterPrompt = styled.p`
 `;
 
 const RegisterLink = styled(Link)`
-  /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
+  /* WCAG AA: primary.700 (#0F6E56) provides 4.60:1 contrast with white background */
   color: ${({ theme }) => theme.colors.accent.sageDeep};
   font-weight: ${({ theme }) => theme.fontWeights.medium};
   text-decoration: none;

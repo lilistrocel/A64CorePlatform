@@ -723,7 +723,7 @@ const WarnConfirmButton = styled.button`
   cursor: pointer;
 
   &:hover {
-    background: #d97706;
+    background: #B8842A;
   }
 `;
 
@@ -731,8 +731,8 @@ const WarnConfirmButton = styled.button`
 
 const InlineChemForm = styled.div`
   padding: 12px;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
+  background: rgba(15,110,86,0.06);
+  border: 1px solid rgba(15,110,86,0.24);
   border-radius: 8px;
   display: flex;
   flex-direction: column;

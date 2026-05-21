@@ -28,8 +28,8 @@ const CancelButton = styled(Button)`background: transparent; color: ${({ theme }
 const ErrorText = styled.div`color: #9E2A2A; font-size: 13px; margin-top: 8px;`;
 const TagInput = styled(Input)``;
 const TagsContainer = styled.div`display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;`;
-const Tag = styled.span`padding: 4px 12px; background: #E0F2FE; color: #0369A1; border-radius: 12px; font-size: 13px; display: flex; align-items: center; gap: 6px;`;
-const RemoveTag = styled.button`background: none; border: none; color: #0369A1; cursor: pointer; font-size: 16px; padding: 0;`;
+const Tag = styled.span`padding: 4px 12px; background: rgba(15,110,86,0.06); color: #0F6E56; border-radius: 12px; font-size: 13px; display: flex; align-items: center; gap: 6px;`;
+const RemoveTag = styled.button`background: none; border: none; color: #0F6E56; cursor: pointer; font-size: 16px; padding: 0;`;
 
 export function CampaignForm({ campaign, onClose }: CampaignFormProps) {
   const [formData, setFormData] = useState({

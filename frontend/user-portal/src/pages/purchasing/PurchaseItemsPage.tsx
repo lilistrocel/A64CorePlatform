@@ -62,7 +62,7 @@ const Td = styled.td`padding: 14px 16px; font-size: 14px; color: ${({ theme }) =
 const Tr = styled.tr`cursor: pointer; transition: background 100ms ease; &:hover { background: ${({ theme }) => theme.colors.surface.canvas}; } &:last-child td { border-bottom: none; }`;
 const Badge = styled.span<{ $active: boolean }>`
   display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600;
-  background: ${({ $active, theme }) => $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
+  background: ${({ $active, theme }) => $active ? theme.colors.accent.sageSoft || 'rgba(15,110,86,0.06)' : theme.colors.surface.raised};
   color: ${({ $active, theme }) => $active ? theme.colors.status.success || '#0F6E56' : theme.colors.text.tertiary};
 `;
 const TypeBadge = styled.span`display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${({ theme }) => theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'}; color: ${({ theme }) => theme.colors.status.info || '#0F6E56'};`;
