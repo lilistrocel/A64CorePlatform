@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@a64core/shared': path.resolve(__dirname, '../shared/src'),
+      '@': path.resolve(__dirname, './src'),
     },
     dedupe: ['react', 'react-dom', 'styled-components'], // Deduplicate these packages
   },
