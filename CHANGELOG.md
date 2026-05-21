@@ -5,6 +5,71 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-05-20
+
+**Type:** Minor Release — AI assistant (Claude Sonnet 4.6), Finance microservice Phase B/C/D, Purchasing Phase 1B workflow, unified attachments module, production ops tooling.
+
+**Author: Viet Anh**
+
+### Added
+
+#### A. AI Assistant — Claude Sonnet 4.6 Slide-Out Chat (T-008)
+
+- New backend module `src/modules/ai_assistant/` with Claude API streaming, MongoDB conversation persistence, per-user cost tracking, and tool-use bridge (farm data, analytics, weather).
+- REST API at `/api/v1/assistant/` with streaming SSE chat endpoint and conversation management.
+- Frontend: `AIAssistantFAB` (floating action button) + `AIAssistantPanel` (slide-out drawer) with full conversation UI (message bubbles, tool call cards, markdown rendering, quick suggestions).
+- `ANTHROPIC_API_KEY` + `CLAUDE_MODEL` settings added to `src/config/settings.py`.
+- 5 unit test files + integration smoke test.
+
+#### B. Finance Microservice — Phase B+C+D
+
+- 8 new Alembic migrations (006–013): GL account descriptions, journal entries, company posting setup, purchase item denormalisation, valuation method, AP payments, reverse-charge tax codes, period audit fields.
+- New API endpoints: `ap_payments.py`, `journal_entries.py`, `reports.py` (trial balance, AP aging, vendor sub-ledger).
+- New schemas: `ap_payments.py`, `journal_entries.py`, `posting_setup.py`.
+- Finance consumer (`services/finance_consumer/`): outbox event consumption and relay.
+- MongoDB replica set enabled in `docker-compose.yml` for transactional outbox support.
+- Frontend: 13 finance pages (CoA, JE, Payments, TrialBalance, APAging, Periods, PostingSetup, ApprovalRules, ItemMapping, IncomingPreview, VendorSubLedger, RecordPayment, PaymentDetail).
+- 11 new TanStack Query hooks for finance data access.
+- `Docs/4-Finance-Mod-docs/`: FINANCE_MODULE_GUIDE.md, INTEGRATION_MODEL.md, POSTING_ENGINE_ROADMAP.md, PM reports.
+- `scripts/generate_finance_docs.py`, `generate_phase_c_d_docs.py`, `generate_pm_response.py` for doc generation.
+- Cron service: `cron/scripts/outbox_reconciler.py` + Docker + crontab for scheduled outbox replay.
+
+#### C. Purchasing — Phase 1B: PR/PO/GR/AP Workflow
+
+- 5 new backend API modules: purchase_requests, purchase_orders, goods_receipts, ap_invoices, approvals.
+- Unified document model (`src/modules/purchasing/models/document.py`) for all transactional documents.
+- Approval engine (`src/modules/purchasing/services/approval_engine.py`) with configurable multi-step chains.
+- Document service (`src/modules/purchasing/services/document_service.py`) for shared lifecycle logic.
+- Frontend: 9 new purchasing pages (PurchaseRequests, PurchaseOrders, GoodsReceipts, APInvoices, ApprovalInbox + detail/form variants).
+- 3 new hooks: `useAPInvoices`, `useApprovalRules`, `useGoodsReceipts`.
+- 3 new service layers: `apInvoicesService`, `approvalRulesService`, `goodsReceiptsService`.
+- 3 unit test files: AP invoice service, approval chain readiness, GR service.
+
+#### D. Attachments — Unified Document Attachment Module
+
+- Backend `src/modules/attachments/`: upload/download/list/delete API with storage backend abstraction (local + S3-compatible), file type validation, size enforcement.
+- Frontend: `AttachmentList.tsx` drag-drop upload component + `useAttachments.ts` hook + `attachmentsService.ts`.
+
+#### E. Operations + Production Tooling
+
+- `DEPLOYMENT.md`: comprehensive operational guide (bootstrap, SSL, health checks, rollback, env vars, troubleshooting).
+- `scripts/deploy/deploy.sh`: full server bootstrap script (system deps, Docker, clone, env, first-run build, Nginx, systemd).
+- `scripts/ops/backup.sh`: MongoDB + MySQL dump with AES-256 encryption, S3 upload, 7-day local rotation.
+- `scripts/ops/restore.sh`: decrypt + restore from S3 or local archive.
+- `scripts/ops/down.sh`: graceful service teardown.
+- `scripts/ops/watchdog.sh`: container health monitor with auto-restart + alerting.
+
+### Fixed
+
+- `src/modules/ai_analytics/services/gemini_service.py`: Gemini API requires `contents` as array; was incorrectly passed as dict (caused silent failures during AI analytics calls).
+- Pre-commit hook (`.githooks/pre-commit`): grep returning no-match (exit 1) inside command substitution under `set -euo pipefail` caused spurious hook failures on barrel files (`index.ts`). Fixed by moving `|| true` inside the command substitution. Also tightened regex to only match zero-indent declarations (was incorrectly matching indented function-body variables as module-level duplicates).
+
+### Infrastructure
+
+- `.gitignore`: added `screenshots/` exclusion; added `!tests/**/*.py` negation to allow structured test suites under `tests/`.
+
+---
+
 ## [1.15.0] - 2026-05-18
 
 **Type:** Minor Release — Fertilizer Cost Calculator (new Tools module), Plant Library Fertigation Schedule Editor, Yield Mode toggle, P&L Dashboard integration, and extensive UX polish/bug fixes.
