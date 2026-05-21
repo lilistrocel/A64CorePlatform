@@ -124,8 +124,8 @@ const StatusBadge = styled.span<{ $isActive: boolean }>`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ $isActive }) => ($isActive ? '#10B98120' : '#6B728020')};
-  color: ${({ $isActive }) => ($isActive ? '#10B981' : '#6B7280')};
+  background: ${({ $isActive }) => ($isActive ? '#0F6E5620' : '#4B484420')};
+  color: ${({ $isActive }) => ($isActive ? '#0F6E56' : '#4B4844')};
 `;
 
 const Actions = styled.div`

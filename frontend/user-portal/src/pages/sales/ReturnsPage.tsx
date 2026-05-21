@@ -64,7 +64,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       `;
     }
     return `
-      background: #3B82F6;
+      background: #0F6E56;
       color: white;
       &:hover {
         background: #0F6E56;
@@ -122,7 +122,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -171,7 +171,7 @@ const TableHeader = styled.th`
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: #6B7280;
+  color: #4B4844;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -200,7 +200,7 @@ const StatusBadge = styled.span<{ $status: ReturnStatus }>`
       case 'completed':
         return `background: ${theme.colors.accent.sageSoft}; color: #065F46;`;
       case 'rejected':
-        return `background: ${theme.colors.status.danger}; color: #991B1B;`;
+        return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       default:
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.primary};`;
     }
@@ -225,31 +225,31 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'success' | 'danger'
     switch ($variant) {
       case 'primary':
         return `
-          background: #3B82F6;
+          background: #0F6E56;
           color: white;
           &:hover {
-            background: #2563EB;
+            background: #0B5644;
           }
         `;
       case 'success':
         return `
-          background: #10B981;
+          background: #0F6E56;
           color: white;
           &:hover {
-            background: #059669;
+            background: #0B5644;
           }
         `;
       case 'danger':
         return `
-          background: #EF4444;
+          background: #9E2A2A;
           color: white;
           &:hover {
-            background: #DC2626;
+            background: #9E2A2A;
           }
         `;
       default:
         return `
-          background: #6B7280;
+          background: #4B4844;
           color: white;
           &:hover {
             background: #4B5563;
@@ -282,7 +282,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   padding: 8px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.canvas)};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.primary)};
   font-size: 14px;
   cursor: pointer;
@@ -307,8 +307,8 @@ const LoadingContainer = styled.div`
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.status.danger};
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -318,19 +318,19 @@ const ErrorContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 24px;
-  color: #6B7280;
+  color: #4B4844;
 `;
 
 const EmptyStateTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #374151;
+  color: #0F0F0F;
   margin: 0 0 8px 0;
 `;
 
 const EmptyStateText = styled.p`
   font-size: 14px;
-  color: #6B7280;
+  color: #4B4844;
   margin: 0 0 24px 0;
 `;
 

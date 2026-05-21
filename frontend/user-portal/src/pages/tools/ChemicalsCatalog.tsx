@@ -581,8 +581,8 @@ const ActiveBadge = styled.span`
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 600;
-  background: #d1fae5;
-  color: #065f46;
+  background: rgba(15,110,86,0.10);
+  color: #0B5644;
 `;
 
 const ArchivedBadge = styled.span`
@@ -876,11 +876,11 @@ const ErrorText = styled.p`
 
 const WarningBanner = styled.div`
   padding: 12px 16px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: rgba(184,132,42,0.10);
+  border: 1px solid #B8842A;
   border-radius: 8px;
   font-size: 14px;
-  color: #92400e;
+  color: #B8842A;
 `;
 
 const DependentList = styled.ul`

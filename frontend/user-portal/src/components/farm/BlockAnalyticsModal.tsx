@@ -57,20 +57,20 @@ const TABS: Array<{ key: TabType; label: string; icon: string }> = [
 ];
 
 const QUALITY_COLORS: Record<string, string> = {
-  A: '#10B981',
-  B: '#3B82F6',
-  C: '#F59E0B',
+  A: '#0F6E56',
+  B: '#0F6E56',
+  C: '#B8842A',
 };
 
 const STATE_COLORS: Record<string, string> = {
-  empty: '#6B7280',
-  planned: '#3B82F6',
-  planted: '#10B981',
-  growing: '#10B981',
+  empty: '#4B4844',
+  planned: '#0F6E56',
+  planted: '#0F6E56',
+  growing: '#0F6E56',
   fruiting: '#A855F7',
-  harvesting: '#F59E0B',
-  cleaning: '#F97316',
-  alert: '#EF4444',
+  harvesting: '#B8842A',
+  cleaning: '#B85C2A',
+  alert: '#9E2A2A',
 };
 
 // ============================================================================
@@ -221,12 +221,12 @@ function OverviewTab({ analytics }: { analytics: any }) {
   const performanceScore = analytics?.performanceMetrics?.overallScore ?? 0;
   const performanceColor =
     performanceScore >= 80
-      ? '#10B981'
+      ? '#0F6E56'
       : performanceScore >= 60
-      ? '#3B82F6'
+      ? '#0F6E56'
       : performanceScore >= 40
-      ? '#F59E0B'
-      : '#EF4444';
+      ? '#B8842A'
+      : '#9E2A2A';
 
   return (
     <TabContent>
@@ -236,7 +236,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
           <InfoCard>
             <InfoLabel>Current State</InfoLabel>
             <InfoValue>
-              <StateBadge $color={STATE_COLORS[analytics.blockInfo.currentState] || '#6B7280'}>
+              <StateBadge $color={STATE_COLORS[analytics.blockInfo.currentState] || '#4B4844'}>
                 {analytics.blockInfo.currentState.charAt(0).toUpperCase() + analytics.blockInfo.currentState.slice(1)}
               </StateBadge>
             </InfoValue>
@@ -288,7 +288,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
         {analytics.performanceMetrics.strengths?.length > 0 && (
           <div style={{ marginTop: '16px' }}>
             <InfoLabel style={{ marginBottom: '8px' }}>Strengths:</InfoLabel>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: '#10B981' }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#0F6E56' }}>
               {analytics.performanceMetrics.strengths.map((strength: string, idx: number) => (
                 <li key={idx} style={{ fontSize: '13px', marginBottom: '4px' }}>{strength}</li>
               ))}
@@ -298,7 +298,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
         {analytics.performanceMetrics.improvements?.length > 0 && (
           <div style={{ marginTop: '12px' }}>
             <InfoLabel style={{ marginBottom: '8px' }}>Areas for Improvement:</InfoLabel>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: '#F59E0B' }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#B8842A' }}>
               {analytics.performanceMetrics.improvements.map((improvement: string, idx: number) => (
                 <li key={idx} style={{ fontSize: '13px', marginBottom: '4px' }}>{improvement}</li>
               ))}
@@ -363,10 +363,10 @@ function YieldTab({ analytics }: { analytics: any }) {
             <YieldStatValue
               $color={
                 analytics.yieldAnalytics.yieldEfficiencyPercent >= 90
-                  ? '#10B981'
+                  ? '#0F6E56'
                   : analytics.yieldAnalytics.yieldEfficiencyPercent >= 70
-                  ? '#3B82F6'
-                  : '#F59E0B'
+                  ? '#0F6E56'
+                  : '#B8842A'
               }
             >
               {analytics.yieldAnalytics.yieldEfficiencyPercent.toFixed(1)}%
@@ -425,8 +425,8 @@ function YieldTab({ analytics }: { analytics: any }) {
                       formatter={(value: number) => [`${value.toFixed(2)} kg`, '']}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="cumulativeKg" stroke="#3B82F6" name="Cumulative Yield" strokeWidth={2} />
-                    <Line type="monotone" dataKey="quantityKg" stroke="#10B981" name="Harvest Quantity" strokeWidth={2} />
+                    <Line type="monotone" dataKey="cumulativeKg" stroke="#0F6E56" name="Cumulative Yield" strokeWidth={2} />
+                    <Line type="monotone" dataKey="quantityKg" stroke="#0F6E56" name="Harvest Quantity" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -447,7 +447,7 @@ function TimelineTab({ analytics }: { analytics: any }) {
   const stateDurationData = Object.entries(analytics.timelineAnalytics.daysInEachState).map(([state, days]) => ({
     state: state.charAt(0).toUpperCase() + state.slice(1),
     days: days as number,
-    color: STATE_COLORS[state] || '#6B7280',
+    color: STATE_COLORS[state] || '#4B4844',
   }));
 
   return (
@@ -557,19 +557,19 @@ function TasksTab({ analytics }: { analytics: any }) {
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Completed</TaskStatLabel>
-            <TaskStatValue $color="#10B981">{analytics.taskAnalytics.completedTasks}</TaskStatValue>
+            <TaskStatValue $color="#0F6E56">{analytics.taskAnalytics.completedTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Pending</TaskStatLabel>
-            <TaskStatValue $color="#F59E0B">{analytics.taskAnalytics.pendingTasks}</TaskStatValue>
+            <TaskStatValue $color="#B8842A">{analytics.taskAnalytics.pendingTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Overdue</TaskStatLabel>
-            <TaskStatValue $color="#EF4444">{analytics.taskAnalytics.overdueTasks}</TaskStatValue>
+            <TaskStatValue $color="#9E2A2A">{analytics.taskAnalytics.overdueTasks}</TaskStatValue>
           </TaskStatCard>
           <TaskStatCard>
             <TaskStatLabel>Completion Rate</TaskStatLabel>
-            <TaskStatValue $color="#3B82F6">{analytics.taskAnalytics.completionRate.toFixed(0)}%</TaskStatValue>
+            <TaskStatValue $color="#0F6E56">{analytics.taskAnalytics.completionRate.toFixed(0)}%</TaskStatValue>
           </TaskStatCard>
         </TaskStatsGrid>
       </Section>
@@ -587,9 +587,9 @@ function TasksTab({ analytics }: { analytics: any }) {
                     <YAxis label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="total" fill="#3B82F6" name="Total Tasks" />
-                    <Bar dataKey="completed" fill="#10B981" name="Completed" />
-                    <Bar dataKey="pending" fill="#F59E0B" name="Pending" />
+                    <Bar dataKey="total" fill="#0F6E56" name="Total Tasks" />
+                    <Bar dataKey="completed" fill="#0F6E56" name="Completed" />
+                    <Bar dataKey="pending" fill="#B8842A" name="Pending" />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -610,7 +610,7 @@ function TasksTab({ analytics }: { analytics: any }) {
               )}
               <MetricItem>
                 <MetricLabel>Overdue Tasks:</MetricLabel>
-                <MetricValue $color={analytics.taskAnalytics.overdueTasks > 0 ? '#EF4444' : '#10B981'}>
+                <MetricValue $color={analytics.taskAnalytics.overdueTasks > 0 ? '#9E2A2A' : '#0F6E56'}>
                   {analytics.taskAnalytics.overdueTasks}
                 </MetricValue>
               </MetricItem>
@@ -637,10 +637,10 @@ function TasksTab({ analytics }: { analytics: any }) {
 
 function AlertsTab({ analytics }: { analytics: any }) {
   const alertSeverityData = [
-    { severity: 'Critical', count: analytics.alertAnalytics.criticalCount, color: '#DC2626' },
-    { severity: 'High', count: analytics.alertAnalytics.highCount, color: '#F59E0B' },
-    { severity: 'Medium', count: analytics.alertAnalytics.mediumCount, color: '#3B82F6' },
-    { severity: 'Low', count: analytics.alertAnalytics.lowCount, color: '#6B7280' },
+    { severity: 'Critical', count: analytics.alertAnalytics.criticalCount, color: '#9E2A2A' },
+    { severity: 'High', count: analytics.alertAnalytics.highCount, color: '#B8842A' },
+    { severity: 'Medium', count: analytics.alertAnalytics.mediumCount, color: '#0F6E56' },
+    { severity: 'Low', count: analytics.alertAnalytics.lowCount, color: '#4B4844' },
   ].filter((item) => item.count > 0);
 
   const hasAlertData = analytics.alertAnalytics.totalAlerts > 0;
@@ -656,15 +656,15 @@ function AlertsTab({ analytics }: { analytics: any }) {
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Active</AlertStatLabel>
-            <AlertStatValue $color="#EF4444">{analytics.alertAnalytics.activeAlerts}</AlertStatValue>
+            <AlertStatValue $color="#9E2A2A">{analytics.alertAnalytics.activeAlerts}</AlertStatValue>
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Resolved</AlertStatLabel>
-            <AlertStatValue $color="#10B981">{analytics.alertAnalytics.resolvedAlerts}</AlertStatValue>
+            <AlertStatValue $color="#0F6E56">{analytics.alertAnalytics.resolvedAlerts}</AlertStatValue>
           </AlertStatCard>
           <AlertStatCard>
             <AlertStatLabel>Dismissed</AlertStatLabel>
-            <AlertStatValue $color="#6B7280">{analytics.alertAnalytics.dismissedAlerts}</AlertStatValue>
+            <AlertStatValue $color="#4B4844">{analytics.alertAnalytics.dismissedAlerts}</AlertStatValue>
           </AlertStatCard>
         </AlertStatsGrid>
       </Section>
@@ -704,7 +704,7 @@ function AlertsTab({ analytics }: { analytics: any }) {
                 {analytics.alertAnalytics.fastestResolutionHours !== null && (
                   <MetricItem>
                     <MetricLabel>Fastest Resolution:</MetricLabel>
-                    <MetricValue $color="#10B981">
+                    <MetricValue $color="#0F6E56">
                       {analytics.alertAnalytics.fastestResolutionHours.toFixed(1)} hours
                     </MetricValue>
                   </MetricItem>
@@ -712,7 +712,7 @@ function AlertsTab({ analytics }: { analytics: any }) {
                 {analytics.alertAnalytics.slowestResolutionHours !== null && (
                   <MetricItem>
                     <MetricLabel>Slowest Resolution:</MetricLabel>
-                    <MetricValue $color="#EF4444">
+                    <MetricValue $color="#9E2A2A">
                       {analytics.alertAnalytics.slowestResolutionHours.toFixed(1)} hours
                     </MetricValue>
                   </MetricItem>
@@ -850,7 +850,7 @@ const PeriodSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -894,12 +894,12 @@ const Tab = styled.button<{ $active: boolean }>`
   padding: 14px 20px;
   border: none;
   background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.text.secondary)};
+  color: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.text.secondary)};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '600' : '500')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   white-space: nowrap;
 
   &:hover {
@@ -1276,7 +1276,7 @@ const LoadingSpinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -1325,14 +1325,14 @@ const RetryButton = styled.button`
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  background: #3b82f6;
+  background: #0F6E56;
   color: white;
   border: none;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #2563eb;
+    background: #0B5644;
   }
 `;
 

@@ -171,10 +171,10 @@ const EfficiencyBadge = styled.span<{ $efficiency: number }>`
   font-size: 14px;
   font-weight: 600;
   background: ${({ $efficiency }) => {
-    if ($efficiency >= 90) return '#10b981';
+    if ($efficiency >= 90) return '#0F6E56';
     if ($efficiency >= 75) return '#8bc34a';
     if ($efficiency >= 60) return '#eab308';
-    return '#f97316';
+    return '#B85C2A';
   }};
   color: white;
 `;
@@ -231,7 +231,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3B82F6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
@@ -282,7 +282,7 @@ const PaginationButton = styled.button<{ $disabled?: boolean }>`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.border.subtle : '#2563eb')};
+    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.border.subtle : '#0B5644')};
   }
 `;
 
@@ -370,7 +370,7 @@ const ModalBody = styled.div`
 
 const WarningText = styled.p`
   font-size: 14px;
-  color: #ef4444;
+  color: #9E2A2A;
   font-weight: 500;
   margin: 0 0 16px 0;
 `;
@@ -436,7 +436,7 @@ const CancelButton = styled.button`
 
 const ConfirmDeleteButton = styled.button`
   padding: 10px 20px;
-  background: #ef4444;
+  background: #9E2A2A;
   color: white;
   border: none;
   border-radius: 6px;
@@ -449,7 +449,7 @@ const ConfirmDeleteButton = styled.button`
   gap: 8px;
 
   &:hover {
-    background: #dc2626;
+    background: #9E2A2A;
   }
 
   &:disabled {
@@ -463,7 +463,7 @@ const Toast = styled.div<{ $show: boolean; $type: 'success' | 'error' }>`
   position: fixed;
   top: 24px;
   right: 24px;
-  background: ${({ $type }) => ($type === 'success' ? '#10b981' : '#ef4444')};
+  background: ${({ $type }) => ($type === 'success' ? '#0F6E56' : '#9E2A2A')};
   color: white;
   padding: 16px 24px;
   border-radius: 8px;
@@ -648,14 +648,14 @@ const TimelineItem = styled.div`
   padding: 16px;
   background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
-  border-left: 4px solid #3B82F6;
+  border-left: 4px solid #0F6E56;
 `;
 
 const TimelineIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   display: flex;
   align-items: center;
@@ -697,9 +697,9 @@ const PerformanceBadge = styled.span<{ $category: string }>`
   background: ${({ $category }) => {
     switch ($category) {
       case 'exceptional':
-        return '#9c27b0';
+        return '#4B4844';
       case 'exceeding':
-        return '#10b981';
+        return '#0F6E56';
       case 'excellent':
         return '#8bc34a';
       case 'good':
@@ -707,9 +707,9 @@ const PerformanceBadge = styled.span<{ $category: string }>`
       case 'acceptable':
         return '#eab308';
       case 'poor':
-        return '#f97316';
+        return '#B85C2A';
       default:
-        return '#9e9e9e';
+        return '#4B4844';
     }
   }};
   color: white;
@@ -744,7 +744,7 @@ const QualityCard = styled.div<{ $grade: string }>`
         case 'C':
           return '#f44336';
         default:
-          return '#9e9e9e';
+          return '#4B4844';
       }
     }};
   border-radius: 8px;

@@ -158,7 +158,7 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
   ${({ $variant, theme }) => {
     if ($variant === 'view') {
       return `
-        background: #3B82F6;
+        background: #0F6E56;
         color: white;
         &:hover {
           background: #0F6E56;
@@ -167,7 +167,7 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
     }
     if ($variant === 'edit') {
       return `
-        background: #F59E0B;
+        background: #B8842A;
         color: white;
         &:hover {
           background: #D97706;
@@ -176,18 +176,18 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
     }
     if ($variant === 'clone') {
       return `
-        background: #10B981;
+        background: #0F6E56;
         color: white;
         &:hover {
-          background: #059669;
+          background: #0B5644;
         }
       `;
     }
     if ($variant === 'delete') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover {
           background: ${theme.colors.status.danger};
         }
@@ -217,7 +217,7 @@ const InactiveBadge = styled.div`
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 500;
-  background: #EF4444;
+  background: #9E2A2A;
   color: white;
 `;
 
@@ -286,7 +286,7 @@ export function PlantDataCard({ plant, onView, onEdit, onClone, onDelete }: Plan
           </FarmTypeBadge>
         ))}
         {plant.farmTypeCompatibility.length > 3 && (
-          <FarmTypeBadge $color="#6B7280">
+          <FarmTypeBadge $color="#4B4844">
             +{plant.farmTypeCompatibility.length - 3}
           </FarmTypeBadge>
         )}

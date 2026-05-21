@@ -265,15 +265,15 @@ export async function getAvailableFarmingYears(): Promise<LogisticsFarmingYearsR
 export function getVehicleStatusColor(status: string): string {
   switch (status) {
     case 'available':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'in_use':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'maintenance':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     case 'retired':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 
@@ -283,15 +283,15 @@ export function getVehicleStatusColor(status: string): string {
 export function getShipmentStatusColor(status: string): string {
   switch (status) {
     case 'scheduled':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'in_transit':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     case 'delivered':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'cancelled':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 

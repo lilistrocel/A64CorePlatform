@@ -141,7 +141,7 @@ const AlertItem = styled.div`
   padding: 10px 12px;
   background: ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  border-left: 4px solid #EF4444;
+  border-left: 4px solid #9E2A2A;
 
   .icon {
     font-size: 16px;

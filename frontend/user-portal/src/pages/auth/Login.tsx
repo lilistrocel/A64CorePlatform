@@ -360,7 +360,7 @@ const LoginContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 1rem;
 
   @media (min-width: 640px) {
@@ -369,9 +369,11 @@ const LoginContainer = styled.div`
 `;
 
 const LoginCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface.canvas};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.default};
+  border-top: ${({ theme }) => theme.brandRule.sage};
+  border-radius: ${({ theme }) => theme.radii.md};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   padding: 1.5rem;
   width: 100%;
   max-width: 400px;
@@ -495,8 +497,8 @@ const SessionPreservedBanner = styled.div`
   justify-content: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border: 1px solid #10b981;
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
   border-radius: ${({ theme }) => theme.radii.md};
   margin-bottom: 1rem;
   animation: ${slideIn} 0.4s ease-out;
@@ -508,8 +510,8 @@ const SessionPreservedIcon = styled.span`
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: #10b981;
-  color: white;
+  background: ${({ theme }) => theme.colors.accent.sage};
+  color: ${({ theme }) => theme.colors.text.onAccent};
   border-radius: 50%;
   font-size: 0.75rem;
   font-weight: bold;
@@ -517,7 +519,7 @@ const SessionPreservedIcon = styled.span`
 
 const SessionPreservedText = styled.span`
   font-size: 0.8125rem;
-  color: #065f46;
+  color: #0B5644;
   font-weight: 500;
 `;
 

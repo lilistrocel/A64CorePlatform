@@ -107,7 +107,7 @@ const SortSelect = styled.select`
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -128,9 +128,9 @@ const SortDirectionButton = styled.button`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  background: ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -177,7 +177,7 @@ const CreateButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: #10B981;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -187,7 +187,7 @@ const CreateButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #059669;
+    background: #0B5644;
   }
 `;
 

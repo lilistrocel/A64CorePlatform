@@ -159,7 +159,7 @@ const Input = styled.input`
   color: ${({ theme }) => theme.colors.text.primary};
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
   &:disabled { opacity: 0.6; background: ${({ theme }) => theme.colors.surface.raised}; }
-  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.status.danger || '#ef4444'}; }
+  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'}; }
 `;
 
 const Select = styled.select`
@@ -170,7 +170,7 @@ const Select = styled.select`
   background: ${({ theme }) => theme.colors.surface.canvas};
   color: ${({ theme }) => theme.colors.text.primary};
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
-  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.status.danger || '#ef4444'}; }
+  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'}; }
 `;
 
 const Textarea = styled.textarea`
@@ -206,14 +206,14 @@ const MethodRadioLabel = styled.label<{ $active: boolean }>`
   color: ${({ $active, theme }) =>
     $active ? theme.colors.accent.sageDeep || theme.colors.accent.sage : theme.colors.text.primary};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageSoft || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.accent.sageSoft || 'rgba(15,110,86,0.05)' : 'transparent'};
   transition: border-color 150ms ease, background 150ms ease;
   user-select: none;
 `;
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
 `;
 
 const InvoiceTable = styled.table`
@@ -257,7 +257,7 @@ const AmountInput = styled.input`
   background: ${({ theme }) => theme.colors.surface.canvas};
   color: ${({ theme }) => theme.colors.text.primary};
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
-  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.status.danger || '#ef4444'}; }
+  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'}; }
 `;
 
 const TotalSummary = styled.div`
@@ -303,7 +303,7 @@ const ErrorBanner = styled.div`
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;
-  color: #991b1b;
+  color: #9E2A2A;
   margin-bottom: 16px;
 `;
 
@@ -746,7 +746,7 @@ export function RecordPaymentPage() {
         <CardTitle>
           Invoices to Pay
           {vendorId && approvedInvoices.length > 0 && (
-            <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8, color: '#6b7280' }}>
+            <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8, color: '#4B4844' }}>
               — {rows.length} outstanding invoice{rows.length !== 1 ? 's' : ''}
             </span>
           )}
@@ -790,7 +790,7 @@ export function RecordPaymentPage() {
                   <Th>Due Date</Th>
                   <Th style={{ textAlign: 'right' }}>Total Gross</Th>
                   <Th style={{ textAlign: 'right' }}>Total Paid</Th>
-                  <Th style={{ textAlign: 'right', color: '#059669' }}>Outstanding</Th>
+                  <Th style={{ textAlign: 'right', color: '#0B5644' }}>Outstanding</Th>
                   <Th style={{ textAlign: 'right' }}>Amount to Apply *</Th>
                 </tr>
               </thead>
@@ -812,16 +812,16 @@ export function RecordPaymentPage() {
                         <code style={{ fontWeight: 600, fontSize: 13 }}>{row.apDocNumber}</code>
                       </Td>
                       <Td style={{ fontSize: 13 }}>{formatDate(row.invoiceDate)}</Td>
-                      <Td style={{ fontSize: 13, color: row.dueDate && row.dueDate < today_ ? '#dc2626' : 'inherit' }}>
+                      <Td style={{ fontSize: 13, color: row.dueDate && row.dueDate < today_ ? '#9E2A2A' : 'inherit' }}>
                         {formatDate(row.dueDate)}
                       </Td>
                       <TdRight style={{ fontSize: 13 }}>
                         {formatCurrency(row.totalGross, row.currency)}
                       </TdRight>
-                      <TdRight style={{ fontSize: 13, color: '#6b7280' }}>
+                      <TdRight style={{ fontSize: 13, color: '#4B4844' }}>
                         {row.totalPaid > 0 ? formatCurrency(row.totalPaid, row.currency) : '—'}
                       </TdRight>
-                      <TdRight style={{ fontSize: 13, fontWeight: 600, color: '#059669' }}>
+                      <TdRight style={{ fontSize: 13, fontWeight: 600, color: '#0B5644' }}>
                         {formatCurrency(row.outstanding, row.currency)}
                       </TdRight>
                       <Td style={{ textAlign: 'right' }}>
@@ -840,7 +840,7 @@ export function RecordPaymentPage() {
                               : undefined
                           }
                           style={{
-                            borderColor: row.selected && isOverpay ? '#ef4444' : undefined,
+                            borderColor: row.selected && isOverpay ? '#9E2A2A' : undefined,
                           }}
                         />
                       </Td>

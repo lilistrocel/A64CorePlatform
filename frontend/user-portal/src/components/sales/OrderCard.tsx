@@ -78,19 +78,19 @@ const StatusBadge = styled.span<{ $status: string }>`
   ${({ $status }) => {
     switch ($status) {
       case 'draft':
-        return 'background: #E0E0E0; color: #616161;';
+        return 'background: #DCD8CF; color: #4B4844;';
       case 'confirmed':
-        return 'background: #DBEAFE; color: #1E40AF;';
+        return 'background: rgba(15,110,86,0.08); color: #1E40AF;';
       case 'processing':
-        return 'background: #FEF3C7; color: #92400E;';
+        return 'background: rgba(184,132,42,0.10); color: #92400E;';
       case 'shipped':
-        return 'background: #DBEAFE; color: #1E40AF;';
+        return 'background: rgba(15,110,86,0.08); color: #1E40AF;';
       case 'delivered':
-        return 'background: #D1FAE5; color: #065F46;';
+        return 'background: rgba(15,110,86,0.10); color: #065F46;';
       case 'cancelled':
-        return 'background: #FEE2E2; color: #991B1B;';
+        return 'background: rgba(158,42,42,0.08); color: #9E2A2A;';
       default:
-        return 'background: #E0E0E0; color: #616161;';
+        return 'background: #DCD8CF; color: #4B4844;';
     }
   }}
 `;
@@ -106,13 +106,13 @@ const PaymentBadge = styled.span<{ $status: string }>`
   ${({ $status }) => {
     switch ($status) {
       case 'paid':
-        return 'background: #D1FAE5; color: #065F46;';
+        return 'background: rgba(15,110,86,0.10); color: #065F46;';
       case 'partial':
-        return 'background: #FEF3C7; color: #92400E;';
+        return 'background: rgba(184,132,42,0.10); color: #92400E;';
       case 'pending':
-        return 'background: #FEE2E2; color: #991B1B;';
+        return 'background: rgba(158,42,42,0.08); color: #9E2A2A;';
       default:
-        return 'background: #E0E0E0; color: #616161;';
+        return 'background: #DCD8CF; color: #4B4844;';
     }
   }}
 `;
@@ -177,17 +177,17 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover {
-          background: #FEE2E2;
+          background: rgba(158,42,42,0.08);
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: #0F6E56;
+      border: 1px solid #0F6E56;
       &:hover {
         background: rgba(15, 110, 86, 0.05);
       }

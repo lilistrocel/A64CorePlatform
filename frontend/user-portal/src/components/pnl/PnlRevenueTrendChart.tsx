@@ -140,7 +140,7 @@ function CustomTooltip({
     <div
       style={{
         background: 'white',
-        border: '1px solid #e0e0e0',
+        border: '1px solid #DCD8CF',
         borderRadius: '8px',
         padding: '12px',
         boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
@@ -205,24 +205,24 @@ export function PnlRevenueTrendChart({
             >
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#0F6E56" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#0F6E56" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorNetProfit" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#0F6E56" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#0F6E56" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#DCD8CF" />
               <XAxis
                 dataKey="yearMonth"
-                tick={{ fontSize: 12, fill: '#616161' }}
+                tick={{ fontSize: 12, fill: '#4B4844' }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 tickFormatter={formatYAxis}
-                tick={{ fontSize: 12, fill: '#616161' }}
+                tick={{ fontSize: 12, fill: '#4B4844' }}
                 tickLine={false}
                 axisLine={false}
                 width={55}
@@ -235,7 +235,7 @@ export function PnlRevenueTrendChart({
                 type="monotone"
                 dataKey="revenue"
                 name="Revenue"
-                stroke="#10B981"
+                stroke="#0F6E56"
                 strokeWidth={2}
                 fill="url(#colorRevenue)"
                 dot={false}

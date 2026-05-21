@@ -84,12 +84,12 @@ const Label = styled.label`
 `;
 
 const Required = styled.span`
-  color: #EF4444;
+  color: #9E2A2A;
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -102,7 +102,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -114,7 +114,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -124,7 +124,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -136,7 +136,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -152,7 +152,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 `;
@@ -210,7 +210,7 @@ const TagInput = styled.input`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #EF4444;
+  color: #9E2A2A;
 `;
 
 const HelpText = styled.span`
@@ -238,7 +238,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: #0F6E56;
         color: white;
         &:hover:not(:disabled) {
           background: #0F6E56;
@@ -248,10 +248,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
     if ($variant === 'reset') {
       return `
         background: transparent;
-        color: #F59E0B;
-        border: 1px solid #F59E0B;
+        color: #B8842A;
+        border: 1px solid #B8842A;
         &:hover:not(:disabled) {
-          background: #FEF3C7;
+          background: rgba(184,132,42,0.10);
         }
       `;
     }

@@ -227,13 +227,13 @@ export function PnlStatementTable({
           </colgroup>
           <thead>
             <tr>
-              <Td as="th" $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#9e9e9e', paddingBottom: '8px' }}>
+              <Td as="th" $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#4B4844', paddingBottom: '8px' }}>
                 Line Item
               </Td>
-              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#9e9e9e', paddingBottom: '8px' }}>
+              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#4B4844', paddingBottom: '8px' }}>
                 Amount (AED)
               </Td>
-              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#9e9e9e', paddingBottom: '8px' }}>
+              <Td as="th" $right $bold style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#4B4844', paddingBottom: '8px' }}>
                 % of Revenue
               </Td>
             </tr>

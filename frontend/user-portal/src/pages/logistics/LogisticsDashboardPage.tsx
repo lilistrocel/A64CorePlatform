@@ -150,7 +150,7 @@ const QuickActions = styled.div`
 
 const ActionButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -174,9 +174,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -283,17 +283,17 @@ export function LogisticsDashboardPage() {
 
         <StatCard>
           <StatLabel>Available</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.availableVehicles)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.availableVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Use</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.inUseVehicles)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.inUseVehicles)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Maintenance</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.maintenanceVehicles)}</StatValue>
+          <StatValue style={{ color: '#B8842A' }}>{formatNumber(stats.maintenanceVehicles)}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -305,17 +305,17 @@ export function LogisticsDashboardPage() {
 
         <StatCard>
           <StatLabel>Scheduled</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.scheduledShipments)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.scheduledShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>In Transit</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.inTransitShipments)}</StatValue>
+          <StatValue style={{ color: '#B8842A' }}>{formatNumber(stats.inTransitShipments)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Delivered</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.deliveredShipments)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.deliveredShipments)}</StatValue>
         </StatCard>
       </StatsGrid>
 

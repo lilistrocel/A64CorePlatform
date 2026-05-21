@@ -85,13 +85,13 @@ const BlockIcon = styled.div`
 const BlockName = styled.h4`
   font-size: 18px;
   font-weight: 600;
-  color: #3b82f6;
+  color: #0F6E56;
   margin: 0 0 8px 0;
   cursor: pointer;
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: #2563eb;
+    color: #0B5644;
     text-decoration: underline;
   }
 `;
@@ -195,7 +195,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   ${({ $variant }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: #0F6E56;
         color: white;
         &:hover {
           background: #0F6E56;
@@ -223,17 +223,17 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover {
-          background: #FEE2E2;
+          background: rgba(158,42,42,0.08);
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: #0F6E56;
+      border: 1px solid #0F6E56;
       &:hover {
         background: rgba(15, 110, 86, 0.05);
       }
@@ -248,11 +248,11 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 
 const StateSelect = styled.select`
   padding: 6px 12px;
-  border: 1px solid #3B82F6;
+  border: 1px solid #0F6E56;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: #3B82F6;
+  color: #0F6E56;
   background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
   flex: 1;

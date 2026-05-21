@@ -151,7 +151,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 
   &:disabled {
@@ -176,7 +176,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 
   &:disabled {

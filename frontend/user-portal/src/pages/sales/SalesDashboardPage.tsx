@@ -152,7 +152,7 @@ const OrderCode = styled.span`
 const OrderAmount = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #10B981;
+  color: #0F6E56;
 `;
 
 const InventoryList = styled.div`
@@ -167,7 +167,7 @@ const InventoryItem = styled.div`
   align-items: center;
   padding: 8px 12px;
   background: ${({ theme }) => theme.colors.status.warning};
-  border-left: 3px solid #F59E0B;
+  border-left: 3px solid #B8842A;
   border-radius: 4px;
   font-size: 13px;
 `;
@@ -193,8 +193,8 @@ const LoadingContainer = styled.div`
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.status.danger};
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -281,31 +281,31 @@ export function SalesDashboardPage() {
 
         <StatCard>
           <StatLabel>Confirmed</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.confirmedOrders)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.confirmedOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Shipped</StatLabel>
-          <StatValue style={{ color: '#8B5CF6' }}>{formatNumber(stats.shippedOrders)}</StatValue>
+          <StatValue style={{ color: '#4B4844' }}>{formatNumber(stats.shippedOrders)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Delivered</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.deliveredOrders)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.deliveredOrders)}</StatValue>
         </StatCard>
       </StatsGrid>
 
       <StatsGrid>
         <StatCard>
           <StatLabel>Total Revenue</StatLabel>
-          <CurrencyValue style={{ color: '#10B981' }}>
+          <CurrencyValue style={{ color: '#0F6E56' }}>
             {formatCurrency(stats.totalRevenue, 'AED')}
           </CurrencyValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Pending Payments</StatLabel>
-          <CurrencyValue style={{ color: '#F59E0B' }}>
+          <CurrencyValue style={{ color: '#B8842A' }}>
             {formatCurrency(stats.pendingPayments, 'AED')}
           </CurrencyValue>
         </StatCard>
@@ -317,7 +317,7 @@ export function SalesDashboardPage() {
 
         <StatCard>
           <StatLabel>Reserved Stock</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>{formatNumber(stats.reservedInventory)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.reservedInventory)}</StatValue>
         </StatCard>
       </StatsGrid>
 

@@ -29,10 +29,10 @@ import type { AIHubSection } from '../../types/aiHub';
 // ============================================================================
 
 const SECTION_ACCENT_COLORS: Record<AIHubSection, string> = {
-  control: '#F59E0B',
-  monitor: '#3B82F6',
-  report:  '#8B5CF6',
-  advise:  '#10B981',
+  control: '#B8842A',
+  monitor: '#0F6E56',
+  report:  '#4B4844',
+  advise:  '#0F6E56',
 };
 
 // ============================================================================
@@ -129,11 +129,11 @@ const Divider = styled.div`
 `;
 
 const LogoutButton = styled(HeaderButton)`
-  color: #EF4444;
+  color: #9E2A2A;
 
   &:hover {
     background: #FEF2F2;
-    color: #DC2626;
+    color: #9E2A2A;
   }
 `;
 

@@ -269,13 +269,13 @@ export function getEmployeeFullName(employee: Employee): string {
 export function getEmployeeStatusColor(status: string): string {
   switch (status) {
     case 'active':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'on_leave':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     case 'terminated':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
   }
 }
 
@@ -319,13 +319,13 @@ export function getContractTypeLabel(type: string): string {
 export function getContractStatusColor(status: string): string {
   switch (status) {
     case 'active':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'expired':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     case 'terminated':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 
@@ -335,13 +335,13 @@ export function getContractStatusColor(status: string): string {
 export function getVisaStatusColor(status: string): string {
   switch (status) {
     case 'valid':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'expired':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     case 'pending_renewal':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 

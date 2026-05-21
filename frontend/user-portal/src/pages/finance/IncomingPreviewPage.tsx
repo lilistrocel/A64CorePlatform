@@ -179,7 +179,7 @@ const PendingBadge = styled.span`
   font-size: 12px;
   font-weight: 700;
   background: ${({ theme }) => theme.colors.status.warning ?? '#fffbeb'};
-  color: ${({ theme }) => theme.colors.status.warning ?? '#92400e'};
+  color: ${({ theme }) => theme.colors.status.warning ?? '#B8842A'};
   border: 1px solid ${({ theme }) => theme.colors.status.warning ?? '#fde68a'};
   white-space: nowrap;
   align-self: center;
@@ -355,7 +355,7 @@ const PRPill = styled.span`
   font-size: 11px;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.surface.sunken ?? '#eff6ff'};
+  background: ${({ theme }) => theme.colors.surface.sunken ?? 'rgba(15,110,86,0.05)'};
   color: ${({ theme }) => theme.colors.status.info ?? '#0F6E56'};
 `;
 
@@ -368,7 +368,7 @@ const POPill = styled.span`
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
   background: ${({ theme }) => theme.colors.accent.sageSoft ?? '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.status.success ?? '#10b981'};
+  color: ${({ theme }) => theme.colors.status.success ?? '#0F6E56'};
 `;
 
 const UrgentPill = styled.span`
@@ -379,7 +379,7 @@ const UrgentPill = styled.span`
   font-size: 11px;
   font-weight: 700;
   background: ${({ theme }) => theme.colors.status.danger ?? '#fef2f2'};
-  color: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger ?? '#9E2A2A'};
   margin-left: 6px;
 `;
 

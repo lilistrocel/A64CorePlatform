@@ -615,7 +615,7 @@ const AddStrainBtn = styled.button`
   padding: 10px 18px;
   border: none;
   border-radius: 8px;
-  background: #8B5CF6;
+  background: #4B4844;
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -627,7 +627,7 @@ const AddStrainBtn = styled.button`
     background: #7C3AED;
   }
   &:focus-visible {
-    outline: 2px solid #8B5CF6;
+    outline: 2px solid #4B4844;
     outline-offset: 2px;
   }
 `;
@@ -718,7 +718,7 @@ const Spinner = styled.div`
   width: 36px;
   height: 36px;
   border: 3px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #8B5CF6;
+  border-top-color: #4B4844;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -983,7 +983,7 @@ const SubmitBtn = styled.button`
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
-  background: #8B5CF6;
+  background: #4B4844;
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -998,7 +998,7 @@ const SubmitBtn = styled.button`
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #8B5CF6;
+    outline: 2px solid #4B4844;
     outline-offset: 2px;
   }
 `;

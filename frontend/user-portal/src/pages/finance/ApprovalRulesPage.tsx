@@ -233,8 +233,8 @@ const DangerButton = styled.button`
 const SuccessButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.status.success || '#10b981'};
-  border: 1px solid ${({ theme }) => theme.colors.status.success || '#10b981'};
+  color: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
+  border: 1px solid ${({ theme }) => theme.colors.status.success || '#0F6E56'};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -373,7 +373,7 @@ const AlwaysPill = styled.span`
   font-size: 11px;
   font-weight: 600;
   background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.status.success || '#10b981'};
+  color: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
 `;
 
 const StatusBadge = styled.span<{ $active: boolean }>`
@@ -386,7 +386,7 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   background: ${({ $active, theme }) =>
     $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.status.success || '#10b981' : theme.colors.text.tertiary};
+    $active ? theme.colors.status.success || '#0F6E56' : theme.colors.text.tertiary};
 `;
 
 const DocTypeBadge = styled.span`
@@ -397,7 +397,7 @@ const DocTypeBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
+  background: ${({ theme }) => theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'};
   color: ${({ theme }) => theme.colors.status.info || '#0F6E56'};
 `;
 
@@ -708,8 +708,8 @@ const TesterResult = styled.div<{ $requiresApproval: boolean | null }>`
   color: ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.text.tertiary;
     return $requiresApproval
-      ? theme.colors.status.warning || '#92400e'
-      : theme.colors.status.success || '#065f46';
+      ? theme.colors.status.warning || '#B8842A'
+      : theme.colors.status.success || '#0B5644';
   }};
   border: 1px solid ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.surface.sunken;
@@ -1728,7 +1728,7 @@ export function ApprovalRulesPage() {
                               aria-label={`Reactivate approval rule for ${rule.docType}`}
                               disabled={reactivateMutation.isPending}
                               style={{
-                                color: 'var(--color-success, #10b981)',
+                                color: 'var(--color-success, #0F6E56)',
                                 borderColor: 'currentColor',
                               }}
                             >

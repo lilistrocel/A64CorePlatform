@@ -69,16 +69,16 @@ const Chip = styled.button<{ $active: boolean }>`
   border: 1px solid ${({ $active, theme }) =>
     $active ? theme.colors.accent.sage : theme.colors.border.subtle};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageSoft || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.accent.sageSoft || 'rgba(15,110,86,0.05)' : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageDeep || '#1d4ed8' : theme.colors.text.secondary};
+    $active ? theme.colors.accent.sageDeep || '#0B5644' : theme.colors.text.secondary};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
     border-color: ${({ theme }) => theme.colors.accent.sage};
-    background: ${({ theme }) => theme.colors.accent.sageSoft || '#eff6ff'};
+    background: ${({ theme }) => theme.colors.accent.sageSoft || 'rgba(15,110,86,0.05)'};
   }
 `;
 
@@ -153,7 +153,7 @@ const StatusBadge = styled.span<{ $status: PRStatus }>`
   background: ${({ $status, theme }) => {
     switch ($status) {
       case 'Draft': return theme.colors.surface.raised;
-      case 'Pending Approval': return '#fef3c7';
+      case 'Pending Approval': return 'rgba(184,132,42,0.10)';
       case 'Approved': return theme.colors.accent.sageSoft || '#ecfdf5';
       case 'Rejected': return theme.colors.status.danger || '#fef2f2';
       case 'Cancelled': return theme.colors.surface.raised;
@@ -164,9 +164,9 @@ const StatusBadge = styled.span<{ $status: PRStatus }>`
   color: ${({ $status, theme }) => {
     switch ($status) {
       case 'Draft': return theme.colors.text.secondary;
-      case 'Pending Approval': return '#92400e';
-      case 'Approved': return theme.colors.status.success || '#10b981';
-      case 'Rejected': return theme.colors.status.danger || '#ef4444';
+      case 'Pending Approval': return '#B8842A';
+      case 'Approved': return theme.colors.status.success || '#0F6E56';
+      case 'Rejected': return theme.colors.status.danger || '#9E2A2A';
       case 'Cancelled': return theme.colors.text.tertiary;
       case 'Closed': return '#5b21b6';
       default: return theme.colors.text.secondary;
@@ -182,10 +182,10 @@ const UrgencyDot = styled.span<{ $urgency: UrgencyLevel }>`
   margin-right: 6px;
   background: ${({ $urgency }) => {
     switch ($urgency) {
-      case 'high': return '#ef4444';
-      case 'normal': return '#f59e0b';
-      case 'low': return '#6b7280';
-      default: return '#6b7280';
+      case 'high': return '#9E2A2A';
+      case 'normal': return '#B8842A';
+      case 'low': return '#4B4844';
+      default: return '#4B4844';
     }
   }};
 `;

@@ -104,10 +104,10 @@ interface StatusChipProps {
 
 function getStatusAccent(status: HarvestStockStatus): string {
   switch (status) {
-    case 'available': return '#10B981';
-    case 'reserved': return '#3B82F6';
-    case 'sold': return '#6B7280';
-    case 'expired': return '#EF4444';
+    case 'available': return '#0F6E56';
+    case 'reserved': return '#0F6E56';
+    case 'sold': return '#4B4844';
+    case 'expired': return '#9E2A2A';
   }
 }
 

@@ -150,7 +150,7 @@ const ExpandedRow = styled.tr`
 
 const ExpandedCell = styled.td`
   padding: 0;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.accent.sageSoft || '#bfdbfe'};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.accent.sageSoft || 'rgba(15,110,86,0.12)'};
 `;
 
 const LinesContainer = styled.div`
@@ -212,13 +212,13 @@ const StatusBadge = styled.span<{ $status: string }>`
   font-size: 11px;
   font-weight: 600;
   background: ${({ $status }) =>
-    $status === 'posted' ? '#d1fae5' :
-    $status === 'void'   ? '#fee2e2' :
-    '#f3f4f6'};
+    $status === 'posted' ? 'rgba(15,110,86,0.10)' :
+    $status === 'void'   ? 'rgba(158,42,42,0.08)' :
+    '#DCD8CF'};
   color: ${({ $status }) =>
-    $status === 'posted' ? '#065f46' :
-    $status === 'void'   ? '#991b1b' :
-    '#6b7280'};
+    $status === 'posted' ? '#0B5644' :
+    $status === 'void'   ? '#9E2A2A' :
+    '#4B4844'};
 `;
 
 const DescriptionCell = styled.span`
@@ -346,7 +346,7 @@ const SourceDocLink = styled.button`
 const ReverseButton = styled.button`
   padding: 4px 10px;
   background: #fef2f2;
-  color: #991b1b;
+  color: #9E2A2A;
   border: 1px solid #fca5a5;
   border-radius: 6px;
   font-size: 11px;
@@ -355,7 +355,7 @@ const ReverseButton = styled.button`
   white-space: nowrap;
   transition: background 150ms ease;
   &:hover {
-    background: #fee2e2;
+    background: rgba(158,42,42,0.08);
   }
   &:disabled {
     opacity: 0.4;
@@ -429,12 +429,12 @@ const ModalCharCount = styled.div<{ $warn: boolean }>`
   font-size: 11px;
   text-align: right;
   margin-top: 4px;
-  color: ${({ $warn }) => ($warn ? '#ef4444' : '#9ca3af')};
+  color: ${({ $warn }) => ($warn ? '#9E2A2A' : '#4B4844')};
 `;
 
 const ModalErrorText = styled.div`
   font-size: 12px;
-  color: #ef4444;
+  color: #9E2A2A;
   margin-top: 6px;
 `;
 
@@ -459,7 +459,7 @@ const ModalCancelButton = styled.button`
 
 const ModalConfirmButton = styled.button`
   padding: 9px 20px;
-  background: #dc2626;
+  background: #9E2A2A;
   color: white;
   border: none;
   border-radius: 8px;
@@ -547,7 +547,7 @@ function ExpandedLines({ jeId, organizationId, accountMap }: ExpandedLinesProps)
   if (isLoading) {
     return (
       <LinesContainer>
-        <div style={{ fontSize: 13, color: '#6b7280' }}>Loading lines...</div>
+        <div style={{ fontSize: 13, color: '#4B4844' }}>Loading lines...</div>
       </LinesContainer>
     );
   }
@@ -555,7 +555,7 @@ function ExpandedLines({ jeId, organizationId, accountMap }: ExpandedLinesProps)
   if (isError || !detail?.lines) {
     return (
       <LinesContainer>
-        <div style={{ fontSize: 13, color: '#ef4444' }}>Failed to load journal entry lines.</div>
+        <div style={{ fontSize: 13, color: '#9E2A2A' }}>Failed to load journal entry lines.</div>
       </LinesContainer>
     );
   }
@@ -596,8 +596,8 @@ function ExpandedLines({ jeId, organizationId, accountMap }: ExpandedLinesProps)
                 <LinesTd style={{ textAlign: 'right', fontFamily: 'monospace' }}>
                   {line.credit ? formatCurrency(line.credit) : ''}
                 </LinesTd>
-                <LinesTd style={{ color: '#6b7280' }}>{line.description ?? '—'}</LinesTd>
-                <LinesTd style={{ color: '#6b7280' }}>{line.costCenterId ?? '—'}</LinesTd>
+                <LinesTd style={{ color: '#4B4844' }}>{line.description ?? '—'}</LinesTd>
+                <LinesTd style={{ color: '#4B4844' }}>{line.costCenterId ?? '—'}</LinesTd>
               </tr>
             );
           })}
@@ -912,7 +912,7 @@ export function JournalEntriesPage() {
                             <span>{je.description}</span>
                           </Tooltip>
                         ) : (
-                          <span style={{ color: '#9ca3af', fontSize: 13 }}>—</span>
+                          <span style={{ color: '#4B4844', fontSize: 13 }}>—</span>
                         )}
                       </Td>
                       <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
@@ -934,7 +934,7 @@ export function JournalEntriesPage() {
                           </StatusBadge>
                         )}
                       </Td>
-                      <Td style={{ fontSize: 12, color: '#6b7280' }}>
+                      <Td style={{ fontSize: 12, color: '#4B4844' }}>
                         {formatDateTime(je.postedAt)}
                       </Td>
                       {/* Actions column — Reverse Entry for posted, not-yet-reversed JEs */}

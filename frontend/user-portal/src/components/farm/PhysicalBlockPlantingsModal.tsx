@@ -151,7 +151,7 @@ const TrashButton = styled.button`
   background: ${({ theme }) => theme.colors.surface.canvas};
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  color: #dc2626;
+  color: #9E2A2A;
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
@@ -159,11 +159,11 @@ const TrashButton = styled.button`
 
   &:hover {
     background: rgba(220, 38, 38, 0.1);
-    border-color: #dc2626;
+    border-color: #9E2A2A;
   }
 
   &:focus-visible {
-    outline: 2px solid #dc2626;
+    outline: 2px solid #9E2A2A;
     outline-offset: 2px;
   }
 `;

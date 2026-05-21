@@ -107,9 +107,9 @@ const DaysInfo = styled.div`
 const DeleteButton = styled.button`
   padding: 4px 8px;
   background: transparent;
-  border: 1px solid #dc2626;
+  border: 1px solid #9E2A2A;
   border-radius: 4px;
-  color: #dc2626;
+  color: #9E2A2A;
   font-size: 12px;
   cursor: pointer;
   transition: all 150ms ease-in-out;

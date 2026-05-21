@@ -14,10 +14,10 @@ interface BiologicalEfficiencyGaugeProps {
 }
 
 function getBEColor(value: number): string {
-  if (value >= 80) return '#10B981'; // Excellent
-  if (value >= 60) return '#3B82F6'; // Good
-  if (value >= 40) return '#F59E0B'; // Fair
-  return '#EF4444';                  // Poor
+  if (value >= 80) return '#0F6E56'; // Excellent
+  if (value >= 60) return '#0F6E56'; // Good
+  if (value >= 40) return '#B8842A'; // Fair
+  return '#9E2A2A';                  // Poor
 }
 
 function getBELabel(value: number): string {
@@ -139,7 +139,7 @@ interface TrackCircleProps {
 
 const TrackCircle = styled.circle<TrackCircleProps>`
   fill: none;
-  stroke: #e0e0e0;
+  stroke: #DCD8CF;
   stroke-width: ${({ $stroke }) => $stroke}px;
 `;
 

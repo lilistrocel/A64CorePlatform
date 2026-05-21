@@ -71,9 +71,9 @@ const FilterBar = styled.div`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
+  background: ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -87,7 +87,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
 
 const CreateButton = styled.button`
   padding: 10px 20px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;

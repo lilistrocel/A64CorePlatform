@@ -182,8 +182,8 @@ const GhostButton = styled.button`
 const DangerIconButton = styled.button`
   padding: 6px 10px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
-  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
@@ -194,18 +194,18 @@ const DangerIconButton = styled.button`
 const AddLineButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.accent.sageDeep || '#2563eb'};
-  border: 1px dashed ${({ theme }) => theme.colors.accent.sage || '#60a5fa'};
+  color: ${({ theme }) => theme.colors.accent.sageDeep || '#0B5644'};
+  border: 1px dashed ${({ theme }) => theme.colors.accent.sage || '#0F6E56'};
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   width: 100%;
   margin-top: 8px;
-  &:hover { background: ${({ theme }) => theme.colors.accent.sageSoft || '#eff6ff'}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageSoft || 'rgba(15,110,86,0.05)'}; }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -222,15 +222,15 @@ const UrgencyChip = styled.button<{ $active: boolean; $urgency: UrgencyLevel }>`
   border-radius: 99px;
   border: 1px solid ${({ $active, $urgency }) => {
     if (!$active) return '#d1d5db';
-    return $urgency === 'high' ? '#ef4444' : $urgency === 'normal' ? '#f59e0b' : '#6b7280';
+    return $urgency === 'high' ? '#9E2A2A' : $urgency === 'normal' ? '#B8842A' : '#4B4844';
   }};
   background: ${({ $active, $urgency }) => {
     if (!$active) return 'transparent';
-    return $urgency === 'high' ? '#fef2f2' : $urgency === 'normal' ? '#fef3c7' : '#f9fafb';
+    return $urgency === 'high' ? '#fef2f2' : $urgency === 'normal' ? 'rgba(184,132,42,0.10)' : '#f9fafb';
   }};
   color: ${({ $active, $urgency }) => {
-    if (!$active) return '#6b7280';
-    return $urgency === 'high' ? '#dc2626' : $urgency === 'normal' ? '#92400e' : '#374151';
+    if (!$active) return '#4B4844';
+    return $urgency === 'high' ? '#9E2A2A' : $urgency === 'normal' ? '#B8842A' : '#0F0F0F';
   }};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
@@ -393,8 +393,8 @@ export function PurchaseRequestFormPage() {
       <Title>{isEdit ? 'Edit Purchase Request' : 'New Purchase Request'}</Title>
 
       {isReadOnly && (
-        <Card style={{ borderLeft: '4px solid #f59e0b', padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, color: '#92400e', fontSize: 14 }}>
+        <Card style={{ borderLeft: '4px solid #B8842A', padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, color: '#B8842A', fontSize: 14 }}>
             This PR is in <strong>{existingPR?.status}</strong> status and cannot be edited.
           </p>
         </Card>

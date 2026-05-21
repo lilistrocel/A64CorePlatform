@@ -98,7 +98,7 @@ const PillButton = styled.button<PillButtonProps>`
   padding: 0 14px 0 10px;
   border-radius: 18px;
   border: 1.5px solid ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
-    if ($hasError) return '#EF4444';
+    if ($hasError) return '#9E2A2A';
     if ($isDisabled) return theme.colors.border.subtle;
     return $isActive ? $activeColor : `${$activeColor}40`;
   }};
@@ -108,7 +108,7 @@ const PillButton = styled.button<PillButtonProps>`
     return $isActive ? `${$activeColor}15` : theme.colors.surface.canvas;
   }};
   color: ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
-    if ($hasError) return '#EF4444';
+    if ($hasError) return '#9E2A2A';
     if ($isDisabled) return theme.colors.text.tertiary;
     return $isActive ? $activeColor : theme.colors.text.secondary;
   }};
@@ -129,11 +129,11 @@ const PillButton = styled.button<PillButtonProps>`
 
   &:hover:not(:disabled) {
     background: ${({ $activeColor, $hasError }) =>
-      $hasError ? '#FEE2E2' : `${$activeColor}12`};
+      $hasError ? 'rgba(158,42,42,0.08)' : `${$activeColor}12`};
     border-color: ${({ $activeColor, $hasError }) =>
-      $hasError ? '#EF4444' : `${$activeColor}80`};
+      $hasError ? '#9E2A2A' : `${$activeColor}80`};
     color: ${({ $activeColor, $hasError }) =>
-      $hasError ? '#DC2626' : $activeColor};
+      $hasError ? '#9E2A2A' : $activeColor};
   }
 
   &:active:not(:disabled) {
@@ -249,8 +249,8 @@ export function VoiceControls({
     }
   };
 
-  const PTT_COLOR = '#3B82F6';
-  const TTS_COLOR = '#8B5CF6';
+  const PTT_COLOR = '#0F6E56';
+  const TTS_COLOR = '#4B4844';
 
   const micLabel = !sttSupported
     ? 'Unavailable'

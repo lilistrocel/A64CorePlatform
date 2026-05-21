@@ -37,7 +37,7 @@ const IconContainer = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #FEF3C7;
+  background: rgba(184,132,42,0.10);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -83,7 +83,7 @@ const CancelButton = styled.button`
 
 const LeaveButton = styled.button`
   padding: 10px 20px;
-  background: #EF4444;
+  background: #9E2A2A;
   color: white;
   border: none;
   border-radius: 8px;
@@ -93,7 +93,7 @@ const LeaveButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #DC2626;
+    background: #9E2A2A;
   }
 `;
 

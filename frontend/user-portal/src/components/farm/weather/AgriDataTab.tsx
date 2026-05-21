@@ -67,7 +67,7 @@ const DataSourceBadge = styled.div`
   gap: 6px;
   padding: 4px 12px;
   background: ${({ theme }) => theme.colors.surface.sunken};
-  color: #3B82F6;
+  color: #0F6E56;
   border-radius: 16px;
   font-size: 12px;
   font-weight: 500;
@@ -105,7 +105,7 @@ const Spinner = styled.div`
   width: 40px;
   height: 40px;
   border: 3px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3B82F6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -125,7 +125,7 @@ const LoadingText = styled.p`
 const ErrorContainer = styled.div`
   padding: 24px;
   background: ${({ theme }) => theme.colors.status.danger};
-  border: 1px solid #EF4444;
+  border: 1px solid #9E2A2A;
   border-radius: 12px;
   text-align: center;
 `;

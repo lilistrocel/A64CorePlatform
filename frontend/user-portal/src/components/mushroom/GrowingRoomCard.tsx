@@ -16,18 +16,18 @@ interface GrowingRoomCardProps {
 }
 
 export function GrowingRoomCard({ room, onClick, compact = false }: GrowingRoomCardProps) {
-  const phaseColor = PHASE_COLORS[room.currentPhase] ?? '#9e9e9e';
+  const phaseColor = PHASE_COLORS[room.currentPhase] ?? '#4B4844';
   const phaseLabel = PHASE_LABELS[room.currentPhase] ?? room.currentPhase;
   const phaseTextColor = PHASE_TEXT_COLORS[room.currentPhase] ?? '#fff';
 
   const bePercent = room.biologicalEfficiency;
   const beColor = bePercent == null
-    ? '#9e9e9e'
+    ? '#4B4844'
     : bePercent >= 80
-    ? '#10B981'
+    ? '#0F6E56'
     : bePercent >= 60
-    ? '#F59E0B'
-    : '#EF4444';
+    ? '#B8842A'
+    : '#9E2A2A';
 
   return (
     <CardWrapper

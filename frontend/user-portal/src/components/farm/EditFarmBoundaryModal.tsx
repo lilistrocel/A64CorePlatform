@@ -87,13 +87,13 @@ const InfoRow = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 14px;
-  color: #6b7280;
+  color: #4B4844;
 `;
 
 const InfoValue = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: #10b981;
+  color: #0F6E56;
 `;
 
 const ButtonGroup = styled.div`

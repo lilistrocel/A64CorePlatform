@@ -556,11 +556,11 @@ const ErrorBanner = styled.div`
 
 const WarningBanner = styled.div`
   background: ${({ theme }) => theme.colors.status.warning};
-  border: 1px solid #f59e0b;
+  border: 1px solid #B8842A;
   border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.75rem 1rem;
   margin-bottom: 1.5rem;
-  color: #92400e;
+  color: #B8842A;
   font-size: 0.875rem;
   display: flex;
   align-items: center;
@@ -589,7 +589,7 @@ const ExpiredIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: ${({ theme }) => theme.colors.status.warning || '#F59E0B'};
+  background: ${({ theme }) => theme.colors.status.warning || '#B8842A'};
   color: white;
   border-radius: 50%;
   display: flex;
@@ -612,7 +612,7 @@ const SessionTimer = styled.div<{ $warning: boolean }>`
   border-radius: ${({ theme }) => theme.radii.md};
   font-size: 0.8125rem;
   color: ${({ $warning, theme }) =>
-    $warning ? '#92400e' : theme.colors.text.secondary};
+    $warning ? '#B8842A' : theme.colors.text.secondary};
   transition: all 0.3s ease;
 
   @media (min-width: 640px) {

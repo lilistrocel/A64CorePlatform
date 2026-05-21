@@ -257,7 +257,7 @@ const RequiredBadge = styled.span`
   font-weight: 500;
   padding: 4px 8px;
   border-radius: 9999px;
-  background: #EF4444;
+  background: #9E2A2A;
   color: white;
   text-transform: uppercase;
 `;
@@ -286,7 +286,7 @@ const Label = styled.label`
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -299,7 +299,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -317,7 +317,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -327,7 +327,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -339,7 +339,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   resize: vertical;
@@ -355,7 +355,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -367,7 +367,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #EF4444;
+  color: #9E2A2A;
 `;
 
 const HelpText = styled.span`
@@ -428,7 +428,7 @@ const ExpandButton = styled.button<{ $expanded: boolean }>`
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface.canvas};
-  color: #3B82F6;
+  color: #0F6E56;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -469,7 +469,7 @@ const StatusSwitch = styled.label`
     height: 0;
 
     &:checked + span {
-      background-color: #10B981;
+      background-color: #0F6E56;
     }
 
     &:checked + span:before {
@@ -517,7 +517,7 @@ const ModalFooter = styled.div`
 const SuccessMessage = styled.div`
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.accent.sageSoft};
-  color: #059669;
+  color: #0B5644;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -526,7 +526,7 @@ const SuccessMessage = styled.div`
 const ErrorMessage = styled.div`
   padding: 12px 16px;
   background: ${({ theme }) => theme.colors.status.danger};
-  color: #EF4444;
+  color: #9E2A2A;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;

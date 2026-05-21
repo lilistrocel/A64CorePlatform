@@ -94,7 +94,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -110,7 +110,7 @@ const SearchInput = styled.input`
 
 const CreateButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -162,8 +162,8 @@ const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: 
   display: none;
   padding: 12px 16px;
   background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#EBF5FF' : theme.colors.surface.raised)};
-  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.text.secondary)};
-  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.border.subtle)};
+  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#0F6E56' : theme.colors.text.secondary)};
+  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -196,7 +196,7 @@ const FilterToggleText = styled.span`
 `;
 
 const ActiveFilterBadge = styled.span`
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   padding: 2px 8px;
   border-radius: 12px;
@@ -230,9 +230,9 @@ const FilterBar = styled.div<{ $isCollapsed?: boolean }>`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 12px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
+  background: ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -260,8 +260,8 @@ const FilterButton = styled.button<{ $active: boolean }>`
 const ResetFiltersButton = styled.button`
   padding: 12px 16px;
   background: transparent;
-  color: #EF4444;
-  border: 1px solid #EF4444;
+  color: #9E2A2A;
+  border: 1px solid #9E2A2A;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -275,7 +275,7 @@ const ResetFiltersButton = styled.button`
   gap: 6px;
 
   &:hover {
-    background: #FEE2E2;
+    background: rgba(158,42,42,0.08);
   }
 
   &:active {
@@ -322,7 +322,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3B82F6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -335,10 +335,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
   border-radius: 8px;
-  color: #EF4444;
+  color: #9E2A2A;
   text-align: center;
 `;
 
@@ -381,9 +381,9 @@ const Pagination = styled.div`
 
 const PageButton = styled.button<{ $active?: boolean }>`
   padding: 12px 16px;
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.canvas)};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
@@ -444,7 +444,7 @@ const PageSizeSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 

@@ -294,7 +294,7 @@ const BalanceTd = styled.td<BalanceTdProps>`
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   text-align: right;
   font-weight: 600;
-  color: ${({ $negative }) => ($negative ? '#dc2626' : '#166534')};
+  color: ${({ $negative }) => ($negative ? '#9E2A2A' : '#166534')};
 `;
 
 const ViewEntriesLink = styled.button`
@@ -338,7 +338,7 @@ const LoadingOverlay = styled.div`
 const ErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;

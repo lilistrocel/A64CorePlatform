@@ -11,13 +11,13 @@ const Title = styled.h2`font-size: 24px; font-weight: 600; color: ${({ theme }) 
 const Form = styled.form``;
 const FormGroup = styled.div`margin-bottom: 20px;`;
 const Label = styled.label`display: block; font-size: 14px; font-weight: 500; color: ${({ theme }) => theme.colors.text.primary}; margin-bottom: 8px;`;
-const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.surface.canvas}; color: ${({ theme }) => theme.colors.text.primary}; &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; } &:focus { outline: none; border-color: #3B82F6; }`;
-const TextArea = styled.textarea`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: 8px; font-size: 14px; min-height: 80px; resize: vertical; background: ${({ theme }) => theme.colors.surface.canvas}; color: ${({ theme }) => theme.colors.text.primary}; &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; } &:focus { outline: none; border-color: #3B82F6; }`;
-const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.surface.canvas}; color: ${({ theme }) => theme.colors.text.primary}; &:focus { outline: none; border-color: #3B82F6; }`;
+const Input = styled.input`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.surface.canvas}; color: ${({ theme }) => theme.colors.text.primary}; &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; } &:focus { outline: none; border-color: #0F6E56; }`;
+const TextArea = styled.textarea`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: 8px; font-size: 14px; min-height: 80px; resize: vertical; background: ${({ theme }) => theme.colors.surface.canvas}; color: ${({ theme }) => theme.colors.text.primary}; &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; } &:focus { outline: none; border-color: #0F6E56; }`;
+const Select = styled.select`width: 100%; padding: 10px 16px; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: 8px; font-size: 14px; background: ${({ theme }) => theme.colors.surface.canvas}; color: ${({ theme }) => theme.colors.text.primary}; &:focus { outline: none; border-color: #0F6E56; }`;
 const ButtonRow = styled.div`display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;`;
-const Button = styled.button`padding: 10px 24px; background: #3B82F6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: #0F6E56; }`;
+const Button = styled.button`padding: 10px 24px; background: #0F6E56; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: #0F6E56; }`;
 const CancelButton = styled(Button)`background: transparent; color: ${({ theme }) => theme.colors.text.secondary}; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }`;
-const ErrorText = styled.div`color: #EF4444; font-size: 13px; margin-top: 8px;`;
+const ErrorText = styled.div`color: #9E2A2A; font-size: 13px; margin-top: 8px;`;
 
 export function EventForm({ event, onClose }: EventFormProps) {
   const [formData, setFormData] = useState({

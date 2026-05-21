@@ -385,7 +385,7 @@ const LoadingOverlay = styled.div`
 const ErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -449,7 +449,7 @@ const BUCKET_DEFS: BucketDef[] = [
     label: 'Grand Total',
     sublabel: 'All vendors',
     bg: '#1e3a5f',
-    text: '#dbeafe',
+    text: 'rgba(15,110,86,0.08)',
   },
 ];
 

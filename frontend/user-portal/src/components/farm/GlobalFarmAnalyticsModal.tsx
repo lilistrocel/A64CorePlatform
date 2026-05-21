@@ -53,13 +53,13 @@ const TABS: Array<{ key: TabType; label: string; icon: string }> = [
 ];
 
 const STATE_COLORS: Record<string, string> = {
-  empty: '#6B7280',
-  planned: '#3B82F6',
-  growing: '#10B981',
+  empty: '#4B4844',
+  planned: '#0F6E56',
+  growing: '#0F6E56',
   fruiting: '#A855F7',
-  harvesting: '#F59E0B',
-  cleaning: '#F97316',
-  alert: '#EF4444',
+  harvesting: '#B8842A',
+  cleaning: '#B85C2A',
+  alert: '#9E2A2A',
 };
 
 const STATE_LABELS: Record<string, string> = {
@@ -215,7 +215,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
   const metrics = analytics.aggregatedMetrics;
   const performanceScore = metrics.avgPerformanceScore ?? 0;
   const performanceColor =
-    performanceScore >= 80 ? '#10B981' : performanceScore >= 60 ? '#3B82F6' : performanceScore >= 40 ? '#F59E0B' : '#EF4444';
+    performanceScore >= 80 ? '#0F6E56' : performanceScore >= 60 ? '#0F6E56' : performanceScore >= 40 ? '#B8842A' : '#9E2A2A';
 
   // Prepare state breakdown pie chart data
   const stateData = Object.entries(analytics.stateBreakdown)
@@ -223,7 +223,7 @@ function OverviewTab({ analytics }: { analytics: any }) {
     .map(([state, count]: [string, any]) => ({
       name: STATE_LABELS[state] || state,
       value: count,
-      color: STATE_COLORS[state] || '#6B7280',
+      color: STATE_COLORS[state] || '#4B4844',
     }))
     .filter((item) => item.value > 0);
 
@@ -232,8 +232,8 @@ function OverviewTab({ analytics }: { analytics: any }) {
                     analytics.performanceInsights?.overallTrend === 'declining' ? '🔽' : '➡️';
   const trendLabel = analytics.performanceInsights?.overallTrend === 'improving' ? 'Improving' :
                      analytics.performanceInsights?.overallTrend === 'declining' ? 'Declining' : 'Stable';
-  const trendColor = analytics.performanceInsights?.overallTrend === 'improving' ? '#10B981' :
-                     analytics.performanceInsights?.overallTrend === 'declining' ? '#EF4444' : '#3B82F6';
+  const trendColor = analytics.performanceInsights?.overallTrend === 'improving' ? '#0F6E56' :
+                     analytics.performanceInsights?.overallTrend === 'declining' ? '#9E2A2A' : '#0F6E56';
 
   return (
     <TabContent>
@@ -371,10 +371,10 @@ function ComparisonTab({ analytics }: { analytics: any }) {
   });
 
   const getPerformanceColor = (score: number) => {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#3B82F6';
-    if (score >= 40) return '#F59E0B';
-    return '#EF4444';
+    if (score >= 80) return '#0F6E56';
+    if (score >= 60) return '#0F6E56';
+    if (score >= 40) return '#B8842A';
+    return '#9E2A2A';
   };
 
   return (
@@ -499,8 +499,8 @@ function TimelineTab({ analytics }: { analytics: any }) {
                     }}
                   />
                   <Legend />
-                  <Line yAxisId="left" type="monotone" dataKey="totalYieldKg" stroke="#10B981" name="Daily Yield" strokeWidth={2} />
-                  <Line yAxisId="right" type="monotone" dataKey="cumulativeYield" stroke="#3B82F6" name="Cumulative Yield" strokeWidth={2} />
+                  <Line yAxisId="left" type="monotone" dataKey="totalYieldKg" stroke="#0F6E56" name="Daily Yield" strokeWidth={2} />
+                  <Line yAxisId="right" type="monotone" dataKey="cumulativeYield" stroke="#0F6E56" name="Cumulative Yield" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -557,10 +557,10 @@ function InsightsTab({ analytics }: { analytics: any }) {
   const insights = analytics.performanceInsights;
 
   const getPerformanceColor = (score: number) => {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#3B82F6';
-    if (score >= 40) return '#F59E0B';
-    return '#EF4444';
+    if (score >= 80) return '#0F6E56';
+    if (score >= 60) return '#0F6E56';
+    if (score >= 40) return '#B8842A';
+    return '#9E2A2A';
   };
 
   const getTrendIcon = () => {
@@ -583,10 +583,10 @@ function InsightsTab({ analytics }: { analytics: any }) {
 
   const getTrendColor = () => {
     switch (insights.overallTrend) {
-      case 'improving': return '#10B981';
-      case 'stable': return '#3B82F6';
-      case 'declining': return '#EF4444';
-      default: return '#9e9e9e';
+      case 'improving': return '#0F6E56';
+      case 'stable': return '#0F6E56';
+      case 'declining': return '#9E2A2A';
+      default: return '#4B4844';
     }
   };
 
@@ -797,7 +797,7 @@ const PeriodSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -841,12 +841,12 @@ const Tab = styled.button<{ $active: boolean }>`
   padding: 14px 20px;
   border: none;
   background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.text.secondary)};
+  color: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.text.secondary)};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '600' : '500')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   white-space: nowrap;
 
   &:hover {
@@ -1169,7 +1169,7 @@ const LoadingSpinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -1218,14 +1218,14 @@ const RetryButton = styled.button`
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  background: #3b82f6;
+  background: #0F6E56;
   color: white;
   border: none;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #2563eb;
+    background: #0B5644;
   }
 `;
 

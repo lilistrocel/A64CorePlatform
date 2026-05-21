@@ -80,13 +80,13 @@ const PrimaryButton = styled.button`
 `;
 
 const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.status.success || '#10b981'};
-  &:hover { background: #059669; }
+  background: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
+  &:hover { background: #0B5644; }
 `;
 
 const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
-  &:hover { background: #dc2626; }
+  background: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
+  &:hover { background: #9E2A2A; }
 `;
 
 const GhostButton = styled.button`
@@ -170,12 +170,12 @@ const StatusBadge = styled.span<{ $posted: boolean }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ $posted }) => ($posted ? '#d1fae5' : '#f3f4f6')};
-  color: ${({ $posted }) => ($posted ? '#065f46' : '#6b7280')};
+  background: ${({ $posted }) => ($posted ? 'rgba(15,110,86,0.10)' : '#DCD8CF')};
+  color: ${({ $posted }) => ($posted ? '#0B5644' : '#4B4844')};
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -196,20 +196,20 @@ const JELinkBanner = styled.div`
 
 const JELinkText = styled.span`
   font-size: 14px;
-  color: #065f46;
+  color: #0B5644;
   font-weight: 500;
 `;
 
 const JELinkButton = styled.a`
   font-size: 13px;
-  color: #059669;
+  color: #0B5644;
   font-weight: 600;
   text-decoration: none;
   border: 1px solid #6ee7b7;
   border-radius: 6px;
   padding: 6px 14px;
   cursor: pointer;
-  &:hover { background: #d1fae5; }
+  &:hover { background: rgba(15,110,86,0.10); }
 `;
 
 // Confirm-action overlay/modal (mirrors PO detail page pattern)
@@ -376,10 +376,10 @@ export function GoodsReceiptDetailPage() {
       <TitleRow>
         <div>
           <Title>{gr.docNumber}</Title>
-          <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: '#4B4844', marginTop: 4 }}>
             {gr.vendorName ?? gr.vendorCode ?? 'No vendor'} &bull;{' '}
             <span
-              style={{ color: '#2563eb', cursor: 'pointer' }}
+              style={{ color: '#0B5644', cursor: 'pointer' }}
               onClick={() => navigate(`/purchasing/po/${gr.baseDocId}`)}
             >
               {gr.baseDocNumber ?? 'View PO'}
@@ -409,9 +409,9 @@ export function GoodsReceiptDetailPage() {
           )}
           {isPosted && (
             <span style={{
-              fontSize: 13, color: '#6b7280',
+              fontSize: 13, color: '#4B4844',
               padding: '8px 12px',
-              background: '#f3f4f6',
+              background: '#DCD8CF',
               borderRadius: 8,
             }}>
               Read-only (Posted)
@@ -437,7 +437,7 @@ export function GoodsReceiptDetailPage() {
             <InfoLabel>Source PO</InfoLabel>
             <InfoValue>
               <span
-                style={{ color: '#2563eb', cursor: 'pointer' }}
+                style={{ color: '#0B5644', cursor: 'pointer' }}
                 onClick={() => navigate(`/purchasing/po/${gr.baseDocId}`)}
               >
                 {gr.baseDocNumber ?? gr.baseDocId}
@@ -490,7 +490,7 @@ export function GoodsReceiptDetailPage() {
                 <Td>{line.lineNumber}</Td>
                 <Td>
                   <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{line.itemName}</div>
+                  <div style={{ fontSize: 12, color: '#4B4844' }}>{line.itemName}</div>
                 </Td>
                 <Td>{line.uom}</Td>
                 <Td>{line.quantity}</Td>

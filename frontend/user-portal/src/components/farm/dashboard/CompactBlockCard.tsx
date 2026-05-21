@@ -33,7 +33,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
   const [planMode, setPlanMode] = useState<'plan' | 'plant'>('plan');
   const { transitionBlock, recordHarvest, transitioning, recordingHarvest } = useBlockActions();
 
-  const stateColor = config.colorScheme.stateColors[block.state] || '#6B7280';
+  const stateColor = config.colorScheme.stateColors[block.state] || '#4B4844';
   const stateIcon = config.icons.states[block.state] || '⚫';
 
   /**
@@ -41,7 +41,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
    */
   const getPerformanceColor = () => {
     const category = block.calculated?.performanceCategory || 'good';
-    return config.colorScheme?.performanceColors?.[category] || '#6B7280';
+    return config.colorScheme?.performanceColors?.[category] || '#4B4844';
   };
 
   /**
@@ -831,17 +831,17 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
   background: ${(props) => {
     switch (props.$variant) {
       case 'success':
-        return '#10B981';
+        return '#0F6E56';
       case 'plan':
-        return '#3B82F6';
+        return '#0F6E56';
       case 'plant':
-        return '#10B981';
+        return '#0F6E56';
       case 'warning':
-        return '#F59E0B';
+        return '#B8842A';
       case 'analytics':
         return '#6366F1';
       default:
-        return '#3B82F6';
+        return '#0F6E56';
     }
   }};
   color: white;
@@ -857,11 +857,11 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
     background: ${(props) => {
       switch (props.$variant) {
         case 'success':
-          return '#059669';
+          return '#0B5644';
         case 'plan':
           return '#1976D2';
         case 'plant':
-          return '#059669';
+          return '#0B5644';
         case 'warning':
           return '#D97706';
         case 'analytics':

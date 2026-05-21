@@ -38,13 +38,13 @@ interface DashboardFiltersProps {
 }
 
 const STATE_OPTIONS: { value: DashboardBlockStatus; label: string; icon: string; color: string }[] = [
-  { value: 'empty', label: 'Empty', icon: '⚪', color: '#9E9E9E' },
-  { value: 'planned', label: 'Planned', icon: '🔵', color: '#3B82F6' },
-  { value: 'planted', label: 'Planted', icon: '🟢', color: '#10B981' },
+  { value: 'empty', label: 'Empty', icon: '⚪', color: '#4B4844' },
+  { value: 'planned', label: 'Planned', icon: '🔵', color: '#0F6E56' },
+  { value: 'planted', label: 'Planted', icon: '🟢', color: '#0F6E56' },
   { value: 'growing', label: 'Growing', icon: '🌿', color: '#84CC16' },
   { value: 'fruiting', label: 'Fruiting', icon: '🍇', color: '#FBBF24' },
-  { value: 'harvesting', label: 'Harvesting', icon: '🧺', color: '#F59E0B' },
-  { value: 'cleaning', label: 'Cleaning', icon: '🧹', color: '#8B5CF6' },
+  { value: 'harvesting', label: 'Harvesting', icon: '🧺', color: '#B8842A' },
+  { value: 'cleaning', label: 'Cleaning', icon: '🧹', color: '#4B4844' },
 ];
 
 const PERFORMANCE_OPTIONS: { value: PerformanceCategory; label: string; icon: string }[] = [
@@ -239,7 +239,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 
   &::placeholder {
@@ -285,7 +285,7 @@ const SortSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -304,17 +304,17 @@ const SortDirectionButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
 
 const ExpandButton = styled.button`
   padding: 8px 16px;
-  border: 2px solid #3b82f6;
+  border: 2px solid #0F6E56;
   border-radius: 6px;
   background: ${({ theme }) => theme.colors.surface.canvas};
-  color: #3b82f6;
+  color: #0F6E56;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -408,14 +408,14 @@ const PerformanceChip = styled.button<{ $isSelected: boolean }>`
   gap: 6px;
   padding: 6px 12px;
   border-radius: 20px;
-  border: 2px solid ${(props) => (props.$isSelected ? '#3b82f6' : props.theme.colors.border.subtle)};
+  border: 2px solid ${(props) => (props.$isSelected ? '#0F6E56' : props.theme.colors.border.subtle)};
   background: ${(props) => (props.$isSelected ? props.theme.colors.surface.sunken : 'transparent')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   font-size: 13px;
 
   &:hover {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
@@ -439,8 +439,8 @@ const ToggleGrid = styled.div`
 const ToggleChip = styled.button<{ $isActive: boolean }>`
   padding: 8px 16px;
   border-radius: 6px;
-  border: 2px solid ${(props) => (props.$isActive ? '#3b82f6' : props.theme.colors.border.subtle)};
-  background: ${(props) => (props.$isActive ? '#3b82f6' : 'transparent')};
+  border: 2px solid ${(props) => (props.$isActive ? '#0F6E56' : props.theme.colors.border.subtle)};
+  background: ${(props) => (props.$isActive ? '#0F6E56' : 'transparent')};
   color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.text.primary)};
   font-size: 14px;
   font-weight: 500;
@@ -448,7 +448,7 @@ const ToggleChip = styled.button<{ $isActive: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     background: ${(props) => (props.$isActive ? props.theme.colors.accent.sageDeep : props.theme.colors.surface.sunken)};
     color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.text.primary)};
   }

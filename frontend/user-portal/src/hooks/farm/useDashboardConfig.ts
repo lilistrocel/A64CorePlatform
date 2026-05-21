@@ -88,32 +88,32 @@ const DEFAULT_CONFIG: DashboardConfig = {
   version: '1.0',
   colorScheme: {
     stateColors: {
-      empty: '#9E9E9E',
-      planned: '#3B82F6',
-      planted: '#10B981',
+      empty: '#4B4844',
+      planned: '#0F6E56',
+      planted: '#0F6E56',
       growing: '#34D399',
       fruiting: '#FCD34D',
-      harvesting: '#F59E0B',
+      harvesting: '#B8842A',
       cleaning: '#A855F7',
-      alert_critical: '#DC2626',
-      alert_high: '#F97316',
+      alert_critical: '#9E2A2A',
+      alert_high: '#B85C2A',
       alert_medium: '#FCD34D',
       alert_low: '#FDE68A'
     },
     performanceColors: {
-      exceptional: '#10B981',
+      exceptional: '#0F6E56',
       exceeding: '#34D399',
-      excellent: '#3B82F6',
+      excellent: '#0F6E56',
       good: '#FCD34D',
-      acceptable: '#F97316',
-      poor: '#DC2626'
+      acceptable: '#B85C2A',
+      poor: '#9E2A2A'
     },
     timelinessColors: {
-      early: '#3B82F6',
-      onTime: '#10B981',
+      early: '#0F6E56',
+      onTime: '#0F6E56',
       slightlyLate: '#FCD34D',
-      late: '#F97316',
-      veryLate: '#DC2626'
+      late: '#B85C2A',
+      veryLate: '#9E2A2A'
     }
   },
   iconSet: 'emoji',

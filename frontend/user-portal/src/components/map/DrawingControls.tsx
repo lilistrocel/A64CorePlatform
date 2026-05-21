@@ -473,7 +473,7 @@ const ToolbarButton = styled.button<{ $variant: 'primary' | 'secondary' | 'dange
       case 'danger':
         return `
           background: ${theme.colors.status.danger};
-          color: #dc2626;
+          color: #9E2A2A;
           &:hover { background: ${theme.colors.status.danger}; filter: brightness(0.92); }
         `;
       default:
@@ -513,7 +513,7 @@ const AreaDisplay = styled.div`
 const AreaText = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #10b981;
+  color: #0F6E56;
 `;
 
 export default DrawingControls;

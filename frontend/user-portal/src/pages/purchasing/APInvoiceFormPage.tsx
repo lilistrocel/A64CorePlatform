@@ -176,9 +176,9 @@ const VarianceCell = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
   font-size: 12px;
   font-weight: ${({ $sign }) => ($sign === 'zero' ? '400' : '600')};
   color: ${({ $sign }) => {
-    if ($sign === 'positive') return '#dc2626';
-    if ($sign === 'negative') return '#059669';
-    return '#9ca3af';
+    if ($sign === 'positive') return '#9E2A2A';
+    if ($sign === 'negative') return '#0B5644';
+    return '#4B4844';
   }};
 `;
 
@@ -218,9 +218,9 @@ const TotalsVariance = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
   min-width: 120px;
   text-align: right;
   color: ${({ $sign }) => {
-    if ($sign === 'positive') return '#dc2626';
-    if ($sign === 'negative') return '#059669';
-    return '#9ca3af';
+    if ($sign === 'positive') return '#9E2A2A';
+    if ($sign === 'negative') return '#0B5644';
+    return '#4B4844';
   }};
 `;
 
@@ -257,15 +257,15 @@ const GhostButton = styled.button`
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   font-size: 13px;
   margin: 8px 0 0;
 `;
 
 const VarianceHelpText = styled.p`
   font-size: 12px;
-  color: #92400e;
-  background: #fef3c7;
+  color: #B8842A;
+  background: rgba(184,132,42,0.10);
   border: 1px solid #fcd34d;
   border-radius: 6px;
   padding: 8px 12px;
@@ -368,7 +368,7 @@ function GRPickerCard({
   if (isLoading) {
     return (
       <Card>
-        <p style={{ fontSize: 14, color: '#6b7280' }}>Loading posted goods receipts...</p>
+        <p style={{ fontSize: 14, color: '#4B4844' }}>Loading posted goods receipts...</p>
       </Card>
     );
   }
@@ -377,7 +377,7 @@ function GRPickerCard({
     return (
       <Card>
         <CardTitle>Select Source GR</CardTitle>
-        <p style={{ fontSize: 14, color: '#6b7280' }}>
+        <p style={{ fontSize: 14, color: '#4B4844' }}>
           No posted GRs available. A GR must be in Posted status to create an AP Invoice.
         </p>
         <GhostButton onClick={() => navigate('/purchasing/gr')}>
@@ -390,7 +390,7 @@ function GRPickerCard({
   return (
     <Card>
       <CardTitle>Select Source GR (Posted)</CardTitle>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>
+      <p style={{ fontSize: 14, color: '#4B4844', marginBottom: 16 }}>
         Choose the Posted Goods Receipt you are invoicing against.
       </p>
       <Table>
@@ -410,7 +410,7 @@ function GRPickerCard({
               <Td><code style={{ fontWeight: 600 }}>{gr.docNumber}</code></Td>
               <Td>
                 {gr.baseDocNumber ?? (
-                  <span style={{ color: '#9ca3af' }}>—</span>
+                  <span style={{ color: '#4B4844' }}>—</span>
                 )}
               </Td>
               <Td>{gr.vendorName ?? gr.vendorCode ?? '—'}</Td>
@@ -447,7 +447,7 @@ function GRPickerCard({
           >
             Previous
           </GhostButton>
-          <span style={{ padding: '6px 8px', fontSize: 13, color: '#6b7280' }}>
+          <span style={{ padding: '6px 8px', fontSize: 13, color: '#4B4844' }}>
             Page {meta.page} / {meta.totalPages}
           </span>
           <GhostButton
@@ -774,8 +774,8 @@ export function APInvoiceFormPage() {
 
       {/* Source GR context banner */}
       {sourceGR && !isEdit && (
-        <Card style={{ borderLeft: '4px solid #2563eb', padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, fontSize: 14, color: '#1d4ed8' }}>
+        <Card style={{ borderLeft: '4px solid #0B5644', padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, fontSize: 14, color: '#0B5644' }}>
             Invoicing against GR <strong>{sourceGR.docNumber}</strong>{' '}
             {sourceGR.baseDocNumber && <>from PO <strong>{sourceGR.baseDocNumber}</strong> · </>}
             Vendor: <strong>{sourceGR.vendorName ?? sourceGR.vendorCode ?? '—'}</strong>
@@ -876,11 +876,11 @@ export function APInvoiceFormPage() {
                   <LineRow key={line.grLineId} $hasVariance={line.variance !== 0}>
                     <Td>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{line.itemCode}</div>
-                      <div style={{ fontSize: 11, color: '#6b7280' }}>{line.itemName}</div>
+                      <div style={{ fontSize: 11, color: '#4B4844' }}>{line.itemName}</div>
                     </Td>
-                    <Td style={{ color: '#6b7280' }}>{line.quantity}</Td>
+                    <Td style={{ color: '#4B4844' }}>{line.quantity}</Td>
                     <Td>{line.uom}</Td>
-                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                    <Td style={{ color: '#4B4844', fontSize: 13 }}>
                       {formatAmt(line.poUnitPrice, currency)}
                     </Td>
                     <Td>
@@ -956,7 +956,7 @@ export function APInvoiceFormPage() {
       ) : (
         effectiveGrDocId && (
           <Card>
-            <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: '#4B4844', textAlign: 'center' }}>
               Loading GR lines...
             </p>
           </Card>

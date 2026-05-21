@@ -45,7 +45,7 @@ const Title = styled.h2`
 
 const FarmingYearContext = styled.span`
   font-size: 13px;
-  color: #3b82f6;
+  color: #0F6E56;
   font-weight: 500;
 `;
 
@@ -74,10 +74,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) =>
     $variant === 'primary'
       ? `
-    background: #3b82f6;
+    background: #0F6E56;
     color: white;
     &:hover:not(:disabled) {
-      background: #2563eb;
+      background: #0B5644;
     }
   `
       : `
@@ -173,13 +173,13 @@ const QualityBadge = styled.span<{ $grade: QualityGrade }>`
   background: ${({ $grade }) => {
     switch ($grade) {
       case 'A':
-        return '#10b981';
+        return '#0F6E56';
       case 'B':
         return '#eab308';
       case 'C':
-        return '#f97316';
+        return '#B85C2A';
       default:
-        return '#9e9e9e';
+        return '#4B4844';
     }
   }};
   color: white;
@@ -261,7 +261,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -283,7 +283,7 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -298,7 +298,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -374,11 +374,11 @@ const DangerButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: none;
-  background: #ef4444;
+  background: #9E2A2A;
   color: white;
 
   &:hover:not(:disabled) {
-    background: #dc2626;
+    background: #9E2A2A;
   }
 
   &:disabled {

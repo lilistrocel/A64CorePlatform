@@ -157,7 +157,7 @@ const Badge = styled.span<{ $active: boolean }>`
   background: ${({ $active, theme }) =>
     $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.status.success || '#10b981' : theme.colors.text.tertiary};
+    $active ? theme.colors.status.success || '#0F6E56' : theme.colors.text.tertiary};
 `;
 
 const BlockedBadge = styled.span`
@@ -682,7 +682,7 @@ function VendorFormModal({
           </FormRow>
 
           <details>
-            <summary style={{ cursor: 'pointer', fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 13, color: '#4B4844', marginBottom: 8 }}>
               Bank Details (optional)
             </summary>
             <FormRow>

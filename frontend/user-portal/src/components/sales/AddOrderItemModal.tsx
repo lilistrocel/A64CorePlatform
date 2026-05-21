@@ -223,7 +223,7 @@ const CloseButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -277,7 +277,7 @@ const ComboWrapper = styled.div`
 const ComboInput = styled.input<{ $hasError?: boolean }>`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -291,7 +291,7 @@ const ComboInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -388,11 +388,11 @@ const ChipClearButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    color: #EF4444;
+    color: #9E2A2A;
   }
 
   &:focus-visible {
-    outline: 2px solid #EF4444;
+    outline: 2px solid #9E2A2A;
     outline-offset: 2px;
   }
 `;
@@ -410,26 +410,26 @@ const GradeChip = styled.button<{ $selected?: boolean; $disabled?: boolean }>`
   font-size: 13px;
   font-weight: 600;
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
-  border: 2px solid ${({ $selected }) => ($selected ? '#3B82F6' : 'transparent')};
+  border: 2px solid ${({ $selected }) => ($selected ? '#0F6E56' : 'transparent')};
   background: ${({ $selected, $disabled, theme }) => {
     if ($disabled) return theme.colors.surface.raised;
-    if ($selected) return '#EFF6FF';
+    if ($selected) return 'rgba(15,110,86,0.05)';
     return theme.colors.surface.raised;
   }};
   color: ${({ $selected, $disabled, theme }) => {
     if ($disabled) return theme.colors.text.tertiary;
-    if ($selected) return '#1D4ED8';
+    if ($selected) return '#0B5644';
     return theme.colors.text.secondary;
   }};
   opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    border-color: ${({ $disabled }) => ($disabled ? 'transparent' : '#93C5FD')};
+    border-color: ${({ $disabled }) => ($disabled ? 'transparent' : '#0F6E56')};
   }
 
   &:focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -449,12 +449,12 @@ const Segment = styled.button<{ $active?: boolean }>`
   font-weight: 500;
   border: none;
   cursor: pointer;
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.canvas)};
   color: ${({ $active, theme }) => ($active ? '#fff' : theme.colors.text.secondary)};
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
 
   &:focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid #0F6E56;
     outline-offset: -2px;
   }
 `;
@@ -488,7 +488,7 @@ const SmallNumInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -509,7 +509,7 @@ const AutoFillRow = styled.div`
 
 const AutoFillButton = styled.button`
   padding: 7px 14px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -520,11 +520,11 @@ const AutoFillButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #1D4ED8;
+    background: #0B5644;
   }
 
   &:focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 
@@ -602,7 +602,7 @@ const RecommendedBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
   color: #D97706;
-  background: #FEF3C7;
+  background: rgba(184,132,42,0.10);
   border: 1px solid #FCD34D;
   border-radius: 4px;
   padding: 1px 6px;
@@ -639,7 +639,7 @@ const TakeLabel = styled.label`
 const TakeInput = styled.input<{ $hasError?: boolean }>`
   width: 100px;
   padding: 6px 10px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 6px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -648,7 +648,7 @@ const TakeInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 2px ${({ $hasError }) => ($hasError ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)')};
   }
 
@@ -661,7 +661,7 @@ const TakeInput = styled.input<{ $hasError?: boolean }>`
 
 const TakeError = styled.span`
   font-size: 12px;
-  color: #EF4444;
+  color: #9E2A2A;
 `;
 
 const Separator = styled.div`
@@ -707,7 +707,7 @@ const ErrorBanner = styled.div`
   ${warningStyle}
   background: #FEF2F2;
   border: 1px solid #FECACA;
-  color: #991B1B;
+  color: #9E2A2A;
 `;
 
 // ---- Summary ----
@@ -757,7 +757,7 @@ const PriceInputWrap = styled.div`
   background: ${({ theme }) => theme.colors.surface.canvas};
 
   &:focus-within {
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -790,8 +790,8 @@ const LineTotalDisplay = styled.div`
 
 // ---- Duplicate-merge prompt ----
 const MergePrompt = styled.div`
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
+  background: rgba(15,110,86,0.05);
+  border: 1px solid rgba(15,110,86,0.12);
   border-radius: 8px;
   padding: 12px 16px;
   display: flex;
@@ -832,10 +832,10 @@ const FooterButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       `;
     }
     return `
-      background: #3B82F6;
+      background: #0F6E56;
       color: white;
       &:hover:not(:disabled) {
-        background: #1D4ED8;
+        background: #0B5644;
       }
       &:disabled {
         opacity: 0.5;
@@ -851,7 +851,7 @@ const Spinner = styled.span`
   width: 14px;
   height: 14px;
   border: 2px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3B82F6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 

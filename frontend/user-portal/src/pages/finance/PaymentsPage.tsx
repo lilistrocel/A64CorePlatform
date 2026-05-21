@@ -52,7 +52,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 const METHOD_COLORS: Record<PaymentMethod, { bg: string; text: string }> = {
-  bank_transfer: { bg: '#dbeafe', text: '#1e40af' },
+  bank_transfer: { bg: 'rgba(15,110,86,0.08)', text: '#1e40af' },
   cheque: { bg: '#fef9c3', text: '#854d0e' },
   cash: { bg: '#dcfce7', text: '#166534' },
 };
@@ -211,8 +211,8 @@ const ReversedBadge = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  background: #fee2e2;
-  color: #991b1b;
+  background: rgba(158,42,42,0.08);
+  color: #9E2A2A;
   border: 1px solid #fca5a5;
   margin-left: 8px;
 `;
@@ -456,8 +456,8 @@ export function PaymentsPage() {
               {items.map((payment) => {
                 const methodLabel = METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod;
                 const methodColor = METHOD_COLORS[payment.paymentMethod] ?? {
-                  bg: '#f3f4f6',
-                  text: '#374151',
+                  bg: '#DCD8CF',
+                  text: '#0F0F0F',
                 };
                 const isReversed = Boolean(payment.je?.reversedByJeNumber);
                 const RowComponent = isReversed ? ReversedRow : ClickableRow;
@@ -504,7 +504,7 @@ export function PaymentsPage() {
                     </Td>
                     <Td>
                       {payment.referenceNumber ?? (
-                        <span style={{ color: '#9ca3af' }}>—</span>
+                        <span style={{ color: '#4B4844' }}>—</span>
                       )}
                     </Td>
                     <Td
@@ -513,7 +513,7 @@ export function PaymentsPage() {
                         fontFamily: 'monospace',
                         fontWeight: 600,
                         textDecoration: isReversed ? 'line-through' : 'none',
-                        color: isReversed ? '#9ca3af' : undefined,
+                        color: isReversed ? '#4B4844' : undefined,
                       }}
                     >
                       {formatCurrency(payment.totalAmount, payment.currencyCode)}
@@ -529,10 +529,10 @@ export function PaymentsPage() {
                           View JE
                         </JeLink>
                       ) : (
-                        <span style={{ color: '#9ca3af', fontSize: 13 }}>—</span>
+                        <span style={{ color: '#4B4844', fontSize: 13 }}>—</span>
                       )}
                     </Td>
-                    <Td style={{ fontSize: 13, color: '#6b7280' }}>
+                    <Td style={{ fontSize: 13, color: '#4B4844' }}>
                       {payment.createdBy}
                     </Td>
                   </RowComponent>

@@ -138,7 +138,7 @@ const EventItem = styled.div`
   align-items: center;
   padding: 12px;
   background: #E0F2FE;
-  border-left: 3px solid #3B82F6;
+  border-left: 3px solid #0F6E56;
   border-radius: 4px;
   font-size: 13px;
 `;
@@ -181,7 +181,7 @@ const BudgetName = styled.span`
 const BudgetAmount = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #10B981;
+  color: #0F6E56;
 `;
 
 const ProgressBar = styled.div`
@@ -199,9 +199,9 @@ interface ProgressFillProps {
 const ProgressFill = styled.div<ProgressFillProps>`
   height: 100%;
   background: ${({ $percentage }) =>
-    $percentage >= 90 ? '#EF4444' :
-    $percentage >= 75 ? '#F59E0B' :
-    '#10B981'
+    $percentage >= 90 ? '#9E2A2A' :
+    $percentage >= 75 ? '#B8842A' :
+    '#0F6E56'
   };
   width: ${({ $percentage }) => Math.min($percentage, 100)}%;
   transition: width 300ms ease-in-out;
@@ -223,7 +223,7 @@ const QuickActions = styled.div`
 
 const ActionButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -247,9 +247,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -324,21 +324,21 @@ export function MarketingDashboardPage() {
 
         <StatCard>
           <StatLabel>Allocated</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>
+          <StatValue style={{ color: '#0F6E56' }}>
             {marketingApi.formatCurrency(stats.allocatedBudget)}
           </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Spent</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>
+          <StatValue style={{ color: '#B8842A' }}>
             {marketingApi.formatCurrency(stats.spentBudget)}
           </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Available</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>
+          <StatValue style={{ color: '#0F6E56' }}>
             {marketingApi.formatCurrency(stats.totalBudget - stats.spentBudget)}
           </StatValue>
         </StatCard>
@@ -347,26 +347,26 @@ export function MarketingDashboardPage() {
       <StatsGrid>
         <StatCard>
           <StatLabel>Active Campaigns</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.activeCampaigns)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.activeCampaigns)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Total Impressions</StatLabel>
-          <StatValue style={{ color: '#3B82F6' }}>
+          <StatValue style={{ color: '#0F6E56' }}>
             {formatNumber(stats.totalImpressions)}
           </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Total Clicks</StatLabel>
-          <StatValue style={{ color: '#8B5CF6' }}>
+          <StatValue style={{ color: '#4B4844' }}>
             {formatNumber(stats.totalClicks)}
           </StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>Conversions</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>
+          <StatValue style={{ color: '#0F6E56' }}>
             {formatNumber(stats.totalConversions)}
           </StatValue>
         </StatCard>

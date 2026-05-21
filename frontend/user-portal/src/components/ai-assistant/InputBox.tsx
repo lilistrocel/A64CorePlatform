@@ -186,7 +186,7 @@ const ActionButton = styled.button<{ $variant: 'send' | 'cancel' }>`
 
   &:hover:not(:disabled) {
     background: ${({ $variant, theme }) =>
-      $variant === 'send' ? theme.colors.accent.sageDeep : '#dc2626'};
+      $variant === 'send' ? theme.colors.accent.sageDeep : '#9E2A2A'};
     transform: scale(1.05);
   }
 
@@ -200,7 +200,7 @@ const ActionButton = styled.button<{ $variant: 'send' | 'cancel' }>`
 const CharCounter = styled.div<{ $isAtLimit: boolean }>`
   font-size: 11px;
   color: ${({ $isAtLimit, theme }) =>
-    $isAtLimit ? theme.colors.status.danger : theme.colors.status.warning ?? '#f59e0b'};
+    $isAtLimit ? theme.colors.status.danger : theme.colors.status.warning ?? '#B8842A'};
   text-align: right;
   font-family: 'JetBrains Mono', monospace;
 `;

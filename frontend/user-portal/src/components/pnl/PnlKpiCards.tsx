@@ -102,10 +102,10 @@ interface ValueProps {
 }
 
 const VALUE_COLORS = {
-  positive: '#10B981',
-  negative: '#EF4444',
-  neutral: '#212121',
-  warning: '#F59E0B',
+  positive: '#0F6E56',
+  negative: '#9E2A2A',
+  neutral: '#0F0F0F',
+  warning: '#B8842A',
 };
 
 const CardValue = styled.div<ValueProps>`
@@ -167,7 +167,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
           style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px' }}
           role="alert"
         >
-          <p style={{ marginBottom: '16px', color: '#EF4444' }}>
+          <p style={{ marginBottom: '16px', color: '#9E2A2A' }}>
             Failed to load KPI summary.
           </p>
           <button
@@ -247,7 +247,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
         <CardSub>
           {formatNumber(orderCounts.paid)} paid · {formatNumber(orderCounts.pending)} pending
           {orderCounts.overdue > 0 && (
-            <span style={{ color: '#EF4444' }}> · {formatNumber(orderCounts.overdue)} overdue</span>
+            <span style={{ color: '#9E2A2A' }}> · {formatNumber(orderCounts.overdue)} overdue</span>
           )}
         </CardSub>
       </Card>

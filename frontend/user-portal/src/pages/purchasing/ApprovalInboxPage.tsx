@@ -54,7 +54,7 @@ const Tab = styled.button<{ $active: boolean }>`
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '700' : '400')};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageDeep || '#2563eb' : theme.colors.text.secondary};
+    $active ? theme.colors.accent.sageDeep || '#0B5644' : theme.colors.text.secondary};
   border-bottom: 2px solid ${({ $active, theme }) =>
     $active ? theme.colors.accent.sage : 'transparent'};
   margin-bottom: -2px;
@@ -103,16 +103,16 @@ const DocTypeBadge = styled.span<{ $type: string }>`
   font-size: 11px;
   font-weight: 700;
   background: ${({ $type }) => {
-    if ($type === 'PR') return '#dbeafe';
-    if ($type === 'PO') return '#d1fae5';
-    if ($type === 'AP') return '#fef3c7';  // amber for AP invoices
-    return '#f3f4f6';
+    if ($type === 'PR') return 'rgba(15,110,86,0.08)';
+    if ($type === 'PO') return 'rgba(15,110,86,0.10)';
+    if ($type === 'AP') return 'rgba(184,132,42,0.10)';  // amber for AP invoices
+    return '#DCD8CF';
   }};
   color: ${({ $type }) => {
-    if ($type === 'PR') return '#1d4ed8';
-    if ($type === 'PO') return '#065f46';
-    if ($type === 'AP') return '#92400e';  // amber-dark for AP invoices
-    return '#6b7280';
+    if ($type === 'PR') return '#0B5644';
+    if ($type === 'PO') return '#0B5644';
+    if ($type === 'AP') return '#B8842A';  // amber-dark for AP invoices
+    return '#4B4844';
   }};
   margin-right: 6px;
 `;
@@ -125,7 +125,7 @@ const ActionCell = styled.td`
 
 const SuccessButton = styled.button`
   padding: 6px 14px;
-  background: ${({ theme }) => theme.colors.status.success || '#10b981'};
+  background: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
   color: white;
   border: none;
   border-radius: 6px;
@@ -134,15 +134,15 @@ const SuccessButton = styled.button`
   cursor: pointer;
   margin-right: 8px;
   transition: background 120ms ease;
-  &:hover { background: #059669; }
+  &:hover { background: #0B5644; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const DangerButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
-  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
@@ -243,7 +243,7 @@ const Textarea = styled.textarea`
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -281,7 +281,7 @@ function RejectModal({ item, onClose, onConfirm }: RejectModalProps) {
           <CloseButton onClick={onClose}>✕</CloseButton>
         </ModalHeader>
         <ModalBody>
-          <p style={{ fontSize: 14, color: '#6b7280', marginTop: 0 }}>
+          <p style={{ fontSize: 14, color: '#4B4844', marginTop: 0 }}>
             Please provide a reason for rejection.
           </p>
           <Textarea
@@ -475,7 +475,7 @@ export function ApprovalInboxPage() {
                     </Td>
                     <Td>
                       <span style={{
-                        color: item.finalState === 'Approved' ? '#059669' : '#dc2626',
+                        color: item.finalState === 'Approved' ? '#0B5644' : '#9E2A2A',
                         fontWeight: 600,
                       }}>
                         {item.finalState}

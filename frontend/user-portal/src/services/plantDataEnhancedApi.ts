@@ -261,15 +261,15 @@ export function formatFarmType(farmType: FarmTypeCompatibility): string {
  */
 export function getFarmTypeColor(farmType: FarmTypeCompatibility): string {
   const colors: Record<FarmTypeCompatibility, string> = {
-    open_field: '#10B981',
-    greenhouse: '#3B82F6',
+    open_field: '#0F6E56',
+    greenhouse: '#0F6E56',
     hydroponic: '#06B6D4',
-    vertical_farm: '#8B5CF6',
+    vertical_farm: '#4B4844',
     aquaponic: '#14B8A6',
-    indoor_farm: '#F59E0B',
+    indoor_farm: '#B8842A',
     polytunnel: '#84CC16',
   };
-  return colors[farmType] || '#6B7280';
+  return colors[farmType] || '#4B4844';
 }
 
 /**

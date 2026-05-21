@@ -253,7 +253,7 @@ const StatusPill = styled.span<StatusPillProps>`
   background: ${({ $complete, theme }) =>
     $complete ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.status.warning || '#fffbeb'};
   color: ${({ $complete, theme }) =>
-    $complete ? theme.colors.status.success || '#10b981' : theme.colors.status.warning || '#92400e'};
+    $complete ? theme.colors.status.success || '#0F6E56' : theme.colors.status.warning || '#B8842A'};
 `;
 
 const LastUpdatedText = styled.p`
@@ -285,18 +285,18 @@ const BannerError = styled(BannerBase)`
 
 const BannerSuccess = styled(BannerBase)`
   background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.status.success || '#065f46'};
+  color: ${({ theme }) => theme.colors.status.success || '#0B5644'};
 `;
 
 const BannerWarning = styled(BannerBase)`
   background: ${({ theme }) => theme.colors.status.warning || '#fffbeb'};
-  color: ${({ theme }) => theme.colors.status.warning || '#92400e'};
+  color: ${({ theme }) => theme.colors.status.warning || '#B8842A'};
 `;
 
 const UnconfiguredHint = styled.div`
   padding: 16px 20px;
-  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'};
+  color: ${({ theme }) => theme.colors.status.info || '#0B5644'};
   border-radius: 10px;
   font-size: 13px;
   line-height: 1.55;

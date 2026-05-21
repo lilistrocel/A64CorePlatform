@@ -117,15 +117,15 @@ export function formatCustomerAddress(address?: {
 export function getCustomerStatusColor(status: string): string {
   switch (status) {
     case 'active':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'inactive':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     case 'lead':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'prospect':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 

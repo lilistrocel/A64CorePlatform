@@ -466,7 +466,7 @@ const AddFacilityBtn = styled.button`
   padding: 10px 18px;
   border: none;
   border-radius: 8px;
-  background: #10B981;
+  background: #0F6E56;
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -475,10 +475,10 @@ const AddFacilityBtn = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #059669;
+    background: #0B5644;
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -523,10 +523,10 @@ const DetailActions = styled.div`
 
 const AddRoomBtn = styled.button`
   padding: 8px 14px;
-  border: 1px solid #3b82f6;
+  border: 1px solid #0F6E56;
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface.canvas};
-  color: #3b82f6;
+  color: #0F6E56;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -536,7 +536,7 @@ const AddRoomBtn = styled.button`
     background: ${({ theme }) => theme.colors.surface.sunken};
   }
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -579,7 +579,7 @@ const InlineSpinner = styled.span`
   width: 14px;
   height: 14px;
   border: 2px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -624,12 +624,12 @@ interface SubstrateStatusProps {
 }
 
 const STATUS_COLOR_MAP: Record<string, string> = {
-  ready: '#10B981',
-  colonizing: '#F59E0B',
-  sterilizing: '#3B82F6',
-  mixing: '#8B5CF6',
-  depleted: '#9E9E9E',
-  discarded: '#EF4444',
+  ready: '#0F6E56',
+  colonizing: '#B8842A',
+  sterilizing: '#0F6E56',
+  mixing: '#4B4844',
+  depleted: '#4B4844',
+  discarded: '#9E2A2A',
   inoculating: '#6366F1',
 };
 
@@ -637,7 +637,7 @@ const SubstrateStatus = styled.span<SubstrateStatusProps>`
   font-size: 11px;
   font-weight: 600;
   color: white;
-  background: ${({ $status }) => STATUS_COLOR_MAP[$status] ?? '#9e9e9e'};
+  background: ${({ $status }) => STATUS_COLOR_MAP[$status] ?? '#4B4844'};
   border-radius: 20px;
   padding: 2px 8px;
   text-transform: capitalize;
@@ -662,7 +662,7 @@ const Spinner = styled.div`
   width: 36px;
   height: 36px;
   border: 3px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -892,7 +892,7 @@ const SubmitBtn = styled.button`
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
-  background: #10B981;
+  background: #0F6E56;
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -900,14 +900,14 @@ const SubmitBtn = styled.button`
   transition: background 150ms;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: #0B5644;
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;

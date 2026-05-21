@@ -136,7 +136,7 @@ const StatusBadge = styled.span<{ $status: string }>`
       case 'delivered':
         return `background: ${theme.colors.accent.sageSoft}; color: #065F46;`;
       case 'cancelled':
-        return `background: ${theme.colors.status.danger}; color: #991B1B;`;
+        return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       default:
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
     }
@@ -158,7 +158,7 @@ const PaymentBadge = styled.span<{ $status: string }>`
       case 'partial':
         return `background: ${theme.colors.status.warning}; color: #92400E;`;
       case 'pending':
-        return `background: ${theme.colors.status.danger}; color: #991B1B;`;
+        return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       default:
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
     }
@@ -193,8 +193,8 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover {
           background: ${theme.colors.status.danger};
         }

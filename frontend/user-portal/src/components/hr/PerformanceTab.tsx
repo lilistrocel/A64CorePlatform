@@ -39,7 +39,7 @@ const Title = styled.h3`
 
 const AddButton = styled.button`
   padding: 8px 16px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -87,7 +87,7 @@ const RatingContainer = styled.div`
 
 const RatingStars = styled.div`
   font-size: 18px;
-  color: #F59E0B;
+  color: #B8842A;
 `;
 
 const RatingText = styled.span`
@@ -133,9 +133,9 @@ const HappinessBar = styled.div<{ $score: number }>`
     height: 100%;
     width: ${({ $score }) => ($score / 10) * 100}%;
     background: ${({ $score }) => {
-      if ($score >= 8) return '#10B981';
-      if ($score >= 5) return '#F59E0B';
-      return '#EF4444';
+      if ($score >= 8) return '#0F6E56';
+      if ($score >= 5) return '#B8842A';
+      return '#9E2A2A';
     }};
     border-radius: 4px;
   }
@@ -176,17 +176,17 @@ const ActionButton = styled.button<{ $variant?: 'secondary' | 'danger' }>`
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover {
-          background: #FEE2E2;
+          background: rgba(158,42,42,0.08);
         }
       `;
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: #0F6E56;
+      border: 1px solid #0F6E56;
       &:hover {
         background: rgba(15, 110, 86, 0.05);
       }
@@ -317,7 +317,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: #0F6E56;
         color: white;
         border: none;
         &:hover {
@@ -513,7 +513,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Strengths:</DetailLabel>
                     <TagList>
                       {review.strengths.map((strength, idx) => (
-                        <Tag key={idx} $color="#10B981">
+                        <Tag key={idx} $color="#0F6E56">
                           {strength}
                         </Tag>
                       ))}
@@ -525,7 +525,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Areas for Improvement:</DetailLabel>
                     <TagList>
                       {review.areasForImprovement.map((area, idx) => (
-                        <Tag key={idx} $color="#F59E0B">
+                        <Tag key={idx} $color="#B8842A">
                           {area}
                         </Tag>
                       ))}
@@ -537,7 +537,7 @@ export function PerformanceTab({ employeeId }: PerformanceTabProps) {
                     <DetailLabel>Goals:</DetailLabel>
                     <TagList>
                       {review.goals.map((goal, idx) => (
-                        <Tag key={idx} $color="#3B82F6">
+                        <Tag key={idx} $color="#0F6E56">
                           {goal}
                         </Tag>
                       ))}

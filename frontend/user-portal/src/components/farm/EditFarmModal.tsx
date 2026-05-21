@@ -118,7 +118,7 @@ const Form = styled.form`
 const SectionTitle = styled.h3`
   font-size: 14px;
   font-weight: 600;
-  color: #3B82F6;
+  color: #0F6E56;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0 0 8px 0;
@@ -140,7 +140,7 @@ const Label = styled.label`
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -153,7 +153,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -165,7 +165,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
@@ -175,7 +175,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -187,7 +187,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #EF4444;
+  color: #9E2A2A;
 `;
 
 const GridRow = styled.div`
@@ -245,7 +245,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: #0F6E56;
         color: white;
         &:hover:not(:disabled) {
           background: #0F6E56;
@@ -269,8 +269,8 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 `;
 
 const CoordinatesHelp = styled.div`
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
+  background: rgba(15,110,86,0.05);
+  border: 1px solid rgba(15,110,86,0.12);
   border-radius: 8px;
   padding: 12px 16px;
   margin-top: 8px;

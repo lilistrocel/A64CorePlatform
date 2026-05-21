@@ -684,7 +684,7 @@ const EmailConfirmCheck = styled.span`
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: #10b981;
+  background: #0F6E56;
   color: white;
   border-radius: 50%;
   font-size: 0.75rem;
@@ -705,11 +705,11 @@ const ErrorBanner = styled.div`
 
 const WarningBanner = styled.div`
   background: ${({ theme }) => theme.colors.status.warning};
-  border: 1px solid #f59e0b;
+  border: 1px solid #B8842A;
   border-radius: ${({ theme }) => theme.radii.md};
   padding: 1rem;
   margin-bottom: 1rem;
-  color: #92400e;
+  color: #B8842A;
   font-size: 0.875rem;
   text-align: center;
   font-weight: 500;
@@ -719,7 +719,7 @@ const WarningIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: #f59e0b;
+  background: #B8842A;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -732,7 +732,7 @@ const SuccessIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: ${({ theme }) => theme.colors.status.success || '#10b981'};
+  background: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
   color: white;
   border-radius: 50%;
   display: flex;
@@ -742,12 +742,12 @@ const SuccessIcon = styled.div`
 `;
 
 const SuccessBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.status.success || '#10b981'}10`};
-  border: 1px solid ${({ theme }) => theme.colors.status.success || '#10b981'};
+  background: ${({ theme }) => `${theme.colors.status.success || '#0F6E56'}10`};
+  border: 1px solid ${({ theme }) => theme.colors.status.success || '#0F6E56'};
   border-radius: ${({ theme }) => theme.radii.md};
   padding: 1rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.status.success || '#059669'};
+  color: ${({ theme }) => theme.colors.status.success || '#0B5644'};
   font-size: 0.875rem;
   text-align: center;
   font-weight: 500;
@@ -959,7 +959,7 @@ const ShieldBadge = styled.span`
 
 const LockoutBanner = styled.div`
   background: ${({ theme }) => theme.colors.status.warning};
-  border: 1px solid #f59e0b;
+  border: 1px solid #B8842A;
   border-radius: ${({ theme }) => theme.radii.md};
   padding: 1rem;
   margin-bottom: 1rem;
@@ -974,13 +974,13 @@ const LockoutIcon = styled.span`
 `;
 
 const LockoutText = styled.span`
-  color: #92400e;
+  color: #B8842A;
   font-size: 0.875rem;
 `;
 
 const LockoutTimer = styled.span`
   font-weight: bold;
-  color: #92400e;
+  color: #B8842A;
 `;
 
 const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $locked?: boolean }>`
@@ -1145,7 +1145,7 @@ const ExpiredIcon = styled.div`
   width: 70px;
   height: 70px;
   margin: 0.5rem auto 1rem;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #B8842A 0%, #d97706 100%);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -1196,7 +1196,7 @@ const SessionTimer = styled.div<{ $warning?: boolean }>`
   margin-bottom: 1rem;
   border-radius: ${({ theme }) => theme.radii.sm};
   background: ${({ $warning, theme }) => $warning ? theme.colors.status.warning : theme.colors.surface.sunken};
-  border: 1px solid ${({ $warning }) => $warning ? '#f59e0b' : '#3b82f6'};
+  border: 1px solid ${({ $warning }) => $warning ? '#B8842A' : '#0F6E56'};
   font-size: 0.75rem;
 
   @media (min-width: 480px) {
@@ -1228,7 +1228,7 @@ const MobileReassuranceText = styled.p`
   margin: 0 0 1rem 0;
   padding: 0.625rem 0.75rem;
   background: ${({ theme }) => theme.colors.accent.sageSoft};
-  border: 1px solid #10b981;
+  border: 1px solid #0F6E56;
   border-radius: ${({ theme }) => theme.radii.sm};
   line-height: 1.4;
   animation: slideInFade 0.3s ease-out;

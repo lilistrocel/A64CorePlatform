@@ -137,12 +137,12 @@ const VisaItem = styled.div`
 const VisaEmployee = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #92400e;
+  color: #B8842A;
 `;
 
 const VisaExpiry = styled.div`
   font-size: 12px;
-  color: #92400e;
+  color: #B8842A;
   margin-top: 4px;
 `;
 
@@ -154,7 +154,7 @@ const QuickActions = styled.div`
 
 const ActionButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -179,8 +179,8 @@ const LoadingContainer = styled.div`
 
 const ErrorContainer = styled.div`
   background: ${({ theme }) => theme.colors.status.danger};
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -215,7 +215,7 @@ const DepartmentName = styled.span`
 const DepartmentCount = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #3B82F6;
+  color: #0F6E56;
   background: ${({ theme }) => theme.colors.surface.sunken};
   padding: 4px 12px;
   border-radius: 16px;
@@ -292,12 +292,12 @@ export function HRDashboardPage() {
 
         <StatCard>
           <StatLabel>Active</StatLabel>
-          <StatValue style={{ color: '#10B981' }}>{formatNumber(stats.activeEmployees)}</StatValue>
+          <StatValue style={{ color: '#0F6E56' }}>{formatNumber(stats.activeEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>
           <StatLabel>On Leave</StatLabel>
-          <StatValue style={{ color: '#F59E0B' }}>{formatNumber(stats.onLeaveEmployees)}</StatValue>
+          <StatValue style={{ color: '#B8842A' }}>{formatNumber(stats.onLeaveEmployees)}</StatValue>
         </StatCard>
 
         <StatCard>

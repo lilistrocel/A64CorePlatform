@@ -34,7 +34,7 @@ const Title = styled.h2`
 const ComingSoonBadge = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: #8B5CF6;
+  color: #4B4844;
   background: ${({ theme }) => theme.colors.surface.sunken};
   padding: 4px 10px;
   border-radius: 12px;

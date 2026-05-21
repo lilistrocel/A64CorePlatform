@@ -67,7 +67,7 @@ const Label = styled.label`
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -80,7 +80,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -92,7 +92,7 @@ const Input = styled.input<{ $hasError?: boolean }>`
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -102,7 +102,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -114,7 +114,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -130,7 +130,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
@@ -142,7 +142,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #EF4444;
+  color: #9E2A2A;
   margin-top: 4px;
 `;
 
@@ -179,7 +179,7 @@ const CargoItem = styled.div`
 
 const AddButton = styled.button`
   padding: 8px 16px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 6px;
@@ -196,8 +196,8 @@ const AddButton = styled.button`
 const RemoveButton = styled.button`
   padding: 8px;
   background: transparent;
-  color: #EF4444;
-  border: 1px solid #EF4444;
+  color: #9E2A2A;
+  border: 1px solid #9E2A2A;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
@@ -206,7 +206,7 @@ const RemoveButton = styled.button`
   align-self: center;
 
   &:hover {
-    background: #FEE2E2;
+    background: rgba(158,42,42,0.08);
   }
 `;
 
@@ -238,7 +238,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       `;
     }
     return `
-      background: #3B82F6;
+      background: #0F6E56;
       color: white;
       &:hover {
         background: #0F6E56;

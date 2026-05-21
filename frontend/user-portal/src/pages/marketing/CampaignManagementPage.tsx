@@ -54,7 +54,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -69,13 +69,13 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
   }
 `;
 
 const Button = styled.button`
   padding: 10px 24px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -99,9 +99,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;

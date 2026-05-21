@@ -63,19 +63,19 @@ const FARM_QUICK_ACTIONS = [
 
 function getRiskIcon(level: string): React.ReactNode {
   switch (level) {
-    case 'low': return <ShieldCheck size={16} color="#10B981" />;
-    case 'medium': return <Shield size={16} color="#F59E0B" />;
-    case 'high': return <ShieldAlert size={16} color="#EF4444" />;
+    case 'low': return <ShieldCheck size={16} color="#0F6E56" />;
+    case 'medium': return <Shield size={16} color="#B8842A" />;
+    case 'high': return <ShieldAlert size={16} color="#9E2A2A" />;
     default: return <Shield size={16} />;
   }
 }
 
 function getRiskColor(level: string): string {
   switch (level) {
-    case 'low': return '#10B981';
-    case 'medium': return '#F59E0B';
-    case 'high': return '#EF4444';
-    default: return '#6B7280';
+    case 'low': return '#0F6E56';
+    case 'medium': return '#B8842A';
+    case 'high': return '#9E2A2A';
+    default: return '#4B4844';
   }
 }
 
@@ -192,7 +192,7 @@ export function AIAnalyticsChat({ farms, scope, onScopeChange }: AIAnalyticsChat
       {/* Header */}
       <ChatHeader>
         <HeaderLeft>
-          <Leaf size={20} color="#10B981" aria-hidden="true" />
+          <Leaf size={20} color="#0F6E56" aria-hidden="true" />
           <div>
             <HeaderTitle>AI Farm Monitor</HeaderTitle>
             <HeaderScope>
@@ -231,7 +231,7 @@ export function AIAnalyticsChat({ farms, scope, onScopeChange }: AIAnalyticsChat
       <MessagesContainer role="log" aria-live="polite" aria-label="Chat messages">
         {messages.length === 0 && (
           <WelcomeMessage>
-            <MessageCircle size={36} color="#10B981" aria-hidden="true" />
+            <MessageCircle size={36} color="#0F6E56" aria-hidden="true" />
             <WelcomeTitle>AI Farm Monitor</WelcomeTitle>
             <WelcomeText>
               {scope.level === 'global'
@@ -397,7 +397,7 @@ const HeaderScope = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #10B981;
+  color: #0F6E56;
   font-weight: 500;
 `;
 
@@ -544,7 +544,7 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   padding: 10px 14px;
   border-radius: ${({ $isUser }) =>
     $isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
-  background: ${({ $isUser, theme }) => ($isUser ? '#10B981' : theme.colors.surface.sunken)};
+  background: ${({ $isUser, theme }) => ($isUser ? '#0F6E56' : theme.colors.surface.sunken)};
   color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.text.primary)};
   display: flex;
   flex-direction: column;
@@ -621,7 +621,7 @@ const ActionButtons = styled.div`
 const ApproveButton = styled.button`
   flex: 1;
   padding: 6px 12px;
-  background: #10B981;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 6px;
@@ -630,7 +630,7 @@ const ApproveButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #059669; }
+  &:hover:not(:disabled) { background: #0B5644; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -740,8 +740,8 @@ const ChatInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #10B981;
-    box-shadow: 0 0 0 2px #10B98125;
+    border-color: #0F6E56;
+    box-shadow: 0 0 0 2px #0F6E5625;
     background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
@@ -763,6 +763,6 @@ const SendButton = styled.button`
   flex-shrink: 0;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #059669; }
+  &:hover:not(:disabled) { background: #0B5644; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;

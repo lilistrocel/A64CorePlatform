@@ -232,7 +232,7 @@ const WarningIcon = styled.span`
 `;
 
 const WarningText = styled.div`
-  color: #92400e;
+  color: #B8842A;
   font-size: 0.8125rem;
   line-height: 1.4;
 

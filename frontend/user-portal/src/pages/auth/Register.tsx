@@ -144,7 +144,7 @@ const RegisterContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 1rem;
 
   @media (min-width: 640px) {

@@ -118,7 +118,7 @@ const LoadingSpinner = styled.div`
   width: 40px;
   height: 40px;
   border: 3px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -199,7 +199,7 @@ const EditBoundaryButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.surface.raised};
-    color: #3b82f6;
+    color: #0F6E56;
   }
 
   svg {
@@ -221,7 +221,7 @@ const AddBoundaryButton = styled.button`
   gap: 8px;
   padding: 12px 20px;
   margin-top: 16px;
-  background: #3b82f6;
+  background: #0F6E56;
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -231,7 +231,7 @@ const AddBoundaryButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #2563eb;
+    background: #0B5644;
   }
 
   svg {
@@ -277,7 +277,7 @@ const PopupRow = styled.div`
 `;
 
 const PopupLabel = styled.span`
-  color: #6b7280;
+  color: #4B4844;
 `;
 
 const PopupValue = styled.span`
@@ -288,7 +288,7 @@ const PopupValue = styled.span`
 const PopupButton = styled.button`
   width: 100%;
   padding: 10px;
-  background: #3b82f6;
+  background: #0F6E56;
   color: white;
   border: none;
   font-size: 13px;
@@ -299,7 +299,7 @@ const PopupButton = styled.button`
   border-radius: 4px;
 
   &:hover {
-    background: #2563eb;
+    background: #0B5644;
   }
 `;
 
@@ -309,7 +309,7 @@ const NoBoundaryMessage = styled.div`
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6b7280;
+  color: #4B4844;
   text-align: center;
   padding: 40px;
 `;
@@ -327,7 +327,7 @@ const NoBoundaryText = styled.p`
 
 const NoBoundaryHint = styled.p`
   font-size: 12px;
-  color: #9ca3af;
+  color: #4B4844;
   margin: 0;
 `;
 
@@ -419,7 +419,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           type: 'fill',
           source: 'farm-boundary',
           paint: {
-            'fill-color': '#3B82F6',
+            'fill-color': '#0F6E56',
             'fill-opacity': 0.05,
           },
         });
@@ -430,7 +430,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           type: 'line',
           source: 'farm-boundary',
           paint: {
-            'line-color': '#3B82F6',
+            'line-color': '#0F6E56',
             'line-width': 3,
             'line-dasharray': [4, 2],
           },
@@ -445,7 +445,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
             blockId: block.blockId,
             name: block.name,
             state: block.state,
-            color: BLOCK_STATE_COLORS[block.state] || '#6B7280',
+            color: BLOCK_STATE_COLORS[block.state] || '#4B4844',
             area: block.area,
             maxPlants: block.maxPlants,
             currentPlantingId: block.currentPlantingId,
@@ -575,7 +575,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
 
     if (selectedBlock) {
       const { block, coordinates } = selectedBlock;
-      const stateColor = BLOCK_STATE_COLORS[block.state] || '#6B7280';
+      const stateColor = BLOCK_STATE_COLORS[block.state] || '#4B4844';
       const areaHectares = block.area ? (block.area / 10000).toFixed(2) : 'N/A';
 
       const popupHtml = `
@@ -588,23 +588,23 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
           </div>
           <div style="padding: 12px 16px;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span style="color: #6b7280;">Area</span>
+              <span style="color: #4B4844;">Area</span>
               <span style="color: #1f2937; font-weight: 500;">${areaHectares} ha</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span style="color: #6b7280;">Max Plants</span>
+              <span style="color: #4B4844;">Max Plants</span>
               <span style="color: #1f2937; font-weight: 500;">${block.maxPlants}</span>
             </div>
             ${block.targetCropName ? `
               <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-                <span style="color: #6b7280;">Crop</span>
+                <span style="color: #4B4844;">Crop</span>
                 <span style="color: #1f2937; font-weight: 500;">${block.targetCropName}</span>
               </div>
             ` : ''}
             ${onBlockClick ? `
               <button
                 id="popup-view-btn"
-                style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 8px; border-radius: 4px;"
+                style="width: 100%; padding: 10px; background: #0F6E56; color: white; border: none; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 8px; border-radius: 4px;"
               >
                 View Details
               </button>
@@ -710,7 +710,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
             <>
               <div style={{ height: 8 }} />
               <LegendItem>
-                <LegendColor $color="#3B82F6" />
+                <LegendColor $color="#0F6E56" />
                 <span>Farm Boundary</span>
               </LegendItem>
             </>

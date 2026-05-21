@@ -67,28 +67,28 @@ export function MushroomDashboardPage() {
 
       {/* Summary Stat Cards */}
       <StatCardsRow>
-        <StatCard $accent="#3B82F6">
+        <StatCard $accent="#0F6E56">
           <StatIcon>🏭</StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.totalFacilities ?? '—'}</StatNumber>
             <StatLabel>Facilities</StatLabel>
           </StatInfo>
         </StatCard>
-        <StatCard $accent="#8B5CF6">
+        <StatCard $accent="#4B4844">
           <StatIcon>🏠</StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.totalRooms ?? '—'}</StatNumber>
             <StatLabel>Total Rooms</StatLabel>
           </StatInfo>
         </StatCard>
-        <StatCard $accent="#10B981">
+        <StatCard $accent="#0F6E56">
           <StatIcon>🍄</StatIcon>
           <StatInfo>
             <StatNumber>{dashboardData?.activeRooms ?? '—'}</StatNumber>
             <StatLabel>Active Rooms</StatLabel>
           </StatInfo>
         </StatCard>
-        <StatCard $accent={activeAlerts.length > 0 ? '#EF4444' : '#9E9E9E'}>
+        <StatCard $accent={activeAlerts.length > 0 ? '#9E2A2A' : '#4B4844'}>
           <StatIcon>⚠️</StatIcon>
           <StatInfo>
             <StatNumber $alert={activeAlerts.length > 0}>
@@ -98,7 +98,7 @@ export function MushroomDashboardPage() {
           </StatInfo>
         </StatCard>
         {dashboardData?.totalHarvestThisMonth != null && (
-          <StatCard $accent="#F59E0B">
+          <StatCard $accent="#B8842A">
             <StatIcon>⚖️</StatIcon>
             <StatInfo>
               <StatNumber>
@@ -326,7 +326,7 @@ const RefreshBtn = styled.button<RefreshBtnProps>`
   padding: 9px 16px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: #0F6E56;
   color: white;
   font-size: 14px;
   font-weight: 500;
@@ -401,7 +401,7 @@ interface StatNumberProps {
 const StatNumber = styled.div<StatNumberProps>`
   font-size: 24px;
   font-weight: 700;
-  color: ${({ $alert, theme }) => ($alert ? '#EF4444' : theme.colors.text.primary)};
+  color: ${({ $alert, theme }) => ($alert ? '#9E2A2A' : theme.colors.text.primary)};
   line-height: 1;
   margin-bottom: 2px;
 `;
@@ -504,7 +504,7 @@ const LoadingDot = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: #0F6E56;
   display: inline-block;
   animation: pulse 1s infinite;
 
@@ -531,7 +531,7 @@ const Spinner = styled.div`
   width: 36px;
   height: 36px;
   border: 3px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -609,7 +609,7 @@ const EmptyState = styled.div`
 `;
 
 const GreenCheck = styled.span`
-  color: #10B981;
+  color: #0F6E56;
   font-size: 16px;
   margin-right: 6px;
 `;
@@ -658,9 +658,9 @@ const AlertType = styled.span`
 `;
 
 const SEVERITY_BADGE_COLORS: Record<string, string> = {
-  low: '#10B981',
-  medium: '#F59E0B',
-  high: '#EF4444',
+  low: '#0F6E56',
+  medium: '#B8842A',
+  high: '#9E2A2A',
   critical: '#7F1D1D',
 };
 
@@ -672,7 +672,7 @@ const AlertSeverityBadge = styled.span<AlertSeverityBadgeProps>`
   font-size: 10px;
   font-weight: 700;
   color: white;
-  background: ${({ $severity }) => SEVERITY_BADGE_COLORS[$severity] ?? '#9e9e9e'};
+  background: ${({ $severity }) => SEVERITY_BADGE_COLORS[$severity] ?? '#4B4844'};
   border-radius: 20px;
   padding: 2px 7px;
   text-transform: uppercase;
@@ -682,8 +682,8 @@ const AlertSeverityBadge = styled.span<AlertSeverityBadgeProps>`
 const AlertCount = styled.span`
   font-size: 12px;
   font-weight: 600;
-  color: #EF4444;
-  background: #FEE2E2;
+  color: #9E2A2A;
+  background: rgba(158,42,42,0.08);
   border-radius: 20px;
   padding: 2px 8px;
 `;

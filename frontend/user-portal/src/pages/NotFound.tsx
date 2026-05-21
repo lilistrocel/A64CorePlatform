@@ -15,7 +15,7 @@ const Container = styled.div`
 const ErrorCode = styled.h1`
   font-size: 8rem;
   font-weight: 800;
-  color: #3B82F6;
+  color: #0F6E56;
   margin: 0;
   line-height: 1;
 
@@ -37,7 +37,7 @@ const Title = styled.h2`
 
 const Message = styled.p`
   font-size: 1.125rem;
-  color: #6B7280;
+  color: #4B4844;
   margin: 0 0 2rem;
   max-width: 480px;
   line-height: 1.6;
@@ -56,7 +56,7 @@ const ButtonGroup = styled.div`
 
 const PrimaryButton = styled.button`
   padding: 0.75rem 2rem;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -66,14 +66,14 @@ const PrimaryButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #2563EB;
+    background: #0B5644;
   }
 `;
 
 const SecondaryButton = styled.button`
   padding: 0.75rem 2rem;
   background: ${({ theme }) => theme.colors.surface.canvas};
-  color: #374151;
+  color: #0F0F0F;
   border: 1px solid #D1D5DB;
   border-radius: 8px;
   font-size: 1rem;
@@ -83,7 +83,7 @@ const SecondaryButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.surface.canvas};
-    border-color: #9CA3AF;
+    border-color: #4B4844;
   }
 `;
 

@@ -217,13 +217,13 @@ const Select = styled.select<{ $compact?: boolean }>`
   padding: ${(props) => (props.$compact ? '8px 32px 8px 36px' : '12px 32px 12px 40px')};
 
   &:hover:not(:disabled) {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     background-color: ${({ theme }) => theme.colors.surface.sunken};
   }
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
 
@@ -257,7 +257,7 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
 
@@ -267,7 +267,7 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 `;
 
 const EmptySelect = styled(Select)`
-  color: #ef4444;
+  color: #9E2A2A;
   border-color: #fecaca;
   background-color: ${({ theme }) => theme.colors.status.danger};
 `;
@@ -278,7 +278,7 @@ const LoadingSpinner = styled.div`
   width: 14px;
   height: 14px;
   border: 2px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
 `;
@@ -314,7 +314,7 @@ const YearBadge = styled.span<{
     $isCurrent
       ? 'rgba(15, 110, 86, 0.05)'
       : $isNext
-        ? '#fef3c7'
+        ? 'rgba(184,132,42,0.10)'
         : theme.colors.surface.raised};
   color: ${({ $isCurrent, $isNext, theme }) =>
     $isCurrent
@@ -354,7 +354,7 @@ const DataIndicator = styled.span`
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
+  background: #0F6E56;
   margin-left: 2px;
 `;
 

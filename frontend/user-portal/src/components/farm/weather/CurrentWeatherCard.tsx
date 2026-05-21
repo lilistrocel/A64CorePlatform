@@ -18,7 +18,7 @@ import {
 import { formatNumber } from '../../../utils';
 
 const Card = styled.div`
-  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  background: linear-gradient(135deg, #0F6E56 0%, #0B5644 100%);
   border-radius: 16px;
   padding: 24px;
   color: white;

@@ -18,9 +18,9 @@ import { BlockAutomationTab } from './BlockAutomationTab';
 type QualityGrade = 'A' | 'B' | 'C';
 
 const HARVEST_GRADE_COLORS: Record<QualityGrade, string> = {
-  A: '#10B981',
-  B: '#3B82F6',
-  C: '#F59E0B',
+  A: '#0F6E56',
+  B: '#0F6E56',
+  C: '#B8842A',
 };
 
 const HARVEST_GRADE_LABELS: Record<QualityGrade, string> = {
@@ -96,15 +96,15 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
 
   const getStatusColor = () => {
     const colors: Record<string, string> = {
-      empty: '#6B7280',
-      planned: '#3B82F6',
-      planted: '#10B981',
-      growing: '#10B981',
+      empty: '#4B4844',
+      planned: '#0F6E56',
+      planted: '#0F6E56',
+      growing: '#0F6E56',
       fruiting: '#A855F7',
-      harvesting: '#F59E0B',
-      cleaning: '#F97316',
+      harvesting: '#B8842A',
+      cleaning: '#B85C2A',
     };
-    return colors[block.state] || '#6B7280';
+    return colors[block.state] || '#4B4844';
   };
 
   const renderGrowthTimeline = () => {
@@ -553,9 +553,9 @@ const TabBar = styled.div`
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
   background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.text.secondary)};
+  color: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.text.secondary)};
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -564,7 +564,7 @@ const Tab = styled.button<{ $active: boolean }>`
 
   &:hover {
     background: ${({ theme }) => theme.colors.surface.raised};
-    color: #3b82f6;
+    color: #0F6E56;
   }
 `;
 
@@ -910,7 +910,7 @@ const YieldBarBackground = styled.div`
 const YieldBarFill = styled.div<{ $percent: number; $overTarget: boolean }>`
   height: 100%;
   width: ${({ $percent }) => $percent}%;
-  background: ${({ $overTarget }) => ($overTarget ? '#10B981' : '#3B82F6')};
+  background: ${({ $overTarget }) => ($overTarget ? '#0F6E56' : '#0F6E56')};
   border-radius: 5px;
   transition: width 0.5s ease-in-out;
 `;
@@ -924,7 +924,7 @@ const YieldFooter = styled.div`
 const YieldPercent = styled.span<{ $overTarget: boolean }>`
   font-size: ${({ theme }) => theme.fontSizes.bodySm};
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
-  color: ${({ $overTarget }) => ($overTarget ? '#10B981' : '#3B82F6')};
+  color: ${({ $overTarget }) => ($overTarget ? '#0F6E56' : '#0F6E56')};
 `;
 
 const YieldHarvestCount = styled.span`
@@ -1068,13 +1068,13 @@ const HarvestQualityBadge = styled.span<{ $grade: QualityGrade }>`
   background: ${({ $grade }) => {
     switch ($grade) {
       case 'A':
-        return '#10b981';
+        return '#0F6E56';
       case 'B':
         return '#eab308';
       case 'C':
-        return '#f97316';
+        return '#B85C2A';
       default:
-        return '#9e9e9e';
+        return '#4B4844';
     }
   }};
 `;

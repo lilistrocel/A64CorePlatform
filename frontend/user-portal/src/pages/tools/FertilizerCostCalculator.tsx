@@ -1856,8 +1856,8 @@ const SourceBadge = styled.span<SourceBadgeProps>`
   font-weight: 600;
   text-transform: capitalize;
   ${({ $source, theme }) => {
-    if ($source === 'override') return `background: #dbeafe; color: #1e40af;`;
-    if ($source === 'inventory') return `background: #d1fae5; color: #065f46;`;
+    if ($source === 'override') return `background: rgba(15,110,86,0.08); color: #1e40af;`;
+    if ($source === 'inventory') return `background: rgba(15,110,86,0.10); color: #0B5644;`;
     return `background: ${theme.colors.surface.sunken}; color: ${theme.colors.text.secondary};`;
   }}
 `;
@@ -2028,8 +2028,8 @@ const NoScheduleBadge = styled.span`
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(184,132,42,0.10);
+  color: #B8842A;
   white-space: nowrap;
   margin-left: 8px;
 `;
@@ -2039,11 +2039,11 @@ const NoScheduleBadge = styled.span`
 const WarningsBanner = styled.div`
   margin-bottom: 16px;
   padding: 12px 16px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: rgba(184,132,42,0.10);
+  border: 1px solid #B8842A;
   border-radius: 8px;
   font-size: 14px;
-  color: #92400e;
+  color: #B8842A;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2052,8 +2052,8 @@ const WarningsBanner = styled.div`
 const InfoBanner = styled.div`
   margin-bottom: 16px;
   padding: 12px 16px;
-  background: #dbeafe;
-  border: 1px solid #3b82f6;
+  background: rgba(15,110,86,0.08);
+  border: 1px solid #0F6E56;
   border-radius: 8px;
   font-size: 14px;
   color: #1e40af;

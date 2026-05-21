@@ -36,10 +36,10 @@ export interface FarmCardProps {
 
 /** Band thresholds and their accent colors (fixed, not theme tokens) */
 const YIELD_COLORS = {
-  onTrack: '#10B981',  // emerald — >= 90%
-  warning: '#F59E0B',  // amber  — 70–89%
-  behind:  '#EF4444',  // red    — < 70%
-  neutral: '#9CA3AF',  // grey   — no data
+  onTrack: '#0F6E56',  // emerald — >= 90%
+  warning: '#B8842A',  // amber  — 70–89%
+  behind:  '#9E2A2A',  // red    — < 70%
+  neutral: '#4B4844',  // grey   — no data
 } as const;
 
 type YieldColor = typeof YIELD_COLORS[keyof typeof YIELD_COLORS];
@@ -67,11 +67,11 @@ interface StatePillDef {
  * Note: FarmSummary uses "growing" for what the UI calls "Planted".
  */
 const STATE_PILL_DEFS: StatePillDef[] = [
-  { key: 'empty',      label: 'Empty',      color: '#6B7280' },
-  { key: 'planned',    label: 'Planned',    color: '#3B82F6' },
-  { key: 'growing',    label: 'Planted',    color: '#10B981' },
-  { key: 'harvesting', label: 'Harvesting', color: '#F59E0B' },
-  { key: 'alert',      label: 'Alert',      color: '#EF4444' },
+  { key: 'empty',      label: 'Empty',      color: '#4B4844' },
+  { key: 'planned',    label: 'Planned',    color: '#0F6E56' },
+  { key: 'growing',    label: 'Planted',    color: '#0F6E56' },
+  { key: 'harvesting', label: 'Harvesting', color: '#B8842A' },
+  { key: 'alert',      label: 'Alert',      color: '#9E2A2A' },
 ];
 
 // ============================================================================
@@ -204,7 +204,7 @@ const StatusBadge = styled.span<{ $isActive: boolean }>`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ $isActive }) => ($isActive ? '#10B981' : '#6B7280')};
+  background: ${({ $isActive }) => ($isActive ? '#0F6E56' : '#4B4844')};
   color: white;
   flex-shrink: 0;
   white-space: nowrap;
@@ -402,8 +402,8 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover { background: ${theme.colors.status.danger}; }
       `;
     }

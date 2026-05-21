@@ -21,7 +21,7 @@ const PageLoader = () => (
     alignItems: 'center',
     height: '100vh',
     fontSize: '1.2rem',
-    color: '#616161'
+    color: '#4B4844'
   }}>
     Loading...
   </div>

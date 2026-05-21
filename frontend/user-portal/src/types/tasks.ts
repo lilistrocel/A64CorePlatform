@@ -247,13 +247,13 @@ export interface HarvestEntryFormData {
 // ============================================================================
 
 export const TASK_TYPE_COLORS: Record<TaskType, string> = {
-  planting: '#10B981',        // Green
+  planting: '#0F6E56',        // Green
   fruiting_check: '#A855F7',  // Purple
-  harvest_readiness: '#F59E0B', // Orange
-  daily_harvest: '#F59E0B',   // Orange
-  harvest_completion: '#3B82F6', // Blue
-  cleaning: '#EF4444',        // Red
-  custom: '#6B7280',          // Gray
+  harvest_readiness: '#B8842A', // Orange
+  daily_harvest: '#B8842A',   // Orange
+  harvest_completion: '#0F6E56', // Blue
+  cleaning: '#9E2A2A',        // Red
+  custom: '#4B4844',          // Gray
 };
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
@@ -267,10 +267,10 @@ export const TASK_TYPE_LABELS: Record<TaskType, string> = {
 };
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
-  pending: '#6B7280',         // Gray
-  in_progress: '#3B82F6',     // Blue
-  completed: '#10B981',       // Green
-  cancelled: '#EF4444',       // Red
+  pending: '#4B4844',         // Gray
+  in_progress: '#0F6E56',     // Blue
+  completed: '#0F6E56',       // Green
+  cancelled: '#9E2A2A',       // Red
 };
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
@@ -281,11 +281,11 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 export const HARVEST_GRADE_COLORS: Record<HarvestGrade, string> = {
-  A: '#10B981',    // Green - Best
-  B: '#3B82F6',    // Blue - Good
-  C: '#F59E0B',    // Orange - Fair
-  D: '#EF4444',    // Red - Poor
-  Waste: '#6B7280', // Gray - Waste
+  A: '#0F6E56',    // Green - Best
+  B: '#0F6E56',    // Blue - Good
+  C: '#B8842A',    // Orange - Fair
+  D: '#9E2A2A',    // Red - Poor
+  Waste: '#4B4844', // Gray - Waste
 };
 
 export const HARVEST_GRADE_LABELS: Record<HarvestGrade, string> = {

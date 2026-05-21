@@ -78,7 +78,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: #0F6E56;
         color: white;
         box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
         &:hover {
@@ -89,8 +89,8 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     }
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 2px solid #3B82F6;
+      color: #0F6E56;
+      border: 2px solid #0F6E56;
       &:hover {
         background: rgba(15, 110, 86, 0.05);
       }
@@ -115,7 +115,7 @@ const StatCard = styled.div`
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #3B82F6;
+  border-left: 4px solid #0F6E56;
 `;
 
 const StatLabel = styled.div`
@@ -161,7 +161,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -183,7 +183,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -236,7 +236,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   font-size: 14px;
   font-weight: 500;
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.canvas)};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
@@ -262,7 +262,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3B82F6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -275,10 +275,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
   border-radius: 8px;
-  color: #EF4444;
+  color: #9E2A2A;
   text-align: center;
 `;
 
@@ -321,9 +321,9 @@ const ImportFeedback = styled.div<{ $type: 'success' | 'error' }>`
     color: #166534;
   `
       : `
-    background: #FEE2E2;
-    border: 1px solid #EF4444;
-    color: #991B1B;
+    background: rgba(158,42,42,0.08);
+    border: 1px solid #9E2A2A;
+    color: #9E2A2A;
   `}
 `;
 
@@ -353,7 +353,7 @@ const ProgressContainer = styled.div`
   margin-bottom: 16px;
   padding: 16px 20px;
   background: #F0F9FF;
-  border: 1px solid #3B82F6;
+  border: 1px solid #0F6E56;
   border-radius: 8px;
 `;
 
@@ -373,13 +373,13 @@ const ProgressLabel = styled.span`
 const ProgressPercent = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #3B82F6;
+  color: #0F6E56;
 `;
 
 const ProgressBarOuter = styled.div`
   width: 100%;
   height: 8px;
-  background: #DBEAFE;
+  background: rgba(15,110,86,0.08);
   border-radius: 4px;
   overflow: hidden;
 `;
@@ -387,7 +387,7 @@ const ProgressBarOuter = styled.div`
 const ProgressBarInner = styled.div<{ $progress: number }>`
   width: ${({ $progress }) => $progress}%;
   height: 100%;
-  background: linear-gradient(90deg, #3B82F6 0%, #1D4ED8 100%);
+  background: linear-gradient(90deg, #0F6E56 0%, #0B5644 100%);
   border-radius: 4px;
   transition: width 200ms ease-out;
 `;

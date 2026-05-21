@@ -360,7 +360,7 @@ const LoadingSpinner = styled.div`
   width: 40px;
   height: 40px;
   border: 3px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -392,7 +392,7 @@ const ErrorIcon = styled.div`
   height: 48px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.status.danger};
-  color: #dc2626;
+  color: #9E2A2A;
   font-size: 24px;
   font-weight: bold;
   display: flex;
@@ -402,14 +402,14 @@ const ErrorIcon = styled.div`
 `;
 
 const ErrorText = styled.p`
-  color: #dc2626;
+  color: #9E2A2A;
   margin: 0 0 16px 0;
   font-size: 14px;
 `;
 
 const RetryButton = styled.button`
   padding: 8px 16px;
-  background: #3b82f6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 6px;
@@ -418,7 +418,7 @@ const RetryButton = styled.button`
   transition: background 0.2s;
 
   &:hover {
-    background: #2563eb;
+    background: #0B5644;
   }
 `;
 

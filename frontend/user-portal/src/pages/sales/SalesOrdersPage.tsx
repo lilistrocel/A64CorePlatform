@@ -77,7 +77,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       `;
     }
     return `
-      background: #3B82F6;
+      background: #0F6E56;
       color: white;
       &:hover {
         background: #0F6E56;
@@ -110,7 +110,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -126,7 +126,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -154,7 +154,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   padding: 8px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.canvas)};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.primary)};
   font-size: 14px;
   cursor: pointer;
@@ -226,9 +226,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;

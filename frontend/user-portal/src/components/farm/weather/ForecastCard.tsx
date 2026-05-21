@@ -41,9 +41,9 @@ const DayCard = styled.div<{ $isToday?: boolean }>`
   flex-direction: column;
   align-items: center;
   padding: 16px 12px;
-  background: ${({ $isToday, theme }) => ($isToday ? '#EFF6FF' : theme.colors.surface.raised)};
+  background: ${({ $isToday, theme }) => ($isToday ? 'rgba(15,110,86,0.05)' : theme.colors.surface.raised)};
   border-radius: 12px;
-  border: ${({ $isToday }) => ($isToday ? '2px solid #3B82F6' : '1px solid transparent')};
+  border: ${({ $isToday }) => ($isToday ? '2px solid #0F6E56' : '1px solid transparent')};
   transition: all 150ms ease-in-out;
 
   &:hover {
@@ -55,7 +55,7 @@ const DayCard = styled.div<{ $isToday?: boolean }>`
 const DayName = styled.div<{ $isToday?: boolean }>`
   font-size: 13px;
   font-weight: ${({ $isToday }) => ($isToday ? '600' : '500')};
-  color: ${({ $isToday, theme }) => ($isToday ? '#3B82F6' : theme.colors.text.secondary)};
+  color: ${({ $isToday, theme }) => ($isToday ? '#0F6E56' : theme.colors.text.secondary)};
   margin-bottom: 8px;
 `;
 
@@ -92,7 +92,7 @@ const Precipitation = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #3B82F6;
+  color: #0F6E56;
 
   .icon {
     font-size: 12px;

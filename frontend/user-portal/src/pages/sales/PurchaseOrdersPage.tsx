@@ -66,7 +66,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -83,7 +83,7 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -113,7 +113,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       `;
     }
     return `
-      background: #3B82F6;
+      background: #0F6E56;
       color: white;
       &:hover {
         background: #0F6E56;
@@ -165,8 +165,8 @@ const LoadingState = styled.div`
 `;
 
 const ErrorState = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
   border-radius: 8px;
   padding: 16px;
   color: #B91C1C;

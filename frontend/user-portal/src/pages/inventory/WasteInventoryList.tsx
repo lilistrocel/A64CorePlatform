@@ -286,9 +286,9 @@ const SourceBadge = styled.span<SourceBadgeProps>`
       case 'expired':
         return `background: ${theme.colors.status.warning}; color: #D97706;`;
       case 'damaged':
-        return `background: ${theme.colors.status.danger}; color: #DC2626;`;
+        return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       case 'harvest':
-        return `background: ${theme.colors.accent.sageSoft}; color: #059669;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #0B5644;`;
       case 'quality_reject':
         return `background: ${theme.colors.status.danger}; color: #DB2777;`;
       default:
@@ -313,9 +313,9 @@ const DisposalBadge = styled.span<DisposalBadgeProps>`
   ${({ $method, theme }) => {
     switch ($method) {
       case 'compost':
-        return `background: ${theme.colors.accent.sageSoft}; color: #059669;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #0B5644;`;
       case 'animal_feed':
-        return `background: ${theme.colors.surface.sunken}; color: #2563EB;`;
+        return `background: ${theme.colors.surface.sunken}; color: #0B5644;`;
       case 'donated':
         return `background: ${theme.colors.surface.sunken}; color: #4F46E5;`;
       case 'sold_discount':
@@ -323,7 +323,7 @@ const DisposalBadge = styled.span<DisposalBadgeProps>`
       case 'discard':
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
       case 'pending':
-        return `background: ${theme.colors.status.danger}; color: #DC2626;`;
+        return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       default:
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
     }
@@ -652,7 +652,7 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
 
       {summary && (
         <SummaryGrid>
-          <SummaryCard $color="#DC2626">
+          <SummaryCard $color="#9E2A2A">
             <SummaryValue>{formatNumber(summary.totalWasteRecords)}</SummaryValue>
             <SummaryLabel>Total Waste Records</SummaryLabel>
           </SummaryCard>
@@ -664,7 +664,7 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
             <SummaryValue>{formatCurrency(summary.totalEstimatedValue, 'AED')}</SummaryValue>
             <SummaryLabel>Estimated Value Lost</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color="#EF4444">
+          <SummaryCard $color="#9E2A2A">
             <SummaryValue>{formatNumber(summary.pendingDisposal)}</SummaryValue>
             <SummaryLabel>Pending Disposal</SummaryLabel>
           </SummaryCard>

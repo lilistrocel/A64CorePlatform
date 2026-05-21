@@ -115,10 +115,10 @@ interface SectionBadgeConfig {
 }
 
 const SECTION_BADGE: Record<AIHubSection, SectionBadgeConfig> = {
-  control: { icon: '⚡', label: 'Write Access', color: '#F59E0B' },
-  monitor: { icon: '👁️', label: 'Read Only',    color: '#3B82F6' },
-  report:  { icon: '📄', label: 'Exportable',   color: '#8B5CF6' },
-  advise:  { icon: '🧠', label: 'Expert Mode',  color: '#10B981' },
+  control: { icon: '⚡', label: 'Write Access', color: '#B8842A' },
+  monitor: { icon: '👁️', label: 'Read Only',    color: '#0F6E56' },
+  report:  { icon: '📄', label: 'Exportable',   color: '#4B4844' },
+  advise:  { icon: '🧠', label: 'Expert Mode',  color: '#0F6E56' },
 };
 
 const SECTION_PLACEHOLDER: Record<AIHubSection, string> = {

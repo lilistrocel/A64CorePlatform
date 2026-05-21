@@ -174,7 +174,7 @@ export function RoomDetailsModal({
 
   const isSubmitting = advancePhase.isPending || updateRoom.isPending;
 
-  const phaseColor = PHASE_COLORS[room.currentPhase] ?? '#9e9e9e';
+  const phaseColor = PHASE_COLORS[room.currentPhase] ?? '#4B4844';
   const phaseTextColor = PHASE_TEXT_COLORS[room.currentPhase] ?? '#fff';
   const phaseLabel = PHASE_LABELS[room.currentPhase] ?? room.currentPhase;
 
@@ -560,7 +560,7 @@ export function RoomDetailsModal({
                         yAxisId="left"
                         type="monotone"
                         dataKey="temp"
-                        stroke="#EF4444"
+                        stroke="#9E2A2A"
                         strokeWidth={2}
                         dot={false}
                         name="Temp (°C)"
@@ -569,7 +569,7 @@ export function RoomDetailsModal({
                         yAxisId="left"
                         type="monotone"
                         dataKey="humidity"
-                        stroke="#3B82F6"
+                        stroke="#0F6E56"
                         strokeWidth={2}
                         dot={false}
                         name="Humidity (%)"
@@ -579,7 +579,7 @@ export function RoomDetailsModal({
                           yAxisId="right"
                           type="monotone"
                           dataKey="co2"
-                          stroke="#8B5CF6"
+                          stroke="#4B4844"
                           strokeWidth={1.5}
                           dot={false}
                           name="CO2 (ppm)"
@@ -781,7 +781,7 @@ const HeaderRight = styled.div`
 const RoomCodeText = styled.h2`
   font-size: 22px;
   font-weight: 700;
-  color: #212121;
+  color: #0F0F0F;
   margin: 0;
 `;
 
@@ -811,7 +811,7 @@ const CloseButton = styled.button`
 
   &:hover {
     background: rgba(0, 0, 0, 0.08);
-    color: #212121;
+    color: #0F0F0F;
   }
   &:focus-visible {
     outline: 2px solid #0F6E56;
@@ -834,7 +834,7 @@ const TabButton = styled.button<TabButtonProps>`
   padding: 12px 18px;
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
-  color: ${({ $active }) => ($active ? '#0F6E56' : '#616161')};
+  color: ${({ $active }) => ($active ? '#0F6E56' : '#4B4844')};
   background: none;
   border: none;
   border-bottom: 2px solid ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
@@ -846,7 +846,7 @@ const TabButton = styled.button<TabButtonProps>`
   transition: all 150ms;
 
   &:hover {
-    color: #212121;
+    color: #0F0F0F;
     background: rgba(0, 0, 0, 0.04);
   }
   &:focus-visible {
@@ -859,12 +859,12 @@ const TabDot = styled.span`
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10B981;
+  background: #0F6E56;
   display: inline-block;
 `;
 
 const AlertDot = styled.span`
-  background: #EF4444;
+  background: #9E2A2A;
   color: white;
   font-size: 10px;
   font-weight: 700;
@@ -905,7 +905,7 @@ const InfoGroup = styled.div`
 const InfoLabel = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: #4B4844;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -913,7 +913,7 @@ const InfoLabel = styled.span`
 const InfoValue = styled.span`
   font-size: 15px;
   font-weight: 500;
-  color: #212121;
+  color: #0F0F0F;
 `;
 
 interface PhasePillProps {
@@ -961,7 +961,7 @@ const EditAssignmentBtn = styled.button`
     color: ${({ theme }) => theme.colors.text.primary};
   }
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -972,10 +972,10 @@ const AdvancePhaseSection = styled.div``;
 
 const AdvancePhaseBtn = styled.button`
   padding: 8px 16px;
-  border: 1px solid #3b82f6;
+  border: 1px solid #0F6E56;
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface.canvas};
-  color: #3b82f6;
+  color: #0F6E56;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -985,7 +985,7 @@ const AdvancePhaseBtn = styled.button`
     background: ${({ theme }) => theme.colors.surface.sunken};
   }
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -1003,7 +1003,7 @@ const AdvanceFormBox = styled.div`
 const AdvanceFormTitle = styled.span`
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: #0F0F0F;
 `;
 
 const PhaseOptionRow = styled.div`
@@ -1036,7 +1036,7 @@ const PhaseOptionBtn = styled.button<PhaseOptionBtnProps>`
     color: ${({ $text }) => $text};
   }
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -1050,7 +1050,7 @@ const AdvanceFormGroup = styled.div`
 const AdvanceFormLabel = styled.label`
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: #4B4844;
 `;
 
 const AdvanceSelect = styled.select`
@@ -1064,7 +1064,7 @@ const AdvanceSelect = styled.select`
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
   }
 `;
@@ -1081,14 +1081,14 @@ const AdvanceTextarea = styled.textarea`
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
   }
 `;
 
 const AdvanceError = styled.div`
   font-size: 12px;
-  color: #dc2626;
+  color: #9E2A2A;
   background: ${({ theme }) => theme.colors.status.danger};
   border: 1px solid #fecaca;
   border-radius: 6px;
@@ -1121,7 +1121,7 @@ const AdvanceConfirmBtn = styled.button`
   padding: 7px 16px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: #0F6E56;
   color: white;
   font-size: 13px;
   font-weight: 600;
@@ -1129,7 +1129,7 @@ const AdvanceConfirmBtn = styled.button`
   transition: all 150ms;
 
   &:hover:not(:disabled) {
-    background: #2563eb;
+    background: #0B5644;
   }
   &:disabled {
     opacity: 0.5;
@@ -1158,7 +1158,7 @@ const BERow = styled.div`
 
 const BEExplain = styled.p`
   font-size: 13px;
-  color: #616161;
+  color: #4B4844;
   line-height: 1.6;
   margin: 0;
 `;
@@ -1193,13 +1193,13 @@ const ReadingIcon = styled.div`
 const ReadingValue = styled.div`
   font-size: 16px;
   font-weight: 700;
-  color: #212121;
+  color: #0F0F0F;
   margin-bottom: 2px;
 `;
 
 const ReadingLabel = styled.div`
   font-size: 10px;
-  color: #9e9e9e;
+  color: #4B4844;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;
@@ -1209,7 +1209,7 @@ const ChartWrapper = styled.div``;
 const ChartTitle = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: #616161;
+  color: #4B4844;
   margin-bottom: 8px;
 `;
 
@@ -1222,16 +1222,16 @@ const SectionToolbar = styled.div`
 const SectionHeading = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: #212121;
+  color: #0F0F0F;
   margin: 0;
 `;
 
 const AddButton = styled.button`
   padding: 7px 14px;
-  border: 1px solid #10B981;
+  border: 1px solid #0F6E56;
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface.canvas};
-  color: #10B981;
+  color: #0F6E56;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1241,7 +1241,7 @@ const AddButton = styled.button`
     background: ${({ theme }) => theme.colors.accent.sageSoft};
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -1257,7 +1257,7 @@ const Th = styled.th`
   padding: 8px 10px;
   font-size: 11px;
   font-weight: 600;
-  color: #9e9e9e;
+  color: #4B4844;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   border-bottom: 2px solid ${({ theme }) => theme.colors.border.subtle};
@@ -1272,9 +1272,9 @@ const Td = styled.td`
 
 const TfootTd = styled.td`
   padding: 10px;
-  border-top: 2px solid #e0e0e0;
+  border-top: 2px solid #DCD8CF;
   background: #fafafa;
-  color: #212121;
+  color: #0F0F0F;
 `;
 
 interface GradePillProps {
@@ -1302,7 +1302,7 @@ interface ContamCardProps {
 
 const ContamCard = styled.div<ContamCardProps>`
   background: ${({ $resolved }) => ($resolved ? '#f9fafb' : '#fff5f5')};
-  border: 1px solid ${({ $resolved }) => ($resolved ? '#e0e0e0' : '#fecaca')};
+  border: 1px solid ${({ $resolved }) => ($resolved ? '#DCD8CF' : '#fecaca')};
   border-radius: 10px;
   padding: 14px;
   opacity: ${({ $resolved }) => ($resolved ? 0.7 : 1)};
@@ -1319,7 +1319,7 @@ const ContamHeader = styled.div`
 const ContamType = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: #0F0F0F;
   text-transform: capitalize;
   flex: 1;
 `;
@@ -1329,9 +1329,9 @@ interface SeverityBadgeProps {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  low: '#10B981',
-  medium: '#F59E0B',
-  high: '#EF4444',
+  low: '#0F6E56',
+  medium: '#B8842A',
+  high: '#9E2A2A',
   critical: '#7F1D1D',
 };
 
@@ -1339,7 +1339,7 @@ const SeverityBadge = styled.span<SeverityBadgeProps>`
   font-size: 11px;
   font-weight: 600;
   color: white;
-  background: ${({ $severity }) => SEVERITY_COLORS[$severity] ?? '#9e9e9e'};
+  background: ${({ $severity }) => SEVERITY_COLORS[$severity] ?? '#4B4844'};
   border-radius: 20px;
   padding: 2px 8px;
   text-transform: capitalize;
@@ -1352,8 +1352,8 @@ interface StatusBadgeProps {
 const StatusBadge = styled.span<StatusBadgeProps>`
   font-size: 11px;
   font-weight: 600;
-  color: ${({ $resolved }) => ($resolved ? '#10B981' : '#F59E0B')};
-  background: ${({ $resolved }) => ($resolved ? '#D1FAE5' : '#FEF3C7')};
+  color: ${({ $resolved }) => ($resolved ? '#0F6E56' : '#B8842A')};
+  background: ${({ $resolved }) => ($resolved ? 'rgba(15,110,86,0.10)' : 'rgba(184,132,42,0.10)')};
   border-radius: 20px;
   padding: 2px 8px;
   text-transform: capitalize;
@@ -1373,10 +1373,10 @@ const ContamDesc = styled.div`
 
 const ResolveButton = styled.button`
   padding: 5px 12px;
-  border: 1px solid #10B981;
+  border: 1px solid #0F6E56;
   border-radius: 6px;
   background: ${({ theme }) => theme.colors.surface.canvas};
-  color: #10B981;
+  color: #0F6E56;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1390,24 +1390,24 @@ const ResolveButton = styled.button`
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: #9e9e9e;
+  color: #4B4844;
   text-align: center;
   padding: 32px;
 `;
 
 const EmptyTabState = styled.div`
   font-size: 14px;
-  color: #9e9e9e;
+  color: #4B4844;
   text-align: center;
   padding: 32px;
   background: #f9fafb;
   border-radius: 10px;
-  border: 1px dashed #e0e0e0;
+  border: 1px dashed #DCD8CF;
 `;

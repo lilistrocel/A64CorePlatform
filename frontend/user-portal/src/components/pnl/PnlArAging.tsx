@@ -28,7 +28,7 @@ function formatAed(value: number): string {
 }
 
 // Green → Yellow → Orange → Red gradient for aging buckets
-const BUCKET_COLORS = ['#10B981', '#F59E0B', '#F97316', '#EF4444'];
+const BUCKET_COLORS = ['#0F6E56', '#B8842A', '#B85C2A', '#9E2A2A'];
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -184,16 +184,16 @@ export function PnlArAging({ data, isLoading, isError, onRetry }: PnlArAgingProp
                 data={data.buckets}
                 margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#DCD8CF" />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 12, fill: '#616161' }}
+                  tick={{ fontSize: 12, fill: '#4B4844' }}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
                   tickFormatter={formatAed}
-                  tick={{ fontSize: 11, fill: '#616161' }}
+                  tick={{ fontSize: 11, fill: '#4B4844' }}
                   tickLine={false}
                   axisLine={false}
                   width={60}
@@ -203,7 +203,7 @@ export function PnlArAging({ data, isLoading, isError, onRetry }: PnlArAgingProp
                   labelStyle={{ fontWeight: 600, fontSize: '13px' }}
                   contentStyle={{
                     borderRadius: '8px',
-                    border: '1px solid #e0e0e0',
+                    border: '1px solid #DCD8CF',
                     fontSize: '13px',
                   }}
                 />

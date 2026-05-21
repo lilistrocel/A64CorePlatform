@@ -131,7 +131,7 @@ const CloseButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -173,7 +173,7 @@ const MissingRow = styled(AllocationRow)`
 
 const ExpiredPanel = styled(AllocationRow)`
   background: #FFFBEB;
-  border-color: #F59E0B;
+  border-color: #B8842A;
 `;
 
 const ExpiredTitle = styled.div`
@@ -199,7 +199,7 @@ const RadioLabel = styled.label`
   input[type='radio'] {
     margin-top: 2px;
     flex-shrink: 0;
-    accent-color: #3B82F6;
+    accent-color: #0F6E56;
   }
 `;
 
@@ -212,7 +212,7 @@ const RadioDescription = styled.div`
 const DateInput = styled.input<{ $hasError?: boolean }>`
   margin-top: 6px;
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#D1D5DB')};
+  border: 1px solid ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#D1D5DB')};
   border-radius: 6px;
   font-size: 13px;
   background: white;
@@ -222,14 +222,14 @@ const DateInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
 
 const DateError = styled.div`
   font-size: 11px;
-  color: #EF4444;
+  color: #9E2A2A;
   margin-top: 2px;
 `;
 
@@ -273,16 +273,16 @@ const FooterButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     }
     if ($variant === 'danger') {
       return `
-        background: #EF4444;
+        background: #9E2A2A;
         color: white;
-        &:hover:not(:disabled) { background: #DC2626; }
+        &:hover:not(:disabled) { background: #9E2A2A; }
         &:disabled { opacity: 0.5; cursor: not-allowed; }
       `;
     }
     return `
-      background: #3B82F6;
+      background: #0F6E56;
       color: white;
-      &:hover:not(:disabled) { background: #1D4ED8; }
+      &:hover:not(:disabled) { background: #0B5644; }
       &:disabled { opacity: 0.5; cursor: not-allowed; }
     `;
   }}
@@ -290,9 +290,9 @@ const FooterButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 
 const ErrorBanner = styled.div`
   padding: 12px 16px;
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   border-radius: 8px;
   font-size: 13px;
   margin: 0 24px 12px;

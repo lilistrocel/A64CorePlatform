@@ -71,7 +71,7 @@ const BlockName = styled.h3`
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: #3b82f6;
+    color: #0F6E56;
     text-decoration: underline;
   }
 `;
@@ -211,8 +211,8 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #dc2626;
-        border: 1px solid #dc2626;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover {
           background: ${theme.colors.status.danger};
         }
@@ -287,7 +287,7 @@ const PlantingState = styled.div<{ $state: string }>`
       case 'harvesting':
         return '#c2185b';
       default:
-        return '#616161';
+        return '#4B4844';
     }
   }};
 `;

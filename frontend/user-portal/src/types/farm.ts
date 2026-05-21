@@ -613,8 +613,8 @@ export interface LightRequirements {
   photoperiodSensitive?: boolean;
 }
 
-// 11. Quality Grading
-export interface QualityGrade {
+// 11. Quality Grading (plant data structure — distinct from QualityGrade enum above)
+export interface QualityGradeSpec {
   gradeName: string;
   sizeRequirements?: string;
   colorRequirements?: string;
@@ -1024,13 +1024,13 @@ export interface CSVImportResult {
 // ============================================================================
 
 export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
-  empty: '#6B7280',      // Gray
-  planned: '#3B82F6',    // Blue
-  growing: '#10B981',    // Green
+  empty: '#4B4844',      // Gray
+  planned: '#0F6E56',    // Blue
+  growing: '#0F6E56',    // Green
   fruiting: '#A855F7',   // Purple
-  harvesting: '#F59E0B', // Yellow/Orange
-  cleaning: '#F97316',   // Orange
-  alert: '#EF4444',      // Red
+  harvesting: '#B8842A', // Yellow/Orange
+  cleaning: '#B85C2A',   // Orange
+  alert: '#9E2A2A',      // Red
   partial: '#06B6D4',    // Cyan
 };
 
@@ -1046,10 +1046,10 @@ export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
 };
 
 export const PLANTING_STATUS_COLORS: Record<PlantingStatus, string> = {
-  planned: '#3B82F6',    // Blue
-  planted: '#10B981',    // Green
-  harvesting: '#F59E0B', // Yellow/Orange
-  completed: '#6B7280',  // Gray
+  planned: '#0F6E56',    // Blue
+  planted: '#0F6E56',    // Green
+  harvesting: '#B8842A', // Yellow/Orange
+  completed: '#4B4844',  // Gray
 };
 
 export const PLANTING_STATUS_LABELS: Record<PlantingStatus, string> = {
@@ -1377,10 +1377,10 @@ export type AQICategory = 'Good' | 'Moderate' | 'Unhealthy for Sensitive Groups'
  * AQI category colors for UI
  */
 export const AQI_CATEGORY_COLORS: Record<string, string> = {
-  'Good': '#10B981',                           // Green
-  'Moderate': '#F59E0B',                       // Amber
-  'Unhealthy for Sensitive Groups': '#F97316', // Orange
-  'Unhealthy': '#EF4444',                      // Red
+  'Good': '#0F6E56',                           // Green
+  'Moderate': '#B8842A',                       // Amber
+  'Unhealthy for Sensitive Groups': '#B85C2A', // Orange
+  'Unhealthy': '#9E2A2A',                      // Red
   'Very Unhealthy': '#7C3AED',                 // Purple
   'Hazardous': '#7F1D1D',                      // Dark Red
 };
@@ -1506,10 +1506,10 @@ export interface AgriWeatherData {
 
 // Risk level colors for UI
 export const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
-  none: '#10B981',    // Green
+  none: '#0F6E56',    // Green
   low: '#84CC16',     // Lime
-  medium: '#F59E0B',  // Amber
-  high: '#EF4444',    // Red
+  medium: '#B8842A',  // Amber
+  high: '#9E2A2A',    // Red
 };
 
 export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
@@ -1521,11 +1521,11 @@ export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
 
 // Growing conditions colors
 export const GROWING_CONDITIONS_COLORS: Record<GrowingConditions, string> = {
-  excellent: '#10B981',  // Green
+  excellent: '#0F6E56',  // Green
   good: '#84CC16',       // Lime
-  fair: '#F59E0B',       // Amber
-  poor: '#EF4444',       // Red
-  unknown: '#6B7280',    // Gray
+  fair: '#B8842A',       // Amber
+  poor: '#9E2A2A',       // Red
+  unknown: '#4B4844',    // Gray
 };
 
 export const GROWING_CONDITIONS_LABELS: Record<GrowingConditions, string> = {

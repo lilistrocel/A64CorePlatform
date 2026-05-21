@@ -417,7 +417,7 @@ const SubmitButton = styled.button`
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
-  background: #10B981;
+  background: #0F6E56;
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -425,14 +425,14 @@ const SubmitButton = styled.button`
   transition: background 150ms;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: #0B5644;
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #10B981;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;

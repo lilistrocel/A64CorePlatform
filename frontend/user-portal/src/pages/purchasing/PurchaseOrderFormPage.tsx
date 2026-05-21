@@ -181,8 +181,8 @@ const GhostButton = styled.button`
 const DangerIconButton = styled.button`
   padding: 6px 10px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
-  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
@@ -192,18 +192,18 @@ const DangerIconButton = styled.button`
 const AddLineButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.accent.sageDeep || '#2563eb'};
-  border: 1px dashed ${({ theme }) => theme.colors.accent.sage || '#60a5fa'};
+  color: ${({ theme }) => theme.colors.accent.sageDeep || '#0B5644'};
+  border: 1px dashed ${({ theme }) => theme.colors.accent.sage || '#0F6E56'};
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   width: 100%;
   margin-top: 8px;
-  &:hover { background: ${({ theme }) => theme.colors.accent.sageSoft || '#eff6ff'}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageSoft || 'rgba(15,110,86,0.05)'}; }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -424,8 +424,8 @@ export function PurchaseOrderFormPage() {
       <Title>{pageTitle}</Title>
 
       {isReadOnly && (
-        <Card style={{ borderLeft: '4px solid #f59e0b', padding: '12px 20px', marginBottom: 16 }}>
-          <p style={{ margin: 0, color: '#92400e', fontSize: 14 }}>
+        <Card style={{ borderLeft: '4px solid #B8842A', padding: '12px 20px', marginBottom: 16 }}>
+          <p style={{ margin: 0, color: '#B8842A', fontSize: 14 }}>
             This PO is in <strong>{existingPO?.status}</strong> status and cannot be edited.
           </p>
         </Card>
@@ -603,8 +603,8 @@ export function PurchaseOrderFormPage() {
       )}
 
       {isFromPR && sourcePR && (
-        <Card style={{ borderLeft: '4px solid #2563eb' }}>
-          <p style={{ margin: 0, fontSize: 14, color: '#1d4ed8' }}>
+        <Card style={{ borderLeft: '4px solid #0B5644' }}>
+          <p style={{ margin: 0, fontSize: 14, color: '#0B5644' }}>
             Lines will be copied from <strong>{sourcePR.docNumber}</strong>{' '}
             ({sourcePR.lines.length} lines, total{' '}
             {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(sourcePR.totalGross)}).

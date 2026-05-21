@@ -346,15 +346,15 @@ export async function getDashboardStats(): Promise<MarketingDashboardStats> {
 export function getCampaignStatusColor(status: string): string {
   switch (status) {
     case 'draft':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     case 'active':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'paused':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     case 'completed':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 
@@ -364,15 +364,15 @@ export function getCampaignStatusColor(status: string): string {
 export function getBudgetStatusColor(status: string): string {
   switch (status) {
     case 'draft':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     case 'approved':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'active':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'closed':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 
@@ -382,15 +382,15 @@ export function getBudgetStatusColor(status: string): string {
 export function getEventStatusColor(status: string): string {
   switch (status) {
     case 'planned':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'ongoing':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     case 'completed':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'cancelled':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 
@@ -400,19 +400,19 @@ export function getEventStatusColor(status: string): string {
 export function getChannelTypeColor(type: string): string {
   switch (type) {
     case 'social_media':
-      return '#8B5CF6'; // purple
+      return '#4B4844'; // purple
     case 'email':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'print':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     case 'digital':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'event':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     case 'other':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 

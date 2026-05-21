@@ -35,7 +35,7 @@ function formatTooltipValue(value: number): string {
 }
 
 const FARM_COLORS = ['#0F6E56', '#0F6E56', '#0F6E56', '#90caf9', 'rgba(15, 110, 86, 0.10)'];
-const CROP_COLORS = ['#10B981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'];
+const CROP_COLORS = ['#0F6E56', '#34d399', '#6ee7b7', '#a7f3d0', 'rgba(15,110,86,0.10)'];
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -175,7 +175,7 @@ function BarTooltip({
     <div
       style={{
         background: 'white',
-        border: '1px solid #e0e0e0',
+        border: '1px solid #DCD8CF',
         borderRadius: '8px',
         padding: '10px 14px',
         boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
@@ -183,7 +183,7 @@ function BarTooltip({
       }}
     >
       <div style={{ fontWeight: 600, marginBottom: '4px' }}>{label}</div>
-      <div style={{ color: '#616161' }}>{formatTooltipValue(payload[0].value)}</div>
+      <div style={{ color: '#4B4844' }}>{formatTooltipValue(payload[0].value)}</div>
     </div>
   );
 }
@@ -254,11 +254,11 @@ export function PnlBreakdownCharts({
                 data={topFarms}
                 margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e0e0e0" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#DCD8CF" />
                 <XAxis
                   type="number"
                   tickFormatter={formatAed}
-                  tick={{ fontSize: 11, fill: '#616161' }}
+                  tick={{ fontSize: 11, fill: '#4B4844' }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -322,11 +322,11 @@ export function PnlBreakdownCharts({
                   data={topCrops}
                   margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e0e0e0" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#DCD8CF" />
                   <XAxis
                     type="number"
                     tickFormatter={formatAed}
-                    tick={{ fontSize: 11, fill: '#616161' }}
+                    tick={{ fontSize: 11, fill: '#4B4844' }}
                     tickLine={false}
                     axisLine={false}
                   />

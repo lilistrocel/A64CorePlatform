@@ -254,9 +254,9 @@ const BadgeChip = styled.span`
 
 const BulkActionButton = styled.button`
   padding: 8px 14px;
-  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
-  border: 1px solid ${({ theme }) => (theme.colors.status.info || '#1d4ed8') + '44'};
+  background: ${({ theme }) => theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'};
+  color: ${({ theme }) => theme.colors.status.info || '#0B5644'};
+  border: 1px solid ${({ theme }) => (theme.colors.status.info || '#0B5644') + '44'};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -266,11 +266,11 @@ const BulkActionButton = styled.button`
   font-family: inherit;
 
   &:hover {
-    background: ${({ theme }) => (theme.colors.status.info || '#1d4ed8') + '18'};
+    background: ${({ theme }) => (theme.colors.status.info || '#0B5644') + '18'};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
+    outline: 2px solid ${({ theme }) => theme.colors.status.info || '#0B5644'};
     outline-offset: 2px;
   }
 `;
@@ -286,13 +286,13 @@ const BannerBase = styled.div`
 `;
 
 const BannerInfo = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'};
+  color: ${({ theme }) => theme.colors.status.info || '#0B5644'};
 `;
 
 const BannerSuccess = styled(BannerBase)`
   background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.status.success || '#065f46'};
+  color: ${({ theme }) => theme.colors.status.success || '#0B5644'};
 `;
 
 const BannerError = styled(BannerBase)`
@@ -340,7 +340,7 @@ interface TrProps {
 const Tr = styled.tr<TrProps>`
   border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   background: ${({ $warning, $dirty, theme }) => {
-    if ($dirty) return (theme.colors.surface.sunken || '#eff6ff') + '55';
+    if ($dirty) return (theme.colors.surface.sunken || 'rgba(15,110,86,0.05)') + '55';
     if ($warning) return (theme.colors.status.warning || '#fffbeb');
     return 'transparent';
   }};
@@ -352,7 +352,7 @@ const Tr = styled.tr<TrProps>`
 
   &:hover {
     background: ${({ $dirty, $warning, theme }) => {
-      if ($dirty) return (theme.colors.surface.sunken || '#eff6ff') + '88';
+      if ($dirty) return (theme.colors.surface.sunken || 'rgba(15,110,86,0.05)') + '88';
       if ($warning) return (theme.colors.status.warning || '#fffbeb') + 'cc';
       return theme.colors.surface.canvas;
     }};
@@ -392,9 +392,9 @@ interface TypePillProps {
 }
 
 const TYPE_PILL_COLORS: Record<NonNullable<PurchaseItemType>, { bg: string; text: string }> = {
-  raw_material: { bg: '#ecfdf5', text: '#065f46' },
-  consumable: { bg: '#fffbeb', text: '#92400e' },
-  service: { bg: '#eff6ff', text: '#1e40af' },
+  raw_material: { bg: '#ecfdf5', text: '#0B5644' },
+  consumable: { bg: '#fffbeb', text: '#B8842A' },
+  service: { bg: 'rgba(15,110,86,0.05)', text: '#1e40af' },
   fixed_asset_acquisition: { bg: '#f5f3ff', text: '#4c1d95' },
 };
 
@@ -408,7 +408,7 @@ const TypePill = styled.span<TypePillProps>`
   background: ${({ $type }) =>
     $type ? TYPE_PILL_COLORS[$type]?.bg ?? '#f5f5f5' : '#f5f5f5'};
   color: ${({ $type }) =>
-    $type ? TYPE_PILL_COLORS[$type]?.text ?? '#616161' : '#616161'};
+    $type ? TYPE_PILL_COLORS[$type]?.text ?? '#4B4844' : '#4B4844'};
 `;
 
 // ─── Status pill ───────────────────────────────────────────────────────────────
@@ -429,7 +429,7 @@ const StatusPill = styled.span<StatusPillProps>`
       : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
     $active
-      ? theme.colors.status.success || '#065f46'
+      ? theme.colors.status.success || '#0B5644'
       : theme.colors.text.tertiary};
 `;
 

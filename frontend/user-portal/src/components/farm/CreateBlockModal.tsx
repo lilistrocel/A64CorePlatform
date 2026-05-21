@@ -91,7 +91,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 
   &:disabled {
@@ -112,7 +112,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -135,11 +135,11 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) =>
     $variant === 'primary'
       ? `
-    background: #3B82F6;
+    background: #0F6E56;
     color: white;
 
     &:hover:not(:disabled) {
-      background: #2563EB;
+      background: #0B5644;
     }
   `
       : `
@@ -187,16 +187,16 @@ const MapToggleButton = styled.button<{ $active: boolean }>`
   gap: 8px;
   padding: 12px 16px;
   width: 100%;
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 8px;
-  background: ${({ $active, theme }) => ($active ? '#EFF6FF' : theme.colors.surface.canvas)};
-  color: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.text.primary)};
+  background: ${({ $active, theme }) => ($active ? 'rgba(15,110,86,0.05)' : theme.colors.surface.canvas)};
+  color: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.text.primary)};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#DBEAFE' : theme.colors.surface.raised)};
+    background: ${({ $active, theme }) => ($active ? 'rgba(15,110,86,0.08)' : theme.colors.surface.raised)};
   }
 
   svg {

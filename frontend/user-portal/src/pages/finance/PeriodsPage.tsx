@@ -362,7 +362,7 @@ interface TrProps {
 
 const Tr = styled.tr<TrProps>`
   border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
-  border-left: ${({ $current }) => ($current ? '3px solid #3b82f6' : '3px solid transparent')};
+  border-left: ${({ $current }) => ($current ? '3px solid #0F6E56' : '3px solid transparent')};
   opacity: ${({ $muted }) => ($muted ? 0.7 : 1)};
   &:hover {
     background: ${({ theme }) => theme.colors.surface.canvas};
@@ -398,9 +398,9 @@ const StatusBadge = styled.span<StatusBadgeProps>`
   text-transform: uppercase;
   letter-spacing: 0.3px;
   background: ${({ $status }) =>
-    $status === 'open' ? '#dcfce7' : '#f3f4f6'};
+    $status === 'open' ? '#dcfce7' : '#DCD8CF'};
   color: ${({ $status }) =>
-    $status === 'open' ? '#15803d' : '#6b7280'};
+    $status === 'open' ? '#15803d' : '#4B4844'};
 `;
 
 const CurrentBadge = styled.span`
@@ -412,8 +412,8 @@ const CurrentBadge = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: rgba(15,110,86,0.05);
+  color: #0B5644;
   margin-left: 6px;
 `;
 
@@ -424,10 +424,10 @@ const CloseActionButton = styled.button`
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
-  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#dc2626'};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   &:hover {
@@ -480,7 +480,7 @@ const LoadingOverlay = styled.div`
 const ErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -578,7 +578,7 @@ const CancelButton = styled.button`
 
 const DangerConfirmButton = styled.button`
   padding: 9px 18px;
-  background: #dc2626;
+  background: #9E2A2A;
   color: white;
   border: none;
   border-radius: 8px;
@@ -713,7 +713,7 @@ const RadioLabel = styled.label`
 
 const WizardErrorText = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   margin: 4px 0 0;
 `;
 

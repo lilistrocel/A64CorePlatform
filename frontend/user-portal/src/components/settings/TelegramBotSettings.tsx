@@ -552,9 +552,9 @@ const HistoryItem = styled.div`
 `;
 
 const severityColors: Record<string, string> = {
-  low: '#6b7280',
+  low: '#4B4844',
   medium: '#d97706',
-  high: '#dc2626',
+  high: '#9E2A2A',
   critical: '#7c3aed',
 };
 
@@ -564,7 +564,7 @@ const HistorySeverity = styled.span<{ severity: string }>`
   padding: 2px 6px;
   border-radius: 3px;
   color: white;
-  background: ${({ severity }) => severityColors[severity] || '#6b7280'};
+  background: ${({ severity }) => severityColors[severity] || '#4B4844'};
   min-width: 60px;
   text-align: center;
 `;

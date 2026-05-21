@@ -194,7 +194,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   ${({ $variant }) => {
     if ($variant === 'primary') {
       return `
-        background: #3B82F6;
+        background: #0F6E56;
         color: white;
         &:hover {
           background: #0F6E56;
@@ -204,18 +204,18 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover {
-          background: #FEE2E2;
+          background: rgba(158,42,42,0.08);
         }
       `;
     }
     /* Secondary/view button - uses brand blue, not a neutral color, so kept as-is */
     return `
       background: transparent;
-      color: #3B82F6;
-      border: 1px solid #3B82F6;
+      color: #0F6E56;
+      border: 1px solid #0F6E56;
       &:hover {
         background: rgba(15, 110, 86, 0.05);
       }

@@ -383,19 +383,19 @@ export async function reportOrderReturn(
 export function getOrderStatusColor(status: string): string {
   switch (status) {
     case 'draft':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     case 'confirmed':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'processing':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     case 'shipped':
-      return '#8B5CF6'; // purple
+      return '#4B4844'; // purple
     case 'delivered':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'cancelled':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 
@@ -405,13 +405,13 @@ export function getOrderStatusColor(status: string): string {
 export function getPaymentStatusColor(status: string): string {
   switch (status) {
     case 'pending':
-      return '#F59E0B'; // amber
+      return '#B8842A'; // amber
     case 'partial':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'paid':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 
@@ -421,15 +421,15 @@ export function getPaymentStatusColor(status: string): string {
 export function getInventoryStatusColor(status: string): string {
   switch (status) {
     case 'available':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'reserved':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'sold':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     case 'expired':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 
@@ -439,17 +439,17 @@ export function getInventoryStatusColor(status: string): string {
 export function getPurchaseOrderStatusColor(status: string): string {
   switch (status) {
     case 'draft':
-      return '#6B7280'; // gray
+      return '#4B4844'; // gray
     case 'sent':
-      return '#3B82F6'; // blue
+      return '#0F6E56'; // blue
     case 'confirmed':
-      return '#8B5CF6'; // purple
+      return '#4B4844'; // purple
     case 'received':
-      return '#10B981'; // green
+      return '#0F6E56'; // green
     case 'cancelled':
-      return '#EF4444'; // red
+      return '#9E2A2A'; // red
     default:
-      return '#6B7280';
+      return '#4B4844';
   }
 }
 

@@ -346,7 +346,7 @@ const Label = styled.label`
 
 const FieldInput = styled.input<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 6px;
   font-size: 13px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -361,7 +361,7 @@ const FieldInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 2px ${({ $hasError }) => ($hasError ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)')};
   }
 
@@ -379,7 +379,7 @@ const FieldInput = styled.input<{ $hasError?: boolean }>`
 
 const FieldSelect = styled.select<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 6px;
   font-size: 13px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -391,14 +391,14 @@ const FieldSelect = styled.select<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
   }
 `;
 
 const FieldTextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
@@ -416,14 +416,14 @@ const FieldTextArea = styled.textarea<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 11px;
-  color: #EF4444;
+  color: #9E2A2A;
   line-height: 1.3;
 `;
 
@@ -489,11 +489,11 @@ const AddButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: #3B82F6;
-  border: 1px dashed #3B82F6;
+  color: #0F6E56;
+  border: 1px dashed #0F6E56;
 
   &:hover:not(:disabled) {
-    background: #eff6ff;
+    background: rgba(15,110,86,0.05);
   }
 
   &:disabled {
@@ -512,8 +512,8 @@ const DeleteButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: #EF4444;
-  border: 1px solid #EF4444;
+  color: #9E2A2A;
+  border: 1px solid #9E2A2A;
   white-space: nowrap;
   flex-shrink: 0;
 
@@ -554,7 +554,7 @@ const MoveButton = styled.button`
 const TextLinkButton = styled.button`
   background: none;
   border: none;
-  color: #3B82F6;
+  color: #0F6E56;
   font-size: 12px;
   cursor: pointer;
   padding: 2px 0;
@@ -562,7 +562,7 @@ const TextLinkButton = styled.button`
   text-align: left;
 
   &:hover {
-    color: #1d4ed8;
+    color: #0B5644;
   }
 `;
 
@@ -702,10 +702,10 @@ const ApplicationBody = styled.div`
 const TypeSwitchWarning = styled.div`
   padding: 8px 12px;
   background: #fffbeb;
-  border: 1px solid #f59e0b;
+  border: 1px solid #B8842A;
   border-radius: 6px;
   font-size: 12px;
-  color: #92400e;
+  color: #B8842A;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -713,7 +713,7 @@ const TypeSwitchWarning = styled.div`
 `;
 
 const WarnConfirmButton = styled.button`
-  background: #f59e0b;
+  background: #B8842A;
   color: white;
   border: none;
   border-radius: 4px;
@@ -982,7 +982,7 @@ function IngredientEditor({ ingredient, path, errors, onChange, onDelete }: Ingr
                   >
                     {c.name}
                     {c.aliases.length > 0 && (
-                      <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 6 }}>
+                      <span style={{ fontSize: 11, color: '#4B4844', marginLeft: 6 }}>
                         ({c.aliases.join(', ')})
                       </span>
                     )}
@@ -1291,7 +1291,7 @@ function RuleEditor({ rule, ruleIndex, cardIndex, errors, onChange, onDelete }: 
             <WarnConfirmButton type="button" onClick={() => applyTypeSwitch(pendingTypeSwitch)}>
               Yes, switch
             </WarnConfirmButton>
-            <TextLinkButton type="button" style={{ color: '#92400e', fontSize: 12, textDecoration: 'none' }} onClick={() => setPendingTypeSwitch(null)}>
+            <TextLinkButton type="button" style={{ color: '#B8842A', fontSize: 12, textDecoration: 'none' }} onClick={() => setPendingTypeSwitch(null)}>
               Cancel
             </TextLinkButton>
           </TypeSwitchWarning>
@@ -1493,7 +1493,7 @@ function CardEditor({
         <CardBlockHeaderLeft>
           {cardLabel}
           {dayRangeLabel && (
-            <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280', marginLeft: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 400, color: '#4B4844', marginLeft: 8 }}>
               {dayRangeLabel}
             </span>
           )}
@@ -1501,8 +1501,8 @@ function CardEditor({
             <span
               style={{
                 fontSize: 11,
-                background: '#fee2e2',
-                color: '#dc2626',
+                background: 'rgba(158,42,42,0.08)',
+                color: '#9E2A2A',
                 borderRadius: 4,
                 padding: '2px 6px',
                 marginLeft: 8,
@@ -1783,10 +1783,10 @@ export function FertigationScheduleEditorModal({
         <ModalFooter>
           <div>
             {saveError && (
-              <span style={{ fontSize: 13, color: '#EF4444' }}>{saveError}</span>
+              <span style={{ fontSize: 13, color: '#9E2A2A' }}>{saveError}</span>
             )}
             {!isValid && (
-              <span style={{ fontSize: 12, color: '#9ca3af' }}>
+              <span style={{ fontSize: 12, color: '#4B4844' }}>
                 Fix validation errors above before saving.
               </span>
             )}

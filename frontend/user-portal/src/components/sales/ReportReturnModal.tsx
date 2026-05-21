@@ -153,7 +153,7 @@ const CloseButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -232,13 +232,13 @@ const RadioLabel = styled.label`
   cursor: pointer;
 
   input[type='radio'] {
-    accent-color: #3B82F6;
+    accent-color: #0F6E56;
   }
 `;
 
 const NumberInput = styled.input<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#EF4444' : '#D1D5DB')};
+  border: 1px solid ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#D1D5DB')};
   border-radius: 6px;
   font-size: 13px;
   background: white;
@@ -248,7 +248,7 @@ const NumberInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -276,7 +276,7 @@ const SelectInput = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -298,7 +298,7 @@ const TextInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -310,7 +310,7 @@ const TextInput = styled.input`
 
 const ValidationError = styled.div`
   font-size: 12px;
-  color: #EF4444;
+  color: #9E2A2A;
   margin-top: 4px;
 `;
 
@@ -329,7 +329,7 @@ const SkipLabel = styled.label`
   cursor: pointer;
 
   input[type='checkbox'] {
-    accent-color: #3B82F6;
+    accent-color: #0F6E56;
   }
 `;
 
@@ -348,7 +348,7 @@ const NotesArea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -402,9 +402,9 @@ const FooterButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       `;
     }
     return `
-      background: #3B82F6;
+      background: #0F6E56;
       color: white;
-      &:hover:not(:disabled) { background: #1D4ED8; }
+      &:hover:not(:disabled) { background: #0B5644; }
       &:disabled { opacity: 0.5; cursor: not-allowed; }
     `;
   }}
@@ -412,9 +412,9 @@ const FooterButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 
 const ErrorBanner = styled.div`
   padding: 12px 16px;
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   border-radius: 8px;
   font-size: 13px;
   margin: 0 24px 12px;
@@ -676,7 +676,7 @@ export function ReportReturnModal({ isOpen, onClose, order, onSuccess }: ReportR
                       aria-label="Container count"
                       placeholder="0"
                     />
-                    <span style={{ fontSize: 13, color: '#6B7280' }}>×</span>
+                    <span style={{ fontSize: 13, color: '#4B4844' }}>×</span>
                     <NumberInput
                       type="number"
                       min="0.1"
@@ -687,7 +687,7 @@ export function ReportReturnModal({ isOpen, onClose, order, onSuccess }: ReportR
                       aria-label="Container size (kg)"
                       placeholder="kg"
                     />
-                    <span style={{ fontSize: 13, color: '#6B7280' }}>kg each</span>
+                    <span style={{ fontSize: 13, color: '#4B4844' }}>kg each</span>
                     <Divider />
                     <ReadonlyValue>
                       = {computedKg != null && computedKg > 0 ? fmtKg(computedKg) : '0 kg'}
@@ -707,7 +707,7 @@ export function ReportReturnModal({ isOpen, onClose, order, onSuccess }: ReportR
                       aria-label="Return quantity in kg"
                       placeholder="0.00"
                     />
-                    <span style={{ fontSize: 13, color: '#6B7280' }}>kg</span>
+                    <span style={{ fontSize: 13, color: '#4B4844' }}>kg</span>
                   </FieldRow>
                 )}
 

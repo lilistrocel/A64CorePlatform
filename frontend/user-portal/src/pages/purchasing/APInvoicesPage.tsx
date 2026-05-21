@@ -73,9 +73,9 @@ const Chip = styled.button<{ $active: boolean }>`
   border: 1px solid ${({ $active, theme }) =>
     $active ? theme.colors.accent.sage : theme.colors.border.subtle};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageSoft || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.accent.sageSoft || 'rgba(15,110,86,0.05)' : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageDeep || '#1d4ed8' : theme.colors.text.secondary};
+    $active ? theme.colors.accent.sageDeep || '#0B5644' : theme.colors.text.secondary};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
@@ -152,20 +152,20 @@ const StatusBadge = styled.span<{ $status: APStatus }>`
   font-weight: 600;
   background: ${({ $status }) => {
     switch ($status) {
-      case 'Draft':            return '#f3f4f6';
-      case 'Pending Approval': return '#fef3c7';
-      case 'Approved':         return '#d1fae5';
-      case 'Rejected':         return '#fee2e2';
-      default:                 return '#f3f4f6';
+      case 'Draft':            return '#DCD8CF';
+      case 'Pending Approval': return 'rgba(184,132,42,0.10)';
+      case 'Approved':         return 'rgba(15,110,86,0.10)';
+      case 'Rejected':         return 'rgba(158,42,42,0.08)';
+      default:                 return '#DCD8CF';
     }
   }};
   color: ${({ $status }) => {
     switch ($status) {
-      case 'Draft':            return '#6b7280';
-      case 'Pending Approval': return '#92400e';
-      case 'Approved':         return '#065f46';
-      case 'Rejected':         return '#991b1b';
-      default:                 return '#6b7280';
+      case 'Draft':            return '#4B4844';
+      case 'Pending Approval': return '#B8842A';
+      case 'Approved':         return '#0B5644';
+      case 'Rejected':         return '#9E2A2A';
+      default:                 return '#4B4844';
     }
   }};
 `;
@@ -175,9 +175,9 @@ const VarianceCell = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
   font-size: 13px;
   font-weight: ${({ $sign }) => ($sign === 'zero' ? '400' : '600')};
   color: ${({ $sign }) => {
-    if ($sign === 'positive') return '#dc2626';   // red — vendor charged more
-    if ($sign === 'negative') return '#059669';   // muted green — vendor charged less
-    return '#9ca3af';                             // grey — no variance
+    if ($sign === 'positive') return '#9E2A2A';   // red — vendor charged more
+    if ($sign === 'negative') return '#0B5644';   // muted green — vendor charged less
+    return '#4B4844';                             // grey — no variance
   }};
 `;
 
@@ -342,7 +342,7 @@ export function APInvoicesPage() {
                     <Td>
                       <StatusBadge $status={ap.status}>{ap.status}</StatusBadge>
                     </Td>
-                    <Td style={{ fontSize: 12, color: '#6b7280' }}>
+                    <Td style={{ fontSize: 12, color: '#4B4844' }}>
                       {ap.approvedBy
                         ? `${ap.approvedBy}${ap.approvedAt ? ` · ${formatDate(ap.approvedAt)}` : ''}`
                         : '—'}

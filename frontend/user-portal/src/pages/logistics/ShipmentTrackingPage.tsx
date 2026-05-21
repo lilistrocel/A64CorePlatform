@@ -72,7 +72,7 @@ const FarmingYearBadge = styled.span`
 
 const CreateButton = styled.button`
   padding: 12px 24px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -107,9 +107,9 @@ const FilterLabel = styled.span`
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
+  background: ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -212,9 +212,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;

@@ -1044,7 +1044,7 @@ const DefaultBadge = styled.span`
   padding: 4px 8px;
   font-size: ${({ theme }: any) => theme.fontSizes.caption};
   font-weight: ${({ theme }: any) => theme.fontWeights.medium};
-  color: #059669;
+  color: #0B5644;
   background: ${({ theme }: any) => theme.colors.accent.sageSoft};
   border-radius: 4px;
 `;
@@ -1249,7 +1249,7 @@ const FarmingYearExample = styled.div`
 
 const ConfirmationBox = styled.div`
   background: ${({ theme }: any) => theme.colors.status.warning};
-  border: 1px solid #f59e0b;
+  border: 1px solid #B8842A;
   border-radius: ${({ theme }: any) => theme.radii.md};
   padding: ${({ theme }: any) => theme.space['6']};
   margin-top: ${({ theme }: any) => theme.space['4']};
@@ -1258,13 +1258,13 @@ const ConfirmationBox = styled.div`
 const ConfirmationTitle = styled.h4`
   font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
   font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
-  color: #92400e;
+  color: #B8842A;
   margin: 0 0 ${({ theme }: any) => theme.space['2']} 0;
 `;
 
 const ConfirmationText = styled.p`
   font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
-  color: #92400e;
+  color: #B8842A;
   margin: 0 0 ${({ theme }: any) => theme.space['4']} 0;
   line-height: 1.5;
 `;
@@ -1275,7 +1275,7 @@ const MfaEnabledBadge = styled.span`
   padding: 4px 12px;
   font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
   font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
-  color: #059669;
+  color: #0B5644;
   background: ${({ theme }: any) => theme.colors.accent.sageSoft};
   border-radius: 4px;
 `;
@@ -1344,11 +1344,11 @@ const ModalDescription = styled.p`
 
 const ModalWarning = styled.div`
   background: ${({ theme }: any) => theme.colors.status.warning};
-  border: 1px solid #f59e0b;
+  border: 1px solid #B8842A;
   border-radius: ${({ theme }: any) => theme.radii.md};
   padding: ${({ theme }: any) => theme.space['4']};
   margin-bottom: ${({ theme }: any) => theme.space['6']};
-  color: #92400e;
+  color: #B8842A;
   font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
 `;
 

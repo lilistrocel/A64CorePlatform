@@ -67,7 +67,7 @@ export type ContaminationSeverity = 'low' | 'medium' | 'high' | 'critical';
 // ============================================================================
 
 export const PHASE_COLORS: Record<RoomPhase, string> = {
-  empty: '#9e9e9e',
+  empty: '#4B4844',
   preparing: '#90caf9',
   inoculated: '#0F6E56',
   colonizing: '#fdd835',
@@ -77,7 +77,7 @@ export const PHASE_COLORS: Record<RoomPhase, string> = {
   resting: '#80deea',
   cleaning: '#bdbdbd',
   quarantined: '#ef5350',
-  decommissioned: '#616161',
+  decommissioned: '#4B4844',
   maintenance: '#ce93d8',
 };
 
@@ -108,7 +108,7 @@ export const PHASE_TEXT_COLORS: Record<RoomPhase, string> = {
   cleaning: '#424242',
   quarantined: '#fff',
   decommissioned: '#fff',
-  maintenance: '#4a148c',
+  maintenance: '#4B4844',
 };
 
 // ============================================================================
@@ -423,11 +423,11 @@ export const QUALITY_GRADE_LABELS: Record<HarvestQualityGrade, string> = {
 };
 
 export const QUALITY_GRADE_COLORS: Record<HarvestQualityGrade, string> = {
-  A: '#10B981',
-  B: '#3B82F6',
-  C: '#F59E0B',
-  D: '#EF4444',
-  rejected: '#6B7280',
+  A: '#0F6E56',
+  B: '#0F6E56',
+  C: '#B8842A',
+  D: '#9E2A2A',
+  rejected: '#4B4844',
 };
 
 export const DIFFICULTY_LABELS: Record<MushroomDifficulty, string> = {
@@ -438,8 +438,8 @@ export const DIFFICULTY_LABELS: Record<MushroomDifficulty, string> = {
 };
 
 export const DIFFICULTY_COLORS: Record<MushroomDifficulty, string> = {
-  beginner: '#10B981',
-  intermediate: '#3B82F6',
-  advanced: '#F59E0B',
-  expert: '#EF4444',
+  beginner: '#0F6E56',
+  intermediate: '#0F6E56',
+  advanced: '#B8842A',
+  expert: '#9E2A2A',
 };

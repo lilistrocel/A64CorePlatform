@@ -464,7 +464,7 @@ const Header = styled.header`
   gap: 16px;
   padding: 20px 24px 16px;
   background: #1a2235;
-  border-bottom: 1px solid #1f2d45;
+  border-bottom: 1px solid #0F0F0F;
   flex-wrap: wrap;
 `;
 
@@ -495,7 +495,7 @@ const StatPill = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #1f2d45;
+  background: #0F0F0F;
   border: 1px solid #2a3d5a;
   border-radius: 10px;
   padding: 8px 16px;
@@ -524,7 +524,7 @@ const LoadingPill = styled.div`
   gap: 6px;
   font-size: 12px;
   color: #6b8cba;
-  background: #1f2d45;
+  background: #0F0F0F;
   border: 1px solid #2a3d5a;
   border-radius: 10px;
   padding: 8px 12px;
@@ -538,7 +538,7 @@ const LegendBar = styled.div`
   gap: 6px;
   padding: 12px 24px;
   background: #16202f;
-  border-bottom: 1px solid #1f2d45;
+  border-bottom: 1px solid #0F0F0F;
 `;
 
 interface LegendChipProps {
@@ -570,7 +570,7 @@ const LegendCount = styled.span`
 const DistributionSection = styled.div`
   padding: 10px 24px;
   background: #16202f;
-  border-bottom: 1px solid #1f2d45;
+  border-bottom: 1px solid #0F0F0F;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -591,7 +591,7 @@ const DistributionBar = styled.div`
   border-radius: 6px;
   overflow: hidden;
   flex: 1;
-  background: #1f2d45;
+  background: #0F0F0F;
 `;
 
 interface DistributionSegmentProps {
@@ -614,7 +614,7 @@ const FiltersBar = styled.div`
   gap: 16px;
   padding: 12px 24px;
   background: #1a2235;
-  border-bottom: 1px solid #1f2d45;
+  border-bottom: 1px solid #0F0F0F;
   flex-wrap: wrap;
 `;
 
@@ -644,19 +644,19 @@ const FilterSelect = styled.select`
   border-radius: 8px;
   font-size: 13px;
   color: #d0e8ff;
-  background: #1f2d45;
+  background: #0F0F0F;
   cursor: pointer;
   outline: none;
   min-width: 180px;
   transition: border-color 150ms;
 
   option {
-    background: #1f2d45;
+    background: #0F0F0F;
     color: #d0e8ff;
   }
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
   }
 `;
@@ -667,7 +667,7 @@ const FilterInput = styled.input`
   border-radius: 8px;
   font-size: 13px;
   color: #d0e8ff;
-  background: #1f2d45;
+  background: #0F0F0F;
   outline: none;
   min-width: 160px;
   transition: border-color 150ms;
@@ -677,7 +677,7 @@ const FilterInput = styled.input`
   }
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
   }
 `;
@@ -718,7 +718,7 @@ const PhaseFilterChip = styled.button<PhaseFilterChipProps>`
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -746,12 +746,12 @@ const ClearBtn = styled.button`
   transition: all 150ms;
 
   &:hover {
-    background: #1f2d45;
+    background: #0F0F0F;
     color: #d0e8ff;
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -777,7 +777,7 @@ const FacilityHeader = styled.div`
   gap: 12px;
   margin-bottom: 10px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #1f2d45;
+  border-bottom: 1px solid #0F0F0F;
 `;
 
 const FacilityMeta = styled.div`
@@ -885,8 +885,8 @@ interface SpinnerProps {
 const Spinner = styled.div<SpinnerProps>`
   width: ${({ $small }) => ($small ? '16px' : '36px')};
   height: ${({ $small }) => ($small ? '16px' : '36px')};
-  border: ${({ $small }) => ($small ? '2px' : '3px')} solid #1f2d45;
-  border-top-color: #3b82f6;
+  border: ${({ $small }) => ($small ? '2px' : '3px')} solid #0F0F0F;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spinAnim 0.9s linear infinite;
 

@@ -15,17 +15,17 @@ interface FacilityCardProps {
 }
 
 const STATUS_COLORS: Record<FacilityStatus, string> = {
-  active: '#10B981',
-  inactive: '#9E9E9E',
-  maintenance: '#F59E0B',
-  construction: '#3B82F6',
+  active: '#0F6E56',
+  inactive: '#4B4844',
+  maintenance: '#B8842A',
+  construction: '#0F6E56',
 };
 
 const STATUS_BG: Record<FacilityStatus, string> = {
-  active: '#D1FAE5',
+  active: 'rgba(15,110,86,0.10)',
   inactive: '#F5F5F5',
-  maintenance: '#FEF3C7',
-  construction: '#DBEAFE',
+  maintenance: 'rgba(184,132,42,0.10)',
+  construction: 'rgba(15,110,86,0.08)',
 };
 
 const TYPE_LABELS: Record<FacilityType, string> = {
@@ -226,7 +226,7 @@ interface StatValueProps {
 const StatValue = styled.div<StatValueProps>`
   font-size: 18px;
   font-weight: 700;
-  color: ${({ $highlight, theme }) => ($highlight ? '#10B981' : theme.colors.text.primary)};
+  color: ${({ $highlight, theme }) => ($highlight ? '#0F6E56' : theme.colors.text.primary)};
   line-height: 1;
   margin-bottom: 2px;
 `;
@@ -258,7 +258,7 @@ interface UtilizationFillProps {
 const UtilizationFill = styled.div<UtilizationFillProps>`
   height: 100%;
   width: ${({ $percent }) => $percent}%;
-  background: linear-gradient(90deg, #10B981, #3B82F6);
+  background: linear-gradient(90deg, #0F6E56, #0F6E56);
   border-radius: 4px;
   transition: width 400ms ease-in-out;
 `;

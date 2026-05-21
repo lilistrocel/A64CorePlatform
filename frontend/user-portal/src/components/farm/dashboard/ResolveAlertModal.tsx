@@ -235,7 +235,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 28px;
-  color: #9ca3af;
+  color: #4B4844;
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -267,7 +267,7 @@ const BlockInfo = styled.div`
 
 const BlockLabel = styled.span`
   font-weight: 600;
-  color: #6b7280;
+  color: #4B4844;
 `;
 
 const BlockValue = styled.span`
@@ -282,12 +282,12 @@ const Label = styled.label`
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: #0F0F0F;
   margin-bottom: 8px;
 `;
 
 const Required = styled.span`
-  color: #ef4444;
+  color: #9E2A2A;
 `;
 
 const Select = styled.select`
@@ -302,7 +302,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
@@ -313,7 +313,7 @@ const AlertDetails = styled.div`
   align-items: center;
   padding: 16px;
   background: ${({ theme }) => theme.colors.status.warning};
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid #B8842A;
   border-radius: 6px;
   margin-bottom: 20px;
 `;
@@ -344,13 +344,13 @@ const AlertSeverity = styled.span<{ $severity: string }>`
   color: ${(props) => {
     switch (props.$severity) {
       case 'critical':
-        return '#dc2626';
+        return '#9E2A2A';
       case 'high':
-        return '#f59e0b';
+        return '#B8842A';
       case 'medium':
-        return '#3b82f6';
+        return '#0F6E56';
       default:
-        return '#6b7280';
+        return '#4B4844';
     }
   }};
 `;
@@ -369,7 +369,7 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -380,7 +380,7 @@ const Textarea = styled.textarea`
 
 const CharCount = styled.div<{ $error?: boolean }>`
   font-size: 12px;
-  color: ${(props) => (props.$error ? '#ef4444' : '#6b7280')};
+  color: ${(props) => (props.$error ? '#9E2A2A' : '#4B4844')};
   margin-top: 4px;
 `;
 
@@ -399,7 +399,7 @@ const Checkbox = styled.input`
 
 const CheckboxLabel = styled.label`
   font-size: 14px;
-  color: #374151;
+  color: #0F0F0F;
   cursor: pointer;
   user-select: none;
 `;
@@ -409,7 +409,7 @@ const InfoNote = styled.div`
   gap: 12px;
   padding: 12px;
   background: ${({ theme }) => theme.colors.surface.sunken};
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid #0F6E56;
   border-radius: 6px;
   margin-bottom: 20px;
 `;
@@ -428,9 +428,9 @@ const InfoText = styled.p`
 const ErrorMessage = styled.div`
   padding: 12px;
   background: ${({ theme }) => theme.colors.status.danger};
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid #9E2A2A;
   border-radius: 6px;
-  color: #991b1b;
+  color: #9E2A2A;
   font-size: 14px;
   margin-bottom: 20px;
 `;
@@ -467,7 +467,7 @@ const ResolveButton = styled.button`
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
-  background: #10b981;
+  background: #0F6E56;
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -475,7 +475,7 @@ const ResolveButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: #0B5644;
   }
 
   &:disabled {

@@ -99,14 +99,14 @@ type BlockState = 'empty' | 'planned' | 'growing' | 'fruiting' | 'harvesting' | 
 // ============================================================================
 
 const STATE_COLORS: Record<string, string> = {
-  empty: '#9E9E9E',
-  planned: '#3B82F6',
-  growing: '#10B981',
+  empty: '#4B4844',
+  planned: '#0F6E56',
+  growing: '#0F6E56',
   fruiting: '#A855F7',
-  harvesting: '#F59E0B',
-  cleaning: '#8B5CF6',
-  alert: '#EF4444',
-  partial: '#F97316',
+  harvesting: '#B8842A',
+  cleaning: '#4B4844',
+  alert: '#9E2A2A',
+  partial: '#B85C2A',
 };
 
 const STATE_LABELS: Record<string, string> = {
@@ -430,7 +430,7 @@ const ActionBtn = styled.button<{ $variant?: 'primary' | 'secondary' | 'outline'
       return `
         background: ${theme.colors.status.success};
         color: #ffffff;
-        &:hover { background: #059669; }
+        &:hover { background: #0B5644; }
       `;
     }
     return `

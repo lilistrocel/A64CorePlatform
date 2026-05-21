@@ -114,7 +114,7 @@ const ActionButton = styled.button<{ $variant?: 'edit' | 'clone' | 'delete' | 'c
   ${({ $variant, theme }) => {
     if ($variant === 'edit') {
       return `
-        background: #F59E0B;
+        background: #B8842A;
         color: white;
         &:hover {
           background: #D97706;
@@ -123,19 +123,19 @@ const ActionButton = styled.button<{ $variant?: 'edit' | 'clone' | 'delete' | 'c
     }
     if ($variant === 'clone') {
       return `
-        background: #10B981;
+        background: #0F6E56;
         color: white;
         &:hover {
-          background: #059669;
+          background: #0B5644;
         }
       `;
     }
     if ($variant === 'delete') {
       return `
-        background: #EF4444;
+        background: #9E2A2A;
         color: white;
         &:hover {
-          background: #DC2626;
+          background: #9E2A2A;
         }
       `;
     }
@@ -311,7 +311,7 @@ const FrequencyBadge = styled.span`
   font-size: 11px;
   font-weight: 500;
   background: ${({ theme }) => theme.colors.surface.sunken};
-  color: #1d4ed8;
+  color: #0B5644;
 `;
 
 const IngredientRow = styled.div`
@@ -328,11 +328,11 @@ const IngredientRow = styled.div`
 `;
 
 const IngredientName = styled.span`
-  color: #374151;
+  color: #0F0F0F;
 `;
 
 const IngredientDosage = styled.span`
-  color: #6b7280;
+  color: #4B4844;
   font-weight: 500;
 `;
 
@@ -357,12 +357,12 @@ const StageBadge = styled.span`
   font-size: 11px;
   font-weight: 500;
   background: ${({ theme }) => theme.colors.accent.sageSoft};
-  color: #065f46;
+  color: #0B5644;
 `;
 
 const DayRange = styled.span`
   font-size: 12px;
-  color: #6b7280;
+  color: #4B4844;
 `;
 
 // ============================================================================
@@ -689,7 +689,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                       <FieldLabel>Name</FieldLabel>
                       <FieldValue>
                         <strong>{disease.name}</strong>
-                        {disease.severity && <Badge $color="#EF4444">{disease.severity}</Badge>}
+                        {disease.severity && <Badge $color="#9E2A2A">{disease.severity}</Badge>}
                       </FieldValue>
                     </Field>
                     {disease.symptoms && (
@@ -780,7 +780,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                       <FieldValue>
                         <strong>{grade.gradeName}</strong>
                         {grade.priceMultiplier && (
-                          <Badge $color="#10B981">{grade.priceMultiplier}x price</Badge>
+                          <Badge $color="#0F6E56">{grade.priceMultiplier}x price</Badge>
                         )}
                       </FieldValue>
                     </Field>
@@ -896,7 +896,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                         {' '}
                         Click{' '}
                         <button
-                          style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontSize: 14, textDecoration: 'underline', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: '#0F6E56', cursor: 'pointer', fontSize: 14, textDecoration: 'underline', padding: 0 }}
                           onClick={() => setShowFertigationEditor(true)}
                         >
                           Create Fertigation Schedule
@@ -924,7 +924,7 @@ export function PlantDataDetail({ plant, onClose, onEdit, onClone, onDelete, onS
                           <CardTitle>{card.cardName}</CardTitle>
                           <StageBadge>{card.growthStage}</StageBadge>
                           <DayRange>Day {card.dayStart} - {card.dayEnd}</DayRange>
-                          {!card.isActive && <Badge $color="#EF4444">Inactive</Badge>}
+                          {!card.isActive && <Badge $color="#9E2A2A">Inactive</Badge>}
                         </CardHeader>
                         {card.rules.map((rule, ruleIdx) => (
                           <RuleCard key={ruleIdx}>

@@ -55,7 +55,7 @@ const Badge = styled.span<BadgeProps>`
 const Code = styled.div`
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
-  color: #3B82F6;
+  color: #0F6E56;
   margin-bottom: 8px;
 `;
 

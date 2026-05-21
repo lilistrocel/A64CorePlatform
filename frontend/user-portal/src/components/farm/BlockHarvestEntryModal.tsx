@@ -40,14 +40,14 @@ type QualityGrade = 'A' | 'B' | 'C' | 'Waste';
 const GRADE_OPTIONS: QualityGrade[] = ['A', 'B', 'C', 'Waste'];
 
 const GRADE_COLORS: Record<QualityGrade, string> = {
-  A: '#10B981',
-  B: '#3B82F6',
-  C: '#F59E0B',
-  Waste: '#9CA3AF',
+  A: '#0F6E56',
+  B: '#0F6E56',
+  C: '#B8842A',
+  Waste: '#4B4844',
 };
 
 /** Accent used for the Waste chip border/dot — subtle red to signal rejected. */
-const WASTE_ACCENT = '#EF4444';
+const WASTE_ACCENT = '#9E2A2A';
 
 const GRADE_LABELS: Record<QualityGrade, string> = {
   A: 'Premium',
@@ -407,7 +407,7 @@ const BlockInfo = styled.div`
   padding: ${({ theme }) => theme.space['4']};
   background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: ${({ theme }) => theme.radii.md};
-  border-left: 4px solid #10B981; /* grade-A green: consistent with Operations harvest modal */
+  border-left: 4px solid #0F6E56; /* grade-A green: consistent with Operations harvest modal */
 `;
 
 const BlockLine = styled.div`
@@ -626,7 +626,7 @@ const CancelButton = styled.button`
 const SubmitButton = styled.button<{ $isWaste: boolean }>`
   flex: 1;
   padding: ${({ theme }) => theme.space['4']};
-  background: ${({ $isWaste, theme }) => ($isWaste ? '#9CA3AF' : theme.colors.status.warning)};
+  background: ${({ $isWaste, theme }) => ($isWaste ? '#4B4844' : theme.colors.status.warning)};
   color: white;
   border: none;
   border-radius: ${({ theme }) => theme.radii.md};

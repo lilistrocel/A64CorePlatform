@@ -19,10 +19,10 @@ interface StrainCardProps {
 }
 
 const DIFFICULTY_BG: Record<MushroomDifficulty, string> = {
-  beginner: '#D1FAE5',
-  intermediate: '#DBEAFE',
-  advanced: '#FEF3C7',
-  expert: '#FEE2E2',
+  beginner: 'rgba(15,110,86,0.10)',
+  intermediate: 'rgba(15,110,86,0.08)',
+  advanced: 'rgba(184,132,42,0.10)',
+  expert: 'rgba(158,42,42,0.08)',
 };
 
 export function StrainCard({ strain, onClick, selected = false }: StrainCardProps) {
@@ -248,7 +248,7 @@ const InactiveBanner = styled.div`
   left: 0;
   right: 0;
   background: rgba(0, 0, 0, 0.06);
-  color: #616161;
+  color: #4B4844;
   font-size: 11px;
   font-weight: 600;
   text-align: center;

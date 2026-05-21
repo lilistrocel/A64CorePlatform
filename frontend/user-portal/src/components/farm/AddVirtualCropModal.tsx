@@ -156,7 +156,7 @@ const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
-    background: linear-gradient(90deg, #3b82f6, #0F6E56);
+    background: linear-gradient(90deg, #0F6E56, #0F6E56);
     transition: width 300ms ease-in-out;
   }
 `;
@@ -170,7 +170,7 @@ const AreaBudgetText = styled.div`
 
 const AreaBudgetWarning = styled.div`
   font-size: 12px;
-  color: #f59e0b;
+  color: #B8842A;
   text-align: center;
   font-weight: 500;
 `;
@@ -204,7 +204,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 
   &:disabled {
@@ -229,7 +229,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 
   &:disabled {
@@ -325,10 +325,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
     switch ($variant) {
       case 'primary':
         return `
-          background: #3b82f6;
+          background: #0F6E56;
           color: white;
           &:hover:not(:disabled) {
-            background: #2563eb;
+            background: #0B5644;
           }
         `;
       case 'success':
@@ -367,7 +367,7 @@ const VirtualBlockCodePreview = styled.div`
   border-radius: 6px;
   padding: 16px;
   margin-top: 16px;
-  border: 2px dashed #3b82f6;
+  border: 2px dashed #0F6E56;
 `;
 
 const CodeLabel = styled.div`
@@ -380,7 +380,7 @@ const CodeLabel = styled.div`
 const CodeValue = styled.div`
   font-size: 20px;
   font-weight: 600;
-  color: #3b82f6;
+  color: #0F6E56;
   font-family: 'JetBrains Mono', monospace;
 `;
 

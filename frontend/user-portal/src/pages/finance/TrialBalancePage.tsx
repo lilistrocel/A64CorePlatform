@@ -307,7 +307,7 @@ interface TotalRowProps {
 
 const TotalsTRow = styled.tr<TotalRowProps>`
   border-top: 3px double ${({ $outOfBalance }) =>
-    $outOfBalance ? '#ef4444' : '#d1d5db'};
+    $outOfBalance ? '#9E2A2A' : '#d1d5db'};
   background: ${({ $outOfBalance }) =>
     $outOfBalance ? '#fef2f2' : 'transparent'};
 `;
@@ -325,13 +325,13 @@ const TotalsTdMono = styled.td<TotalRowProps>`
   font-weight: 700;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   text-align: right;
-  color: ${({ $outOfBalance }) => ($outOfBalance ? '#dc2626' : 'inherit')};
+  color: ${({ $outOfBalance }) => ($outOfBalance ? '#9E2A2A' : 'inherit')};
 `;
 
 const OutOfBalanceLabel = styled.span`
   font-size: 11px;
   font-weight: 700;
-  color: #dc2626;
+  color: #9E2A2A;
   display: block;
   margin-top: 2px;
 `;
@@ -356,7 +356,7 @@ const LoadingOverlay = styled.div`
 const ErrorBanner = styled.div`
   padding: 14px 18px;
   background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -366,8 +366,8 @@ const VoidedIncludedPill = styled.span`
   font-size: 11px;
   padding: 2px 10px;
   border-radius: 99px;
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(184,132,42,0.10);
+  color: #B8842A;
   font-weight: 600;
 `;
 
@@ -713,7 +713,7 @@ export function TrialBalancePage() {
                           <TBTr key={acc.accountId}>
                             <AccountNumberCell>{acc.accountNumber}</AccountNumberCell>
                             <TBTd>{acc.accountName}</TBTd>
-                            <TBTd style={{ fontSize: 12, color: '#6b7280' }}>
+                            <TBTd style={{ fontSize: 12, color: '#4B4844' }}>
                               {acc.drawer}
                             </TBTd>
                             <TBTdMono>

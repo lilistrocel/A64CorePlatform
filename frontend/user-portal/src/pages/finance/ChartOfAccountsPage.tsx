@@ -197,8 +197,8 @@ const DangerButton = styled.button`
 const SuccessButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.status.success || '#10b981'};
-  border: 1px solid ${({ theme }) => theme.colors.status.success || '#10b981'};
+  color: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
+  border: 1px solid ${({ theme }) => theme.colors.status.success || '#0F6E56'};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -333,7 +333,7 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'control') {
       return `
-        background: ${theme.colors.surface.sunken || '#eff6ff'};
+        background: ${theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'};
         color: ${theme.colors.status.info || '#0F6E56'};
       `;
     }
@@ -346,7 +346,7 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
     // locked
     return `
       background: ${theme.colors.status.warning || '#fffbeb'};
-      color: ${theme.colors.status.warning || '#f59e0b'};
+      color: ${theme.colors.status.warning || '#B8842A'};
     `;
   }}
 `;
@@ -446,7 +446,7 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   background: ${({ $active, theme }) =>
     $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.status.success || '#10b981' : theme.colors.text.tertiary};
+    $active ? theme.colors.status.success || '#0F6E56' : theme.colors.text.tertiary};
 `;
 
 const FlagRow = styled.div`
@@ -481,19 +481,19 @@ const LevelBadge = styled.span<{ $level: AccountLevel }>`
     if ($level === 'active') {
       return `
         background: ${theme.colors.accent.sageSoft || '#ecfdf5'};
-        color: ${theme.colors.status.success || '#10b981'};
+        color: ${theme.colors.status.success || '#0F6E56'};
       `;
     }
     if ($level === 'title') {
       return `
-        background: ${theme.colors.surface.sunken || '#eff6ff'};
+        background: ${theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'};
         color: ${theme.colors.status.info || '#0F6E56'};
       `;
     }
     // drawer
     return `
       background: ${theme.colors.status.warning || '#fffbeb'};
-      color: ${theme.colors.status.warning || '#f59e0b'};
+      color: ${theme.colors.status.warning || '#B8842A'};
     `;
   }}
 `;
@@ -1538,7 +1538,7 @@ export function ChartOfAccountsPage() {
                 {selectedAccount.isHeader && (
                   <BannerError
                     role="note"
-                    style={{ marginBottom: 20, background: '#fffbeb', color: '#92400e', borderColor: '#fde68a' }}
+                    style={{ marginBottom: 20, background: '#fffbeb', color: '#B8842A', borderColor: '#fde68a' }}
                   >
                     This is a header account. It is a section title and cannot be posted to directly.
                   </BannerError>

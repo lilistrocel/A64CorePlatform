@@ -45,18 +45,18 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
     switch ($variant) {
       case 'primary':
         return `
-          background: #3b82f6;
+          background: #0F6E56;
           color: white;
           &:hover:not(:disabled) {
-            background: #2563eb;
+            background: #0B5644;
           }
         `;
       case 'danger':
         return `
-          background: #ef4444;
+          background: #9E2A2A;
           color: white;
           &:hover:not(:disabled) {
-            background: #dc2626;
+            background: #9E2A2A;
           }
         `;
       default:
@@ -89,15 +89,15 @@ const AlertCard = styled.div<{ $severity: AlertSeverity; $status: string }>`
     ${({ $severity }) => {
       switch ($severity) {
         case 'critical':
-          return '#ef4444';
+          return '#9E2A2A';
         case 'high':
-          return '#f97316';
+          return '#B85C2A';
         case 'medium':
           return '#eab308';
         case 'low':
-          return '#3b82f6';
+          return '#0F6E56';
         default:
-          return '#e0e0e0';
+          return '#DCD8CF';
       }
     }};
   border-radius: 8px;
@@ -129,13 +129,13 @@ const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
   background: ${({ $severity, theme }) => {
     switch ($severity) {
       case 'critical':
-        return '#ef4444';
+        return '#9E2A2A';
       case 'high':
-        return '#f97316';
+        return '#B85C2A';
       case 'medium':
         return '#eab308';
       case 'low':
-        return '#3b82f6';
+        return '#0F6E56';
       default:
         return theme.colors.text.tertiary;
     }
@@ -239,7 +239,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -261,7 +261,7 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -276,7 +276,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 

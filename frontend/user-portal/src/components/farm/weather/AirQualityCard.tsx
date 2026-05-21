@@ -133,14 +133,14 @@ const PollenLevel = styled.div<{ $level: number }>`
 
   background: ${({ $level }) => {
     if ($level === 0) return '#E5E7EB';   // None - gray
-    if ($level === 1) return '#D1FAE5';   // Low - green
-    if ($level === 2) return '#FEF3C7';   // Moderate - yellow
+    if ($level === 1) return 'rgba(15,110,86,0.10)';   // Low - green
+    if ($level === 2) return 'rgba(184,132,42,0.10)';   // Moderate - yellow
     if ($level === 3) return '#FED7AA';   // High - orange
     return '#FECACA';                      // Very High - red
   }};
 
   color: ${({ $level }) => {
-    if ($level === 0) return '#6B7280';   // None - gray
+    if ($level === 0) return '#4B4844';   // None - gray
     if ($level === 1) return '#065F46';   // Low - green
     if ($level === 2) return '#92400E';   // Moderate - yellow
     if ($level === 3) return '#C2410C';   // High - orange
@@ -206,8 +206,8 @@ export function AirQualityCard({ airQuality }: AirQualityCardProps) {
   }
 
   const aqiColor = airQuality.aqiCategory
-    ? AQI_CATEGORY_COLORS[airQuality.aqiCategory] || '#6B7280'
-    : '#6B7280';
+    ? AQI_CATEGORY_COLORS[airQuality.aqiCategory] || '#4B4844'
+    : '#4B4844';
 
   return (
     <Card>

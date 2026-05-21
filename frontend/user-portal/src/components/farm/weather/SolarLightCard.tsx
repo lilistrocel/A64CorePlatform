@@ -134,12 +134,12 @@ const UVIndicator = styled.div<{ $level: 'low' | 'moderate' | 'high' | 'very_hig
 
   background: ${({ $level }) => {
     switch ($level) {
-      case 'low': return '#D1FAE5';
-      case 'moderate': return '#FEF3C7';
+      case 'low': return 'rgba(15,110,86,0.10)';
+      case 'moderate': return 'rgba(184,132,42,0.10)';
       case 'high': return '#FED7AA';
       case 'very_high': return '#FECACA';
       case 'extreme': return '#E9D5FF';
-      default: return '#F3F4F6';
+      default: return '#DCD8CF';
     }
   }};
 
@@ -150,7 +150,7 @@ const UVIndicator = styled.div<{ $level: 'low' | 'moderate' | 'high' | 'very_hig
       case 'high': return '#C2410C';
       case 'very_high': return '#B91C1C';
       case 'extreme': return '#7C3AED';
-      default: return '#374151';
+      default: return '#0F0F0F';
     }
   }};
 `;
@@ -224,7 +224,7 @@ const EstimatedBadge = styled.span`
 `;
 
 const DLIHighlight = styled.div`
-  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  background: linear-gradient(135deg, #ECFDF5 0%, rgba(15,110,86,0.10) 100%);
   border: 1px solid #A7F3D0;
   border-radius: 10px;
   padding: 14px;
@@ -262,13 +262,13 @@ const DLIHighlight = styled.div`
 
     .unit {
       font-size: 12px;
-      color: #059669;
+      color: #0B5644;
     }
   }
 
   .note {
     font-size: 11px;
-    color: #6B7280;
+    color: #4B4844;
     margin-top: 6px;
   }
 `;

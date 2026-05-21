@@ -20,10 +20,10 @@ import type { RevenueSourcesResponse } from '../../types/finance';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const SOURCE_COLORS: Record<string, string> = {
-  excel_match: '#10B981',
+  excel_match: '#0F6E56',
   excel_alias_match: '#0F6E56',
-  imputed: '#F59E0B',
-  no_data: '#9e9e9e',
+  imputed: '#B8842A',
+  no_data: '#4B4844',
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -156,8 +156,8 @@ const WarningBanner = styled.div`
   align-items: flex-start;
   gap: ${({ theme }) => theme.space['2']};
   padding: ${({ theme }) => theme.space['4']};
-  background: #FEF3C7;
-  border: 1px solid #F59E0B;
+  background: rgba(184,132,42,0.10);
+  border: 1px solid #B8842A;
   border-radius: ${({ theme }) => theme.radii.md};
   margin-top: ${({ theme }) => theme.space['6']};
   font-size: ${({ theme }) => theme.fontSizes.bodySm};
@@ -253,7 +253,7 @@ export function PnlRevenueConfidence({
                     {data.sources.map((entry) => (
                       <Cell
                         key={entry.priceSource}
-                        fill={SOURCE_COLORS[entry.priceSource] || '#9e9e9e'}
+                        fill={SOURCE_COLORS[entry.priceSource] || '#4B4844'}
                       />
                     ))}
                   </Pie>
@@ -264,7 +264,7 @@ export function PnlRevenueConfidence({
                     ]}
                     contentStyle={{
                       borderRadius: '8px',
-                      border: '1px solid #e0e0e0',
+                      border: '1px solid #DCD8CF',
                       fontSize: '13px',
                     }}
                   />
@@ -277,7 +277,7 @@ export function PnlRevenueConfidence({
             <LegendList aria-label="Revenue confidence breakdown">
               {data.sources.map((entry) => (
                 <LegendItem key={entry.priceSource}>
-                  <Dot $color={SOURCE_COLORS[entry.priceSource] || '#9e9e9e'} aria-hidden="true" />
+                  <Dot $color={SOURCE_COLORS[entry.priceSource] || '#4B4844'} aria-hidden="true" />
                   <LegendText>
                     <LegendLabel>
                       {SOURCE_LABELS[entry.priceSource] || entry.label}

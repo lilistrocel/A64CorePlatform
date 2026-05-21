@@ -91,7 +91,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 
   &:disabled {
@@ -119,11 +119,11 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant, theme }) =>
     $variant === 'primary'
       ? `
-    background: #3B82F6;
+    background: #0F6E56;
     color: white;
 
     &:hover:not(:disabled) {
-      background: #2563EB;
+      background: #0B5644;
     }
   `
       : `
@@ -194,7 +194,7 @@ const MapLoadingFallback = styled.div`
 
 const MapHint = styled.p`
   font-size: 12px;
-  color: #6B7280;
+  color: #4B4844;
   margin: 8px 0 0 0;
 `;
 

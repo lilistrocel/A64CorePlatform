@@ -348,7 +348,7 @@ export const useDashboardStore = create<DashboardState>()(
             xKey: 'farm',
             yKey: 'blocks',
             series: [
-              { name: 'Blocks', dataKey: 'blocks', color: '#3b82f6' },
+              { name: 'Blocks', dataKey: 'blocks', color: '#0F6E56' },
             ],
           };
           break;

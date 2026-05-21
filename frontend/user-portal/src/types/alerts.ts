@@ -182,7 +182,7 @@ export const ALERT_STATUS_CONFIG: Record<AlertStatus, AlertStatusConfig> = {
   },
   dismissed: {
     label: 'Dismissed',
-    color: '#9E9E9E', // Gray
+    color: '#4B4844', // Gray
     icon: '❌',
   },
 };

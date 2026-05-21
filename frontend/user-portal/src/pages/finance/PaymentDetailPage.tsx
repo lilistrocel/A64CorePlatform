@@ -50,7 +50,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 const METHOD_COLORS: Record<PaymentMethod, { bg: string; text: string }> = {
-  bank_transfer: { bg: '#dbeafe', text: '#1e40af' },
+  bank_transfer: { bg: 'rgba(15,110,86,0.08)', text: '#1e40af' },
   cheque: { bg: '#fef9c3', text: '#854d0e' },
   cash: { bg: '#dcfce7', text: '#166534' },
 };
@@ -105,14 +105,14 @@ const ActionsRow = styled.div`
 const ReverseButton = styled.button`
   padding: 9px 18px;
   background: #fef2f2;
-  color: #991b1b;
+  color: #9E2A2A;
   border: 1px solid #fca5a5;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: #fee2e2; }
+  &:hover { background: rgba(158,42,42,0.08); }
 `;
 
 const ReversedBanner = styled.div`
@@ -123,7 +123,7 @@ const ReversedBanner = styled.div`
   margin-bottom: 20px;
   background: #fef2f2;
   border: 1px solid #fca5a5;
-  border-left: 4px solid #dc2626;
+  border-left: 4px solid #9E2A2A;
   border-radius: 8px;
   color: #7f1d1d;
   font-size: 14px;
@@ -139,8 +139,8 @@ const ReversedTag = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  background: #fee2e2;
-  color: #991b1b;
+  background: rgba(158,42,42,0.08);
+  color: #9E2A2A;
   border: 1px solid #fca5a5;
   margin-left: 10px;
   vertical-align: middle;
@@ -322,7 +322,7 @@ const ErrorState = styled.div`
   padding: 48px;
   text-align: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
 `;
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -361,7 +361,7 @@ export function PaymentDetailPage() {
   }
 
   const methodLabel = METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod;
-  const methodColor = METHOD_COLORS[payment.paymentMethod] ?? { bg: '#f3f4f6', text: '#374151' };
+  const methodColor = METHOD_COLORS[payment.paymentMethod] ?? { bg: '#DCD8CF', text: '#0F0F0F' };
   const isReversed = Boolean(payment.je?.reversedByJeNumber);
 
   const applicationsTotal = payment.applications.reduce(
@@ -451,7 +451,7 @@ export function PaymentDetailPage() {
             <MetaValue>
               <strong>{payment.vendorCode}</strong>
               {payment.vendorName && (
-                <span style={{ fontWeight: 400, marginLeft: 6, color: '#6b7280' }}>
+                <span style={{ fontWeight: 400, marginLeft: 6, color: '#4B4844' }}>
                   {payment.vendorName}
                 </span>
               )}
@@ -468,7 +468,7 @@ export function PaymentDetailPage() {
           <MetaField>
             <MetaLabel>Reference #</MetaLabel>
             <MetaValue>
-              {payment.referenceNumber ?? <span style={{ color: '#9ca3af' }}>—</span>}
+              {payment.referenceNumber ?? <span style={{ color: '#4B4844' }}>—</span>}
             </MetaValue>
           </MetaField>
           <MetaField>
@@ -503,7 +503,7 @@ export function PaymentDetailPage() {
       <Card>
         <CardTitle>Applied Invoices ({payment.applications.length})</CardTitle>
         {payment.applications.length === 0 ? (
-          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>
+          <p style={{ fontSize: 14, color: '#4B4844', margin: 0 }}>
             No invoice applications recorded.
           </p>
         ) : (
@@ -519,7 +519,7 @@ export function PaymentDetailPage() {
               <tbody>
                 {payment.applications.map((app, idx) => (
                   <tr key={app.applicationId}>
-                    <Td style={{ color: '#6b7280', width: 48 }}>{idx + 1}</Td>
+                    <Td style={{ color: '#4B4844', width: 48 }}>{idx + 1}</Td>
                     <Td>
                       <InvoiceLink
                         onClick={() => handleInvoiceClick(app.apDocId)}
@@ -565,7 +565,7 @@ export function PaymentDetailPage() {
             </JeInlineSummary>
           </JeSummaryRow>
           {canReverse && !isReversed && (
-            <p style={{ fontSize: 13, color: '#6b7280', marginTop: 12, marginBottom: 0 }}>
+            <p style={{ fontSize: 13, color: '#4B4844', marginTop: 12, marginBottom: 0 }}>
               To reverse this payment, click "Reverse this Payment" above. This will
               navigate to the linked journal entry where you can trigger the reversal.
             </p>

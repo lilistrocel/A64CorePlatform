@@ -77,13 +77,13 @@ const PrimaryButton = styled.button`
 `;
 
 const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.status.success || '#10b981'};
-  &:hover { background: #059669; }
+  background: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
+  &:hover { background: #0B5644; }
 `;
 
 const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
-  &:hover { background: #dc2626; }
+  background: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
+  &:hover { background: #9E2A2A; }
 `;
 
 const GhostButton = styled.button`
@@ -236,7 +236,7 @@ const Textarea = styled.textarea`
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -302,11 +302,11 @@ export function PurchaseOrderDetailPage() {
       <TitleRow>
         <div>
           <Title>{po.docNumber}</Title>
-          <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: '#4B4844', marginTop: 4 }}>
             Vendor: {po.vendorName ?? po.vendorCode ?? '—'} •{' '}
             {po.baseDocId && (
               <span
-                style={{ color: '#2563eb', cursor: 'pointer' }}
+                style={{ color: '#0B5644', cursor: 'pointer' }}
                 onClick={() => navigate(`/purchasing/pr/${po.baseDocId}`)}
               >
                 Based on PR
@@ -418,7 +418,7 @@ export function PurchaseOrderDetailPage() {
                 <Td>{line.lineNumber}</Td>
                 <Td>
                   <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{line.itemName}</div>
+                  <div style={{ fontSize: 12, color: '#4B4844' }}>{line.itemName}</div>
                 </Td>
                 <Td>{line.uom}</Td>
                 <Td>{line.quantity}</Td>
@@ -453,7 +453,7 @@ export function PurchaseOrderDetailPage() {
               <CloseButton onClick={() => { setShowRejectModal(false); setRejectComment(''); }}>✕</CloseButton>
             </ModalHeader>
             <ModalBody>
-              <p style={{ fontSize: 14, color: '#6b7280', marginTop: 0 }}>
+              <p style={{ fontSize: 14, color: '#4B4844', marginTop: 0 }}>
                 Please provide a reason for rejecting {po.docNumber}.
               </p>
               <Textarea

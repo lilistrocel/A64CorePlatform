@@ -966,7 +966,7 @@ const GreenLed = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #10B981;
+  background: #0F6E56;
   flex-shrink: 0;
   animation: ${ledPulse} 2s ease-in-out infinite;
 `;

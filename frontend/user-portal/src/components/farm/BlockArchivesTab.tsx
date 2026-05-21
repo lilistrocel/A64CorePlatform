@@ -211,10 +211,10 @@ const EfficiencyBadge = styled.span<{ $efficiency: number }>`
   font-size: 14px;
   font-weight: 600;
   background: ${({ $efficiency }) => {
-    if ($efficiency >= 90) return '#10b981';
+    if ($efficiency >= 90) return '#0F6E56';
     if ($efficiency >= 75) return '#8bc34a';
     if ($efficiency >= 60) return '#eab308';
-    return '#f97316';
+    return '#B85C2A';
   }};
   color: white;
 `;

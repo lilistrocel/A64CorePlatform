@@ -63,9 +63,9 @@ const Tr = styled.tr`cursor: pointer; transition: background 100ms ease; &:hover
 const Badge = styled.span<{ $active: boolean }>`
   display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600;
   background: ${({ $active, theme }) => $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
-  color: ${({ $active, theme }) => $active ? theme.colors.status.success || '#10b981' : theme.colors.text.tertiary};
+  color: ${({ $active, theme }) => $active ? theme.colors.status.success || '#0F6E56' : theme.colors.text.tertiary};
 `;
-const TypeBadge = styled.span`display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'}; color: ${({ theme }) => theme.colors.status.info || '#3b82f6'};`;
+const TypeBadge = styled.span`display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${({ theme }) => theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'}; color: ${({ theme }) => theme.colors.status.info || '#0F6E56'};`;
 const EmptyState = styled.div`text-align: center; padding: 64px 32px; color: ${({ theme }) => theme.colors.text.secondary}; font-size: 15px;`;
 const Pagination = styled.div`display: flex; justify-content: space-between; align-items: center; padding: 16px 0; font-size: 14px; color: ${({ theme }) => theme.colors.text.secondary};`;
 const PageButtons = styled.div`display: flex; gap: 8px;`;

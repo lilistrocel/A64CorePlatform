@@ -47,8 +47,8 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: #3B82F6;
-  border: 1px solid #3B82F6;
+  color: #0F6E56;
+  border: 1px solid #0F6E56;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -78,15 +78,15 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: #EF4444;
-        border: 1px solid #EF4444;
+        color: #9E2A2A;
+        border: 1px solid #9E2A2A;
         &:hover {
-          background: #FEE2E2;
+          background: rgba(158,42,42,0.08);
         }
       `;
     }
     return `
-      background: #3B82F6;
+      background: #0F6E56;
       color: white;
       &:hover {
         background: #0F6E56;
@@ -110,9 +110,9 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  background: #FEE2E2;
-  border: 1px solid #EF4444;
-  color: #991B1B;
+  background: rgba(158,42,42,0.08);
+  border: 1px solid #9E2A2A;
+  color: #9E2A2A;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -173,9 +173,9 @@ const TabsContainer = styled.div`
 const Tab = styled.button<{ $active: boolean }>`
   padding: 12px 24px;
   background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.text.secondary)};
+  color: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.text.secondary)};
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -184,7 +184,7 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    color: #3B82F6;
+    color: #0F6E56;
   }
 `;
 

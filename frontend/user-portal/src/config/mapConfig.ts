@@ -98,11 +98,11 @@ export const MAP_CONTROLS = {
  */
 export const FARM_POLYGON_STYLE = {
   fill: {
-    color: '#10B981', // Green
+    color: '#0F6E56', // Green
     opacity: 0.2,
   },
   stroke: {
-    color: '#059669', // Darker green
+    color: '#0B5644', // Darker green
     width: 3,
   },
 };
@@ -111,13 +111,13 @@ export const FARM_POLYGON_STYLE = {
  * Polygon styling for blocks by status
  */
 export const BLOCK_POLYGON_COLORS: Record<string, { fill: string; stroke: string }> = {
-  empty: { fill: '#9CA3AF', stroke: '#6B7280' },      // Gray
-  planned: { fill: '#3B82F6', stroke: '#2563EB' },    // Blue
-  growing: { fill: '#10B981', stroke: '#059669' },    // Green
+  empty: { fill: '#4B4844', stroke: '#4B4844' },      // Gray
+  planned: { fill: '#0F6E56', stroke: '#0B5644' },    // Blue
+  growing: { fill: '#0F6E56', stroke: '#0B5644' },    // Green
   fruiting: { fill: '#A855F7', stroke: '#9333EA' },   // Purple
-  harvesting: { fill: '#F59E0B', stroke: '#D97706' }, // Yellow/Orange
-  cleaning: { fill: '#F97316', stroke: '#EA580C' },   // Orange
-  alert: { fill: '#EF4444', stroke: '#DC2626' },      // Red
+  harvesting: { fill: '#B8842A', stroke: '#D97706' }, // Yellow/Orange
+  cleaning: { fill: '#B85C2A', stroke: '#EA580C' },   // Orange
+  alert: { fill: '#9E2A2A', stroke: '#9E2A2A' },      // Red
   partial: { fill: '#06B6D4', stroke: '#0891B2' },    // Cyan
 };
 
@@ -127,14 +127,14 @@ export const BLOCK_POLYGON_COLORS: Record<string, { fill: string; stroke: string
 export const BOUNDARY_COLORS = {
   // Farm boundaries - Orange/Amber for clear distinction
   farm: {
-    fill: '#F59E0B',      // Amber
+    fill: '#B8842A',      // Amber
     stroke: '#D97706',    // Darker amber
     fillOpacity: 0.15,
   },
   // Block boundaries - Blue for active drawing
   block: {
-    fill: '#3B82F6',      // Blue
-    stroke: '#2563EB',    // Darker blue
+    fill: '#0F6E56',      // Blue
+    stroke: '#0B5644',    // Darker blue
     fillOpacity: 0.25,
   },
 };

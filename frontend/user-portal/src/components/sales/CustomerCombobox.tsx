@@ -65,7 +65,7 @@ const Wrapper = styled.div`
 const ComboInput = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+    ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   background: ${({ theme }) => theme.colors.surface.canvas};
@@ -80,7 +80,7 @@ const ComboInput = styled.input<{ $hasError?: boolean }>`
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError }) => ($hasError ? '#EF4444' : '#3B82F6')};
+    border-color: ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#0F6E56')};
     box-shadow: 0 0 0 3px
       ${({ $hasError }) =>
         $hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'};
@@ -102,7 +102,7 @@ const SelectedChip = styled.div<{ $hasError?: boolean }>`
   gap: 12px;
   padding: 12px 12px 12px 16px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
+    ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface.raised};
   font-size: 14px;
@@ -138,11 +138,11 @@ const ClearButton = styled.button`
 
   &:hover {
     background: rgba(239, 68, 68, 0.1);
-    color: #EF4444;
+    color: #9E2A2A;
   }
 
   &:focus-visible {
-    outline: 2px solid #EF4444;
+    outline: 2px solid #9E2A2A;
     outline-offset: 2px;
   }
 
@@ -204,7 +204,7 @@ const DropdownState = styled.li`
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: #ef4444;
+  color: #9E2A2A;
 `;
 
 const BrokenLinkWarning = styled.div`
@@ -212,8 +212,8 @@ const BrokenLinkWarning = styled.div`
   align-items: flex-start;
   gap: 6px;
   font-size: 12px;
-  color: #92400e; /* amber-800 */
-  background: #fef3c7; /* amber-100 */
+  color: #B8842A; /* amber-800 */
+  background: rgba(184,132,42,0.10); /* amber-100 */
   border: 1px solid #fcd34d; /* amber-300 */
   border-radius: 6px;
   padding: 6px 10px;
@@ -225,7 +225,7 @@ const Spinner = styled.span`
   width: 14px;
   height: 14px;
   border: 2px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   vertical-align: middle;

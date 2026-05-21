@@ -58,14 +58,14 @@ const TABS: Array<{ key: TabType; label: string; icon: string }> = [
 ];
 
 const STATE_COLORS: Record<string, string> = {
-  empty: '#6B7280',
-  planned: '#3B82F6',
-  planted: '#10B981',
-  growing: '#10B981',
+  empty: '#4B4844',
+  planned: '#0F6E56',
+  planted: '#0F6E56',
+  growing: '#0F6E56',
   fruiting: '#A855F7',
-  harvesting: '#F59E0B',
-  cleaning: '#F97316',
-  alert: '#EF4444',
+  harvesting: '#B8842A',
+  cleaning: '#B85C2A',
+  alert: '#9E2A2A',
 };
 
 const STATE_ICONS: Record<string, string> = {
@@ -220,14 +220,14 @@ function OverviewTab({ analytics }: { analytics: any }) {
 
   const performanceScore = analytics.aggregatedMetrics.overallPerformanceScore ?? 0;
   const performanceColor =
-    performanceScore >= 80 ? '#10B981' : performanceScore >= 60 ? '#3B82F6' : performanceScore >= 40 ? '#F59E0B' : '#EF4444';
+    performanceScore >= 80 ? '#0F6E56' : performanceScore >= 60 ? '#0F6E56' : performanceScore >= 40 ? '#B8842A' : '#9E2A2A';
 
   // Prepare state breakdown pie chart data
   const stateData = Object.entries(analytics.stateBreakdown)
     .map(([state, info]: [string, any]) => ({
       name: state.charAt(0).toUpperCase() + state.slice(1),
       value: info.count,
-      color: STATE_COLORS[state] || '#6B7280',
+      color: STATE_COLORS[state] || '#4B4844',
     }))
     .filter((item) => item.value > 0);
 
@@ -405,10 +405,10 @@ function ComparisonTab({ analytics }: { analytics: any }) {
   });
 
   const getPerformanceColor = (score: number) => {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#3B82F6';
-    if (score >= 40) return '#F59E0B';
-    return '#EF4444';
+    if (score >= 80) return '#0F6E56';
+    if (score >= 60) return '#0F6E56';
+    if (score >= 40) return '#B8842A';
+    return '#9E2A2A';
   };
 
   return (
@@ -457,7 +457,7 @@ function ComparisonTab({ analytics }: { analytics: any }) {
                   <TableCell $bold>{block.blockCode}</TableCell>
                   <TableCell>{block.name || '-'}</TableCell>
                   <TableCell>
-                    <StateBadge $color={STATE_COLORS[block.state] || '#6B7280'}>
+                    <StateBadge $color={STATE_COLORS[block.state] || '#4B4844'}>
                       {block.state.charAt(0).toUpperCase() + block.state.slice(1)}
                     </StateBadge>
                   </TableCell>
@@ -516,10 +516,10 @@ function TrendsTab({ analytics }: { analytics: any }) {
 
   const getTrendColor = () => {
     switch (analytics.historicalTrends.performanceTrend) {
-      case 'improving': return '#10B981';
-      case 'stable': return '#3B82F6';
-      case 'declining': return '#EF4444';
-      default: return '#9e9e9e';
+      case 'improving': return '#0F6E56';
+      case 'stable': return '#0F6E56';
+      case 'declining': return '#9E2A2A';
+      default: return '#4B4844';
     }
   };
 
@@ -573,8 +573,8 @@ function TrendsTab({ analytics }: { analytics: any }) {
                   }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="totalYieldKg" stroke="#10B981" name="Total Yield" strokeWidth={2} />
-                <Line type="monotone" dataKey="harvestCount" stroke="#3B82F6" name="Harvest Count" strokeWidth={2} />
+                <Line type="monotone" dataKey="totalYieldKg" stroke="#0F6E56" name="Total Yield" strokeWidth={2} />
+                <Line type="monotone" dataKey="harvestCount" stroke="#0F6E56" name="Harvest Count" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -623,7 +623,7 @@ function StatesTab({ analytics }: { analytics: any }) {
 
         const stateLabel = state.charAt(0).toUpperCase() + state.slice(1);
         const stateIcon = STATE_ICONS[state] || '⚪';
-        const stateColor = STATE_COLORS[state] || '#6B7280';
+        const stateColor = STATE_COLORS[state] || '#4B4844';
 
         return (
           <Section key={state}>
@@ -772,7 +772,7 @@ const PeriodSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -816,12 +816,12 @@ const Tab = styled.button<{ $active: boolean }>`
   padding: 14px 20px;
   border: none;
   background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.text.secondary)};
+  color: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.text.secondary)};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '600' : '500')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   white-space: nowrap;
 
   &:hover {
@@ -1125,7 +1125,7 @@ const FrequencyIcon = styled.div`
 const FrequencyValue = styled.div`
   font-size: 48px;
   font-weight: 700;
-  color: #3b82f6;
+  color: #0F6E56;
 `;
 
 const FrequencyLabel = styled.div`
@@ -1181,7 +1181,7 @@ const TransitionArrow = styled.span`
 
 const TransitionState = styled.span`
   font-weight: 500;
-  color: #3b82f6;
+  color: #0F6E56;
 `;
 
 const StateHeader = styled.div`
@@ -1269,7 +1269,7 @@ const LoadingSpinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -1318,14 +1318,14 @@ const RetryButton = styled.button`
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  background: #3b82f6;
+  background: #0F6E56;
   color: white;
   border: none;
   cursor: pointer;
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #2563eb;
+    background: #0B5644;
   }
 `;
 

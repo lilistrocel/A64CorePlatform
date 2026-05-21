@@ -208,7 +208,7 @@ const SearchForm = styled.form`
 `;
 
 const SearchIcon = styled.div`
-  color: #9ca3af;
+  color: #4B4844;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -232,7 +232,7 @@ const LoadingSpinner = styled.div`
   width: 16px;
   height: 16px;
   border: 2px solid #e5e7eb;
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
@@ -293,14 +293,14 @@ const ResultItem = styled.li`
 `;
 
 const ResultIcon = styled.div`
-  color: #3b82f6;
+  color: #0F6E56;
   flex-shrink: 0;
   margin-top: 2px;
 `;
 
 const ResultText = styled.span`
   font-size: 13px;
-  color: #374151;
+  color: #0F0F0F;
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -315,7 +315,7 @@ const ErrorMessage = styled.div`
   left: 0;
   right: 0;
   background: ${({ theme }) => theme.colors.status.danger};
-  color: #dc2626;
+  color: #9E2A2A;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;

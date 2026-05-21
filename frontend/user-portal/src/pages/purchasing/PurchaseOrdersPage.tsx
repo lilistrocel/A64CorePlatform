@@ -68,9 +68,9 @@ const Chip = styled.button<{ $active: boolean }>`
   border: 1px solid ${({ $active, theme }) =>
     $active ? theme.colors.accent.sage : theme.colors.border.subtle};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageSoft || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.accent.sageSoft || 'rgba(15,110,86,0.05)' : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageDeep || '#1d4ed8' : theme.colors.text.secondary};
+    $active ? theme.colors.accent.sageDeep || '#0B5644' : theme.colors.text.secondary};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
@@ -147,28 +147,28 @@ const StatusBadge = styled.span<{ $status: POStatus }>`
   font-weight: 600;
   background: ${({ $status }) => {
     switch ($status) {
-      case 'Draft': return '#f3f4f6';
-      case 'Pending Approval': return '#fef3c7';
-      case 'Open': return '#dbeafe';
-      case 'Sent': return '#d1fae5';
+      case 'Draft': return '#DCD8CF';
+      case 'Pending Approval': return 'rgba(184,132,42,0.10)';
+      case 'Open': return 'rgba(15,110,86,0.08)';
+      case 'Sent': return 'rgba(15,110,86,0.10)';
       case 'Partially Received': return '#e0e7ff';
       case 'Received': return '#ecfdf5';
       case 'Closed': return '#ede9fe';
-      case 'Cancelled': return '#f3f4f6';
-      default: return '#f3f4f6';
+      case 'Cancelled': return '#DCD8CF';
+      default: return '#DCD8CF';
     }
   }};
   color: ${({ $status }) => {
     switch ($status) {
-      case 'Draft': return '#6b7280';
-      case 'Pending Approval': return '#92400e';
-      case 'Open': return '#1d4ed8';
-      case 'Sent': return '#065f46';
+      case 'Draft': return '#4B4844';
+      case 'Pending Approval': return '#B8842A';
+      case 'Open': return '#0B5644';
+      case 'Sent': return '#0B5644';
       case 'Partially Received': return '#3730a3';
-      case 'Received': return '#065f46';
+      case 'Received': return '#0B5644';
       case 'Closed': return '#5b21b6';
-      case 'Cancelled': return '#9ca3af';
-      default: return '#6b7280';
+      case 'Cancelled': return '#4B4844';
+      default: return '#4B4844';
     }
   }};
 `;
@@ -305,7 +305,7 @@ export function PurchaseOrdersPage() {
                   <Td>
                     {po.baseDocId ? (
                       <span
-                        style={{ color: '#2563eb', cursor: 'pointer', fontSize: 12 }}
+                        style={{ color: '#0B5644', cursor: 'pointer', fontSize: 12 }}
                         onClick={(e) => { e.stopPropagation(); navigate(`/purchasing/pr/${po.baseDocId}`); }}
                       >
                         From PR

@@ -162,7 +162,7 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #DCD8CF;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -171,7 +171,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #212121;
+  color: #0F0F0F;
   margin: 0;
 `;
 
@@ -212,11 +212,11 @@ const BlockInfo = styled.div`
 
 const InfoLabel = styled.span`
   font-weight: 600;
-  color: #616161;
+  color: #4B4844;
 `;
 
 const InfoValue = styled.span`
-  color: #212121;
+  color: #0F0F0F;
 `;
 
 const FormGroup = styled.div`
@@ -227,7 +227,7 @@ const Label = styled.label`
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #212121;
+  color: #0F0F0F;
   margin-bottom: 8px;
 `;
 
@@ -243,7 +243,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
   }
 
   &:disabled {
@@ -263,7 +263,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: #0F6E56;
   }
 `;
 
@@ -301,7 +301,7 @@ const ConfirmButton = styled.button`
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
-  background: #3B82F6;
+  background: #0F6E56;
   color: white;
   font-size: 14px;
   font-weight: 600;

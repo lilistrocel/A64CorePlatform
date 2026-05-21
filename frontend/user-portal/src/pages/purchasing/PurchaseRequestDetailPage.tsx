@@ -76,13 +76,13 @@ const PrimaryButton = styled.button`
 `;
 
 const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.status.success || '#10b981'};
-  &:hover { background: #059669; }
+  background: ${({ theme }) => theme.colors.status.success || '#0F6E56'};
+  &:hover { background: #0B5644; }
 `;
 
 const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
-  &:hover { background: #dc2626; }
+  background: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
+  &:hover { background: #9E2A2A; }
 `;
 
 const GhostButton = styled.button`
@@ -166,7 +166,7 @@ const StatusBadge = styled.span<{ color?: string }>`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ color }) => color || '#f3f4f6'};
+  background: ${({ color }) => color || '#DCD8CF'};
 `;
 
 const ApprovalCard = styled(Card)`
@@ -312,7 +312,7 @@ export function PurchaseRequestDetailPage() {
       <TitleRow>
         <div>
           <Title>{pr.docNumber}</Title>
-          <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: '#4B4844', marginTop: 4 }}>
             {pr.department && `${pr.department} • `}Urgency: {pr.urgency} • Created {formatDate(pr.docDate)}
           </div>
         </div>
@@ -424,7 +424,7 @@ export function PurchaseRequestDetailPage() {
                 <Td>{line.lineNumber}</Td>
                 <Td>
                   <div style={{ fontWeight: 600 }}>{line.itemCode}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{line.itemName}</div>
+                  <div style={{ fontSize: 12, color: '#4B4844' }}>{line.itemName}</div>
                 </Td>
                 <Td>{line.description ?? '—'}</Td>
                 <Td>{line.uom}</Td>
@@ -459,7 +459,7 @@ export function PurchaseRequestDetailPage() {
               <CloseButton onClick={() => { setShowRejectModal(false); setRejectComment(''); }}>✕</CloseButton>
             </ModalHeader>
             <ModalBody>
-              <p style={{ fontSize: 14, color: '#6b7280', marginTop: 0 }}>
+              <p style={{ fontSize: 14, color: '#4B4844', marginTop: 0 }}>
                 Please provide a reason for rejecting {pr.docNumber}.
               </p>
               <Textarea

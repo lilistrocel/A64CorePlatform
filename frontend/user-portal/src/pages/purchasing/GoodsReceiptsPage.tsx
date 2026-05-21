@@ -71,9 +71,9 @@ const Chip = styled.button<{ $active: boolean }>`
   border: 1px solid ${({ $active, theme }) =>
     $active ? theme.colors.accent.sage : theme.colors.border.subtle};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageSoft || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.accent.sageSoft || 'rgba(15,110,86,0.05)' : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.sageDeep || '#1d4ed8' : theme.colors.text.secondary};
+    $active ? theme.colors.accent.sageDeep || '#0B5644' : theme.colors.text.secondary};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
@@ -150,16 +150,16 @@ const StatusBadge = styled.span<{ $status: GRStatus }>`
   font-weight: 600;
   background: ${({ $status }) => {
     switch ($status) {
-      case 'Draft':   return '#f3f4f6';
-      case 'Posted':  return '#d1fae5';
-      default:        return '#f3f4f6';
+      case 'Draft':   return '#DCD8CF';
+      case 'Posted':  return 'rgba(15,110,86,0.10)';
+      default:        return '#DCD8CF';
     }
   }};
   color: ${({ $status }) => {
     switch ($status) {
-      case 'Draft':   return '#6b7280';
-      case 'Posted':  return '#065f46';
-      default:        return '#6b7280';
+      case 'Draft':   return '#4B4844';
+      case 'Posted':  return '#0B5644';
+      default:        return '#4B4844';
     }
   }};
 `;
@@ -290,7 +290,7 @@ export function GoodsReceiptsPage() {
                   <Td>
                     {gr.baseDocNumber ? (
                       <span
-                        style={{ color: '#2563eb', cursor: 'pointer', fontSize: 13 }}
+                        style={{ color: '#0B5644', cursor: 'pointer', fontSize: 13 }}
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/purchasing/po/${gr.baseDocId}`);
@@ -306,7 +306,7 @@ export function GoodsReceiptsPage() {
                   <Td>
                     <StatusBadge $status={gr.status}>{gr.status}</StatusBadge>
                   </Td>
-                  <Td style={{ fontSize: 12, color: '#6b7280' }}>
+                  <Td style={{ fontSize: 12, color: '#4B4844' }}>
                     {gr.postedAt ? formatDate(gr.postedAt) : '—'}
                   </Td>
                 </Tr>

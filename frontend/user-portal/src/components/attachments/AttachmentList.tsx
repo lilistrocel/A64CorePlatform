@@ -99,7 +99,7 @@ const HelpText = styled.p`
 const DropZone = styled.div<{ $active: boolean; $hasError: boolean }>`
   border: 2px dashed ${({ theme, $active, $hasError }) =>
     $hasError
-      ? (theme.colors.status.danger ?? '#ef4444')
+      ? (theme.colors.status.danger ?? '#9E2A2A')
       : $active
         ? theme.colors.accent.sage
         : theme.colors.border.subtle};
@@ -108,13 +108,13 @@ const DropZone = styled.div<{ $active: boolean; $hasError: boolean }>`
   text-align: center;
   cursor: pointer;
   background: ${({ theme, $active }) =>
-    $active ? theme.colors.accent.sageSoft ?? '#eff6ff' : theme.colors.surface.raised};
+    $active ? theme.colors.accent.sageSoft ?? 'rgba(15,110,86,0.05)' : theme.colors.surface.raised};
   transition: border-color 150ms ease, background 150ms ease;
   user-select: none;
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.accent.sage};
-    background: ${({ theme }) => theme.colors.accent.sageSoft ?? '#eff6ff'};
+    background: ${({ theme }) => theme.colors.accent.sageSoft ?? 'rgba(15,110,86,0.05)'};
   }
 `;
 
@@ -213,7 +213,7 @@ const CancelPendingButton = styled.button`
 
 const WarnText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger ?? '#9E2A2A'};
   margin-bottom: 8px;
   line-height: 1.4;
 `;
@@ -236,8 +236,8 @@ const ProgressFill = styled.div<{ $percent: number }>`
     45deg,
     ${({ theme }) => theme.colors.accent.sage},
     ${({ theme }) => theme.colors.accent.sage} 10px,
-    ${({ theme }) => theme.colors.accent.sage ?? '#60a5fa'} 10px,
-    ${({ theme }) => theme.colors.accent.sage ?? '#60a5fa'} 20px
+    ${({ theme }) => theme.colors.accent.sage ?? '#0F6E56'} 10px,
+    ${({ theme }) => theme.colors.accent.sage ?? '#0F6E56'} 20px
   );
   background-size: 40px 40px;
   animation: ${progressStripe} 600ms linear infinite;
@@ -314,8 +314,8 @@ const DeleteButton = styled.button`
   align-items: center;
   transition: color 150ms ease, background 150ms ease;
   &:hover {
-    color: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
-    background: #fee2e2;
+    color: ${({ theme }) => theme.colors.status.danger ?? '#9E2A2A'};
+    background: rgba(158,42,42,0.08);
   }
 `;
 
@@ -327,10 +327,10 @@ const EmptyState = styled.div`
 
 const InlineError = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger ?? '#9E2A2A'};
   margin-top: 8px;
   padding: 8px 12px;
-  background: #fee2e2;
+  background: rgba(158,42,42,0.08);
   border-radius: 6px;
   line-height: 1.4;
 `;
@@ -414,7 +414,7 @@ const GhostButton = styled.button`
 
 const DangerButton = styled.button`
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
+  background: ${({ theme }) => theme.colors.status.danger ?? '#9E2A2A'};
   color: white;
   border: none;
   border-radius: 6px;
@@ -422,7 +422,7 @@ const DangerButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: #dc2626; }
+  &:hover { background: #9E2A2A; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 

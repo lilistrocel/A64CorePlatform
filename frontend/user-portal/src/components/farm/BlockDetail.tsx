@@ -39,8 +39,8 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
+  color: #0F6E56;
+  border: 1px solid #0F6E56;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -99,7 +99,7 @@ const StatusBadge = styled.span<{ $status: string }>`
   background: ${({ $status }) => {
     switch ($status) {
       case 'empty':
-        return '#9E9E9E';
+        return '#4B4844';
       case 'planted':
         return '#4CAF50';
       case 'growing':
@@ -113,7 +113,7 @@ const StatusBadge = styled.span<{ $status: string }>`
       case 'alert':
         return '#F44336';
       default:
-        return '#9E9E9E';
+        return '#4B4844';
     }
   }};
   color: white;
@@ -179,9 +179,9 @@ const TabBar = styled.div`
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
   background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
-  color: ${({ $active }) => ($active ? '#3b82f6' : 'inherit')};
+  color: ${({ $active }) => ($active ? '#0F6E56' : 'inherit')};
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -190,7 +190,7 @@ const Tab = styled.button<{ $active: boolean }>`
 
   &:hover {
     background: ${({ theme }) => theme.colors.surface.raised};
-    color: #3b82f6;
+    color: #0F6E56;
   }
 `;
 
@@ -209,7 +209,7 @@ const Spinner = styled.div`
   width: 48px;
   height: 48px;
   border: 4px solid ${({ theme }) => theme.colors.border.subtle};
-  border-top-color: #3b82f6;
+  border-top-color: #0F6E56;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -303,7 +303,7 @@ const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
-    background: linear-gradient(90deg, #3b82f6, #0F6E56);
+    background: linear-gradient(90deg, #0F6E56, #0F6E56);
     transition: width 300ms ease-in-out;
   }
 `;

@@ -84,19 +84,19 @@ export function FarmAIChat({ farmId, blockId, isConnected }: FarmAIChatProps) {
 
   const getRiskIcon = (level: string) => {
     switch (level) {
-      case 'low': return <ShieldCheck size={16} color="#10B981" />;
-      case 'medium': return <Shield size={16} color="#F59E0B" />;
-      case 'high': return <ShieldAlert size={16} color="#EF4444" />;
+      case 'low': return <ShieldCheck size={16} color="#0F6E56" />;
+      case 'medium': return <Shield size={16} color="#B8842A" />;
+      case 'high': return <ShieldAlert size={16} color="#9E2A2A" />;
       default: return <Shield size={16} />;
     }
   };
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'low': return '#10B981';
-      case 'medium': return '#F59E0B';
-      case 'high': return '#EF4444';
-      default: return '#6B7280';
+      case 'low': return '#0F6E56';
+      case 'medium': return '#B8842A';
+      case 'high': return '#9E2A2A';
+      default: return '#4B4844';
     }
   };
 
@@ -125,7 +125,7 @@ export function FarmAIChat({ farmId, blockId, isConnected }: FarmAIChatProps) {
           {/* Header */}
           <ChatHeader>
             <HeaderLeft>
-              <Leaf size={18} color="#10B981" />
+              <Leaf size={18} color="#0F6E56" />
               <HeaderTitle>Farm AI Assistant</HeaderTitle>
             </HeaderLeft>
             <HeaderRight>
@@ -147,7 +147,7 @@ export function FarmAIChat({ farmId, blockId, isConnected }: FarmAIChatProps) {
           <MessagesContainer>
             {messages.length === 0 && (
               <WelcomeMessage>
-                <Leaf size={32} color="#10B981" />
+                <Leaf size={32} color="#0F6E56" />
                 <WelcomeTitle>Farm AI Assistant</WelcomeTitle>
                 <WelcomeText>
                   Ask me about sensor readings, crop conditions, automations, or control equipment.
@@ -289,7 +289,7 @@ const FloatingButton = styled.button`
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #10B981;
+  background: #0F6E56;
   color: white;
   border: none;
   cursor: pointer;
@@ -359,8 +359,8 @@ const HeaderRight = styled.div`
 const GrowthBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: #10B981;
-  background: #10B98115;
+  color: #0F6E56;
+  background: #0F6E5615;
   padding: 2px 8px;
   border-radius: 10px;
   text-transform: capitalize;
@@ -451,7 +451,7 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   padding: 10px 14px;
   border-radius: ${({ $isUser }) =>
     $isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
-  background: ${({ $isUser, theme }) => ($isUser ? '#10B981' : theme.colors.surface.raised)};
+  background: ${({ $isUser, theme }) => ($isUser ? '#0F6E56' : theme.colors.surface.raised)};
   color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.text.primary)};
   display: flex;
   flex-direction: column;
@@ -526,7 +526,7 @@ const ActionButtons = styled.div`
 const ApproveButton = styled.button`
   flex: 1;
   padding: 6px 12px;
-  background: #10B981;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 6px;
@@ -535,7 +535,7 @@ const ApproveButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #059669; }
+  &:hover:not(:disabled) { background: #0B5644; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -638,8 +638,8 @@ const ChatInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #10B981;
-    box-shadow: 0 0 0 2px #10B98130;
+    border-color: #0F6E56;
+    box-shadow: 0 0 0 2px #0F6E5630;
     background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
@@ -661,6 +661,6 @@ const SendButton = styled.button`
   flex-shrink: 0;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: #059669; }
+  &:hover:not(:disabled) { background: #0B5644; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;

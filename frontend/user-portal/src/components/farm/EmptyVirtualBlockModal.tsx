@@ -122,13 +122,13 @@ const SummaryItem = styled.div<{ $warning?: boolean }>`
   padding: 12px;
   background: ${({ $warning, theme }) => ($warning ? theme.colors.status.warning : theme.colors.accent.sageSoft)};
   border-radius: 8px;
-  border-left: 4px solid ${({ $warning }) => ($warning ? '#f59e0b' : '#4caf50')};
+  border-left: 4px solid ${({ $warning }) => ($warning ? '#B8842A' : '#4caf50')};
 `;
 
 const Icon = styled.div<{ $warning?: boolean }>`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ $warning }) => ($warning ? '#f59e0b' : '#4caf50')};
+  color: ${({ $warning }) => ($warning ? '#B8842A' : '#4caf50')};
   flex-shrink: 0;
   margin-top: 2px;
 `;
@@ -238,7 +238,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
           background: ${theme.colors.status.danger};
           color: white;
           &:hover:not(:disabled) {
-            background: #dc2626;
+            background: #9E2A2A;
           }
         `;
       default:

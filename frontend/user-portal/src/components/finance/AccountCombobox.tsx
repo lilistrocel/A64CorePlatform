@@ -176,11 +176,11 @@ const ClearButton = styled.button`
 
   &:hover {
     background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    color: #9E2A2A;
   }
 
   &:focus-visible {
-    outline: 2px solid #ef4444;
+    outline: 2px solid #9E2A2A;
     outline-offset: 2px;
   }
 
@@ -197,8 +197,8 @@ const InputControlBadge = styled.span`
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 99px;
-  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'};
+  color: ${({ theme }) => theme.colors.status.info || '#0B5644'};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   white-space: nowrap;
@@ -259,8 +259,8 @@ const ControlBadge = styled.span`
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 99px;
-  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.surface.sunken || 'rgba(15,110,86,0.05)'};
+  color: ${({ theme }) => theme.colors.status.info || '#0B5644'};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   white-space: nowrap;

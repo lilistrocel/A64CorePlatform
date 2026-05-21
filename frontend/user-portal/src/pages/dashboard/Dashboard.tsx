@@ -170,11 +170,11 @@ interface Insight {
 // ============================================================================
 
 const MODULE_COLORS: Record<string, string> = {
-  farms: '#10B981',
-  blocks: '#3B82F6',
-  employees: '#8B5CF6',
-  customers: '#F59E0B',
-  orders: '#EF4444',
+  farms: '#0F6E56',
+  blocks: '#0F6E56',
+  employees: '#4B4844',
+  customers: '#B8842A',
+  orders: '#9E2A2A',
   vehicles: '#6366F1',
   shipments: '#14B8A6',
   campaigns: '#EC4899',
@@ -182,24 +182,24 @@ const MODULE_COLORS: Record<string, string> = {
 };
 
 const BLOCK_STATE_COLORS: Record<string, string> = {
-  growing: '#10B981',
-  harvesting: '#F59E0B',
-  planned: '#3B82F6',
-  empty: '#9E9E9E',
-  cleaning: '#8B5CF6',
-  alert: '#EF4444',
-  fruiting: '#F97316',
+  growing: '#0F6E56',
+  harvesting: '#B8842A',
+  planned: '#0F6E56',
+  empty: '#4B4844',
+  cleaning: '#4B4844',
+  alert: '#9E2A2A',
+  fruiting: '#B85C2A',
   partial: '#06B6D4',
 };
 
 const CROP_PALETTE: string[] = [
-  '#10B981',
-  '#3B82F6',
-  '#F59E0B',
-  '#8B5CF6',
+  '#0F6E56',
+  '#0F6E56',
+  '#B8842A',
+  '#4B4844',
   '#EC4899',
   '#14B8A6',
-  '#F97316',
+  '#B85C2A',
   '#06B6D4',
   '#6366F1',
   '#84CC16',
@@ -546,7 +546,7 @@ export function Dashboard() {
         .map(([key, value]) => ({
           name: key.charAt(0).toUpperCase() + key.slice(1),
           value,
-          color: BLOCK_STATE_COLORS[key] ?? '#9E9E9E',
+          color: BLOCK_STATE_COLORS[key] ?? '#4B4844',
         }))
     : [];
 
@@ -608,7 +608,7 @@ export function Dashboard() {
       .map(([name, value]) => ({
         name,
         value,
-        color: BLOCK_STATE_COLORS[name.toLowerCase()] ?? '#9E9E9E',
+        color: BLOCK_STATE_COLORS[name.toLowerCase()] ?? '#4B4844',
       }));
   })();
 
@@ -653,7 +653,7 @@ export function Dashboard() {
         {
           label: 'Active Alerts',
           value: farmData?.recentActivity.activeAlerts ?? 0,
-          borderColor: '#EF4444',
+          borderColor: '#9E2A2A',
         },
       ]
     : [];
@@ -1146,7 +1146,7 @@ function PnLTab() {
                   {pnlCropSearchResults.map((c) => (
                     <CropSearchItem key={c.cropName} onClick={() => togglePnlCrop(c.cropName)}>
                       <span>{c.cropName}</span>
-                      <CropSearchItemKpi $color="#10B981">
+                      <CropSearchItemKpi $color="#0F6E56">
                         {c.revenue.toLocaleString('en-US', { maximumFractionDigits: 0 })} AED
                       </CropSearchItemKpi>
                     </CropSearchItem>
@@ -1220,7 +1220,7 @@ function YieldKpiChart({ data }: YieldKpiChartProps) {
       </LeaderboardHeader>
       {sorted.map((farm, i) => {
         const pct = farm.efficiencyPercent;
-        const barColor = pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444';
+        const barColor = pct >= 80 ? '#0F6E56' : pct >= 40 ? '#B8842A' : '#9E2A2A';
         return (
           <LeaderboardRow key={farm.farmId}>
             <LbRankCol>
@@ -1341,7 +1341,7 @@ function CropYieldKpiChart({ data, selectedFarm }: CropYieldKpiChartProps) {
               {searchResults.map((c) => (
                 <CropSearchItem key={c.cropName} onClick={() => toggleCrop(c.cropName)}>
                   <span>{c.cropName}</span>
-                  <CropSearchItemKpi $color={c.efficiencyPercent >= 80 ? '#10B981' : c.efficiencyPercent >= 40 ? '#F59E0B' : '#EF4444'}>
+                  <CropSearchItemKpi $color={c.efficiencyPercent >= 80 ? '#0F6E56' : c.efficiencyPercent >= 40 ? '#B8842A' : '#9E2A2A'}>
                     {c.efficiencyPercent}%
                   </CropSearchItemKpi>
                 </CropSearchItem>
@@ -1373,7 +1373,7 @@ function CropYieldKpiChart({ data, selectedFarm }: CropYieldKpiChartProps) {
         </LeaderboardHeader>
         {displayList.map((crop, i) => {
           const pct = crop.efficiencyPercent;
-          const barColor = pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444';
+          const barColor = pct >= 80 ? '#0F6E56' : pct >= 40 ? '#B8842A' : '#9E2A2A';
           return (
             <LeaderboardRow key={crop.cropName}>
               <LbRankCol>
@@ -1421,8 +1421,8 @@ interface OrdersOverviewListProps {
 function OrdersOverviewList({ data }: OrdersOverviewListProps) {
   const statusColors: Record<string, string> = {
     pending: MODULE_COLORS.orders,
-    processing: '#F59E0B',
-    delivered: '#10B981',
+    processing: '#B8842A',
+    delivered: '#0F6E56',
   };
 
   const rows: { key: string; label: string; count: number }[] = [
@@ -1454,7 +1454,7 @@ function OrdersOverviewList({ data }: OrdersOverviewListProps) {
       {rows.map((row) => (
         <OrderStatusRow key={row.key}>
           <OrderStatusLeft>
-            <StatusDot $color={statusColors[row.key] ?? '#9E9E9E'} />
+            <StatusDot $color={statusColors[row.key] ?? '#4B4844'} />
             <OrderStatusLabel>{row.label}</OrderStatusLabel>
           </OrderStatusLeft>
           <OrderStatusCount>{formatNumber(row.count)}</OrderStatusCount>
@@ -1787,10 +1787,10 @@ const LegendLabel = styled.span`
 // ── Insights grid ───────────────────────────────────────────────────────────
 
 const INSIGHT_BORDER_COLORS: Record<InsightType, string> = {
-  success: '#10B981',
-  warning: '#F59E0B',
-  info: '#3B82F6',
-  critical: '#EF4444',
+  success: '#0F6E56',
+  warning: '#B8842A',
+  info: '#0F6E56',
+  critical: '#9E2A2A',
 };
 
 const INSIGHT_BG_COLORS: Record<InsightType, string> = {

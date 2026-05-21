@@ -246,7 +246,7 @@ const TaskInfo = styled.div`
   padding: ${({ theme }) => theme.space['4']};
   background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: ${({ theme }) => theme.radii.md};
-  border-left: 4px solid #10B981; /* grade-A green: signals crop/harvest context */
+  border-left: 4px solid #0F6E56; /* grade-A green: signals crop/harvest context */
 `;
 
 const BlockLine = styled.div`

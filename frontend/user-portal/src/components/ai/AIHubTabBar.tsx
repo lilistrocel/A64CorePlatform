@@ -32,10 +32,10 @@ interface TabDefinition {
 // ============================================================================
 
 const TABS: TabDefinition[] = [
-  { section: 'control', label: 'Control', subtitle: 'Execute & Manage', icon: '⚙️', color: '#F59E0B' },
-  { section: 'monitor', label: 'Monitor', subtitle: 'Live Data',         icon: '📡', color: '#3B82F6' },
-  { section: 'report',  label: 'Report',  subtitle: 'Generate & Export', icon: '📊', color: '#8B5CF6' },
-  { section: 'advise',  label: 'Advise',  subtitle: 'Expert Guidance',   icon: '💡', color: '#10B981' },
+  { section: 'control', label: 'Control', subtitle: 'Execute & Manage', icon: '⚙️', color: '#B8842A' },
+  { section: 'monitor', label: 'Monitor', subtitle: 'Live Data',         icon: '📡', color: '#0F6E56' },
+  { section: 'report',  label: 'Report',  subtitle: 'Generate & Export', icon: '📊', color: '#4B4844' },
+  { section: 'advise',  label: 'Advise',  subtitle: 'Expert Guidance',   icon: '💡', color: '#0F6E56' },
 ];
 
 // ============================================================================

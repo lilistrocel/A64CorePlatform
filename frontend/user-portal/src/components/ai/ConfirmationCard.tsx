@@ -6,9 +6,9 @@
  * and a live countdown to expiry.
  *
  * Risk level colors:
- *   low    → green  (#10B981)
- *   medium → amber  (#F59E0B)
- *   high   → red    (#EF4444)
+ *   low    → green  (#0F6E56)
+ *   medium → amber  (#B8842A)
+ *   high   → red    (#9E2A2A)
  */
 
 import { useState, useEffect } from 'react';
@@ -32,18 +32,18 @@ export interface ConfirmationCardProps {
 
 function getRiskColor(level: string): string {
   switch (level) {
-    case 'low':    return '#10B981';
-    case 'medium': return '#F59E0B';
-    case 'high':   return '#EF4444';
-    default:       return '#6B7280';
+    case 'low':    return '#0F6E56';
+    case 'medium': return '#B8842A';
+    case 'high':   return '#9E2A2A';
+    default:       return '#4B4844';
   }
 }
 
 function getRiskIcon(level: string): React.ReactNode {
   switch (level) {
-    case 'low':    return <ShieldCheck size={16} color="#10B981" aria-hidden="true" />;
-    case 'medium': return <Shield size={16} color="#F59E0B" aria-hidden="true" />;
-    case 'high':   return <ShieldAlert size={16} color="#EF4444" aria-hidden="true" />;
+    case 'low':    return <ShieldCheck size={16} color="#0F6E56" aria-hidden="true" />;
+    case 'medium': return <Shield size={16} color="#B8842A" aria-hidden="true" />;
+    case 'high':   return <ShieldAlert size={16} color="#9E2A2A" aria-hidden="true" />;
     default:       return <Shield size={16} aria-hidden="true" />;
   }
 }
@@ -155,7 +155,7 @@ const ApproveButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: #0B5644;
   }
 
   &:focus-visible {
@@ -187,7 +187,7 @@ const DenyButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid #EF4444;
+    outline: 2px solid #9E2A2A;
     outline-offset: 2px;
   }
 

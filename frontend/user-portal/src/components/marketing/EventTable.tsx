@@ -11,11 +11,11 @@ const Th = styled.th`padding: 16px; text-align: left; font-size: 13px; font-weig
 const Tbody = styled.tbody``;
 const Tr = styled.tr`border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle}; &:hover { background: ${({ theme }) => theme.colors.surface.canvas}; }`;
 const Td = styled.td`padding: 16px; font-size: 14px; color: ${({ theme }) => theme.colors.text.primary};`;
-const Code = styled.span`font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #3B82F6;`;
+const Code = styled.span`font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #0F6E56;`;
 interface BadgeProps { $color: string; }
 const Badge = styled.span<BadgeProps>`padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${({ $color }) => $color}20; color: ${({ $color }) => $color};`;
 const ActionButton = styled.button`padding: 6px 12px; margin-right: 8px; background: transparent; border: 1px solid ${({ theme }) => theme.colors.border.subtle}; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 150ms ease-in-out; &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }`;
-const DeleteButton = styled(ActionButton)`color: #EF4444; border-color: #EF4444; &:hover { background: #FEE2E2; }`;
+const DeleteButton = styled(ActionButton)`color: #9E2A2A; border-color: #9E2A2A; &:hover { background: rgba(158,42,42,0.08); }`;
 const EmptyText = styled.div`text-align: center; padding: 48px 24px; color: ${({ theme }) => theme.colors.text.tertiary};`;
 
 export function EventTable({ events, onEdit, onDelete, loading }: EventTableProps) {
