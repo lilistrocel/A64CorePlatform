@@ -318,10 +318,14 @@ const KpiLabel = styled.div`
 `;
 
 const KpiValue = styled.div`
-  font-size: ${({ theme }) => theme.fontSizes.h1};
-  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  /* Slate §4: KPI values use Playfair Display, tabular numerals. */
+  font-family: ${({ theme }) => theme.fonts.display};
+  font-size: ${({ theme }) => theme.fontSizes.displaySm};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
   color: ${({ theme }) => theme.colors.text.primary};
-  line-height: ${({ theme }) => theme.lineHeights.snug};
+  line-height: ${({ theme }) => theme.lineHeights.tight};
+  letter-spacing: ${({ theme }) => theme.letterSpacings.tight};
+  font-variant-numeric: tabular-nums;
   margin-bottom: ${({ theme }) => theme.space['1']};
 `;
 
@@ -1324,8 +1328,8 @@ export function FarmDashboard() {
               <KpiSubtext>Blocks ready to harvest</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor="#0F6E56">
-              <KpiIndicator $color="#0F6E56" aria-hidden="true" />
+            <KpiCard $borderColor={STATE_COLORS.growing}>
+              <KpiIndicator $color={STATE_COLORS.growing} aria-hidden="true" />
               <KpiLabel>Total Yield</KpiLabel>
               <KpiValue>{formatNumber(Math.round(harvestSummary.totalHarvestsKg))}</KpiValue>
               <KpiSubtext>kg harvested</KpiSubtext>
