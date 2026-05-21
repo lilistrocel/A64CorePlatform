@@ -83,13 +83,13 @@ const SectionHeader = styled.div`
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px;
 `;
 
 const HelpText = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px;
   line-height: 1.5;
 `;
@@ -99,27 +99,27 @@ const HelpText = styled.p`
 const DropZone = styled.div<{ $active: boolean; $hasError: boolean }>`
   border: 2px dashed ${({ theme, $active, $hasError }) =>
     $hasError
-      ? (theme.colors.error ?? '#ef4444')
+      ? (theme.colors.status.danger ?? '#ef4444')
       : $active
-        ? theme.colors.primary[500]
-        : theme.colors.neutral[300]};
+        ? theme.colors.accent.sage
+        : theme.colors.border.subtle};
   border-radius: 10px;
   padding: 28px 24px;
   text-align: center;
   cursor: pointer;
   background: ${({ theme, $active }) =>
-    $active ? theme.colors.primary[50] ?? '#eff6ff' : theme.colors.surface};
+    $active ? theme.colors.accent.sageSoft ?? '#eff6ff' : theme.colors.surface.raised};
   transition: border-color 150ms ease, background 150ms ease;
   user-select: none;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50] ?? '#eff6ff'};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    background: ${({ theme }) => theme.colors.accent.sageSoft ?? '#eff6ff'};
   }
 `;
 
 const DropZoneIcon = styled.div`
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   margin-bottom: 10px;
   display: flex;
   justify-content: center;
@@ -128,13 +128,13 @@ const DropZoneIcon = styled.div`
 const DropZoneText = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 4px;
 `;
 
 const DropZoneSub = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const HiddenInput = styled.input`
@@ -145,17 +145,17 @@ const HiddenInput = styled.input`
 
 const PendingUploadBox = styled.div`
   margin-top: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 8px;
   padding: 12px 14px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   animation: ${fadeIn} 200ms ease;
 `;
 
 const PendingFileName = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 8px;
   word-break: break-all;
 `;
@@ -163,17 +163,17 @@ const PendingFileName = styled.div`
 const DescriptionInput = styled.input`
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background ?? theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas ?? theme.colors.surface.raised};
   box-sizing: border-box;
   margin-bottom: 10px;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
   &:disabled { opacity: 0.6; }
 `;
@@ -187,7 +187,7 @@ const PendingActions = styled.div`
 
 const UploadButton = styled.button`
   padding: 7px 16px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 6px;
@@ -195,25 +195,25 @@ const UploadButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageDeep}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const CancelPendingButton = styled.button`
   padding: 7px 12px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const WarnText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error ?? '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
   margin-bottom: 8px;
   line-height: 1.4;
 `;
@@ -223,7 +223,7 @@ const WarnText = styled.div`
 const ProgressBar = styled.div`
   height: 6px;
   border-radius: 3px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   overflow: hidden;
   margin-bottom: 8px;
 `;
@@ -234,10 +234,10 @@ const ProgressFill = styled.div<{ $percent: number }>`
   border-radius: 3px;
   background: repeating-linear-gradient(
     45deg,
-    ${({ theme }) => theme.colors.primary[500]},
-    ${({ theme }) => theme.colors.primary[500]} 10px,
-    ${({ theme }) => theme.colors.primary[400] ?? '#60a5fa'} 10px,
-    ${({ theme }) => theme.colors.primary[400] ?? '#60a5fa'} 20px
+    ${({ theme }) => theme.colors.accent.sage},
+    ${({ theme }) => theme.colors.accent.sage} 10px,
+    ${({ theme }) => theme.colors.accent.sage ?? '#60a5fa'} 10px,
+    ${({ theme }) => theme.colors.accent.sage ?? '#60a5fa'} 20px
   );
   background-size: 40px 40px;
   animation: ${progressStripe} 600ms linear infinite;
@@ -248,7 +248,7 @@ const ProgressFill = styled.div<{ $percent: number }>`
 
 const AttachmentTable = styled.div`
   margin-top: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -258,15 +258,15 @@ const AttachmentRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   animation: ${fadeIn} 200ms ease;
   &:last-child { border-bottom: none; }
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.canvas}; }
 `;
 
 const FileIconWrap = styled.div`
   flex-shrink: 0;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   display: flex;
   align-items: center;
 `;
@@ -280,7 +280,7 @@ const FileName = styled.a`
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[600] ?? theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep ?? theme.colors.accent.sage};
   text-decoration: none;
   word-break: break-all;
   &:hover { text-decoration: underline; }
@@ -292,12 +292,12 @@ const FileDetails = styled.div`
   gap: 8px;
   margin-top: 2px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const FileDescription = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 2px;
   font-style: italic;
 `;
@@ -307,27 +307,27 @@ const DeleteButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   transition: color 150ms ease, background 150ms ease;
   &:hover {
-    color: ${({ theme }) => theme.colors.error ?? '#ef4444'};
+    color: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
     background: #fee2e2;
   }
 `;
 
 const EmptyState = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 16px 0 4px;
 `;
 
 const InlineError = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.error ?? '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
   margin-top: 8px;
   padding: 8px 12px;
   background: #fee2e2;
@@ -349,9 +349,9 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   width: 100%;
   max-width: 400px;
 `;
@@ -361,13 +361,13 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 18px 22px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ModalTitle = styled.h2`
   font-size: 16px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -376,19 +376,19 @@ const ModalCloseButton = styled.button`
   border: none;
   font-size: 16px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px;
   border-radius: 6px;
   line-height: 1;
   display: flex;
   align-items: center;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const ModalBody = styled.div`
   padding: 18px 22px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
 `;
 
@@ -397,24 +397,24 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const GhostButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const DangerButton = styled.button`
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.error ?? '#ef4444'};
+  background: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
   color: white;
   border: none;
   border-radius: 6px;

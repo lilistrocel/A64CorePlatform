@@ -27,7 +27,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
   max-width: 450px;
@@ -47,14 +47,14 @@ const ModalTitle = styled.h3`
 
 const ModalText = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 8px 0;
   line-height: 1.6;
 `;
 
 const ModalWarning = styled.div`
-  background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
+  background: ${({ theme }) => theme.colors.status.warning};
+  border: 1px solid ${({ theme }) => theme.colors.status.warning};
   border-radius: 8px;
   padding: 12px;
   margin: 16px 0;
@@ -71,9 +71,9 @@ const ModalButtons = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -81,7 +81,7 @@ const CancelButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 `;
 
@@ -125,7 +125,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -135,7 +135,7 @@ const SummaryGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
 `;
 
@@ -146,7 +146,7 @@ const SummaryCard = styled.div`
 const SummaryLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -155,12 +155,12 @@ const SummaryLabel = styled.div`
 const SummaryValue = styled.div`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
@@ -172,8 +172,8 @@ const ArchivesList = styled.div`
 `;
 
 const ArchiveCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 20px;
   transition: box-shadow 150ms ease-in-out;
@@ -195,13 +195,13 @@ const ArchiveTitleSection = styled.div``;
 const ArchiveTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
 `;
 
 const ArchiveMeta = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const EfficiencyBadge = styled.span<{ $efficiency: number }>`
@@ -225,7 +225,7 @@ const ArchiveStats = styled.div`
   gap: 16px;
   margin-bottom: 16px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 6px;
 `;
 
@@ -237,7 +237,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -246,12 +246,12 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const QualitySection = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
 `;
 
@@ -265,7 +265,7 @@ const ArchiveActions = styled.div`
   justify-content: flex-end;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const DeleteButton = styled.button`
@@ -273,7 +273,7 @@ const DeleteButton = styled.button`
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   color: #c62828;
   border: 1px solid #ef5350;
   border-radius: 6px;
@@ -291,13 +291,13 @@ const DeleteButton = styled.button`
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 
   p {
     margin: 8px 0;

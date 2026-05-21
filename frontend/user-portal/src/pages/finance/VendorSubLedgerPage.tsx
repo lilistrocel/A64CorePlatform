@@ -77,28 +77,28 @@ const PageContainer = styled.div`
 const PageTitle = styled.h1`
   font-size: 26px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px;
 `;
 
 const PageSubtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 24px;
   line-height: 1.55;
 `;
 
 const Divider = styled.div`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   margin-bottom: 24px;
 `;
 
 // ─── Toolbar ───────────────────────────────────────────────────────────────────
 
 const ToolbarCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   padding: 18px 22px;
   margin-bottom: 24px;
@@ -122,44 +122,44 @@ const ToolbarLabel = styled.label`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ToolbarSelect = styled.select`
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   min-width: 200px;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const ToolbarDateInput = styled.input`
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 // ─── Total outstanding card ────────────────────────────────────────────────────
 
 const SummaryCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   padding: 20px 24px;
   margin-bottom: 24px;
@@ -179,19 +179,19 @@ const SummaryLabel = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const SummaryValue = styled.span`
   font-size: 24px;
   font-weight: 700;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SummaryMeta = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 // ─── Report meta bar ───────────────────────────────────────────────────────────
@@ -201,26 +201,26 @@ const ReportMetaBar = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 10px 10px 0 0;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ReportMetaTitle = styled.span`
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
 
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-top: none;
   border-radius: 0 0 12px 12px;
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const SubLedgerTable = styled.table`
@@ -230,7 +230,7 @@ const SubLedgerTable = styled.table`
 `;
 
 const SLTHead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.surface.raised};
   position: sticky;
   top: 0;
   z-index: 1;
@@ -243,8 +243,8 @@ const SLTh = styled.th`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.surface.sunken};
   white-space: nowrap;
 `;
 
@@ -257,16 +257,16 @@ const SLThCenter = styled(SLTh)`
 `;
 
 const SLTr = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
 const SLTd = styled.td`
   padding: 11px 14px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SLTdMono = styled.td`
@@ -274,14 +274,14 @@ const SLTdMono = styled.td`
   font-size: 13px;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   text-align: right;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SLTdCenter = styled.td`
   padding: 11px 14px;
   font-size: 13px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 interface BalanceTdProps {
@@ -302,18 +302,18 @@ const ViewEntriesLink = styled.button`
   border: none;
   cursor: pointer;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   padding: 4px 8px;
   border-radius: 6px;
   font-family: inherit;
   white-space: nowrap;
   transition: background 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
+    background: ${({ theme }) => theme.colors.accent.sageSoft};
     text-decoration: underline;
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -323,7 +323,7 @@ const ViewEntriesLink = styled.button`
 const EmptyState = styled.div`
   padding: 60px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
   line-height: 1.7;
 `;
@@ -331,14 +331,14 @@ const EmptyState = styled.div`
 const LoadingOverlay = styled.div`
   padding: 48px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
 `;
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
+  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -348,7 +348,7 @@ const VendorCodeCell = styled.td`
   padding: 11px 14px;
   font-size: 12px;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
 `;
 

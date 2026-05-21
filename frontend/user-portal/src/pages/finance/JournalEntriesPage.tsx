@@ -29,7 +29,7 @@ const Container = styled.div`
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 24px;
 `;
 
@@ -45,38 +45,38 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 200px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const FilterSelect = styled.select`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const DateInput = styled.input`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const DateLabel = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -84,32 +84,32 @@ const DateLabel = styled.span`
 
 const RefreshButton = styled.button`
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[200]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.sunken}; }
 `;
 
 const GhostButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   overflow: hidden;
   box-shadow: ${({ theme }) => theme.shadows.sm};
@@ -122,16 +122,16 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   vertical-align: top;
 `;
 
@@ -139,18 +139,18 @@ const JeRow = styled.tr<{ $expanded: boolean }>`
   cursor: pointer;
   transition: background 100ms ease;
   background: ${({ $expanded, theme }) =>
-    $expanded ? theme.colors.neutral[50] : 'transparent'};
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+    $expanded ? theme.colors.surface.canvas : 'transparent'};
+  &:hover { background: ${({ theme }) => theme.colors.surface.canvas}; }
 `;
 
 /** The inline expanded detail row */
 const ExpandedRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 `;
 
 const ExpandedCell = styled.td`
   padding: 0;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.primary[200] || '#bfdbfe'};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.accent.sageSoft || '#bfdbfe'};
 `;
 
 const LinesContainer = styled.div`
@@ -160,7 +160,7 @@ const LinesContainer = styled.div`
 const LinesTitle = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin-bottom: 10px;
@@ -179,19 +179,19 @@ const LinesTh = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const LinesTd = styled.td`
   padding: 8px 10px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const LinesTotalRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.surface.raised};
   font-weight: 700;
 `;
 
@@ -200,7 +200,7 @@ const ExpandIcon = styled.span<{ $expanded: boolean }>`
   margin-right: 8px;
   transform: ${({ $expanded }) => ($expanded ? 'rotate(90deg)' : 'rotate(0)')};
   transition: transform 150ms ease;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   font-size: 12px;
 `;
 
@@ -229,7 +229,7 @@ const DescriptionCell = styled.span`
   text-overflow: ellipsis;
   max-width: 260px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Tooltip = styled.span`
@@ -259,14 +259,14 @@ const Tooltip = styled.span`
 const EmptyState = styled.div`
   text-align: center;
   padding: 80px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const EmptyTitle = styled.div`
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const EmptyHint = styled.div`
@@ -282,7 +282,7 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PageButtons = styled.div`
@@ -293,7 +293,7 @@ const PageButtons = styled.div`
 const LoadingOverlay = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
 `;
 
@@ -304,16 +304,16 @@ const VoidedJeRow = styled.tr<{ $expanded: boolean }>`
   opacity: 0.55;
   transition: background 100ms ease, opacity 100ms ease;
   background: ${({ $expanded, theme }) =>
-    $expanded ? theme.colors.neutral[50] : 'transparent'};
+    $expanded ? theme.colors.surface.canvas : 'transparent'};
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
     opacity: 0.75;
   }
 `;
 
 const VoidedText = styled.span`
   text-decoration: line-through;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ReversalBadge = styled.span`
@@ -334,7 +334,7 @@ const SourceDocLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600] || theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep || theme.colors.accent.sage};
   font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
@@ -376,7 +376,7 @@ const ModalBackdrop = styled.div`
 `;
 
 const ModalCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 14px;
   padding: 28px 32px;
   width: 100%;
@@ -388,13 +388,13 @@ const ModalCard = styled.div`
 const ModalTitle = styled.h2`
   font-size: 18px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 6px;
 `;
 
 const ModalSubtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 20px;
   line-height: 1.55;
 `;
@@ -403,7 +403,7 @@ const ModalLabel = styled.label`
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 6px;
 `;
 
@@ -411,17 +411,17 @@ const ModalTextarea = styled.textarea`
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   resize: vertical;
   min-height: 100px;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -447,14 +447,14 @@ const ModalFooter = styled.div`
 
 const ModalCancelButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[200]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.sunken}; }
 `;
 
 const ModalConfirmButton = styled.button`

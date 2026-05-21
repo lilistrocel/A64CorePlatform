@@ -97,20 +97,20 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -120,18 +120,18 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -142,25 +142,25 @@ const Select = styled.select<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   min-height: 80px;
   resize: vertical;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -170,7 +170,7 @@ const TextArea = styled.textarea<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
@@ -189,7 +189,7 @@ const FormRow = styled.div`
 
 const FormSection = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   margin-top: 8px;
 `;
@@ -197,7 +197,7 @@ const FormSection = styled.div`
 const SectionTitle = styled.h4`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px 0;
   display: flex;
   justify-content: space-between;
@@ -213,7 +213,7 @@ const OrderItem = styled.div`
 `;
 
 const TotalDisplay = styled.div`
-  background: #e3f2fd;
+  background: rgba(15, 110, 86, 0.05);
   padding: 16px;
   border-radius: 8px;
   margin-top: 16px;
@@ -225,7 +225,7 @@ const TotalRow = styled.div`
   align-items: center;
   padding: 8px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &.total {
     font-size: 18px;
@@ -248,7 +248,7 @@ const AddButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: #0F6E56;
   }
 `;
 
@@ -277,8 +277,8 @@ const ItemDisplayRow = styled.div`
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   margin-bottom: 8px;
 
@@ -305,7 +305,7 @@ const ItemTitleLine = styled.div`
 const ItemName = styled.span`
   font-weight: 600;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const GradeChip = styled.span`
@@ -313,20 +313,20 @@ const GradeChip = styled.span`
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  color: ${({ theme }) => theme.colors.text.secondary};
   letter-spacing: 0.3px;
 `;
 
 const ItemMetaLine = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const AllocationBreakdown = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
@@ -347,7 +347,7 @@ const AllocationPill = styled.span<{ $isReturned?: boolean }>`
 const ItemTotal = styled.div`
   font-weight: 600;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   white-space: nowrap;
   align-self: center;
 `;
@@ -355,10 +355,10 @@ const ItemTotal = styled.div`
 const EmptyItemsState = styled.div`
   padding: 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px dashed ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
 `;
 
@@ -382,10 +382,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
+        color: ${theme.colors.text.secondary};
+        border: 1px solid ${theme.colors.border.subtle};
         &:hover {
-          background: ${theme.colors.surface};
+          background: ${theme.colors.surface.raised};
         }
       `;
     }
@@ -403,7 +403,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
       background: #3B82F6;
       color: white;
       &:hover:not(:disabled) {
-        background: #1976d2;
+        background: #0F6E56;
       }
       &:disabled {
         opacity: 0.6;
@@ -420,9 +420,9 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
 const CustomerIdDisplay = styled.div`
   font-size: 12px;
   font-family: 'Courier New', Courier, monospace;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 6px;
   padding: 6px 10px;
   word-break: break-all;
@@ -431,7 +431,7 @@ const CustomerIdDisplay = styled.div`
 const CustomerIdPlaceholder = styled(CustomerIdDisplay)`
   font-family: inherit;
   font-style: italic;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // ============================================================================

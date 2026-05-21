@@ -360,7 +360,7 @@ const LoginContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
   padding: 1rem;
 
   @media (min-width: 640px) {
@@ -369,8 +369,8 @@ const LoginContainer = styled.div`
 `;
 
 const LoginCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.lg};
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 1.5rem;
   width: 100%;
@@ -379,14 +379,14 @@ const LoginCard = styled.div`
   @media (min-width: 640px) {
     padding: 2rem;
     max-width: 440px;
-    border-radius: ${({ theme }) => theme.borderRadius.xl};
+    border-radius: ${({ theme }) => theme.radii.xl};
   }
 `;
 
 const Logo = styled.div`
   font-size: 1.875rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.accent.sage};
   text-align: center;
   margin-bottom: 0.75rem;
 
@@ -408,8 +408,8 @@ const LogoImg = styled.img`
 
 const Title = styled.h1`
   font-size: 1.5rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: center;
   margin: 0 0 0.5rem 0;
 
@@ -420,7 +420,7 @@ const Title = styled.h1`
 
 const Subtitle = styled.p`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   margin: 0 0 1.5rem 0;
 
@@ -431,23 +431,23 @@ const Subtitle = styled.p`
 `;
 
 const SessionExpiredBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.warning}15`};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => `${theme.colors.status.warning}15`};
+  border: 1px solid ${({ theme }) => theme.colors.status.warning};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.75rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.status.warning};
   font-size: 0.875rem;
   text-align: center;
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.error}10`};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => `${theme.colors.status.danger}10`};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.75rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 0.875rem;
   text-align: center;
 `;
@@ -497,7 +497,7 @@ const SessionPreservedBanner = styled.div`
   padding: 0.625rem 1rem;
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
   border: 1px solid #10b981;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   margin-bottom: 1rem;
   animation: ${slideIn} 0.4s ease-out;
 `;
@@ -527,11 +527,11 @@ const MobileHelperText = styled.p`
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   padding: 0.5rem 0.75rem;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.sm};
   line-height: 1.4;
   animation: ${fadeIn} 0.3s ease-out;
 
@@ -547,7 +547,7 @@ const MobileHelperIcon = styled.span`
 
 const ForgotPasswordLink = styled(Link)`
   /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   font-size: 0.875rem;
   text-decoration: none;
   align-self: flex-end;
@@ -562,14 +562,14 @@ const RegisterPrompt = styled.p`
   text-align: center;
   margin-top: 1.5rem;
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 0;
 `;
 
 const RegisterLink = styled(Link)`
   /* WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background */
-  color: ${({ theme }) => theme.colors.primary[700]};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   text-decoration: none;
 
   &:hover {

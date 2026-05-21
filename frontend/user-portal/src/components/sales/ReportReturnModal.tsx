@@ -106,7 +106,7 @@ const Overlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
   width: 100%;
@@ -121,14 +121,14 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -141,15 +141,15 @@ const CloseButton = styled.button`
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 20px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   line-height: 1;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:focus-visible {
@@ -161,9 +161,9 @@ const CloseButton = styled.button`
 const SubHeader = styled.div`
   padding: 10px 24px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
@@ -182,9 +182,9 @@ const ModalBody = styled.div`
 
 const ItemBlock = styled.div<{ $skipped?: boolean }>`
   padding: 16px;
-  border: 1px solid ${({ $skipped, theme }) => ($skipped ? theme.colors.neutral[200] : theme.colors.neutral[300])};
+  border: 1px solid ${({ $skipped, theme }) => ($skipped ? theme.colors.surface.sunken : theme.colors.border.subtle)};
   border-radius: 10px;
-  background: ${({ $skipped, theme }) => ($skipped ? theme.colors.neutral[50] : theme.colors.background)};
+  background: ${({ $skipped, theme }) => ($skipped ? theme.colors.surface.canvas : theme.colors.surface.canvas)};
   opacity: ${({ $skipped }) => ($skipped ? 0.6 : 1)};
   transition: opacity 150ms ease-in-out;
 `;
@@ -192,13 +192,13 @@ const ItemBlock = styled.div<{ $skipped?: boolean }>`
 const ItemTitle = styled.div`
   font-weight: 600;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 2px;
 `;
 
 const ItemMeta = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 12px;
 `;
 
@@ -213,7 +213,7 @@ const FieldRow = styled.div`
 const FieldLabel = styled.label`
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   white-space: nowrap;
   min-width: 80px;
 `;
@@ -228,7 +228,7 @@ const RadioLabel = styled.label`
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
 
   input[type='radio'] {
@@ -260,7 +260,7 @@ const NumberInput = styled.input<{ $hasError?: boolean }>`
 
 const ReadonlyValue = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
 `;
 
@@ -317,7 +317,7 @@ const ValidationError = styled.div`
 const SkipRow = styled.div`
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const SkipLabel = styled.label`
@@ -325,7 +325,7 @@ const SkipLabel = styled.label`
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
 
   input[type='checkbox'] {
@@ -356,7 +356,7 @@ const NotesArea = styled.textarea`
 const NotesLabel = styled.label`
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   display: block;
   margin-bottom: 6px;
 `;
@@ -367,14 +367,14 @@ const ModalFooter = styled.div`
   justify-content: space-between;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
   flex-wrap: wrap;
 `;
 
 const FooterSummary = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex: 1;
 `;
 
@@ -396,9 +396,9 @@ const FooterButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
-        &:hover:not(:disabled) { background: ${theme.colors.surface}; }
+        color: ${theme.colors.text.secondary};
+        border: 1px solid ${theme.colors.border.subtle};
+        &:hover:not(:disabled) { background: ${theme.colors.surface.raised}; }
       `;
     }
     return `

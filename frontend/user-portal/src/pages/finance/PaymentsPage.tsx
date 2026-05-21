@@ -77,7 +77,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -93,38 +93,38 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 200px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const FilterSelect = styled.select`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const DateInput = styled.input`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const DateLabel = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -132,7 +132,7 @@ const DateLabel = styled.span`
 
 const NewButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -141,25 +141,25 @@ const NewButton = styled.button`
   cursor: pointer;
   white-space: nowrap;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageDeep}; }
 `;
 
 const RefreshButton = styled.button`
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[200]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.sunken}; }
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   overflow: hidden;
   box-shadow: ${({ theme }) => theme.shadows.sm};
@@ -172,23 +172,23 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   vertical-align: middle;
 `;
 
 const ClickableRow = styled.tr`
   cursor: pointer;
   transition: background 100ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.canvas}; }
 `;
 
 const MethodPill = styled.span<{ $bg: string; $text: string }>`
@@ -218,8 +218,8 @@ const ReversedBadge = styled.span`
 `;
 
 const ReversedRow = styled(ClickableRow)`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   /* Strike-through across the amount cell only — keep the rest readable */
 `;
 
@@ -227,7 +227,7 @@ const JeLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600] || theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep || theme.colors.accent.sage};
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
@@ -239,14 +239,14 @@ const JeLink = styled.button`
 const EmptyState = styled.div`
   text-align: center;
   padding: 80px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const EmptyTitle = styled.div`
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const EmptyHint = styled.div`
@@ -259,7 +259,7 @@ const EmptyHint = styled.div`
 const LoadingOverlay = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
 `;
 
@@ -269,7 +269,7 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PageButtons = styled.div`
@@ -280,12 +280,12 @@ const PageButtons = styled.div`
 const GhostButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 

@@ -28,7 +28,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -62,10 +62,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
       default:
         return `
           background: transparent;
-          color: ${theme.colors.textSecondary};
-          border: 1px solid ${theme.colors.neutral[300]};
+          color: ${theme.colors.text.secondary};
+          border: 1px solid ${theme.colors.border.subtle};
           &:hover:not(:disabled) {
-            background: ${theme.colors.surface};
+            background: ${theme.colors.surface.raised};
           }
         `;
     }
@@ -84,7 +84,7 @@ const AlertsList = styled.div`
 `;
 
 const AlertCard = styled.div<{ $severity: AlertSeverity; $status: string }>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border: 2px solid
     ${({ $severity }) => {
       switch ($severity) {
@@ -115,7 +115,7 @@ const AlertHeader = styled.div`
 const AlertTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -137,7 +137,7 @@ const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
       case 'low':
         return '#3b82f6';
       default:
-        return theme.colors.textDisabled;
+        return theme.colors.text.tertiary;
     }
   }};
   color: white;
@@ -145,7 +145,7 @@ const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
 
 const AlertDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px 0;
   line-height: 1.6;
 `;
@@ -154,7 +154,7 @@ const AlertMeta = styled.div`
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-bottom: 12px;
 `;
 
@@ -166,13 +166,13 @@ const AlertActions = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // Modal styles (simplified - reuse from other modals)
@@ -190,7 +190,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
   max-width: 500px;
@@ -202,7 +202,7 @@ const Modal = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 24px 0;
 `;
 
@@ -221,20 +221,20 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input`
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -245,18 +245,18 @@ const Input = styled.input`
 
 const Textarea = styled.textarea`
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   min-height: 100px;
   resize: vertical;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -267,11 +267,11 @@ const Textarea = styled.textarea`
 
 const Select = styled.select`
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &:focus {
@@ -289,10 +289,10 @@ const ButtonGroup = styled.div`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 14px;
 `;
 

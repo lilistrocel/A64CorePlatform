@@ -156,8 +156,8 @@ const PageContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  padding: ${({ theme }) => theme.spacing.xl};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  padding: ${({ theme }) => theme.space['8']};
 `;
 
 const CenteredContent = styled.div`
@@ -166,7 +166,7 @@ const CenteredContent = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xl};
+  gap: ${({ theme }) => theme.space['8']};
   animation: ${fadeInUp} 0.4s ease-out;
 `;
 
@@ -182,39 +182,39 @@ const LogoImg = styled.img`
 `;
 
 const Heading = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h2};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: center;
   margin: 0;
 `;
 
 const SubHeading = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   max-width: 480px;
-  line-height: ${({ theme }) => theme.typography.lineHeight.normal};
+  line-height: ${({ theme }) => theme.lineHeights.base};
   margin: 0;
 `;
 
 const LoadingText = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
 const ErrorBanner = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => `${theme.colors.error}15`};
-  border: 1px solid ${({ theme }) => `${theme.colors.error}40`};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.error};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  padding: ${({ theme }) => theme.space['4']} ${({ theme }) => theme.space['6']};
+  background: ${({ theme }) => `${theme.colors.status.danger}15`};
+  border: 1px solid ${({ theme }) => `${theme.colors.status.danger}40`};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: ${({ theme }) => theme.colors.status.danger};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const ErrorIcon = styled.span`
@@ -223,18 +223,18 @@ const ErrorIcon = styled.span`
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  background: ${({ theme }) => theme.colors.error};
+  border-radius: ${({ theme }) => theme.radii.pill};
+  background: ${({ theme }) => theme.colors.status.danger};
   color: white;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   flex-shrink: 0;
 `;
 
 const DivisionGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space['6']};
   width: 100%;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -252,28 +252,28 @@ const DivisionCard = styled.button<DivisionCardProps>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.xl};
-  background: ${({ theme }) => theme.colors.surface};
+  gap: ${({ theme }) => theme.space['4']};
+  padding: ${({ theme }) => theme.space['8']};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border: 2px solid
     ${({ theme, $isSelected }) =>
-      $isSelected ? theme.colors.primary[500] : theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+      $isSelected ? theme.colors.accent.sage : theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.lg};
   box-shadow: ${({ theme, $isSelected }) =>
-    $isSelected ? `0 0 0 4px ${theme.colors.primary[500]}20` : theme.shadows.md};
+    $isSelected ? `0 0 0 4px ${theme.colors.accent.sage}20` : theme.shadows.md};
   cursor: ${({ $isLoading }) => ($isLoading ? 'not-allowed' : 'pointer')};
   text-align: center;
   transition: all 0.2s ease;
   overflow: hidden;
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: ${({ theme }) => `0 0 0 4px ${theme.colors.primary[500]}20`};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: ${({ theme }) => `0 0 0 4px ${theme.colors.accent.sage}20`};
     transform: translateY(-2px);
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 
@@ -291,20 +291,20 @@ const CardBody = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const CardName = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const CardCode = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -315,24 +315,24 @@ interface CardIndustryBadgeProps {
 
 const CardIndustryBadge = styled.span<CardIndustryBadgeProps>`
   display: inline-block;
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  margin-top: ${({ theme }) => theme.spacing.xs};
+  padding: ${({ theme }) => `${theme.space['1']} ${theme.space['2']}`};
+  border-radius: ${({ theme }) => theme.radii.pill};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  margin-top: ${({ theme }) => theme.space['1']};
   background: ${({ $industryType, theme }) =>
     $industryType === 'vegetable_fruits'
-      ? `${theme.colors.success}20`
-      : `${theme.colors.primary[500]}15`};
+      ? `${theme.colors.status.success}20`
+      : `${theme.colors.accent.sage}15`};
   color: ${({ $industryType, theme }) =>
-    $industryType === 'vegetable_fruits' ? theme.colors.success : theme.colors.primary[600]};
+    $industryType === 'vegetable_fruits' ? theme.colors.status.success : theme.colors.accent.sageDeep};
 `;
 
 const CardDescription = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  line-height: ${({ theme }) => theme.typography.lineHeight.normal};
-  margin: ${({ theme }) => theme.spacing.xs} 0 0;
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  line-height: ${({ theme }) => theme.lineHeights.base};
+  margin: ${({ theme }) => theme.space['1']} 0 0;
 `;
 
 const CardLoadingOverlay = styled.div`
@@ -341,15 +341,15 @@ const CardLoadingOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => `${theme.colors.surface}cc`};
+  background: ${({ theme }) => `${theme.colors.surface.raised}cc`};
 `;
 
 const EmptyState = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing['2xl']};
+  gap: ${({ theme }) => theme.space['4']};
+  padding: ${({ theme }) => theme.space['12']};
   text-align: center;
 `;
 
@@ -358,16 +358,16 @@ const EmptyIcon = styled.span`
 `;
 
 const EmptyTitle = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const EmptyDescription = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  color: ${({ theme }) => theme.colors.text.secondary};
   max-width: 400px;
-  line-height: ${({ theme }) => theme.typography.lineHeight.normal};
+  line-height: ${({ theme }) => theme.lineHeights.base};
   margin: 0;
 `;

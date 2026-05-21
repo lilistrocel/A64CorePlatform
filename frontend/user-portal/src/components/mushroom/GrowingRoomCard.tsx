@@ -99,9 +99,9 @@ interface CardWrapperProps {
 
 const CardWrapper = styled.div<CardWrapperProps>`
   position: relative;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   box-shadow: ${({ theme }) => theme.shadows.sm};
   overflow: hidden;
   transition: box-shadow 150ms ease-in-out, transform 150ms ease-in-out;
@@ -121,7 +121,7 @@ const CardWrapper = styled.div<CardWrapperProps>`
     $clickable &&
     `
     &:focus-visible {
-      outline: 2px solid ${theme.colors.primary[500]};
+      outline: 2px solid ${theme.colors.accent.sage};
       outline-offset: 2px;
     }
   `}
@@ -150,15 +150,15 @@ const RoomCodeRow = styled.div`
 const RoomCode = styled.span`
   font-size: 15px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: 0.3px;
 `;
 
 const FlushBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.primary[800]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   border-radius: 20px;
   padding: 2px 7px;
 `;
@@ -181,7 +181,7 @@ const PhaseBadge = styled.span<PhaseBadgeProps>`
 
 const StrainName = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
@@ -209,5 +209,5 @@ const BeValue = styled.span<BeValueProps>`
 
 const FlushInfo = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;

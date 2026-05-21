@@ -342,42 +342,42 @@ const Overlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: ${({ theme }) => theme.zIndex.modal};
-  padding: ${({ theme }) => theme.spacing.lg};
+  z-index: ${({ theme }) => theme.zIndices.modal};
+  padding: ${({ theme }) => theme.space['6']};
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.xl};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-radius: ${({ theme }) => theme.radii.xl};
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => theme.space['6']};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Title = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.h1};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -385,120 +385,120 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
 const Content = styled.div`
-  padding: ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.space['6']};
   overflow-y: auto;
 `;
 
 const BlockInfo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  gap: ${({ theme }) => theme.space['1']};
+  margin-bottom: ${({ theme }) => theme.space['6']};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.md};
   border-left: 4px solid #10B981; /* grade-A green: consistent with Operations harvest modal */
 `;
 
 const BlockLine = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const CropLine = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const LineIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
   line-height: 1;
 `;
 
 const BlockIdentity = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: 'Courier New', monospace;
 `;
 
 const BlockNameInline = styled.span`
-  font-family: ${({ theme }) => theme.typography.fontFamily.primary};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-family: ${({ theme }) => theme.fonts.body};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const CropName = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ChipRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
   margin-top: 2px;
 `;
 
 const Chip = styled.span<{ $variant?: 'progress' }>`
   display: inline-flex;
   align-items: center;
-  padding: 2px ${({ theme }) => theme.spacing.xs};
+  padding: 2px ${({ theme }) => theme.space['1']};
   background: ${({ theme, $variant }) =>
-    $variant === 'progress' ? 'rgba(16, 185, 129, 0.1)' : theme.colors.neutral[100]};
+    $variant === 'progress' ? 'rgba(16, 185, 129, 0.1)' : theme.colors.surface.raised};
   color: ${({ theme, $variant }) =>
-    $variant === 'progress' ? '#047857' : theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+    $variant === 'progress' ? '#047857' : theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  border-radius: ${({ theme }) => theme.radii.sm};
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space['6']};
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const Label = styled.label`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input`
-  padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  padding: ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[500]};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
@@ -506,7 +506,7 @@ const Input = styled.input`
 const GradeGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste: boolean }>`
@@ -514,7 +514,7 @@ const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['4']};
   border: 2px solid
     ${({ $selected, $color, $isWaste, theme }) =>
       $selected
@@ -522,9 +522,9 @@ const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste
           ? $color /* solid red border when Waste selected */
           : $color
         : $isWaste
-        ? theme.colors.neutral[300] /* muted when not selected */
-        : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+        ? theme.colors.border.subtle /* muted when not selected */
+        : theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   background: ${({ $selected, $color, $isWaste }) =>
     $selected
       ? $isWaste
@@ -542,79 +542,79 @@ const GradeButton = styled.button<{ $selected: boolean; $color: string; $isWaste
 `;
 
 const GradeIcon = styled.div<{ $color?: string }>`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
-  color: ${({ $color, theme }) => $color ?? theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  margin-bottom: ${({ theme }) => theme.space['1']};
+  color: ${({ $color, theme }) => $color ?? theme.colors.text.primary};
 `;
 
 const GradeLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const GradeNote = styled.div<{ $warn?: boolean }>`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ $warn, theme }) => ($warn ? '#B91C1C' : theme.colors.textSecondary)};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ $warn, theme }) => ($warn ? '#B91C1C' : theme.colors.text.secondary)};
   font-style: italic;
   text-align: center;
 `;
 
 const Textarea = styled.textarea`
-  padding: ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  padding: ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   resize: vertical;
   transition: border-color 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[500]};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
 const CharCount = styled.div<{ $over: boolean }>`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ $over, theme }) => ($over ? theme.colors.error : theme.colors.textSecondary)};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ $over, theme }) => ($over ? theme.colors.status.danger : theme.colors.text.secondary)};
   text-align: right;
 `;
 
 const ErrorMessage = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.error}15`};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.error};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => `${theme.colors.status.danger}15`};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: ${({ theme }) => theme.colors.status.danger};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   text-align: center;
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
 `;
 
 const CancelButton = styled.button`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.primary};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
   cursor: pointer;
   transition: background 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 
   &:disabled {
@@ -625,13 +625,13 @@ const CancelButton = styled.button`
 
 const SubmitButton = styled.button<{ $isWaste: boolean }>`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ $isWaste, theme }) => ($isWaste ? '#9CA3AF' : theme.colors.warning)};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ $isWaste, theme }) => ($isWaste ? '#9CA3AF' : theme.colors.status.warning)};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
   cursor: pointer;
   transition: all 0.2s ease;
 

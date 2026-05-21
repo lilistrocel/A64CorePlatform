@@ -20,7 +20,7 @@ const toast = {
 
 // Basic Card component
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   padding: 16px;
@@ -62,10 +62,10 @@ const Button = styled.button<ButtonProps>`
         `;
       default:
         return `
-          background: ${theme.colors.surface};
-          color: ${theme.colors.textPrimary};
-          border: 1px solid ${theme.colors.neutral[300]};
-          &:hover { background: ${theme.colors.neutral[300]}; }
+          background: ${theme.colors.surface.raised};
+          color: ${theme.colors.text.primary};
+          border: 1px solid ${theme.colors.border.subtle};
+          &:hover { background: ${theme.colors.border.subtle}; }
         `;
     }
   }}
@@ -168,12 +168,12 @@ const FiltersRow = styled.div`
 
 const FilterSelect = styled.select`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 0.875rem;
   min-width: 180px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &:focus {
     outline: none;
@@ -184,15 +184,15 @@ const FilterSelect = styled.select`
 
 const SearchInput = styled.input`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 0.875rem;
   min-width: 200px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -204,9 +204,9 @@ const SearchInput = styled.input`
 
 const ExportButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -214,7 +214,7 @@ const ExportButton = styled.button`
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 
   &:disabled {
@@ -239,23 +239,23 @@ const TableHeader = styled.th`
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const TableRow = styled.tr`
   /* Striped rows for readability - alternating row colors */
   &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -282,17 +282,17 @@ const SourceBadge = styled.span<SourceBadgeProps>`
   ${({ $type, theme }) => {
     switch ($type) {
       case 'return':
-        return `background: ${theme.colors.infoBg}; color: #7C3AED;`;
+        return `background: ${theme.colors.surface.sunken}; color: #7C3AED;`;
       case 'expired':
-        return `background: ${theme.colors.warningBg}; color: #D97706;`;
+        return `background: ${theme.colors.status.warning}; color: #D97706;`;
       case 'damaged':
-        return `background: ${theme.colors.errorBg}; color: #DC2626;`;
+        return `background: ${theme.colors.status.danger}; color: #DC2626;`;
       case 'harvest':
-        return `background: ${theme.colors.successBg}; color: #059669;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #059669;`;
       case 'quality_reject':
-        return `background: ${theme.colors.errorBg}; color: #DB2777;`;
+        return `background: ${theme.colors.status.danger}; color: #DB2777;`;
       default:
-        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
+        return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
     }
   }}
 `;
@@ -313,19 +313,19 @@ const DisposalBadge = styled.span<DisposalBadgeProps>`
   ${({ $method, theme }) => {
     switch ($method) {
       case 'compost':
-        return `background: ${theme.colors.successBg}; color: #059669;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #059669;`;
       case 'animal_feed':
-        return `background: ${theme.colors.infoBg}; color: #2563EB;`;
+        return `background: ${theme.colors.surface.sunken}; color: #2563EB;`;
       case 'donated':
-        return `background: ${theme.colors.infoBg}; color: #4F46E5;`;
+        return `background: ${theme.colors.surface.sunken}; color: #4F46E5;`;
       case 'sold_discount':
-        return `background: ${theme.colors.warningBg}; color: #D97706;`;
+        return `background: ${theme.colors.status.warning}; color: #D97706;`;
       case 'discard':
-        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
+        return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
       case 'pending':
-        return `background: ${theme.colors.errorBg}; color: #DC2626;`;
+        return `background: ${theme.colors.status.danger}; color: #DC2626;`;
       default:
-        return `background: ${theme.colors.surface}; color: ${theme.colors.textSecondary};`;
+        return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
     }
   }}
 `;
@@ -392,16 +392,16 @@ interface PageButtonProps {
 
 const PageButton = styled.button<PageButtonProps>`
   padding: 8px 14px;
-  border: 1px solid ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.border.subtle)};
   border-radius: 6px;
-  background: ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textPrimary)};
+  background: ${({ $active, theme }) => ($active ? '#4a90d9' : theme.colors.surface.canvas)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.primary)};
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? '#3a7bc8' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? '#3a7bc8' : theme.colors.surface.raised)};
   }
 
   &:disabled {
@@ -424,7 +424,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
   width: 100%;
@@ -455,26 +455,26 @@ const FormLabel = styled.label`
 const FormSelect = styled.select`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 0.875rem;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const FormTextarea = styled.textarea`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 0.875rem;
   min-height: 80px;
   resize: vertical;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 

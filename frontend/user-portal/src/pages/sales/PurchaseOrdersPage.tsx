@@ -34,7 +34,7 @@ const PageHeader = styled.div`
 const PageTitle = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -56,11 +56,11 @@ const FiltersGroup = styled.div`
 
 const Select = styled.select`
   padding: 10px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -73,12 +73,12 @@ const Select = styled.select`
 
 const SearchInput = styled.input`
   padding: 10px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   min-width: 250px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &:focus {
@@ -88,7 +88,7 @@ const SearchInput = styled.input`
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
@@ -105,10 +105,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
+        color: ${theme.colors.text.secondary};
+        border: 1px solid ${theme.colors.border.subtle};
         &:hover {
-          background: ${theme.colors.surface};
+          background: ${theme.colors.surface.raised};
         }
       `;
     }
@@ -116,7 +116,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       background: #3B82F6;
       color: white;
       &:hover {
-        background: #1976d2;
+        background: #0F6E56;
       }
       &:disabled {
         opacity: 0.6;
@@ -138,7 +138,7 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 16px;
   padding: 32px;
   max-width: 900px;
@@ -154,14 +154,14 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const ErrorState = styled.div`

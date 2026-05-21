@@ -148,8 +148,8 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.lg};
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 100%;
   max-width: 500px;
@@ -179,8 +179,8 @@ const ModalHeader = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 1.25rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 
   @media (min-width: 480px) {
@@ -205,9 +205,9 @@ const ModalFooter = styled.div`
 `;
 
 const WarningBanner = styled.div`
-  background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.status.warning};
+  border: 1px solid ${({ theme }) => theme.colors.status.warning};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.75rem;
   margin-bottom: 1rem;
   display: flex;
@@ -243,9 +243,9 @@ const WarningText = styled.div`
 `;
 
 const BackupCodesContainer = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.75rem;
   margin-bottom: 0.75rem;
 
@@ -271,10 +271,10 @@ const BackupCode = styled.div`
   align-items: center;
   gap: 0.375rem;
   font-family: 'Courier New', monospace;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 0.5rem 0.625rem;
   border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 
   @media (min-width: 480px) {
     gap: 0.5rem;
@@ -283,7 +283,7 @@ const BackupCode = styled.div`
 `;
 
 const CodeNumber = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.75rem;
   min-width: 1.25rem;
 
@@ -293,7 +293,7 @@ const CodeNumber = styled.span`
 `;
 
 const CodeValue = styled.span`
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 1rem; /* Min 16px for readability on mobile */
   font-weight: 500;
   letter-spacing: 0.25px;
@@ -321,10 +321,10 @@ const ActionButton = styled.button`
   flex: 1;
   min-height: 44px; /* Touch-friendly */
   padding: 0.625rem 1rem;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.primary[600]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -337,8 +337,8 @@ const ActionButton = styled.button`
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -347,8 +347,8 @@ const AcknowledgmentSection = styled.div`
   align-items: flex-start;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-radius: ${({ theme }) => theme.radii.md};
 
   @media (min-width: 480px) {
     gap: 0.75rem;
@@ -362,12 +362,12 @@ const Checkbox = styled.input`
   min-width: 1.25rem; /* Prevent shrinking */
   margin-top: 0.125rem;
   cursor: pointer;
-  accent-color: ${({ theme }) => theme.colors.primary[500]};
+  accent-color: ${({ theme }) => theme.colors.accent.sage};
 `;
 
 const CheckboxLabel = styled.label`
   font-size: 0.8125rem;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   line-height: 1.4;
 
@@ -382,10 +382,10 @@ const CloseButton = styled.button<{ $acknowledged: boolean }>`
   min-height: 44px; /* Touch-friendly */
   padding: 0.75rem;
   background: ${({ $acknowledged, theme }) =>
-    $acknowledged ? theme.colors.primary[500] : theme.colors.neutral[300]};
+    $acknowledged ? theme.colors.accent.sage : theme.colors.border.subtle};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ $acknowledged, theme }) => $acknowledged ? 'white' : theme.colors.textSecondary};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: ${({ $acknowledged, theme }) => $acknowledged ? 'white' : theme.colors.text.secondary};
   font-size: 0.875rem;
   font-weight: 500;
   cursor: ${({ $acknowledged }) => $acknowledged ? 'pointer' : 'not-allowed'};
@@ -398,6 +398,6 @@ const CloseButton = styled.button<{ $acknowledged: boolean }>`
 
   &:hover:not(:disabled) {
     background: ${({ $acknowledged, theme }) =>
-      $acknowledged ? theme.colors.primary[600] : theme.colors.neutral[300]};
+      $acknowledged ? theme.colors.accent.sageDeep : theme.colors.border.subtle};
   }
 `;

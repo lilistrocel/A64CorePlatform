@@ -115,7 +115,7 @@ const PageHeader = styled.div`
 const PageTitle = styled.h1`
   font-size: 26px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -131,29 +131,29 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 200px;
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const FilterSelect = styled.select`
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const PrimaryButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -162,49 +162,49 @@ const PrimaryButton = styled.button`
   cursor: pointer;
   white-space: nowrap;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageDeep}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const SecondaryButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; color: ${({ theme }) => theme.colors.textPrimary}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; color: ${({ theme }) => theme.colors.text.primary}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const DangerButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  &:hover { background: ${({ theme }) => theme.colors.status.danger}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const SuccessButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.success || '#10b981'};
-  border: 1px solid ${({ theme }) => theme.colors.success || '#10b981'};
+  color: ${({ theme }) => theme.colors.status.success || '#10b981'};
+  border: 1px solid ${({ theme }) => theme.colors.status.success || '#10b981'};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -222,8 +222,8 @@ const TwoPaneLayout = styled.div`
 // ─── Left pane — account tree ──────────────────────────────────────────────────
 
 const TreePanel = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   overflow: hidden;
   /* Allow the tree to scroll independently on tall viewports */
@@ -239,13 +239,13 @@ const DrawerHeader = styled.button`
   justify-content: space-between;
   width: 100%;
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border: none;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const DrawerLabel = styled.span`
@@ -253,19 +253,19 @@ const DrawerLabel = styled.span`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const DrawerCaret = styled.span<{ $open: boolean }>`
   font-size: 11px;
   transition: transform 0.15s ease;
   transform: ${({ $open }) => ($open ? 'rotate(0deg)' : 'rotate(-90deg)')};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const DrawerCount = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-left: 6px;
 `;
 
@@ -284,9 +284,9 @@ const AccountRow = styled.button<AccountRowProps>`
   padding: 7px 16px;
   padding-left: ${({ $depth }) => 16 + $depth * 20}px;
   background: ${({ $isSelected, theme }) =>
-    $isSelected ? `${theme.colors.primary[500]}15` : 'transparent'};
+    $isSelected ? `${theme.colors.accent.sage}15` : 'transparent'};
   border: none;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -295,7 +295,7 @@ const AccountRow = styled.button<AccountRowProps>`
 
   &:hover {
     background: ${({ $isSelected, theme }) =>
-      $isSelected ? `${theme.colors.primary[500]}20` : theme.colors.neutral[50]};
+      $isSelected ? `${theme.colors.accent.sage}20` : theme.colors.surface.canvas};
   }
 
   &:last-child {
@@ -306,7 +306,7 @@ const AccountRow = styled.button<AccountRowProps>`
 const AccountNumber = styled.span<{ $isHeader: boolean }>`
   font-size: 12px;
   font-weight: ${({ $isHeader }) => ($isHeader ? 700 : 400)};
-  color: ${({ $isHeader, theme }) => ($isHeader ? theme.colors.textPrimary : theme.colors.textSecondary)};
+  color: ${({ $isHeader, theme }) => ($isHeader ? theme.colors.text.primary : theme.colors.text.secondary)};
   font-family: 'JetBrains Mono', monospace;
   min-width: 110px;
   flex-shrink: 0;
@@ -315,7 +315,7 @@ const AccountNumber = styled.span<{ $isHeader: boolean }>`
 const AccountName = styled.span<{ $isHeader: boolean }>`
   font-size: 13px;
   font-weight: ${({ $isHeader }) => ($isHeader ? 600 : 400)};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -333,20 +333,20 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
   ${({ $variant, theme }) => {
     if ($variant === 'control') {
       return `
-        background: ${theme.colors.infoBg || '#eff6ff'};
-        color: ${theme.colors.info || '#2196f3'};
+        background: ${theme.colors.surface.sunken || '#eff6ff'};
+        color: ${theme.colors.status.info || '#0F6E56'};
       `;
     }
     if ($variant === 'inactive') {
       return `
-        background: ${theme.colors.neutral[100]};
-        color: ${theme.colors.textDisabled};
+        background: ${theme.colors.surface.raised};
+        color: ${theme.colors.text.tertiary};
       `;
     }
     // locked
     return `
-      background: ${theme.colors.warningBg || '#fffbeb'};
-      color: ${theme.colors.warning || '#f59e0b'};
+      background: ${theme.colors.status.warning || '#fffbeb'};
+      color: ${theme.colors.status.warning || '#f59e0b'};
     `;
   }}
 `;
@@ -354,8 +354,8 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
 // ─── Right pane — detail ───────────────────────────────────────────────────────
 
 const DetailPanel = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   padding: 28px;
 `;
@@ -363,7 +363,7 @@ const DetailPanel = styled.div`
 const EmptyDetail = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 14px;
 `;
 
@@ -380,7 +380,7 @@ const DetailTitle = styled.div``;
 const DetailAccountNumber = styled.div`
   font-size: 22px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: 'JetBrains Mono', monospace;
   display: flex;
   align-items: center;
@@ -389,7 +389,7 @@ const DetailAccountNumber = styled.div`
 
 const DetailAccountName = styled.div`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
@@ -416,24 +416,24 @@ const FieldLabel = styled.div`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-bottom: 4px;
 `;
 
 const FieldValue = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ParentLink = styled.button`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   text-decoration: underline;
-  &:hover { color: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { color: ${({ theme }) => theme.colors.accent.sageDeep}; }
 `;
 
 const StatusBadge = styled.span<{ $active: boolean }>`
@@ -444,9 +444,9 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg || '#ecfdf5' : theme.colors.neutral[100]};
+    $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.success || '#10b981' : theme.colors.textDisabled};
+    $active ? theme.colors.status.success || '#10b981' : theme.colors.text.tertiary};
 `;
 
 const FlagRow = styled.div`
@@ -459,7 +459,7 @@ const FlagRow = styled.div`
 /** Multi-line description text in the detail pane. */
 const DetailDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.6;
   margin: 0;
   white-space: pre-wrap;
@@ -480,20 +480,20 @@ const LevelBadge = styled.span<{ $level: AccountLevel }>`
   ${({ $level, theme }) => {
     if ($level === 'active') {
       return `
-        background: ${theme.colors.successBg || '#ecfdf5'};
-        color: ${theme.colors.success || '#10b981'};
+        background: ${theme.colors.accent.sageSoft || '#ecfdf5'};
+        color: ${theme.colors.status.success || '#10b981'};
       `;
     }
     if ($level === 'title') {
       return `
-        background: ${theme.colors.infoBg || '#eff6ff'};
-        color: ${theme.colors.info || '#2196f3'};
+        background: ${theme.colors.surface.sunken || '#eff6ff'};
+        color: ${theme.colors.status.info || '#0F6E56'};
       `;
     }
     // drawer
     return `
-      background: ${theme.colors.warningBg || '#fffbeb'};
-      color: ${theme.colors.warning || '#f59e0b'};
+      background: ${theme.colors.status.warning || '#fffbeb'};
+      color: ${theme.colors.status.warning || '#f59e0b'};
     `;
   }}
 `;
@@ -506,8 +506,8 @@ const RoleBadge = styled.span`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 /** Small inline label for IFRS tag. */
@@ -518,8 +518,8 @@ const IfrsTagLabel = styled.span`
   font-family: 'JetBrains Mono', monospace;
   padding: 2px 8px;
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
   letter-spacing: 0.5px;
 `;
 
@@ -538,9 +538,9 @@ const ModalOverlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   width: 100%;
   max-width: 640px;
   max-height: 90vh;
@@ -554,14 +554,14 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -570,11 +570,11 @@ const CloseButton = styled.button`
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px;
   border-radius: 6px;
   line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const ModalBody = styled.div`
@@ -590,7 +590,7 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
@@ -610,75 +610,75 @@ const Field = styled.div`
 const FormLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const FormInput = styled.input<{ $hasError?: boolean }>`
   padding: 10px 14px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
+    $hasError ? theme.colors.status.danger : theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: inherit;
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
   }
-  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.surface.canvas}; }
 `;
 
 const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
   padding: 10px 14px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
+    $hasError ? theme.colors.status.danger : theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: inherit;
   resize: vertical;
   min-height: 72px;
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
   }
-  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.surface.canvas}; }
 `;
 
 const FormSelect = styled.select<{ $hasError?: boolean }>`
   padding: 10px 14px;
   border: 1px solid ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
+    $hasError ? theme.colors.status.danger : theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   font-family: inherit;
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
   }
-  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.surface.canvas}; }
 `;
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   margin-top: 2px;
 `;
 
 const BannerError = styled.p`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 13px;
   margin: 0;
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
 `;
 
@@ -687,13 +687,13 @@ const CheckboxRow = styled.label`
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
 `;
 
 const HintText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // ─── Confirm dialog ────────────────────────────────────────────────────────────

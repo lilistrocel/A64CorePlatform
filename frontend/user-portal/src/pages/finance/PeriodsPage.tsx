@@ -187,13 +187,13 @@ const PageContainer = styled.div`
 const PageTitle = styled.h1`
   font-size: 26px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px;
 `;
 
 const PageSubtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 24px;
   line-height: 1.6;
   max-width: 820px;
@@ -201,15 +201,15 @@ const PageSubtitle = styled.p`
 
 const Divider = styled.div`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   margin-bottom: 24px;
 `;
 
 // ─── Toolbar ──────────────────────────────────────────────────────────────────
 
 const ToolbarCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   padding: 16px 20px;
   margin-bottom: 20px;
@@ -241,22 +241,22 @@ const ToolbarLabel = styled.label`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ToolbarSelect = styled.select`
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   min-width: 180px;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -264,7 +264,7 @@ const ToolbarSelect = styled.select`
 
 const PillToggleGroup = styled.div`
   display: flex;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -279,11 +279,11 @@ const PillToggleButton = styled.button<PillToggleButtonProps>`
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   font-family: inherit;
   border: none;
-  border-right: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-right: 1px solid ${({ theme }) => theme.colors.border.subtle};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.background};
+    $active ? theme.colors.accent.sage : theme.colors.surface.canvas};
   color: ${({ $active, theme }) =>
-    $active ? 'white' : theme.colors.textSecondary};
+    $active ? 'white' : theme.colors.text.secondary};
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   white-space: nowrap;
@@ -294,7 +294,7 @@ const PillToggleButton = styled.button<PillToggleButtonProps>`
 
   &:hover:not([disabled]) {
     background: ${({ $active, theme }) =>
-      $active ? theme.colors.primary[700] : theme.colors.neutral[100]};
+      $active ? theme.colors.accent.sageDeep : theme.colors.surface.raised};
   }
 `;
 
@@ -302,7 +302,7 @@ const PillToggleButton = styled.button<PillToggleButtonProps>`
 
 const CreateButton = styled.button`
   padding: 10px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -313,7 +313,7 @@ const CreateButton = styled.button`
   white-space: nowrap;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
   &:disabled {
     opacity: 0.5;
@@ -324,10 +324,10 @@ const CreateButton = styled.button`
 // ─── Table ─────────────────────────────────────────────────────────────────────
 
 const TableWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const Table = styled.table`
@@ -337,7 +337,7 @@ const Table = styled.table`
 `;
 
 const THead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.surface.raised};
   position: sticky;
   top: 0;
   z-index: 1;
@@ -350,8 +350,8 @@ const Th = styled.th`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.surface.sunken};
   white-space: nowrap;
 `;
 
@@ -361,23 +361,23 @@ interface TrProps {
 }
 
 const Tr = styled.tr<TrProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   border-left: ${({ $current }) => ($current ? '3px solid #3b82f6' : '3px solid transparent')};
   opacity: ${({ $muted }) => ($muted ? 0.7 : 1)};
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
 const Td = styled.td`
   padding: 12px 16px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   white-space: nowrap;
 `;
 
 const TdMuted = styled(Td)`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 12px;
 `;
 
@@ -424,14 +424,14 @@ const CloseActionButton = styled.button`
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
-  border: 1px solid ${({ theme }) => theme.colors.error || '#dc2626'};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#dc2626'};
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
+    background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
   }
   &:disabled {
     opacity: 0.4;
@@ -444,15 +444,15 @@ const ReopenActionButton = styled.button`
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
   &:disabled {
     opacity: 0.4;
@@ -465,7 +465,7 @@ const ReopenActionButton = styled.button`
 const EmptyState = styled.div`
   padding: 60px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
   line-height: 1.6;
 `;
@@ -473,14 +473,14 @@ const EmptyState = styled.div`
 const LoadingOverlay = styled.div`
   padding: 48px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
 `;
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
+  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
   border-radius: 10px;
   font-size: 13px;
   margin-bottom: 20px;
@@ -505,7 +505,7 @@ const ModalBackdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 14px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   width: 100%;
@@ -517,14 +517,14 @@ const ModalBox = styled.div`
 const ModalTitle = styled.h2`
   font-size: 18px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 12px;
   padding-right: 32px;
 `;
 
 const ModalBody = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.65;
   margin: 0 0 20px;
 `;
@@ -541,15 +541,15 @@ const ModalCloseBtn = styled.button`
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 18px;
   cursor: pointer;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -563,16 +563,16 @@ const ModalActions = styled.div`
 
 const CancelButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
 
@@ -598,7 +598,7 @@ const DangerConfirmButton = styled.button`
 
 const ConfirmButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -608,7 +608,7 @@ const ConfirmButton = styled.button`
   cursor: pointer;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
   &:disabled {
     opacity: 0.5;
@@ -620,7 +620,7 @@ const ModalReasonLabel = styled.label`
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -630,16 +630,16 @@ const ModalReasonInput = styled.input`
   width: 100%;
   box-sizing: border-box;
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 20px;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -657,7 +657,7 @@ const WizardSectionLabel = styled.label`
   display: block;
   font-size: 12px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin-bottom: 8px;
@@ -667,31 +667,31 @@ const WizardInput = styled.input`
   width: 100%;
   box-sizing: border-box;
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const WizardSelect = styled.select`
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -706,20 +706,20 @@ const RadioLabel = styled.label`
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   user-select: none;
 `;
 
 const WizardErrorText = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error || '#dc2626'};
+  color: ${({ theme }) => theme.colors.status.danger || '#dc2626'};
   margin: 4px 0 0;
 `;
 
 const ProgressBar = styled.div`
   height: 4px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 16px;
@@ -731,7 +731,7 @@ interface ProgressFillProps {
 
 const ProgressFill = styled.div<ProgressFillProps>`
   height: 100%;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   width: ${({ $percent }) => $percent}%;
   transition: width 200ms ease;
 `;

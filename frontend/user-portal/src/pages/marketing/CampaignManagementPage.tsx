@@ -27,7 +27,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -42,14 +42,14 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 200px;
   padding: 10px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -60,11 +60,11 @@ const SearchInput = styled.input`
 
 const Select = styled.select`
   padding: 10px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
 
   &:focus {
@@ -85,7 +85,7 @@ const Button = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: #0F6E56;
   }
 `;
 
@@ -95,7 +95,7 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const ErrorContainer = styled.div`

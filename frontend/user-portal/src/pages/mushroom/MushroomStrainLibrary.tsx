@@ -584,7 +584,7 @@ const Container = styled.div`
   padding: 24px;
   max-width: 100%;
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const PageHeader = styled.div`
@@ -601,7 +601,7 @@ const TitleSection = styled.div``;
 const PageTitle = styled.h1`
   font-size: 28px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
 `;
 
@@ -642,17 +642,17 @@ const FiltersRow = styled.div`
 
 const SearchInput = styled.input`
   padding: 9px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   outline: none;
   min-width: 240px;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 
@@ -670,31 +670,31 @@ const FilterGroup = styled.div`
 const FilterLabel = styled.label`
   font-size: 11px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const FilterSelect = styled.select`
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 `;
 
 const ResultsCount = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   align-self: flex-end;
   padding-bottom: 10px;
 `;
@@ -717,7 +717,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 3px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #8B5CF6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -729,13 +729,13 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
   max-width: 480px;
@@ -754,13 +754,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 22px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
@@ -779,7 +779,7 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   width: 100%;
@@ -798,7 +798,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -807,17 +807,17 @@ const CloseModalBtn = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
   }
 `;
 
@@ -836,12 +836,12 @@ const FormSection = styled.div`
 const FormSectionTitle = styled.h3`
   font-size: 13px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0;
   padding-bottom: 6px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const TwoColForm = styled.div`
@@ -863,7 +863,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Required = styled.span`
@@ -873,21 +873,21 @@ const Required = styled.span`
 
 const Input = styled.input`
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   outline: none;
   transition: border-color 150ms;
   width: 100%;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 `;
@@ -900,45 +900,45 @@ const TwoInputRow = styled.div`
 
 const RangeSep = styled.span`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   flex-shrink: 0;
 `;
 
 const SelectField = styled.select`
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 `;
 
 const TextArea = styled.textarea`
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   resize: vertical;
   font-family: inherit;
   outline: none;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 `;
@@ -946,7 +946,7 @@ const TextArea = styled.textarea`
 const FormError = styled.div`
   font-size: 13px;
   color: #ef5350;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 10px 12px;
@@ -961,20 +961,20 @@ const FormActions = styled.div`
 
 const CancelBtn = styled.button`
   padding: 10px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;

@@ -34,7 +34,7 @@ function formatTooltipValue(value: number): string {
   return `${value.toLocaleString()} AED`;
 }
 
-const FARM_COLORS = ['#2196f3', '#42a5f5', '#64b5f6', '#90caf9', '#bbdefb'];
+const FARM_COLORS = ['#0F6E56', '#0F6E56', '#0F6E56', '#90caf9', 'rgba(15, 110, 86, 0.10)'];
 const CROP_COLORS = ['#10B981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'];
 
 // ─── Styled Components ────────────────────────────────────────────────────────
@@ -47,8 +47,8 @@ const shimmer = keyframes`
 const Row = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: ${({ theme }) => theme.spacing.lg};
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  gap: ${({ theme }) => theme.space['6']};
+  margin-bottom: ${({ theme }) => theme.space['8']};
   align-items: stretch;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -57,10 +57,10 @@ const Row = styled.div`
 `;
 
 const Panel = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.space['6']};
   box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
@@ -70,10 +70,10 @@ const FarmPanel = styled(Panel)`
 `;
 
 const PanelTitle = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.lg} 0;
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }) => theme.space['6']} 0;
 `;
 
 const ChartContainer = styled.div`
@@ -87,12 +87,12 @@ const FarmChartContainer = styled.div`
 
 const SkeletonBar = styled.div`
   height: 280px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.surface.sunken} 25%,
+    ${({ theme }) => theme.colors.surface.raised} 50%,
+    ${({ theme }) => theme.colors.surface.sunken} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
@@ -103,8 +103,8 @@ const EmptyState = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const ErrorState = styled.div`
@@ -113,51 +113,51 @@ const ErrorState = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  color: ${({ theme }) => theme.colors.error};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  gap: ${({ theme }) => theme.space['4']};
+  color: ${({ theme }) => theme.colors.status.danger};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const RetryButton = styled.button`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background: ${({ theme }) => theme.colors.primary[500]};
+  padding: ${({ theme }) => `${theme.space['2']} ${theme.space['4']}`};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   cursor: pointer;
   font-family: inherit;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
 const ShowMoreBtn = styled.button`
   display: block;
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.sm};
-  margin-top: ${({ theme }) => theme.spacing.sm};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  padding: ${({ theme }) => theme.space['2']};
+  margin-top: ${({ theme }) => theme.space['2']};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.accent.sage};
   background: transparent;
-  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 1px dashed ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const Hint = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: ${({ theme }) => theme.spacing.sm} 0 0 0;
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin: ${({ theme }) => theme.space['2']} 0 0 0;
 `;
 
 // Custom tooltip shared by both charts

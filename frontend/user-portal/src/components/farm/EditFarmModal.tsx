@@ -67,7 +67,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   max-width: 700px;
@@ -78,7 +78,7 @@ const Modal = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -87,7 +87,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -96,12 +96,12 @@ const CloseButton = styled.button`
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px 8px;
   transition: color 150ms ease-in-out;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -123,7 +123,7 @@ const SectionTitle = styled.h3`
   letter-spacing: 0.5px;
   margin: 0 0 8px 0;
   padding-bottom: 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const FormGroup = styled.div`
@@ -135,20 +135,20 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -158,19 +158,19 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   transition: all 150ms ease-in-out;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
 
   &:focus {
@@ -180,7 +180,7 @@ const Select = styled.select<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
@@ -210,7 +210,7 @@ const CheckboxContainer = styled.label`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -222,12 +222,12 @@ const Checkbox = styled.input`
 
 const CheckboxLabel = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ModalFooter = styled.div`
   padding: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -248,16 +248,16 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
         background: #3B82F6;
         color: white;
         &:hover:not(:disabled) {
-          background: #1976d2;
+          background: #0F6E56;
         }
       `;
     }
     return `
       background: transparent;
-      color: ${theme.colors.textSecondary};
-      border: 1px solid ${theme.colors.neutral[300]};
+      color: ${theme.colors.text.secondary};
+      border: 1px solid ${theme.colors.border.subtle};
       &:hover:not(:disabled) {
-        background: ${theme.colors.surface};
+        background: ${theme.colors.surface.raised};
       }
     `;
   }}

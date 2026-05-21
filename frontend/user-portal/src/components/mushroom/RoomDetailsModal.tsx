@@ -742,7 +742,7 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 16px;
   box-shadow: ${({ theme }) => theme.shadows.lg};
   width: 100%;
@@ -814,14 +814,14 @@ const CloseButton = styled.button`
     color: #212121;
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
   }
 `;
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  background: ${({ theme }) => theme.colors.surface.raised};
   overflow-x: auto;
   flex-shrink: 0;
 `;
@@ -834,10 +834,10 @@ const TabButton = styled.button<TabButtonProps>`
   padding: 12px 18px;
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
-  color: ${({ $active }) => ($active ? '#2196f3' : '#616161')};
+  color: ${({ $active }) => ($active ? '#0F6E56' : '#616161')};
   background: none;
   border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#2196f3' : 'transparent')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#0F6E56' : 'transparent')};
   cursor: pointer;
   white-space: nowrap;
   display: flex;
@@ -850,7 +850,7 @@ const TabButton = styled.button<TabButtonProps>`
     background: rgba(0, 0, 0, 0.04);
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
     outline-offset: -2px;
   }
 `;
@@ -945,10 +945,10 @@ const AssignmentRow = styled.div`
 
 const EditAssignmentBtn = styled.button`
   padding: 4px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -957,8 +957,8 @@ const EditAssignmentBtn = styled.button`
   margin-top: 2px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
   &:focus-visible {
     outline: 2px solid #3b82f6;
@@ -974,7 +974,7 @@ const AdvancePhaseBtn = styled.button`
   padding: 8px 16px;
   border: 1px solid #3b82f6;
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   color: #3b82f6;
   font-size: 13px;
   font-weight: 600;
@@ -982,7 +982,7 @@ const AdvancePhaseBtn = styled.button`
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
   &:focus-visible {
     outline: 2px solid #3b82f6;
@@ -991,8 +991,8 @@ const AdvancePhaseBtn = styled.button`
 `;
 
 const AdvanceFormBox = styled.div`
-  background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sageSoft};
   border-radius: 10px;
   padding: 14px;
   display: flex;
@@ -1055,11 +1055,11 @@ const AdvanceFormLabel = styled.label`
 
 const AdvanceSelect = styled.select`
   padding: 8px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
   outline: none;
 
@@ -1071,11 +1071,11 @@ const AdvanceSelect = styled.select`
 
 const AdvanceTextarea = styled.textarea`
   padding: 8px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   resize: vertical;
   font-family: inherit;
   outline: none;
@@ -1089,7 +1089,7 @@ const AdvanceTextarea = styled.textarea`
 const AdvanceError = styled.div`
   font-size: 12px;
   color: #dc2626;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border: 1px solid #fecaca;
   border-radius: 6px;
   padding: 8px 10px;
@@ -1103,17 +1103,17 @@ const AdvanceActions = styled.div`
 
 const AdvanceCancelBtn = styled.button`
   padding: 7px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -1165,8 +1165,8 @@ const BEExplain = styled.p`
 
 const NotesBox = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   padding: 10px 14px;
   line-height: 1.6;
@@ -1179,7 +1179,7 @@ const LatestReadingGrid = styled.div`
 `;
 
 const ReadingCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 10px;
   padding: 12px;
   text-align: center;
@@ -1230,7 +1230,7 @@ const AddButton = styled.button`
   padding: 7px 14px;
   border: 1px solid #10B981;
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   color: #10B981;
   font-size: 13px;
   font-weight: 600;
@@ -1238,7 +1238,7 @@ const AddButton = styled.button`
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.successBg};
+    background: ${({ theme }) => theme.colors.accent.sageSoft};
   }
   &:focus-visible {
     outline: 2px solid #10B981;
@@ -1260,8 +1260,8 @@ const Th = styled.th`
   color: #9e9e9e;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border.subtle};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const Td = styled.td`
@@ -1375,7 +1375,7 @@ const ResolveButton = styled.button`
   padding: 5px 12px;
   border: 1px solid #10B981;
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   color: #10B981;
   font-size: 12px;
   font-weight: 600;
@@ -1383,7 +1383,7 @@ const ResolveButton = styled.button`
   transition: all 150ms;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.successBg};
+    background: ${({ theme }) => theme.colors.accent.sageSoft};
   }
   &:disabled {
     opacity: 0.5;

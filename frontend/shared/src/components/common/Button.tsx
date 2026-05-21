@@ -32,11 +32,11 @@ const StyledButton = styled.button<StyledButtonProps>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-family: ${({ theme }) => theme.typography.fontFamily.primary};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-family: ${({ theme }) => theme.fonts.body};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   transition: all 150ms ease-in-out;
   cursor: pointer;
   width: ${({ $fullWidth }) => ($fullWidth ? '100%' : 'auto')};
@@ -46,21 +46,21 @@ const StyledButton = styled.button<StyledButtonProps>`
     if ($variant === 'primary') {
       // WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white text
       return `
-        background: ${theme.colors.primary[700]};
+        background: ${theme.colors.accent.sageDeep};
         color: white;
 
         &:hover:not(:disabled) {
-          background: ${theme.colors.primary[800]};
+          background: ${theme.colors.accent.sageDeep};
         }
       `;
     }
     if ($variant === 'secondary') {
       return `
-        background: ${theme.colors.neutral[100]};
-        color: ${theme.colors.textPrimary};
+        background: ${theme.colors.surface.raised};
+        color: ${theme.colors.text.primary};
 
         &:hover:not(:disabled) {
-          background: ${theme.colors.neutral[200]};
+          background: ${theme.colors.surface.sunken};
         }
       `;
     }
@@ -68,11 +68,11 @@ const StyledButton = styled.button<StyledButtonProps>`
       // WCAG AA: primary.700 (#1976D2) provides 4.60:1 contrast with white background
       return `
         background: transparent;
-        color: ${theme.colors.primary[700]};
-        border: 1px solid ${theme.colors.primary[700]};
+        color: ${theme.colors.accent.sageDeep};
+        border: 1px solid ${theme.colors.accent.sageDeep};
 
         &:hover:not(:disabled) {
-          background: ${theme.colors.primary[50]};
+          background: ${theme.colors.accent.sageSoft};
         }
       `;
     }
@@ -82,20 +82,20 @@ const StyledButton = styled.button<StyledButtonProps>`
   ${({ theme, $size }) => {
     if ($size === 'small') {
       return `
-        padding: ${theme.spacing.sm} ${theme.spacing.md};
-        font-size: ${theme.typography.fontSize.sm};
+        padding: ${theme.space['2']} ${theme.space['4']};
+        font-size: ${theme.fontSizes.bodySm};
       `;
     }
     if ($size === 'medium') {
       return `
-        padding: ${theme.spacing.md} ${theme.spacing.lg};
-        font-size: ${theme.typography.fontSize.base};
+        padding: ${theme.space['4']} ${theme.space['6']};
+        font-size: ${theme.fontSizes.bodyMd};
       `;
     }
     if ($size === 'large') {
       return `
-        padding: ${theme.spacing.lg} ${theme.spacing.xl};
-        font-size: ${theme.typography.fontSize.lg};
+        padding: ${theme.space['6']} ${theme.space['8']};
+        font-size: ${theme.fontSizes.bodyLg};
       `;
     }
   }}
@@ -106,7 +106,7 @@ const StyledButton = styled.button<StyledButtonProps>`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[700]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sageDeep};
     outline-offset: 2px;
   }
 `;

@@ -444,7 +444,7 @@ const ControlsContainer = styled.div`
 const ControlsToolbar = styled.div`
   display: flex;
   gap: 8px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 8px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -466,21 +466,21 @@ const ToolbarButton = styled.button<{ $variant: 'primary' | 'secondary' | 'dange
     switch ($variant) {
       case 'primary':
         return `
-          background: ${theme.colors.primary[500]};
+          background: ${theme.colors.accent.sage};
           color: white;
-          &:hover { background: ${theme.colors.primary[700]}; }
+          &:hover { background: ${theme.colors.accent.sageDeep}; }
         `;
       case 'danger':
         return `
-          background: ${theme.colors.errorBg};
+          background: ${theme.colors.status.danger};
           color: #dc2626;
-          &:hover { background: ${theme.colors.errorBg}; filter: brightness(0.92); }
+          &:hover { background: ${theme.colors.status.danger}; filter: brightness(0.92); }
         `;
       default:
         return `
-          background: ${theme.colors.surface};
-          color: ${theme.colors.textPrimary};
-          &:hover { background: ${theme.colors.neutral[300]}; }
+          background: ${theme.colors.surface.raised};
+          color: ${theme.colors.text.primary};
+          &:hover { background: ${theme.colors.border.subtle}; }
         `;
     }
   }}
@@ -495,8 +495,8 @@ const ToolbarInfo = styled.span`
   align-items: center;
   padding: 8px 12px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 6px;
 `;
 
@@ -504,7 +504,7 @@ const AreaDisplay = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 8px 12px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);

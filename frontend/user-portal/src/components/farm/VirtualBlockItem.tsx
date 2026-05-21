@@ -31,14 +31,14 @@ const Container = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
-  border-left: 3px solid #1976d2;
+  border-left: 3px solid #0F6E56;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     transform: translateX(4px);
   }
 `;
@@ -67,7 +67,7 @@ const CropInfo = styled.div`
 const CropName = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -75,7 +75,7 @@ const CropName = styled.div`
 
 const BlockCode = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-family: 'Courier New', monospace;
 `;
 
@@ -100,7 +100,7 @@ const StateBadge = styled.span<{ $color: string }>`
 
 const DaysInfo = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
 `;
 
@@ -118,7 +118,7 @@ const DeleteButton = styled.button`
   gap: 4px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: ${({ theme }) => theme.colors.status.danger};
   }
 
   &:disabled {

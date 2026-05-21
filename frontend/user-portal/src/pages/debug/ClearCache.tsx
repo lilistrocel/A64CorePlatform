@@ -18,7 +18,7 @@ const Container = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 16px;
   padding: 48px;
   max-width: 600px;
@@ -29,14 +29,14 @@ const Card = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 12px 0;
   text-align: center;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 32px 0;
   text-align: center;
 `;
@@ -44,14 +44,14 @@ const Subtitle = styled.p`
 const Section = styled.div`
   margin-bottom: 24px;
   padding: 20px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
 `;
 
 const SectionTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 12px 0;
 `;
 
@@ -59,7 +59,7 @@ const InfoRow = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   &:last-child {
     border-bottom: none;
@@ -68,13 +68,13 @@ const InfoRow = styled.div`
 
 const Label = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Value = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ButtonGroup = styled.div`
@@ -105,8 +105,8 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
     }
     if (props.$variant === 'secondary') {
       return `
-        background: ${props.theme.colors.neutral[300]};
-        color: ${props.theme.colors.textPrimary};
+        background: ${props.theme.colors.border.subtle};
+        color: ${props.theme.colors.text.primary};
         &:hover {
           background: #d0d0d0;
         }
@@ -137,22 +137,22 @@ const Message = styled.div<{ $type: 'success' | 'error' | 'info' }>`
   ${({ $type, theme }) => {
     if ($type === 'success') {
       return `
-        background: ${theme.colors.successBg};
+        background: ${theme.colors.accent.sageSoft};
         color: #2e7d32;
         border: 1px solid #4caf50;
       `;
     }
     if ($type === 'error') {
       return `
-        background: ${theme.colors.errorBg};
+        background: ${theme.colors.status.danger};
         color: #c62828;
         border: 1px solid #f44336;
       `;
     }
     return `
-      background: ${theme.colors.infoBg};
-      color: #1565c0;
-      border: 1px solid #2196f3;
+      background: ${theme.colors.surface.sunken};
+      color: #0B5644;
+      border: 1px solid #0F6E56;
     `;
   }}
 `;

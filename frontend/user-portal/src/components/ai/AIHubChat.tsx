@@ -142,7 +142,7 @@ const ChatWrapper = styled.div`
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   overflow: hidden;
 `;
 
@@ -153,8 +153,8 @@ const ChatInnerHeader = styled.div`
   align-items: center;
   justify-content: flex-end;
   padding: 6px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.background};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
   gap: 8px;
 `;
@@ -185,7 +185,7 @@ const SectionBadge = styled.span<AccentTextProps>`
   background: ${({ $color }) => `${$color}12`};
   border: 1px solid ${({ $color }) => `${$color}30`};
   padding: 3px 10px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   white-space: nowrap;
   flex-shrink: 0;
 `;
@@ -198,14 +198,14 @@ const IconButton = styled.button`
   height: 32px;
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   cursor: pointer;
   border-radius: 6px;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-    color: ${({ theme }) => theme.colors.textSecondary};
+    background: ${({ theme }) => theme.colors.surface.sunken};
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
 
   &:disabled {
@@ -214,7 +214,7 @@ const IconButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.textDisabled};
+    outline: 2px solid ${({ theme }) => theme.colors.text.tertiary};
     outline-offset: 2px;
   }
 `;
@@ -229,7 +229,7 @@ const MessagesArea = styled.div`
   flex-direction: column;
   gap: 14px;
   min-height: 0;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -238,7 +238,7 @@ const MessagesArea = styled.div`
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
     border-radius: 2px;
   }
 
@@ -274,13 +274,13 @@ const WelcomeIcon = styled.div<AccentTextProps>`
 const WelcomeTitle = styled.h2`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const WelcomeText = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
   max-width: 480px;
   margin: 0;
@@ -350,8 +350,8 @@ const MessageBubble = styled.div<BubbleProps>`
   border-radius: ${({ $isUser }) =>
     $isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};
   background: ${({ $isUser, $accentColor, theme }) =>
-    $isUser ? $accentColor : theme.colors.neutral[200]};
-  color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.textPrimary)};
+    $isUser ? $accentColor : theme.colors.surface.sunken};
+  color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.text.primary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -373,8 +373,8 @@ const ToolBadges = styled.div`
 const ToolBadge = styled.span`
   font-size: 10px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.border.subtle};
   padding: 2px 7px;
   border-radius: 4px;
   text-transform: capitalize;
@@ -396,7 +396,7 @@ const Dot = styled.div<DotProps>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.textDisabled};
+  background: ${({ theme }) => theme.colors.text.tertiary};
   animation: ${bounce} 1.2s infinite ease-in-out;
   animation-delay: ${({ $delay }) => $delay};
 `;
@@ -405,9 +405,9 @@ const Dot = styled.div<DotProps>`
 
 const ErrorBanner = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.error};
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error}40;
+  color: ${({ theme }) => theme.colors.status.danger};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger}40;
   padding: 8px 14px;
   border-radius: 8px;
   text-align: center;
@@ -420,7 +420,7 @@ const ExportBar = styled.div`
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ExportButton = styled.button`
@@ -428,22 +428,22 @@ const ExportButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 4px 12px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border-radius: ${({ theme }) => theme.radii.md};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary?.[500] ?? '#2196f3'};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 
@@ -460,8 +460,8 @@ const QuickActionsBar = styled.div`
   gap: 6px;
   padding: 8px 12px;
   overflow-x: auto;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.background};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
 
   &::-webkit-scrollbar {
@@ -472,9 +472,9 @@ const QuickActionsBar = styled.div`
 const QuickBarChip = styled.button<QuickChipProps>`
   padding: 5px 12px;
   min-height: 36px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
@@ -507,8 +507,8 @@ const InputArea = styled.div`
   align-items: flex-end;
   gap: 10px;
   padding: 12px 14px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.background};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
 `;
 
@@ -521,21 +521,21 @@ const TextareaInput = styled.textarea`
   border-radius: 14px;
   font-size: 18px;
   line-height: 1.4;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.raised};
   resize: none;
   transition: all 150ms ease-in-out;
   font-family: inherit;
 
   &:focus {
     outline: none;
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.12);
-    background: ${({ theme }) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: ${({ theme }) => theme.shadows.focus};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:disabled {

@@ -42,7 +42,7 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -62,7 +62,7 @@ const TitleRow = styled.div`
 const Title = styled.h1`
   font-size: 26px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -74,7 +74,7 @@ const ActionBar = styled.div`
 
 const PrimaryButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -82,34 +82,34 @@ const PrimaryButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageDeep}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const SuccessButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.success || '#10b981'};
+  background: ${({ theme }) => theme.colors.status.success || '#10b981'};
   &:hover { background: #059669; }
 `;
 
 const DangerButton = styled(PrimaryButton)`
-  background: ${({ theme }) => theme.colors.error || '#ef4444'};
+  background: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
   &:hover { background: #dc2626; }
 `;
 
 const GhostButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   box-shadow: ${({ theme }) => theme.shadows.sm};
   padding: 24px 28px;
@@ -119,7 +119,7 @@ const Card = styled.div`
 const CardTitle = styled.h2`
   font-size: 16px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px;
 `;
 
@@ -136,13 +136,13 @@ const InfoLabel = styled.div`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 4px;
 `;
 
 const InfoValue = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Table = styled.table`
@@ -158,16 +158,16 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 12px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
 `;
 
 /** Line row is amber-tinted when variance exists */
@@ -216,7 +216,7 @@ const VarianceValue = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
   font-size: 13px;
   margin: 8px 0 0;
 `;
@@ -229,7 +229,7 @@ const TotalsBlock = styled.div`
   gap: 6px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const TotalsRow = styled.div`
@@ -240,7 +240,7 @@ const TotalsRow = styled.div`
 `;
 
 const TotalsLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   min-width: 140px;
   text-align: right;
 `;
@@ -249,7 +249,7 @@ const TotalsValue = styled.span`
   font-weight: 500;
   min-width: 120px;
   text-align: right;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 /** JE link banner — appears when the AP Invoice is Approved */
@@ -292,8 +292,8 @@ const VarianceTooltip = styled.span`
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.border.subtle};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 10px;
   font-weight: 700;
   cursor: help;
@@ -314,9 +314,9 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   width: 100%;
   max-width: 480px;
 `;
@@ -326,7 +326,7 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ModalTitle = styled.h2`
@@ -340,17 +340,17 @@ const CloseButton = styled.button`
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px;
   border-radius: 6px;
   line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const ModalBody = styled.div`
   padding: 20px 24px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
 `;
 
@@ -359,22 +359,22 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ModalTextarea = styled.textarea`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
   box-sizing: border-box;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

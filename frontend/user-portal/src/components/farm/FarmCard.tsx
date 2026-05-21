@@ -79,11 +79,11 @@ const STATE_PILL_DEFS: StatePillDef[] = [
 // ============================================================================
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   transition: all 150ms ease-in-out;
   cursor: pointer;
   overflow: hidden;
@@ -126,8 +126,8 @@ const IconBadge = styled.div`
   height: 56px;
   min-width: 56px;
   border-radius: 12px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -161,7 +161,7 @@ const TitleRow = styled.div`
 const FarmTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   /* Allow wrapping at narrow widths — more readable than ellipsis at 280px */
   word-break: break-word;
@@ -178,9 +178,9 @@ const FarmCodeChip = styled.span`
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   font-size: 11px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
   padding: 2px 6px;
   letter-spacing: 0.3px;
@@ -193,7 +193,7 @@ const MetaLine = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex-wrap: wrap;
   min-width: 0;
 `;
@@ -220,7 +220,7 @@ const MetricGrid = styled.div`
 `;
 
 const MetricCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   padding: 12px;
   min-width: 0;
@@ -230,7 +230,7 @@ const MetricLabel = styled.span`
   display: block;
   font-size: 11px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -240,7 +240,7 @@ const MetricValue = styled.span`
   display: block;
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   word-break: break-word;
 
   @media (max-width: 480px) {
@@ -251,7 +251,7 @@ const MetricValue = styled.span`
 const MetricSubValue = styled.span`
   font-size: 13px;
   font-weight: 400;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 /* ---- Yield achievement bar ---- */
@@ -273,7 +273,7 @@ const YieldTopRow = styled.div`
 const YieldLabel = styled.span`
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -288,7 +288,7 @@ const YieldPercentGroup = styled.div`
 const YieldPercent = styled.span`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const OverflowChip = styled.span<{ $color: string }>`
@@ -306,7 +306,7 @@ const OverflowChip = styled.span<{ $color: string }>`
 const BarTrack = styled.div`
   height: 8px;
   border-radius: 9999px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   overflow: hidden;
 `;
 
@@ -324,13 +324,13 @@ const YieldBottomRow = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex-wrap: wrap;
 `;
 
 const NoYieldText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-style: italic;
 `;
 
@@ -341,7 +341,7 @@ const StatePillRow = styled.div`
   flex-wrap: wrap;
   gap: 6px;
   padding-top: 4px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const StatePill = styled.span<{ $color: string; $active: boolean }>`
@@ -354,9 +354,9 @@ const StatePill = styled.span<{ $color: string; $active: boolean }>`
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   background: ${({ $color, $active }) => ($active ? `${$color}18` : 'transparent')};
   color: ${({ $color, $active, theme }) =>
-    $active ? $color : theme.colors.textDisabled};
+    $active ? $color : theme.colors.text.tertiary};
   border: 1px solid ${({ $color, $active, theme }) =>
-    $active ? `${$color}44` : theme.colors.neutral[200]};
+    $active ? `${$color}44` : theme.colors.surface.sunken};
   transition: all 150ms ease-in-out;
 `;
 
@@ -366,7 +366,7 @@ const StateDot = styled.span<{ $color: string; $active: boolean }>`
   min-width: 6px;
   border-radius: 50%;
   background: ${({ $color, $active, theme }) =>
-    $active ? $color : theme.colors.neutral[400]};
+    $active ? $color : theme.colors.border.default};
 `;
 
 /* ---- Action row ---- */
@@ -394,9 +394,9 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.colors.primary[500]};
+        background: ${theme.colors.accent.sage};
         color: white;
-        &:hover { background: ${theme.colors.primary[700]}; }
+        &:hover { background: ${theme.colors.accent.sageDeep}; }
       `;
     }
     if ($variant === 'danger') {
@@ -404,14 +404,14 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         background: transparent;
         color: #EF4444;
         border: 1px solid #EF4444;
-        &:hover { background: ${theme.colors.errorBg}; }
+        &:hover { background: ${theme.colors.status.danger}; }
       `;
     }
     return `
       background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
-      &:hover { background: ${theme.colors.infoBg}; }
+      color: ${theme.colors.accent.sage};
+      border: 1px solid ${theme.colors.accent.sage};
+      &:hover { background: ${theme.colors.surface.sunken}; }
     `;
   }}
 

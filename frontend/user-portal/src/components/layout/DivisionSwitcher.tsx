@@ -137,10 +137,10 @@ const Container = styled.div`
 const SingleDivisionDisplay = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  gap: ${({ theme }) => theme.space['2']};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 interface TriggerProps {
@@ -150,25 +150,25 @@ interface TriggerProps {
 const TriggerButton = styled.button<TriggerProps>`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
   background: ${({ theme, $isOpen }) =>
-    $isOpen ? theme.colors.neutral[100] : 'transparent'};
+    $isOpen ? theme.colors.surface.raised : 'transparent'};
   border: 1px solid ${({ theme, $isOpen }) =>
-    $isOpen ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+    $isOpen ? theme.colors.accent.sage : theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
   text-align: left;
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -186,17 +186,17 @@ const DivisionInfo = styled.div`
 `;
 
 const DivisionName = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
 const DivisionIndustry = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -207,8 +207,8 @@ interface ChevronIconProps {
 }
 
 const ChevronIcon = styled.span<ChevronIconProps>`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex-shrink: 0;
   transition: transform 0.2s ease;
   transform: ${({ $isOpen }) => ($isOpen ? 'rotate(180deg)' : 'rotate(0deg)')};
@@ -216,46 +216,46 @@ const ChevronIcon = styled.span<ChevronIconProps>`
 
 const Dropdown = styled.div`
   position: absolute;
-  top: calc(100% + ${({ theme }) => theme.spacing.xs});
+  top: calc(100% + ${({ theme }) => theme.space['1']});
   left: 0;
   right: 0;
   z-index: 1000;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.md};
   box-shadow: ${({ theme }) => theme.shadows.lg};
   overflow: hidden;
 `;
 
 const DropdownHeader = styled.div`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const DropdownOption = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['2']};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
   cursor: pointer;
   transition: background 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: -2px;
   }
 
   & + & {
-    border-top: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+    border-top: 1px solid ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -271,12 +271,12 @@ const OptionInfo = styled.div`
 `;
 
 const OptionName = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const OptionIndustry = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;

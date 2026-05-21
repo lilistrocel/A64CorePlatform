@@ -96,8 +96,8 @@ const ActionTile = styled.button<ActionTileStyledProps>`
   ${({ $active, $accent, $accentHover, theme }) =>
     !$active &&
     `
-    background: ${theme.colors.background};
-    border: 1px solid ${theme.colors.neutral[300]};
+    background: ${theme.colors.surface.canvas};
+    border: 1px solid ${theme.colors.border.subtle};
     border-left: 4px solid ${$accent};
 
     &:hover {
@@ -175,7 +175,7 @@ const TileLabel = styled.p<TileTextProps>`
   font-size: 16px;
   font-weight: 600;
   margin: 0;
-  color: ${({ $active, theme }) => ($active ? '#fff' : theme.colors.textPrimary)};
+  color: ${({ $active, theme }) => ($active ? '#fff' : theme.colors.text.primary)};
 `;
 
 const TileSubtitle = styled.p<TileTextProps>`
@@ -183,7 +183,7 @@ const TileSubtitle = styled.p<TileTextProps>`
   margin: 4px 0 0 0;
   line-height: 1.4;
   color: ${({ $active, theme }) =>
-    $active ? 'rgba(255, 255, 255, 0.85)' : theme.colors.textSecondary};
+    $active ? 'rgba(255, 255, 255, 0.85)' : theme.colors.text.secondary};
 `;
 
 // ============================================================================

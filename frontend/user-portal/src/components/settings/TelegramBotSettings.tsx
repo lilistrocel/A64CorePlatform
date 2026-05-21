@@ -367,12 +367,12 @@ export function TelegramBotSettings() {
 const Content = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.lg};
+  gap: ${({ theme }: any) => theme.space['6']};
 `;
 
 const Description = styled.p`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
   margin: 0;
   line-height: 1.6;
 `;
@@ -380,16 +380,16 @@ const Description = styled.p`
 const Section = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.md};
+  gap: ${({ theme }: any) => theme.space['4']};
 `;
 
 const SectionTitle = styled.h4`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
+  color: ${({ theme }: any) => theme.colors.text.primary};
   margin: 0;
-  padding-bottom: ${({ theme }: any) => theme.spacing.xs};
-  border-bottom: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  padding-bottom: ${({ theme }: any) => theme.space['1']};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.surface.sunken};
 `;
 
 const FieldGroup = styled.div`
@@ -400,14 +400,14 @@ const FieldGroup = styled.div`
 
 const InlineFields = styled.div`
   display: flex;
-  gap: ${({ theme }: any) => theme.spacing.lg};
+  gap: ${({ theme }: any) => theme.space['6']};
   flex-wrap: wrap;
 `;
 
 const Label = styled.label`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.medium};
+  color: ${({ theme }: any) => theme.colors.text.primary};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -415,14 +415,14 @@ const Label = styled.label`
 
 const Input = styled.input`
   padding: 8px 12px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  border: 1px solid ${({ theme }: any) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  color: ${({ theme }: any) => theme.colors.text.primary};
   max-width: 400px;
-  &::placeholder { color: ${({ theme }: any) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }: any) => theme.colors.primary[500]}; }
+  &::placeholder { color: ${({ theme }: any) => theme.colors.text.tertiary}; }
+  &:focus { outline: none; border-color: ${({ theme }: any) => theme.colors.accent.sage}; }
 `;
 
 const NumberInput = styled(Input)`
@@ -432,13 +432,13 @@ const NumberInput = styled(Input)`
 
 const Select = styled.select`
   padding: 8px 12px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  border: 1px solid ${({ theme }: any) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  color: ${({ theme }: any) => theme.colors.text.primary};
   max-width: 300px;
-  &:focus { outline: none; border-color: ${({ theme }: any) => theme.colors.primary[500]}; }
+  &:focus { outline: none; border-color: ${({ theme }: any) => theme.colors.accent.sage}; }
 `;
 
 const Checkbox = styled.input`
@@ -457,82 +457,82 @@ const CheckItem = styled.label`
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  color: ${({ theme }: any) => theme.colors.text.primary};
   cursor: pointer;
 `;
 
 const HelpText = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
 `;
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: ${({ theme }: any) => theme.spacing.sm};
+  gap: ${({ theme }: any) => theme.space['2']};
   flex-wrap: wrap;
 `;
 
 const PrimaryButton = styled.button`
   padding: 8px 16px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
   color: white;
-  background: ${({ theme }: any) => theme.colors.primary[500]};
+  background: ${({ theme }: any) => theme.colors.accent.sage};
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  &:hover:not(:disabled) { background: ${({ theme }: any) => theme.colors.primary[600]}; }
+  &:hover:not(:disabled) { background: ${({ theme }: any) => theme.colors.accent.sageDeep}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const SecondaryButton = styled.button`
   padding: 8px 16px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
-  background: ${({ theme }: any) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.medium};
+  color: ${({ theme }: any) => theme.colors.text.primary};
+  background: ${({ theme }: any) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }: any) => theme.colors.border.subtle};
   border-radius: 6px;
   cursor: pointer;
-  &:hover:not(:disabled) { background: ${({ theme }: any) => theme.colors.neutral[200]}; }
+  &:hover:not(:disabled) { background: ${({ theme }: any) => theme.colors.surface.sunken}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const ResultBox = styled.div<{ success: boolean }>`
-  padding: ${({ theme }: any) => theme.spacing.md};
+  padding: ${({ theme }: any) => theme.space['4']};
   border-radius: 6px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  background: ${({ success, theme }: any) => success ? theme.colors.success[50] : theme.colors.error[50]};
-  color: ${({ success, theme }: any) => success ? theme.colors.success[700] : theme.colors.error[700]};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  background: ${({ success, theme }: any) => success ? theme.colors.status.success[50] : theme.colors.status.danger[50]};
+  color: ${({ success, theme }: any) => success ? theme.colors.status.success[700] : theme.colors.status.danger[700]};
 `;
 
 const StatusBar = styled.div`
-  padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.neutral[50]};
+  padding: ${({ theme }: any) => theme.space['2']} ${({ theme }: any) => theme.space['4']};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
   border-radius: 6px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
 `;
 
 const ErrorText = styled.div`
-  color: ${({ theme }: any) => theme.colors.error[500]};
-  padding: ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.error[50]};
+  color: ${({ theme }: any) => theme.colors.status.danger[500]};
+  padding: ${({ theme }: any) => theme.space['4']};
+  background: ${({ theme }: any) => theme.colors.status.danger[50]};
   border-radius: 6px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
 `;
 
 const LoadingText = styled.div`
   text-align: center;
-  padding: ${({ theme }: any) => theme.spacing.xl};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  padding: ${({ theme }: any) => theme.space['8']};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
 `;
 
 const HistorySection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.sm};
+  gap: ${({ theme }: any) => theme.space['2']};
 `;
 
 const HistoryList = styled.div`
@@ -544,11 +544,11 @@ const HistoryList = styled.div`
 const HistoryItem = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }: any) => theme.spacing.sm};
-  padding: 6px ${({ theme }: any) => theme.spacing.sm};
+  gap: ${({ theme }: any) => theme.space['2']};
+  padding: 6px ${({ theme }: any) => theme.space['2']};
   border-radius: 4px;
-  background: ${({ theme }: any) => theme.colors.neutral[50]};
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
 `;
 
 const severityColors: Record<string, string> = {
@@ -571,10 +571,10 @@ const HistorySeverity = styled.span<{ severity: string }>`
 
 const HistoryTitle = styled.span`
   flex: 1;
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  color: ${({ theme }: any) => theme.colors.text.primary};
 `;
 
 const HistoryTime = styled.span`
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
   white-space: nowrap;
 `;

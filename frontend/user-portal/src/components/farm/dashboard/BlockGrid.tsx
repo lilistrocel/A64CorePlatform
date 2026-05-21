@@ -117,8 +117,8 @@ const TrashButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   color: #dc2626;
   font-size: 14px;
@@ -140,9 +140,9 @@ const TrashButton = styled.button`
 const Summary = styled.div`
   text-align: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 16px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 `;
@@ -150,7 +150,7 @@ const Summary = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
@@ -164,12 +164,12 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;

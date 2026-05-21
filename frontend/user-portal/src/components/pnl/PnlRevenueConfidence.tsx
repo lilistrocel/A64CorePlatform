@@ -21,7 +21,7 @@ import type { RevenueSourcesResponse } from '../../types/finance';
 
 const SOURCE_COLORS: Record<string, string> = {
   excel_match: '#10B981',
-  excel_alias_match: '#2196f3',
+  excel_alias_match: '#0F6E56',
   imputed: '#F59E0B',
   no_data: '#9e9e9e',
 };
@@ -52,25 +52,25 @@ const shimmer = keyframes`
 `;
 
 const Section = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.space['6']};
   box-shadow: ${({ theme }) => theme.shadows.sm};
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  margin-bottom: ${({ theme }) => theme.space['8']};
 `;
 
 const SectionTitle = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.lg} 0;
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }) => theme.space['6']} 0;
 `;
 
 const Layout = styled.div`
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: ${({ theme }) => theme.spacing.xl};
+  gap: ${({ theme }) => theme.space['8']};
   align-items: start;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -88,9 +88,9 @@ const SkeletonCircle = styled.div`
   border-radius: 50%;
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.surface.sunken} 25%,
+    ${({ theme }) => theme.colors.surface.raised} 50%,
+    ${({ theme }) => theme.colors.surface.sunken} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
@@ -103,14 +103,14 @@ const LegendList = styled.ul`
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
   justify-content: center;
 `;
 
 const LegendItem = styled.li`
   display: flex;
   align-items: flex-start;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 interface DotProps {
@@ -132,35 +132,35 @@ const LegendText = styled.div`
 `;
 
 const LegendLabel = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const LegendDesc = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 2px;
 `;
 
 const LegendPct = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-left: auto;
-  padding-left: ${({ theme }) => theme.spacing.sm};
+  padding-left: ${({ theme }) => theme.space['2']};
 `;
 
 const WarningBanner = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['2']};
+  padding: ${({ theme }) => theme.space['4']};
   background: #FEF3C7;
   border: 1px solid #F59E0B;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  margin-top: ${({ theme }) => theme.spacing.lg};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  border-radius: ${({ theme }) => theme.radii.md};
+  margin-top: ${({ theme }) => theme.space['6']};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   color: #92400E;
 `;
 
@@ -173,29 +173,29 @@ const ErrorState = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.error};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  gap: ${({ theme }) => theme.space['4']};
+  padding: ${({ theme }) => theme.space['8']};
+  color: ${({ theme }) => theme.colors.status.danger};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   text-align: center;
 `;
 
 const RetryButton = styled.button`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background: ${({ theme }) => theme.colors.primary[500]};
+  padding: ${({ theme }) => `${theme.space['2']} ${theme.space['4']}`};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   cursor: pointer;
   font-family: inherit;
 `;
 
 const EmptyState = styled.div`
-  padding: ${({ theme }) => theme.spacing.xl};
+  padding: ${({ theme }) => theme.space['8']};
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────

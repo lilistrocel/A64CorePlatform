@@ -66,7 +66,7 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -86,13 +86,13 @@ const PageHeader = styled.div`
 const PageTitle = styled.h1`
   font-size: 26px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const TitleSubLine = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
@@ -147,7 +147,7 @@ const ReversedTag = styled.span`
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   box-shadow: ${({ theme }) => theme.shadows.sm};
   padding: 24px 28px;
@@ -157,7 +157,7 @@ const Card = styled.div`
 const CardTitle = styled.h2`
   font-size: 15px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin: 0 0 20px;
@@ -180,18 +180,18 @@ const MetaLabel = styled.span`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const MetaValue = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const TotalAmount = styled.span`
   font-size: 22px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -208,10 +208,10 @@ const MethodPill = styled.span<{ $bg: string; $text: string }>`
 
 const NotesText = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.6;
   margin: 0;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 6px;
   padding: 10px 14px;
 `;
@@ -228,16 +228,16 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 12px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   vertical-align: middle;
 `;
 
@@ -251,7 +251,7 @@ const InvoiceLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600] || theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep || theme.colors.accent.sage};
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
@@ -271,7 +271,7 @@ const JeLink = styled.button`
   background: none;
   border: none;
   padding: 0;
-  color: ${({ theme }) => theme.colors.primary[600] || theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep || theme.colors.accent.sage};
   font-size: 14px;
   cursor: pointer;
   text-decoration: underline;
@@ -281,8 +281,8 @@ const JeLink = styled.button`
 
 const JeInlineSummary = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 6px;
   padding: 4px 10px;
   font-family: monospace;
@@ -294,20 +294,20 @@ const TotalFooter = styled.div`
   gap: 24px;
   align-items: baseline;
   padding-top: 12px;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 2px solid ${({ theme }) => theme.colors.surface.sunken};
   margin-top: 4px;
 `;
 
 const TotalLabel = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const TotalValue = styled.span`
   font-size: 16px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: monospace;
 `;
 
@@ -315,14 +315,14 @@ const LoadingState = styled.div`
   padding: 48px;
   text-align: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ErrorState = styled.div`
   padding: 48px;
   text-align: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
 `;
 
 // ─── Main Page ────────────────────────────────────────────────────────────────

@@ -499,7 +499,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
 // ============================================================================
 
 const Card = styled.div<{ $stateColor: string }>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   padding: 12px;
   box-shadow: ${({ theme }) => theme.shadows.sm};
@@ -527,7 +527,7 @@ const Header = styled.div`
 const BlockCode = styled.div`
   font-size: 11px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-family: 'Courier New', monospace;
 `;
 
@@ -549,7 +549,7 @@ const StateBadge = styled.div<{ $color: string }>`
 const BlockName = styled.div`
   font-size: 14px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -581,7 +581,7 @@ const EmptyIcon = styled.div`
 
 const EmptyText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 4px;
 `;
 
@@ -623,13 +623,13 @@ const CleaningIcon = styled.div`
 
 const CleaningText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 4px;
 `;
 
 const LastYield = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // Common Elements
@@ -646,7 +646,7 @@ const CropIcon = styled.span`
 const CropName = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -654,21 +654,21 @@ const CropName = styled.div`
 
 const Capacity = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const CapacityBar = styled.div``;
 
 const CapacityLabel = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 4px;
 `;
 
 const ProgressBar = styled.div`
   width: 100%;
   height: 6px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 4px;
@@ -683,7 +683,7 @@ const ProgressFill = styled.div<{ $percent: number; $color: string }>`
 
 const CapacityPercent = styled.div`
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-align: right;
 `;
 
@@ -707,7 +707,7 @@ const InfoIcon = styled.span`
 
 const InfoText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const DelayBadge = styled.div<{ $color: string }>`
@@ -733,14 +733,14 @@ const TimelineIcon = styled.span`
 
 const TimelineText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const YieldProgress = styled.div``;
 
 const YieldLabel = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 600;
   margin-bottom: 4px;
 `;
@@ -757,7 +757,7 @@ const HarvestInfo = styled.div``;
 const AlertsSection = styled.div`
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -771,25 +771,25 @@ const AlertBadge = styled.div<{ $severity: string }>`
   background: ${({ $severity, theme }) => {
     switch ($severity) {
       case 'critical':
-        return theme.colors.errorBg;
+        return theme.colors.status.danger;
       case 'high':
-        return theme.colors.warningBg;
+        return theme.colors.status.warning;
       case 'medium':
-        return theme.colors.infoBg;
+        return theme.colors.surface.sunken;
       default:
-        return theme.colors.surface;
+        return theme.colors.surface.raised;
     }
   }};
   color: ${({ $severity, theme }) => {
     switch ($severity) {
       case 'critical':
-        return theme.colors.error;
+        return theme.colors.status.danger;
       case 'high':
-        return theme.colors.warning;
+        return theme.colors.status.warning;
       case 'medium':
-        return theme.colors.info;
+        return theme.colors.status.info;
       default:
-        return theme.colors.textSecondary;
+        return theme.colors.text.secondary;
     }
   }};
   overflow: hidden;
@@ -799,7 +799,7 @@ const AlertBadge = styled.div<{ $severity: string }>`
 
 const MoreAlerts = styled.div`
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-align: center;
 `;
 
@@ -814,7 +814,7 @@ const QuickActions = styled.div`
   /* "f2" hex alpha = ~95% opacity on the themed surface so the card state
      color still shows faintly through the action bar while keeping contrast
      against whatever's below in dark mode. */
-  background: ${({ theme }) => `${theme.colors.surface}f2`};
+  background: ${({ theme }) => `${theme.colors.surface.raised}f2`};
   padding: 4px;
   border-radius: 4px;
   box-shadow: ${({ theme }) => theme.shadows.md};

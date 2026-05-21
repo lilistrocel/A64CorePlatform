@@ -114,9 +114,9 @@ interface CardWrapperProps {
 
 const CardWrapper = styled.div<CardWrapperProps>`
   position: relative;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
-  border: 2px solid ${({ $selected, theme }) => ($selected ? theme.colors.primary[500] : theme.colors.neutral[300])};
+  border: 2px solid ${({ $selected, theme }) => ($selected ? theme.colors.accent.sage : theme.colors.border.subtle)};
   padding: 16px;
   box-shadow: ${({ $selected, theme }) =>
     $selected ? '0 0 0 3px rgba(33,150,243,0.18)' : theme.shadows.sm};
@@ -137,7 +137,7 @@ const CardWrapper = styled.div<CardWrapperProps>`
     $clickable &&
     `
     &:focus-visible {
-      outline: 2px solid ${theme.colors.primary[500]};
+      outline: 2px solid ${theme.colors.accent.sage};
       outline-offset: 2px;
     }
   `}
@@ -164,7 +164,7 @@ const TitleBlock = styled.div`
 const CommonName = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 2px 0;
   white-space: nowrap;
   overflow: hidden;
@@ -173,7 +173,7 @@ const CommonName = styled.h3`
 
 const ScientificName = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
   white-space: nowrap;
   overflow: hidden;
@@ -205,14 +205,14 @@ const SpeciesRow = styled.div`
 
 const SpeciesLabel = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const SpeciesValue = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 500;
 `;
 
@@ -223,7 +223,7 @@ const StatsGrid = styled.div`
 `;
 
 const StatBox = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   padding: 8px 10px;
 `;
@@ -231,13 +231,13 @@ const StatBox = styled.div`
 const StatBoxValue = styled.div`
   font-size: 14px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 2px;
 `;
 
 const StatBoxLabel = styled.div`
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;

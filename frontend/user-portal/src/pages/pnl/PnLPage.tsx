@@ -97,12 +97,12 @@ function filtersToApiParams(filters: PnlFilters): PnlFilterParams {
 // ─── Styled Components ────────────────────────────────────────────────────────
 
 const Container = styled.div`
-  padding: ${({ theme }) => theme.spacing.xl};
+  padding: ${({ theme }) => theme.space['8']};
   max-width: 1440px;
   margin: 0 auto;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: ${({ theme }) => theme.spacing.lg};
+    padding: ${({ theme }) => theme.space['6']};
   }
 `;
 
@@ -111,20 +111,20 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space['4']};
+  margin-bottom: ${({ theme }) => theme.space['6']};
 `;
 
 const HeaderLeft = styled.div``;
 
 const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
+  font-size: ${({ theme }) => theme.fontSizes.h2};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }) => theme.space['1']} 0;
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const TitleIcon = styled.span`
@@ -132,20 +132,20 @@ const TitleIcon = styled.span`
 `;
 
 const Subtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
 const PeriodBadge = styled.span`
   display: inline-block;
-  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-  color: ${({ theme }) => theme.colors.primary[700]};
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  margin-left: ${({ theme }) => theme.spacing.sm};
+  background: ${({ theme }) => `${theme.colors.accent.sage}15`};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
+  padding: ${({ theme }) => `${theme.space['1']} ${theme.space['2']}`};
+  border-radius: ${({ theme }) => theme.radii.pill};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  margin-left: ${({ theme }) => theme.space['2']};
 `;
 
 const AccessDenied = styled.div`
@@ -154,11 +154,11 @@ const AccessDenied = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  gap: ${({ theme }) => theme.spacing.md};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  gap: ${({ theme }) => theme.space['4']};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
+  padding: ${({ theme }) => theme.space['8']};
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────

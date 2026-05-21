@@ -46,7 +46,7 @@ const FullScreen = styled.div`
   height: 100vh;
   height: 100dvh; /* Dynamic viewport height for mobile browsers */
   overflow: hidden;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 `;
 
 const Header = styled.header`
@@ -54,8 +54,8 @@ const Header = styled.header`
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  background: ${({ theme }) => theme.colors.background};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   flex-shrink: 0;
   min-height: 56px;
   z-index: 10;
@@ -75,7 +75,7 @@ const HeaderButton = styled.button`
   height: 44px;
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   border-radius: 8px;
   flex-shrink: 0;
@@ -84,12 +84,12 @@ const HeaderButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.sunken};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -124,7 +124,7 @@ const HeaderActions = styled.div`
 const Divider = styled.div`
   width: 1px;
   height: 28px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
   margin: 0 4px;
 `;
 
@@ -159,13 +159,13 @@ const AccessDeniedContainer = styled.div`
 const AccessDeniedTitle = styled.h1`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const AccessDeniedText = styled.p`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   max-width: 360px;
 `;

@@ -203,7 +203,7 @@ export function DashboardFilters({
 // ============================================================================
 
 const Container = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -230,11 +230,11 @@ const SearchSection = styled.div`
 const SearchInput = styled.input`
   width: 100%;
   padding: 10px 16px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &:focus {
@@ -243,7 +243,7 @@ const SearchInput = styled.input`
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
@@ -256,7 +256,7 @@ const ControlsSection = styled.div`
 
 const ResultsCount = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 500;
   white-space: nowrap;
 `;
@@ -269,17 +269,17 @@ const SortControl = styled.div`
 
 const SortLabel = styled.label`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 500;
 `;
 
 const SortSelect = styled.select`
   padding: 8px 12px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
@@ -295,17 +295,17 @@ const SortDirectionButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 16px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
     border-color: #3b82f6;
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
 
@@ -313,7 +313,7 @@ const ExpandButton = styled.button`
   padding: 8px 16px;
   border: 2px solid #3b82f6;
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   color: #3b82f6;
   font-size: 14px;
   font-weight: 500;
@@ -325,7 +325,7 @@ const ExpandButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
 
@@ -358,7 +358,7 @@ const ClearButton = styled.button`
 const ExpandedFilters = styled.div`
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 2px solid ${({ theme }) => theme.colors.surface};
+  border-top: 2px solid ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const FilterGroup = styled.div`
@@ -372,7 +372,7 @@ const FilterGroup = styled.div`
 const FilterGroupTitle = styled.h4`
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0 0 8px 0;
@@ -390,7 +390,7 @@ const StateChip = styled.button<{ $isSelected: boolean; $color: string }>`
   gap: 6px;
   padding: 6px 12px;
   border-radius: 20px;
-  border: 2px solid ${(props) => (props.$isSelected ? props.$color : props.theme.colors.neutral[300])};
+  border: 2px solid ${(props) => (props.$isSelected ? props.$color : props.theme.colors.border.subtle)};
   background: ${(props) => (props.$isSelected ? `${props.$color}15` : 'transparent')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
@@ -408,15 +408,15 @@ const PerformanceChip = styled.button<{ $isSelected: boolean }>`
   gap: 6px;
   padding: 6px 12px;
   border-radius: 20px;
-  border: 2px solid ${(props) => (props.$isSelected ? '#3b82f6' : props.theme.colors.neutral[300])};
-  background: ${(props) => (props.$isSelected ? props.theme.colors.infoBg : 'transparent')};
+  border: 2px solid ${(props) => (props.$isSelected ? '#3b82f6' : props.theme.colors.border.subtle)};
+  background: ${(props) => (props.$isSelected ? props.theme.colors.surface.sunken : 'transparent')};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   font-size: 13px;
 
   &:hover {
     border-color: #3b82f6;
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
 
@@ -427,7 +427,7 @@ const ChipIcon = styled.span`
 const ChipLabel = styled.span`
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ToggleGrid = styled.div`
@@ -439,9 +439,9 @@ const ToggleGrid = styled.div`
 const ToggleChip = styled.button<{ $isActive: boolean }>`
   padding: 8px 16px;
   border-radius: 6px;
-  border: 2px solid ${(props) => (props.$isActive ? '#3b82f6' : props.theme.colors.neutral[300])};
+  border: 2px solid ${(props) => (props.$isActive ? '#3b82f6' : props.theme.colors.border.subtle)};
   background: ${(props) => (props.$isActive ? '#3b82f6' : 'transparent')};
-  color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.textPrimary)};
+  color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.text.primary)};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -449,7 +449,7 @@ const ToggleChip = styled.button<{ $isActive: boolean }>`
 
   &:hover {
     border-color: #3b82f6;
-    background: ${(props) => (props.$isActive ? props.theme.colors.primary[700] : props.theme.colors.infoBg)};
-    color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.textPrimary)};
+    background: ${(props) => (props.$isActive ? props.theme.colors.accent.sageDeep : props.theme.colors.surface.sunken)};
+    color: ${(props) => (props.$isActive ? 'white' : props.theme.colors.text.primary)};
   }
 `;

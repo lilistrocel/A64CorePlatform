@@ -31,7 +31,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   display: flex;
   align-items: center;
@@ -43,8 +43,8 @@ const RefreshButton = styled.button`
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -52,7 +52,7 @@ const RefreshButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 
   &:disabled {
@@ -66,7 +66,7 @@ const DataSourceBadge = styled.div`
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: ${({ theme }) => theme.colors.infoBg};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   color: #3B82F6;
   border-radius: 16px;
   font-size: 12px;
@@ -75,7 +75,7 @@ const DataSourceBadge = styled.div`
 
 const LastUpdated = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const MainGrid = styled.div`
@@ -104,7 +104,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 3px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -117,14 +117,14 @@ const Spinner = styled.div`
 `;
 
 const LoadingText = styled.p`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
   margin: 0;
 `;
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border: 1px solid #EF4444;
   border-radius: 12px;
   text-align: center;
@@ -145,7 +145,7 @@ const ErrorMessage = styled.p`
 
 const NoLocationContainer = styled.div`
   padding: 48px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   text-align: center;
 `;
@@ -156,14 +156,14 @@ const NoLocationIcon = styled.div`
 `;
 
 const NoLocationTitle = styled.h3`
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 18px;
   font-weight: 600;
   margin: 0 0 8px 0;
 `;
 
 const NoLocationMessage = styled.p`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
   margin: 0;
   max-width: 400px;

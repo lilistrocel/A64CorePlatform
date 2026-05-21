@@ -213,22 +213,22 @@ const Trigger = styled.button`
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    background: ${({ theme }) => theme.colors.accent.sageSoft};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -246,7 +246,7 @@ const TriggerLabel = styled.span`
 
 const TriggerChevron = styled.span<{ $open?: boolean }>`
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   transition: transform 150ms ease-in-out;
   transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'rotate(0deg)')};
   display: inline-block;
@@ -258,8 +258,8 @@ const Popover = styled.div`
   left: 0;
   min-width: 280px;
   max-width: 360px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 10px;
   box-shadow: ${({ theme }) => theme.shadows.lg};
   z-index: 500;
@@ -286,22 +286,22 @@ const Option = styled.li<{ $isSelected: boolean }>`
   cursor: pointer;
   border-left: 3px solid
     ${({ $isSelected, theme }) =>
-      $isSelected ? theme.colors.primary[500] : 'transparent'};
+      $isSelected ? theme.colors.accent.sage : 'transparent'};
   background: ${({ $isSelected, theme }) =>
-    $isSelected ? theme.colors.primary[50] : 'transparent'};
+    $isSelected ? theme.colors.accent.sageSoft : 'transparent'};
   transition: background 100ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:focus {
     outline: none;
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: -2px;
   }
 `;
@@ -319,7 +319,7 @@ const OptionInfo = styled.div`
 const OptionName = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -327,7 +327,7 @@ const OptionName = styled.div`
 
 const OptionLocation = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 2px;
 `;
 
@@ -336,7 +336,7 @@ const OptionBadge = styled.span`
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   letter-spacing: 0.4px;
 `;
 
@@ -346,14 +346,14 @@ const InactiveBadge = styled.span`
   text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 4px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.border.subtle};
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex-shrink: 0;
 `;
 
 const Divider = styled.li`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
   margin: 4px 0;
   list-style: none;
 `;
@@ -361,11 +361,11 @@ const Divider = styled.li`
 const LoadingRow = styled.div`
   padding: 16px 14px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const EmptyRow = styled.div`
   padding: 16px 14px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;

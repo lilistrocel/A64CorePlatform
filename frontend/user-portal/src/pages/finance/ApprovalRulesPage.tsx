@@ -121,13 +121,13 @@ const PageHeader = styled.div`
 const PageTitle = styled.h1`
   font-size: 26px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const PageSubtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 4px 0 0;
 `;
 
@@ -143,37 +143,37 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 200px;
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const FilterSelect = styled.select`
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const PrimaryButton = styled.button`
   padding: 9px 18px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -183,7 +183,7 @@ const PrimaryButton = styled.button`
   white-space: nowrap;
   transition: background 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
   &:disabled {
     opacity: 0.5;
@@ -194,16 +194,16 @@ const PrimaryButton = styled.button`
 const SecondaryButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
   &:disabled {
     opacity: 0.5;
@@ -214,15 +214,15 @@ const SecondaryButton = styled.button`
 const DangerButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: ${({ theme }) => theme.colors.status.danger};
   }
   &:disabled {
     opacity: 0.5;
@@ -233,15 +233,15 @@ const DangerButton = styled.button`
 const SuccessButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.success || '#10b981'};
-  border: 1px solid ${({ theme }) => theme.colors.success || '#10b981'};
+  color: ${({ theme }) => theme.colors.status.success || '#10b981'};
+  border: 1px solid ${({ theme }) => theme.colors.status.success || '#10b981'};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'};
+    background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
   }
   &:disabled {
     opacity: 0.5;
@@ -257,16 +257,16 @@ const IconButton = styled.button`
   height: 30px;
   padding: 0;
   background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   transition: all 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
-    border-color: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
+    border-color: ${({ theme }) => theme.colors.border.subtle};
   }
   &:disabled {
     opacity: 0.4;
@@ -276,17 +276,17 @@ const IconButton = styled.button`
 
 const DangerIconButton = styled(IconButton)`
   &:hover {
-    color: ${({ theme }) => theme.colors.error};
-    border-color: ${({ theme }) => theme.colors.error};
-    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.status.danger};
+    border-color: ${({ theme }) => theme.colors.status.danger};
+    background: ${({ theme }) => theme.colors.status.danger};
   }
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
 
 const TableWrapper = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   overflow: hidden;
 `;
@@ -298,8 +298,8 @@ const Table = styled.table`
 `;
 
 const Thead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 type SortDirection = 'asc' | 'desc';
@@ -318,13 +318,13 @@ const Th = styled.th<ThProps>`
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.textSecondary};
+    $active ? theme.colors.accent.sage : theme.colors.text.secondary};
   white-space: nowrap;
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
   user-select: none;
   &:hover {
     color: ${({ $sortable, theme }) =>
-      $sortable ? theme.colors.textPrimary : theme.colors.textSecondary};
+      $sortable ? theme.colors.text.primary : theme.colors.text.secondary};
   }
 `;
 
@@ -335,20 +335,20 @@ interface TrProps {
 }
 
 const Tr = styled.tr<TrProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   opacity: ${({ $inactive }) => ($inactive ? 0.55 : 1)};
   transition: background 100ms ease;
   &:last-child {
     border-bottom: none;
   }
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
 const Td = styled.td`
   padding: 10px 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   vertical-align: middle;
 `;
 
@@ -372,8 +372,8 @@ const AlwaysPill = styled.span`
   border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.success || '#10b981'};
+  background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
+  color: ${({ theme }) => theme.colors.status.success || '#10b981'};
 `;
 
 const StatusBadge = styled.span<{ $active: boolean }>`
@@ -384,9 +384,9 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   font-size: 11px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg || '#ecfdf5' : theme.colors.neutral[100]};
+    $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.success || '#10b981' : theme.colors.textDisabled};
+    $active ? theme.colors.status.success || '#10b981' : theme.colors.text.tertiary};
 `;
 
 const DocTypeBadge = styled.span`
@@ -397,8 +397,8 @@ const DocTypeBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#2196f3'};
+  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
+  color: ${({ theme }) => theme.colors.status.info || '#0F6E56'};
 `;
 
 // ─── Empty / Loading states ────────────────────────────────────────────────────
@@ -406,7 +406,7 @@ const DocTypeBadge = styled.span`
 const EmptyState = styled.div`
   padding: 48px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 14px;
 `;
 
@@ -424,9 +424,9 @@ const ModalOverlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   width: 100%;
   max-width: 560px;
   max-height: 90vh;
@@ -440,14 +440,14 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -456,12 +456,12 @@ const CloseButton = styled.button`
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px;
   border-radius: 6px;
   line-height: 1;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -478,7 +478,7 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
@@ -500,28 +500,28 @@ const Field = styled.div`
 const FormLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const FormInput = styled.input<{ $hasError?: boolean }>`
   padding: 10px 14px;
   border: 1px solid
     ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
+      $hasError ? theme.colors.status.danger : theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: inherit;
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
@@ -529,22 +529,22 @@ const FormSelect = styled.select<{ $hasError?: boolean }>`
   padding: 10px 14px;
   border: 1px solid
     ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
+      $hasError ? theme.colors.status.danger : theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   font-family: inherit;
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
@@ -552,38 +552,38 @@ const FormTextarea = styled.textarea<{ $hasError?: boolean }>`
   padding: 10px 14px;
   border: 1px solid
     ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.neutral[300]};
+      $hasError ? theme.colors.status.danger : theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: inherit;
   resize: vertical;
   min-height: 72px;
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   margin-top: 2px;
 `;
 
 const BannerError = styled.p`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 13px;
   margin: 0;
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
 `;
 
@@ -592,13 +592,13 @@ const CheckboxRow = styled.label`
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
 `;
 
 const HintText = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // ─── Radio group for Approval Mode ────────────────────────────────────────────
@@ -614,14 +614,14 @@ const RadioLabel = styled.label`
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   transition: background 100ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
@@ -629,8 +629,8 @@ const RadioLabel = styled.label`
 
 const TesterCard = styled.div`
   margin-top: 28px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   padding: 20px 24px;
 `;
@@ -638,7 +638,7 @@ const TesterCard = styled.div`
 const TesterTitle = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px;
 `;
 
@@ -659,37 +659,37 @@ const TesterField = styled.div`
 const TesterLabel = styled.label`
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;
 
 const TesterInput = styled.input`
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: inherit;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const TesterSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: inherit;
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -700,22 +700,22 @@ const TesterResult = styled.div<{ $requiresApproval: boolean | null }>`
   font-size: 13px;
   line-height: 1.5;
   background: ${({ $requiresApproval, theme }) => {
-    if ($requiresApproval === null) return theme.colors.neutral[50];
+    if ($requiresApproval === null) return theme.colors.surface.canvas;
     return $requiresApproval
-      ? theme.colors.warningBg || '#fffbeb'
-      : theme.colors.successBg || '#ecfdf5';
+      ? theme.colors.status.warning || '#fffbeb'
+      : theme.colors.accent.sageSoft || '#ecfdf5';
   }};
   color: ${({ $requiresApproval, theme }) => {
-    if ($requiresApproval === null) return theme.colors.textDisabled;
+    if ($requiresApproval === null) return theme.colors.text.tertiary;
     return $requiresApproval
-      ? theme.colors.warning || '#92400e'
-      : theme.colors.success || '#065f46';
+      ? theme.colors.status.warning || '#92400e'
+      : theme.colors.status.success || '#065f46';
   }};
   border: 1px solid ${({ $requiresApproval, theme }) => {
-    if ($requiresApproval === null) return theme.colors.neutral[200];
+    if ($requiresApproval === null) return theme.colors.surface.sunken;
     return $requiresApproval
-      ? theme.colors.warning || '#fde68a'
-      : theme.colors.success || '#6ee7b7';
+      ? theme.colors.status.warning || '#fde68a'
+      : theme.colors.status.success || '#6ee7b7';
   }};
 `;
 

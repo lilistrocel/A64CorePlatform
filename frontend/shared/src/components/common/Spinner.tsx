@@ -19,9 +19,9 @@ const spin = keyframes`
 `;
 
 const StyledSpinner = styled.div<SpinnerProps>`
-  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top-color: ${({ theme, color }) => color || theme.colors.primary[500]};
-  border-radius: ${({ theme }) => theme.borderRadius.full};
+  border: 3px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-top-color: ${({ theme, color }) => color || theme.colors.accent.sage};
+  border-radius: ${({ theme }) => theme.radii.pill};
   animation: ${spin} 0.8s linear infinite;
 
   ${({ size }) => {

@@ -109,11 +109,11 @@ const LoadingContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  gap: ${({ theme }) => theme.spacing.lg};
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  gap: ${({ theme }) => theme.space['6']};
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
 `;
 
 const LoadingText = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
   color: white;
 `;

@@ -181,21 +181,21 @@ export function Profile() {
 }
 
 const ProfileContainer = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['4']};
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
   width: 100%;
 
   @media (min-width: 768px) {
-    padding: ${({ theme }) => theme.spacing.lg};
-    gap: ${({ theme }) => theme.spacing.lg};
+    padding: ${({ theme }) => theme.space['6']};
+    gap: ${({ theme }) => theme.space['6']};
   }
 
   @media (min-width: 1024px) {
-    padding: ${({ theme }) => theme.spacing.xl};
+    padding: ${({ theme }) => theme.space['8']};
   }
 
   @media (min-width: 1600px) {
@@ -204,25 +204,25 @@ const ProfileContainer = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
+  font-size: ${({ theme }) => theme.fontSizes.h2};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }) => theme.space['4']} 0;
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-    margin-bottom: ${({ theme }) => theme.spacing.lg};
+    font-size: ${({ theme }) => theme.fontSizes.h1};
+    margin-bottom: ${({ theme }) => theme.space['6']};
   }
 `;
 
 const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space['6']};
 
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, 1fr);
-    gap: ${({ theme }) => theme.spacing.xl};
+    gap: ${({ theme }) => theme.space['8']};
   }
 
   @media (min-width: 1024px) {
@@ -233,64 +233,64 @@ const InfoGrid = styled.div`
 const InfoItem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const Label = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Value = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const RoleBadge = styled.div`
   display: inline-flex;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.primary[500]};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  padding: ${({ theme }) => theme.space['1']} ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => `${theme.colors.accent.sage}15`};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   width: fit-content;
 `;
 
 const PermissionsList = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const PermissionItem = styled.div`
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.primary[500]};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  padding: ${({ theme }) => theme.space['1']} ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => `${theme.colors.accent.sage}15`};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
 `;
 
 const NoPermissions = styled.div`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
 `;
 
 const EditForm = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space['6']};
 `;
 
 const FormGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
 
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, 1fr);
@@ -299,33 +299,33 @@ const FormGrid = styled.div`
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding-top: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
+  padding-top: ${({ theme }) => theme.space['2']};
 `;
 
 const InputWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const DisabledLabel = styled.label`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const DisabledValue = styled.div`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
   opacity: 0.6;
 `;
 
 const HelperText = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;

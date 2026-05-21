@@ -40,7 +40,7 @@ const Section = styled.div`
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   display: flex;
   align-items: center;
@@ -80,7 +80,7 @@ const FormField = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Required = styled.span`
@@ -89,15 +89,15 @@ const Required = styled.span`
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -107,18 +107,18 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -129,25 +129,25 @@ const Select = styled.select<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const TextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -162,7 +162,7 @@ const TagsInput = styled.div`
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   min-height: 42px;
 `;
@@ -172,8 +172,8 @@ const Tag = styled.span`
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: rgba(15, 110, 86, 0.05);
+  color: #0F6E56;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
@@ -182,14 +182,14 @@ const Tag = styled.span`
 const RemoveTagButton = styled.button`
   background: none;
   border: none;
-  color: #1976d2;
+  color: #0F6E56;
   cursor: pointer;
   padding: 0;
   font-size: 14px;
   line-height: 1;
 
   &:hover {
-    color: #1565c0;
+    color: #0B5644;
   }
 `;
 
@@ -201,10 +201,10 @@ const TagInput = styled.input`
   min-width: 120px;
   padding: 4px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
@@ -215,7 +215,7 @@ const ErrorText = styled.span`
 
 const HelpText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const Actions = styled.div`
@@ -223,7 +223,7 @@ const Actions = styled.div`
   gap: 12px;
   justify-content: flex-end;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
@@ -241,7 +241,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
         background: #3B82F6;
         color: white;
         &:hover:not(:disabled) {
-          background: #1976d2;
+          background: #0F6E56;
         }
       `;
     }
@@ -257,10 +257,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
     }
     return `
       background: transparent;
-      color: ${theme.colors.textSecondary};
-      border: 1px solid ${theme.colors.neutral[300]};
+      color: ${theme.colors.text.secondary};
+      border: 1px solid ${theme.colors.border.subtle};
       &:hover:not(:disabled) {
-        background: ${theme.colors.surface};
+        background: ${theme.colors.surface.raised};
       }
     `;
   }}

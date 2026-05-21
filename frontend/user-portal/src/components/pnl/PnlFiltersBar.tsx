@@ -31,78 +31,78 @@ const FiltersBar = styled.div`
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  gap: ${({ theme }) => theme.space['4']};
+  padding: ${({ theme }) => theme.space['6']};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  margin-bottom: ${({ theme }) => theme.space['8']};
 `;
 
 const FilterGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const FilterLabel = styled.label`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const Select = styled.select`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   font-family: inherit;
   cursor: pointer;
   min-width: 160px;
 
   &:focus {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
     opacity: 0.6;
     cursor: not-allowed;
   }
 `;
 
 const DateInput = styled.input`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   font-family: inherit;
 
   &:focus {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const ToggleGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const ToggleRow = styled.label`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   cursor: pointer;
   user-select: none;
 `;
@@ -116,8 +116,8 @@ const ToggleInput = styled.input<ToggleInputProps>`
   width: 36px;
   height: 20px;
   background: ${({ $checked, theme }) =>
-    $checked ? theme.colors.success : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.full};
+    $checked ? theme.colors.status.success : theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.pill};
   position: relative;
   cursor: pointer;
   transition: background 150ms ease-in-out;
@@ -130,21 +130,21 @@ const ToggleInput = styled.input<ToggleInputProps>`
     left: ${({ $checked }) => ($checked ? '18px' : '2px')};
     width: 16px;
     height: 16px;
-    background: ${({ theme }) => theme.colors.background};
-    border-radius: ${({ theme }) => theme.borderRadius.full};
+    background: ${({ theme }) => theme.colors.surface.canvas};
+    border-radius: ${({ theme }) => theme.radii.pill};
     transition: left 150ms ease-in-out;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 
   &:focus {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
 
 const ToggleLabel = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────

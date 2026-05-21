@@ -84,11 +84,11 @@ export function MessageList({
 const Container = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['4']};
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -98,7 +98,7 @@ const Container = styled.div`
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
     border-radius: 3px;
   }
 `;
@@ -106,7 +106,7 @@ const Container = styled.div`
 const MessageListInner = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const EmptyState = styled.div`
@@ -116,8 +116,8 @@ const EmptyState = styled.div`
   justify-content: center;
   text-align: center;
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.xl} ${({ theme }) => theme.spacing.md};
-  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['8']} ${({ theme }) => theme.space['4']};
+  gap: ${({ theme }) => theme.space['4']};
 `;
 
 const EmptyIcon = styled.div`
@@ -125,14 +125,14 @@ const EmptyIcon = styled.div`
 `;
 
 const EmptyTitle = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const EmptyDescription = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
   max-width: 320px;
 `;
@@ -140,26 +140,26 @@ const EmptyDescription = styled.div`
 const SuggestionGrid = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   justify-content: center;
-  margin-top: ${({ theme }) => theme.spacing.sm};
+  margin-top: ${({ theme }) => theme.space['2']};
 `;
 
 const SuggestionChip = styled.button`
   padding: 7px 14px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.primary[500]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]}40;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage}40;
+  border-radius: ${({ theme }) => theme.radii.pill};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   font-family: inherit;
   cursor: pointer;
   transition: all 150ms ease;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &:disabled {

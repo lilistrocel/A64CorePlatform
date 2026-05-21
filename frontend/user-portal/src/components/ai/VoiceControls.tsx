@@ -99,18 +99,18 @@ const PillButton = styled.button<PillButtonProps>`
   border-radius: 18px;
   border: 1.5px solid ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
     if ($hasError) return '#EF4444';
-    if ($isDisabled) return theme.colors.neutral[300];
+    if ($isDisabled) return theme.colors.border.subtle;
     return $isActive ? $activeColor : `${$activeColor}40`;
   }};
   background: ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
     if ($hasError) return '#FEF2F2';
-    if ($isDisabled) return theme.colors.surface;
-    return $isActive ? `${$activeColor}15` : theme.colors.neutral[50];
+    if ($isDisabled) return theme.colors.surface.raised;
+    return $isActive ? `${$activeColor}15` : theme.colors.surface.canvas;
   }};
   color: ${({ $isActive, $activeColor, $isDisabled, $hasError, theme }) => {
     if ($hasError) return '#EF4444';
-    if ($isDisabled) return theme.colors.textDisabled;
-    return $isActive ? $activeColor : theme.colors.textSecondary;
+    if ($isDisabled) return theme.colors.text.tertiary;
+    return $isActive ? $activeColor : theme.colors.text.secondary;
   }};
   cursor: ${({ $isDisabled }) => ($isDisabled ? 'not-allowed' : 'pointer')};
   transition: all 150ms ease-in-out;
@@ -185,10 +185,10 @@ const ErrorToast = styled.div`
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error}40;
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger}40;
   border-radius: 10px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;

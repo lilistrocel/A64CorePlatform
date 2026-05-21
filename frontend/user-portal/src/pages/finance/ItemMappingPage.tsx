@@ -173,13 +173,13 @@ const PageTitleBlock = styled.div``;
 const PageTitle = styled.h1`
   font-size: 26px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const PageSubtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 6px 0 0;
   max-width: 680px;
   line-height: 1.55;
@@ -187,7 +187,7 @@ const PageSubtitle = styled.p`
 
 const Divider = styled.div`
   height: 1px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   margin: 20px 0 24px;
 `;
 
@@ -206,47 +206,47 @@ const SearchInput = styled.input`
   min-width: 200px;
   max-width: 320px;
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[500]}1a;
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent.sage}1a;
   }
 `;
 
 const FilterSelect = styled.select`
   padding: 9px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   white-space: nowrap;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const BadgeChip = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 99px;
   padding: 4px 12px;
   white-space: nowrap;
@@ -254,9 +254,9 @@ const BadgeChip = styled.span`
 
 const BulkActionButton = styled.button`
   padding: 8px 14px;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
-  border: 1px solid ${({ theme }) => (theme.colors.info || '#1d4ed8') + '44'};
+  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
+  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
+  border: 1px solid ${({ theme }) => (theme.colors.status.info || '#1d4ed8') + '44'};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -266,11 +266,11 @@ const BulkActionButton = styled.button`
   font-family: inherit;
 
   &:hover {
-    background: ${({ theme }) => (theme.colors.info || '#1d4ed8') + '18'};
+    background: ${({ theme }) => (theme.colors.status.info || '#1d4ed8') + '18'};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.info || '#1d4ed8'};
+    outline: 2px solid ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
     outline-offset: 2px;
   }
 `;
@@ -286,27 +286,27 @@ const BannerBase = styled.div`
 `;
 
 const BannerInfo = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
+  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
 `;
 
 const BannerSuccess = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.successBg || '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.success || '#065f46'};
+  background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
+  color: ${({ theme }) => theme.colors.status.success || '#065f46'};
 `;
 
 const BannerError = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
+  color: ${({ theme }) => theme.colors.status.danger};
 `;
 
 // ─── Table ─────────────────────────────────────────────────────────────────────
 
 const TableWrapper = styled.div`
   overflow-x: auto;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const Table = styled.table`
@@ -317,8 +317,8 @@ const Table = styled.table`
 `;
 
 const THead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Th = styled.th`
@@ -328,7 +328,7 @@ const Th = styled.th`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
 `;
 
@@ -338,10 +338,10 @@ interface TrProps {
 }
 
 const Tr = styled.tr<TrProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   background: ${({ $warning, $dirty, theme }) => {
-    if ($dirty) return (theme.colors.infoBg || '#eff6ff') + '55';
-    if ($warning) return (theme.colors.warningBg || '#fffbeb');
+    if ($dirty) return (theme.colors.surface.sunken || '#eff6ff') + '55';
+    if ($warning) return (theme.colors.status.warning || '#fffbeb');
     return 'transparent';
   }};
   transition: background 120ms ease-in-out;
@@ -352,9 +352,9 @@ const Tr = styled.tr<TrProps>`
 
   &:hover {
     background: ${({ $dirty, $warning, theme }) => {
-      if ($dirty) return (theme.colors.infoBg || '#eff6ff') + '88';
-      if ($warning) return (theme.colors.warningBg || '#fffbeb') + 'cc';
-      return theme.colors.neutral[50];
+      if ($dirty) return (theme.colors.surface.sunken || '#eff6ff') + '88';
+      if ($warning) return (theme.colors.status.warning || '#fffbeb') + 'cc';
+      return theme.colors.surface.canvas;
     }};
   }
 `;
@@ -362,7 +362,7 @@ const Tr = styled.tr<TrProps>`
 const Td = styled.td`
   padding: 10px 14px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   vertical-align: middle;
 `;
 
@@ -371,7 +371,7 @@ const ItemCodeCell = styled.td`
   padding: 10px 14px;
   font-size: 12px;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   vertical-align: middle;
   white-space: nowrap;
 `;
@@ -379,7 +379,7 @@ const ItemCodeCell = styled.td`
 const ItemNameCell = styled.td`
   padding: 10px 14px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   vertical-align: middle;
   min-width: 160px;
   word-break: break-word;
@@ -425,12 +425,12 @@ const StatusPill = styled.span<StatusPillProps>`
   font-weight: 600;
   background: ${({ $active, theme }) =>
     $active
-      ? theme.colors.successBg || '#ecfdf5'
-      : theme.colors.neutral[100]};
+      ? theme.colors.accent.sageSoft || '#ecfdf5'
+      : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
     $active
-      ? theme.colors.success || '#065f46'
-      : theme.colors.textDisabled};
+      ? theme.colors.status.success || '#065f46'
+      : theme.colors.text.tertiary};
 `;
 
 // ─── Inline editable controls ──────────────────────────────────────────────────
@@ -457,22 +457,22 @@ const NarrowEditCell = styled.td`
 const SmallSelect = styled.select`
   width: 100%;
   padding: 7px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 7px;
   font-size: 13px;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}1a;
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.accent.sage}1a;
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
     opacity: 0.6;
     cursor: not-allowed;
   }
@@ -497,13 +497,13 @@ const RowSaveButton = styled.button<{ $dirty: boolean }>`
   opacity: ${({ $dirty }) => ($dirty ? 1 : 0.35)};
   pointer-events: ${({ $dirty }) => ($dirty ? 'auto' : 'none')};
   background: ${({ $dirty, theme }) =>
-    $dirty ? theme.colors.primary[500] : theme.colors.neutral[200]};
+    $dirty ? theme.colors.accent.sage : theme.colors.surface.sunken};
   color: ${({ $dirty }) => ($dirty ? 'white' : 'inherit')};
   transition: background 150ms ease-in-out, opacity 150ms ease-in-out;
 
   &:hover {
     background: ${({ $dirty, theme }) =>
-      $dirty ? theme.colors.primary[700] : theme.colors.neutral[200]};
+      $dirty ? theme.colors.accent.sageDeep : theme.colors.surface.sunken};
   }
 
   &:disabled {
@@ -515,14 +515,14 @@ const RowSaveButton = styled.button<{ $dirty: boolean }>`
 
 const RowSavingIndicator = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   padding: 0 4px;
 `;
 
 const RowErrorText = styled.span`
   display: block;
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   margin-top: 3px;
 `;
 
@@ -538,7 +538,7 @@ const FooterRow = styled.div`
 
 const SaveAllButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -550,7 +550,7 @@ const SaveAllButton = styled.button`
   transition: background 150ms ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 
   &:disabled {
@@ -562,7 +562,7 @@ const SaveAllButton = styled.button`
 const EmptyState = styled.div`
   padding: 64px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 14px;
   line-height: 1.6;
 `;
@@ -571,7 +571,7 @@ const EmptyState = styled.div`
 
 const MutedCell = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-style: italic;
 `;
 
@@ -579,7 +579,7 @@ const MutedCell = styled.span`
 
 const UnassignedText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // ─── Main component ────────────────────────────────────────────────────────────

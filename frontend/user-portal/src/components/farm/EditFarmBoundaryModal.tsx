@@ -32,7 +32,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
   max-width: 800px;
@@ -48,19 +48,19 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
 const MapSection = styled.div`
   margin-bottom: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -70,8 +70,8 @@ const MapLoadingFallback = styled.div`
   align-items: center;
   justify-content: center;
   height: 450px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
 `;
 
@@ -80,7 +80,7 @@ const InfoRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   margin-bottom: 24px;
 `;
@@ -115,22 +115,22 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
     switch ($variant) {
       case 'primary':
         return `
-          background: ${theme.colors.primary[500]};
+          background: ${theme.colors.accent.sage};
           color: white;
-          &:hover:not(:disabled) { background: ${theme.colors.primary[700]}; }
+          &:hover:not(:disabled) { background: ${theme.colors.accent.sageDeep}; }
         `;
       case 'danger':
         return `
-          background: ${theme.colors.errorBg};
-          color: ${theme.colors.error};
-          &:hover:not(:disabled) { background: ${theme.colors.neutral[200]}; }
+          background: ${theme.colors.status.danger};
+          color: ${theme.colors.status.danger};
+          &:hover:not(:disabled) { background: ${theme.colors.surface.sunken}; }
         `;
       default:
         return `
           background: transparent;
-          color: ${theme.colors.textSecondary};
-          border: 1px solid ${theme.colors.neutral[300]};
-          &:hover:not(:disabled) { background: ${theme.colors.surface}; }
+          color: ${theme.colors.text.secondary};
+          border: 1px solid ${theme.colors.border.subtle};
+          &:hover:not(:disabled) { background: ${theme.colors.surface.raised}; }
         `;
     }
   }}
@@ -143,17 +143,17 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 14px;
   margin-bottom: 16px;
 `;
 
 const HelpText = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px 0;
   line-height: 1.5;
 `;

@@ -105,13 +105,13 @@ const ComboInput = styled.input<{ $hasError?: boolean; $disabled?: boolean; $has
   /* Right padding: 12px chevron gap (10px icon + 8px margin) + 26px clear btn + 4px gap = ~58px when selection exists, 38px otherwise */
   padding: 9px ${({ $hasSelection }) => ($hasSelection ? '64px' : '38px')} 9px 13px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
+    ${({ $hasError, theme }) => ($hasError ? theme.colors.status.danger : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   background: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.neutral[50] : theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+    $disabled ? theme.colors.surface.canvas : theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'text')};
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
   opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};
@@ -121,18 +121,18 @@ const ComboInput = styled.input<{ $hasError?: boolean; $disabled?: boolean; $has
   white-space: nowrap;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
     outline: none;
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
     box-shadow: 0 0 0 3px
       ${({ $hasError, theme }) =>
         $hasError
           ? 'rgba(239, 68, 68, 0.1)'
-          : `${theme.colors.primary[500]}1a`};
+          : `${theme.colors.accent.sage}1a`};
   }
 `;
 
@@ -146,7 +146,7 @@ const ChevronIcon = styled.span<{ $open: boolean; $disabled?: boolean; $hasSelec
   transition: transform 150ms ease-in-out;
   pointer-events: none;
   color: ${({ $disabled, theme }) =>
-    $disabled ? theme.colors.textDisabled : theme.colors.textSecondary};
+    $disabled ? theme.colors.text.tertiary : theme.colors.text.secondary};
   font-size: 10px;
   line-height: 1;
   user-select: none;
@@ -167,7 +167,7 @@ const ClearButton = styled.button`
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 15px;
   cursor: pointer;
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
@@ -197,8 +197,8 @@ const InputControlBadge = styled.span`
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 99px;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
+  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   white-space: nowrap;
@@ -212,8 +212,8 @@ const InputControlBadge = styled.span`
  */
 const Dropdown = styled.ul`
   position: fixed;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
   max-height: 280px;
@@ -230,7 +230,7 @@ const DropdownItem = styled.li<{ $highlighted?: boolean; $taken?: boolean }>`
   padding: 9px 14px;
   cursor: ${({ $taken }) => ($taken ? 'not-allowed' : 'pointer')};
   background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.surface : 'transparent'};
+    $highlighted ? theme.colors.surface.raised : 'transparent'};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -238,13 +238,13 @@ const DropdownItem = styled.li<{ $highlighted?: boolean; $taken?: boolean }>`
   opacity: ${({ $taken }) => ($taken ? 0.45 : 1)};
 
   &:hover {
-    background: ${({ $taken, theme }) => ($taken ? 'transparent' : theme.colors.surface)};
+    background: ${({ $taken, theme }) => ($taken ? 'transparent' : theme.colors.surface.raised)};
   }
 `;
 
 const OptionText = styled.span<{ $taken?: boolean }>`
   font-size: 13px;
-  color: ${({ $taken, theme }) => ($taken ? theme.colors.textDisabled : theme.colors.textPrimary)};
+  color: ${({ $taken, theme }) => ($taken ? theme.colors.text.tertiary : theme.colors.text.primary)};
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -259,8 +259,8 @@ const ControlBadge = styled.span`
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 99px;
-  background: ${({ theme }) => theme.colors.infoBg || '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info || '#1d4ed8'};
+  background: ${({ theme }) => theme.colors.surface.sunken || '#eff6ff'};
+  color: ${({ theme }) => theme.colors.status.info || '#1d4ed8'};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   white-space: nowrap;
@@ -269,16 +269,16 @@ const ControlBadge = styled.span`
 const DropdownState = styled.li`
   padding: 12px 14px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
 `;
 
 const TruncationFooter = styled.li`
   padding: 8px 14px;
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-align: center;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   margin-top: 2px;
 `;
 

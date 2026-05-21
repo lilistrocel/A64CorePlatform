@@ -184,9 +184,9 @@ const Panel = styled.aside<{ $isOpen: boolean }>`
   z-index: 900;
   display: flex;
   flex-direction: column;
-  background: ${({ theme }) => theme.colors.background};
-  border-left: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-left: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  box-shadow: ${({ theme }) => theme.shadows.md};
 
   /* Slide transition */
   transform: translateX(${({ $isOpen }) => ($isOpen ? '0' : '100%')});
@@ -204,34 +204,34 @@ const PanelHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.surface};
+  padding: ${({ theme }) => theme.space['4']} ${({ theme }) => theme.space['6']};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  background: ${({ theme }) => theme.colors.surface.raised};
   flex-shrink: 0;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  gap: ${({ theme }) => theme.space['2']};
+  color: ${({ theme }) => theme.colors.accent.sage};
 `;
 
 const HeaderTitle = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const HeaderBadge = styled.span`
   font-size: 10px;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.primary[500]};
-  background: ${({ theme }) => theme.colors.primary[500]}15;
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]}40;
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  background: ${({ theme }) => theme.colors.accent.sage}15;
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage}40;
   padding: 1px 7px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -244,28 +244,28 @@ const CloseButton = styled.button`
   height: 32px;
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 0;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.sunken};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
 
 const PanelError = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.error};
-  background: ${({ theme }) => theme.colors.errorBg};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.error}40;
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.status.danger};
+  background: ${({ theme }) => theme.colors.status.danger};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.status.danger}40;
   flex-shrink: 0;
 `;

@@ -60,7 +60,7 @@ const FAB = styled.button<{ $isOpen: boolean }>`
   transition: transform 200ms ease, background 150ms ease;
 
   background: ${({ $isOpen, theme }) =>
-    $isOpen ? theme.colors.primary[700] : theme.colors.primary[500]};
+    $isOpen ? theme.colors.accent.sageDeep : theme.colors.accent.sage};
   color: white;
 
   /* Rotate icon slightly when panel is open for visual feedback */
@@ -71,7 +71,7 @@ const FAB = styled.button<{ $isOpen: boolean }>`
 
   &:hover {
     transform: scale(1.08);
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 
   &:active {
@@ -79,7 +79,7 @@ const FAB = styled.button<{ $isOpen: boolean }>`
   }
 
   &:focus-visible {
-    outline: 3px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 3px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 3px;
   }
 

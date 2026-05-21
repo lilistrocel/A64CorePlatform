@@ -114,73 +114,73 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: ${({ theme }) => theme.spacing.sm};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.surface};
+  padding: ${({ theme }) => theme.space['2']};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const NewButton = styled.button`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
   width: 100%;
-  padding: 8px ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme }) => theme.colors.primary[500]};
+  padding: 8px ${({ theme }) => theme.space['2']};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   font-family: inherit;
   cursor: pointer;
   transition: background 150ms ease;
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  margin-bottom: ${({ theme }) => theme.space['1']};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
 const LoadingText = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.space['2']};
 `;
 
 const EmptyText = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.space['2']};
 `;
 
 const ConvItem = styled.div<{ $isActive: boolean }>`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: 8px ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  gap: ${({ theme }) => theme.space['2']};
+  padding: 8px ${({ theme }) => theme.space['2']};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
   background: ${({ $isActive, theme }) =>
-    $isActive ? `${theme.colors.primary[500]}15` : 'transparent'};
+    $isActive ? `${theme.colors.accent.sage}15` : 'transparent'};
   border: 1px solid ${({ $isActive, theme }) =>
-    $isActive ? `${theme.colors.primary[500]}40` : 'transparent'};
+    $isActive ? `${theme.colors.accent.sage}40` : 'transparent'};
   transition: all 150ms ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 1px;
   }
 `;
 
 const ConvIcon = styled.div<{ $isActive: boolean }>`
   color: ${({ $isActive, theme }) =>
-    $isActive ? theme.colors.primary[500] : theme.colors.textSecondary};
+    $isActive ? theme.colors.accent.sage : theme.colors.text.secondary};
   flex-shrink: 0;
 `;
 
@@ -190,9 +190,9 @@ const ConvContent = styled.div`
 `;
 
 const ConvTitle = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -200,7 +200,7 @@ const ConvTitle = styled.div`
 
 const ConvMeta = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-top: 1px;
 `;
 
@@ -213,8 +213,8 @@ const DeleteButton = styled.button`
   height: 24px;
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  border-radius: ${({ theme }) => theme.radii.sm};
   cursor: pointer;
   transition: all 150ms ease;
   opacity: 0;
@@ -224,8 +224,8 @@ const DeleteButton = styled.button`
   }
 
   &:hover {
-    color: ${({ theme }) => theme.colors.error};
-    background: ${({ theme }) => theme.colors.errorBg};
+    color: ${({ theme }) => theme.colors.status.danger};
+    background: ${({ theme }) => theme.colors.status.danger};
   }
 
   &:disabled {

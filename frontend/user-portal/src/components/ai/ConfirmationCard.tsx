@@ -74,7 +74,7 @@ interface CardProps {
 }
 
 const Card = styled.div<CardProps>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border: 1px solid ${({ $riskColor }) => `${$riskColor}30`};
   border-left: 3px solid ${({ $riskColor }) => $riskColor};
   border-radius: 8px;
@@ -94,7 +94,7 @@ const CardHeader = styled.div`
 const CardTitle = styled.span`
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   flex: 1;
 `;
 
@@ -115,22 +115,22 @@ const RiskBadge = styled.span<RiskBadgeProps>`
 const ExpiryTimer = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-variant-numeric: tabular-nums;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
 `;
 
 const Description = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.5;
   margin: 0;
 `;
 
 const ToolName = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
   padding: 1px 6px;
   border-radius: 4px;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
@@ -145,7 +145,7 @@ const ApproveButton = styled.button`
   flex: 1;
   padding: 8px 16px;
   min-height: 44px;
-  background: ${({ theme }) => theme.colors.success};
+  background: ${({ theme }) => theme.colors.status.success};
   color: white;
   border: none;
   border-radius: 8px;
@@ -159,7 +159,7 @@ const ApproveButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.success};
+    outline: 2px solid ${({ theme }) => theme.colors.status.success};
     outline-offset: 2px;
   }
 
@@ -173,9 +173,9 @@ const DenyButton = styled.button`
   flex: 1;
   padding: 8px 16px;
   min-height: 44px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.error};
-  border: 1.5px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.status.danger};
+  border: 1.5px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -183,7 +183,7 @@ const DenyButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: ${({ theme }) => theme.colors.status.danger};
   }
 
   &:focus-visible {

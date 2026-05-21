@@ -508,36 +508,36 @@ const Overlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: ${({ theme }) => theme.zIndex.modal};
-  padding: ${({ theme }) => theme.spacing.lg};
+  z-index: ${({ theme }) => theme.zIndices.modal};
+  padding: ${({ theme }) => theme.space['6']};
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.xl};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-radius: ${({ theme }) => theme.radii.xl};
   width: 100%;
   max-width: 800px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => theme.space['6']};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   overflow-x: auto;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   flex-shrink: 0;
 
   &::-webkit-scrollbar {
@@ -545,15 +545,15 @@ const TabBar = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
     border-radius: 2px;
   }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.text.secondary)};
   border: none;
   border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
   font-size: 14px;
@@ -563,7 +563,7 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     color: #3b82f6;
   }
 `;
@@ -571,7 +571,7 @@ const Tab = styled.button<{ $active: boolean }>`
 const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
 `;
 
 const HeaderTitles = styled.div`
@@ -580,34 +580,34 @@ const HeaderTitles = styled.div`
 `;
 
 const BlockCodeSmall = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.neutral[400]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.border.default};
   font-family: 'Courier New', monospace;
 `;
 
 const BlockName = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const StatusBadge = styled.div<{ $color: string }>`
   padding: 4px 12px;
-  border-radius: ${({ theme }) => theme.borderRadius.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   background: ${({ $color }) => `${$color}15`};
   color: ${({ $color }) => $color};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
   text-transform: capitalize;
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.h1};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -615,21 +615,21 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
 const Content = styled.div`
-  padding: ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.space['6']};
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xl};
+  gap: ${({ theme }) => theme.space['8']};
   position: relative;
   z-index: 1;
   /* Enable proper scrolling in flex container */
@@ -640,58 +640,58 @@ const Content = styled.div`
 const Section = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
 `;
 
 const SectionTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const SectionSubtitle = styled.h4`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0 0 ${({ theme }) => theme.spacing.sm} 0;
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin: 0 0 ${({ theme }) => theme.space['2']} 0;
 `;
 
 const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
 `;
 
 const InfoItem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const InfoLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const InfoValue = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Timeline = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
   position: relative;
 `;
 
 const TimelineStage = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
   position: relative;
 `;
 
@@ -702,18 +702,18 @@ const TimelineIcon = styled.div<{ $status: 'completed' | 'current' | 'pending' }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
   background: ${({ $status, theme }) => {
     switch ($status) {
       case 'completed':
-        return theme.colors.success;
+        return theme.colors.status.success;
       case 'current':
-        return theme.colors.primary[500];
+        return theme.colors.accent.sage;
       case 'pending':
-        return theme.colors.neutral[200];
+        return theme.colors.surface.sunken;
     }
   }};
-  border: 3px solid ${({ theme }) => theme.colors.surface};
+  border: 3px solid ${({ theme }) => theme.colors.surface.raised};
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 1;
   flex-shrink: 0;
@@ -722,29 +722,29 @@ const TimelineIcon = styled.div<{ $status: 'completed' | 'current' | 'pending' }
 const TimelineContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
   flex: 1;
 `;
 
 const TimelineLabel = styled.div<{ $isCurrent: boolean }>`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
   font-weight: ${({ $isCurrent, theme }) =>
     $isCurrent
-      ? theme.typography.fontWeight.semibold
-      : theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+      ? theme.fontWeights.semibold
+      : theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const TimelineDate = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const TimelineExpected = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.neutral[400]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.border.default};
   font-style: italic;
-  margin-top: ${({ theme }) => theme.spacing.xs};
+  margin-top: ${({ theme }) => theme.space['1']};
 `;
 
 const TimelineConnector = styled.div<{ $completed: boolean }>`
@@ -754,45 +754,45 @@ const TimelineConnector = styled.div<{ $completed: boolean }>`
   width: 2px;
   height: calc(100% + 16px);
   background: ${({ $completed, theme }) =>
-    $completed ? theme.colors.success : theme.colors.neutral[300]};
+    $completed ? theme.colors.status.success : theme.colors.border.subtle};
 `;
 
 const HarvestHistorySection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space['6']};
 `;
 
 const HarvestStats = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
 `;
 
 const StatCard = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.md};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const StatLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-bottom: ${({ theme }) => theme.space['1']};
 `;
 
 const StatValue = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const StatSubtext = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: ${({ theme }) => theme.spacing.xs};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-top: ${({ theme }) => theme.space['1']};
 `;
 
 const GradeBreakdown = styled.div``;
@@ -800,109 +800,109 @@ const GradeBreakdown = styled.div``;
 const GradeGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
 `;
 
 const GradeCard = styled.div<{ $color: string }>`
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['4']};
   background: ${({ $color }) => `${$color}10`};
   border: 2px solid ${({ $color }) => $color};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const GradeHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const GradeBadge = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
 `;
 
 const GradeLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const GradeQuantity = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const GradePercentage = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const HarvestDates = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.xl};
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  gap: ${({ theme }) => theme.space['8']};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.md};
 `;
 
 const DateInfo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const DateLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const DateValue = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const YieldContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  gap: ${({ theme }) => theme.space['2']};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.md};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const YieldHeader = styled.div`
   display: flex;
   align-items: baseline;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const YieldActual = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h2};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const YieldSeparator = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  color: ${({ theme }) => theme.colors.neutral[400]};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  color: ${({ theme }) => theme.colors.border.default};
 `;
 
 const YieldPredicted = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const YieldBarBackground = styled.div`
   width: 100%;
   height: 10px;
-  background: ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 5px;
   overflow: hidden;
 `;
@@ -922,40 +922,40 @@ const YieldFooter = styled.div`
 `;
 
 const YieldPercent = styled.span<{ $overTarget: boolean }>`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
   color: ${({ $overTarget }) => ($overTarget ? '#10B981' : '#3B82F6')};
 `;
 
 const YieldHarvestCount = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PerformanceGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
 `;
 
 const PerformanceCard = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.md};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const PerformanceLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-bottom: ${({ theme }) => theme.space['1']};
 `;
 
 const PerformanceValue = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const EmptyState = styled.div`
@@ -963,84 +963,84 @@ const EmptyState = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: ${({ theme }) => theme.spacing.xl};
+  padding: ${({ theme }) => theme.space['8']};
   text-align: center;
 `;
 
 const EmptyIcon = styled.div`
   font-size: 48px;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
+  margin-bottom: ${({ theme }) => theme.space['4']};
   opacity: 0.5;
 `;
 
 const EmptyText = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const LoadingState = styled.div`
-  padding: ${({ theme }) => theme.spacing.xl};
+  padding: ${({ theme }) => theme.space['8']};
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 // Individual Harvest Records Styles
 const HarvestRecordsSection = styled.div`
-  margin-top: ${({ theme }) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  padding-top: ${({ theme }) => theme.spacing.lg};
+  margin-top: ${({ theme }) => theme.space['6']};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  padding-top: ${({ theme }) => theme.space['6']};
 `;
 
 const HarvestRecordsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   max-height: 300px;
   overflow-y: auto;
 `;
 
 const HarvestRecordCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  padding: ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.md};
+  padding: ${({ theme }) => theme.space['4']};
   display: flex;
   justify-content: space-between;
   align-items: center;
   transition: background-color 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
 const HarvestRecordInfo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const HarvestRecordDate = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const HarvestRecordCrop = styled.span`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.normal};
-  color: ${({ theme }) => theme.colors.success};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  color: ${({ theme }) => theme.colors.status.success};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const HarvestRecordMeta = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   flex-wrap: wrap;
 `;
 
@@ -1048,22 +1048,22 @@ const HarvestRecordDot = styled.span`
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.neutral[400]};
+  background: ${({ theme }) => theme.colors.border.default};
 `;
 
 const HarvestRecordNotes = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
-  margin-top: ${({ theme }) => theme.spacing.xs};
+  margin-top: ${({ theme }) => theme.space['1']};
 `;
 
 const HarvestQualityBadge = styled.span<{ $grade: QualityGrade }>`
   display: inline-block;
   padding: 2px 8px;
   border-radius: 9999px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
   color: white;
   background: ${({ $grade }) => {
     switch ($grade) {

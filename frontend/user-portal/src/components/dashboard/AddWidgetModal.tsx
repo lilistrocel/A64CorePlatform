@@ -75,8 +75,8 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.lg};
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   width: 90%;
   max-width: 560px;
@@ -91,13 +91,13 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ModalTitle = styled.h2`
   font-size: 1.25rem;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -105,13 +105,13 @@ const CloseBtn = styled.button`
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   padding: 0;
   line-height: 1;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -131,13 +131,13 @@ const WidgetCard = styled.div`
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.md};
   transition: border-color 0.2s, background 0.2s;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[300]};
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    border-color: ${({ theme }) => theme.colors.accent.sageSoft};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
@@ -159,18 +159,18 @@ const WidgetInfo = styled.div`
 const WidgetName = styled.div`
   font-size: 0.9375rem;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const WidgetDesc = styled.div`
   font-size: 0.8125rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 0.125rem;
 `;
 
 const WidgetType = styled.div`
   font-size: 0.6875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 0.25rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -178,10 +178,10 @@ const WidgetType = styled.div`
 
 const AddButton = styled.button`
   padding: 0.5rem 1rem;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -190,7 +190,7 @@ const AddButton = styled.button`
   transition: background 0.2s;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 
   &:disabled {
@@ -201,7 +201,7 @@ const AddButton = styled.button`
 
 const EmptyMessage = styled.p`
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 2rem 0;
   font-size: 0.9375rem;
 `;

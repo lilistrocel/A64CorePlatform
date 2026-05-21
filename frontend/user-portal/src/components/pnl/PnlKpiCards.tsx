@@ -37,23 +37,23 @@ const shimmer = keyframes`
 
 const SkeletonBlock = styled.div`
   height: 24px;
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  border-radius: ${({ theme }) => theme.radii.sm};
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.surface.sunken} 25%,
+    ${({ theme }) => theme.colors.surface.raised} 50%,
+    ${({ theme }) => theme.colors.surface.sunken} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
-  margin-bottom: ${({ theme }) => theme.spacing.sm};
+  margin-bottom: ${({ theme }) => theme.space['2']};
 `;
 
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${({ theme }) => theme.spacing.lg};
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  gap: ${({ theme }) => theme.space['6']};
+  margin-bottom: ${({ theme }) => theme.space['8']};
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     grid-template-columns: repeat(2, 1fr);
@@ -65,10 +65,10 @@ const Grid = styled.div`
 `;
 
 const Card = styled.article`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.space['6']};
   box-shadow: ${({ theme }) => theme.shadows.sm};
   transition: box-shadow 150ms ease-in-out;
 
@@ -81,13 +81,13 @@ const CardHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
+  margin-bottom: ${({ theme }) => theme.space['4']};
 `;
 
 const CardTitle = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -109,23 +109,23 @@ const VALUE_COLORS = {
 };
 
 const CardValue = styled.div<ValueProps>`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.fontSizes.h2};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   color: ${({ $color = 'neutral', theme }) =>
-    $color === 'neutral' ? theme.colors.textPrimary : VALUE_COLORS[$color]};
-  line-height: ${({ theme }) => theme.typography.lineHeight.tight};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
+    $color === 'neutral' ? theme.colors.text.primary : VALUE_COLORS[$color]};
+  line-height: ${({ theme }) => theme.lineHeights.snug};
+  margin-bottom: ${({ theme }) => theme.space['1']};
   word-break: break-word;
 
   @media (max-width: 1200px) {
-    font-size: ${({ theme }) => theme.typography.fontSize.xl};
+    font-size: ${({ theme }) => theme.fontSizes.h4};
   }
 `;
 
 const CardSub = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: ${({ theme }) => theme.spacing.xs};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-top: ${({ theme }) => theme.space['1']};
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -174,7 +174,7 @@ export function PnlKpiCards({ summary, isLoading, isError, onRetry }: PnlKpiCard
             onClick={onRetry}
             style={{
               padding: '8px 16px',
-              background: '#2196f3',
+              background: '#0F6E56',
               color: 'white',
               border: 'none',
               borderRadius: '8px',

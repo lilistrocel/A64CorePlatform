@@ -172,7 +172,7 @@ const Overlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
   width: 100%;
@@ -191,14 +191,14 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -211,15 +211,15 @@ const CloseButton = styled.button`
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 20px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   line-height: 1;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:focus-visible {
@@ -246,7 +246,7 @@ const ModalFooter = styled.div`
   gap: 12px;
   justify-content: flex-end;
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 
   @media (max-width: 480px) {
@@ -258,7 +258,7 @@ const ModalFooter = styled.div`
 const SectionLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -277,16 +277,16 @@ const ComboWrapper = styled.div`
 const ComboInput = styled.input<{ $hasError?: boolean }>`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   box-sizing: border-box;
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -312,8 +312,8 @@ const Dropdown = styled.ul<{
   left: ${({ $left }) => $left}px;
   width: ${({ $width }) => $width}px;
   max-height: ${({ $maxHeight }) => $maxHeight}px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   overflow-y: auto;
@@ -332,7 +332,7 @@ const DropdownItem = styled.li<{ $highlighted?: boolean; $disabled?: boolean }>`
   padding: 10px 14px;
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
   background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.neutral[50] : 'transparent'};
+    $highlighted ? theme.colors.surface.canvas : 'transparent'};
   opacity: ${({ $disabled }) => ($disabled ? 0.45 : 1)};
   display: flex;
   flex-direction: column;
@@ -341,24 +341,24 @@ const DropdownItem = styled.li<{ $highlighted?: boolean; $disabled?: boolean }>`
   pointer-events: ${({ $disabled }) => ($disabled ? 'none' : 'auto')};
 
   &:hover {
-    background: ${({ $disabled, theme }) => ($disabled ? 'transparent' : theme.colors.neutral[50])};
+    background: ${({ $disabled, theme }) => ($disabled ? 'transparent' : theme.colors.surface.canvas)};
   }
 `;
 
 const CropName = styled.strong`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const CropMeta = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const DropdownStatus = styled.li`
   padding: 14px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
 `;
 
@@ -368,18 +368,18 @@ const SelectedCropChip = styled.div`
   justify-content: space-between;
   gap: 8px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 500;
 `;
 
 const ChipClearButton = styled.button`
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 18px;
   cursor: pointer;
   line-height: 1;
@@ -412,14 +412,14 @@ const GradeChip = styled.button<{ $selected?: boolean; $disabled?: boolean }>`
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
   border: 2px solid ${({ $selected }) => ($selected ? '#3B82F6' : 'transparent')};
   background: ${({ $selected, $disabled, theme }) => {
-    if ($disabled) return theme.colors.neutral[100];
+    if ($disabled) return theme.colors.surface.raised;
     if ($selected) return '#EFF6FF';
-    return theme.colors.neutral[100];
+    return theme.colors.surface.raised;
   }};
   color: ${({ $selected, $disabled, theme }) => {
-    if ($disabled) return theme.colors.textDisabled;
+    if ($disabled) return theme.colors.text.tertiary;
     if ($selected) return '#1D4ED8';
-    return theme.colors.textSecondary;
+    return theme.colors.text.secondary;
   }};
   opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
   transition: all 150ms ease-in-out;
@@ -437,7 +437,7 @@ const GradeChip = styled.button<{ $selected?: boolean; $disabled?: boolean }>`
 // ---- Mode segmented control ----
 const SegmentedControl = styled.div`
   display: inline-flex;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   overflow: hidden;
   align-self: flex-start;
@@ -449,8 +449,8 @@ const Segment = styled.button<{ $active?: boolean }>`
   font-weight: 500;
   border: none;
   cursor: pointer;
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? '#fff' : theme.colors.textSecondary)};
+  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  color: ${({ $active, theme }) => ($active ? '#fff' : theme.colors.text.secondary)};
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
 
   &:focus-visible {
@@ -465,25 +465,25 @@ const ContainerMathRow = styled.div`
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 8px;
   padding: 12px 16px;
 `;
 
 const MathLabel = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const SmallNumInput = styled.input`
   width: 80px;
   padding: 6px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: right;
 
   &:focus {
@@ -496,7 +496,7 @@ const SmallNumInput = styled.input`
 const MathResult = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 // ---- Auto-fill row ----
@@ -536,7 +536,7 @@ const AutoFillButton = styled.button`
 
 const InfoTip = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
 `;
 
@@ -546,25 +546,25 @@ const NeedInput = styled(SmallNumInput)`
 
 // ---- Per-source panels ----
 const Panel = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 8px;
   overflow: hidden;
 `;
 
 const PanelHeading = styled.div`
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const SourceRow = styled.div`
   padding: 12px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -589,7 +589,7 @@ const SourceRowHeader = styled.div`
 const FarmRowName = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -610,13 +610,13 @@ const RecommendedBadge = styled.span`
 
 const AvailBadge = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
 `;
 
 const SourceMeta = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const TakeInputRow = styled.div`
@@ -632,18 +632,18 @@ const TakeInputRow = styled.div`
 
 const TakeLabel = styled.label`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
 `;
 
 const TakeInput = styled.input<{ $hasError?: boolean }>`
   width: 100px;
   padding: 6px 10px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 6px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: right;
 
   &:focus {
@@ -653,7 +653,7 @@ const TakeInput = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
     opacity: 0.6;
   }
@@ -675,13 +675,13 @@ const Separator = styled.div`
     content: '';
     flex: 1;
     height: 1px;
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
 
 const SeparatorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
   font-weight: 500;
 `;
@@ -712,8 +712,8 @@ const ErrorBanner = styled.div`
 
 // ---- Summary ----
 const SummaryBox = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 8px;
   padding: 14px 16px;
   display: flex;
@@ -724,18 +724,18 @@ const SummaryBox = styled.div`
 const SummaryTotal = styled.div`
   font-size: 15px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SummaryLine = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding-left: 12px;
 `;
 
 const SummaryContainerLine = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
 `;
 
@@ -751,10 +751,10 @@ const PriceInputWrap = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 0 12px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 
   &:focus-within {
     border-color: #3B82F6;
@@ -769,19 +769,19 @@ const PriceInput = styled.input`
   width: 100px;
   padding: 10px 0;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: right;
 `;
 
 const PriceSuffix = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
 `;
 
 const LineTotalDisplay = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   strong {
     font-weight: 600;
@@ -824,10 +824,10 @@ const FooterButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
+        color: ${theme.colors.text.secondary};
+        border: 1px solid ${theme.colors.border.subtle};
         &:hover {
-          background: ${theme.colors.surface};
+          background: ${theme.colors.surface.raised};
         }
       `;
     }
@@ -850,7 +850,7 @@ const Spinner = styled.span`
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -864,7 +864,7 @@ const EmptyState = styled.div`
   padding: 20px;
   text-align: center;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 // ============================================================================

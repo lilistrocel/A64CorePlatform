@@ -77,8 +77,8 @@ const BackButton = styled.button`
   gap: 8px;
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -87,12 +87,12 @@ const BackButton = styled.button`
   margin-bottom: 24px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
 
 const Header = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
   box-shadow: ${({ theme }) => theme.shadows.md};
@@ -131,8 +131,8 @@ const FarmIcon = styled.div`
   justify-content: center;
   font-size: 32px;
   border-radius: 14px;
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
 `;
 
 /** Vertical stack to the right of the icon: title row + metadata row. */
@@ -146,7 +146,7 @@ const TitleContent = styled.div`
 const FarmTitle = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   line-height: 1.2;
 `;
@@ -165,9 +165,9 @@ const FarmingYearChip = styled.span`
   gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  background: ${({ theme }) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
   border-radius: 20px;
   padding: 4px 12px;
   white-space: nowrap;
@@ -178,13 +178,13 @@ const Location = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 /** Divider between the title/actions row and the hero stats. */
 const HeaderDivider = styled.hr`
   border: none;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
   margin: 0 0 24px 0;
 `;
 
@@ -209,7 +209,7 @@ const EditButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -219,7 +219,7 @@ const EditButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
@@ -230,8 +230,8 @@ const StatsButton = styled.button`
   gap: 8px;
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -239,18 +239,18 @@ const StatsButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
 
 const TabsContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: ${({ theme }) => theme.shadows.md};
   overflow: hidden;
@@ -258,7 +258,7 @@ const TabsContainer = styled.div`
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   overflow-x: auto;
 
   &::-webkit-scrollbar {
@@ -266,17 +266,17 @@ const TabBar = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
     border-radius: 2px;
   }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textSecondary)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.accent.sage : theme.colors.text.secondary)};
   border: none;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : 'transparent')};
+  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.accent.sage : 'transparent')};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -284,8 +284,8 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -303,8 +303,8 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 4px solid ${({ theme }) => theme.colors.border.subtle};
+  border-top-color: ${({ theme }) => theme.colors.accent.sage};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -317,10 +317,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   text-align: center;
   margin-top: 24px;
 `;
@@ -332,7 +332,7 @@ const OverviewGrid = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   padding: 20px;
 `;
@@ -340,7 +340,7 @@ const InfoCard = styled.div`
 const InfoTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px 0;
 `;
 
@@ -348,7 +348,7 @@ const InfoItem = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   &:last-child {
     border-bottom: none;
@@ -357,13 +357,13 @@ const InfoItem = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 // Mobile Map/List Toggle Components
@@ -385,9 +385,9 @@ const MobileToggleButton = styled.button<{ $active: boolean }>`
   justify-content: center;
   gap: 8px;
   padding: 12px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
+  background: ${({ $active, theme }) => ($active ? theme.colors.accent.sage : theme.colors.surface.canvas)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.accent.sage : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -406,7 +406,7 @@ const MobileToggleIcon = styled.span`
 
 const MobileMapContainer = styled.div<{ $isFullScreen: boolean }>`
   @media (max-width: 768px) {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.surface.canvas};
     ${({ $isFullScreen }) => $isFullScreen && `
       position: fixed;
       top: 0;
@@ -426,15 +426,15 @@ const MobileMapHeader = styled.div`
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    background: ${({ theme }) => theme.colors.background};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   }
 `;
 
 const MobileMapTitle = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const MobileCloseButton = styled.button`
@@ -443,7 +443,7 @@ const MobileCloseButton = styled.button`
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border: none;
   border-radius: 8px;
   font-size: 20px;
@@ -451,7 +451,7 @@ const MobileCloseButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 `;
 
@@ -474,7 +474,7 @@ const FloatingMapButton = styled.button`
     bottom: 24px;
     right: 24px;
     padding: 14px 20px;
-    background: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.accent.sage};
     color: white;
     border: none;
     border-radius: 28px;

@@ -236,13 +236,13 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const BlockCount = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 500;
   margin-top: 4px;
   display: block;
@@ -257,10 +257,10 @@ const HeaderRight = styled.div`
 
 const ToolButton = styled.button`
   padding: 8px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -271,12 +271,12 @@ const ToolButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    background: ${({ theme }) => theme.colors.primary[50]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    background: ${({ theme }) => theme.colors.accent.sageSoft};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -310,8 +310,8 @@ const StateContainer = styled.div`
 const Spinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.border.subtle};
+  border-top-color: ${({ theme }) => theme.colors.accent.sage};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -327,14 +327,14 @@ const StateIcon = styled.div`
 
 const StateText = styled.p`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
 const ErrorBox = styled.div`
   padding: 24px;
   background: rgba(239, 68, 68, 0.08);
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 10px;
   text-align: center;
   max-width: 480px;
@@ -349,13 +349,13 @@ const ErrorIcon = styled.div`
 const ErrorTitle = styled.h3`
   font-size: 17px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   margin: 0 0 8px 0;
 `;
 
 const ErrorMessage = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px 0;
 `;
 
@@ -363,7 +363,7 @@ const RetryButton = styled.button`
   padding: 8px 20px;
   border: none;
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
   color: white;
   font-size: 14px;
   font-weight: 500;
@@ -375,7 +375,7 @@ const RetryButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.error};
+    outline: 2px solid ${({ theme }) => theme.colors.status.danger};
     outline-offset: 2px;
   }
 `;

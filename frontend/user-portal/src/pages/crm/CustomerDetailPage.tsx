@@ -51,7 +51,7 @@ const BackButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e3f2fd;
+    background: rgba(15, 110, 86, 0.05);
   }
 `;
 
@@ -84,7 +84,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
       background: #3B82F6;
       color: white;
       &:hover {
-        background: #1976d2;
+        background: #0F6E56;
       }
     `;
   }}
@@ -101,7 +101,7 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const ErrorContainer = styled.div`
@@ -114,10 +114,10 @@ const ErrorContainer = styled.div`
 `;
 
 const DetailsCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const CustomerHeader = styled.div`
@@ -126,7 +126,7 @@ const CustomerHeader = styled.div`
   align-items: flex-start;
   margin-bottom: 32px;
   padding-bottom: 24px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const CustomerInfo = styled.div`
@@ -136,14 +136,14 @@ const CustomerInfo = styled.div`
 const CustomerName = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
 `;
 
 const CustomerCode = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-family: 'JetBrains Mono', monospace;
 `;
 
@@ -169,8 +169,8 @@ const TypeBadge = styled.span`
   border-radius: 9999px;
   font-size: 14px;
   font-weight: 500;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Section = styled.div`
@@ -183,7 +183,7 @@ const Section = styled.div`
 const SectionTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px 0;
 `;
 
@@ -206,14 +206,14 @@ const DetailItem = styled.div`
 const DetailLabel = styled.span`
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const DetailValue = styled.span`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const TagsContainer = styled.div`
@@ -225,26 +225,26 @@ const TagsContainer = styled.div`
 const Tag = styled.span`
   display: inline-block;
   padding: 6px 12px;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: rgba(15, 110, 86, 0.05);
+  color: #0F6E56;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
 `;
 
 const Notes = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 16px;
   border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
   white-space: pre-wrap;
 `;
 
 const EmptyText = styled.span`
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-style: italic;
 `;
 
@@ -252,9 +252,9 @@ const Metadata = styled.div`
   display: flex;
   gap: 24px;
   padding-top: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // ============================================================================

@@ -62,7 +62,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   width: 100%;
   max-width: 600px;
@@ -75,11 +75,11 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
 `;
 
@@ -91,14 +91,14 @@ const WarningIcon = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
   text-align: center;
 `;
 
 const ModalDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   text-align: center;
 `;
@@ -120,7 +120,7 @@ const SummaryItem = styled.div<{ $warning?: boolean }>`
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  background: ${({ $warning, theme }) => ($warning ? theme.colors.warningBg : theme.colors.successBg)};
+  background: ${({ $warning, theme }) => ($warning ? theme.colors.status.warning : theme.colors.accent.sageSoft)};
   border-radius: 8px;
   border-left: 4px solid ${({ $warning }) => ($warning ? '#f59e0b' : '#4caf50')};
 `;
@@ -135,16 +135,16 @@ const Icon = styled.div<{ $warning?: boolean }>`
 
 const Text = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.5;
 `;
 
 const WarningText = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
   padding: 16px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 14px;
   font-weight: 500;
   text-align: center;
@@ -169,15 +169,15 @@ const ModeOption = styled.button<{ $active: boolean }>`
   gap: 4px;
   padding: 12px 14px;
   border-radius: 8px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.infoBg : theme.colors.surface)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.surface.sunken : theme.colors.surface.raised)};
   border: 2px solid
-    ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
+    ${({ $active, theme }) => ($active ? theme.colors.accent.sage : theme.colors.border.subtle)};
   cursor: pointer;
   text-align: left;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &:disabled {
@@ -189,36 +189,36 @@ const ModeOption = styled.button<{ $active: boolean }>`
 const ModeLabel = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ModeHint = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.4;
 `;
 
 const LoadingContainer = styled.div`
   text-align: center;
   padding: 40px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ErrorContainer = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.error};
-  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.status.danger};
+  background: ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
 `;
 
 const ModalFooter = styled.div`
   padding: 20px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
 `;
 
@@ -235,7 +235,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
     switch ($variant) {
       case 'danger':
         return `
-          background: ${theme.colors.error};
+          background: ${theme.colors.status.danger};
           color: white;
           &:hover:not(:disabled) {
             background: #dc2626;
@@ -243,10 +243,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
         `;
       default:
         return `
-          background: ${theme.colors.surface};
-          color: ${theme.colors.textSecondary};
+          background: ${theme.colors.surface.raised};
+          color: ${theme.colors.text.secondary};
           &:hover:not(:disabled) {
-            background: ${theme.colors.neutral[300]};
+            background: ${theme.colors.border.subtle};
           }
         `;
     }

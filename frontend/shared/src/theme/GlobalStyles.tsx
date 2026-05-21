@@ -17,12 +17,12 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   body {
-    font-family: ${({ theme }) => theme.typography.fontFamily.primary};
-    font-size: ${({ theme }) => theme.typography.fontSize.base};
-    font-weight: ${({ theme }) => theme.typography.fontWeight.regular};
-    line-height: ${({ theme }) => theme.typography.lineHeight.normal};
-    color: ${({ theme }) => theme.colors.textPrimary};
-    background-color: ${({ theme }) => theme.colors.background};
+    font-family: ${({ theme }) => theme.fonts.body};
+    font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+    font-weight: ${({ theme }) => theme.fontWeights.regular};
+    line-height: ${({ theme }) => theme.lineHeights.base};
+    color: ${({ theme }) => theme.colors.text.primary};
+    background-color: ${({ theme }) => theme.colors.surface.canvas};
     width: 100%;
     min-height: 100vh;
     overflow-x: hidden;
@@ -35,26 +35,26 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-    line-height: ${({ theme }) => theme.typography.lineHeight.tight};
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
+    line-height: ${({ theme }) => theme.lineHeights.snug};
   }
 
-  h1 { font-size: ${({ theme }) => theme.typography.fontSize['4xl']}; }
-  h2 { font-size: ${({ theme }) => theme.typography.fontSize['3xl']}; }
-  h3 { font-size: ${({ theme }) => theme.typography.fontSize['2xl']}; }
-  h4 { font-size: ${({ theme }) => theme.typography.fontSize.xl}; }
-  h5 { font-size: ${({ theme }) => theme.typography.fontSize.lg}; }
-  h6 { font-size: ${({ theme }) => theme.typography.fontSize.base}; }
+  h1 { font-size: ${({ theme }) => theme.fontSizes.displaySm}; }
+  h2 { font-size: ${({ theme }) => theme.fontSizes.h1}; }
+  h3 { font-size: ${({ theme }) => theme.fontSizes.h2}; }
+  h4 { font-size: ${({ theme }) => theme.fontSizes.h4}; }
+  h5 { font-size: ${({ theme }) => theme.fontSizes.bodyLg}; }
+  h6 { font-size: ${({ theme }) => theme.fontSizes.bodyMd}; }
 
   /* Global focus-visible styles for accessibility */
   a:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
     border-radius: 2px;
   }
 
   a {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.accent.sage};
     text-decoration: none;
 
     &:hover {
@@ -68,17 +68,17 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   button:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 
   select:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 1px;
   }
 
   textarea:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 1px;
   }
 

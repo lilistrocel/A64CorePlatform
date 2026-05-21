@@ -361,48 +361,48 @@ export function UserManagementPage() {
 }
 
 const Container = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['4']};
   max-width: 1400px;
   margin: 0 auto;
 
   @media (min-width: 768px) {
-    padding: ${({ theme }) => theme.spacing.lg};
+    padding: ${({ theme }) => theme.space['6']};
   }
 `;
 
 const Header = styled.div`
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
+  margin-bottom: ${({ theme }) => theme.space['6']};
 `;
 
 const Title = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
+  font-size: ${({ theme }) => theme.fontSizes.h2};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }) => theme.space['1']} 0;
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
+    font-size: ${({ theme }) => theme.fontSizes.h1};
   }
 `;
 
 const Subtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
 const FiltersCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
-  padding: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['4']};
+  margin-bottom: ${({ theme }) => theme.space['4']};
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 const FiltersRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
   align-items: center;
 `;
 
@@ -413,69 +413,69 @@ const SearchForm = styled.form`
 
 const SearchInput = styled.input`
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const FilterSelect = styled.select`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   min-width: 140px;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const ClearButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.error[300]};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger[300]};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.error[600]};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.status.danger[600]};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   cursor: pointer;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.error[50]};
+    background: ${({ theme }) => theme.colors.status.danger[50]};
   }
 `;
 
 const LoadingText = styled.div`
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: ${({ theme }) => theme.space['8']};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ErrorText = styled.div`
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.error[600]};
+  padding: ${({ theme }) => theme.space['8']};
+  color: ${({ theme }) => theme.colors.status.danger[600]};
 `;
 
 const EmptyText = styled.div`
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: ${({ theme }) => theme.space['8']};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Table = styled.table`
@@ -485,89 +485,89 @@ const Table = styled.table`
 
 const TableHeader = styled.th`
   text-align: left;
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const TableRow = styled.tr`
   /* Striped rows for readability - alternating row colors */
   &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
 const TableCell = styled.td`
-  padding: ${({ theme }) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  padding: ${({ theme }) => theme.space['4']};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const UserName = styled.div`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const YouBadge = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  background: ${({ theme }) => theme.colors.primary[100]};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: normal;
 `;
 
 const EmailText = styled.div`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const UnverifiedBadge = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  background: ${({ theme }) => theme.colors.warning[100]};
-  color: ${({ theme }) => theme.colors.warning[700]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  background: ${({ theme }) => theme.colors.status.warning[100]};
+  color: ${({ theme }) => theme.colors.status.warning[700]};
   padding: 2px 6px;
   border-radius: 4px;
-  margin-left: ${({ theme }) => theme.spacing.xs};
+  margin-left: ${({ theme }) => theme.space['1']};
 `;
 
 const RoleBadge = styled.span<{ role: string }>`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   text-transform: capitalize;
   background: ${({ role, theme }) => {
     switch (role) {
-      case 'super_admin': return theme.colors.error[100];
-      case 'admin': return theme.colors.warning[100];
-      case 'moderator': return theme.colors.info[100];
-      case 'user': return theme.colors.success[100];
-      default: return theme.colors.neutral[100];
+      case 'super_admin': return theme.colors.status.danger[100];
+      case 'admin': return theme.colors.status.warning[100];
+      case 'moderator': return theme.colors.status.info[100];
+      case 'user': return theme.colors.status.success[100];
+      default: return theme.colors.surface.raised;
     }
   }};
   color: ${({ role, theme }) => {
     switch (role) {
-      case 'super_admin': return theme.colors.error[700];
-      case 'admin': return theme.colors.warning[700];
-      case 'moderator': return theme.colors.info[700];
-      case 'user': return theme.colors.success[700];
-      default: return theme.colors.neutral[700];
+      case 'super_admin': return theme.colors.status.danger[700];
+      case 'admin': return theme.colors.status.warning[700];
+      case 'moderator': return theme.colors.status.info[700];
+      case 'user': return theme.colors.status.success[700];
+      default: return theme.colors.text.secondary;
     }
   }};
 `;
@@ -576,77 +576,77 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ $active, theme }) => $active ? theme.colors.success[100] : theme.colors.neutral[100]};
-  color: ${({ $active, theme }) => $active ? theme.colors.success[700] : theme.colors.neutral[600]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  background: ${({ $active, theme }) => $active ? theme.colors.status.success[100] : theme.colors.surface.raised};
+  color: ${({ $active, theme }) => $active ? theme.colors.status.success[700] : theme.colors.text.secondary};
 `;
 
 const RoleEditRow = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const RoleSelect = styled.select`
   padding: 4px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SmallButton = styled.button`
   padding: 4px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
-  background: ${({ theme }) => theme.colors.background};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
   cursor: pointer;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
 const ActionsRow = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const ActionButton = styled.button`
   padding: 4px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
-  background: ${({ theme }) => theme.colors.background};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.canvas};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
 const DeleteButton = styled(ActionButton)`
-  border-color: ${({ theme }) => theme.colors.error[300]};
-  color: ${({ theme }) => theme.colors.error[600]};
+  border-color: ${({ theme }) => theme.colors.status.danger[300]};
+  color: ${({ theme }) => theme.colors.status.danger[600]};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.error[50]};
-    color: ${({ theme }) => theme.colors.error[700]};
+    background: ${({ theme }) => theme.colors.status.danger[50]};
+    color: ${({ theme }) => theme.colors.status.danger[700]};
   }
 `;
 
 const ResetMfaButton = styled(ActionButton)`
-  border-color: ${({ theme }) => theme.colors.warning[300]};
-  color: ${({ theme }) => theme.colors.warning[700]};
+  border-color: ${({ theme }) => theme.colors.status.warning[300]};
+  color: ${({ theme }) => theme.colors.status.warning[700]};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.warning[50]};
-    color: ${({ theme }) => theme.colors.warning[800]};
+    background: ${({ theme }) => theme.colors.status.warning[50]};
+    color: ${({ theme }) => theme.colors.status.warning[800]};
   }
 `;
 
@@ -654,61 +654,61 @@ const MfaEnabledBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme }) => theme.colors.success[100]};
-  color: ${({ theme }) => theme.colors.success[700]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  background: ${({ theme }) => theme.colors.status.success[100]};
+  color: ${({ theme }) => theme.colors.status.success[700]};
 `;
 
 const MfaPendingBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme }) => theme.colors.warning[100]};
-  color: ${({ theme }) => theme.colors.warning[700]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  background: ${({ theme }) => theme.colors.status.warning[100]};
+  color: ${({ theme }) => theme.colors.status.warning[700]};
 `;
 
 const MfaDisabledBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  color: ${({ theme }) => theme.colors.neutral[600]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Pagination = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing.md};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => theme.space['4']};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const PageInfo = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PageButtons = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const PageButton = styled.button`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:disabled {
@@ -718,8 +718,8 @@ const PageButton = styled.button`
 `;
 
 const PageIndicator = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 export default UserManagementPage;

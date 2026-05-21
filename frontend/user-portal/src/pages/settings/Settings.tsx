@@ -868,56 +868,56 @@ export function Settings() {
 }
 
 const SettingsContainer = styled.div`
-  padding: ${({ theme }: any) => theme.spacing.md};
+  padding: ${({ theme }: any) => theme.space['4']};
   max-width: 1000px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.md};
+  gap: ${({ theme }: any) => theme.space['4']};
   width: 100%;
 
   @media (min-width: 768px) {
-    padding: ${({ theme }: any) => theme.spacing.lg};
-    gap: ${({ theme }: any) => theme.spacing.lg};
+    padding: ${({ theme }: any) => theme.space['6']};
+    gap: ${({ theme }: any) => theme.space['6']};
   }
 
   @media (min-width: 1024px) {
-    padding: ${({ theme }: any) => theme.spacing.xl};
+    padding: ${({ theme }: any) => theme.space['8']};
     max-width: 1200px;
   }
 `;
 
 const Title = styled.h1`
-  font-size: ${({ theme }: any) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.bold};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
+  font-size: ${({ theme }: any) => theme.fontSizes.h2};
+  font-weight: ${({ theme }: any) => theme.fontWeights.bold};
+  color: ${({ theme }: any) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }: any) => theme.space['4']} 0;
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }: any) => theme.typography.fontSize['3xl']};
-    margin-bottom: ${({ theme }: any) => theme.spacing.lg};
+    font-size: ${({ theme }: any) => theme.fontSizes.h1};
+    margin-bottom: ${({ theme }: any) => theme.space['6']};
   }
 `;
 
 const SettingsContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.lg};
+  gap: ${({ theme }: any) => theme.space['6']};
 
   @media (min-width: 768px) {
-    gap: ${({ theme }: any) => theme.spacing.xl};
+    gap: ${({ theme }: any) => theme.space['8']};
   }
 `;
 
 const SettingItem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.xs};
-  padding-bottom: ${({ theme }: any) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  gap: ${({ theme }: any) => theme.space['1']};
+  padding-bottom: ${({ theme }: any) => theme.space['4']};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.surface.sunken};
 
   @media (min-width: 768px) {
-    padding-bottom: ${({ theme }: any) => theme.spacing.lg};
+    padding-bottom: ${({ theme }: any) => theme.space['6']};
   }
 
   &:last-child {
@@ -927,55 +927,55 @@ const SettingItem = styled.div`
 `;
 
 const SettingLabel = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
+  color: ${({ theme }: any) => theme.colors.text.primary};
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }: any) => theme.typography.fontSize.base};
+    font-size: ${({ theme }: any) => theme.fontSizes.bodyMd};
   }
 `;
 
 const SettingValue = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.primary[500]};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.accent.sage};
+  font-weight: ${({ theme }: any) => theme.fontWeights.medium};
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+    font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
   }
 `;
 
 const SettingDescription = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
 
   @media (min-width: 768px) {
-    font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+    font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
   }
 `;
 
 // Spacing Standards styled components
 const SpacingIntro = styled.p`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  margin: 0 0 ${({ theme }: any) => theme.spacing.lg} 0;
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
+  margin: 0 0 ${({ theme }: any) => theme.space['6']} 0;
   line-height: 1.6;
 `;
 
 const SpacingTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: ${({ theme }: any) => theme.spacing.md};
+  margin-bottom: ${({ theme }: any) => theme.space['4']};
 `;
 
 const TableHeader = styled.th`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
   text-align: left;
-  padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
-  border-bottom: 2px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  padding: ${({ theme }: any) => theme.space['2']} ${({ theme }: any) => theme.space['4']};
+  border-bottom: 2px solid ${({ theme }: any) => theme.colors.surface.sunken};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -983,129 +983,129 @@ const TableHeader = styled.th`
 const TableRow = styled.tr`
   /* Striped rows for readability - alternating row colors */
   &:nth-child(even) {
-    background: ${({ theme }: any) => theme.colors.neutral[50]};
+    background: ${({ theme }: any) => theme.colors.surface.canvas};
   }
 
   &:nth-child(odd) {
-    background: ${({ theme }: any) => theme.colors.background};
+    background: ${({ theme }: any) => theme.colors.surface.canvas};
   }
 
   &:hover {
-    background: ${({ theme }: any) => theme.colors.neutral[100]};
+    background: ${({ theme }: any) => theme.colors.surface.raised};
   }
 `;
 
 const TableCell = styled.td`
-  padding: ${({ theme }: any) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  padding: ${({ theme }: any) => theme.space['4']};
+  border-bottom: 1px solid ${({ theme }: any) => theme.colors.surface.sunken};
   vertical-align: middle;
 `;
 
 const CategoryName = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
+  color: ${({ theme }: any) => theme.colors.text.primary};
 `;
 
 const CategoryCode = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
   font-family: monospace;
 `;
 
 const ExampleText = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
 `;
 
 const DensityValue = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.bold};
-  color: ${({ theme }: any) => theme.colors.primary[600]};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodyLg};
+  font-weight: ${({ theme }: any) => theme.fontWeights.bold};
+  color: ${({ theme }: any) => theme.colors.accent.sageDeep};
 `;
 
 const DefaultValue = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
 `;
 
 const ModifiedBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  font-weight: ${({ theme }: any) => theme.fontWeights.medium};
   color: #b45309;
-  background: ${({ theme }: any) => theme.colors.warningBg};
+  background: ${({ theme }: any) => theme.colors.status.warning};
   border-radius: 4px;
 `;
 
 const DefaultBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  font-weight: ${({ theme }: any) => theme.fontWeights.medium};
   color: #059669;
-  background: ${({ theme }: any) => theme.colors.successBg};
+  background: ${({ theme }: any) => theme.colors.accent.sageSoft};
   border-radius: 4px;
 `;
 
 const LastUpdatedInfo = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  margin-top: ${({ theme }: any) => theme.spacing.md};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
+  margin-top: ${({ theme }: any) => theme.space['4']};
 `;
 
 const SpacingNote = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  padding: ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.neutral[100]};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
+  padding: ${({ theme }: any) => theme.space['4']};
+  background: ${({ theme }: any) => theme.colors.surface.raised};
   border-radius: 6px;
-  margin-top: ${({ theme }: any) => theme.spacing.md};
+  margin-top: ${({ theme }: any) => theme.space['4']};
 `;
 
 const LoadingText = styled.div`
   text-align: center;
-  padding: ${({ theme }: any) => theme.spacing.xl};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  padding: ${({ theme }: any) => theme.space['8']};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
 `;
 
 const ErrorText = styled.div`
-  color: ${({ theme }: any) => theme.colors.error[500]};
-  padding: ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.error[50]};
+  color: ${({ theme }: any) => theme.colors.status.danger[500]};
+  padding: ${({ theme }: any) => theme.space['4']};
+  background: ${({ theme }: any) => theme.colors.status.danger[50]};
   border-radius: 6px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
 `;
 
 const SuccessText = styled.div`
-  color: ${({ theme }: any) => theme.colors.success[700]};
-  padding: ${({ theme }: any) => theme.spacing.md};
-  background: ${({ theme }: any) => theme.colors.success[50]};
+  color: ${({ theme }: any) => theme.colors.status.success[700]};
+  padding: ${({ theme }: any) => theme.space['4']};
+  background: ${({ theme }: any) => theme.colors.status.success[50]};
   border-radius: 6px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
 `;
 
 const DensityInput = styled.input`
   width: 80px;
-  padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
-  font-size: ${({ theme }: any) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  padding: ${({ theme }: any) => theme.space['2']} ${({ theme }: any) => theme.space['4']};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
   text-align: right;
-  border: 2px solid ${({ theme }: any) => theme.colors.primary[300]};
+  border: 2px solid ${({ theme }: any) => theme.colors.accent.sageSoft};
   border-radius: 6px;
-  color: ${({ theme }: any) => theme.colors.primary[600]};
-  background: ${({ theme }: any) => theme.colors.background};
+  color: ${({ theme }: any) => theme.colors.accent.sageDeep};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+    border-color: ${({ theme }: any) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.accent.sageSoft};
   }
 
   &:disabled {
-    background: ${({ theme }: any) => theme.colors.neutral[100]};
+    background: ${({ theme }: any) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 
@@ -1120,17 +1120,17 @@ const DensityInput = styled.input`
 
 const ButtonRow = styled.div`
   display: flex;
-  gap: ${({ theme }: any) => theme.spacing.md};
+  gap: ${({ theme }: any) => theme.space['4']};
   justify-content: flex-end;
-  margin-top: ${({ theme }: any) => theme.spacing.lg};
-  padding-top: ${({ theme }: any) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  margin-top: ${({ theme }: any) => theme.space['6']};
+  padding-top: ${({ theme }: any) => theme.space['6']};
+  border-top: 1px solid ${({ theme }: any) => theme.colors.surface.sunken};
 `;
 
 const BaseButton = styled.button`
-  padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.lg};
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  padding: ${({ theme }: any) => theme.space['2']} ${({ theme }: any) => theme.space['6']};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
@@ -1142,44 +1142,44 @@ const BaseButton = styled.button`
 `;
 
 const PrimaryButton = styled(BaseButton)`
-  background: ${({ theme }: any) => theme.colors.primary[500]};
+  background: ${({ theme }: any) => theme.colors.accent.sage};
   color: white;
   border: none;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.primary[600]};
+    background: ${({ theme }: any) => theme.colors.accent.sageDeep};
   }
 `;
 
 const SecondaryButton = styled(BaseButton)`
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }: any) => theme.colors.border.subtle};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.neutral[50]};
-    border-color: ${({ theme }: any) => theme.colors.neutral[400]};
+    background: ${({ theme }: any) => theme.colors.surface.canvas};
+    border-color: ${({ theme }: any) => theme.colors.border.default};
   }
 `;
 
 const DangerButton = styled(BaseButton)`
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.error[600]};
-  border: 1px solid ${({ theme }: any) => theme.colors.error[300]};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  color: ${({ theme }: any) => theme.colors.status.danger[600]};
+  border: 1px solid ${({ theme }: any) => theme.colors.status.danger[300]};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }: any) => theme.colors.error[50]};
-    border-color: ${({ theme }: any) => theme.colors.error[500]};
+    background: ${({ theme }: any) => theme.colors.status.danger[50]};
+    border-color: ${({ theme }: any) => theme.colors.status.danger[500]};
   }
 `;
 
 const PreferenceSelect = styled.select`
-  padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  padding: ${({ theme }: any) => theme.space['2']} ${({ theme }: any) => theme.space['4']};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  border: 1px solid ${({ theme }: any) => theme.colors.border.subtle};
   border-radius: 6px;
-  color: ${({ theme }: any) => theme.colors.primary[600]};
-  background: ${({ theme }: any) => theme.colors.background};
+  color: ${({ theme }: any) => theme.colors.accent.sageDeep};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
   cursor: pointer;
   width: 100%;
   max-width: 350px;
@@ -1187,85 +1187,85 @@ const PreferenceSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+    border-color: ${({ theme }: any) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.accent.sageSoft};
   }
 
   &:disabled {
-    background: ${({ theme }: any) => theme.colors.neutral[100]};
+    background: ${({ theme }: any) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const PrefsButtonRow = styled.div`
   display: flex;
-  gap: ${({ theme }: any) => theme.spacing.md};
-  margin-top: ${({ theme }: any) => theme.spacing.md};
+  gap: ${({ theme }: any) => theme.space['4']};
+  margin-top: ${({ theme }: any) => theme.space['4']};
 `;
 
 // Farming Year Configuration styled components
 const FarmingYearPreviewBox = styled.div`
-  background: ${({ theme }: any) => theme.colors.primary[50]};
-  border: 1px solid ${({ theme }: any) => theme.colors.primary[200]};
-  border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  padding: ${({ theme }: any) => theme.spacing.lg};
-  margin-top: ${({ theme }: any) => theme.spacing.md};
+  background: ${({ theme }: any) => theme.colors.accent.sageSoft};
+  border: 1px solid ${({ theme }: any) => theme.colors.accent.sageSoft};
+  border-radius: ${({ theme }: any) => theme.radii.md};
+  padding: ${({ theme }: any) => theme.space['6']};
+  margin-top: ${({ theme }: any) => theme.space['4']};
 `;
 
 const FarmingYearPreviewTitle = styled.h4`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.primary[700]};
-  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
+  color: ${({ theme }: any) => theme.colors.accent.sageDeep};
+  margin: 0 0 ${({ theme }: any) => theme.space['4']} 0;
 `;
 
 const FarmingYearPreviewContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.sm};
+  gap: ${({ theme }: any) => theme.space['2']};
 `;
 
 const FarmingYearPreviewRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
 `;
 
 const FarmingYearValue = styled.span`
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.primary[600]};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
+  color: ${({ theme }: any) => theme.colors.accent.sageDeep};
 `;
 
 const FarmingYearExample = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  margin-top: ${({ theme }: any) => theme.spacing.md};
-  padding-top: ${({ theme }: any) => theme.spacing.md};
-  border-top: 1px solid ${({ theme }: any) => theme.colors.primary[200]};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
+  margin-top: ${({ theme }: any) => theme.space['4']};
+  padding-top: ${({ theme }: any) => theme.space['4']};
+  border-top: 1px solid ${({ theme }: any) => theme.colors.accent.sageSoft};
   font-style: italic;
 `;
 
 const ConfirmationBox = styled.div`
-  background: ${({ theme }: any) => theme.colors.warningBg};
+  background: ${({ theme }: any) => theme.colors.status.warning};
   border: 1px solid #f59e0b;
-  border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  padding: ${({ theme }: any) => theme.spacing.lg};
-  margin-top: ${({ theme }: any) => theme.spacing.md};
+  border-radius: ${({ theme }: any) => theme.radii.md};
+  padding: ${({ theme }: any) => theme.space['6']};
+  margin-top: ${({ theme }: any) => theme.space['4']};
 `;
 
 const ConfirmationTitle = styled.h4`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
   color: #92400e;
-  margin: 0 0 ${({ theme }: any) => theme.spacing.sm} 0;
+  margin: 0 0 ${({ theme }: any) => theme.space['2']} 0;
 `;
 
 const ConfirmationText = styled.p`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
   color: #92400e;
-  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
+  margin: 0 0 ${({ theme }: any) => theme.space['4']} 0;
   line-height: 1.5;
 `;
 
@@ -1273,33 +1273,33 @@ const ConfirmationText = styled.p`
 const MfaEnabledBadge = styled.span`
   display: inline-block;
   padding: 4px 12px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
   color: #059669;
-  background: ${({ theme }: any) => theme.colors.successBg};
+  background: ${({ theme }: any) => theme.colors.accent.sageSoft};
   border-radius: 4px;
 `;
 
 const MfaPendingBadge = styled.span`
   display: inline-block;
   padding: 4px 12px;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
   color: #b45309;
-  background: ${({ theme }: any) => theme.colors.warningBg};
+  background: ${({ theme }: any) => theme.colors.status.warning};
   border-radius: 4px;
 `;
 
 const MfaWarning = styled.div`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xs};
-  color: ${({ theme }: any) => theme.colors.error[600]};
-  margin-top: ${({ theme }: any) => theme.spacing.xs};
+  font-size: ${({ theme }: any) => theme.fontSizes.caption};
+  color: ${({ theme }: any) => theme.colors.status.danger[600]};
+  margin-top: ${({ theme }: any) => theme.space['1']};
 `;
 
 const MfaActionsRow = styled.div`
-  margin-top: ${({ theme }: any) => theme.spacing.md};
+  margin-top: ${({ theme }: any) => theme.space['4']};
   display: flex;
-  gap: ${({ theme }: any) => theme.spacing.sm};
+  gap: ${({ theme }: any) => theme.space['2']};
 `;
 
 // Modal styled components
@@ -1314,13 +1314,13 @@ const ModalOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: ${({ theme }: any) => theme.spacing.md};
+  padding: ${({ theme }: any) => theme.space['4']};
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }: any) => theme.colors.background};
-  border-radius: ${({ theme }: any) => theme.borderRadius.lg};
-  padding: ${({ theme }: any) => theme.spacing.xl};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }: any) => theme.radii.lg};
+  padding: ${({ theme }: any) => theme.space['8']};
   max-width: 480px;
   width: 100%;
   max-height: 90vh;
@@ -1329,148 +1329,148 @@ const ModalContent = styled.div`
 `;
 
 const ModalTitle = styled.h2`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }: any) => theme.spacing.md} 0;
+  font-size: ${({ theme }: any) => theme.fontSizes.h4};
+  font-weight: ${({ theme }: any) => theme.fontWeights.semibold};
+  color: ${({ theme }: any) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }: any) => theme.space['4']} 0;
 `;
 
 const ModalDescription = styled.p`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: ${({ theme }: any) => theme.colors.textSecondary};
-  margin: 0 0 ${({ theme }: any) => theme.spacing.lg} 0;
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  color: ${({ theme }: any) => theme.colors.text.secondary};
+  margin: 0 0 ${({ theme }: any) => theme.space['6']} 0;
   line-height: 1.6;
 `;
 
 const ModalWarning = styled.div`
-  background: ${({ theme }: any) => theme.colors.warningBg};
+  background: ${({ theme }: any) => theme.colors.status.warning};
   border: 1px solid #f59e0b;
-  border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  padding: ${({ theme }: any) => theme.spacing.md};
-  margin-bottom: ${({ theme }: any) => theme.spacing.lg};
+  border-radius: ${({ theme }: any) => theme.radii.md};
+  padding: ${({ theme }: any) => theme.space['4']};
+  margin-bottom: ${({ theme }: any) => theme.space['6']};
   color: #92400e;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
 `;
 
 const ModalError = styled.div`
-  background: ${({ theme }: any) => theme.colors.error[50]};
-  border: 1px solid ${({ theme }: any) => theme.colors.error[300]};
-  border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  padding: ${({ theme }: any) => theme.spacing.md};
-  margin-bottom: ${({ theme }: any) => theme.spacing.lg};
-  color: ${({ theme }: any) => theme.colors.error[600]};
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  background: ${({ theme }: any) => theme.colors.status.danger[50]};
+  border: 1px solid ${({ theme }: any) => theme.colors.status.danger[300]};
+  border-radius: ${({ theme }: any) => theme.radii.md};
+  padding: ${({ theme }: any) => theme.space['4']};
+  margin-bottom: ${({ theme }: any) => theme.space['6']};
+  color: ${({ theme }: any) => theme.colors.status.danger[600]};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
 `;
 
 const ModalForm = styled.form`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.lg};
+  gap: ${({ theme }: any) => theme.space['6']};
 `;
 
 const ModalFormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }: any) => theme.spacing.xs};
+  gap: ${({ theme }: any) => theme.space['1']};
 `;
 
 const ModalLabel = styled.label`
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }: any) => theme.typography.fontWeight.medium};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }: any) => theme.fontWeights.medium};
+  color: ${({ theme }: any) => theme.colors.text.primary};
 `;
 
 const TotpCodeInput = styled.input`
-  padding: ${({ theme }: any) => theme.spacing.md};
+  padding: ${({ theme }: any) => theme.space['4']};
   font-size: 1.5rem;
   font-family: 'Courier New', monospace;
   text-align: center;
   letter-spacing: 0.5rem;
-  border: 2px solid ${({ theme }: any) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  border: 2px solid ${({ theme }: any) => theme.colors.border.subtle};
+  border-radius: ${({ theme }: any) => theme.radii.md};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  color: ${({ theme }: any) => theme.colors.text.primary};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+    border-color: ${({ theme }: any) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.accent.sageSoft};
   }
 
   &::placeholder {
-    color: ${({ theme }: any) => theme.colors.textDisabled};
+    color: ${({ theme }: any) => theme.colors.text.tertiary};
     letter-spacing: 0.5rem;
   }
 `;
 
 const PasswordInput = styled.input`
-  padding: ${({ theme }: any) => theme.spacing.md};
-  font-size: ${({ theme }: any) => theme.typography.fontSize.base};
-  border: 2px solid ${({ theme }: any) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  background: ${({ theme }: any) => theme.colors.background};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
+  padding: ${({ theme }: any) => theme.space['4']};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodyMd};
+  border: 2px solid ${({ theme }: any) => theme.colors.border.subtle};
+  border-radius: ${({ theme }: any) => theme.radii.md};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  color: ${({ theme }: any) => theme.colors.text.primary};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &::placeholder {
-    color: ${({ theme }: any) => theme.colors.textDisabled};
+    color: ${({ theme }: any) => theme.colors.text.tertiary};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.primary[100]};
+    border-color: ${({ theme }: any) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 3px ${({ theme }: any) => theme.colors.accent.sageSoft};
   }
 `;
 
 const ModalButtonRow = styled.div`
   display: flex;
-  gap: ${({ theme }: any) => theme.spacing.md};
+  gap: ${({ theme }: any) => theme.space['4']};
   justify-content: flex-end;
-  margin-top: ${({ theme }: any) => theme.spacing.md};
+  margin-top: ${({ theme }: any) => theme.space['4']};
 `;
 
 const BackupCodesContainer = styled.div`
-  background: ${({ theme }: any) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }: any) => theme.borderRadius.md};
-  padding: ${({ theme }: any) => theme.spacing.md};
-  margin-bottom: ${({ theme }: any) => theme.spacing.lg};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }: any) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }: any) => theme.radii.md};
+  padding: ${({ theme }: any) => theme.space['4']};
+  margin-bottom: ${({ theme }: any) => theme.space['6']};
 `;
 
 const BackupCodesGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${({ theme }: any) => theme.spacing.sm};
-  margin-bottom: ${({ theme }: any) => theme.spacing.md};
+  gap: ${({ theme }: any) => theme.space['2']};
+  margin-bottom: ${({ theme }: any) => theme.space['4']};
 `;
 
 const BackupCodeItem = styled.div`
   font-family: 'Courier New', monospace;
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
-  color: ${({ theme }: any) => theme.colors.textPrimary};
-  background: ${({ theme }: any) => theme.colors.background};
-  padding: ${({ theme }: any) => theme.spacing.sm} ${({ theme }: any) => theme.spacing.md};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
+  color: ${({ theme }: any) => theme.colors.text.primary};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  padding: ${({ theme }: any) => theme.space['2']} ${({ theme }: any) => theme.space['4']};
   border-radius: 4px;
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }: any) => theme.colors.surface.sunken};
   text-align: center;
 `;
 
 const CopyCodesButton = styled.button`
   width: 100%;
-  padding: ${({ theme }: any) => theme.spacing.sm};
-  background: ${({ theme }: any) => theme.colors.background};
-  border: 1px solid ${({ theme }: any) => theme.colors.neutral[300]};
+  padding: ${({ theme }: any) => theme.space['2']};
+  background: ${({ theme }: any) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }: any) => theme.colors.border.subtle};
   border-radius: 4px;
-  color: ${({ theme }: any) => theme.colors.primary[600]};
-  font-size: ${({ theme }: any) => theme.typography.fontSize.sm};
+  color: ${({ theme }: any) => theme.colors.accent.sageDeep};
+  font-size: ${({ theme }: any) => theme.fontSizes.bodySm};
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }: any) => theme.colors.neutral[50]};
-    border-color: ${({ theme }: any) => theme.colors.primary[500]};
+    background: ${({ theme }: any) => theme.colors.surface.canvas};
+    border-color: ${({ theme }: any) => theme.colors.accent.sage};
   }
 `;

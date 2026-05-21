@@ -24,10 +24,10 @@ export interface OrderCardProps {
 // ============================================================================
 
 const Card = styled.div<{ $clickable: boolean }>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   transition: all 150ms ease-in-out;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
 
@@ -50,14 +50,14 @@ const OrderInfo = styled.div`
 const OrderCode = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
   font-family: 'JetBrains Mono', monospace;
 `;
 
 const CustomerName = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const StatusContainer = styled.div`
@@ -128,7 +128,7 @@ const InfoRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
 
   &:last-child {
     border-bottom: none;
@@ -137,22 +137,22 @@ const InfoRow = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 500;
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 500;
 `;
 
 const ItemsList = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 12px;
   border-radius: 6px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Actions = styled.div`
@@ -160,7 +160,7 @@ const Actions = styled.div`
   gap: 8px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
@@ -189,7 +189,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
       color: #3B82F6;
       border: 1px solid #3B82F6;
       &:hover {
-        background: #e3f2fd;
+        background: rgba(15, 110, 86, 0.05);
       }
     `;
   }}

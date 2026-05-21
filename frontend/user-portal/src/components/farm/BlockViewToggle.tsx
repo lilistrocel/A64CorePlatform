@@ -61,8 +61,8 @@ export function BlockViewToggle({ value, onChange }: BlockViewToggleProps) {
 
 const Wrapper = styled.div`
   display: inline-flex;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 3px;
   gap: 2px;
@@ -82,19 +82,19 @@ const Segment = styled.button<{ $isSelected: boolean }>`
   white-space: nowrap;
 
   background: ${({ $isSelected, theme }) =>
-    $isSelected ? theme.colors.primary[500] : 'transparent'};
+    $isSelected ? theme.colors.accent.sage : 'transparent'};
   color: ${({ $isSelected, theme }) =>
-    $isSelected ? 'white' : theme.colors.textSecondary};
+    $isSelected ? 'white' : theme.colors.text.secondary};
 
   &:hover {
     background: ${({ $isSelected, theme }) =>
-      $isSelected ? theme.colors.primary[700] : theme.colors.neutral[300]};
+      $isSelected ? theme.colors.accent.sageDeep : theme.colors.border.subtle};
     color: ${({ $isSelected, theme }) =>
-      $isSelected ? 'white' : theme.colors.textPrimary};
+      $isSelected ? 'white' : theme.colors.text.primary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;

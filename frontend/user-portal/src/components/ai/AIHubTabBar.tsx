@@ -73,7 +73,7 @@ const TabButton = styled.button<TabButtonProps>`
   border-bottom: 3px solid ${({ $isActive, $accentColor }) =>
     $isActive ? $accentColor : 'transparent'};
   background: transparent;
-  color: ${({ $isActive, $accentColor, theme }) => ($isActive ? $accentColor : theme.colors.textSecondary)};
+  color: ${({ $isActive, $accentColor, theme }) => ($isActive ? $accentColor : theme.colors.text.secondary)};
   font-size: 14px;
   font-weight: ${({ $isActive }) => ($isActive ? '600' : '500')};
   cursor: pointer;

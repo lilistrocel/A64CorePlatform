@@ -33,7 +33,7 @@ export interface PhysicalBlockCardProps {
 // ============================================================================
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -65,7 +65,7 @@ const BlockIcon = styled.div`
 const BlockName = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
   cursor: pointer;
   transition: color 150ms ease-in-out;
@@ -78,14 +78,14 @@ const BlockName = styled.h3`
 
 const BlockCode = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-family: 'Courier New', monospace;
   margin-bottom: 4px;
 `;
 
 const BlockType = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: capitalize;
 `;
 
@@ -94,8 +94,8 @@ const PlantingCountBadge = styled.div<{ $count: number }>`
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
-  background: ${({ $count, theme }) => ($count > 0 ? '#e8f5e9' : theme.colors.surface)};
-  color: ${({ $count, theme }) => ($count > 0 ? '#2e7d32' : theme.colors.textDisabled)};
+  background: ${({ $count, theme }) => ($count > 0 ? '#e8f5e9' : theme.colors.surface.raised)};
+  color: ${({ $count, theme }) => ($count > 0 ? '#2e7d32' : theme.colors.text.tertiary)};
   white-space: nowrap;
 `;
 
@@ -104,8 +104,8 @@ const StatsRow = styled.div`
   gap: 24px;
   margin-bottom: 16px;
   padding: 12px 0;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const StatItem = styled.div`
@@ -117,7 +117,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -125,7 +125,7 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const PlantingsSection = styled.div`
@@ -135,7 +135,7 @@ const PlantingsSection = styled.div`
 const PlantingsSectionTitle = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 12px;
@@ -144,10 +144,10 @@ const PlantingsSectionTitle = styled.div`
 const EmptyPlantingsMessage = styled.div`
   padding: 24px;
   text-align: center;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
-  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  border: 2px dashed ${({ theme }) => theme.colors.border.subtle};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 14px;
 `;
 
@@ -159,9 +159,9 @@ const ViewPlantingsButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,11 +169,11 @@ const ViewPlantingsButton = styled.button`
   margin-bottom: 12px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -200,10 +200,10 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.colors.success};
+        background: ${theme.colors.status.success};
         color: white;
         &:hover {
-          background: ${theme.colors.success};
+          background: ${theme.colors.status.success};
           filter: brightness(0.85);
         }
       `;
@@ -214,16 +214,16 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         color: #dc2626;
         border: 1px solid #dc2626;
         &:hover {
-          background: ${theme.colors.errorBg};
+          background: ${theme.colors.status.danger};
         }
       `;
     }
     return `
       background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      color: ${theme.colors.accent.sage};
+      border: 1px solid ${theme.colors.accent.sage};
       &:hover {
-        background: ${theme.colors.infoBg};
+        background: ${theme.colors.surface.sunken};
       }
     `;
   }}
@@ -236,10 +236,10 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 
 const AvailableAreaInfo = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 8px;
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 6px;
 `;
 
@@ -248,7 +248,7 @@ const PhysicalBlockPlantingInfo = styled.div`
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.successBg};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
   border-radius: 8px;
   margin-bottom: 8px;
 `;
@@ -265,21 +265,21 @@ const PlantingState = styled.div<{ $state: string }>`
   background: ${({ $state, theme }) => {
     switch ($state) {
       case 'planned':
-        return theme.colors.infoBg;
+        return theme.colors.surface.sunken;
       case 'growing':
-        return theme.colors.successBg;
+        return theme.colors.accent.sageSoft;
       case 'fruiting':
-        return theme.colors.warningBg;
+        return theme.colors.status.warning;
       case 'harvesting':
-        return theme.colors.errorBg;
+        return theme.colors.status.danger;
       default:
-        return theme.colors.surface;
+        return theme.colors.surface.raised;
     }
   }};
   color: ${({ $state }) => {
     switch ($state) {
       case 'planned':
-        return '#1565c0';
+        return '#0B5644';
       case 'growing':
         return '#2e7d32';
       case 'fruiting':
@@ -299,12 +299,12 @@ const PlantingDetails = styled.div`
 const PlantingCrop = styled.div`
   font-size: 15px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const PlantingMeta = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 2px;
 `;
 

@@ -36,14 +36,14 @@ const Container = styled.div`
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 24px;
 `;
 
 const Tabs = styled.div`
   display: flex;
   gap: 0;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.surface.sunken};
   margin-bottom: 24px;
 `;
 
@@ -54,9 +54,9 @@ const Tab = styled.button<{ $active: boolean }>`
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? '700' : '400')};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[600] || '#2563eb' : theme.colors.textSecondary};
+    $active ? theme.colors.accent.sageDeep || '#2563eb' : theme.colors.text.secondary};
   border-bottom: 2px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : 'transparent'};
+    $active ? theme.colors.accent.sage : 'transparent'};
   margin-bottom: -2px;
   cursor: pointer;
   transition: all 120ms ease;
@@ -65,7 +65,7 @@ const Tab = styled.button<{ $active: boolean }>`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   overflow: hidden;
   box-shadow: ${({ theme }) => theme.shadows.sm};
@@ -78,20 +78,20 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const Tr = styled.tr`
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.canvas}; }
   &:last-child td { border-bottom: none; }
 `;
 
@@ -119,13 +119,13 @@ const DocTypeBadge = styled.span<{ $type: string }>`
 
 const ActionCell = styled.td`
   padding: 10px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   white-space: nowrap;
 `;
 
 const SuccessButton = styled.button`
   padding: 6px 14px;
-  background: ${({ theme }) => theme.colors.success || '#10b981'};
+  background: ${({ theme }) => theme.colors.status.success || '#10b981'};
   color: white;
   border: none;
   border-radius: 6px;
@@ -141,20 +141,20 @@ const SuccessButton = styled.button`
 const DangerButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
-  border: 1px solid ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#ef4444'};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   transition: all 120ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 15px;
 `;
 
@@ -172,9 +172,9 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   width: 100%;
   max-width: 480px;
 `;
@@ -184,7 +184,7 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ModalTitle = styled.h2`
@@ -198,11 +198,11 @@ const CloseButton = styled.button`
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px;
   border-radius: 6px;
   line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const ModalBody = styled.div`
@@ -214,36 +214,36 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const GhostButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const Textarea = styled.textarea`
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 90px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
   font-size: 13px;
   margin: 8px 0 0;
 `;

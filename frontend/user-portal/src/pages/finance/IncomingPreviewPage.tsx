@@ -161,13 +161,13 @@ const PageHeader = styled.div`
 const PageTitle = styled.h1`
   font-size: 26px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const PageSubtitle = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 4px 0 0;
 `;
 
@@ -178,9 +178,9 @@ const PendingBadge = styled.span`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.warningBg ?? '#fffbeb'};
-  color: ${({ theme }) => theme.colors.warning ?? '#92400e'};
-  border: 1px solid ${({ theme }) => theme.colors.warning ?? '#fde68a'};
+  background: ${({ theme }) => theme.colors.status.warning ?? '#fffbeb'};
+  color: ${({ theme }) => theme.colors.status.warning ?? '#92400e'};
+  border: 1px solid ${({ theme }) => theme.colors.status.warning ?? '#fde68a'};
   white-space: nowrap;
   align-self: center;
 `;
@@ -198,7 +198,7 @@ const ToolbarRow = styled.div`
 // Doc type pill toggle
 const PillGroup = styled.div`
   display: inline-flex;
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   padding: 3px;
   gap: 2px;
@@ -217,27 +217,27 @@ const PillButton = styled.button<PillButtonProps>`
   cursor: pointer;
   transition: all 120ms ease;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.surface : 'transparent'};
+    $active ? theme.colors.surface.raised : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.textPrimary : theme.colors.textSecondary};
+    $active ? theme.colors.text.primary : theme.colors.text.secondary};
   box-shadow: ${({ $active }) => ($active ? '0 1px 3px rgba(0,0,0,0.12)' : 'none')};
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
 
 const FilterSelect = styled.select`
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -245,25 +245,25 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 200px;
   padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const RefreshButton = styled.button`
   padding: 8px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -271,8 +271,8 @@ const RefreshButton = styled.button`
   white-space: nowrap;
   transition: all 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
   &:disabled {
     opacity: 0.5;
@@ -283,8 +283,8 @@ const RefreshButton = styled.button`
 // ─── Table ─────────────────────────────────────────────────────────────────────
 
 const TableWrapper = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 12px;
   overflow: hidden;
 `;
@@ -296,8 +296,8 @@ const Table = styled.table`
 `;
 
 const Thead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Th = styled.th`
@@ -307,7 +307,7 @@ const Th = styled.th`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
 `;
 
@@ -318,26 +318,26 @@ interface TrProps {
 }
 
 const Tr = styled.tr<TrProps>`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   transition: background 100ms ease;
   background: ${({ $expanded, theme }) =>
-    $expanded ? theme.colors.neutral[50] : 'transparent'};
+    $expanded ? theme.colors.surface.canvas : 'transparent'};
   &:last-child {
     border-bottom: none;
   }
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
 const ExpansionTr = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 10px 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   vertical-align: middle;
 `;
 
@@ -355,8 +355,8 @@ const PRPill = styled.span`
   font-size: 11px;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.infoBg ?? '#eff6ff'};
-  color: ${({ theme }) => theme.colors.info ?? '#2196f3'};
+  background: ${({ theme }) => theme.colors.surface.sunken ?? '#eff6ff'};
+  color: ${({ theme }) => theme.colors.status.info ?? '#0F6E56'};
 `;
 
 const POPill = styled.span`
@@ -367,8 +367,8 @@ const POPill = styled.span`
   font-size: 11px;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  background: ${({ theme }) => theme.colors.successBg ?? '#ecfdf5'};
-  color: ${({ theme }) => theme.colors.success ?? '#10b981'};
+  background: ${({ theme }) => theme.colors.accent.sageSoft ?? '#ecfdf5'};
+  color: ${({ theme }) => theme.colors.status.success ?? '#10b981'};
 `;
 
 const UrgentPill = styled.span`
@@ -378,8 +378,8 @@ const UrgentPill = styled.span`
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.errorBg ?? '#fef2f2'};
-  color: ${({ theme }) => theme.colors.error ?? '#ef4444'};
+  background: ${({ theme }) => theme.colors.status.danger ?? '#fef2f2'};
+  color: ${({ theme }) => theme.colors.status.danger ?? '#ef4444'};
   margin-left: 6px;
 `;
 
@@ -398,8 +398,8 @@ const Avatar = styled.span`
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.primary[100]};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   font-size: 10px;
   font-weight: 700;
   flex-shrink: 0;
@@ -415,21 +415,21 @@ const ViewButton = styled.button<ViewButtonProps>`
   padding: 5px 12px;
   background: transparent;
   color: ${({ $expanded, theme }) =>
-    $expanded ? theme.colors.primary[700] : theme.colors.primary[500]};
+    $expanded ? theme.colors.accent.sageDeep : theme.colors.accent.sage};
   border: 1px solid
     ${({ $expanded, theme }) =>
-      $expanded ? theme.colors.primary[700] : theme.colors.primary[300]};
+      $expanded ? theme.colors.accent.sageDeep : theme.colors.accent.sageSoft};
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 120ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[50]};
-    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.accent.sageSoft};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
   }
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -438,7 +438,7 @@ const ViewButton = styled.button<ViewButtonProps>`
 
 const ExpansionPanel = styled.div`
   padding: 20px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ExpansionSection = styled.div`
@@ -453,7 +453,7 @@ const ExpansionSectionTitle = styled.h3`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 10px;
 `;
 
@@ -464,7 +464,7 @@ const LinesTable = styled.table`
 `;
 
 const LinesThead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const LinesTh = styled.th`
@@ -474,35 +474,35 @@ const LinesTh = styled.th`
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
 `;
 
 const LinesTd = styled.td`
   padding: 7px 10px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   vertical-align: middle;
 `;
 
 const LinesWrapper = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 8px;
   overflow: hidden;
 `;
 
 const ApprovalTimeline = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   line-height: 1.6;
 `;
 
 const NotesBox = styled.p`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 6px;
   padding: 10px 14px;
   margin: 0;
@@ -512,14 +512,14 @@ const NotesBox = styled.p`
 const LoadingInPanel = styled.div`
   padding: 20px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 13px;
 `;
 
 const ErrorInPanel = styled.div`
   padding: 20px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 13px;
 `;
 
@@ -528,7 +528,7 @@ const ErrorInPanel = styled.div`
 const EmptyState = styled.div`
   padding: 64px 32px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 15px;
   line-height: 1.6;
 `;

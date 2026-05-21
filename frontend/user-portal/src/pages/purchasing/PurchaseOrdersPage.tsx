@@ -31,7 +31,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -47,13 +47,13 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 220px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const FilterChips = styled.div`
@@ -66,11 +66,11 @@ const Chip = styled.button<{ $active: boolean }>`
   padding: 6px 14px;
   border-radius: 99px;
   border: 1px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary[500] : theme.colors.neutral[300]};
+    $active ? theme.colors.accent.sage : theme.colors.border.subtle};
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[50] || '#eff6ff' : 'transparent'};
+    $active ? theme.colors.accent.sageSoft || '#eff6ff' : 'transparent'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary[700] || '#1d4ed8' : theme.colors.textSecondary};
+    $active ? theme.colors.accent.sageDeep || '#1d4ed8' : theme.colors.text.secondary};
   font-size: 13px;
   font-weight: ${({ $active }) => ($active ? '600' : '400')};
   cursor: pointer;
@@ -79,7 +79,7 @@ const Chip = styled.button<{ $active: boolean }>`
 
 const PrimaryButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -88,25 +88,25 @@ const PrimaryButton = styled.button`
   cursor: pointer;
   white-space: nowrap;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageDeep}; }
 `;
 
 const GhostButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   overflow: hidden;
   box-shadow: ${({ theme }) => theme.shadows.sm};
@@ -119,22 +119,22 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const Tr = styled.tr`
   cursor: pointer;
   transition: background 100ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.canvas}; }
   &:last-child td { border-bottom: none; }
 `;
 
@@ -176,7 +176,7 @@ const StatusBadge = styled.span<{ $status: POStatus }>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 15px;
 `;
 
@@ -186,7 +186,7 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PageButtons = styled.div`

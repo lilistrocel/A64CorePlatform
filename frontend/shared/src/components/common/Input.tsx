@@ -27,47 +27,47 @@ Input.displayName = 'Input';
 const InputWrapper = styled.div<{ $fullWidth: boolean }>`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
   width: ${({ $fullWidth }) => ($fullWidth ? '100%' : 'auto')};
 `;
 
 const Label = styled.label`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const StyledInput = styled.input<{ $hasError: boolean }>`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
   border: 1px solid ${({ theme, $hasError }) =>
-    $hasError ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-family: ${({ theme }) => theme.typography.fontFamily.primary};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+    $hasError ? theme.colors.status.danger : theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-family: ${({ theme }) => theme.fonts.body};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   transition: all 0.2s ease;
 
   &:focus {
     outline: none;
     border-color: ${({ theme, $hasError }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
     box-shadow: 0 0 0 3px ${({ theme, $hasError }) =>
-      $hasError ? `${theme.colors.error}40` : `${theme.colors.primary[500]}40`};
+      $hasError ? `${theme.colors.status.danger}40` : `${theme.colors.accent.sage}40`};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
     opacity: 0.6;
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
 `;
 
 const ErrorText = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.error};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.status.danger};
 `;

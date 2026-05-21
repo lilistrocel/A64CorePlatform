@@ -14,7 +14,7 @@ import {
 } from '../../../services/weatherApi';
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -23,7 +23,7 @@ const Card = styled.div`
 const Title = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 20px 0;
   display: flex;
   align-items: center;
@@ -41,7 +41,7 @@ const DayCard = styled.div<{ $isToday?: boolean }>`
   flex-direction: column;
   align-items: center;
   padding: 16px 12px;
-  background: ${({ $isToday, theme }) => ($isToday ? '#EFF6FF' : theme.colors.surface)};
+  background: ${({ $isToday, theme }) => ($isToday ? '#EFF6FF' : theme.colors.surface.raised)};
   border-radius: 12px;
   border: ${({ $isToday }) => ($isToday ? '2px solid #3B82F6' : '1px solid transparent')};
   transition: all 150ms ease-in-out;
@@ -55,7 +55,7 @@ const DayCard = styled.div<{ $isToday?: boolean }>`
 const DayName = styled.div<{ $isToday?: boolean }>`
   font-size: 13px;
   font-weight: ${({ $isToday }) => ($isToday ? '600' : '500')};
-  color: ${({ $isToday, theme }) => ($isToday ? '#3B82F6' : theme.colors.textSecondary)};
+  color: ${({ $isToday, theme }) => ($isToday ? '#3B82F6' : theme.colors.text.secondary)};
   margin-bottom: 8px;
 `;
 
@@ -78,12 +78,12 @@ const TempRange = styled.div`
   .high {
     font-size: 15px;
     font-weight: 600;
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   .low {
     font-size: 15px;
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
@@ -101,7 +101,7 @@ const Precipitation = styled.div`
 
 const Description = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   margin-top: 4px;
   text-transform: capitalize;
@@ -110,7 +110,7 @@ const Description = styled.div`
 const EvapotranspirationBadge = styled.div`
   font-size: 10px;
   color: #16A34A;
-  background: ${({ theme }) => theme.colors.successBg};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
   padding: 2px 6px;
   border-radius: 4px;
   margin-top: 6px;
@@ -119,7 +119,7 @@ const EvapotranspirationBadge = styled.div`
 const NoDataMessage = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 14px;
 `;
 

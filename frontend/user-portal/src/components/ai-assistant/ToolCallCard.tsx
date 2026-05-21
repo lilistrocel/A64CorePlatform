@@ -65,11 +65,11 @@ const Card = styled.div<{ $isPending: boolean }>`
   gap: 8px;
   padding: 6px 10px;
   background: ${({ theme, $isPending }) =>
-    $isPending ? theme.colors.neutral[100] : theme.colors.successBg ?? theme.colors.neutral[50]};
+    $isPending ? theme.colors.surface.raised : theme.colors.accent.sageSoft ?? theme.colors.surface.canvas};
   border: 1px solid ${({ theme, $isPending }) =>
-    $isPending ? theme.colors.neutral[300] : theme.colors.success ?? '#10B981'};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+    $isPending ? theme.colors.border.subtle : theme.colors.status.success ?? '#10B981'};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
   transition: all 200ms ease;
 `;
 
@@ -84,9 +84,9 @@ const ToolContent = styled.div`
 `;
 
 const ToolLabel = styled.div<{ $isPending: boolean }>`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   color: ${({ theme, $isPending }) =>
-    $isPending ? theme.colors.textSecondary : theme.colors.textPrimary};
+    $isPending ? theme.colors.text.secondary : theme.colors.text.primary};
   display: flex;
   align-items: center;
   gap: 2px;
@@ -97,7 +97,7 @@ const Ellipsis = styled.span`
 `;
 
 const ToolSummary = styled.div`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 11px;
   margin-top: 2px;
   overflow: hidden;
@@ -108,16 +108,16 @@ const ToolSummary = styled.div`
 const Spinner = styled.div`
   width: 12px;
   height: 12px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
+  border-top-color: ${({ theme }) => theme.colors.accent.sage};
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
   flex-shrink: 0;
 `;
 
 const DoneCheck = styled.span`
-  color: ${({ theme }) => theme.colors.success ?? '#10B981'};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  color: ${({ theme }) => theme.colors.status.success ?? '#10B981'};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   font-size: 13px;
   flex-shrink: 0;
 `;

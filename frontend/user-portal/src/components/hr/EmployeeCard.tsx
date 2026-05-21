@@ -25,10 +25,10 @@ export interface EmployeeCardProps {
 // ============================================================================
 
 const Card = styled.div<{ $clickable: boolean }>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   transition: all 150ms ease-in-out;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
 
@@ -56,14 +56,14 @@ const EmployeeInfo = styled.div`
 const EmployeeName = styled.h4`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
 `;
 
 const EmployeeCode = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-family: 'JetBrains Mono', monospace;
 `;
 
@@ -90,7 +90,7 @@ const InfoItem = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const InfoIcon = styled.span`
@@ -101,10 +101,10 @@ const InfoIcon = styled.span`
 
 const Department = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.surface};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const Actions = styled.div`
@@ -112,7 +112,7 @@ const Actions = styled.div`
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
@@ -140,7 +140,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
       color: #3B82F6;
       border: 1px solid #3B82F6;
       &:hover {
-        background: #e3f2fd;
+        background: rgba(15, 110, 86, 0.05);
       }
     `;
   }}

@@ -161,10 +161,10 @@ const Avatar = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   font-size: 9px;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -178,14 +178,14 @@ const Bubble = styled.div<{ $isUser: boolean; $isError: boolean }>`
   border-radius: ${({ $isUser }) =>
     $isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
   background: ${({ $isUser, $isError, theme }) => {
-    if ($isError) return theme.colors.errorBg;
-    if ($isUser) return theme.colors.primary[500];
-    return theme.colors.neutral[200];
+    if ($isError) return theme.colors.status.danger;
+    if ($isUser) return theme.colors.accent.sage;
+    return theme.colors.surface.sunken;
   }};
   color: ${({ $isUser, $isError, theme }) => {
-    if ($isError) return theme.colors.error;
+    if ($isError) return theme.colors.status.danger;
     if ($isUser) return 'white';
-    return theme.colors.textPrimary;
+    return theme.colors.text.primary;
   }};
   display: flex;
   flex-direction: column;
@@ -194,17 +194,17 @@ const Bubble = styled.div<{ $isUser: boolean; $isError: boolean }>`
 `;
 
 const MessageText = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   line-height: 1.55;
   white-space: pre-wrap;
 `;
 
 const MarkdownText = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   line-height: 1.6;
 
   strong {
-    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
   }
 
   em {
@@ -214,14 +214,14 @@ const MarkdownText = styled.div`
   code {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 12px;
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
     padding: 1px 5px;
     border-radius: 3px;
   }
 
   pre {
-    background: ${({ theme }) => theme.colors.neutral[300]};
-    border-radius: ${({ theme }) => theme.borderRadius.md};
+    background: ${({ theme }) => theme.colors.border.subtle};
+    border-radius: ${({ theme }) => theme.radii.md};
     padding: 10px 12px;
     overflow-x: auto;
     margin: 4px 0;
@@ -250,7 +250,7 @@ const ToolCallList = styled.div`
 
 const CostTag = styled.span`
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   align-self: flex-end;
   font-family: 'JetBrains Mono', monospace;
 `;
@@ -265,7 +265,7 @@ const Dot = styled.div<{ $delay: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.textDisabled};
+  background: ${({ theme }) => theme.colors.text.tertiary};
   animation: ${bounce} 1.2s infinite ease-in-out;
   animation-delay: ${({ $delay }) => $delay};
 `;

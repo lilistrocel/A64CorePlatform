@@ -16,10 +16,10 @@ interface BadgeProps {
 }
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
@@ -39,7 +39,7 @@ const Header = styled.div`
 const Title = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -61,7 +61,7 @@ const Code = styled.div`
 
 const Description = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px 0;
 `;
 
@@ -73,21 +73,21 @@ const MetricsGrid = styled.div`
 `;
 
 const Metric = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   padding: 12px;
 `;
 
 const MetricLabel = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 4px;
 `;
 
 const MetricValue = styled.div`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const TagsContainer = styled.div`

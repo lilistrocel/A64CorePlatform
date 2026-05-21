@@ -44,15 +44,15 @@ const PageHeader = styled.div`
 `;
 
 const PageTitle = styled.h1`
-  font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h2};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
 `;
 
 const PageSubtitle = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 28px 0;
 `;
 
@@ -69,23 +69,23 @@ interface TabButtonProps {
 const TabButton = styled.button<TabButtonProps>`
   padding: 8px 20px;
   border-radius: 999px;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: 1px solid
-    ${({ theme, $active }) => ($active ? theme.colors.primary[500] : theme.colors.neutral[300])};
+    ${({ theme, $active }) => ($active ? theme.colors.accent.sage : theme.colors.border.subtle)};
   background: ${({ theme, $active }) =>
-    $active ? theme.colors.primary[500] : theme.colors.background};
-  color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.textSecondary)};
+    $active ? theme.colors.accent.sage : theme.colors.surface.canvas};
+  color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.text.secondary)};
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.primary[500])};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    color: ${({ theme, $active }) => ($active ? '#fff' : theme.colors.accent.sage)};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -114,8 +114,8 @@ function getStatusAccent(status: HarvestStockStatus): string {
 const StatusChip = styled.button<StatusChipProps>`
   padding: 4px 14px;
   border-radius: 999px;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: 1px solid
@@ -123,7 +123,7 @@ const StatusChip = styled.button<StatusChipProps>`
   background: ${({ $active, $status }) =>
     $active ? getStatusAccent($status) + '20' : 'transparent'};
   color: ${({ $active, $status, theme }) =>
-    $active ? getStatusAccent($status) : theme.colors.textSecondary};
+    $active ? getStatusAccent($status) : theme.colors.text.secondary};
 
   &:hover {
     border-color: ${({ $status }) => getStatusAccent($status)};

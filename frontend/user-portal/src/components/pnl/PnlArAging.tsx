@@ -38,38 +38,38 @@ const shimmer = keyframes`
 `;
 
 const Section = styled.section`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.space['6']};
   box-shadow: ${({ theme }) => theme.shadows.sm};
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  margin-bottom: ${({ theme }) => theme.space['8']};
 `;
 
 const SectionTitle = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin: 0 0 ${({ theme }) => theme.spacing.lg} 0;
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }) => theme.space['6']} 0;
 `;
 
 const ChartContainer = styled.div`
   height: 220px;
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  margin-bottom: ${({ theme }) => theme.space['8']};
 `;
 
 const SkeletonBar = styled.div`
   height: 220px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   background: linear-gradient(
     90deg,
-    ${({ theme }) => theme.colors.neutral[200]} 25%,
-    ${({ theme }) => theme.colors.neutral[100]} 50%,
-    ${({ theme }) => theme.colors.neutral[200]} 75%
+    ${({ theme }) => theme.colors.surface.sunken} 25%,
+    ${({ theme }) => theme.colors.surface.raised} 50%,
+    ${({ theme }) => theme.colors.surface.sunken} 75%
   );
   background-size: 800px 100%;
   animation: ${shimmer} 1.5s infinite linear;
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  margin-bottom: ${({ theme }) => theme.space['8']};
 `;
 
 const TableWrapper = styled.div`
@@ -79,20 +79,20 @@ const TableWrapper = styled.div`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   min-width: 500px;
 `;
 
 const Th = styled.th`
   text-align: left;
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  padding: ${({ theme }) => `${theme.space['2']} ${theme.space['4']}`};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.surface.sunken};
   white-space: nowrap;
 
   &[data-right] {
@@ -106,44 +106,44 @@ interface TdProps {
 }
 
 const Td = styled.td<TdProps>`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => `${theme.space['2']} ${theme.space['4']}`};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   text-align: ${({ $right }) => ($right ? 'right' : 'left')};
-  color: ${({ theme, $danger }) => ($danger ? theme.colors.error : theme.colors.textPrimary)};
+  color: ${({ theme, $danger }) => ($danger ? theme.colors.status.danger : theme.colors.text.primary)};
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 `;
 
 const TotalsRow = styled.tr`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
 `;
 
 const EmptyState = styled.div`
-  padding: ${({ theme }) => theme.spacing.xl};
+  padding: ${({ theme }) => theme.space['8']};
   text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const ErrorState = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.error};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  gap: ${({ theme }) => theme.space['4']};
+  padding: ${({ theme }) => theme.space['8']};
+  color: ${({ theme }) => theme.colors.status.danger};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   text-align: center;
 `;
 
 const RetryButton = styled.button`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background: ${({ theme }) => theme.colors.primary[500]};
+  padding: ${({ theme }) => `${theme.space['2']} ${theme.space['4']}`};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   cursor: pointer;
   font-family: inherit;
 `;

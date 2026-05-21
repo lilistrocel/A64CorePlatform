@@ -156,12 +156,12 @@ const LoadingContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space['6']};
 `;
 
 const LoadingText = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const MfaSetupBanner = styled.div`
@@ -173,11 +173,11 @@ const MfaSetupBanner = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['2']};
+  padding: ${({ theme }) => theme.space['4']};
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 `;
 
@@ -186,9 +186,9 @@ const BannerIcon = styled.span`
 `;
 
 const BannerText = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 
   @media (min-width: 640px) {
-    font-size: ${({ theme }) => theme.typography.fontSize.md};
+    font-size: ${({ theme }) => theme.fontSizes.bodyMd};
   }
 `;

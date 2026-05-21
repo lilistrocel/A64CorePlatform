@@ -47,7 +47,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -72,8 +72,8 @@ const FilterBar = styled.div`
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
   background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -81,7 +81,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.raised)};
   }
 `;
 
@@ -100,7 +100,7 @@ const CreateButton = styled.button`
   gap: 8px;
 
   &:hover {
-    background: #1976d2;
+    background: #0F6E56;
   }
 
   &:disabled {
@@ -127,7 +127,7 @@ const GridContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const EmptyIcon = styled.div`
@@ -138,19 +138,19 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin: 0 0 24px 0;
 `;
 
 const BlockCount = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 500;
 `;
 

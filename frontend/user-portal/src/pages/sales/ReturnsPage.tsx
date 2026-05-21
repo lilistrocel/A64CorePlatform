@@ -33,7 +33,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -56,10 +56,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
+        color: ${theme.colors.text.secondary};
+        border: 1px solid ${theme.colors.border.subtle};
         &:hover {
-          background: ${theme.colors.surface};
+          background: ${theme.colors.surface.raised};
         }
       `;
     }
@@ -67,7 +67,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       background: #3B82F6;
       color: white;
       &:hover {
-        background: #1976d2;
+        background: #0F6E56;
       }
     `;
   }}
@@ -81,8 +81,8 @@ const StatsRow = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 12px;
   padding: 20px;
   text-align: center;
@@ -92,13 +92,13 @@ const StatCard = styled.div`
 const StatValue = styled.div`
   font-size: 32px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 8px;
 `;
 
 const StatLabel = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 500;
 `;
 
@@ -112,11 +112,11 @@ const FiltersRow = styled.div`
 
 const Select = styled.select`
   padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   min-width: 200px;
 
@@ -128,8 +128,8 @@ const Select = styled.select`
 `;
 
 const TableContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
@@ -141,20 +141,20 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   /* Striped rows for readability - alternating row colors */
   &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:last-child {
@@ -162,7 +162,7 @@ const TableRow = styled.tr`
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -179,7 +179,7 @@ const TableHeader = styled.th`
 const TableCell = styled.td`
   padding: 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const StatusBadge = styled.span<{ $status: ReturnStatus }>`
@@ -194,15 +194,15 @@ const StatusBadge = styled.span<{ $status: ReturnStatus }>`
   ${({ $status, theme }) => {
     switch ($status) {
       case 'pending':
-        return `background: ${theme.colors.warningBg}; color: #92400E;`;
+        return `background: ${theme.colors.status.warning}; color: #92400E;`;
       case 'processing':
-        return `background: ${theme.colors.infoBg}; color: #1E40AF;`;
+        return `background: ${theme.colors.surface.sunken}; color: #1E40AF;`;
       case 'completed':
-        return `background: ${theme.colors.successBg}; color: #065F46;`;
+        return `background: ${theme.colors.accent.sageSoft}; color: #065F46;`;
       case 'rejected':
-        return `background: ${theme.colors.errorBg}; color: #991B1B;`;
+        return `background: ${theme.colors.status.danger}; color: #991B1B;`;
       default:
-        return `background: ${theme.colors.surface}; color: ${theme.colors.textPrimary};`;
+        return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.primary};`;
     }
   }}
 `;
@@ -270,7 +270,7 @@ const Pagination = styled.div`
 
 const PageInfo = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PageControls = styled.div`
@@ -280,16 +280,16 @@ const PageControls = styled.div`
 
 const PageButton = styled.button<{ $active?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textPrimary)};
+  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.primary)};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.raised)};
   }
 
   &:disabled {
@@ -301,12 +301,12 @@ const PageButton = styled.button<{ $active?: boolean }>`
 const LoadingContainer = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 16px;
 `;
 
 const ErrorContainer = styled.div`
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border: 1px solid #EF4444;
   color: #991B1B;
   padding: 16px;

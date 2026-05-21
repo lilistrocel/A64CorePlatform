@@ -24,7 +24,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   display: flex;
   align-items: center;
@@ -35,7 +35,7 @@ const ComingSoonBadge = styled.span`
   font-size: 11px;
   font-weight: 500;
   color: #8B5CF6;
-  background: ${({ theme }) => theme.colors.infoBg};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   padding: 4px 10px;
   border-radius: 12px;
 `;
@@ -46,7 +46,7 @@ const EmptyStateContainer = styled.div`
   align-items: center;
   justify-content: center;
   padding: 64px 24px;
-  background: ${({ theme }) => theme.colors.infoBg};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 16px;
   text-align: center;
 `;
@@ -59,13 +59,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 12px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 32px 0;
   max-width: 500px;
   line-height: 1.6;
@@ -80,7 +80,7 @@ const FeaturesList = styled.div`
 `;
 
 const FeatureCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 20px;
   text-align: left;
@@ -94,19 +94,19 @@ const FeatureCard = styled.div`
   .title {
     font-size: 14px;
     font-weight: 600;
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
     margin-bottom: 4px;
   }
 
   .description {
     font-size: 12px;
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
 const ContactInfo = styled.div`
   padding: 20px 24px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -121,14 +121,14 @@ const ContactInfo = styled.div`
 
     .label {
       font-size: 13px;
-      color: ${({ theme }) => theme.colors.textDisabled};
+      color: ${({ theme }) => theme.colors.text.tertiary};
       margin-bottom: 4px;
     }
 
     .text {
       font-size: 15px;
       font-weight: 500;
-      color: ${({ theme }) => theme.colors.textPrimary};
+      color: ${({ theme }) => theme.colors.text.primary};
     }
   }
 `;
@@ -142,7 +142,7 @@ const SupportedSensorsSection = styled.div`
 const SectionTitle = styled.h4`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0 0 16px 0;
@@ -157,11 +157,11 @@ const SensorLogos = styled.div`
 
 const SensorBrand = styled.div`
   padding: 12px 20px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 `;
 

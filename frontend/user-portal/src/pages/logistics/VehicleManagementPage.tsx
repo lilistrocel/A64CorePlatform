@@ -42,7 +42,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -58,16 +58,16 @@ const Actions = styled.div`
 
 const SearchInput = styled.input`
   padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   width: 300px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -94,7 +94,7 @@ const CreateButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #1976d2;
+    background: #0F6E56;
   }
 `;
 
@@ -118,14 +118,14 @@ const FilterGroup = styled.div`
 const FilterLabel = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
   background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -133,22 +133,22 @@ const FilterButton = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.raised)};
   }
 `;
 
 const ViewToggle = styled.div`
   display: flex;
   gap: 8px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   padding: 4px;
   border-radius: 8px;
 `;
 
 const ViewButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
+  color: ${({ theme }) => theme.colors.text.secondary};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -158,7 +158,7 @@ const ViewButton = styled.button<{ $active: boolean }>`
   box-shadow: ${({ $active }) => ($active ? '0 1px 2px rgba(0, 0, 0, 0.1)' : 'none')};
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.neutral[200])};
+    background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : theme.colors.surface.sunken)};
   }
 `;
 
@@ -179,7 +179,7 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const ErrorContainer = styled.div`
@@ -206,7 +206,7 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
   max-width: 800px;
@@ -225,7 +225,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -233,12 +233,12 @@ const CloseButton = styled.button`
   background: transparent;
   border: none;
   font-size: 24px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   padding: 4px;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -252,9 +252,9 @@ const Pagination = styled.div`
 
 const PageButton = styled.button`
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -262,7 +262,7 @@ const PageButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:disabled {
@@ -273,7 +273,7 @@ const PageButton = styled.button`
 
 const PageInfo = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 // ============================================================================

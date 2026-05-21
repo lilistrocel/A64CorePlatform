@@ -31,7 +31,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -43,7 +43,7 @@ const FilterSection = styled.div`
 
 const PageInfo = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 // Summary Cards Section
@@ -52,7 +52,7 @@ const SummaryGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
 `;
 
@@ -63,7 +63,7 @@ const SummaryCard = styled.div`
 const SummaryLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -72,12 +72,12 @@ const SummaryLabel = styled.div`
 const SummaryValue = styled.div`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
@@ -89,8 +89,8 @@ const ArchivesList = styled.div`
 `;
 
 const ArchiveCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 20px;
   transition: box-shadow 150ms ease-in-out, transform 150ms ease-in-out;
@@ -116,18 +116,18 @@ const ArchiveTitleSection = styled.div`
 const ArchiveTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
 `;
 
 const ArchiveMeta = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const BlockInfo = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
@@ -145,12 +145,12 @@ const DeleteButton = styled.button`
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   cursor: pointer;
   transition: background 150ms ease-in-out, transform 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: ${({ theme }) => theme.colors.status.danger};
     transform: scale(1.05);
   }
 
@@ -185,7 +185,7 @@ const ArchiveStats = styled.div`
   gap: 16px;
   margin-bottom: 16px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 6px;
 `;
 
@@ -197,7 +197,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -206,12 +206,12 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const QualitySection = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
 `;
 
@@ -224,13 +224,13 @@ const QualityRow = styled.div`
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 4px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -246,7 +246,7 @@ const Spinner = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 
   p {
     margin: 8px 0;
@@ -255,10 +255,10 @@ const EmptyState = styled.div`
 
 const ErrorState = styled.div`
   padding: 24px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   text-align: center;
 `;
 
@@ -272,8 +272,8 @@ const PaginationContainer = styled.div`
 
 const PaginationButton = styled.button<{ $disabled?: boolean }>`
   padding: 8px 16px;
-  background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : theme.colors.primary[500])};
-  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : 'white')};
+  background: ${({ $disabled, theme }) => ($disabled ? theme.colors.border.subtle : theme.colors.accent.sage)};
+  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.text.tertiary : 'white')};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -282,7 +282,7 @@ const PaginationButton = styled.button<{ $disabled?: boolean }>`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.neutral[300] : '#2563eb')};
+    background: ${({ $disabled, theme }) => ($disabled ? theme.colors.border.subtle : '#2563eb')};
   }
 `;
 
@@ -312,7 +312,7 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
   max-width: 500px;
@@ -342,7 +342,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -353,14 +353,14 @@ const CloseButton = styled.button`
   padding: 4px;
   background: transparent;
   border: none;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   cursor: pointer;
   border-radius: 4px;
   transition: background 150ms ease-in-out, color 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -376,8 +376,8 @@ const WarningText = styled.p`
 `;
 
 const ArchiveDetails = styled.div`
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 16px;
   margin-top: 12px;
@@ -388,7 +388,7 @@ const DetailRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   &:last-child {
     border-bottom: none;
@@ -397,13 +397,13 @@ const DetailRow = styled.div`
 
 const DetailLabel = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 500;
 `;
 
 const DetailValue = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 600;
 `;
 
@@ -415,8 +415,8 @@ const ModalFooter = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.border.subtle};
+  color: ${({ theme }) => theme.colors.text.primary};
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -531,7 +531,7 @@ const DetailModalOverlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const DetailModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   max-width: 900px;
   width: 90%;
@@ -558,7 +558,7 @@ const DetailModalHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   padding: 24px 32px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const DetailModalHeaderLeft = styled.div`
@@ -568,13 +568,13 @@ const DetailModalHeaderLeft = styled.div`
 const DetailModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
 `;
 
 const DetailModalSubtitle = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   display: flex;
   align-items: center;
   gap: 12px;
@@ -604,10 +604,10 @@ const DetailSection = styled.div`
 const DetailSectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px 0;
   padding-bottom: 8px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const DetailGrid = styled.div`
@@ -625,7 +625,7 @@ const DetailItem = styled.div`
 const DetailItemLabel = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -633,7 +633,7 @@ const DetailItemLabel = styled.span`
 const DetailItemValue = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Timeline = styled.div`
@@ -646,7 +646,7 @@ const TimelineItem = styled.div`
   display: flex;
   gap: 16px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   border-left: 4px solid #3B82F6;
 `;
@@ -672,19 +672,19 @@ const TimelineContent = styled.div`
 const TimelineTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 4px;
 `;
 
 const TimelineDate = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 8px;
 `;
 
 const TimelineDetails = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.5;
 `;
 
@@ -703,7 +703,7 @@ const PerformanceBadge = styled.span<{ $category: string }>`
       case 'excellent':
         return '#8bc34a';
       case 'good':
-        return '#2196f3';
+        return '#0F6E56';
       case 'acceptable':
         return '#eab308';
       case 'poor':
@@ -755,21 +755,21 @@ const QualityCard = styled.div<{ $grade: string }>`
 const QualityGradeLabel = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 8px;
 `;
 
 const QualityAmount = styled.div`
   font-size: 24px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const YieldComparisonBar = styled.div`
   display: flex;
   gap: 16px;
   align-items: center;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   padding: 20px;
   border-radius: 8px;
 `;
@@ -782,7 +782,7 @@ const YieldColumn = styled.div`
 const YieldLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -791,19 +791,19 @@ const YieldLabel = styled.div`
 const YieldValue = styled.div`
   font-size: 28px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const YieldUnit = styled.span`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-left: 4px;
 `;
 
 const VsDivider = styled.div`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // ============================================================================

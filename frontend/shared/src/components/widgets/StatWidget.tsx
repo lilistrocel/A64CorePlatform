@@ -71,59 +71,59 @@ const StatContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing.lg} 0;
+  padding: ${({ theme }) => theme.space['6']} 0;
 `;
 
 const StatValue = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.primary[500]};
-  line-height: ${({ theme }) => theme.typography.lineHeight.tight};
+  font-size: ${({ theme }) => theme.fontSizes.h1};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  line-height: ${({ theme }) => theme.lineHeights.snug};
 `;
 
 const StatLabel = styled.div`
-  font-size: ${({ theme}) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: ${({ theme }) => theme.spacing.sm};
+  font-size: ${({ theme}) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-top: ${({ theme }) => theme.space['2']};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const TrendContainer = styled.div`
-  margin-top: ${({ theme }) => theme.spacing.md};
+  margin-top: ${({ theme }) => theme.space['4']};
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
 `;
 
 const TrendIndicator = styled.div<{ $positive: boolean }>`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.space['1']};
   color: ${({ theme, $positive }) =>
-    $positive ? theme.colors.success : theme.colors.error};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+    $positive ? theme.colors.status.success : theme.colors.status.danger};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
 `;
 
 const TrendArrow = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.lg};
+  font-size: ${({ theme }) => theme.fontSizes.bodyLg};
 `;
 
 const TrendValue = styled.span``;
 
 const TrendLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const SecondaryMetrics = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.xl};
-  margin-top: ${({ theme }) => theme.spacing.lg};
-  padding-top: ${({ theme }) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  gap: ${({ theme }) => theme.space['8']};
+  margin-top: ${({ theme }) => theme.space['6']};
+  padding-top: ${({ theme }) => theme.space['6']};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const SecondaryMetric = styled.div`
@@ -133,54 +133,54 @@ const SecondaryMetric = styled.div`
 `;
 
 const SecondaryValue = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SecondaryLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: ${({ theme }) => theme.spacing.xs};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-top: ${({ theme }) => theme.space['1']};
 `;
 
 const LoadingContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing['2xl']} 0;
+  padding: ${({ theme }) => theme.space['12']} 0;
 `;
 
 const ErrorContainer = styled.div`
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl} ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.space['8']} ${({ theme }) => theme.space['6']};
 `;
 
 const ErrorText = styled.div`
-  color: ${({ theme }) => theme.colors.error};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  color: ${({ theme }) => theme.colors.status.danger};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
 `;
 
 const RetryLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  color: ${({ theme }) => theme.colors.accent.sage};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-  margin-top: ${({ theme }) => theme.spacing.sm};
+  margin-top: ${({ theme }) => theme.space['2']};
   text-decoration: underline;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[600]};
+    color: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
 const RefreshRow = styled.div`
   display: flex;
   justify-content: flex-end;
-  margin-bottom: -${({ theme }) => theme.spacing.sm};
+  margin-bottom: -${({ theme }) => theme.space['2']};
 `;
 
 const StatRefreshButton = styled.button`
@@ -189,15 +189,15 @@ const StatRefreshButton = styled.button`
   font-size: 1rem;
   cursor: pointer;
   padding: 0.25rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   transition: color 0.2s ease;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
     border-radius: 4px;
   }

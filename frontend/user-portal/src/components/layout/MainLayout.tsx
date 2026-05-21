@@ -461,7 +461,7 @@ const LayoutContainer = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 
   @media (min-width: 1024px) {
     flex-direction: row;
@@ -472,9 +472,9 @@ const MobileHeader = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => theme.space['4']} ${({ theme }) => theme.space['6']};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   height: 64px;
   position: fixed;
   top: 0;
@@ -496,7 +496,7 @@ const MenuButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  padding: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.space['2']};
   min-width: 44px; /* WCAG touch target minimum */
   min-height: 44px; /* WCAG touch target minimum */
 
@@ -504,7 +504,7 @@ const MenuButton = styled.button`
     display: block;
     width: 24px;
     height: 2px;
-    background: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.text.primary};
     transition: all 0.3s ease;
   }
 
@@ -519,8 +519,8 @@ interface SidebarProps {
 
 const Sidebar = styled.aside<SidebarProps>`
   width: 280px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-right: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-right: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -562,21 +562,21 @@ const Overlay = styled.div`
 `;
 
 const SidebarHeader = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => theme.space['4']};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const Logo = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.primary[500]};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.accent.sage};
 
   @media (min-width: 1024px) {
-    font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
+    font-size: ${({ theme }) => theme.fontSizes.h2};
   }
 `;
 
@@ -590,29 +590,29 @@ const LogoImg = styled.img`
 `;
 
 const UserCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
-  padding: ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.space['4']};
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const UserCardTop = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const UserAvatar = styled.div`
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -627,26 +627,26 @@ const UserCardInfo = styled.div`
 `;
 
 const UserName = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
 
 const UserRole = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: capitalize;
 `;
 
 const UserCardActions = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
-  padding-top: ${({ theme }) => theme.spacing.xs};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  gap: ${({ theme }) => theme.space['1']};
+  padding-top: ${({ theme }) => theme.space['1']};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ThemeToggleSmall = styled.button`
@@ -656,34 +656,34 @@ const ThemeToggleSmall = styled.button`
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: ${({ theme }) => theme.colors.surface.raised};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 0;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 `;
 
 const LogoutSmall = styled.button`
   flex: 1;
   padding: 6px 0;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
   font-family: inherit;
   transition: all 150ms ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
-    color: ${({ theme }) => theme.colors.error};
+    background: ${({ theme }) => theme.colors.status.danger};
+    color: ${({ theme }) => theme.colors.status.danger};
   }
 `;
 
@@ -693,7 +693,7 @@ const DivisionSwitcherWrapper = styled.div`
 
 const Nav = styled.nav`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -703,35 +703,35 @@ const Nav = styled.nav`
 const NavItem = styled(NavLink)`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['2']};
+  padding: ${({ theme }) => theme.space['4']};
   min-height: 36px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-decoration: none;
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &.active {
-    background: ${({ theme }) => `${theme.colors.primary[500]}15`};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => `${theme.colors.accent.sage}15`};
+    color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const NavIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
 `;
 
 const NavContent = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   flex: 1;
 `;
 
@@ -741,54 +741,54 @@ const Badge = styled.span`
   justify-content: center;
   min-width: 20px;
   height: 20px;
-  padding: 0 ${({ theme }) => theme.spacing.xs};
-  background: ${({ theme }) => theme.colors.error};
+  padding: 0 ${({ theme }) => theme.space['1']};
+  background: ${({ theme }) => theme.colors.status.danger};
   color: white;
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  border-radius: ${({ theme }) => theme.borderRadius.full};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  border-radius: ${({ theme }) => theme.radii.pill};
 `;
 
 const SidebarFooter = styled.div`
-  padding: ${({ theme }) => theme.spacing.xl};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => theme.space['8']};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const ThemeToggleButton = styled.button`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
   width: 100%;
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['4']};
   min-height: 44px; /* WCAG touch target minimum */
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   background: none;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
-    border-color: ${({ theme }) => theme.colors.neutral[400]};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
+    border-color: ${({ theme }) => theme.colors.border.default};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
 
 const ThemeToggleIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
   line-height: 1;
 `;
 
@@ -857,16 +857,16 @@ function FarmingYearDropdown({ years, selectedYear, onSelect }: FarmingYearDropd
 // ── Farming Year Dropdown Styles ──────────────────────────────────────────
 
 const FyWrapper = styled.div`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  padding: ${({ theme }) => `${theme.space['2']} ${theme.space['4']}`};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
   position: relative;
 `;
 
 const FyLabel = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin-bottom: 6px;
@@ -877,20 +877,20 @@ const FyTrigger = styled.button<{ $open: boolean }>`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  padding: ${({ theme }) => `${theme.space['2']} ${theme.space['4']}`};
   min-height: 36px;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ $open, theme }) => ($open ? theme.colors.surface : 'transparent')};
-  border: 1px solid ${({ $open, theme }) => ($open ? theme.colors.primary[500] : theme.colors.neutral[300])};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ $open, theme }) => ($open ? theme.colors.surface.raised : 'transparent')};
+  border: 1px solid ${({ $open, theme }) => ($open ? theme.colors.accent.sage : theme.colors.border.subtle)};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -898,20 +898,20 @@ const FyArrow = styled.span<{ $open: boolean }>`
   font-size: 12px;
   transition: transform 0.15s ease;
   transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'rotate(0)')};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const FyMenu = styled.div`
   position: absolute;
   top: 100%;
-  left: ${({ theme }) => theme.spacing.lg};
-  right: ${({ theme }) => theme.spacing.lg};
+  left: ${({ theme }) => theme.space['6']};
+  right: ${({ theme }) => theme.space['6']};
   margin-top: 4px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   box-shadow: ${({ theme }) => theme.shadows.lg};
-  z-index: ${({ theme }) => theme.zIndex.dropdown};
+  z-index: ${({ theme }) => theme.zIndices.dropdown};
   max-height: 240px;
   overflow-y: auto;
 `;
@@ -921,11 +921,11 @@ const FyItem = styled.button<{ $active: boolean }>`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  font-weight: ${({ $active, theme }) => ($active ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.regular)};
-  color: ${({ $active, theme }) => ($active ? theme.colors.primary[500] : theme.colors.textPrimary)};
-  background: ${({ $active, theme }) => ($active ? theme.colors.infoBg : 'transparent')};
+  padding: ${({ theme }) => `${theme.space['2']} ${theme.space['4']}`};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  font-weight: ${({ $active, theme }) => ($active ? theme.fontWeights.semibold : theme.fontWeights.regular)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.accent.sage : theme.colors.text.primary)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.surface.sunken : 'transparent')};
   border: none;
   cursor: pointer;
   text-align: left;
@@ -933,15 +933,15 @@ const FyItem = styled.button<{ $active: boolean }>`
   transition: background 0.1s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:first-child {
-    border-radius: ${({ theme }) => `${theme.borderRadius.md} ${theme.borderRadius.md} 0 0`};
+    border-radius: ${({ theme }) => `${theme.radii.md} ${theme.radii.md} 0 0`};
   }
 
   &:last-child {
-    border-radius: ${({ theme }) => `0 0 ${theme.borderRadius.md} ${theme.borderRadius.md}`};
+    border-radius: ${({ theme }) => `0 0 ${theme.radii.md} ${theme.radii.md}`};
   }
 `;
 
@@ -981,37 +981,37 @@ interface NavGroupHeaderProps {
 const NavGroupHeader = styled.button<NavGroupHeaderProps>`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
   /* Horizontal padding is overridden inline via style prop for depth-based indentation;
      vertical padding and min-height remain constant for touch target compliance. */
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.space['4']};
   min-height: 36px;
   width: 100%;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   background: ${({ $childActive, theme }) =>
-    $childActive ? `${theme.colors.primary[500]}0d` : 'transparent'};
+    $childActive ? `${theme.colors.accent.sage}0d` : 'transparent'};
   color: ${({ $childActive, theme }) =>
-    $childActive ? theme.colors.primary[500] : theme.colors.textSecondary};
+    $childActive ? theme.colors.accent.sage : theme.colors.text.secondary};
   /* Sub-group headers (depth >= 1) use smaller font and lighter weight */
   font-size: ${({ $depth, theme }) =>
-    $depth >= 1 ? theme.typography.fontSize.sm : theme.typography.fontSize.base};
+    $depth >= 1 ? theme.fontSizes.bodySm : theme.fontSizes.bodyMd};
   font-weight: ${({ $depth, theme }) =>
     $depth >= 1
-      ? theme.typography.fontWeight.regular
-      : theme.typography.fontWeight.medium};
+      ? theme.fontWeights.regular
+      : theme.fontWeights.medium};
   font-family: inherit;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -1024,7 +1024,7 @@ const NavGroupCaret = styled.span<{ $expanded: boolean }>`
   font-size: 12px;
   transition: transform 0.15s ease;
   transform: ${({ $expanded }) => ($expanded ? 'rotate(0deg)' : 'rotate(-90deg)')};
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const NavGroupChildren = styled.div<{ $depth: number }>`
@@ -1036,7 +1036,7 @@ const NavGroupChildren = styled.div<{ $depth: number }>`
 `;
 
 const NavChildIcon = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
 `;
 
 const BackToTopButton = styled.button<{ $visible: boolean }>`
@@ -1047,13 +1047,13 @@ const BackToTopButton = styled.button<{ $visible: boolean }>`
   height: 44px;
   border-radius: 50%;
   border: none;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   font-size: 20px;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   cursor: pointer;
   box-shadow: ${({ theme }) => theme.shadows.lg};
-  z-index: ${({ theme }) => theme.zIndex.sticky};
+  z-index: ${({ theme }) => theme.zIndices.sticky};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1063,7 +1063,7 @@ const BackToTopButton = styled.button<{ $visible: boolean }>`
   pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
     transform: translateY(-2px);
   }
 

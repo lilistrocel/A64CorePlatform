@@ -69,7 +69,7 @@ export type ContaminationSeverity = 'low' | 'medium' | 'high' | 'critical';
 export const PHASE_COLORS: Record<RoomPhase, string> = {
   empty: '#9e9e9e',
   preparing: '#90caf9',
-  inoculated: '#42a5f5',
+  inoculated: '#0F6E56',
   colonizing: '#fdd835',
   fruiting_initiation: '#ffa726',
   fruiting: '#66bb6a',
@@ -98,7 +98,7 @@ export const PHASE_LABELS: Record<RoomPhase, string> = {
 
 export const PHASE_TEXT_COLORS: Record<RoomPhase, string> = {
   empty: '#fff',
-  preparing: '#1565c0',
+  preparing: '#0B5644',
   inoculated: '#fff',
   colonizing: '#4e3400',
   fruiting_initiation: '#4e2100',

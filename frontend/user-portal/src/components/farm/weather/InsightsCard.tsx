@@ -14,7 +14,7 @@ import {
 } from '../../../types/farm';
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -23,7 +23,7 @@ const Card = styled.div`
 const Title = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 20px 0;
   display: flex;
   align-items: center;
@@ -42,7 +42,7 @@ const GrowingConditionsBadge = styled.div<{ $condition: GrowingConditions }>`
 
   .label {
     font-size: 13px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
 
   .value {
@@ -77,7 +77,7 @@ const RiskItem = styled.div<{ $level: RiskLevel }>`
 
     .label {
       font-size: 12px;
-      color: ${({ theme }) => theme.colors.textSecondary};
+      color: ${({ theme }) => theme.colors.text.secondary};
     }
 
     .value {
@@ -98,7 +98,7 @@ const Section = styled.div`
   h4 {
     font-size: 13px;
     font-weight: 600;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.text.secondary};
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin: 0 0 12px 0;
@@ -109,7 +109,7 @@ const AssessmentRow = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 
   &:last-child {
     border-bottom: none;
@@ -117,13 +117,13 @@ const AssessmentRow = styled.div`
 
   .label {
     font-size: 14px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
 
   .value {
     font-size: 14px;
     font-weight: 500;
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
     text-transform: capitalize;
   }
 `;
@@ -139,7 +139,7 @@ const AlertItem = styled.div`
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
   border-left: 4px solid #EF4444;
 
@@ -166,7 +166,7 @@ const RecommendationItem = styled.div`
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  background: ${({ theme }) => theme.colors.successBg};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
   border-radius: 8px;
 
   .icon {

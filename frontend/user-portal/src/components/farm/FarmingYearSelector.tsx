@@ -173,7 +173,7 @@ const Label = styled.label`
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -198,7 +198,7 @@ const DropdownArrow = styled.span<{ $disabled?: boolean }>`
   position: absolute;
   right: 12px;
   font-size: 10px;
-  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.textDisabled : theme.colors.textSecondary)};
+  color: ${({ $disabled, theme }) => ($disabled ? theme.colors.text.tertiary : theme.colors.text.secondary)};
   pointer-events: none;
   transition: color 150ms ease-in-out, transform 150ms ease-in-out;
 `;
@@ -207,9 +207,9 @@ const Select = styled.select<{ $compact?: boolean }>`
   width: 100%;
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   cursor: pointer;
   appearance: none;
@@ -218,7 +218,7 @@ const Select = styled.select<{ $compact?: boolean }>`
 
   &:hover:not(:disabled) {
     border-color: #3b82f6;
-    background-color: ${({ theme }) => theme.colors.infoBg};
+    background-color: ${({ theme }) => theme.colors.surface.sunken};
   }
 
   &:focus {
@@ -228,8 +228,8 @@ const Select = styled.select<{ $compact?: boolean }>`
   }
 
   &:disabled {
-    background-color: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textDisabled};
+    background-color: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.tertiary};
     cursor: not-allowed;
   }
 
@@ -244,9 +244,9 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
   width: 100%;
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.background};
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   cursor: pointer;
   appearance: none;
@@ -269,7 +269,7 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 const EmptySelect = styled(Select)`
   color: #ef4444;
   border-color: #fecaca;
-  background-color: ${({ theme }) => theme.colors.errorBg};
+  background-color: ${({ theme }) => theme.colors.status.danger};
 `;
 
 const LoadingSpinner = styled.div`
@@ -277,7 +277,7 @@ const LoadingSpinner = styled.div`
   right: 12px;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
@@ -312,30 +312,30 @@ const YearBadge = styled.span<{
   /* Current year styling - primary blue */
   background: ${({ $isCurrent, $isNext, theme }) =>
     $isCurrent
-      ? '#e3f2fd'
+      ? 'rgba(15, 110, 86, 0.05)'
       : $isNext
         ? '#fef3c7'
-        : theme.colors.surface};
+        : theme.colors.surface.raised};
   color: ${({ $isCurrent, $isNext, theme }) =>
     $isCurrent
-      ? '#1976d2'
+      ? '#0F6E56'
       : $isNext
         ? '#d97706'
-        : theme.colors.textSecondary};
+        : theme.colors.text.secondary};
   border: 1px solid ${({ $isCurrent, $isNext, theme }) =>
     $isCurrent
-      ? '#bbdefb'
+      ? 'rgba(15, 110, 86, 0.10)'
       : $isNext
         ? '#fde68a'
-        : theme.colors.neutral[300]};
+        : theme.colors.border.subtle};
 
   &:hover {
     background: ${({ $isCurrent, $isNext, theme }) =>
       $isCurrent
-        ? '#bbdefb'
+        ? 'rgba(15, 110, 86, 0.10)'
         : $isNext
           ? '#fde68a'
-          : theme.colors.neutral[200]};
+          : theme.colors.surface.sunken};
   }
 
   @media (max-width: 768px) {

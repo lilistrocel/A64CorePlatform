@@ -53,7 +53,7 @@ const Backdrop = styled.div`
 `;
 
 const Dialog = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.3);
   max-width: min(1200px, 90vw);
@@ -66,7 +66,7 @@ const Dialog = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   align-items: center;
   gap: 16px;
@@ -77,7 +77,7 @@ const TitleId = 'physical-block-plantings-modal-title';
 const ModalTitle = styled.h2.attrs({ id: TitleId })`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   flex: 1;
 `;
@@ -85,12 +85,12 @@ const ModalTitle = styled.h2.attrs({ id: TitleId })`
 const PlantingCountChip = styled.span`
   padding: 4px 12px;
   border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const CloseButton = styled.button`
@@ -104,17 +104,17 @@ const CloseButton = styled.button`
   border-radius: 8px;
   font-size: 18px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   transition: all 150ms ease-in-out;
   flex-shrink: 0;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;
@@ -148,8 +148,8 @@ const TrashButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   color: #dc2626;
   font-size: 14px;
@@ -171,13 +171,13 @@ const TrashButton = styled.button`
 const EmptyState = styled.div`
   padding: 48px 24px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 14px;
 `;
 
 const ModalFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   justify-content: flex-end;
 `;
@@ -190,15 +190,15 @@ const FooterCloseButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.sage};
     outline-offset: 2px;
   }
 `;

@@ -198,9 +198,9 @@ export function ChartWidget({ widget, data, loading, error, onRefresh }: ChartWi
 }
 
 const WidgetCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.lg};
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -236,8 +236,8 @@ const Icon = styled.span`
 
 const WidgetTitle = styled.h3`
   font-size: 1rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -250,7 +250,7 @@ const WidgetTitle = styled.h3`
 
 const WidgetDescription = styled.p`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 0.75rem 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -267,11 +267,11 @@ const RefreshButton = styled.button`
   font-size: 1rem;
   cursor: pointer;
   padding: 0.25rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   transition: color 0.2s ease;
 
   &:hover:not(:disabled) {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.accent.sage};
   }
 
   &:disabled {
@@ -306,7 +306,7 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
@@ -325,23 +325,23 @@ const ErrorIcon = styled.div`
 
 const ErrorText = styled.p`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   margin: 0;
 `;
 
 const RetryButton = styled.button`
   padding: 0.5rem 1rem;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   font-size: 0.875rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   cursor: pointer;
   transition: background 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
@@ -359,6 +359,6 @@ const EmptyIcon = styled.div`
 
 const EmptyText = styled.p`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;

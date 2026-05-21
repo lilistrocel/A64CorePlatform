@@ -80,9 +80,9 @@ const Grid = styled.div<GridProps>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
-  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px dashed ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const EmptyIcon = styled.div`
@@ -94,12 +94,12 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h4`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 6px 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;

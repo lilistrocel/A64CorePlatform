@@ -49,12 +49,12 @@ const BackButton = styled.button`
   margin-bottom: 24px;
 
   &:hover {
-    background: #e3f2fd;
+    background: rgba(15, 110, 86, 0.05);
   }
 `;
 
 const Header = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -78,7 +78,7 @@ const TitleSection = styled.div``;
 const BlockTitle = styled.h1`
   font-size: 36px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
 `;
 
@@ -87,7 +87,7 @@ const BlockMeta = styled.div`
   gap: 16px;
   align-items: center;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const StatusBadge = styled.span<{ $status: string }>`
@@ -125,7 +125,7 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 24px;
   padding-top: 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const StatCard = styled.div`
@@ -136,7 +136,7 @@ const StatCard = styled.div`
 const StatLabel = styled.span`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -145,17 +145,17 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 32px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const StatSubtext = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
 const TabsContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -163,7 +163,7 @@ const TabsContainer = styled.div`
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   overflow-x: auto;
 
   &::-webkit-scrollbar {
@@ -171,14 +171,14 @@ const TabBar = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
     border-radius: 2px;
   }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   padding: 16px 24px;
-  background: ${({ $active, theme }) => ($active ? theme.colors.background : 'transparent')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.surface.canvas : 'transparent')};
   color: ${({ $active }) => ($active ? '#3b82f6' : 'inherit')};
   border: none;
   border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
@@ -189,7 +189,7 @@ const Tab = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     color: #3b82f6;
   }
 `;
@@ -208,7 +208,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 4px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -222,10 +222,10 @@ const Spinner = styled.div`
 
 const ErrorContainer = styled.div`
   padding: 24px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   text-align: center;
   margin-top: 24px;
 `;
@@ -237,7 +237,7 @@ const OverviewGrid = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   padding: 20px;
 `;
@@ -245,7 +245,7 @@ const InfoCard = styled.div`
 const InfoTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px 0;
 `;
 
@@ -253,7 +253,7 @@ const InfoItem = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   &:last-child {
     border-bottom: none;
@@ -262,19 +262,19 @@ const InfoItem = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 // Multi-crop styled components
 const AreaBudgetSection = styled.div`
-  background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
@@ -283,14 +283,14 @@ const AreaBudgetSection = styled.div`
 const AreaBudgetTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   margin: 0 0 12px 0;
 `;
 
 const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
   width: 100%;
   height: 24px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -303,14 +303,14 @@ const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
-    background: linear-gradient(90deg, #3b82f6, #1976d2);
+    background: linear-gradient(90deg, #3b82f6, #0F6E56);
     transition: width 300ms ease-in-out;
   }
 `;
 
 const AreaBudgetText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   margin-bottom: 12px;
 `;
@@ -333,17 +333,17 @@ const AddCropButton = styled.button`
 `;
 
 const VirtualChildrenSection = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px 0;
 `;
 
@@ -352,7 +352,7 @@ const VirtualChildCard = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 6px;
   margin-bottom: 8px;
   cursor: pointer;
@@ -363,23 +363,23 @@ const VirtualChildCard = styled.div`
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 
   span {
     font-size: 14px;
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
 
     &:first-child {
       font-weight: 600;
-      color: #1976d2;
+      color: #0F6E56;
     }
   }
 `;
 
 const VirtualBlockInfo = styled.div`
-  background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[700]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sageDeep};
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
@@ -387,24 +387,24 @@ const VirtualBlockInfo = styled.div`
 
 const VirtualBadge = styled.span`
   display: inline-block;
-  background: ${({ theme }) => theme.colors.infoBg};
-  color: ${({ theme }) => theme.colors.primary[700]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   font-size: 12px;
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border: 1px solid ${({ theme }) => theme.colors.primary[700]};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sageDeep};
   margin-left: 12px;
 `;
 
 const EmptyVirtualButton = styled.button`
   margin-top: 16px;
   padding: 10px 16px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  color: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
@@ -413,8 +413,8 @@ const EmptyVirtualButton = styled.button`
   width: 100%;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-    border-color: ${({ theme }) => theme.colors.error};
+    background: ${({ theme }) => theme.colors.surface.sunken};
+    border-color: ${({ theme }) => theme.colors.status.danger};
   }
 `;
 
@@ -653,7 +653,7 @@ export function BlockDetail() {
                   <InfoItem>
                     <InfoLabel>Parent Block</InfoLabel>
                     <InfoValue
-                      style={{ color: '#1976d2', cursor: 'pointer' }}
+                      style={{ color: '#0F6E56', cursor: 'pointer' }}
                       onClick={() => block.parentBlockId && navigate(`/farm/farms/${farmId}/blocks/${block.parentBlockId}`)}
                     >
                       {block.parentBlockId ? 'View Parent Block →' : 'Unknown'}

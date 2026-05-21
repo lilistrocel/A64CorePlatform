@@ -42,13 +42,13 @@ const HeaderLeft = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
@@ -60,10 +60,10 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   transition: all 150ms ease-in-out;
 
   &:hover {
@@ -73,14 +73,14 @@ const StatCard = styled.div`
 
 const StatLabel = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 8px;
 `;
 
 const StatValue = styled.div`
   font-size: 36px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const WidgetsRow = styled.div`
@@ -95,16 +95,16 @@ const WidgetsRow = styled.div`
 `;
 
 const Widget = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const WidgetTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px 0;
 `;
 
@@ -119,26 +119,26 @@ const ShipmentItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
 const ShipmentCode = styled.span`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: 'JetBrains Mono', monospace;
 `;
 
 const ShipmentDate = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const QuickActions = styled.div`
@@ -160,7 +160,7 @@ const ActionButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: #0F6E56;
   }
 `;
 
@@ -170,7 +170,7 @@ const LoadingContainer = styled.div`
   align-items: center;
   min-height: 400px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const ErrorContainer = styled.div`
@@ -185,7 +185,7 @@ const ErrorContainer = styled.div`
 const EmptyText = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const FarmingYearBadge = styled.span`
@@ -195,9 +195,9 @@ const FarmingYearBadge = styled.span`
   padding: 4px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: #1976d2;
-  background: #e3f2fd;
-  border: 1px solid #bbdefb;
+  color: #0F6E56;
+  background: rgba(15, 110, 86, 0.05);
+  border: 1px solid rgba(15, 110, 86, 0.10);
   border-radius: 16px;
   margin-left: 8px;
 `;

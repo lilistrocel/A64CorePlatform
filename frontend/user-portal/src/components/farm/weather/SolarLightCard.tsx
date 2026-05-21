@@ -26,7 +26,7 @@ const PAR_FRACTION = 0.45; // Fraction of solar radiation in PAR range
 const PHOTON_CONVERSION = 4.57; // µmol photons per Joule
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -35,7 +35,7 @@ const Card = styled.div`
 const Title = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 20px 0;
   display: flex;
   align-items: center;
@@ -56,7 +56,7 @@ const Section = styled.div`
   h4 {
     font-size: 13px;
     font-weight: 600;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.text.secondary};
     margin: 0 0 12px 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -68,7 +68,7 @@ const MetricItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   margin-bottom: 8px;
 
@@ -78,13 +78,13 @@ const MetricItem = styled.div`
 
   .label {
     font-size: 13px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
 
   .value {
     font-size: 14px;
     font-weight: 600;
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -158,7 +158,7 @@ const UVIndicator = styled.div<{ $level: 'low' | 'moderate' | 'high' | 'very_hig
 const NoDataMessage = styled.div`
   text-align: center;
   padding: 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 14px;
 `;
 
@@ -166,7 +166,7 @@ const DualValueItem = styled.div`
   display: flex;
   flex-direction: column;
   padding: 10px 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   margin-bottom: 8px;
 
@@ -176,7 +176,7 @@ const DualValueItem = styled.div`
 
   .label {
     font-size: 13px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.text.secondary};
     margin-bottom: 6px;
   }
 
@@ -193,12 +193,12 @@ const DualValueItem = styled.div`
     .value {
       font-size: 14px;
       font-weight: 600;
-      color: ${({ theme }) => theme.colors.textPrimary};
+      color: ${({ theme }) => theme.colors.text.primary};
     }
 
     .unit-label {
       font-size: 10px;
-      color: ${({ theme }) => theme.colors.textDisabled};
+      color: ${({ theme }) => theme.colors.text.tertiary};
       text-transform: uppercase;
     }
   }
@@ -215,7 +215,7 @@ const EstimatedBadge = styled.span`
   align-items: center;
   gap: 4px;
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-left: 4px;
 
   &::before {

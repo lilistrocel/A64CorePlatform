@@ -415,7 +415,7 @@ const SetupContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
   padding: 0.5rem;
 
   @media (min-width: 360px) {
@@ -432,8 +432,8 @@ const SetupContainer = styled.div`
 `;
 
 const SetupCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.lg};
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 1rem;
   width: 100%;
@@ -450,7 +450,7 @@ const SetupCard = styled.div`
   @media (min-width: 640px) {
     padding: 2rem;
     max-width: 520px;
-    border-radius: ${({ theme }) => theme.borderRadius.xl};
+    border-radius: ${({ theme }) => theme.radii.xl};
   }
 `;
 
@@ -477,8 +477,8 @@ const LogoImg = styled.img`
 
 const Title = styled.h1`
   font-size: 1.25rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: center;
   margin: 0 0 0.5rem 0;
 
@@ -497,7 +497,7 @@ const Title = styled.h1`
 
 const Subtitle = styled.p`
   font-size: 0.8125rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   margin: 0 0 1rem 0;
   line-height: 1.5;
@@ -527,8 +527,8 @@ const LoadingSpinner = styled.div`
 const SpinnerIcon = styled.div`
   width: 40px;
   height: 40px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border: 3px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-top-color: ${({ theme }) => theme.colors.accent.sage};
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -539,25 +539,25 @@ const SpinnerIcon = styled.div`
 
 const LoadingText = styled.p`
   margin-top: 1rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.875rem;
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.error}10`};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => `${theme.colors.status.danger}10`};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.75rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 0.875rem;
   text-align: center;
 `;
 
 const WarningBanner = styled.div`
-  background: ${({ theme }) => theme.colors.warningBg};
+  background: ${({ theme }) => theme.colors.status.warning};
   border: 1px solid #f59e0b;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.75rem 1rem;
   margin-bottom: 1.5rem;
   color: #92400e;
@@ -575,7 +575,7 @@ const SuccessIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: ${({ theme }) => theme.colors.success};
+  background: ${({ theme }) => theme.colors.status.success};
   color: white;
   border-radius: 50%;
   display: flex;
@@ -589,7 +589,7 @@ const ExpiredIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: ${({ theme }) => theme.colors.warning || '#F59E0B'};
+  background: ${({ theme }) => theme.colors.status.warning || '#F59E0B'};
   color: white;
   border-radius: 50%;
   display: flex;
@@ -606,13 +606,13 @@ const SessionTimer = styled.div<{ $warning: boolean }>`
   padding: 0.5rem 1rem;
   margin-bottom: 1rem;
   background: ${({ $warning, theme }) =>
-    $warning ? 'rgba(245, 158, 11, 0.1)' : theme.colors.neutral[50]};
+    $warning ? 'rgba(245, 158, 11, 0.1)' : theme.colors.surface.canvas};
   border: 1px solid ${({ $warning, theme }) =>
-    $warning ? 'rgba(245, 158, 11, 0.3)' : theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+    $warning ? 'rgba(245, 158, 11, 0.3)' : theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.md};
   font-size: 0.8125rem;
   color: ${({ $warning, theme }) =>
-    $warning ? '#92400e' : theme.colors.textSecondary};
+    $warning ? '#92400e' : theme.colors.text.secondary};
   transition: all 0.3s ease;
 
   @media (min-width: 640px) {
@@ -625,12 +625,12 @@ const TimerIcon = styled.span`
 `;
 
 const TimerText = styled.span`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
 `;
 
 const TimerValue = styled.span`
-  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-family: ${({ theme }) => theme.fonts.mono};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
 `;
 
 const ButtonGroup = styled.div`
@@ -645,9 +645,9 @@ const StepSection = styled.div<{ $active: boolean }>`
   gap: 0.75rem;
   padding: 0.875rem;
   margin-bottom: 0.75rem;
-  background: ${({ $active, theme }) => $active ? theme.colors.neutral[50] : 'transparent'};
-  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.neutral[200] : 'transparent'};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  background: ${({ $active, theme }) => $active ? theme.colors.surface.canvas : 'transparent'};
+  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.surface.sunken : 'transparent'};
+  border-radius: ${({ theme }) => theme.radii.lg};
   opacity: ${({ $active }) => $active ? 1 : 0.6};
   transition: all 0.3s ease;
 
@@ -671,13 +671,13 @@ const StepNumber = styled.div`
   width: 28px;
   height: 28px;
   min-width: 28px;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[600]} 100%);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   font-size: 0.75rem;
   box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
 
@@ -696,8 +696,8 @@ const StepContent = styled.div`
 
 const StepTitle = styled.h3`
   font-size: 0.9375rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 0.375rem 0;
 
   @media (min-width: 360px) {
@@ -708,7 +708,7 @@ const StepTitle = styled.h3`
 
 const StepDescription = styled.p`
   font-size: 0.8125rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 0.75rem 0;
   line-height: 1.4;
 
@@ -722,10 +722,10 @@ const QRCodeContainer = styled.div`
   display: flex;
   justify-content: center;
   padding: 1rem;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.lg};
   margin-bottom: 0.75rem;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 2px solid ${({ theme }) => theme.colors.surface.sunken};
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   position: relative;
 
@@ -745,7 +745,7 @@ const QRCodeContainer = styled.div`
     position: absolute;
     width: 16px;
     height: 16px;
-    border: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    border: 2px solid ${({ theme }) => theme.colors.accent.sage};
 
     @media (min-width: 360px) {
       width: 20px;
@@ -759,7 +759,7 @@ const QRCodeContainer = styled.div`
     left: -2px;
     border-right: none;
     border-bottom: none;
-    border-radius: ${({ theme }) => theme.borderRadius.lg} 0 0 0;
+    border-radius: ${({ theme }) => theme.radii.lg} 0 0 0;
   }
 
   &::after {
@@ -767,7 +767,7 @@ const QRCodeContainer = styled.div`
     right: -2px;
     border-left: none;
     border-top: none;
-    border-radius: 0 0 ${({ theme }) => theme.borderRadius.lg} 0;
+    border-radius: 0 0 ${({ theme }) => theme.radii.lg} 0;
   }
 `;
 
@@ -775,7 +775,7 @@ const QRCodeImage = styled.img`
   width: 140px;
   height: 140px;
   max-width: 200px;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
 
   @media (min-width: 360px) {
     width: 160px;
@@ -798,13 +798,13 @@ const QRCodePlaceholder = styled.div`
   justify-content: center;
   align-items: center;
   padding: 2rem;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-radius: ${({ theme }) => theme.radii.md};
   margin-bottom: 1rem;
 `;
 
 const QRCodeFallback = styled.p`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.875rem;
   text-align: center;
 `;
@@ -819,7 +819,7 @@ const ManualEntrySection = styled.div`
 
 const ManualEntryLabel = styled.p`
   font-size: 0.6875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 0.5rem 0;
 
   @media (min-width: 360px) {
@@ -831,9 +831,9 @@ const SecretKeyBox = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.625rem 0.75rem;
 
   @media (min-width: 360px) {
@@ -851,10 +851,10 @@ const SecretKeyBox = styled.div`
 
 const SecretKey = styled.code`
   flex: 1;
-  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-family: ${({ theme }) => theme.fonts.mono};
   font-size: 0.6875rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
   word-break: break-all;
   letter-spacing: 1px;
   line-height: 1.6;
@@ -884,15 +884,15 @@ const CopySecretButton = styled.button<{ $copied?: boolean }>`
   justify-content: center;
   gap: 0.375rem;
   background: ${({ $copied, theme }) =>
-    $copied ? theme.colors.success : theme.colors.primary[500]};
+    $copied ? theme.colors.status.success : theme.colors.accent.sage};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   /* Touch-friendly: min 44px height for accessibility */
   min-height: 44px;
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -903,12 +903,12 @@ const CopySecretButton = styled.button<{ $copied?: boolean }>`
     min-height: 36px;
     padding: 0.5rem 0.875rem;
     font-size: 0.8125rem;
-    border-radius: ${({ theme }) => theme.borderRadius.sm};
+    border-radius: ${({ theme }) => theme.radii.sm};
   }
 
   &:hover {
     background: ${({ $copied, theme }) =>
-      $copied ? theme.colors.success : theme.colors.primary[600]};
+      $copied ? theme.colors.status.success : theme.colors.accent.sageDeep};
     transform: translateY(-1px);
   }
 
@@ -956,17 +956,17 @@ const DigitInput = styled.input<{ $filled: boolean; $error: boolean }>`
   width: 36px;
   height: 44px;
   font-size: 1.25rem;
-  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-family: ${({ theme }) => theme.fonts.mono};
   text-align: center;
   border: 2px solid ${({ $error, $filled, theme }) =>
-    $error ? theme.colors.error :
-    $filled ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+    $error ? theme.colors.status.danger :
+    $filled ? theme.colors.accent.sage : theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   background: ${({ $filled, theme }) =>
-    $filled ? theme.colors.primary[50] : theme.colors.background};
+    $filled ? theme.colors.accent.sageSoft : theme.colors.surface.canvas};
   transition: all 0.2s ease;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
 
   @media (min-width: 360px) {
     width: 40px;
@@ -989,14 +989,14 @@ const DigitInput = styled.input<{ $filled: boolean; $error: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ $error, theme }) =>
-      $error ? theme.colors.error : theme.colors.primary[500]};
+      $error ? theme.colors.status.danger : theme.colors.accent.sage};
     box-shadow: 0 0 0 3px ${({ $error, theme }) =>
-      $error ? `${theme.colors.error}20` : theme.colors.primary[100]};
+      $error ? `${theme.colors.status.danger}20` : theme.colors.accent.sageSoft};
     animation: ${pulse} 0.3s ease;
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.border.subtle};
   }
 
   /* Hide spinner controls in number inputs */
@@ -1022,12 +1022,12 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   min-height: 48px;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
   color: white;
   background: ${({ disabled, theme }) =>
-    disabled ? theme.colors.neutral[300] : `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[600]} 100%)`};
+    disabled ? theme.colors.border.subtle : `linear-gradient(135deg, ${theme.colors.accent.sage} 0%, ${theme.colors.accent.sageDeep} 100%)`};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   transition: all 0.2s ease;
   box-shadow: ${({ disabled }) => disabled ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'};
@@ -1079,7 +1079,7 @@ const CancelLink = styled.button`
   padding: 0.75rem 0.5rem;
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s;
@@ -1089,7 +1089,7 @@ const CancelLink = styled.button`
   }
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
+    color: ${({ theme }) => theme.colors.text.primary};
     text-decoration: underline;
   }
 `;

@@ -28,9 +28,9 @@ type SortDirection = 'asc' | 'desc';
 // ============================================================================
 
 const TableContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   overflow: hidden;
 `;
 
@@ -40,8 +40,8 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
@@ -49,7 +49,7 @@ const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
@@ -57,7 +57,7 @@ const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.neutral[200] : theme.colors.surface)};
+    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.surface.sunken : theme.colors.surface.raised)};
   }
 `;
 
@@ -69,20 +69,20 @@ const SortIndicator = styled.span`
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   transition: background 150ms ease-in-out;
 
   /* Striped rows for readability - alternating row colors */
   &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.neutral[50]};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[200]};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 
   &:last-child {
@@ -93,7 +93,7 @@ const TableRow = styled.tr`
 const TableCell = styled.td`
   padding: 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -109,7 +109,7 @@ const CustomerNameCell = styled.div`
 
 const CustomerName = styled.span`
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -118,14 +118,14 @@ const CustomerName = styled.span`
 
 const CustomerCode = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-family: 'JetBrains Mono', monospace;
 `;
 
 const TruncatedCell = styled.td`
   padding: 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -171,8 +171,8 @@ const TypeBadge = styled.span`
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Actions = styled.div`
@@ -197,7 +197,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         background: #3B82F6;
         color: white;
         &:hover {
-          background: #1976d2;
+          background: #0F6E56;
         }
       `;
     }
@@ -217,7 +217,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
       color: #3B82F6;
       border: 1px solid #3B82F6;
       &:hover {
-        background: #e3f2fd;
+        background: rgba(15, 110, 86, 0.05);
       }
     `;
   }}
@@ -226,7 +226,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // ============================================================================

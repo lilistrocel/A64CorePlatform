@@ -30,9 +30,9 @@ type SortDirection = 'asc' | 'desc';
 // ============================================================================
 
 const TableContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   overflow: hidden;
 `;
 
@@ -42,8 +42,8 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
@@ -51,7 +51,7 @@ const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: ${({ $sortable }) => ($sortable ? 'pointer' : 'default')};
@@ -59,7 +59,7 @@ const TableHeaderCell = styled.th<{ $sortable?: boolean }>`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.neutral[200] : theme.colors.surface)};
+    background: ${({ $sortable, theme }) => ($sortable ? theme.colors.surface.sunken : theme.colors.surface.raised)};
   }
 `;
 
@@ -71,19 +71,19 @@ const SortIndicator = styled.span`
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   transition: background 150ms ease-in-out;
 
   &:nth-child(even) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:nth-child(odd) {
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:last-child {
@@ -94,13 +94,13 @@ const TableRow = styled.tr`
 const TableCell = styled.td`
   padding: 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ShipmentCodeCell = styled.div`
   font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const StatusBadge = styled.span<{ $color: string }>`
@@ -116,7 +116,7 @@ const StatusBadge = styled.span<{ $color: string }>`
 
 const CargoInfo = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Actions = styled.div`
@@ -137,29 +137,29 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   ${({ $variant, theme }) => {
     if ($variant === 'primary') {
       return `
-        background: ${theme.colors.primary[500]};
+        background: ${theme.colors.accent.sage};
         color: white;
         &:hover {
-          background: ${theme.colors.primary[700]};
+          background: ${theme.colors.accent.sageDeep};
         }
       `;
     }
     if ($variant === 'danger') {
       return `
         background: transparent;
-        color: ${theme.colors.error};
-        border: 1px solid ${theme.colors.error};
+        color: ${theme.colors.status.danger};
+        border: 1px solid ${theme.colors.status.danger};
         &:hover {
-          background: ${theme.colors.errorBg};
+          background: ${theme.colors.status.danger};
         }
       `;
     }
     return `
       background: transparent;
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      color: ${theme.colors.accent.sage};
+      border: 1px solid ${theme.colors.accent.sage};
       &:hover {
-        background: ${theme.colors.infoBg};
+        background: ${theme.colors.surface.sunken};
       }
     `;
   }}
@@ -168,7 +168,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // ============================================================================

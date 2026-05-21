@@ -115,9 +115,9 @@ interface CardWrapperProps {
 }
 
 const CardWrapper = styled.div<CardWrapperProps>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
-  border: 2px solid ${({ $selected, theme }) => ($selected ? '#2196f3' : theme.colors.neutral[300])};
+  border: 2px solid ${({ $selected, theme }) => ($selected ? '#0F6E56' : theme.colors.border.subtle)};
   padding: 16px;
   box-shadow: ${({ $selected }) =>
     $selected
@@ -134,7 +134,7 @@ const CardWrapper = styled.div<CardWrapperProps>`
       transform: translateY(-1px);
     }
     &:focus-visible {
-      outline: 2px solid #2196f3;
+      outline: 2px solid #0F6E56;
       outline-offset: 2px;
     }
   `}
@@ -161,7 +161,7 @@ const HeaderInfo = styled.div`
 const FacilityName = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 2px 0;
   white-space: nowrap;
   overflow: hidden;
@@ -170,7 +170,7 @@ const FacilityName = styled.h3`
 
 const FacilityType = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 interface StatusBadgeProps {
@@ -201,7 +201,7 @@ const LocationIcon = styled.span`
 
 const LocationText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -226,14 +226,14 @@ interface StatValueProps {
 const StatValue = styled.div<StatValueProps>`
   font-size: 18px;
   font-weight: 700;
-  color: ${({ $highlight, theme }) => ($highlight ? '#10B981' : theme.colors.textPrimary)};
+  color: ${({ $highlight, theme }) => ($highlight ? '#10B981' : theme.colors.text.primary)};
   line-height: 1;
   margin-bottom: 2px;
 `;
 
 const StatLabel = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;
@@ -241,12 +241,12 @@ const StatLabel = styled.div`
 const Divider = styled.div`
   width: 1px;
   height: 28px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const UtilizationTrack = styled.div`
   height: 4px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
   overflow: hidden;
 `;

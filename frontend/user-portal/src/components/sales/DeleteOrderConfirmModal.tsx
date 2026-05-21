@@ -84,7 +84,7 @@ const Overlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
   width: 100%;
@@ -99,14 +99,14 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -119,15 +119,15 @@ const CloseButton = styled.button`
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 20px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
   line-height: 1;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[100]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:focus-visible {
@@ -140,9 +140,9 @@ const SubHeader = styled.p`
   margin: 0;
   padding: 12px 24px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ModalBody = styled.div`
@@ -158,17 +158,17 @@ const AllocationRow = styled.div`
   padding: 12px 14px;
   border-radius: 8px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ActiveRow = styled(AllocationRow)`
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const MissingRow = styled(AllocationRow)`
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const ExpiredPanel = styled(AllocationRow)`
@@ -193,7 +193,7 @@ const RadioLabel = styled.label`
   align-items: flex-start;
   gap: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
 
   input[type='radio'] {
@@ -238,7 +238,7 @@ const GroupLabel = styled.div`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
   margin-bottom: 2px;
 `;
@@ -249,7 +249,7 @@ const ModalFooter = styled.div`
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
@@ -266,9 +266,9 @@ const FooterButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
-        &:hover:not(:disabled) { background: ${theme.colors.surface}; }
+        color: ${theme.colors.text.secondary};
+        border: 1px solid ${theme.colors.border.subtle};
+        &:hover:not(:disabled) { background: ${theme.colors.surface.raised}; }
       `;
     }
     if ($variant === 'danger') {

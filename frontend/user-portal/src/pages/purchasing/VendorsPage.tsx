@@ -39,7 +39,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -55,29 +55,29 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 220px;
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const Select = styled.select`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const PrimaryButton = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -85,37 +85,37 @@ const PrimaryButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageDeep}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const DangerButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg}; }
+  &:hover { background: ${({ theme }) => theme.colors.status.danger}; }
 `;
 
 const GhostButton = styled.button`
   padding: 6px 14px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   overflow: hidden;
   box-shadow: ${({ theme }) => theme.shadows.sm};
@@ -128,22 +128,22 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 14px 16px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const Tr = styled.tr`
   cursor: pointer;
   transition: background 100ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[50]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.canvas}; }
   &:last-child td { border-bottom: none; }
 `;
 
@@ -155,9 +155,9 @@ const Badge = styled.span<{ $active: boolean }>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.successBg || '#ecfdf5' : theme.colors.neutral[100]};
+    $active ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.success || '#10b981' : theme.colors.textDisabled};
+    $active ? theme.colors.status.success || '#10b981' : theme.colors.text.tertiary};
 `;
 
 const BlockedBadge = styled.span`
@@ -167,14 +167,14 @@ const BlockedBadge = styled.span`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ theme }) => theme.colors.errorBg};
-  color: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  color: ${({ theme }) => theme.colors.status.danger};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 15px;
 `;
 
@@ -184,7 +184,7 @@ const Pagination = styled.div`
   align-items: center;
   padding: 16px 0;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PageButtons = styled.div`
@@ -206,9 +206,9 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 16px;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
   width: 100%;
   max-width: 620px;
   max-height: 90vh;
@@ -222,14 +222,14 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -238,11 +238,11 @@ const CloseButton = styled.button`
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px;
   border-radius: 6px;
   line-height: 1;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const ModalBody = styled.div`
@@ -258,7 +258,7 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-shrink: 0;
 `;
 
@@ -278,27 +278,27 @@ const Field = styled.div`
 const Label = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Input = styled.input`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
   &[disabled] { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const Hint = styled.span`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 13px;
   margin: 0;
 `;
@@ -306,17 +306,17 @@ const ErrorText = styled.p`
 /** Per-field inline error shown directly below the offending input. */
 const FieldError = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   margin-top: 2px;
 `;
 
 /** Input variant that shows a red border when the field has an error. */
 const InputWithError = styled(Input)<{ $hasError?: boolean }>`
   border-color: ${({ $hasError, theme }) =>
-    $hasError ? theme.colors.error : undefined};
+    $hasError ? theme.colors.status.danger : undefined};
   &:focus {
     border-color: ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error : theme.colors.primary[500]};
+      $hasError ? theme.colors.status.danger : theme.colors.accent.sage};
   }
 `;
 

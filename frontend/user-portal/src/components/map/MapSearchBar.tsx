@@ -200,7 +200,7 @@ const SearchContainer = styled.div`
 const SearchForm = styled.form`
   display: flex;
   align-items: center;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   padding: 8px 12px;
@@ -219,12 +219,12 @@ const SearchInput = styled.input`
   border: none;
   outline: none;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   background: transparent;
   min-width: 0;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
@@ -248,19 +248,19 @@ const ClearButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border: none;
   border-radius: 50%;
   width: 20px;
   height: 20px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex-shrink: 0;
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.border.subtle};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -269,7 +269,7 @@ const ResultsList = styled.ul`
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   list-style: none;
@@ -288,7 +288,7 @@ const ResultItem = styled.li`
   transition: background 0.15s;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -314,7 +314,7 @@ const ErrorMessage = styled.div`
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   color: #dc2626;
   padding: 8px 12px;
   border-radius: 8px;

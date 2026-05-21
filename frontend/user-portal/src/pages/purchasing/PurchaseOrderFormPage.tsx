@@ -40,7 +40,7 @@ const Container = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -51,12 +51,12 @@ const BackLink = styled.button`
 const Title = styled.h1`
   font-size: 26px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 24px;
 `;
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 12px;
   box-shadow: ${({ theme }) => theme.shadows.sm};
   padding: 24px 28px;
@@ -66,7 +66,7 @@ const Card = styled.div`
 const CardTitle = styled.h2`
   font-size: 16px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px;
 `;
 
@@ -87,40 +87,40 @@ const Field = styled.div`
 const Label = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Input = styled.input`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const Select = styled.select`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const Textarea = styled.textarea`
   padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary[500]}; }
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.accent.sage}; }
 `;
 
 const Table = styled.table`
@@ -135,14 +135,14 @@ const Th = styled.th`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const Td = styled.td`
   padding: 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
   vertical-align: top;
 `;
 
@@ -155,7 +155,7 @@ const FooterRow = styled.div`
 
 const PrimaryButton = styled.button`
   padding: 10px 24px;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 8px;
@@ -163,47 +163,47 @@ const PrimaryButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageDeep}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const GhostButton = styled.button`
   padding: 10px 20px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:hover { background: ${({ theme }) => theme.colors.surface.raised}; }
 `;
 
 const DangerIconButton = styled.button`
   padding: 6px 10px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
-  border: 1px solid ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger || '#ef4444'};
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'}; }
 `;
 
 const AddLineButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.primary[600] || '#2563eb'};
-  border: 1px dashed ${({ theme }) => theme.colors.primary[400] || '#60a5fa'};
+  color: ${({ theme }) => theme.colors.accent.sageDeep || '#2563eb'};
+  border: 1px dashed ${({ theme }) => theme.colors.accent.sage || '#60a5fa'};
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   width: 100%;
   margin-top: 8px;
-  &:hover { background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageSoft || '#eff6ff'}; }
 `;
 
 const ErrorText = styled.p`
-  color: ${({ theme }) => theme.colors.error || '#ef4444'};
+  color: ${({ theme }) => theme.colors.status.danger || '#ef4444'};
   font-size: 13px;
   margin: 8px 0 0;
 `;

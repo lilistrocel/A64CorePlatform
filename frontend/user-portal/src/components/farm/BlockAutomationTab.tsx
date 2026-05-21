@@ -76,7 +76,7 @@ interface BlockAutomationTabProps {
   farmId: string;
 }
 
-type SubTab = 'overview' | 'equipment' | 'automations' | 'alerts' | 'lab';
+type SubTabKey = 'overview' | 'equipment' | 'automations' | 'alerts' | 'lab';
 
 // ============================================================================
 // COMPONENT
@@ -91,7 +91,7 @@ export function BlockAutomationTab({ blockId, farmId }: BlockAutomationTabProps)
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<SubTabKey>('overview');
 
   // Connection form state
   const [showConnectionForm, setShowConnectionForm] = useState(false);
@@ -1249,7 +1249,7 @@ const LoadingState = styled.div`
   justify-content: center;
   padding: 32px;
   gap: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Section = styled.div`
@@ -1270,13 +1270,13 @@ const SectionTitle = styled.h3`
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const SectionSubtitle = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ConfigEmptyState = styled.div`
@@ -1286,8 +1286,8 @@ const ConfigEmptyState = styled.div`
   justify-content: center;
   padding: 32px;
   gap: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 2px dashed ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
 `;
 
@@ -1298,7 +1298,7 @@ const EmptyState = styled.div`
   justify-content: center;
   padding: 32px;
   gap: 16px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   text-align: center;
 `;
@@ -1309,7 +1309,7 @@ const EmptyIcon = styled.div`
 
 const EmptyText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ConfigButton = styled.button`
@@ -1329,8 +1329,8 @@ const ConfigButton = styled.button`
 `;
 
 const ConnectionForm = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 24px;
   display: flex;
@@ -1342,7 +1342,7 @@ const ConnectionForm = styled.div`
 const FormTitle = styled.h4`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -1355,16 +1355,16 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input`
   padding: 8px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   transition: all 150ms ease-in-out;
 
   &:focus {
@@ -1374,7 +1374,7 @@ const Input = styled.input`
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
@@ -1406,8 +1406,8 @@ const ConnectButton = styled.button`
 
 const ConfigCard = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -1423,7 +1423,7 @@ const ConfigInfo = styled.div`
 const ConfigLabel = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ConfigValue = styled.div`
@@ -1432,7 +1432,7 @@ const ConfigValue = styled.div`
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-family: 'Courier New', monospace;
 `;
 
@@ -1448,9 +1448,9 @@ const RefreshButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
@@ -1458,7 +1458,7 @@ const RefreshButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 
   &:disabled {
@@ -1479,15 +1479,15 @@ const ToggleInput = styled.input`
 
 const ToggleLabel = styled.label`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
 `;
 
 const DisconnectButton = styled.button`
   padding: 8px 16px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
@@ -1495,7 +1495,7 @@ const DisconnectButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: ${({ theme }) => theme.colors.status.danger};
   }
 `;
 
@@ -1504,7 +1504,7 @@ const LastUpdateText = styled.div`
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ErrorBanner = styled.div`
@@ -1512,10 +1512,10 @@ const ErrorBanner = styled.div`
   align-items: center;
   gap: 16px;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ErrorText = styled.div`
@@ -1542,7 +1542,7 @@ const RetryButton = styled.button`
 const SubTabBar = styled.div`
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   padding-bottom: 4px;
 `;
 
@@ -1551,8 +1551,8 @@ const SubTab = styled.button<{ $active: boolean }>`
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#e3f2fd' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.textSecondary)};
+  background: ${({ $active }) => ($active ? 'rgba(15, 110, 86, 0.05)' : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? '#3b82f6' : theme.colors.text.secondary)};
   border: none;
   border-bottom: 2px solid ${({ $active }) => ($active ? '#3b82f6' : 'transparent')};
   font-size: 14px;
@@ -1561,13 +1561,13 @@ const SubTab = styled.button<{ $active: boolean }>`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
-    color: ${({ theme }) => theme.colors.primary[500]};
+    background: ${({ theme }) => theme.colors.surface.sunken};
+    color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
 const AlertBadge = styled.span`
-  background: ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
   color: white;
   padding: 2px 6px;
   border-radius: 10px;
@@ -1584,8 +1584,8 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -1596,7 +1596,7 @@ const StatCard = styled.div`
 const StatLabel = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -1604,7 +1604,7 @@ const StatLabel = styled.div`
 const StatValue = styled.div`
   font-size: 30px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const StatBreakdown = styled.div`
@@ -1626,7 +1626,7 @@ const AlertsList = styled.div`
 `;
 
 const AlertCard = styled.div<{ $severity: 'critical' | 'warning' | 'info' }>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-left: 4px solid ${({ $severity }) => {
     switch ($severity) {
       case 'critical': return '#ef4444';
@@ -1651,13 +1651,13 @@ const AlertHeader = styled.div`
 const AlertTitle = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   flex: 1;
 `;
 
 const AlertMeta = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const AcknowledgeButton = styled.button`
@@ -1702,8 +1702,8 @@ const EquipmentGrid = styled.div`
 
 const EquipmentCard = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -1744,7 +1744,7 @@ const EquipmentInfo = styled.div`
 const EquipmentName = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const EquipmentMeta = styled.div`
@@ -1762,16 +1762,16 @@ const StatusDot = styled.div<{ $online: boolean }>`
 
 const EquipmentStatus = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: capitalize;
 `;
 
 const EquipmentType = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   padding: 2px 6px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
 `;
 
@@ -1780,7 +1780,7 @@ const ReadingsContainer = styled.div`
   flex-direction: column;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const ReadingRow = styled.div`
@@ -1792,14 +1792,14 @@ const ReadingRow = styled.div`
 const ReadingLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: capitalize;
 `;
 
 const ReadingValue = styled.div`
   font-size: 16px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const RelayControls = styled.div`
@@ -1807,7 +1807,7 @@ const RelayControls = styled.div`
   flex-direction: column;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const RelayControl = styled.div`
@@ -1819,13 +1819,13 @@ const RelayControl = styled.div`
 const RelayLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const ToggleRelayButton = styled.button<{ $isOn: boolean }>`
   padding: 4px 12px;
-  background: ${({ $isOn, theme }) => ($isOn ? '#10b981' : theme.colors.neutral[300])};
-  color: ${({ $isOn, theme }) => ($isOn ? 'white' : theme.colors.textPrimary)};
+  background: ${({ $isOn, theme }) => ($isOn ? '#10b981' : theme.colors.border.subtle)};
+  color: ${({ $isOn, theme }) => ($isOn ? 'white' : theme.colors.text.primary)};
   border: none;
   border-radius: 4px;
   font-size: 12px;
@@ -1851,8 +1851,8 @@ const AutomationsList = styled.div`
 `;
 
 const AutomationCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -1877,12 +1877,12 @@ const AutomationInfo = styled.div`
 const AutomationName = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const AutomationDescription = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const AutomationBadge = styled.span<{ $enabled: boolean }>`
@@ -1896,7 +1896,7 @@ const AutomationBadge = styled.span<{ $enabled: boolean }>`
 
 const AutomationMeta = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const AutomationActions = styled.div`
@@ -1909,9 +1909,9 @@ const AutomationButton = styled.button`
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
@@ -1919,7 +1919,7 @@ const AutomationButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 
   &:disabled {
@@ -1945,11 +1945,11 @@ const LabFilterGroup = styled.div`
 
 const LabSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   min-width: 140px;
 
   &:focus {
@@ -1984,7 +1984,7 @@ const LabSectionTitle = styled.h4`
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 8px 0 0 0;
 `;
 
@@ -1995,8 +1995,8 @@ const LabZoneGrid = styled.div`
 `;
 
 const LabZoneCard = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 16px;
 `;
@@ -2004,10 +2004,10 @@ const LabZoneCard = styled.div`
 const LabZoneHeader = styled.div`
   font-size: 15px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const LabReadingsGrid = styled.div`
@@ -2017,8 +2017,8 @@ const LabReadingsGrid = styled.div`
 `;
 
 const LabReadingCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   padding: 8px;
   text-align: center;
@@ -2027,7 +2027,7 @@ const LabReadingCard = styled.div`
 const LabReadingNutrient = styled.div`
   font-size: 11px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -2035,26 +2035,26 @@ const LabReadingNutrient = styled.div`
 const LabReadingValue = styled.div`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 4px 0 2px;
 `;
 
 const LabReadingUnit = styled.div`
   font-size: 11px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const LabReadingDate = styled.div`
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-top: 4px;
 `;
 
 const LabTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -2064,29 +2064,29 @@ const LabTh = styled.th`
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const LabTd = styled.td`
   padding: 10px 12px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const LabZoneStatsHeader = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[500]};
+  color: ${({ theme }) => theme.colors.accent.sage};
   margin-top: 8px;
   padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.infoBg};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 6px 6px 0 0;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-bottom: none;
 `;
 

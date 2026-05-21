@@ -67,7 +67,7 @@ const Header = styled.div`
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -83,12 +83,12 @@ const Actions = styled.div`
 
 const SearchInput = styled.input`
   padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 16px; /* Prevents iOS zoom on focus */
   width: 300px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
   min-height: 44px; /* Touch-friendly height */
 
@@ -99,7 +99,7 @@ const SearchInput = styled.input`
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   @media (max-width: 768px) {
@@ -126,7 +126,7 @@ const CreateButton = styled.button`
   white-space: nowrap;
 
   &:hover {
-    background: #1976d2;
+    background: #0F6E56;
   }
 
   &:active {
@@ -161,9 +161,9 @@ const slideDown = keyframes`
 const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
   display: none;
   padding: 12px 16px;
-  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#EBF5FF' : theme.colors.surface)};
-  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.neutral[300])};
+  background: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#EBF5FF' : theme.colors.surface.raised)};
+  color: ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.text.secondary)};
+  border: 1px solid ${({ $hasActiveFilters, theme }) => ($hasActiveFilters ? '#3B82F6' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -231,8 +231,8 @@ const FilterBar = styled.div<{ $isCollapsed?: boolean }>`
 const FilterButton = styled.button<{ $active: boolean }>`
   padding: 12px 16px;
   background: ${({ $active }) => ($active ? '#3B82F6' : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -244,7 +244,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
   justify-content: center;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.raised)};
   }
 
   &:active {
@@ -321,7 +321,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 4px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -345,7 +345,7 @@ const ErrorContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const EmptyIcon = styled.div`
@@ -356,13 +356,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin: 0 0 24px 0;
 `;
 
@@ -381,9 +381,9 @@ const Pagination = styled.div`
 
 const PageButton = styled.button<{ $active?: boolean }>`
   padding: 12px 16px;
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
@@ -394,7 +394,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   justify-content: center;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.raised)};
   }
 
   &:active:not(:disabled) {
@@ -409,7 +409,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
 
 const PageInfo = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PageSizeContainer = styled.div`
@@ -428,16 +428,16 @@ const PageSizeContainer = styled.div`
 
 const PageSizeLabel = styled.span`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const PageSizeSelect = styled.select`
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 16px; /* Prevents iOS zoom */
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   min-height: 44px; /* Touch-friendly height */
@@ -449,7 +449,7 @@ const PageSizeSelect = styled.select`
   }
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.neutral[400]};
+    border-color: ${({ theme }) => theme.colors.border.default};
   }
 `;
 

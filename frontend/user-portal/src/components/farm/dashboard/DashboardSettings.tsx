@@ -294,7 +294,7 @@ const Modal = styled.div`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: ${({ theme }) => theme.shadows.lg};
   z-index: 9999;
@@ -310,7 +310,7 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const Title = styled.h2`
@@ -324,7 +324,7 @@ const CloseButton = styled.button`
   width: 32px;
   height: 32px;
   border: none;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 50%;
   font-size: 18px;
   cursor: pointer;
@@ -334,7 +334,7 @@ const CloseButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
   }
 `;
 
@@ -402,11 +402,11 @@ const SettingValue = styled.div`
 const Select = styled.select`
   flex: 1;
   padding: 8px 12px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
 
   &:focus {
@@ -432,7 +432,7 @@ const IconSetOption = styled.div<{ $isSelected: boolean }>`
 
   &:hover {
     border-color: #3b82f6;
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
 `;
 
@@ -473,7 +473,7 @@ const ColorSwatch = styled.div<{ $color: string }>`
   height: 32px;
   border-radius: 6px;
   background: ${(props) => props.$color};
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   cursor: pointer;
   transition: transform 150ms ease-in-out;
 
@@ -486,7 +486,7 @@ const Footer = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 16px 24px;
-  border-top: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 2px solid ${({ theme }) => theme.colors.border.subtle};
   gap: 12px;
 `;
 
@@ -494,7 +494,7 @@ const ResetButton = styled.button`
   padding: 10px 20px;
   border: 2px solid #f44336;
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   color: #f44336;
   font-size: 14px;
   font-weight: 500;
@@ -502,7 +502,7 @@ const ResetButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: ${({ theme }) => theme.colors.status.danger};
   }
 `;
 
@@ -518,6 +518,6 @@ const SaveButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: #1976d2;
+    background: #0F6E56;
   }
 `;

@@ -112,9 +112,9 @@ export function InputBox({
 // ---------------------------------------------------------------------------
 
 const Container = styled.div`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.background};
+  padding: ${({ theme }) => theme.space['2']} ${({ theme }) => theme.space['4']};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -124,18 +124,18 @@ const Container = styled.div`
 const InputRow = styled.div`
   display: flex;
   align-items: flex-end;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const Textarea = styled.textarea`
   flex: 1;
   padding: 9px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 20px;
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
   font-family: inherit;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.raised};
   resize: none;
   line-height: 1.5;
   min-height: 38px;
@@ -145,13 +145,13 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}25;
-    background: ${({ theme }) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.accent.sage}25;
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:disabled {
@@ -164,7 +164,7 @@ const Textarea = styled.textarea`
     width: 4px;
   }
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.neutral[300]};
+    background: ${({ theme }) => theme.colors.border.subtle};
     border-radius: 2px;
   }
 `;
@@ -181,12 +181,12 @@ const ActionButton = styled.button<{ $variant: 'send' | 'cancel' }>`
   flex-shrink: 0;
   transition: all 150ms ease;
   background: ${({ $variant, theme }) =>
-    $variant === 'send' ? theme.colors.primary[500] : theme.colors.error};
+    $variant === 'send' ? theme.colors.accent.sage : theme.colors.status.danger};
   color: white;
 
   &:hover:not(:disabled) {
     background: ${({ $variant, theme }) =>
-      $variant === 'send' ? theme.colors.primary[700] : '#dc2626'};
+      $variant === 'send' ? theme.colors.accent.sageDeep : '#dc2626'};
     transform: scale(1.05);
   }
 
@@ -200,13 +200,13 @@ const ActionButton = styled.button<{ $variant: 'send' | 'cancel' }>`
 const CharCounter = styled.div<{ $isAtLimit: boolean }>`
   font-size: 11px;
   color: ${({ $isAtLimit, theme }) =>
-    $isAtLimit ? theme.colors.error : theme.colors.warning ?? '#f59e0b'};
+    $isAtLimit ? theme.colors.status.danger : theme.colors.status.warning ?? '#f59e0b'};
   text-align: right;
   font-family: 'JetBrains Mono', monospace;
 `;
 
 const Hint = styled.div`
   font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-align: center;
 `;

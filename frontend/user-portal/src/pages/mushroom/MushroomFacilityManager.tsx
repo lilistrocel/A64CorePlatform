@@ -435,7 +435,7 @@ const Container = styled.div`
   padding: 24px;
   max-width: 100%;
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const PageHeader = styled.div`
@@ -452,7 +452,7 @@ const TitleSection = styled.div``;
 const PageTitle = styled.h1`
   font-size: 28px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
 `;
 
@@ -491,11 +491,11 @@ const FacilitiesGrid = styled.div`
 `;
 
 const DetailPanel = styled.section`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 2px solid #e3f2fd;
+  border: 2px solid rgba(15, 110, 86, 0.05);
   margin-top: 8px;
 `;
 
@@ -511,7 +511,7 @@ const DetailPanelHeader = styled.div`
 const DetailPanelTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -525,7 +525,7 @@ const AddRoomBtn = styled.button`
   padding: 8px 14px;
   border: 1px solid #3b82f6;
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   color: #3b82f6;
   font-size: 13px;
   font-weight: 600;
@@ -533,7 +533,7 @@ const AddRoomBtn = styled.button`
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.infoBg};
+    background: ${({ theme }) => theme.colors.surface.sunken};
   }
   &:focus-visible {
     outline: 2px solid #3b82f6;
@@ -546,17 +546,17 @@ const CloseDetailBtn = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   padding: 4px 8px;
   border-radius: 6px;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textSecondary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
   }
 `;
 
@@ -567,7 +567,7 @@ const DetailSection = styled.div`
 const DetailSectionTitle = styled.h3`
   font-size: 15px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -578,7 +578,7 @@ const InlineSpinner = styled.span`
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -599,22 +599,22 @@ const SubstrateRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   flex-wrap: wrap;
 `;
 
 const SubstrateBatchCode = styled.span`
   font-size: 13px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   min-width: 80px;
 `;
 
 const SubstrateType = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: capitalize;
   flex: 1;
 `;
@@ -645,7 +645,7 @@ const SubstrateStatus = styled.span<SubstrateStatusProps>`
 
 const SubstrateWeight = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // Shared form elements
@@ -661,7 +661,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 3px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -673,13 +673,13 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
   max-width: 480px;
@@ -698,13 +698,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 22px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const EmptyText = styled.p`
   font-size: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
@@ -722,7 +722,7 @@ const Backdrop = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   width: 100%;
@@ -742,7 +742,7 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -751,17 +751,17 @@ const CloseModalBtn = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
   }
 `;
 
@@ -786,7 +786,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Required = styled.span`
@@ -796,59 +796,59 @@ const Required = styled.span`
 
 const Input = styled.input`
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   outline: none;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 `;
 
 const SelectField = styled.select`
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
   outline: none;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 `;
 
 const TextArea = styled.textarea`
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   resize: vertical;
   font-family: inherit;
   outline: none;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 `;
@@ -856,7 +856,7 @@ const TextArea = styled.textarea`
 const FormError = styled.div`
   font-size: 13px;
   color: #ef5350;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 10px 12px;
@@ -870,20 +870,20 @@ const FormActions = styled.div`
 
 const CancelBtn = styled.button`
   padding: 10px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;

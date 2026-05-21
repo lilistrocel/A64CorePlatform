@@ -234,7 +234,7 @@ const Overlay = styled.div`
 `;
 
 const ModalBox = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
   width: 100%;
@@ -247,13 +247,13 @@ const ModalBox = styled.div`
 
 const ModalHeader = styled.div`
   padding: 20px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
   flex-shrink: 0;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 `;
 
 const ModalHeaderContent = styled.div`
@@ -265,18 +265,18 @@ const ModalHeaderContent = styled.div`
 const ModalTitle = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const ModalSubtitle = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const CycleLengthDisplay = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-style: italic;
 `;
 
@@ -285,7 +285,7 @@ const CloseButton = styled.button`
   border: none;
   font-size: 22px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px 8px;
   border-radius: 4px;
   line-height: 1;
@@ -293,8 +293,8 @@ const CloseButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.textPrimary};
-    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.text.primary};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:disabled {
@@ -311,13 +311,13 @@ const ModalBody = styled.div`
 
 const ModalFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 `;
 
 const FooterActions = styled.div`
@@ -339,24 +339,24 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const FieldInput = styled.input<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   width: 100%;
   box-sizing: border-box;
   transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -366,8 +366,8 @@ const FieldInput = styled.input<{ $hasError?: boolean }>`
   }
 
   &:read-only {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textSecondary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.secondary};
     cursor: default;
   }
 
@@ -379,11 +379,11 @@ const FieldInput = styled.input<{ $hasError?: boolean }>`
 
 const FieldSelect = styled.select<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 6px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   width: 100%;
   box-sizing: border-box;
   cursor: pointer;
@@ -398,20 +398,20 @@ const FieldSelect = styled.select<{ $hasError?: boolean }>`
 
 const FieldTextArea = styled.textarea<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   resize: vertical;
   min-height: 60px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   width: 100%;
   box-sizing: border-box;
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -444,11 +444,11 @@ const PrimaryButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   border: none;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 
   &:disabled {
@@ -465,11 +465,11 @@ const SecondaryButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:disabled {
@@ -537,12 +537,12 @@ const MoveButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   flex-shrink: 0;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 
   &:disabled {
@@ -578,13 +578,13 @@ const Section = styled.div`
 const SectionLabel = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const CardBlock = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 12px;
@@ -592,8 +592,8 @@ const CardBlock = styled.div`
 
 const CardBlockHeader = styled.div`
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -604,7 +604,7 @@ const CardBlockHeaderLeft = styled.div`
   flex: 1;
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -616,20 +616,20 @@ const CardBlockBody = styled.div`
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 `;
 
 const RuleBlock = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 8px;
   overflow: hidden;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 `;
 
 const RuleBlockHeader = styled.div`
   padding: 10px 14px;
-  background: ${({ theme }) => theme.colors.neutral[100]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -640,7 +640,7 @@ const RuleBlockHeaderLeft = styled.div`
   flex: 1;
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -667,11 +667,11 @@ const IngredientRow = styled.div`
   padding: 8px;
   background: white;
   border-radius: 6px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const ApplicationBlock = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 6px;
   overflow: hidden;
   background: white;
@@ -680,14 +680,14 @@ const ApplicationBlock = styled.div`
 
 const ApplicationHeader = styled.div`
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ApplicationBody = styled.div`
@@ -769,8 +769,8 @@ const TypeaheadDropdown = styled.ul`
   left: 0;
   right: 0;
   z-index: 100;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   max-height: 180px;
@@ -784,10 +784,10 @@ const TypeaheadItem = styled.li`
   padding: 8px 12px;
   font-size: 13px;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -796,19 +796,19 @@ const LockedNameRow = styled.div`
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 32px 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
-  border: 2px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px dashed ${({ theme }) => theme.colors.border.subtle};
   border-radius: 10px;
   margin-bottom: 12px;
 `;

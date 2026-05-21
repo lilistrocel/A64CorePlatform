@@ -39,7 +39,7 @@ const HeaderLeft = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -82,10 +82,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   `
       : `
     background: transparent;
-    color: ${theme.colors.textSecondary};
-    border: 1px solid ${theme.colors.neutral[300]};
+    color: ${theme.colors.text.secondary};
+    border: 1px solid ${theme.colors.border.subtle};
     &:hover:not(:disabled) {
-      background: ${theme.colors.surface};
+      background: ${theme.colors.surface.raised};
     }
   `}
 
@@ -100,7 +100,7 @@ const SummaryGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   padding: 24px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
 `;
 
@@ -111,7 +111,7 @@ const SummaryCard = styled.div`
 const SummaryLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -120,12 +120,12 @@ const SummaryLabel = styled.div`
 const SummaryValue = styled.div`
   font-size: 28px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const SummarySubtext = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
@@ -136,8 +136,8 @@ const HarvestsList = styled.div`
 `;
 
 const HarvestCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -154,12 +154,12 @@ const HarvestInfo = styled.div`
 const HarvestDate = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const HarvestMeta = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   display: flex;
   gap: 12px;
 `;
@@ -188,13 +188,13 @@ const QualityBadge = styled.span<{ $grade: QualityGrade }>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 48px 24px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 // Modal styles
@@ -212,7 +212,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
   max-width: 500px;
@@ -224,7 +224,7 @@ const Modal = styled.div`
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 24px 0;
 `;
 
@@ -243,20 +243,20 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input`
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -267,18 +267,18 @@ const Input = styled.input`
 
 const Textarea = styled.textarea`
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   min-height: 80px;
   resize: vertical;
   font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -289,11 +289,11 @@ const Textarea = styled.textarea`
 
 const Select = styled.select`
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &:focus {
@@ -311,16 +311,16 @@ const ButtonGroup = styled.div`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 14px;
 `;
 
 const HelpText = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin: 0;
 `;
 
@@ -332,11 +332,11 @@ const DeleteButton = styled.button`
   cursor: pointer;
   transition: all 150ms ease-in-out;
   background: transparent;
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.errorBg};
+    background: ${({ theme }) => theme.colors.status.danger};
   }
 
   &:disabled {
@@ -353,17 +353,17 @@ const ConfirmModalContent = styled.div`
 
 const ConfirmText = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   line-height: 1.5;
 `;
 
 const ConfirmHighlight = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const DangerButton = styled.button`
@@ -388,8 +388,8 @@ const DangerButton = styled.button`
 `;
 
 const VirtualBlockInfoBanner = styled.div`
-  background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[300]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sageSoft};
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -398,7 +398,7 @@ const VirtualBlockInfoBanner = styled.div`
 const BannerTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -407,12 +407,12 @@ const BannerTitle = styled.div`
 
 const BannerText = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.5;
 `;
 
 const ViewHistoryLink = styled.button`
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
   border-radius: 6px;
@@ -424,13 +424,13 @@ const ViewHistoryLink = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[700]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
 const PhysicalBlockBanner = styled.div`
-  background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.success}40;
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  border: 1px solid ${({ theme }) => theme.colors.status.success}40;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -439,7 +439,7 @@ const PhysicalBlockBanner = styled.div`
 const PhysicalBannerTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 4px;
   display: flex;
   align-items: center;

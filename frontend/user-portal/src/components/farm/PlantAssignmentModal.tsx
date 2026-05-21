@@ -57,7 +57,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   width: 100%;
   max-width: 800px;
@@ -70,18 +70,18 @@ const ModalContainer = styled.div`
 
 const ModalHeader = styled.div`
   padding: 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
 `;
 
 const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
@@ -89,7 +89,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 28px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -101,7 +101,7 @@ const CloseButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -118,7 +118,7 @@ const FormSection = styled.div`
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px 0;
 `;
 
@@ -130,7 +130,7 @@ const Label = styled.label`
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 8px;
 `;
 
@@ -142,11 +142,11 @@ const RequiredMark = styled.span`
 const Select = styled.select`
   width: 100%;
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   transition: border-color 150ms ease-in-out;
 
   &:focus {
@@ -155,7 +155,7 @@ const Select = styled.select`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
@@ -163,15 +163,15 @@ const Select = styled.select`
 const Input = styled.input`
   width: 100%;
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -180,14 +180,14 @@ const Input = styled.input`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const HelpText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
@@ -199,8 +199,8 @@ const ErrorText = styled.div`
 
 const PreviewSection = styled.div<{ $visible: boolean }>`
   display: ${({ $visible }) => ($visible ? 'block' : 'none')};
-  background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sage};
   border-radius: 8px;
   padding: 20px;
   margin-top: 24px;
@@ -209,7 +209,7 @@ const PreviewSection = styled.div<{ $visible: boolean }>`
 const PreviewTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   margin: 0 0 16px 0;
   display: flex;
   align-items: center;
@@ -223,7 +223,7 @@ const PreviewGrid = styled.div`
 `;
 
 const PreviewItem = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 6px;
   padding: 16px;
 `;
@@ -231,7 +231,7 @@ const PreviewItem = styled.div`
 const PreviewLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
@@ -240,17 +240,17 @@ const PreviewLabel = styled.div`
 const PreviewValue = styled.div`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const PreviewSubtext = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: 4px;
 `;
 
 const TimelineSection = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 6px;
   padding: 16px;
   margin-top: 16px;
@@ -259,7 +259,7 @@ const TimelineSection = styled.div`
 const TimelineTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 12px;
 `;
 
@@ -267,7 +267,7 @@ const TimelineItem = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
 
   &:last-child {
     border-bottom: none;
@@ -276,22 +276,22 @@ const TimelineItem = styled.div`
 
 const TimelineLabel = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const TimelineDate = styled.div`
   font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ModalFooter = styled.div`
   padding: 20px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
 `;
 
@@ -308,27 +308,27 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
     switch ($variant) {
       case 'primary':
         return `
-          background: ${theme.colors.primary[500]};
+          background: ${theme.colors.accent.sage};
           color: white;
           &:hover:not(:disabled) {
-            background: ${theme.colors.primary[700]};
+            background: ${theme.colors.accent.sageDeep};
           }
         `;
       case 'success':
         return `
-          background: ${theme.colors.success};
+          background: ${theme.colors.status.success};
           color: white;
           &:hover:not(:disabled) {
-            background: ${theme.colors.success};
+            background: ${theme.colors.status.success};
             filter: brightness(0.9);
           }
         `;
       default:
         return `
-          background: ${theme.colors.surface};
-          color: ${theme.colors.textSecondary};
+          background: ${theme.colors.surface.raised};
+          color: ${theme.colors.text.secondary};
           &:hover:not(:disabled) {
-            background: ${theme.colors.neutral[300]};
+            background: ${theme.colors.border.subtle};
           }
         `;
     }
@@ -343,7 +343,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
 const LoadingText = styled.div`
   text-align: center;
   padding: 40px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const AutoCalculationInfo = styled.div`
@@ -351,12 +351,12 @@ const AutoCalculationInfo = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.success};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  border: 1px solid ${({ theme }) => theme.colors.status.success};
   border-radius: 8px;
   margin-top: 8px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.success};
+  color: ${({ theme }) => theme.colors.status.success};
 `;
 
 const AutoCalcIcon = styled.span`
@@ -366,7 +366,7 @@ const AutoCalcIcon = styled.span`
 const ManualOverrideButton = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   cursor: pointer;
   font-size: 12px;
   text-decoration: underline;
@@ -374,7 +374,7 @@ const ManualOverrideButton = styled.button`
   margin-left: auto;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[900]};
+    color: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
@@ -383,12 +383,12 @@ const NoSpacingWarning = styled.div`
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: ${({ theme }) => theme.colors.warningBg};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
+  background: ${({ theme }) => theme.colors.status.warning};
+  border: 1px solid ${({ theme }) => theme.colors.status.warning};
   border-radius: 8px;
   margin-top: 8px;
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.status.warning};
 `;
 
 // ============================================================================

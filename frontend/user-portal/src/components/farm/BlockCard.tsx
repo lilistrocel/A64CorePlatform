@@ -33,7 +33,7 @@ export interface BlockCardProps {
 // ============================================================================
 
 const Card = styled.div<{ $stateColor: string; $isVirtual?: boolean }>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -41,7 +41,7 @@ const Card = styled.div<{ $stateColor: string; $isVirtual?: boolean }>`
   ${({ $isVirtual }) =>
     $isVirtual &&
     `
-    border: 2px dashed #1976d2;
+    border: 2px dashed #0F6E56;
     border-left-width: 4px;
     border-left-style: solid;
   `}
@@ -66,15 +66,15 @@ const VirtualBadge = styled.span`
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: rgba(15, 110, 86, 0.05);
+  color: #0F6E56;
   font-size: 10px;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border: 1px solid #1976d2;
+  border: 1px solid #0F6E56;
 `;
 
 const BlockIcon = styled.div`
@@ -123,7 +123,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -132,11 +132,11 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const PlantingInfo = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
@@ -145,18 +145,18 @@ const PlantingInfo = styled.div`
 
 const PlantingLabel = styled.div`
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 4px;
 `;
 
 const PlantingDetail = styled.div`
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const CapacityBar = styled.div`
   width: 100%;
   height: 8px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -171,7 +171,7 @@ const CapacityFill = styled.div<{ $percent: number; $color: string }>`
 
 const CapacityText = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
 `;
 
@@ -198,7 +198,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         background: #3B82F6;
         color: white;
         &:hover {
-          background: #1976d2;
+          background: #0F6E56;
         }
       `;
     }
@@ -235,7 +235,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
       color: #3B82F6;
       border: 1px solid #3B82F6;
       &:hover {
-        background: #e3f2fd;
+        background: rgba(15, 110, 86, 0.05);
       }
     `;
   }}
@@ -253,13 +253,13 @@ const StateSelect = styled.select`
   font-size: 13px;
   font-weight: 500;
   color: #3B82F6;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
   flex: 1;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #e3f2fd;
+    background: rgba(15, 110, 86, 0.05);
   }
 
   &:focus {

@@ -46,13 +46,13 @@ const HeaderLeft = styled.div`
 const Title = styled.h1`
   font-size: 36px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
@@ -82,7 +82,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
         color: white;
         box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
         &:hover {
-          background: #1976d2;
+          background: #0F6E56;
           box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
         }
       `;
@@ -92,7 +92,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
       color: #3B82F6;
       border: 2px solid #3B82F6;
       &:hover {
-        background: #e3f2fd;
+        background: rgba(15, 110, 86, 0.05);
       }
     `;
   }}
@@ -111,7 +111,7 @@ const StatsRow = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -121,7 +121,7 @@ const StatCard = styled.div`
 const StatLabel = styled.div`
   font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -130,11 +130,11 @@ const StatLabel = styled.div`
 const StatValue = styled.div`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const FilterBar = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -152,11 +152,11 @@ const SearchInput = styled.input`
   flex: 1;
   min-width: 250px;
   padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &:focus {
@@ -166,17 +166,17 @@ const SearchInput = styled.input`
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
 const Select = styled.select`
   padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
   min-width: 140px;
@@ -188,24 +188,24 @@ const Select = styled.select`
   }
 
   option {
-    color: ${({ theme }) => theme.colors.textPrimary};
-    background: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.text.primary};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 `;
 
 const ClearButton = styled.button`
   padding: 12px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -235,14 +235,14 @@ const PageButton = styled.button<{ $active?: boolean }>`
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.textSecondary)};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  background: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.surface.canvas)};
+  color: ${({ $active, theme }) => ($active ? 'white' : theme.colors.text.secondary)};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ $active, theme }) => ($active ? '#1976d2' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? '#0F6E56' : theme.colors.surface.raised)};
   }
 
   &:disabled {
@@ -261,7 +261,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 48px;
   height: 48px;
-  border: 4px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 4px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3B82F6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -285,7 +285,7 @@ const ErrorContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const EmptyIcon = styled.div`
@@ -296,13 +296,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 8px 0;
 `;
 
 const EmptyDescription = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin: 0;
 `;
 

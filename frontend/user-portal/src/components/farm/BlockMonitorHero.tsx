@@ -100,7 +100,7 @@ const HeroGrid = styled.div`
 
 const HeroCard = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   text-align: center;
   position: relative;
@@ -114,7 +114,7 @@ const HeroIcon = styled.div`
 const HeroValue = styled.div`
   font-size: 24px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 4px;
 `;
 
@@ -137,14 +137,14 @@ const BreakdownPair = styled.div`
 const BreakdownValue = styled.div`
   font-size: 22px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1;
 `;
 
 const BreakdownPairLabel = styled.div`
   font-size: 10px;
   margin-top: 4px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
@@ -152,12 +152,12 @@ const BreakdownPairLabel = styled.div`
 
 const BreakdownDivider = styled.div`
   width: 1px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const HeroLabel = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;

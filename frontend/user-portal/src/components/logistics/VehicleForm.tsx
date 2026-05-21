@@ -67,59 +67,59 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.status.danger : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.status.danger : theme.colors.accent.sage)};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select<{ $hasError?: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.neutral[300])};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? theme.colors.status.danger : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
-    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.error : theme.colors.primary[500])};
+    border-color: ${({ $hasError, theme }) => ($hasError ? theme.colors.status.danger : theme.colors.accent.sage)};
     box-shadow: 0 0 0 3px ${({ $hasError }) => ($hasError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const ErrorText = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   margin-top: 4px;
 `;
 
@@ -131,7 +131,7 @@ const FormRow = styled.div`
 
 const FormSection = styled.div`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
   margin-top: 8px;
 `;
@@ -139,7 +139,7 @@ const FormSection = styled.div`
 const SectionTitle = styled.h4`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 16px 0;
 `;
 
@@ -163,28 +163,28 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'reset' }>`
     if ($variant === 'secondary') {
       return `
         background: transparent;
-        color: ${theme.colors.textSecondary};
-        border: 1px solid ${theme.colors.neutral[300]};
+        color: ${theme.colors.text.secondary};
+        border: 1px solid ${theme.colors.border.subtle};
         &:hover {
-          background: ${theme.colors.surface};
+          background: ${theme.colors.surface.raised};
         }
       `;
     }
     if ($variant === 'reset') {
       return `
         background: transparent;
-        color: ${theme.colors.warning};
-        border: 1px solid ${theme.colors.warning};
+        color: ${theme.colors.status.warning};
+        border: 1px solid ${theme.colors.status.warning};
         &:hover:not(:disabled) {
-          background: ${theme.colors.warningBg};
+          background: ${theme.colors.status.warning};
         }
       `;
     }
     return `
-      background: ${theme.colors.primary[500]};
+      background: ${theme.colors.accent.sage};
       color: white;
       &:hover {
-        background: ${theme.colors.primary[700]};
+        background: ${theme.colors.accent.sageDeep};
       }
       &:disabled {
         opacity: 0.6;

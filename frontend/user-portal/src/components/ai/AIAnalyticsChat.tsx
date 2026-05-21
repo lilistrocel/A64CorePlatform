@@ -356,7 +356,7 @@ const ChatContainer = styled.div`
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -367,8 +367,8 @@ const ChatHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: ${({ theme }) => theme.colors.successBg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
   flex-shrink: 0;
   gap: 12px;
 
@@ -388,7 +388,7 @@ const HeaderLeft = styled.div`
 const HeaderTitle = styled.div`
   font-size: 15px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.2;
 `;
 
@@ -423,9 +423,9 @@ const HeaderRight = styled.div`
 const ReadOnlyBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   padding: 2px 8px;
   border-radius: 10px;
   cursor: help;
@@ -439,14 +439,14 @@ const IconButton = styled.button`
   height: 30px;
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   border-radius: 6px;
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[300]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.border.subtle};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:disabled {
@@ -463,7 +463,7 @@ const MessagesContainer = styled.div`
   flex-direction: column;
   gap: 14px;
   min-height: 0;
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -493,12 +493,12 @@ const WelcomeMessage = styled.div`
 const WelcomeTitle = styled.div`
   font-size: 18px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const WelcomeText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
   max-width: 480px;
 `;
@@ -514,9 +514,9 @@ const QuickActionsGrid = styled.div`
 
 const QuickActionChip = styled.button`
   padding: 8px 18px;
-  background: ${({ theme }) => theme.colors.successBg};
-  color: ${({ theme }) => theme.colors.success};
-  border: 1px solid ${({ theme }) => theme.colors.success}40;
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
+  color: ${({ theme }) => theme.colors.status.success};
+  border: 1px solid ${({ theme }) => theme.colors.status.success}40;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
@@ -524,8 +524,8 @@ const QuickActionChip = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[200]};
-    border-color: ${({ theme }) => theme.colors.success}80;
+    background: ${({ theme }) => theme.colors.surface.sunken};
+    border-color: ${({ theme }) => theme.colors.status.success}80;
   }
 
   &:disabled {
@@ -544,8 +544,8 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   padding: 10px 14px;
   border-radius: ${({ $isUser }) =>
     $isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
-  background: ${({ $isUser, theme }) => ($isUser ? '#10B981' : theme.colors.neutral[200])};
-  color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.textPrimary)};
+  background: ${({ $isUser, theme }) => ($isUser ? '#10B981' : theme.colors.surface.sunken)};
+  color: ${({ $isUser, theme }) => ($isUser ? 'white' : theme.colors.text.primary)};
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -567,8 +567,8 @@ const ToolBadges = styled.div`
 const ToolBadge = styled.span`
   font-size: 10px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.neutral[300]};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.border.subtle};
   padding: 1px 6px;
   border-radius: 4px;
   text-transform: capitalize;
@@ -577,7 +577,7 @@ const ToolBadge = styled.span`
 /* ---- Confirmation Card ---- */
 
 const ActionCard = styled.div<{ $riskColor: string }>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border: 1px solid ${({ $riskColor }) => $riskColor}40;
   border-left: 3px solid ${({ $riskColor }) => $riskColor};
   border-radius: 8px;
@@ -596,20 +596,20 @@ const ActionHeader = styled.div`
 const ActionTitle = styled.span`
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   flex: 1;
 `;
 
 const ExpiryBadge = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-family: monospace;
 `;
 
 const ActionDescription = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.4;
 `;
 
@@ -637,16 +637,16 @@ const ApproveButton = styled.button`
 const DenyButton = styled.button`
   flex: 1;
   padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.error};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
-  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.errorBg}; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.status.danger}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -662,7 +662,7 @@ const Dot = styled.div<{ $delay: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.textDisabled};
+  background: ${({ theme }) => theme.colors.text.tertiary};
   animation: ${bounce} 1.2s infinite ease-in-out;
   animation-delay: ${({ $delay }) => $delay};
 `;
@@ -671,8 +671,8 @@ const Dot = styled.div<{ $delay: string }>`
 
 const ErrorMessage = styled.div`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.error};
-  background: ${({ theme }) => theme.colors.errorBg};
+  color: ${({ theme }) => theme.colors.status.danger};
+  background: ${({ theme }) => theme.colors.status.danger};
   padding: 8px 12px;
   border-radius: 8px;
   text-align: center;
@@ -685,8 +685,8 @@ const QuickActionsBar = styled.div`
   gap: 6px;
   padding: 8px 16px;
   overflow-x: auto;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.background};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
 
   &::-webkit-scrollbar { display: none; }
@@ -694,9 +694,9 @@ const QuickActionsBar = styled.div`
 
 const QuickActionSmall = styled.button`
   padding: 4px 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
@@ -706,8 +706,8 @@ const QuickActionSmall = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.neutral[300]};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.border.subtle};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
   &:disabled {
@@ -723,8 +723,8 @@ const InputContainer = styled.div`
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  background: ${({ theme }) => theme.colors.background};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   flex-shrink: 0;
 `;
 
@@ -734,18 +734,18 @@ const ChatInput = styled.input`
   border: 1px solid #d4d4d4;
   border-radius: 22px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.raised};
   transition: all 150ms ease-in-out;
 
   &:focus {
     outline: none;
     border-color: #10B981;
     box-shadow: 0 0 0 2px #10B98125;
-    background: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.surface.canvas};
   }
 
-  &::placeholder { color: ${({ theme }) => theme.colors.textDisabled}; }
+  &::placeholder { color: ${({ theme }) => theme.colors.text.tertiary}; }
   &:disabled { opacity: 0.6; }
 `;
 
@@ -753,7 +753,7 @@ const SendButton = styled.button`
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.success};
+  background: ${({ theme }) => theme.colors.status.success};
   color: white;
   border: none;
   cursor: pointer;

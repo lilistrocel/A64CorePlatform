@@ -207,7 +207,7 @@ const Overlay = styled.div`
 `;
 
 const ModalContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   width: 100%;
   max-width: 600px;
@@ -247,8 +247,8 @@ const CloseButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -261,7 +261,7 @@ const BlockInfo = styled.div`
   gap: 8px;
   margin-bottom: 20px;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 8px;
 `;
 
@@ -293,11 +293,11 @@ const Required = styled.span`
 const Select = styled.select`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   transition: all 150ms ease-in-out;
 
   &:focus {
@@ -312,7 +312,7 @@ const AlertDetails = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: ${({ theme }) => theme.colors.warningBg};
+  background: ${({ theme }) => theme.colors.status.warning};
   border-left: 4px solid #f59e0b;
   border-radius: 6px;
   margin-bottom: 20px;
@@ -321,7 +321,7 @@ const AlertDetails = styled.div`
 const AlertTitle = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.status.warning};
 `;
 
 const AlertSeverity = styled.span<{ $severity: string }>`
@@ -332,13 +332,13 @@ const AlertSeverity = styled.span<{ $severity: string }>`
   background: ${({ $severity, theme }) => {
     switch ($severity) {
       case 'critical':
-        return theme.colors.errorBg;
+        return theme.colors.status.danger;
       case 'high':
-        return theme.colors.warningBg;
+        return theme.colors.status.warning;
       case 'medium':
-        return theme.colors.infoBg;
+        return theme.colors.surface.sunken;
       default:
-        return theme.colors.surface;
+        return theme.colors.surface.raised;
     }
   }};
   color: ${(props) => {
@@ -358,12 +358,12 @@ const AlertSeverity = styled.span<{ $severity: string }>`
 const Textarea = styled.textarea`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 14px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   resize: vertical;
   transition: all 150ms ease-in-out;
 
@@ -374,7 +374,7 @@ const Textarea = styled.textarea`
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
@@ -408,7 +408,7 @@ const InfoNote = styled.div`
   display: flex;
   gap: 12px;
   padding: 12px;
-  background: ${({ theme }) => theme.colors.infoBg};
+  background: ${({ theme }) => theme.colors.surface.sunken};
   border-left: 4px solid #3b82f6;
   border-radius: 6px;
   margin-bottom: 20px;
@@ -427,7 +427,7 @@ const InfoText = styled.p`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.errorBg};
+  background: ${({ theme }) => theme.colors.status.danger};
   border-left: 4px solid #ef4444;
   border-radius: 6px;
   color: #991b1b;
@@ -443,18 +443,18 @@ const Actions = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    border-color: ${({ theme }) => theme.colors.neutral[400]};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    border-color: ${({ theme }) => theme.colors.border.default};
   }
 
   &:disabled {

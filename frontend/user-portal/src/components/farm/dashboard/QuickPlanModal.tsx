@@ -149,7 +149,7 @@ const Overlay = styled.div`
 `;
 
 const ModalContainer = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
@@ -191,7 +191,7 @@ const CloseButton = styled.button`
   transition: background 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
@@ -206,7 +206,7 @@ const BlockInfo = styled.div`
   justify-content: space-between;
   margin-bottom: 12px;
   padding: 8px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   border-radius: 4px;
 `;
 
@@ -234,11 +234,11 @@ const Label = styled.label`
 const Select = styled.select`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
 
   &:focus {
@@ -247,7 +247,7 @@ const Select = styled.select`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
@@ -255,11 +255,11 @@ const Select = styled.select`
 const Input = styled.input`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 
   &:focus {
     outline: none;
@@ -275,7 +275,7 @@ const Hint = styled.div`
 
 const ModalFooter = styled.div`
   padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.subtle};
   display: flex;
   gap: 12px;
   justify-content: flex-end;
@@ -283,17 +283,17 @@ const ModalFooter = styled.div`
 
 const CancelButton = styled.button`
   padding: 10px 20px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 

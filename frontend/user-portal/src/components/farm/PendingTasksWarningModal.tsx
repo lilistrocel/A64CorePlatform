@@ -122,117 +122,117 @@ const Overlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: ${({ theme }) => theme.zIndex.modal};
-  padding: ${({ theme }) => theme.spacing.lg};
+  z-index: ${({ theme }) => theme.zIndices.modal};
+  padding: ${({ theme }) => theme.space['6']};
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius.xl};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  border-radius: ${({ theme }) => theme.radii.xl};
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: ${({ theme }) => theme.shadows.xl};
+  box-shadow: ${({ theme }) => theme.shadows.md};
 `;
 
 const Header = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.lg};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => `${theme.colors.warning}15`};
+  gap: ${({ theme }) => theme.space['4']};
+  padding: ${({ theme }) => theme.space['6']};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  background: ${({ theme }) => `${theme.colors.status.warning}15`};
 `;
 
 const WarningIcon = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
+  font-size: ${({ theme }) => theme.fontSizes.h1};
 `;
 
 const Title = styled.h2`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 const Content = styled.div`
-  padding: ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.space['6']};
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space['6']};
 `;
 
 const Message = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  line-height: ${({ theme }) => theme.typography.lineHeight.relaxed};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  color: ${({ theme }) => theme.colors.text.primary};
+  line-height: ${({ theme }) => theme.lineHeights.loose};
   margin: 0;
 
   strong {
-    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-    color: ${({ theme }) => theme.colors.warning};
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
+    color: ${({ theme }) => theme.colors.status.warning};
   }
 `;
 
 const StatusBadge = styled.span`
   display: inline-block;
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  background: ${({ theme }) => `${theme.colors.primary[500]}20`};
-  color: ${({ theme }) => theme.colors.primary[600]};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  padding: ${({ theme }) => `${theme.space['1']} ${theme.space['2']}`};
+  background: ${({ theme }) => `${theme.colors.accent.sage}20`};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
+  border-radius: ${({ theme }) => theme.radii.sm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const Recommendation = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.primary[500]}10`};
-  border-left: 4px solid ${({ theme }) => theme.colors.primary[500]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => `${theme.colors.accent.sage}10`};
+  border-left: 4px solid ${({ theme }) => theme.colors.accent.sage};
+  border-radius: ${({ theme }) => theme.radii.md};
 `;
 
 const RecommendTitle = styled.div`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: ${({ theme }) => theme.space['1']};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const RecommendText = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
-  line-height: ${({ theme }) => theme.typography.lineHeight.normal};
+  line-height: ${({ theme }) => theme.lineHeights.base};
 `;
 
 const TaskList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space['2']};
 `;
 
 const TaskListTitle = styled.div`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  margin-bottom: ${({ theme }) => theme.space['1']};
 `;
 
 const TaskItem = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  gap: ${({ theme }) => theme.space['4']};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.md};
+  border: 1px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const TaskIcon = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+  font-size: ${({ theme }) => theme.fontSizes.h4};
   flex-shrink: 0;
 `;
 
@@ -242,87 +242,87 @@ const TaskDetails = styled.div`
 `;
 
 const TaskTitle = styled.div`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  margin-bottom: ${({ theme }) => theme.space['1']};
 `;
 
 const TaskMeta = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space['4']};
   flex-wrap: wrap;
 `;
 
 const TaskType = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: capitalize;
-  padding: ${({ theme }) => `2px ${theme.spacing.xs}`};
-  background: ${({ theme }) => theme.colors.neutral[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  padding: ${({ theme }) => `2px ${theme.space['1']}`};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  border-radius: ${({ theme }) => theme.radii.sm};
 `;
 
 const TaskSchedule = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.caption};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Warning = styled.div`
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => `${theme.colors.warning}10`};
-  border-left: 4px solid ${({ theme }) => theme.colors.warning};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => `${theme.colors.status.warning}10`};
+  border-left: 4px solid ${({ theme }) => theme.colors.status.warning};
+  border-radius: ${({ theme }) => theme.radii.md};
 `;
 
 const WarningTitle = styled.div`
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: ${({ theme }) => theme.space['1']};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
 `;
 
 const WarningText = styled.p`
-  font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.fontSizes.bodySm};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
-  line-height: ${({ theme }) => theme.typography.lineHeight.normal};
+  line-height: ${({ theme }) => theme.lineHeights.base};
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.lg};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  background: ${({ theme }) => theme.colors.neutral[50]};
+  gap: ${({ theme }) => theme.space['4']};
+  padding: ${({ theme }) => theme.space['6']};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
+  background: ${({ theme }) => theme.colors.surface.canvas};
 `;
 
 const CancelButton = styled.button`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.primary[500]};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.accent.sage};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
 const ForceButton = styled.button`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.warning};
+  padding: ${({ theme }) => theme.space['4']};
+  background: ${({ theme }) => theme.colors.status.warning};
   color: white;
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  border-radius: ${({ theme }) => theme.radii.md};
+  font-size: ${({ theme }) => theme.fontSizes.bodyMd};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
   cursor: pointer;
   transition: all 0.2s ease;
 

@@ -26,11 +26,11 @@ export interface PlantDataCardProps {
 // ============================================================================
 
 const Card = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   transition: all 150ms ease-in-out;
   cursor: pointer;
   position: relative;
@@ -50,7 +50,7 @@ const PlantIcon = styled.div`
 const PlantName = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
   text-align: center;
 `;
@@ -58,7 +58,7 @@ const PlantName = styled.h3`
 const ScientificName = styled.div`
   font-size: 14px;
   font-style: italic;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   margin-bottom: 16px;
   min-height: 20px;
@@ -71,7 +71,7 @@ const FarmTypeBadges = styled.div`
   justify-content: center;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.subtle};
 `;
 
 const FarmTypeBadge = styled.span<{ $color: string }>`
@@ -100,7 +100,7 @@ const StatItem = styled.div`
 const StatLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -109,7 +109,7 @@ const StatLabel = styled.span`
 const StatValue = styled.span`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const TagsContainer = styled.div`
@@ -127,8 +127,8 @@ const Tag = styled.span`
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const Actions = styled.div`
@@ -161,7 +161,7 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
         background: #3B82F6;
         color: white;
         &:hover {
-          background: #1976d2;
+          background: #0F6E56;
         }
       `;
     }
@@ -189,16 +189,16 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
         color: #EF4444;
         border: 1px solid #EF4444;
         &:hover {
-          background: ${theme.colors.errorBg};
+          background: ${theme.colors.status.danger};
         }
       `;
     }
     return `
-      background: ${theme.colors.background};
-      color: ${theme.colors.primary[500]};
-      border: 1px solid ${theme.colors.primary[500]};
+      background: ${theme.colors.surface.canvas};
+      color: ${theme.colors.accent.sage};
+      border: 1px solid ${theme.colors.accent.sage};
       &:hover {
-        background: ${theme.colors.infoBg};
+        background: ${theme.colors.surface.sunken};
       }
     `;
   }}

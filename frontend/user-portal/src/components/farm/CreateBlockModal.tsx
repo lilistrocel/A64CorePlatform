@@ -32,7 +32,7 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 32px;
   max-width: 700px;
@@ -48,13 +48,13 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 24px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 8px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
@@ -73,20 +73,20 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input`
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: border-color 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -95,18 +95,18 @@ const Input = styled.input`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
 
 const Select = styled.select`
   padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
   transition: border-color 150ms ease-in-out;
 
@@ -144,11 +144,11 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   `
       : `
     background: transparent;
-    color: ${theme.colors.textSecondary};
-    border: 1px solid ${theme.colors.neutral[300]};
+    color: ${theme.colors.text.secondary};
+    border: 1px solid ${theme.colors.border.subtle};
 
     &:hover:not(:disabled) {
-      background: ${theme.colors.surface};
+      background: ${theme.colors.surface.raised};
     }
   `}
 
@@ -160,23 +160,23 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 
 const ErrorMessage = styled.div`
   padding: 12px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  background: ${({ theme }) => theme.colors.status.danger};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 14px;
 `;
 
 const HelpText = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin: 0;
 `;
 
 // Map Section Styles
 const MapSection = styled.div`
   margin-top: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -187,16 +187,16 @@ const MapToggleButton = styled.button<{ $active: boolean }>`
   gap: 8px;
   padding: 12px 16px;
   width: 100%;
-  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.neutral[300])};
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.border.subtle)};
   border-radius: 8px;
-  background: ${({ $active, theme }) => ($active ? '#EFF6FF' : theme.colors.background)};
-  color: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.textPrimary)};
+  background: ${({ $active, theme }) => ($active ? '#EFF6FF' : theme.colors.surface.canvas)};
+  color: ${({ $active, theme }) => ($active ? '#3B82F6' : theme.colors.text.primary)};
   font-size: 14px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: ${({ $active, theme }) => ($active ? '#DBEAFE' : theme.colors.surface)};
+    background: ${({ $active, theme }) => ($active ? '#DBEAFE' : theme.colors.surface.raised)};
   }
 
   svg {
@@ -209,14 +209,14 @@ const MapLoadingFallback = styled.div`
   align-items: center;
   justify-content: center;
   height: 350px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
 `;
 
 const MapHint = styled.p`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 8px 0 0 0;
 `;
 

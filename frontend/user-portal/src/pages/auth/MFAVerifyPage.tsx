@@ -506,7 +506,7 @@ const VerifyContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[700]} 100%);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.accent.sage} 0%, ${({ theme }) => theme.colors.accent.sageDeep} 100%);
   padding: 0.5rem;
 
   @media (min-width: 360px) {
@@ -523,8 +523,8 @@ const VerifyContainer = styled.div`
 `;
 
 const VerifyCard = styled.div`
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.lg};
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 1rem;
   width: 100%;
@@ -541,7 +541,7 @@ const VerifyCard = styled.div`
   @media (min-width: 640px) {
     padding: 2rem;
     max-width: 460px;
-    border-radius: ${({ theme }) => theme.borderRadius.xl};
+    border-radius: ${({ theme }) => theme.radii.xl};
   }
 `;
 
@@ -568,8 +568,8 @@ const LogoImg = styled.img`
 
 const Title = styled.h1`
   font-size: 1.25rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: center;
   margin: 0 0 0.5rem 0;
 
@@ -588,7 +588,7 @@ const Title = styled.h1`
 
 const Subtitle = styled.p`
   font-size: 0.8125rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   margin: 0 0 1rem 0;
   line-height: 1.5;
@@ -610,12 +610,12 @@ const Subtitle = styled.p`
 
 const EmailHint = styled.p`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   margin: 0 0 1rem 0;
   padding: 0.5rem;
-  background: ${({ theme }) => theme.colors.neutral[50]};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border-radius: ${({ theme }) => theme.radii.sm};
 `;
 
 // Feature #347: Enhanced email confirmation box (read-only display)
@@ -625,9 +625,9 @@ const EmailConfirmationBox = styled.div`
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   margin: 0 0 1rem 0;
-  background: ${({ theme }) => theme.colors.infoBg};
-  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => theme.colors.surface.sunken};
+  border: 1px solid ${({ theme }) => theme.colors.accent.sageSoft};
+  border-radius: ${({ theme }) => theme.radii.md};
   animation: fadeInSlide 0.3s ease-out;
 
   @keyframes fadeInSlide {
@@ -648,7 +648,7 @@ const EmailConfirmIcon = styled.span`
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: ${({ theme }) => theme.colors.primary[100]};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
   border-radius: 50%;
   font-size: 1rem;
   flex-shrink: 0;
@@ -663,7 +663,7 @@ const EmailConfirmDetails = styled.div`
 
 const EmailConfirmLabel = styled.span`
   font-size: 0.6875rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 500;
@@ -671,7 +671,7 @@ const EmailConfirmLabel = styled.span`
 
 const EmailConfirmValue = styled.span`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -693,20 +693,20 @@ const EmailConfirmCheck = styled.span`
 `;
 
 const ErrorBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.error}10`};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => `${theme.colors.status.danger}10`};
+  border: 1px solid ${({ theme }) => theme.colors.status.danger};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 0.75rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.colors.status.danger};
   font-size: 0.875rem;
   text-align: center;
 `;
 
 const WarningBanner = styled.div`
-  background: ${({ theme }) => theme.colors.warningBg};
+  background: ${({ theme }) => theme.colors.status.warning};
   border: 1px solid #f59e0b;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 1rem;
   margin-bottom: 1rem;
   color: #92400e;
@@ -732,7 +732,7 @@ const SuccessIcon = styled.div`
   width: 60px;
   height: 60px;
   margin: 0 auto 1rem;
-  background: ${({ theme }) => theme.colors.success || '#10b981'};
+  background: ${({ theme }) => theme.colors.status.success || '#10b981'};
   color: white;
   border-radius: 50%;
   display: flex;
@@ -742,12 +742,12 @@ const SuccessIcon = styled.div`
 `;
 
 const SuccessBanner = styled.div`
-  background: ${({ theme }) => `${theme.colors.success || '#10b981'}10`};
-  border: 1px solid ${({ theme }) => theme.colors.success || '#10b981'};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  background: ${({ theme }) => `${theme.colors.status.success || '#10b981'}10`};
+  border: 1px solid ${({ theme }) => theme.colors.status.success || '#10b981'};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 1rem;
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.success || '#059669'};
+  color: ${({ theme }) => theme.colors.status.success || '#059669'};
   font-size: 0.875rem;
   text-align: center;
   font-weight: 500;
@@ -755,7 +755,7 @@ const SuccessBanner = styled.div`
 
 const BackupCodesInfo = styled.p`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: center;
   margin: 0 0 1rem 0;
 `;
@@ -774,8 +774,8 @@ const CodeInputContainer = styled.div`
 
 const CodeLabel = styled.label`
   font-size: 0.875rem;
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const DigitInputContainer = styled.div`
@@ -802,10 +802,10 @@ const DigitInput = styled.input`
   font-size: 1.5rem;
   font-family: 'Courier New', monospace;
   text-align: center;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 0.2s ease;
 
   @media (min-width: 640px) {
@@ -816,12 +816,12 @@ const DigitInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent.sageSoft};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.border.subtle};
   }
 `;
 
@@ -832,18 +832,18 @@ const TotpInput = styled.input`
   font-family: 'Courier New', monospace;
   text-align: center;
   letter-spacing: 0.75rem;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent.sageSoft};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.border.subtle};
     letter-spacing: 0.75rem;
   }
 `;
@@ -855,26 +855,26 @@ const BackupInput = styled.input`
   font-family: 'Courier New', monospace;
   text-align: center;
   letter-spacing: 0.25rem;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   transition: border-color 0.2s, box-shadow 0.2s;
   text-transform: uppercase;
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary[100]};
+    border-color: ${({ theme }) => theme.colors.accent.sage};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent.sageSoft};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.border.subtle};
     letter-spacing: 0.25rem;
   }
 `;
 
 const BackupCodeHint = styled.p`
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
   margin: 0;
 `;
@@ -887,20 +887,20 @@ const ToggleModeLink = styled.button`
   padding: 0.5rem;
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.accent.sage};
     text-decoration: underline;
   }
 `;
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   margin: 1rem 0;
 
   @media (min-width: 480px) {
@@ -914,12 +914,12 @@ const BackToLogin = styled(Link)`
   justify-content: center;
   /* Touch-friendly: min 44px height */
   min-height: 44px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.875rem;
   text-decoration: none;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.accent.sage};
     text-decoration: underline;
   }
 `;
@@ -958,9 +958,9 @@ const ShieldBadge = styled.span`
 `;
 
 const LockoutBanner = styled.div`
-  background: ${({ theme }) => theme.colors.warningBg};
+  background: ${({ theme }) => theme.colors.status.warning};
   border: 1px solid #f59e0b;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   padding: 1rem;
   margin-bottom: 1rem;
   display: flex;
@@ -991,13 +991,13 @@ const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $lo
   font-family: 'Courier New', monospace;
   text-align: center;
   border: 2px solid ${({ $error, $filled, $locked, theme }) =>
-    $locked ? theme.colors.neutral[400] :
-    $error ? theme.colors.error :
-    $filled ? theme.colors.primary[500] : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+    $locked ? theme.colors.border.default :
+    $error ? theme.colors.status.danger :
+    $filled ? theme.colors.accent.sage : theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   background: ${({ $locked, theme }) =>
-    $locked ? theme.colors.neutral[100] : theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+    $locked ? theme.colors.surface.raised : theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 0.2s ease;
   opacity: ${({ $locked }) => $locked ? 0.6 : 1};
 
@@ -1022,8 +1022,8 @@ const StyledDigitInput = styled.input<{ $filled?: boolean; $error?: boolean; $lo
   &:focus {
     outline: none;
     border-color: ${({ $error, $locked, theme }) =>
-      $locked ? theme.colors.neutral[400] :
-      $error ? theme.colors.error : theme.colors.primary[500]};
+      $locked ? theme.colors.border.default :
+      $error ? theme.colors.status.danger : theme.colors.accent.sage};
     box-shadow: ${({ $locked }) => $locked ? 'none' : '0 0 0 3px rgba(59, 130, 246, 0.2)'};
   }
 
@@ -1040,21 +1040,21 @@ const StyledBackupInput = styled.input<{ $error?: boolean }>`
   text-align: center;
   letter-spacing: 0.25rem;
   border: 2px solid ${({ $error, theme }) =>
-    $error ? theme.colors.error : theme.colors.neutral[300]};
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+    $error ? theme.colors.status.danger : theme.colors.border.subtle};
+  border-radius: ${({ theme }) => theme.radii.md};
   transition: border-color 0.2s, box-shadow 0.2s;
   text-transform: uppercase;
 
   &:focus {
     outline: none;
     border-color: ${({ $error, theme }) =>
-      $error ? theme.colors.error : theme.colors.primary[500]};
+      $error ? theme.colors.status.danger : theme.colors.accent.sage};
     box-shadow: 0 0 0 3px ${({ $error, theme }) =>
-      $error ? 'rgba(239, 68, 68, 0.2)' : theme.colors.primary[100]};
+      $error ? 'rgba(239, 68, 68, 0.2)' : theme.colors.accent.sageSoft};
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.neutral[300]};
+    color: ${({ theme }) => theme.colors.border.subtle};
     letter-spacing: 0.25rem;
   }
 `;
@@ -1076,9 +1076,9 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   font-weight: 600;
   color: white;
   background: ${({ disabled, theme }) =>
-    disabled ? theme.colors.neutral[300] : theme.colors.primary[500]};
+    disabled ? theme.colors.border.subtle : theme.colors.accent.sage};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   transition: all 0.2s ease;
 
@@ -1092,7 +1092,7 @@ const VerifyButton = styled.button<{ $loading?: boolean }>`
   }
 
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
   }
 `;
 
@@ -1122,7 +1122,7 @@ const StyledToggleModeLink = styled.button`
   padding: 0.625rem 0.5rem;
   background: none;
   border: none;
-  color: ${({ theme }) => theme.colors.primary[700]};
+  color: ${({ theme }) => theme.colors.accent.sageDeep};
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s;
@@ -1132,7 +1132,7 @@ const StyledToggleModeLink = styled.button`
   }
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary[500]};
+    color: ${({ theme }) => theme.colors.accent.sage};
   }
 `;
 
@@ -1166,15 +1166,15 @@ const StartOverButton = styled.button`
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  background: ${({ theme }) => theme.colors.primary[500]};
+  background: ${({ theme }) => theme.colors.accent.sage};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.md};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
   transition: all 0.2s ease;
   margin-bottom: 1rem;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
+    background: ${({ theme }) => theme.colors.accent.sageDeep};
     transform: translateY(-1px);
   }
 
@@ -1194,8 +1194,8 @@ const SessionTimer = styled.div<{ $warning?: boolean }>`
   gap: 0.375rem;
   padding: 0.5rem 0.75rem;
   margin-bottom: 1rem;
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  background: ${({ $warning, theme }) => $warning ? theme.colors.warningBg : theme.colors.infoBg};
+  border-radius: ${({ theme }) => theme.radii.sm};
+  background: ${({ $warning, theme }) => $warning ? theme.colors.status.warning : theme.colors.surface.sunken};
   border: 1px solid ${({ $warning }) => $warning ? '#f59e0b' : '#3b82f6'};
   font-size: 0.75rem;
 
@@ -1209,13 +1209,13 @@ const SessionTimerIcon = styled.span`
 `;
 
 const SessionTimerText = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const SessionTimerValue = styled.span`
   font-weight: 600;
   font-family: 'Courier New', monospace;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 // Feature #347: Mobile reassurance text for app switching
@@ -1224,12 +1224,12 @@ const MobileReassuranceText = styled.p`
   align-items: flex-start;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 1rem 0;
   padding: 0.625rem 0.75rem;
-  background: ${({ theme }) => theme.colors.successBg};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
   border: 1px solid #10b981;
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  border-radius: ${({ theme }) => theme.radii.sm};
   line-height: 1.4;
   animation: slideInFade 0.3s ease-out;
 

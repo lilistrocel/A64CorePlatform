@@ -285,7 +285,7 @@ const Container = styled.div`
   padding: 24px;
   max-width: 100%;
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
 `;
 
 const TopBar = styled.div`
@@ -302,7 +302,7 @@ const TitleSection = styled.div``;
 const PageTitle = styled.h1`
   font-size: 28px;
   font-weight: 700;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 4px 0;
 `;
 
@@ -338,14 +338,14 @@ const RefreshBtn = styled.button<RefreshBtnProps>`
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: #1976d2;
+    background: #0F6E56;
   }
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
@@ -376,7 +376,7 @@ interface StatCardProps {
 }
 
 const StatCard = styled.div<StatCardProps>`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   border-left: 4px solid ${({ $accent }) => $accent};
   padding: 16px;
@@ -401,14 +401,14 @@ interface StatNumberProps {
 const StatNumber = styled.div<StatNumberProps>`
   font-size: 24px;
   font-weight: 700;
-  color: ${({ $alert, theme }) => ($alert ? '#EF4444' : theme.colors.textPrimary)};
+  color: ${({ $alert, theme }) => ($alert ? '#EF4444' : theme.colors.text.primary)};
   line-height: 1;
   margin-bottom: 2px;
 `;
 
 const StatLabel = styled.div`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-weight: 500;
 `;
 
@@ -429,35 +429,35 @@ const ControlGroup = styled.div`
 const ControlLabel = styled.label`
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
 
 const Select = styled.select`
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   cursor: pointer;
   outline: none;
   min-width: 200px;
   transition: border-color 150ms;
 
   &:focus {
-    border-color: #2196f3;
+    border-color: #0F6E56;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
 `;
 
 const ClearFilterBtn = styled.button`
   padding: 8px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 13px;
   cursor: pointer;
   transition: all 150ms;
@@ -465,17 +465,17 @@ const ClearFilterBtn = styled.button`
   align-self: flex-end;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.textPrimary};
+    background: ${({ theme }) => theme.colors.surface.raised};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
   &:focus-visible {
-    outline: 2px solid #2196f3;
+    outline: 2px solid #0F6E56;
     outline-offset: 2px;
   }
 `;
 
 const GridSection = styled.section`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
@@ -493,7 +493,7 @@ const SectionHeader = styled.div`
 const SectionTitle = styled.h2`
   font-size: 16px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   display: flex;
   align-items: center;
@@ -516,7 +516,7 @@ const LoadingDot = styled.span`
 
 const RoomCount = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const LoadingContainer = styled.div`
@@ -530,7 +530,7 @@ const LoadingContainer = styled.div`
 const Spinner = styled.div`
   width: 36px;
   height: 36px;
-  border: 3px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 3px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -542,7 +542,7 @@ const Spinner = styled.div`
 
 const LoadingText = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const BottomRow = styled.div`
@@ -556,7 +556,7 @@ const BottomRow = styled.div`
 `;
 
 const BottomCard = styled.section`
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface.canvas};
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
@@ -574,16 +574,16 @@ const HTh = styled.th`
   padding: 7px 8px;
   font-size: 11px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.surface.sunken};
 `;
 
 const HTd = styled.td`
   padding: 9px 8px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.surface.raised};
+  color: ${({ theme }) => theme.colors.text.secondary};
   vertical-align: middle;
 `;
 
@@ -603,7 +603,7 @@ const GradeDot = styled.span<GradeDotProps>`
 
 const EmptyState = styled.div`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textDisabled};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   padding: 24px;
   text-align: center;
 `;
@@ -646,13 +646,13 @@ const AlertItem = styled.div<AlertItemProps>`
 const AlertRoom = styled.span`
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   min-width: 60px;
 `;
 
 const AlertType = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex: 1;
   text-transform: capitalize;
 `;

@@ -65,17 +65,17 @@ const Wrapper = styled.div`
 const ComboInput = styled.input<{ $hasError?: boolean }>`
   padding: 12px 16px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  color: ${({ theme }) => theme.colors.text.primary};
   width: 100%;
   box-sizing: border-box;
   transition: all 150ms ease-in-out;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 
   &:focus {
@@ -87,7 +87,7 @@ const ComboInput = styled.input<{ $hasError?: boolean }>`
   }
 
   &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
     cursor: not-allowed;
   }
 `;
@@ -102,11 +102,11 @@ const SelectedChip = styled.div<{ $hasError?: boolean }>`
   gap: 12px;
   padding: 12px 12px 12px 16px;
   border: 1px solid
-    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.neutral[300])};
+    ${({ $hasError, theme }) => ($hasError ? '#EF4444' : theme.colors.border.subtle)};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surface.raised};
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   width: 100%;
   box-sizing: border-box;
   min-height: 44px;
@@ -131,7 +131,7 @@ const ClearButton = styled.button`
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 16px;
   cursor: pointer;
   transition: all 150ms ease-in-out;
@@ -157,8 +157,8 @@ const Dropdown = styled.ul`
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.surface.canvas};
+  border: 1px solid ${({ theme }) => theme.colors.border.subtle};
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   max-height: 280px;
@@ -173,32 +173,32 @@ const DropdownItem = styled.li<{ $highlighted?: boolean }>`
   padding: 10px 16px;
   cursor: pointer;
   background: ${({ $highlighted, theme }) =>
-    $highlighted ? theme.colors.surface : 'transparent'};
+    $highlighted ? theme.colors.surface.raised : 'transparent'};
   display: flex;
   flex-direction: column;
   gap: 2px;
   transition: background 80ms ease-in-out;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface};
+    background: ${({ theme }) => theme.colors.surface.raised};
   }
 `;
 
 const CustomerName = styled.strong`
   font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 500;
 `;
 
 const CustomerMeta = styled.span`
   font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const DropdownState = styled.li`
   padding: 14px 16px;
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
 `;
 
@@ -224,7 +224,7 @@ const Spinner = styled.span`
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid ${({ theme }) => theme.colors.neutral[300]};
+  border: 2px solid ${({ theme }) => theme.colors.border.subtle};
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
