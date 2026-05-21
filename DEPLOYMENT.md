@@ -1,605 +1,454 @@
-# Deployment Guide - A64 Core Platform
+# A64 Core Platform — Deployment Guide
 
-## Overview
-This document contains all deployment instructions, configurations, and procedures for the A64CorePlatform project. The platform uses Docker containerization for consistent deployment across environments.
+End-to-end guide for deploying the platform on a fresh server, migrating from
+an existing host, or re-deploying after an incident. The automated path takes
+~10 minutes including data restore.
 
-## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Environment Setup](#environment-setup)
-- [Deployment Process](#deployment-process)
-- [Post-Deployment](#post-deployment)
-- [Rollback Procedures](#rollback-procedures)
-- [Monitoring](#monitoring)
-- [Troubleshooting](#troubleshooting)
+---
 
-## Prerequisites
+## Contents
 
-### System Requirements
+1. [Architecture overview](#architecture-overview)
+2. [Server requirements](#server-requirements)
+3. [Automated deploy (recommended)](#automated-deploy-recommended)
+4. [Manual deploy](#manual-deploy)
+5. [Environment configuration](#environment-configuration)
+6. [Cloudflare Tunnel (public access)](#cloudflare-tunnel-public-access)
+7. [Operations: backup, restore, watchdog](#operations-backup-restore-watchdog)
+8. [Multi-instance hosting](#multi-instance-hosting)
+9. [Updating an existing deployment](#updating-an-existing-deployment)
+10. [Troubleshooting](#troubleshooting)
+11. [Rollback](#rollback)
 
-**Production Server:**
-- OS: Linux (Ubuntu 20.04+ or RHEL 8+)
-- CPU: 4+ cores
-- RAM: 8GB minimum, 16GB recommended
-- Storage: 50GB+ SSD
-- Network: Static IP address, open ports 80, 443
+---
 
-**Software Requirements:**
-- Docker Engine 20.10+
-- Docker Compose 2.0+
-- Git
-- SSL Certificate (for HTTPS)
+## Architecture overview
 
-### Access Requirements
-- SSH access to production server
-- Docker Hub credentials (if using private registry)
-- Database backup storage access
-- DNS configuration access
+The platform is a Docker Compose stack. Core services:
 
-## Environment Setup
+| Service | Container | Host port | Purpose |
+|---|---|---|---|
+| **api** | `a64coreplatform-api-1` | 8000 | FastAPI backend, REST `/api/v1/*` |
+| **user-portal** | `a64coreplatform-user-portal-1` | 5173 | Vite/React dev server (or built bundle in prod) |
+| **mongodb** | `a64coreplatform-mongodb-1` | 27017 | Primary data store (replica set `rs0`) |
+| **redis** | `a64coreplatform-redis-1` | 6379 | Cache, rate limiting, sessions |
+| **nginx** | `a64coreplatform-nginx-1` | 80 / 443 | Reverse proxy fronting api + user-portal |
+| **adminer** | `a64coreplatform-adminer-1` | 8080 | DB admin UI (optional in prod) |
+| **cron** | `a64coreplatform-cron-1` | — | Scheduled jobs (outbox reconciler, etc.) |
+| **registry** | `a64coreplatform-registry-1` | 5050 | Local Docker registry for module images |
+| **iot-simulator** | `a64coreplatform-iot-simulator-1` | 8090 | Mock SenseHub MCP for dev (optional in prod) |
 
-### 1. Server Preparation
+Optional overlays (compose profiles):
+
+| Overlay | File | Profile flag | Adds |
+|---|---|---|---|
+| **finance** | `docker-compose.finance.yml` | `--profile finance` | `a64-mysql`, `a64-finance` (FastAPI), `a64-finance-consumer` (outbox bridge) |
+
+Persistent state lives in:
+
+- **MongoDB**: bind-mounted at `./data/mongodb` (host visible, survives compose project rename)
+- **MongoDB config**: named volume `mongodb_config`
+- **Redis**: named volume `redis_data` (ephemeral cache; safe to lose)
+- **Registry**: named volume `registry_data`
+- **Camera snapshots**: bind-mounted at `./data/sensehub_images`
+
+---
+
+## Server requirements
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| CPU | 2 cores | 4 cores |
+| RAM | 4 GB | 8 GB |
+| Disk | 20 GB | 50 GB (data grows ~50 MB/day) |
+| OS | Ubuntu 22.04+ / Debian 12+ / any Linux with Docker | Ubuntu 24.04 LTS |
+| Docker | 20.10+ with Compose plugin v2 | latest stable |
+| Network | outbound HTTPS to docker.io, github.com, anthropic.com, weatherbit.io | + Tailscale if integrating with on-prem SenseHub |
+
+API keys to obtain before deploy:
+
+- **Anthropic API key** — https://console.anthropic.com/settings/keys (for the AI assistant)
+- **WeatherBit API key** — https://weatherbit.io (for agricultural weather context)
+- **ElevenLabs API key** — only if voice features are enabled (currently disabled)
+
+---
+
+## Automated deploy (recommended)
+
+One-shot deploy on a fresh host:
 
 ```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
+# 1. install Docker (Ubuntu example)
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER && newgrp docker
 
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Add user to docker group
-sudo usermod -aG docker $USER
-
-# Verify installations
-docker --version
-docker-compose --version
+# 2. clone + run
+git clone https://github.com/lilistrocel/A64CorePlatform.git ~/Code/A64CorePlatform
+cd ~/Code/A64CorePlatform
+bash scripts/deploy/deploy.sh
 ```
 
-### 2. Clone Repository
+The script will:
+
+1. Verify Docker + git + curl + python3 are present
+2. Clone / update the repo
+3. Copy `.env.example` to `.env` and open your editor (set keys + passwords)
+4. Create data + log directories
+5. `docker compose pull && up -d`
+6. Wait up to 90s for MongoDB to become healthy
+7. Initialise the single-node replica set `rs0` (required for the finance outbox)
+8. Optionally restore data from a backup archive
+9. Install `~/bin/a64core-*` ops scripts + cron (daily backup + 5-min watchdog)
+10. Smoke-test `http://localhost/api/health`
+
+### Environment variables you can pass
 
 ```bash
-# Create application directory
-sudo mkdir -p /opt/a64core
-cd /opt/a64core
-
-# Clone repository
-git clone <repository-url> .
-
-# Set proper permissions
-sudo chown -R $USER:$USER /opt/a64core
+REPO_DIR=/srv/a64core           # install elsewhere
+BRANCH=staging                  # deploy a different branch
+DEPLOY_PROFILE=finance          # include the finance overlay
+RESTORE_FROM=/path/to/backup    # restore on first boot
+SKIP_CRON=1                     # don't install cron (manage externally)
+FORCE_ENV=1                     # overwrite existing .env from template
+DRY_RUN=1                       # print actions, change nothing
 ```
 
-### 3. Environment Configuration
+### Migrating from another host
+
+On the **source** host, take a backup:
 
 ```bash
-# Copy environment template
+~/bin/a64core-backup.sh   # writes to ~/Documents/Backups/YYYY-MM-DD/
+```
+
+Transfer the backup directory to the new host (`scp -r`, `rsync`, USB, etc.):
+
+```bash
+scp -r ~/Documents/Backups/2026-05-21 newhost:~/restore-bundle
+```
+
+On the **target**, run the deploy with `RESTORE_FROM` pointed at the bundle:
+
+```bash
+RESTORE_FROM=~/restore-bundle bash scripts/deploy/deploy.sh
+```
+
+The script will restore `a64core_db` from the archive (`--drop` semantics) after MongoDB comes up.
+
+---
+
+## Manual deploy
+
+For when you need granular control or the automated script doesn't fit. Each step matches one stage of `scripts/deploy/deploy.sh`.
+
+```bash
+# 1. clone + checkout
+git clone https://github.com/lilistrocel/A64CorePlatform.git
+cd A64CorePlatform
+git config core.hooksPath .githooks   # activate the pre-commit hook
+
+# 2. environment
 cp .env.example .env
+$EDITOR .env   # fill in secrets (see "Environment configuration" below)
 
-# Edit environment file
-nano .env
+# 3. data dirs
+mkdir -p data/mongodb data/sensehub_images logs/{mongodb,nginx,api}
+
+# 4. bring stack up
+docker compose pull
+docker compose up -d
+# optional: with finance overlay
+# docker compose -f docker-compose.yml -f docker-compose.finance.yml --profile finance up -d
+
+# 5. wait for mongodb healthy
+docker compose ps mongodb
+
+# 6. initialise replica set (idempotent — error if already initiated is fine)
+docker exec a64coreplatform-mongodb-1 mongosh --quiet --eval \
+  'rs.initiate({_id:"rs0", members:[{_id:0, host:"mongodb:27017"}]})'
+
+# 7. (optional) restore data
+docker exec -i a64coreplatform-mongodb-1 mongorestore --archive --gzip --drop \
+  < /path/to/a64core_db.archive.gz
+
+# 8. install ops scripts + cron
+mkdir -p ~/bin
+for s in backup restore down watchdog; do
+    cp scripts/ops/${s}.sh ~/bin/a64core-${s}.sh
+    chmod +x ~/bin/a64core-${s}.sh
+done
+( crontab -l 2>/dev/null
+  echo "0 3 * * * $HOME/bin/a64core-backup.sh > /dev/null 2>&1"
+  echo "*/5 * * * * $HOME/bin/a64core-watchdog.sh"
+) | crontab -
+
+# 9. smoke test
+curl -i http://localhost/api/health
 ```
 
-**Required Environment Variables for Production:**
+---
+
+## Environment configuration
+
+`.env` is read at container startup. **Edit it before bringing the stack up, or recreate containers after changes** (`docker compose up -d --force-recreate api`). `docker restart` does NOT re-read `.env`.
+
+Required keys:
+
+| Variable | Purpose | How to generate |
+|---|---|---|
+| `SECRET_KEY` | JWT / session signing | `python3 -c "import secrets; print(secrets.token_hex(32))"` |
+| `ADMIN_EMAIL` | Initial super_admin login (created on first start) | your email |
+| `ADMIN_PASSWORD` | Initial super_admin password | strong, store in password manager |
+| `MONGO_APP_USER` / `MONGO_APP_PASSWORD` | MongoDB app user | set both to non-default in prod |
+| `REDIS_PASSWORD` | Redis auth | random 32+ chars |
+| `MONGODB_DB_NAME` | Database name | `a64core_db` (default) — only change for multi-tenancy |
+| `ANTHROPIC_API_KEY` | AI assistant | https://console.anthropic.com/settings/keys |
+| `WEATHERBIT_API_KEY` | Weather data for AI context | https://weatherbit.io |
+
+Optional / module-specific:
+
+| Variable | Purpose |
+|---|---|
+| `CLAUDE_MODEL` | Override the default model (`claude-sonnet-4-6`) |
+| `AI_ASSISTANT_HISTORY_LIMIT` | How many conversations to retain per user (default 3) |
+| `FINANCE_OUTBOX_ENABLED` | Set `true` after deploying the finance overlay |
+| `FINANCE_INGESTION_SECRET` | Shared secret between main API and finance service |
+| `UVICORN_WORKERS` | Worker count (default 4) |
+
+> Never commit `.env` — it's gitignored. Back it up out-of-band (the daily backup includes a copy under `env/.env`).
+
+---
+
+## Cloudflare Tunnel (public access)
+
+If exposing the platform publicly, prefer a Cloudflare Tunnel over opening ports.
 
 ```bash
-# Application Settings
-APP_NAME=A64 Core Platform API Hub
-ENVIRONMENT=production
-DEBUG=False
+# 1. install cloudflared (Ubuntu/Debian)
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
+    -o cloudflared.deb
+sudo dpkg -i cloudflared.deb
 
-# Server Settings
-HOST=0.0.0.0
-PORT=8000
+# 2. login (opens browser, picks a zone)
+cloudflared tunnel login
 
-# CORS Settings (update with actual domains)
-ALLOWED_ORIGINS=https://yourdomain.com,https://api.yourdomain.com
+# 3. create the tunnel
+cloudflared tunnel create a64core
 
-# Database Settings - MongoDB
-MONGODB_URL=mongodb://mongodb:27017
-MONGODB_DB_NAME=a64core_prod
+# 4. configure ~/.cloudflared/config.yml
+cat > ~/.cloudflared/config.yml <<EOF
+tunnel: a64core
+credentials-file: $HOME/.cloudflared/$(cloudflared tunnel list -o json | jq -r '.[0].id').json
+protocol: quic
 
-# Database Settings - MySQL
-MYSQL_HOST=mysql
-MYSQL_PORT=3306
-MYSQL_USER=a64user
-MYSQL_PASSWORD=<strong_password_here>
-MYSQL_DB_NAME=a64core_prod
+ingress:
+  - hostname: yourdomain.com
+    service: http://localhost:80
+    originRequest:
+      connectTimeout: 10s
+      keepAliveTimeout: 90s
+  - hostname: www.yourdomain.com
+    service: http://localhost:80
+  - service: http_status:404
+EOF
 
-# Security Settings (MUST CHANGE!)
-SECRET_KEY=<generate_secure_random_key_min_32_chars>
-API_KEY_PREFIX=prod_key
+# 5. point your DNS at the tunnel
+cloudflared tunnel route dns a64core yourdomain.com
+cloudflared tunnel route dns a64core www.yourdomain.com
 
-# Logging
-LOG_LEVEL=INFO
+# 6. install as a systemd service
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+sudo systemctl status cloudflared
 ```
 
-**Generate Secure Secret Key:**
+The tunnel's origin (`http://localhost:80`) is the nginx container, which fronts both the API (`/api/*`) and the user portal (everything else).
+
+---
+
+## Operations: backup, restore, watchdog
+
+These ship with the deploy and live in `~/bin/` after installation.
+
+### Daily backup
+
+`~/bin/a64core-backup.sh` runs nightly at 03:00 UTC via cron. Output:
+
+```
+~/Documents/Backups/YYYY-MM-DD/
+  a64core_db.archive.gz       # mongodump --archive --gzip
+  esgagro-all-dbs.archive.gz  # if the esgagro stack is also running
+  env/.env                    # secrets (back this up out-of-band too)
+  git-state.txt               # branch / HEAD / recent commits
+  MANIFEST.sha256             # integrity checksums
+```
+
+14-day retention by default. Override: `RETENTION_DAYS=30 a64core-backup.sh`.
+
+### Restore
+
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
+~/bin/a64core-restore.sh                           # auto-picks the latest backup
+~/bin/a64core-restore.sh ~/Documents/Backups/2026-05-19   # specific dir
+~/bin/a64core-restore.sh path/to/a64core_db.archive.gz    # specific archive
+~/bin/a64core-restore.sh --yes                     # skip confirmation prompt
 ```
 
-### 4. Docker Production Configuration
+Verifies the SHA-256 checksum against the manifest, drops + restores, then recreates the api container so it picks up fresh DB handles.
 
-Create `docker-compose.prod.yml`:
+### Watchdog
 
-```yaml
-version: '3.8'
+`~/bin/a64core-watchdog.sh` runs every 5 minutes via cron. Checks:
 
-services:
-  api:
-    container_name: a64core-api-prod
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    volumes:
-      - ./logs:/app/logs
-    depends_on:
-      - mongodb
-      - mysql
-    networks:
-      - a64core-network
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
+1. `a64coreplatform-nginx-1` is `Up healthy` — if not, `docker compose up -d`
+2. `a64-finance` / `a64-mysql` are bridged to the a64core network (handles the cross-project setup automatically)
+3. User-portal logs for Vite Internal Server Errors — flags them in `~/Documents/Backups/.watchdog.log`
 
-  mongodb:
-    container_name: a64core-mongodb-prod
-    image: mongo:7.0
-    environment:
-      - MONGO_INITDB_DATABASE=a64core_prod
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=<strong_password>
-    volumes:
-      - mongodb_data:/data/db
-      - ./backups/mongodb:/backups
-    networks:
-      - a64core-network
-    restart: always
+Max downtime under any external shutdown: ~5 minutes.
 
-  mysql:
-    container_name: a64core-mysql-prod
-    image: mysql:8.0
-    environment:
-      - MYSQL_ROOT_PASSWORD=<strong_root_password>
-      - MYSQL_DATABASE=a64core_prod
-      - MYSQL_USER=a64user
-      - MYSQL_PASSWORD=<strong_password>
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./backups/mysql:/backups
-    networks:
-      - a64core-network
-    restart: always
+### Safe shutdown
 
-  nginx:
-    container_name: a64core-nginx-prod
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - api
-    networks:
-      - a64core-network
-    restart: always
-
-networks:
-  a64core-network:
-    driver: bridge
-
-volumes:
-  mongodb_data:
-  mysql_data:
-```
-
-## Deployment Process
-
-### Initial Deployment
-
-**Step 1: Build Images**
 ```bash
-cd /opt/a64core
-docker-compose -f docker-compose.prod.yml build --no-cache
+~/bin/a64core-down.sh             # takes an ad-hoc backup, then docker compose down
+~/bin/a64core-down.sh --no-backup # skip the backup (not recommended)
 ```
 
-**Step 2: Start Database Services First**
+Refuses `-v` (volume removal) without `--i-know` — guards against accidental data loss.
+
+---
+
+## Multi-instance hosting
+
+This server can host multiple isolated A64Core instances (e.g., `a64core.com` + `esgagro.a20core.com`) sharing the same machine. See `instances/instance-manager.sh` for the per-instance bootstrap. Key principles:
+
+- Each instance has its own `.env` and host port range (the manager increments base ports per instance).
+- Both fronted by a single `cloudflared` config with hostname → origin port mapping.
+- Cross-project containers (e.g., shared MySQL) need their docker network bridged — the watchdog handles this automatically.
+
+---
+
+## Updating an existing deployment
+
+Routine update:
+
 ```bash
-docker-compose -f docker-compose.prod.yml up -d mongodb mysql
+cd ~/Code/A64CorePlatform
+
+# 1. take a snapshot first
+~/bin/a64core-backup.sh
+
+# 2. pull latest
+git pull --ff-only
+
+# 3. rebuild + roll
+docker compose build api
+docker compose up -d --force-recreate api
+
+# 4. tail logs while it warms up
+docker compose logs -f --since 1m api
+
+# 5. smoke test
+curl http://localhost/api/health
 ```
 
-**Step 3: Wait for Databases to be Ready**
-```bash
-# Check health status
-docker-compose -f docker-compose.prod.yml ps
+For changes that affect the frontend bundle, also recreate `user-portal`.
 
-# Wait for healthy status
-sleep 30
-```
+For changes that touch `.env` (new variables, value rotations), always `--force-recreate` the api — `docker restart` does NOT re-read `.env`.
 
-**Step 4: Initialize Databases**
-```bash
-# Run database migrations (when implemented)
-# docker-compose -f docker-compose.prod.yml exec api python -m alembic upgrade head
-```
-
-**Step 5: Start API Service**
-```bash
-docker-compose -f docker-compose.prod.yml up -d api
-```
-
-**Step 6: Start Nginx Reverse Proxy**
-```bash
-docker-compose -f docker-compose.prod.yml up -d nginx
-```
-
-**Step 7: Verify All Services**
-```bash
-docker-compose -f docker-compose.prod.yml ps
-```
-
-### Update Deployment (Rolling Update)
-
-**Step 1: Pull Latest Changes**
-```bash
-cd /opt/a64core
-git pull origin main
-```
-
-**Step 2: Backup Databases** (See Backup Procedures below)
-
-**Step 3: Rebuild and Update**
-```bash
-docker-compose -f docker-compose.prod.yml build api
-docker-compose -f docker-compose.prod.yml up -d --no-deps api
-```
-
-**Step 4: Verify Update**
-```bash
-curl http://localhost:8000/api/health
-docker-compose -f docker-compose.prod.yml logs -f api
-```
-
-## Post-Deployment
-
-### Verification Checklist
-
-1. **Health Checks**
-   ```bash
-   # API Health
-   curl http://localhost:8000/api/health
-
-   # Expected: {"status":"healthy","timestamp":"...","service":"A64 Core Platform API Hub","version":"1.0.0"}
-
-   # Readiness Check
-   curl http://localhost:8000/api/ready
-   ```
-
-2. **Database Connectivity**
-   ```bash
-   # MongoDB
-   docker exec a64core-mongodb-prod mongosh --eval "db.runCommand({ping: 1})"
-
-   # MySQL
-   docker exec a64core-mysql-prod mysql -u root -p<password> -e "SELECT 1"
-   ```
-
-3. **API Documentation**
-   - Access: https://yourdomain.com/api/docs
-   - Verify all endpoints are accessible
-
-4. **Logs Inspection**
-   ```bash
-   docker-compose -f docker-compose.prod.yml logs --tail=100
-   ```
-
-5. **Resource Usage**
-   ```bash
-   docker stats
-   ```
-
-### Security Hardening
-
-1. **Firewall Configuration**
-   ```bash
-   sudo ufw allow 22/tcp    # SSH
-   sudo ufw allow 80/tcp    # HTTP
-   sudo ufw allow 443/tcp   # HTTPS
-   sudo ufw enable
-   ```
-
-2. **SSL/TLS Setup** (using Let's Encrypt)
-   ```bash
-   # Install certbot
-   sudo apt install certbot python3-certbot-nginx
-
-   # Obtain certificate
-   sudo certbot --nginx -d yourdomain.com -d api.yourdomain.com
-
-   # Auto-renewal test
-   sudo certbot renew --dry-run
-   ```
-
-3. **Database Security**
-   - Change default passwords
-   - Restrict network access
-   - Enable authentication
-   - Regular security updates
-
-## Backup Procedures
-
-### Automated Daily Backups
-
-**MongoDB Backup Script** (`/opt/a64core/scripts/backup-mongodb.sh`):
-```bash
-#!/bin/bash
-BACKUP_DIR="/opt/a64core/backups/mongodb"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-CONTAINER="a64core-mongodb-prod"
-
-docker exec $CONTAINER mongodump \
-  --archive=/backups/backup_${TIMESTAMP}.archive \
-  --gzip
-
-# Keep only last 7 days
-find $BACKUP_DIR -name "*.archive" -mtime +7 -delete
-```
-
-**MySQL Backup Script** (`/opt/a64core/scripts/backup-mysql.sh`):
-```bash
-#!/bin/bash
-BACKUP_DIR="/opt/a64core/backups/mysql"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-CONTAINER="a64core-mysql-prod"
-
-docker exec $CONTAINER mysqldump \
-  -u root -p<password> \
-  --all-databases --single-transaction \
-  | gzip > $BACKUP_DIR/backup_${TIMESTAMP}.sql.gz
-
-# Keep only last 7 days
-find $BACKUP_DIR -name "*.sql.gz" -mtime +7 -delete
-```
-
-**Setup Cron Jobs:**
-```bash
-# Edit crontab
-crontab -e
-
-# Add backup jobs (runs at 2 AM daily)
-0 2 * * * /opt/a64core/scripts/backup-mongodb.sh
-0 2 * * * /opt/a64core/scripts/backup-mysql.sh
-```
-
-## Rollback Procedures
-
-### Application Rollback
-
-**Step 1: Identify Previous Version**
-```bash
-cd /opt/a64core
-git log --oneline -10
-```
-
-**Step 2: Checkout Previous Version**
-```bash
-git checkout <previous-commit-hash>
-```
-
-**Step 3: Rebuild and Restart**
-```bash
-docker-compose -f docker-compose.prod.yml build api
-docker-compose -f docker-compose.prod.yml up -d --no-deps api
-```
-
-**Step 4: Verify Rollback**
-```bash
-curl http://localhost:8000/api/health
-docker-compose -f docker-compose.prod.yml logs api
-```
-
-### Database Rollback
-
-**MongoDB Restore:**
-```bash
-docker exec a64core-mongodb-prod mongorestore \
-  --archive=/backups/backup_<timestamp>.archive \
-  --gzip \
-  --drop
-```
-
-**MySQL Restore:**
-```bash
-gunzip < /opt/a64core/backups/mysql/backup_<timestamp>.sql.gz | \
-  docker exec -i a64core-mysql-prod mysql -u root -p<password>
-```
-
-## Monitoring
-
-### Log Management
-
-**View Real-time Logs:**
-```bash
-# All services
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Specific service
-docker-compose -f docker-compose.prod.yml logs -f api
-
-# Last 100 lines
-docker-compose -f docker-compose.prod.yml logs --tail=100 api
-```
-
-### Performance Monitoring
-
-**Resource Usage:**
-```bash
-docker stats
-```
-
-**Disk Usage:**
-```bash
-docker system df
-```
-
-### Health Monitoring Setup
-
-Create health check script (`/opt/a64core/scripts/health-check.sh`):
-```bash
-#!/bin/bash
-HEALTH_URL="http://localhost:8000/api/health"
-RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
-
-if [ $RESPONSE -eq 200 ]; then
-    echo "$(date): API is healthy"
-    exit 0
-else
-    echo "$(date): API health check failed with status $RESPONSE"
-    # Send alert (email, Slack, etc.)
-    exit 1
-fi
-```
-
-**Setup Cron for Monitoring:**
-```bash
-# Check every 5 minutes
-*/5 * * * * /opt/a64core/scripts/health-check.sh >> /var/log/a64core-health.log
-```
+---
 
 ## Troubleshooting
 
-### Common Issues
+### Site returns 502 (Cloudflare Bad Gateway)
 
-**1. Container Won't Start**
-```bash
-# Check logs
-docker-compose -f docker-compose.prod.yml logs <service-name>
-
-# Rebuild from scratch
-docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml build --no-cache
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-**2. Database Connection Failed**
-```bash
-# Check database is running
-docker-compose -f docker-compose.prod.yml ps mongodb mysql
-
-# Check network connectivity
-docker network inspect a64core-network
-
-# Verify environment variables
-docker-compose -f docker-compose.prod.yml config
-```
-
-**3. Out of Memory**
-```bash
-# Check memory usage
-docker stats
-
-# Increase Docker memory limits in docker-compose.prod.yml
-# Restart with new limits
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-**4. Disk Space Full**
-```bash
-# Clean up Docker resources
-docker system prune -a
-
-# Remove old images
-docker image prune -a
-
-# Remove unused volumes (CAUTION!)
-docker volume prune
-```
-
-**5. SSL Certificate Issues**
-```bash
-# Renew certificate
-sudo certbot renew
-
-# Test renewal
-sudo certbot renew --dry-run
-```
-
-### Emergency Procedures
-
-**Complete System Restart:**
-```bash
-docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-**Database Recovery:**
-```bash
-# Stop affected services
-docker-compose -f docker-compose.prod.yml stop mongodb mysql
-
-# Restore from backup (see Rollback Procedures)
-
-# Restart services
-docker-compose -f docker-compose.prod.yml start mongodb mysql
-docker-compose -f docker-compose.prod.yml restart api
-```
-
-## Maintenance
-
-### Regular Maintenance Tasks
-
-**Weekly:**
-- Review logs for errors
-- Check disk space
-- Verify backups are running
-
-**Monthly:**
-- Update Docker images
-- Security patches
-- Performance review
-- Backup testing
-
-**Quarterly:**
-- Security audit
-- Capacity planning
-- Update SSL certificates (if not auto-renewed)
-
-### Update Process
+The origin behind the tunnel is down. Check:
 
 ```bash
-# 1. Backup everything
-/opt/a64core/scripts/backup-mongodb.sh
-/opt/a64core/scripts/backup-mysql.sh
-
-# 2. Pull latest changes
-git pull origin main
-
-# 3. Update dependencies
-docker-compose -f docker-compose.prod.yml build
-
-# 4. Rolling update
-docker-compose -f docker-compose.prod.yml up -d
-
-# 5. Verify
-curl http://localhost:8000/api/health
+docker ps --filter "name=a64coreplatform-nginx-1"
+curl -i http://localhost
 ```
 
-## Support Contacts
+If nginx is missing or crashlooping, `docker compose up -d` to recover. The watchdog catches this within 5 min automatically.
 
-- **System Administrator:** [Contact Info]
-- **Database Administrator:** [Contact Info]
-- **Development Team:** [Contact Info]
-- **24/7 Emergency:** [Contact Info]
+### Page loads but is blank
+
+Vite is failing to transform a TS/TSX file. Symptom in `~/Documents/Backups/.watchdog.log`:
+
+```
+VITE ERROR DETECTED — front-end is broken
+  [vite] Internal server error: ... Identifier 'X' has already been declared
+```
+
+Fix the source file, then:
+
+```bash
+docker restart a64coreplatform-user-portal-1
+```
+
+The pre-commit hook in `.githooks/pre-commit` blocks the most common cause (duplicate top-level identifiers) — activate it with `git config core.hooksPath .githooks` on every clone.
+
+### `host not found in upstream "finance:8001"`
+
+The `a64-finance` container is on a different docker network than nginx. Run:
+
+```bash
+docker network connect --alias finance a64coreplatform_a64core-network a64-finance
+docker network connect --alias mysql   a64coreplatform_a64core-network a64-mysql
+```
+
+Or just wait — the watchdog re-bridges automatically on each recovery cycle.
+
+### MongoDB won't initiate replica set
+
+Most common cause: replica set already initiated but you're running the command twice. Confirm:
+
+```bash
+docker exec a64coreplatform-mongodb-1 mongosh --quiet --eval 'rs.status().ok'
+```
+
+If `1`, you're done. If you genuinely need to re-init (data wipe), stop the stack, `rm -rf data/mongodb/*`, restart, then re-init.
+
+### "AI assistant is not configured"
+
+The `ANTHROPIC_API_KEY` is missing, invalid, or the api container has stale env. Check:
+
+```bash
+docker exec a64coreplatform-api-1 printenv ANTHROPIC_API_KEY | head -c 15
+docker exec a64coreplatform-api-1 python3 -c \
+  "import asyncio, os; from anthropic import AsyncAnthropic; \
+   asyncio.run(AsyncAnthropic(api_key=os.environ['ANTHROPIC_API_KEY']).messages.create(model='claude-sonnet-4-6', max_tokens=5, messages=[{'role':'user','content':'hi'}]))"
+```
+
+If the key is unset or invalid, fix `.env` and **`docker compose up -d --force-recreate api`** (not `docker restart`).
+
+---
+
+## Rollback
+
+If a deploy goes sideways:
+
+```bash
+# 1. take a fresh snapshot of the broken state (for forensics)
+~/bin/a64core-backup.sh adhoc
+
+# 2. roll the code back to a known-good commit
+cd ~/Code/A64CorePlatform
+git log --oneline -10
+git checkout <good-sha>
+
+# 3. restore data from before the bad deploy
+~/bin/a64core-restore.sh ~/Documents/Backups/<earlier-date>
+
+# 4. recreate
+docker compose up -d --force-recreate
+```
+
+`docker compose down` (no `-v`) is safe — the MongoDB bind mount at `./data/mongodb` is on the host filesystem, not in a Docker volume that could be reaped.
+
+---
+
+## Footnotes
+
+- Daily backups are sized ~35 MB compressed (snapshot of ~400 MB live DB). 14 days × 35 MB = ~0.5 GB.
+- The pre-commit hook + watchdog were added in response to the 2026-05-20 incidents where (a) the cloudflared tunnel went down because cross-stack network bridging was lost, and (b) Vite crashed silently from a duplicate `PurchaseOrdersPage` identifier in `App.tsx`. See `.githooks/README.md` and `~/Documents/Backups/.watchdog.log` for details.
+- The `data/mongodb/` bind mount was migrated from the named volume `a64coreplatform_mongodb_data` on 2026-05-19 to insulate the database from compose-project-name changes. The old named volume is kept as a one-shot rollback option until manually pruned.

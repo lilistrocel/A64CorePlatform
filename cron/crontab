@@ -4,4 +4,10 @@
 # Expiry cron disabled — manual expiry via POST /v1/farm/inventory/harvest/{id}/expire
 # 0 2 * * * /usr/local/bin/run-expiry-inventory.sh >> /var/log/cron/expiry-inventory.log 2>&1
 
+# Finance outbox reconciliation sweeper — runs every 5 minutes.
+# Back-fills any finance_outbox rows that were silently dropped by the best-effort
+# try/except in document_service._emit_pr_event / _emit_po_event.
+# No-op when FINANCE_OUTBOX_ENABLED is not "true" / "1" / "yes".
+*/5 * * * * /usr/local/bin/run-outbox-reconciler.sh >> /var/log/cron/outbox-reconciler.log 2>&1
+
 # Empty line at end of file (required by cron)
