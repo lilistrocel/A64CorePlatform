@@ -29,7 +29,9 @@ from ...models.schemas.master_data import (
     ApprovalRuleResolveResponse,
     ApprovalRuleUpdate,
     PurchaseItemFinanceExtResponse,
+    PurchaseItemFinanceExtUpdate,
     PurchaseItemFinanceExtUpsert,
+    PurchaseItemTypeLiteral,
     VendorFinanceExtResponse,
     VendorFinanceExtUpsert,
 )
@@ -374,6 +376,244 @@ async def delete_item_ext(
             detail=f"No finance extension found for item '{item_id}'",
         )
     await db.delete(row)
+
+
+# ===========================================================================
+# Purchase Items — finance GL mapping view
+# New endpoints added for A.4: GET list/detail and PATCH for account mapping.
+# These sit alongside the existing purchase-item-ext PUT/DELETE routes and
+# expose a cleaner URL scheme (/purchase-items/{item_id}) plus search/filter.
+# ===========================================================================
+
+
+@router.get(
+    "/purchase-items",
+    response_model=PaginatedResponse[PurchaseItemFinanceExtResponse],
+    summary="List purchase items with their finance GL mapping",
+)
+async def list_purchase_items(
+    organization_id: str = Query(...),
+    item_type: Optional[PurchaseItemTypeLiteral] = Query(
+        None, alias="itemType", description="Filter by item type"
+    ),
+    is_active: Optional[bool] = Query(None, alias="is_active"),
+    search: Optional[str] = Query(
+        None,
+        description="Substring search on itemCode or itemName (case-insensitive)",
+    ),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
+) -> PaginatedResponse[PurchaseItemFinanceExtResponse]:
+    """
+    Return a paginated list of purchase items with their finance-side GL mapping.
+
+    Supports optional filtering by itemType, isActive status, and a substring
+    search on itemCode / itemName (case-insensitive).
+
+    Args:
+        organization_id: Org scope (required).
+        item_type: Optional filter by operational item type.
+        is_active: Optional filter by active/inactive status.
+        search: Optional substring match on itemCode or itemName.
+        page: 1-based page number.
+        size: Items per page (max 200).
+        db: Async DB session.
+        _current_user: Authenticated user (read roles).
+
+    Returns:
+        Paginated list of PurchaseItemFinanceExtResponse.
+    """
+    from sqlalchemy import func, or_
+
+    from ...models.orm.models import PurchaseItemTypeEnum
+
+    base_filter = [PurchaseItemFinanceExt.organizationId == organization_id]
+
+    if item_type is not None:
+        try:
+            enum_val = PurchaseItemTypeEnum(item_type)
+            base_filter.append(PurchaseItemFinanceExt.itemType == enum_val)
+        except ValueError:
+            pass  # Reason: unknown value returns empty result gracefully
+
+    if is_active is not None:
+        base_filter.append(PurchaseItemFinanceExt.isActive == is_active)
+
+    if search:
+        # Reason: use ilike for case-insensitive substring match on either field.
+        pattern = f"%{search}%"
+        base_filter.append(
+            or_(
+                PurchaseItemFinanceExt.itemCode.ilike(pattern),
+                PurchaseItemFinanceExt.itemName.ilike(pattern),
+            )
+        )
+
+    count_q = (
+        select(func.count())
+        .select_from(PurchaseItemFinanceExt)
+        .where(*base_filter)
+    )
+    total = await db.scalar(count_q) or 0
+
+    offset = (page - 1) * size
+    result = await db.execute(
+        select(PurchaseItemFinanceExt)
+        .where(*base_filter)
+        .order_by(PurchaseItemFinanceExt.itemCode)
+        .offset(offset)
+        .limit(size)
+    )
+    items = result.scalars().all()
+
+    return paginated(
+        items=[PurchaseItemFinanceExtResponse.model_validate(r) for r in items],
+        total=total,
+        page=page,
+        size=size,
+    )
+
+
+@router.get(
+    "/purchase-items/{item_id}",
+    response_model=SuccessResponse[PurchaseItemFinanceExtResponse],
+    summary="Get purchase item finance mapping by itemId",
+)
+async def get_purchase_item(
+    item_id: str,
+    organization_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
+) -> SuccessResponse[PurchaseItemFinanceExtResponse]:
+    """
+    Retrieve the finance GL mapping for a single purchase item.
+
+    Args:
+        item_id: UUID string matching the main app's purchase item document.
+        organization_id: Org scope.
+        db: Async DB session.
+        _current_user: Authenticated user (read roles).
+
+    Returns:
+        PurchaseItemFinanceExtResponse wrapped in SuccessResponse.
+
+    Raises:
+        HTTPException 404: If no ext row exists for this item in this org.
+    """
+    result = await db.execute(
+        select(PurchaseItemFinanceExt).where(
+            PurchaseItemFinanceExt.organizationId == organization_id,
+            PurchaseItemFinanceExt.itemId == item_id,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No finance extension found for item '{item_id}'",
+        )
+    return success(PurchaseItemFinanceExtResponse.model_validate(row))
+
+
+@router.patch(
+    "/purchase-items/{item_id}",
+    response_model=SuccessResponse[PurchaseItemFinanceExtResponse],
+    summary="Update GL account mapping for a purchase item",
+)
+async def patch_purchase_item(
+    item_id: str,
+    body: PurchaseItemFinanceExtUpdate,
+    organization_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    _current_user: TokenPayload = Depends(require_roles(*_WRITE_ROLES)),
+) -> SuccessResponse[PurchaseItemFinanceExtResponse]:
+    """
+    Partially update the GL account mapping for a purchase item.
+
+    Any account ID field supplied is validated: it must reference an active
+    leaf-level (accountLevel='active') GL account in the SAME organisation.
+    Pass null to explicitly clear an account assignment.
+    Only fields present in the request body are written.
+
+    Args:
+        item_id: UUID string matching the main app's purchase item document.
+        body: Fields to update; omitted fields are unchanged.
+        organization_id: Org scope.
+        db: Async DB session.
+        _current_user: Authenticated user (write roles).
+
+    Returns:
+        Updated PurchaseItemFinanceExtResponse.
+
+    Raises:
+        HTTPException 404: If no ext row exists for this item.
+        HTTPException 422: If an account ID is not a valid active leaf account
+                           in this organisation.
+    """
+    result = await db.execute(
+        select(PurchaseItemFinanceExt).where(
+            PurchaseItemFinanceExt.organizationId == organization_id,
+            PurchaseItemFinanceExt.itemId == item_id,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No finance extension found for item '{item_id}'",
+        )
+
+    # Reason: account FK fields need extra validation — they must reference an
+    # active leaf account in the SAME org (not a title/drawer header account).
+    _ACCOUNT_FK_FIELDS = {"inventoryAccountId", "cogsAccountId", "allocationAccountId"}
+
+    from ...models.orm.models import AccountLevelEnum, GLAccount
+
+    # Reason: model_fields_set contains only the fields explicitly present in
+    # the JSON body.  Fields omitted by the caller are not iterated, so we
+    # never overwrite something the caller didn't touch.  Fields present with
+    # value null are in model_fields_set with a None value — we allow those
+    # through to clear the FK.
+    for field_name in body.model_fields_set:
+        value = getattr(body, field_name)
+        if field_name not in _ACCOUNT_FK_FIELDS or value is None:
+            # null is always allowed (clears the FK); non-account fields skip validation
+            setattr(row, field_name, value)
+            continue
+
+        # Validate that the account exists, belongs to this org, and is active leaf
+        acct_result = await db.execute(
+            select(GLAccount).where(
+                GLAccount.accountId == value,
+                GLAccount.organizationId == organization_id,
+                GLAccount.isActive == True,  # noqa: E712
+            )
+        )
+        acct = acct_result.scalar_one_or_none()
+        if acct is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"{field_name}: account '{value}' not found or inactive "
+                    f"in organisation '{organization_id}'"
+                ),
+            )
+        if acct.accountLevel != AccountLevelEnum.ACTIVE:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"{field_name}: account '{value}' is a "
+                    f"'{acct.accountLevel.value}' account — only active leaf "
+                    f"accounts may be assigned for posting"
+                ),
+            )
+        setattr(row, field_name, value)
+
+    await db.flush()
+    await db.refresh(row)
+    return success(PurchaseItemFinanceExtResponse.model_validate(row))
 
 
 # ===========================================================================

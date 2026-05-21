@@ -11,24 +11,30 @@ Design decisions
   the finance service.
 - Validates the payload against the contracts registry before writing.
   Invalid payloads raise ValueError immediately (fail-fast at the producer).
-- Designed to be called right after (or within) the business write, not in
-  a separate background task — keeps the outbox entry as close as possible
-  to the business transaction.
+- Designed to be called inside the same Mongo session/transaction as the
+  business write so the outbox insert and the business mutation are atomic.
+  Pass `session=session` (Motor AsyncIOMotorClientSession) to participate in
+  the caller's transaction.  Default `session=None` keeps the call outside
+  any transaction (backwards-compatible with pre-Phase-2 callers).
 - The eventId is generated here if not supplied so callers don't need to
   import uuid.
 
-Example usage (Week 4 — in a sales order handler):
+Example usage (Phase 2 — inside a Mongo session transaction):
     from src.modules.finance_bridge.outbox_writer import OutboxWriter
 
-    await OutboxWriter.publish(
-        db=mongodb.get_database(),
-        event_type="sales_order_shipped",
-        organization_id="<uuid>",
-        company_code="A001",
-        payload={...},
-        source_user_id="<uuid>",
-        source_document_id=str(order["_id"]),
-    )
+    async with await db.client.start_session() as session:
+        async with session.start_transaction():
+            await db["document_headers"].update_one({...}, {...}, session=session)
+            await OutboxWriter.publish(
+                db=db,
+                event_type="pr_state_changed",
+                organization_id="<uuid>",
+                company_code="1000",
+                payload={...},
+                source_user_id="<uuid>",
+                source_document_id="<doc_id>",
+                session=session,
+            )
 """
 
 import logging
@@ -36,7 +42,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorDatabase
 
 from contracts.finance_events import EVENT_TYPE_REGISTRY
 
@@ -65,12 +71,13 @@ class OutboxWriter:
         source_user_id: str,
         source_document_id: Optional[str] = None,
         event_id: Optional[str] = None,
+        session: Optional[AsyncIOMotorClientSession] = None,
     ) -> Optional[str]:
         """
         Validate and publish a finance domain event to the outbox collection.
 
         If FINANCE_OUTBOX_ENABLED is False the method is a no-op and returns
-        None immediately.
+        None immediately without touching the session.
 
         Args:
             db: Motor async database instance (same connection as the caller's
@@ -86,6 +93,11 @@ class OutboxWriter:
             source_document_id: Optional opaque id linking back to the MongoDB
                                  source document (e.g. order ObjectId hex str).
             event_id: Optional UUID string.  Generated automatically if omitted.
+            session: Optional Motor client session.  When provided, the insert
+                     participates in the caller's active transaction so the
+                     outbox write and the business mutation are atomic.  Default
+                     None keeps the call outside any transaction (backwards-
+                     compatible with pre-Phase-2 callers).
 
         Returns:
             The eventId (str UUID) if the event was written, None if outbox is
@@ -94,6 +106,8 @@ class OutboxWriter:
         Raises:
             ValueError: If event_type is not in EVENT_TYPE_REGISTRY.
             pydantic.ValidationError: If payload does not match the schema.
+            Exception: Any non-duplicate MongoDB error is re-raised so the
+                       caller's transaction aborts and the failure is visible.
         """
         if not is_outbox_enabled():
             # Reason: feature flag off — main app must work without finance service
@@ -134,7 +148,9 @@ class OutboxWriter:
         }
 
         try:
-            await db[_COLLECTION].insert_one(doc)
+            # Reason: pass session so insert participates in the caller's Mongo
+            # transaction when one is active; None is a no-op for Motor.
+            await db[_COLLECTION].insert_one(doc, session=session)
             logger.info(
                 "[FinanceBridge] published event event_type=%s event_id=%s",
                 event_type,
@@ -143,7 +159,7 @@ class OutboxWriter:
             return generated_event_id
         except Exception as exc:
             # Reason: duplicate key on eventId means caller already published —
-            # treat as idempotent success rather than a hard error
+            # treat as idempotent success rather than a hard error.
             if "duplicate key" in str(exc).lower() or "11000" in str(exc):
                 logger.warning(
                     "[FinanceBridge] duplicate eventId=%s — skipping",

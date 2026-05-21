@@ -114,7 +114,10 @@ services:
       dockerfile: services/finance_consumer/Dockerfile
     container_name: a64-finance-consumer
     environment:
-      - MONGODB_URL=${MONGODB_URL:-mongodb://mongodb:27017/a64core_db}
+      # Use the same URL pattern as the main API (no auth, replicaSet=rs0 required).
+      # Do NOT inherit the generic MONGODB_URL from .env — that value may contain
+      # auth credentials for a different instance or a stale database name.
+      - MONGODB_URL=mongodb://mongodb:27017/?replicaSet=rs0
       - MONGODB_DB_NAME=${MONGODB_DB_NAME:-a64core_db}
       - FINANCE_URL=http://finance:8001
       - FINANCE_INGESTION_SECRET=${FINANCE_INGESTION_SECRET:-dev-only-secret-change-in-prod}

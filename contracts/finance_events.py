@@ -84,19 +84,34 @@ class SalesLine(BaseModel):
     """Used to derive COGS posting in Week 4."""
 
 
-class PurchaseLine(BaseModel):
-    """One line on a purchase goods receipt."""
+class GoodsReceivedLine(BaseModel):
+    """
+    One line on a goods receipt.
 
-    itemType: Literal["raw_material", "consumable", "fixed_asset", "expense"]
+    Phase B contract. The finance handler uses itemId to look up the
+    per-item inventory account in purchase_item_finance_ext, then debits
+    that account for `lineNet` per line.
+    """
+
+    lineNumber: int
+    itemId: UUID
+    itemCode: str
     itemName: str
+    itemType: Literal["raw_material", "consumable", "service", "fixed_asset_acquisition"]
     quantity: Decimal
-    unit: str
-    unitCost: Decimal
-    lineTotal: Decimal
-    taxCode: str
-    taxAmount: Decimal
-    glAccountHint: Optional[str] = None
-    """Optional account suggestion; finance service resolves to actual account."""
+    uom: str
+    unitPrice: Decimal
+    lineNet: Decimal
+    lineTax: Decimal
+    lineGross: Decimal
+    taxCode: Optional[str] = None
+    baseLineId: Optional[UUID] = None
+    """Link to the source PO line this receipt was created from."""
+
+
+# Backwards-compat alias retained until any old handlers are removed.
+# New code should use GoodsReceivedLine.
+PurchaseLine = GoodsReceivedLine
 
 
 class InvoiceApplication(BaseModel):
@@ -151,18 +166,149 @@ class SalesOrderShippedPayload(BaseModel):
 
 class PurchaseReceivedPayload(BaseModel):
     """
-    Raised when a purchase order goods receipt is confirmed.
+    Raised when a goods receipt is posted (Draft → Posted) on the operation side.
 
-    Finance action (Week 4): DR appropriate asset/expense account, DR VAT Input, CR AP.
+    Finance action: DR per-line inventory account (looked up via
+    purchase_item_finance_ext.inventoryAccountId for each lineN.itemId) /
+    CR GR/IR Clearing account (from company_posting_setup.grIrClearingAccountId).
+    VAT is NOT recognised at GR — VAT lives on the AP Invoice (Phase C).
     """
 
-    purchaseOrderId: UUID
+    # GR document identity
+    grDocId: UUID
+    grDocNumber: str
+    grDate: str
+    """ISO date (YYYY-MM-DD). The accounting date for the JE."""
+
+    # Source PO link
+    poDocId: UUID
+    poDocNumber: str
+
+    # Counterparty + finance company
     vendorId: UUID
-    farmCode: Optional[str] = None
-    lines: List[PurchaseLine]
+    vendorCode: Optional[str] = None
+    companyCode: str
+
+    # Lines and totals
+    lines: List[GoodsReceivedLine]
+    currencyCode: str = "AED"
     totalNetAmount: Decimal
     totalTaxAmount: Decimal
     totalGrossAmount: Decimal
+
+    # Optional context
+    warehouseId: Optional[str] = None
+    notes: Optional[str] = None
+    farmCode: Optional[str] = None
+    """Legacy field retained for non-purchasing handlers; unused by GR posting."""
+
+
+class ApInvoiceLine(BaseModel):
+    """
+    One line on an AP (vendor) invoice.
+
+    Phase C contract. Each line traces back to the originating GR line via
+    `grLineId`, which in turn carries `baseLineId` pointing to the PO line.
+    Finance uses this chain for the three-way match audit.
+
+    Variance accounting:
+      - `poUnitPrice` and `invoiceUnitPrice` may differ. The system records
+        `priceVarianceAmount = (invoiceUnitPrice - poUnitPrice) * quantity`
+        per line and aggregates them at the header.
+      - `quantity` always equals the GR receipt quantity in v1 — partial
+        invoicing of one GR is deferred to a later phase.
+    """
+
+    lineNumber: int
+    itemId: UUID
+    itemCode: str
+    itemName: str
+    itemType: Literal["raw_material", "consumable", "service", "fixed_asset_acquisition"]
+    quantity: Decimal
+    uom: str
+    poUnitPrice: Decimal
+    invoiceUnitPrice: Decimal
+    priceVarianceAmount: Decimal
+    """(invoiceUnitPrice - poUnitPrice) * quantity. Positive = vendor over-billed."""
+    lineNet: Decimal
+    """quantity * invoiceUnitPrice. The basis for VAT and AP."""
+    lineTax: Decimal
+    lineGross: Decimal
+    taxCode: Optional[str] = None
+    grLineId: UUID
+    """Link to the source GR line being invoiced."""
+    baseLineId: Optional[UUID] = None
+    """Link to the original PO line (traceability)."""
+
+
+class ApInvoicePostedPayload(BaseModel):
+    """
+    Raised when an AP Invoice transitions Draft → Posted (Phase C).
+
+    Finance action:
+      DR GR/IR Clearing            (sum of lineNet — clears the GR holding)
+      DR Input VAT                 (sum of lineTax — reclaimable from authority)
+      DR Purchase Price Variance   (totalPriceVariance, only if non-zero)
+      CR AP - Vendor Control       (sum of lineGross — vendor's specific liability)
+
+    The AP Control account comes from company_posting_setup.apControlAccountId.
+    The Input VAT account from posting setup. The variance account is
+    posting_setup.purchasePriceVarianceAccountId — REQUIRED in production once
+    Phase C is live; the handler rejects with 400 if it is null AND there is
+    non-zero variance to post.
+    """
+
+    # AP Invoice document identity
+    apDocId: UUID
+    apDocNumber: str
+    """Internal doc number, e.g. AP-2026-0001."""
+    apDate: str
+    """ISO date — accounting date for the JE. Usually the invoice receipt date."""
+    invoiceNumber: str
+    """The vendor's invoice number, as printed on their document."""
+    invoiceDate: str
+    """The vendor's invoice date (ISO). Used for audit + due-date calc."""
+    dueDate: Optional[str] = None
+    """ISO date when payment is due. Driven by paymentTermsCode + invoiceDate."""
+    dateOfSupply: str = ""
+    """
+    ISO date — UAE VAT Article 25 date of supply (= GR docDate for purchases).
+
+    The FTA-defined tax point is min(dateOfSupply, invoiceDate, paymentDate).
+    At AP Invoice posting time (no payment yet) it is min(dateOfSupply, invoiceDate).
+    The finance handler uses this date in the Input VAT line description so VAT
+    return reports can reconstruct the tax point for each transaction.
+
+    Defaults to "" (empty) so existing events that pre-date this field remain
+    valid; the handler treats empty/missing as 'use invoiceDate as tax point'.
+    """
+
+    # Source GR + PO chain
+    grDocId: UUID
+    grDocNumber: str
+    poDocId: UUID
+    poDocNumber: str
+
+    # Counterparty + finance company
+    vendorId: UUID
+    vendorCode: Optional[str] = None
+    companyCode: str
+    paymentTermsCode: Optional[str] = None
+
+    # Lines and totals
+    lines: List[ApInvoiceLine]
+    currencyCode: str = "AED"
+    totalNetAmount: Decimal
+    """Sum of lineNet. Hits DR GR/IR Clearing."""
+    totalTaxAmount: Decimal
+    """Sum of lineTax. Hits DR Input VAT."""
+    totalGrossAmount: Decimal
+    """Sum of lineGross. Hits CR AP Control."""
+    totalPriceVariance: Decimal
+    """Sum of priceVarianceAmount per line. Hits DR Purchase Price Variance (if non-zero)."""
+
+    # Optional context
+    notes: Optional[str] = None
 
 
 class HarvestRecordedPayload(BaseModel):
@@ -347,6 +493,102 @@ class PaymentTermsChangedPayload(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Phase 1B — Purchase Request and Purchase Order state change events
+# ---------------------------------------------------------------------------
+
+
+class PurchaseRequestStateChangedPayload(BaseModel):
+    """
+    Emitted on PR state transitions (created, submitted, approved, rejected,
+    cancelled, converted to PO).
+
+    Finance action (Phase 3): accrue budget commitment on Approved;
+    reverse on Rejected/Cancelled.
+    """
+
+    docId: UUID
+    docNumber: str
+    """PR-2026-0001 style"""
+    state: Literal[
+        "Draft",
+        "Pending Approval",
+        "Approved",
+        "Rejected",
+        "Cancelled",
+        "Closed",
+    ]
+    previousState: Optional[str] = None
+    organizationId: UUID
+    companyCode: str
+    requestedBy: UUID
+    requestedDate: datetime
+    department: Optional[str] = None
+    urgency: Literal["low", "normal", "high"] = "normal"
+    totalAmount: Decimal
+    currencyCode: str = "AED"
+    notes: Optional[str] = None
+    approvalRequestedFrom: Optional[str] = None
+    """Role or userId of the requested approver."""
+    approvalDecidedBy: Optional[UUID] = None
+    approvalComment: Optional[str] = None
+    approvalHistory: Optional[List[dict]] = None
+    """
+    Ordered list of approval decisions for this document.  Null when not yet available
+    (e.g. events emitted by older code or replayed from outbox without history).
+    Today contains at most one entry; Phase F multi-step chains will have more.
+    Finance consumers should treat this as an optional audit supplement.
+    """
+
+
+class PurchaseOrderStateChangedPayload(BaseModel):
+    """
+    Emitted on PO state transitions.
+
+    Finance action (Phase 3): create AP accrual on Open; book receipt on
+    Received; generate AP Invoice on Closed.
+    """
+
+    docId: UUID
+    docNumber: str
+    """PO-2026-0001 style"""
+    state: Literal[
+        "Draft",
+        "Pending Approval",
+        "Open",
+        "Sent",
+        "Partially Received",
+        "Received",
+        "Closed",
+        "Cancelled",
+    ]
+    previousState: Optional[str] = None
+    organizationId: UUID
+    companyCode: str
+    vendorId: Optional[UUID] = None
+    vendorCode: Optional[str] = None
+    issuedBy: UUID
+    issuedDate: datetime
+    expectedDeliveryDate: Optional[datetime] = None
+    paymentTermsCode: Optional[str] = None
+    dueDate: Optional[datetime] = None
+    """Computed from issuedDate + payment terms net days."""
+    baseDocId: Optional[UUID] = None
+    """Set when the PO was created from a PR."""
+    totalNet: Decimal
+    totalTax: Decimal
+    totalGross: Decimal
+    currencyCode: str = "AED"
+    notes: Optional[str] = None
+    approvalHistory: Optional[List[dict]] = None
+    """
+    Ordered list of approval decisions for this document.  Null when not yet available
+    (e.g. events emitted by older code or replayed from outbox without history).
+    Today contains at most one entry; Phase F multi-step chains will have more.
+    Finance consumers should treat this as an optional audit supplement.
+    """
+
+
+# ---------------------------------------------------------------------------
 # Union + registry
 # ---------------------------------------------------------------------------
 
@@ -364,11 +606,14 @@ EventPayload = Union[
     VendorChangedPayload,
     PurchaseItemChangedPayload,
     PaymentTermsChangedPayload,
+    PurchaseRequestStateChangedPayload,
+    PurchaseOrderStateChangedPayload,
 ]
 
 EVENT_TYPE_REGISTRY: Dict[str, Type[BaseModel]] = {
     "sales_order_shipped": SalesOrderShippedPayload,
     "purchase_received": PurchaseReceivedPayload,
+    "ap_invoice_posted": ApInvoicePostedPayload,
     "harvest_recorded": HarvestRecordedPayload,
     "inventory_waste": InventoryWastePayload,
     "customer_payment": CustomerPaymentPayload,
@@ -381,6 +626,9 @@ EVENT_TYPE_REGISTRY: Dict[str, Type[BaseModel]] = {
     "vendor_changed": VendorChangedPayload,
     "purchase_item_changed": PurchaseItemChangedPayload,
     "payment_terms_changed": PaymentTermsChangedPayload,
+    # Phase 1B — Purchase Request and Purchase Order state changes
+    "pr_state_changed": PurchaseRequestStateChangedPayload,
+    "po_state_changed": PurchaseOrderStateChangedPayload,
 }
 """
 Maps eventType discriminator strings to their payload Pydantic class.

@@ -1,12 +1,17 @@
 """
 Default Chart of Accounts seed data.
 
-308 accounts across 9 drawers for a standard UAE agri-business company.
+231 accounts across 9 drawers for a standard UAE agri-business company.
 Each tuple: (accountNumber, accountName, drawer, accountType, parentAccountNumber_or_None, isHeader)
 
 Control accounts (isControlAccount=True) are set in the seed loader:
   - 124000-001 Trade Receivables - Customers
   - 221000-001 Trade Payables - Suppliers
+
+Change history:
+  2026-05-20: Added 514000-004 Purchase Price Variance (Item 12)
+              Added 617000-011 Rounding Differences (Item 10)
+              Added 223000-004 Goods Received Not Invoiced (Item 1 — reclassified from 221000-002)
 """
 
 from ...models.orm.models import AccountTypeEnum, DrawerEnum
@@ -100,6 +105,10 @@ DEFAULT_COA: list[tuple] = [
     ("223000-001", "Accrued Expenses",                             DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY, "223000",     False),
     ("223000-002", "Deferred Revenue",                             DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY, "223000",     False),
     ("223000-003", "Customer Deposits Received",                   DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY, "223000",     False),
+    # Item 1: GR/IR reclassified from Trade Payables (221000-002) to Accrued Liabilities.
+    # IAS 37 / IAS 2 — goods received but not yet invoiced are accrued liabilities,
+    # not specific trade payables.  The old 221000-002 row is kept inactive for JE history.
+    ("223000-004", "Goods Received Not Invoiced",                  DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY, "223000",     False),
     ("224000",     "Short-Term Borrowings",                        DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY, "220000",     True),
     ("224000-001", "Bank Overdraft",                               DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY, "224000",     False),
     ("224000-002", "Bank Loans - Short Term",                      DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY, "224000",     False),
@@ -178,6 +187,9 @@ DEFAULT_COA: list[tuple] = [
     ("514000-001", "Inventory Write-Offs",                         DrawerEnum.COST_OF_SALES, AccountTypeEnum.EXPENSE, "514000",     False),
     ("514000-002", "Waste & Spoilage",                             DrawerEnum.COST_OF_SALES, AccountTypeEnum.EXPENSE, "514000",     False),
     ("514000-003", "Cycle Count Adjustments",                      DrawerEnum.COST_OF_SALES, AccountTypeEnum.EXPENSE, "514000",     False),
+    # Item 12: PPV account — captures the difference between PO price and invoice price.
+    # Required by Phase C AP Invoice posting handler (purchase price variance JE leg).
+    ("514000-004", "Purchase Price Variance",                      DrawerEnum.COST_OF_SALES, AccountTypeEnum.EXPENSE, "514000",     False),
 
     # =========================================================================
     # OPERATING COST
@@ -232,6 +244,9 @@ DEFAULT_COA: list[tuple] = [
     ("617000-008", "Postage & Courier",                            DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE, "617000",     False),
     ("617000-009", "Miscellaneous Expenses",                       DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE, "617000",     False),
     ("617000-010", "Donations & CSR",                              DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE, "617000",     False),
+    # Item 10: Rounding Differences — target for PostingSetup.roundingAccountId.
+    # Absorbs sub-cent rounding deltas to keep JEs balanced.
+    ("617000-011", "Rounding Differences",                         DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE, "617000",     False),
     ("618000",     "Research & Development",                       DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE, "610000",     True),
     ("618000-001", "R&D - Crop Trials",                            DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE, "618000",     False),
     ("618000-002", "R&D - Technology Development",                 DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE, "618000",     False),

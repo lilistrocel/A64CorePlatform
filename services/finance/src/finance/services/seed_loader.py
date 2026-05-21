@@ -11,6 +11,22 @@ Behaviour:
 4. Set isControlAccount=True for the designated control accounts.
 5. Wrap everything in a single transaction.
 6. Seed default tax codes for the organization (idempotent per taxCode).
+
+Note on account_level backfill (Flag A — 2026-05-20):
+Migration 004 adds the account_level column and backfills it via two UPDATE
+statements executed at migration time. However, when alembic upgrade head
+runs on a fresh deployment, gl_accounts is empty — no CoA rows exist yet
+because they are seeded lazily when the first company is created, not at
+migration time. The migration backfill therefore produces zero updated rows
+on a fresh deploy.
+
+Fix: seed_chart_of_accounts now sets accountLevel directly on each GLAccount
+ORM object before flush, using the same two-rule logic as migration 004:
+  - isHeader=True  AND parentAccountId IS NULL  → drawer
+  - isHeader=True  AND parentAccountId IS NOT NULL → title
+  - isHeader=False (leaf)                          → active (ORM default)
+This makes the seed self-contained and idempotent — no manual SQL is needed
+after a fresh alembic upgrade + first company creation.
 """
 
 import logging
@@ -26,7 +42,7 @@ from ..db.seeds.default_coa import (
     DEFAULT_COA,
     DEFAULT_TAX_CODES,
 )
-from ..models.orm.models import ApprovalRule, GLAccount, TaxCode
+from ..models.orm.models import AccountLevelEnum, ApprovalRule, GLAccount, TaxCode
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +126,25 @@ async def seed_chart_of_accounts(
                     account.accountNumber,
                 )
 
+    # Third pass: backfill account_level using the same logic as migration 004.
+    # Reason: migration 004 runs its UPDATE backfill at migration time, but
+    # gl_accounts is empty on a fresh deployment (CoA is seeded lazily on first
+    # company creation, not at migrate time). Setting accountLevel here ensures
+    # every fresh deploy produces correct values without manual SQL intervention.
+    #
+    # Rules (mirror of migration 004):
+    #   isHeader=True  AND parentAccountId IS NULL  → drawer  (top-level section)
+    #   isHeader=True  AND parentAccountId IS NOT NULL → title (intermediate header)
+    #   isHeader=False (leaf account)               → active  (matches ORM default)
+    for account in rows:
+        if account.isHeader:
+            if account.parentAccountId is None:
+                account.accountLevel = AccountLevelEnum.DRAWER
+            else:
+                account.accountLevel = AccountLevelEnum.TITLE
+        # Reason: leaf accounts keep the default AccountLevelEnum.ACTIVE set in
+        # the GLAccount ORM model — no explicit assignment needed.
+
     logger.info(
         "Seeded %d GL accounts for organization %s",
         len(rows),
@@ -173,6 +208,10 @@ async def seed_tax_codes(
         input_id = await _get_account_id(input_account_number)
         output_id = await _get_account_id(output_account_number)
 
+        # Reason: SR (Standard Reverse Charge) requires UAE VAT self-accounting.
+        # The buyer posts both DR Input VAT and CR Output VAT for the same amount.
+        is_reverse_charge = tax_code == "SR"
+
         tc = TaxCode(
             organizationId=organization_id,
             taxCode=tax_code,
@@ -180,6 +219,7 @@ async def seed_tax_codes(
             rate=Decimal(rate_str),
             inputTaxAccountId=input_id,
             outputTaxAccountId=output_id,
+            isReverseCharge=is_reverse_charge,
             isActive=True,
         )
         db.add(tc)

@@ -11,8 +11,9 @@ from pydantic_settings import BaseSettings
 class ConsumerSettings(BaseSettings):
     """Settings for the finance outbox consumer worker."""
 
-    # MongoDB — same instance as the main A64 app
-    MONGODB_URL: str = "mongodb://mongodb:27017/a64core_db"
+    # MongoDB — same instance as the main A64 app (replica set rs0 required for
+    # change-stream and session operations since the main app switched to rs0)
+    MONGODB_URL: str = "mongodb://mongodb:27017/a64core_db?replicaSet=rs0"
     MONGODB_DB_NAME: str = "a64core_db"
 
     # Finance service ingestion endpoint

@@ -15,7 +15,21 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.v1 import accounts, company, cost_centers, customer_ext, events, health, master_data, periods, tax_codes, vendors
+from .api.v1 import (
+    accounts,
+    ap_payments,
+    company,
+    cost_centers,
+    customer_ext,
+    events,
+    health,
+    journal_entries,
+    master_data,
+    periods,
+    reports,
+    tax_codes,
+    vendors,
+)
 from .config import settings
 from .middleware.error_handler import global_exception_handler
 from .middleware.timing import TimingMiddleware
@@ -71,6 +85,12 @@ app.include_router(customer_ext.router, prefix=_PREFIX)
 app.include_router(master_data.router, prefix=_PREFIX)
 # Week 3: Outbox bridge ingest endpoint (service-to-service, X-Service-Secret auth)
 app.include_router(events.router, prefix=_PREFIX)
+# Phase A.1 + Reversal: Journal Entries API
+app.include_router(journal_entries.router, prefix=_PREFIX)
+# Finance Reports (trial balance, future P&L / BS)
+app.include_router(reports.router, prefix=_PREFIX)
+# Phase D: AP Payments (vendor payment recording + open-invoice totals lookup)
+app.include_router(ap_payments.router, prefix=_PREFIX)
 
 
 # ---- Startup / Shutdown ----

@@ -5,7 +5,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from ..orm.models import AccountTypeEnum, DrawerEnum
+from ..orm.models import AccountLevelEnum, AccountRoleEnum, AccountTypeEnum, DrawerEnum
 
 
 class GLAccountCreate(BaseModel):
@@ -14,18 +14,23 @@ class GLAccountCreate(BaseModel):
     organizationId: str = Field(..., min_length=1)
     accountNumber: str = Field(..., min_length=1, max_length=20)
     accountName: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=500)
     drawer: DrawerEnum
     accountType: AccountTypeEnum
     parentAccountId: Optional[str] = None
     isHeader: bool = False
     isControlAccount: bool = False
     isActive: bool = True
+    accountLevel: AccountLevelEnum = AccountLevelEnum.ACTIVE
+    accountRole: Optional[AccountRoleEnum] = None
+    ifrsTag: Optional[str] = Field(None, max_length=10)
 
 
 class GLAccountUpdate(BaseModel):
     """Request body for patching a GL account."""
 
     accountName: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=500)
     drawer: Optional[DrawerEnum] = None
     accountType: Optional[AccountTypeEnum] = None
     parentAccountId: Optional[str] = None
@@ -33,6 +38,9 @@ class GLAccountUpdate(BaseModel):
     isControlAccount: Optional[bool] = None
     isActive: Optional[bool] = None
     isLockedNumber: Optional[bool] = None
+    accountLevel: Optional[AccountLevelEnum] = None
+    accountRole: Optional[AccountRoleEnum] = None
+    ifrsTag: Optional[str] = Field(None, max_length=10)
 
 
 class GLAccountResponse(BaseModel):
@@ -42,6 +50,7 @@ class GLAccountResponse(BaseModel):
     organizationId: str
     accountNumber: str
     accountName: str
+    description: Optional[str]
     drawer: DrawerEnum
     accountType: AccountTypeEnum
     parentAccountId: Optional[str]
@@ -49,6 +58,9 @@ class GLAccountResponse(BaseModel):
     isControlAccount: bool
     isActive: bool
     isLockedNumber: bool
+    accountLevel: AccountLevelEnum
+    accountRole: Optional[AccountRoleEnum]
+    ifrsTag: Optional[str]
     createdAt: datetime
     updatedAt: datetime
 

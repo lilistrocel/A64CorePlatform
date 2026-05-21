@@ -9,13 +9,31 @@ rather than a JWT — this call never goes through the user auth flow.
 """
 
 import asyncio
+import json
 import logging
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Dict, Tuple
 from uuid import UUID
 
 import httpx
 
 from .config import settings
+
+
+def _json_default(obj: Any) -> Any:
+    # Reason: nested payload dicts may contain datetime/Decimal/UUID values
+    # from Mongo. httpx's default encoder can't handle these — without this
+    # default, any event with datetime fields in its payload (e.g. PR/PO
+    # state-changed) fails to serialize and never reaches the finance ingest
+    # endpoint.
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return str(obj)
+    if isinstance(obj, UUID):
+        return str(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +113,13 @@ class FinanceClient:
         }
 
         try:
+            # Reason: use a custom encoder via content= because httpx's json= param
+            # doesn't accept a `default` callable. _json_default handles datetime,
+            # Decimal, and UUID values that may be nested in event payloads.
             response = await self._client.post(
                 settings.ingest_url,
-                json=payload,
+                content=json.dumps(payload, default=_json_default).encode("utf-8"),
+                headers={"content-type": "application/json"},
             )
 
             if response.status_code == 200:

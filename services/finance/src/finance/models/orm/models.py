@@ -77,6 +77,28 @@ class CostCenterTypeEnum(str, enum.Enum):
     OTHER = "OTHER"
 
 
+class AccountLevelEnum(str, enum.Enum):
+    """Hierarchical level of a GL account in the chart of accounts."""
+
+    DRAWER = "drawer"
+    TITLE = "title"
+    ACTIVE = "active"
+
+
+class AccountRoleEnum(str, enum.Enum):
+    """Functional role of a GL account for automated posting rules."""
+
+    POSTING = "posting"
+    BANK = "bank"
+    CASH = "cash"
+    RECONCILIATION = "reconciliation"
+    CLEARING = "clearing"
+    CONTRA = "contra"
+    REVENUE = "revenue"
+    EXPENSE = "expense"
+    OTHER = "other"
+
+
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
@@ -129,8 +151,16 @@ class GLAccount(Base):
     organizationId = Column(String(36), nullable=False, index=True)
     accountNumber = Column(String(20), nullable=False)
     accountName = Column(String(200), nullable=False)
+    # Reason: description is free-text metadata; nullable so existing rows are unaffected.
+    description = Column(String(500), nullable=True)
     drawer = Column(Enum(DrawerEnum), nullable=False)
-    accountType = Column(Enum(AccountTypeEnum), nullable=False)
+    # Reason: values_callable forces SQLAlchemy to use enum VALUES ('asset', 'liability',
+    # etc.) not names ('ASSET', 'LIABILITY') to match the MySQL column definition in
+    # migration 001 which uses lowercase values.
+    accountType = Column(
+        Enum(AccountTypeEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+    )
     parentAccountId = Column(
         String(36), ForeignKey("gl_accounts.accountId", ondelete="RESTRICT"), nullable=True
     )
@@ -138,6 +168,24 @@ class GLAccount(Base):
     isControlAccount = Column(Boolean, nullable=False, default=False)
     isActive = Column(Boolean, nullable=False, default=True)
     isLockedNumber = Column(Boolean, nullable=False, default=False)
+    # Reason: values_callable forces SQLAlchemy to use enum VALUES ('drawer', 'title',
+    # 'active') not names, matching the MySQL ENUM created by migration 004.
+    # Column name= maps the camelCase ORM attribute to the snake_case DB column.
+    accountLevel = Column(
+        "account_level",
+        Enum(AccountLevelEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=AccountLevelEnum.ACTIVE,
+        server_default="active",
+    )
+    # Reason: nullable — not every account has a role; migration 004 seeded these as NULL.
+    accountRole = Column(
+        "account_role",
+        Enum(AccountRoleEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=True,
+    )
+    # Reason: nullable — IFRS tag is optional metadata; most accounts will not have one.
+    ifrsTag = Column("ifrs_tag", String(10), nullable=True)
     createdAt = Column(DateTime, nullable=False, server_default=func.now())
     updatedAt = Column(
         DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
@@ -183,9 +231,21 @@ class FiscalPeriod(Base):
     periodNumber = Column(Integer, nullable=False)  # 1–13
     startDate = Column(Date, nullable=False)
     endDate = Column(Date, nullable=False)
-    status = Column(Enum(PeriodStatusEnum), nullable=False, default=PeriodStatusEnum.OPEN)
+    # Reason: values_callable forces SQLAlchemy to use enum VALUES ('open', 'closed',
+    # 'locked') not names ('OPEN', 'CLOSED', 'LOCKED') to match migration 001.
+    status = Column(
+        Enum(PeriodStatusEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=PeriodStatusEnum.OPEN,
+    )
     closedAt = Column(DateTime, nullable=True)
+    # Reason: closedByUserId stores the JWT userId of whoever closed the period.
+    # VARCHAR(36) matches the UUID format used throughout the platform.
     closedByUserId = Column(String(36), nullable=True)
+    closeReason = Column(String(500), nullable=True)
+    reopenedAt = Column(DateTime, nullable=True)
+    reopenedByUserId = Column(String(36), nullable=True)
+    reopenReason = Column(String(500), nullable=True)
     createdAt = Column(DateTime, nullable=False, server_default=func.now())
     updatedAt = Column(
         DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
@@ -218,6 +278,11 @@ class TaxCode(Base):
         ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
         nullable=True,
     )
+    # Reason: UAE VAT reverse-charge flag (migration 012). When True, the AP
+    # invoice posting handler must post both DR Input VAT and CR Output VAT
+    # for the same amount (self-accounting). The foreign supplier did not
+    # charge VAT, so AP control is credited for lineNet only (not lineGross).
+    isReverseCharge = Column(Boolean, nullable=False, default=False, server_default="0")
     isActive = Column(Boolean, nullable=False, default=True)
     createdAt = Column(DateTime, nullable=False, server_default=func.now())
     updatedAt = Column(
@@ -353,34 +418,26 @@ class OutboxEventResultEnum(str, enum.Enum):
     FAILED = "failed"
 
 
-class AccountLevelEnum(str, enum.Enum):
-    """Hierarchical level of a GL account in the chart of accounts."""
-
-    DRAWER = "drawer"
-    TITLE = "title"
-    ACTIVE = "active"
-
-
-class AccountRoleEnum(str, enum.Enum):
-    """Functional role of a GL account for automated posting rules."""
-
-    POSTING = "posting"
-    BANK = "bank"
-    CASH = "cash"
-    RECONCILIATION = "reconciliation"
-    CLEARING = "clearing"
-    CONTRA = "contra"
-    REVENUE = "revenue"
-    EXPENSE = "expense"
-    OTHER = "other"
-
-
 class ValuationMethodEnum(str, enum.Enum):
     """Inventory valuation method for purchase items."""
 
     MOVING_AVERAGE = "MovingAverage"
     STANDARD = "Standard"
     FIFO = "FIFO"
+
+
+class PurchaseItemTypeEnum(str, enum.Enum):
+    """
+    Operational item type, denormalized into purchase_item_finance_ext.
+
+    Mirrors the Literal in PurchaseItemChangedPayload so the finance service
+    can filter and display items without cross-DB joins to MongoDB.
+    """
+
+    RAW_MATERIAL = "raw_material"
+    CONSUMABLE = "consumable"
+    SERVICE = "service"
+    FIXED_ASSET_ACQUISITION = "fixed_asset_acquisition"
 
 
 class ApprovalDocTypeEnum(str, enum.Enum):
@@ -453,6 +510,17 @@ class PurchaseItemFinanceExt(Base):
     organizationId = Column(String(36), nullable=False, index=True)
     itemId = Column(String(36), nullable=False)
     itemCode = Column(String(20), nullable=False)
+    # Reason: denormalized from the operational item so the finance UI can display
+    # useful item info without cross-DB joins.  Nullable because existing rows
+    # pre-date migration 009; populated on the next purchase_item_changed event.
+    itemName = Column(String(200), nullable=True)
+    itemType = Column(
+        # Reason: values_callable forces SQLAlchemy to use enum VALUES
+        # ('raw_material', etc.) not names ('RAW_MATERIAL', etc.) to match
+        # the MySQL ENUM column created by migration 009.
+        Enum(PurchaseItemTypeEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=True,
+    )
     inventoryAccountId = Column(
         String(36),
         ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
@@ -469,6 +537,11 @@ class PurchaseItemFinanceExt(Base):
         nullable=True,
         comment="GRNI clearing account",
     )
+    # DEPRECATED (Item 11, 2026-05-20): per-item valuation is no longer the source of truth.
+    # IAS 2 requires a consistent cost formula per company.  The authoritative value is now
+    # CompanyPostingSetup.defaultValuationMethod.  This column is retained for backward
+    # compatibility and historical data; it will be removed in v2.
+    # At posting time, consume CompanyPostingSetup.defaultValuationMethod — not this field.
     valuationMethod = Column(
         Enum(ValuationMethodEnum, values_callable=lambda e: [m.value for m in e]),
         nullable=False,
@@ -514,6 +587,226 @@ class ApprovalRule(Base):
     )
 
 
+class JEStatusEnum(str, enum.Enum):
+    """Lifecycle status of a journal entry."""
+
+    POSTED = "posted"
+    VOID = "void"
+
+
+class JournalEntry(Base):
+    """
+    Journal Entry header.
+
+    Immutable from the API perspective — only the posting handlers (Phase B+)
+    may create rows. The API exposes read-only list and detail endpoints.
+
+    jeNumber format: JE-{companyCode}-{YYYY}-{NNNN} (per-company sequence).
+    totalDebit must equal totalCredit — enforced by the posting handler, not
+    at DB level (MySQL CHECK constraints are poorly supported across versions).
+    status transitions: posted → void only; no edit, no delete.
+    """
+
+    __tablename__ = "journal_entries"
+    __table_args__ = (
+        UniqueConstraint("organizationId", "jeNumber", name="uq_org_je_number"),
+    )
+
+    jeId = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organizationId = Column(String(36), nullable=False, index=True)
+    companyCode = Column(String(10), nullable=False)
+    jeNumber = Column(String(40), nullable=False, index=True)
+    jeDate = Column(Date, nullable=False)
+    periodId = Column(
+        String(36),
+        ForeignKey("fiscal_periods.periodId", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    sourceEventType = Column(String(60), nullable=False)
+    sourceEventId = Column(String(36), nullable=False, index=True)
+    sourceDocId = Column(String(36), nullable=True)
+    sourceDocNumber = Column(String(40), nullable=True)
+    description = Column(String(500), nullable=True)
+    totalDebit = Column(Numeric(15, 2), nullable=False)
+    totalCredit = Column(Numeric(15, 2), nullable=False)
+    # Reason: values_callable forces SQLAlchemy to use enum VALUES ('posted', 'void')
+    # not names ('POSTED', 'VOID') to match the MySQL ENUM column definition.
+    status = Column(
+        Enum(JEStatusEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=JEStatusEnum.POSTED,
+        server_default="posted",
+    )
+    voidedAt = Column(DateTime, nullable=True)
+    voidedBy = Column(String(36), nullable=True)
+    voidReason = Column(String(500), nullable=True)
+    postedAt = Column(DateTime, nullable=False)
+    postedBy = Column(String(36), nullable=False)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+    updatedAt = Column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    lines = relationship(
+        "JournalEntryLine",
+        back_populates="journal_entry",
+        cascade="all, delete-orphan",
+        order_by="JournalEntryLine.lineNumber",
+    )
+    period = relationship("FiscalPeriod")
+
+
+class JournalEntryLine(Base):
+    """
+    Journal Entry line (DR or CR leg).
+
+    Exactly one of debit/credit must be > 0 per line — enforced in Pydantic
+    validators and the posting handler, not at DB level (the XOR constraint
+    cannot be expressed cleanly as a MySQL CHECK without version-specific syntax).
+
+    referenceLineId is a free-form link back to an operational line (e.g. PO line
+    UUID) for traceability; no FK enforced since it references a Mongo document.
+    """
+
+    __tablename__ = "journal_entry_lines"
+    __table_args__ = (
+        UniqueConstraint("jeId", "lineNumber", name="uq_je_line_number"),
+    )
+
+    jeLineId = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    jeId = Column(
+        String(36),
+        ForeignKey("journal_entries.jeId", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    lineNumber = Column(Integer, nullable=False)
+    accountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    debit = Column(Numeric(15, 2), nullable=True)
+    credit = Column(Numeric(15, 2), nullable=True)
+    description = Column(String(500), nullable=True)
+    # Reason: cost_centers has a composite PK (organizationId, costCenterId) so
+    # MySQL cannot enforce a FK referencing costCenterId alone.  Stored as a soft
+    # reference; application layer enforces validity if needed.
+    costCenterId = Column(String(36), nullable=True)
+    # Reason: referenceLineId links to an operational doc line in MongoDB — no FK.
+    referenceLineId = Column(String(36), nullable=True)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+
+    # Relationships
+    journal_entry = relationship("JournalEntry", back_populates="lines")
+    account = relationship("GLAccount")
+
+
+class CompanyPostingSetup(Base):
+    """
+    Company Posting Setup configuration.
+
+    One row per (organizationId, companyCode). Holds the default GL account
+    assignments used by Phase B+ posting handlers when building journal entries.
+
+    Required fields for isComplete=True (enforced at application layer):
+      - apControlAccountId  (Trade Payables control)
+      - bankAccountId       (Operating bank account)
+      - grIrClearingAccountId (GR/IR holding account)
+      - inputVatAccountId   (Reclaimable VAT)
+      - retainedEarningsAccountId (Period close)
+
+    Optional in v1 (consumed by later phases):
+      - arControlAccountId, cashAccountId, outputVatAccountId,
+        purchasePriceVarianceAccountId, roundingAccountId.
+
+    isComplete is computed and stored by the PUT handler based on required fields.
+    """
+
+    __tablename__ = "company_posting_setup"
+    __table_args__ = (
+        UniqueConstraint(
+            "organizationId", "companyCode", name="uq_posting_setup_org_company"
+        ),
+    )
+
+    setupId = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organizationId = Column(String(36), nullable=False)
+    companyCode = Column(String(10), nullable=False)
+
+    apControlAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    arControlAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    bankAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    cashAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    grIrClearingAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    inputVatAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    outputVatAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    retainedEarningsAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    purchasePriceVarianceAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    roundingAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # Item 11: IAS 2 requires the same cost formula across inventories of similar nature.
+    # Company-level defaultValuationMethod is the authoritative source of truth from v1.
+    # The per-item valuationMethod on PurchaseItemFinanceExt is DEPRECATED — it is
+    # "informational, derived from company setting at posting time" and will be removed in v2.
+    # Reason: Enum values must use values_callable to emit MySQL-compatible lowercase strings
+    # matching the ENUM column created by migration 010.
+    defaultValuationMethod = Column(
+        Enum(ValuationMethodEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=ValuationMethodEnum.MOVING_AVERAGE,
+        server_default="MovingAverage",
+    )
+
+    isComplete = Column(Boolean, nullable=False, default=False, server_default="0")
+    updatedBy = Column(String(36), nullable=True)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+    updatedAt = Column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class OutboxEventsProcessed(Base):
     """
     Idempotency table for the outbox bridge.
@@ -544,3 +837,123 @@ class OutboxEventsProcessed(Base):
         default=OutboxEventResultEnum.SUCCESS,
     )
     errorMessage = Column(Text, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Phase D — Vendor Payment models
+# ---------------------------------------------------------------------------
+
+
+class PaymentMethodEnum(str, enum.Enum):
+    """Payment method for vendor payments."""
+
+    BANK_TRANSFER = "bank_transfer"
+    CHEQUE = "cheque"
+    CASH = "cash"
+
+
+class ApPayment(Base):
+    """
+    Vendor Payment header.
+
+    Finance-internal action: a finance user picks one or more open AP invoices
+    and records the bank outflow.  The posting handler creates the JE atomically
+    in the same request (DR AP Control / CR Bank).
+
+    Payment records are one-shot: no edit, no delete in v1.  To correct an
+    error the finance user reverses the associated JE via the existing reversal
+    endpoint (POST /journal-entries/{jeId}/reverse).
+
+    paymentNumber format: PAY-{companyCode}-{YYYY}-{NNNN}
+    """
+
+    __tablename__ = "ap_payments"
+    __table_args__ = (
+        UniqueConstraint("organizationId", "paymentNumber", name="uq_org_payment_number"),
+    )
+
+    paymentId = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organizationId = Column(String(36), nullable=False, index=True)
+    companyCode = Column(String(10), nullable=False, index=True)
+    paymentNumber = Column(String(40), nullable=False, index=True)
+    paymentDate = Column(Date, nullable=False)
+    periodId = Column(
+        String(36),
+        ForeignKey("fiscal_periods.periodId", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    vendorId = Column(String(36), nullable=False, index=True)
+    vendorCode = Column(String(20), nullable=True)
+    bankAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    # Reason: values_callable forces SQLAlchemy to use enum VALUES
+    # ('bank_transfer', 'cheque', 'cash') not names, matching the MySQL ENUM
+    # column definition created by migration 011.
+    paymentMethod = Column(
+        Enum(PaymentMethodEnum, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=PaymentMethodEnum.BANK_TRANSFER,
+        server_default="bank_transfer",
+    )
+    referenceNumber = Column(String(50), nullable=True)
+    currencyCode = Column(String(3), nullable=False, default="AED")
+    totalAmount = Column(Numeric(15, 2), nullable=False)
+    notes = Column(String(500), nullable=True)
+    # Reason: jeId is null at INSERT time; updated after the JE row is created
+    # within the same transaction.  The FK ensures the JE exists before commit.
+    jeId = Column(
+        String(36),
+        ForeignKey("journal_entries.jeId", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    createdBy = Column(String(36), nullable=False)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+    updatedAt = Column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    applications = relationship(
+        "ApPaymentApplication",
+        back_populates="payment",
+        cascade="all, delete-orphan",
+        order_by="ApPaymentApplication.createdAt",
+    )
+    journal_entry = relationship("JournalEntry")
+
+
+class ApPaymentApplication(Base):
+    """
+    AP Payment Application — junction between a payment and an AP invoice.
+
+    Each row represents how much of a payment was applied against a specific
+    AP invoice document.  The apInvoiceDocId references the operation-side
+    MongoDB document (no FK enforced — cross-store reference).
+
+    UNIQUE on (paymentId, apInvoiceDocId) prevents the same invoice being
+    applied twice on the same payment.
+    """
+
+    __tablename__ = "ap_payment_applications"
+    __table_args__ = (
+        UniqueConstraint("paymentId", "apInvoiceDocId", name="uq_payment_application"),
+    )
+
+    applicationId = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    paymentId = Column(
+        String(36),
+        ForeignKey("ap_payments.paymentId", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    # Reason: cross-store reference to the operation MongoDB document — no FK.
+    apInvoiceDocId = Column(String(36), nullable=False, index=True)
+    apInvoiceDocNumber = Column(String(40), nullable=True)
+    amountApplied = Column(Numeric(15, 2), nullable=False)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+
+    # Relationships
+    payment = relationship("ApPayment", back_populates="applications")

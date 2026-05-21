@@ -11,7 +11,7 @@ services:
     environment:
       - ENVIRONMENT=development
       - DEBUG=True
-      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_URL=mongodb://mongodb:27017/?replicaSet=rs0
       - MONGODB_DB_NAME=${MONGODB_DB_NAME:-a64core_db}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379
       - LICENSE_VALIDATION_MODE=format  # Format-only validation for development
@@ -49,6 +49,7 @@ services:
       - ./logs:/app/logs  # Centralized logging
       - ./.credentials:/app/.credentials  # Google Cloud credentials for Vertex AI
       - ./data/sensehub_images:/app/data/sensehub_images  # Camera snapshot storage
+      - ./data/attachments:/app/data/attachments  # Document attachment storage (T-053)
       - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for module management
       - nginx_modules_config:/etc/nginx/conf.d/modules  # Shared volume for module proxy configs
     user: "0:0"  # Run as root to access Docker socket (CRITICAL for module management)
@@ -91,8 +92,11 @@ services:
       - MONGO_APP_USER=${MONGO_APP_USER:-a64core_app}
       - MONGO_APP_PASSWORD=${MONGO_APP_PASSWORD:-changeme_in_production}
     # MongoDB wiredTiger cache: 50% of memory limit (1.5GB of 3GB = ~1.5GB cache)
-    # Default is (RAM - 1GB) / 2, but we explicitly set for container environment
-    command: ["mongod", "--wiredTigerCacheSizeGB", "1.5"]
+    # Default is (RAM - 1GB) / 2, but we explicitly set for container environment.
+    # --replSet rs0 enables single-node replica set mode (required for multi-document
+    # transactions used by the finance-bridge transactional outbox). Initiate once
+    # with: rs.initiate({_id:"rs0", members:[{_id:0, host:"mongodb:27017"}]})
+    command: ["mongod", "--wiredTigerCacheSizeGB", "1.5", "--replSet", "rs0", "--bind_ip_all"]
     volumes:
       # Bind-mount for data (survives compose project rename + visible in repo). Migrated 2026-05-19.
       # Was: mongodb_data:/data/db (named volume — kept defined below for emergency rollback).
@@ -283,12 +287,28 @@ services:
       - API_HOST=api:8000
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@a64platform.com}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-SuperAdmin123!}
+      # --- Finance outbox reconciler settings ---
+      # MONGODB_URL and MONGODB_DB_NAME allow the Python sweeper to connect
+      # directly to Mongo without going through the API HTTP layer.
+      - MONGODB_URL=mongodb://mongodb:27017/?replicaSet=rs0
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-a64core_db}
+      # FINANCE_OUTBOX_ENABLED must match the api service setting.
+      # When false the sweeper exits cleanly on every run (no-op).
+      - FINANCE_OUTBOX_ENABLED=${FINANCE_OUTBOX_ENABLED:-false}
+      # PYTHONPATH makes src/ and contracts/ importable from /app.
+      - PYTHONPATH=/app/src:/app
     volumes:
       - ./logs/cron:/var/log/cron
+      # Mount src/ and contracts/ so the Python sweeper can import
+      # OutboxWriter and the payload builders without duplication.
+      - ./src:/app/src
+      - ./contracts:/app/contracts
+      - ./cron/scripts:/app/cron/scripts
     networks:
       - a64core-network
     depends_on:
       - api
+      - mongodb
     healthcheck:
       test: ["CMD", "pgrep", "-x", "crond"]
       interval: 60s

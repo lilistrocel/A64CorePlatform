@@ -26,7 +26,14 @@ class FiscalPeriodCreate(BaseModel):
 
 
 class FiscalPeriodResponse(BaseModel):
-    """Response representation of a fiscal period."""
+    """
+    Response representation of a fiscal period.
+
+    Audit trail fields (closedAt/By/Reason, reopenedAt/By/Reason) surface the
+    full lifecycle history so the UI can display "Closed by X on Y" tooltips.
+    On reopen the closed* fields are cleared; on subsequent close they are
+    re-populated fresh.
+    """
 
     periodId: str
     companyCode: str
@@ -35,8 +42,14 @@ class FiscalPeriodResponse(BaseModel):
     startDate: date
     endDate: date
     status: PeriodStatusEnum
-    closedAt: Optional[datetime]
-    closedByUserId: Optional[str]
+    # --- close audit fields ---
+    closedAt: Optional[datetime] = None
+    closedByUserId: Optional[str] = None
+    closeReason: Optional[str] = None
+    # --- reopen audit fields ---
+    reopenedAt: Optional[datetime] = None
+    reopenedByUserId: Optional[str] = None
+    reopenReason: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
 

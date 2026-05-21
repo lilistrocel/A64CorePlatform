@@ -16,6 +16,9 @@ class TaxCodeCreate(BaseModel):
     rate: Decimal = Field(..., ge=0, le=100)
     inputTaxAccountId: Optional[str] = None
     outputTaxAccountId: Optional[str] = None
+    # Reason: UAE VAT — reverse-charge tax codes (e.g. SR) require the buyer
+    # to self-account VAT. Defaults to False for all standard codes.
+    isReverseCharge: bool = False
     isActive: bool = True
 
 
@@ -26,6 +29,7 @@ class TaxCodeUpdate(BaseModel):
     rate: Optional[Decimal] = Field(None, ge=0, le=100)
     inputTaxAccountId: Optional[str] = None
     outputTaxAccountId: Optional[str] = None
+    isReverseCharge: Optional[bool] = None
     isActive: Optional[bool] = None
 
 
@@ -38,6 +42,9 @@ class TaxCodeResponse(BaseModel):
     rate: Decimal
     inputTaxAccountId: Optional[str]
     outputTaxAccountId: Optional[str]
+    # Reason: UAE VAT reverse-charge flag — exposed so the frontend and
+    # callers can identify codes that require self-accounting treatment.
+    isReverseCharge: bool
     isActive: bool
     createdAt: datetime
     updatedAt: datetime

@@ -91,9 +91,10 @@ async def test_close_and_reopen_period(client: AsyncClient) -> None:
     assert close_resp.status_code == 200
     assert close_resp.json()["data"]["status"] == "closed"
 
-    # Reopen it
+    # Reopen it (reason is required as of migration 013 — min 5 chars)
     reopen_resp = await client.patch(
         f"/api/v1/finance/periods/{period_id}/reopen",
+        json={"reason": "Test reopen for unit test"},
         headers=auth_headers(),
     )
     assert reopen_resp.status_code == 200
