@@ -17,8 +17,25 @@ import { queryKeys } from '../../config/react-query.config';
 
 export function MFASetupPage() {
   const navigate = useNavigate();
-  const { loadUser } = useAuthStore();
+  const { user, loadUser, logout } = useAuthStore();
   const queryClient = useQueryClient();
+
+  // Forced-setup: account has mfaSetupRequired=true and not yet enabled.
+  // In this state ProtectedRoute only allows /mfa/setup and /logout — so
+  // any "back" / "cancel" path that targets /settings would loop infinitely.
+  // We surface a "Sign Out" exit instead.
+  const isForcedSetup = !!(user?.mfaSetupRequired && !user?.mfaEnabled);
+
+  const exitSetup = async () => {
+    if (isForcedSetup) {
+      // Clean way out: sign out, return to /login.
+      await logout();
+      navigate('/login', { replace: true });
+    } else {
+      navigate('/settings');
+    }
+  };
+  const exitLabel = isForcedSetup ? 'Sign Out' : 'Back to Settings';
 
   // Use React Query for MFA setup data
   // - 10-minute stale time (data is considered fresh, no refetches)
@@ -230,8 +247,8 @@ export function MFASetupPage() {
               <Button variant="primary" onClick={handleRetry}>
                 Try Again
               </Button>
-              <Button variant="secondary" onClick={() => navigate('/settings')}>
-                Back to Settings
+              <Button variant="secondary" onClick={exitSetup}>
+                {exitLabel}
               </Button>
             </ButtonGroup>
           </SetupCard>
@@ -256,8 +273,8 @@ export function MFASetupPage() {
               <Button variant="primary" onClick={handleRegenerateCode}>
                 Generate New Code
               </Button>
-              <Button variant="secondary" onClick={() => navigate('/settings')}>
-                Back to Settings
+              <Button variant="secondary" onClick={exitSetup}>
+                {exitLabel}
               </Button>
             </ButtonGroup>
           </SetupCard>
@@ -391,8 +408,8 @@ export function MFASetupPage() {
             </StepContent>
           </StepSection>
 
-          <CancelLink onClick={() => navigate('/settings')}>
-            Cancel Setup
+          <CancelLink onClick={exitSetup}>
+            {isForcedSetup ? 'Sign out and continue later' : 'Cancel Setup'}
           </CancelLink>
         </SetupCard>
       </SetupContainer>
