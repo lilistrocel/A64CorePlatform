@@ -210,6 +210,12 @@ export const breakpoints = {
   lg: '1024px',
   xl: '1280px',
   '2xl': '1536px',
+  // Legacy semantic aliases used by pre-Slate components.
+  // Slate canonical names are sm/md/lg/xl — prefer those in new code.
+  mobile: '640px',
+  tablet: '768px',
+  desktop: '1024px',
+  wide: '1280px',
 } as const
 
 export const media = {

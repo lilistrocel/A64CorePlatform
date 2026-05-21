@@ -1636,11 +1636,15 @@ const HeroCard = styled.article<{ $borderColor: string }>`
 `;
 
 const KpiValue = styled.p`
-  font-size: ${({ theme }) => theme.fontSizes.h2};
-  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  /* Slate §4: KPI values use Playfair Display, tabular numerals. */
+  font-family: ${({ theme }) => theme.fonts.display};
+  font-size: ${({ theme }) => theme.fontSizes.displaySm};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 ${({ theme }) => theme.space['1']} 0;
-  line-height: ${({ theme }) => theme.lineHeights.snug};
+  line-height: ${({ theme }) => theme.lineHeights.tight};
+  font-variant-numeric: tabular-nums;
+  letter-spacing: ${({ theme }) => theme.letterSpacings.tight};
 `;
 
 const KpiLabel = styled.p`
