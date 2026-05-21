@@ -146,7 +146,7 @@ const UVIndicator = styled.div<{ $level: 'low' | 'moderate' | 'high' | 'very_hig
   color: ${({ $level }) => {
     switch ($level) {
       case 'low': return '#065F46';
-      case 'moderate': return '#92400E';
+      case 'moderate': return '#B8842A';
       case 'high': return '#C2410C';
       case 'very_high': return '#B91C1C';
       case 'extreme': return '#7C3AED';

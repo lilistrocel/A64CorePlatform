@@ -179,7 +179,7 @@ const ProductName = styled.span`
 
 const ExpiryDate = styled.span`
   font-size: 12px;
-  color: #92400E;
+  color: #B8842A;
 `;
 
 const LoadingContainer = styled.div`

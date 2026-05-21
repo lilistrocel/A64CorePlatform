@@ -108,7 +108,7 @@ const ExpiryWarning = styled.div<{ $type: 'expired' | 'expiring_soon' }>`
   `
       : `
     background: rgba(184,132,42,0.10);
-    color: #92400E;
+    color: #B8842A;
     border: 1px solid #FDE68A;
   `}
 `;

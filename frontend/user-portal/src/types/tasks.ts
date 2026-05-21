@@ -248,7 +248,7 @@ export interface HarvestEntryFormData {
 
 export const TASK_TYPE_COLORS: Record<TaskType, string> = {
   planting: '#0F6E56',        // Green
-  fruiting_check: '#A855F7',  // Purple
+  fruiting_check: '#4B4844',  // Purple
   harvest_readiness: '#B8842A', // Orange
   daily_harvest: '#B8842A',   // Orange
   harvest_completion: '#0F6E56', // Blue

@@ -74,7 +74,7 @@ const SecondaryButton = styled.button`
   padding: 0.75rem 2rem;
   background: ${({ theme }) => theme.colors.surface.canvas};
   color: #0F0F0F;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #DCD8CF;
   border-radius: 8px;
   font-size: 1rem;
   font-weight: 500;

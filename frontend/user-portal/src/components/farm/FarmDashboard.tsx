@@ -102,7 +102,7 @@ const STATE_COLORS: Record<string, string> = {
   empty: '#4B4844',
   planned: '#0F6E56',
   growing: '#0F6E56',
-  fruiting: '#A855F7',
+  fruiting: '#4B4844',
   harvesting: '#B8842A',
   cleaning: '#4B4844',
   alert: '#9E2A2A',
@@ -1324,8 +1324,8 @@ export function FarmDashboard() {
               <KpiSubtext>Blocks ready to harvest</KpiSubtext>
             </KpiCard>
 
-            <KpiCard $borderColor="#6366F1">
-              <KpiIndicator $color="#6366F1" aria-hidden="true" />
+            <KpiCard $borderColor="#0F6E56">
+              <KpiIndicator $color="#0F6E56" aria-hidden="true" />
               <KpiLabel>Total Yield</KpiLabel>
               <KpiValue>{formatNumber(Math.round(harvestSummary.totalHarvestsKg))}</KpiValue>
               <KpiSubtext>kg harvested</KpiSubtext>
@@ -1474,7 +1474,7 @@ export function FarmDashboard() {
                         width={80}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="kg" name="kg" fill="#6366F1" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="kg" name="kg" fill="#0F6E56" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>

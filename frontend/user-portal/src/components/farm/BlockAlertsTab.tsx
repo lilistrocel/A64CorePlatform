@@ -93,7 +93,7 @@ const AlertCard = styled.div<{ $severity: AlertSeverity; $status: string }>`
         case 'high':
           return '#B85C2A';
         case 'medium':
-          return '#eab308';
+          return '#B8842A';
         case 'low':
           return '#0F6E56';
         default:
@@ -133,7 +133,7 @@ const SeverityBadge = styled.span<{ $severity: AlertSeverity }>`
       case 'high':
         return '#B85C2A';
       case 'medium':
-        return '#eab308';
+        return '#B8842A';
       case 'low':
         return '#0F6E56';
       default:

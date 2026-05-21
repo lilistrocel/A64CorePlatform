@@ -251,7 +251,7 @@ const StatusPill = styled.span<StatusPillProps>`
   font-size: 12px;
   font-weight: 600;
   background: ${({ $complete, theme }) =>
-    $complete ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.status.warning || '#fffbeb'};
+    $complete ? theme.colors.accent.sageSoft || '#ecfdf5' : theme.colors.status.warning || 'rgba(184,132,42,0.06)'};
   color: ${({ $complete, theme }) =>
     $complete ? theme.colors.status.success || '#0F6E56' : theme.colors.status.warning || '#B8842A'};
 `;
@@ -289,7 +289,7 @@ const BannerSuccess = styled(BannerBase)`
 `;
 
 const BannerWarning = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.status.warning || '#fffbeb'};
+  background: ${({ theme }) => theme.colors.status.warning || 'rgba(184,132,42,0.06)'};
   color: ${({ theme }) => theme.colors.status.warning || '#B8842A'};
 `;
 

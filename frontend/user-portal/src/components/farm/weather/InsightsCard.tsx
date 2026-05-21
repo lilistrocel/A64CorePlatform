@@ -177,7 +177,7 @@ const RecommendationItem = styled.div`
 
   .text {
     font-size: 13px;
-    color: #166534;
+    color: #0B5644;
     line-height: 1.4;
   }
 `;

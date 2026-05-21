@@ -204,7 +204,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     }
     if ($variant === 'success') {
       return `
-        background: #4CAF50;
+        background: #0F6E56;
         color: white;
         &:hover {
           background: #388E3C;
@@ -213,7 +213,7 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
     }
     if ($variant === 'analytics') {
       return `
-        background: #6366F1;
+        background: #0F6E56;
         color: white;
         &:hover {
           background: #4F46E5;

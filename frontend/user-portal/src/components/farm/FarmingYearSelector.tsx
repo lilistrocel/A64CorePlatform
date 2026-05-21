@@ -268,7 +268,7 @@ const LoadingSelect = styled.select<{ $compact?: boolean }>`
 
 const EmptySelect = styled(Select)`
   color: #9E2A2A;
-  border-color: #fecaca;
+  border-color: rgba(158,42,42,0.12);
   background-color: ${({ theme }) => theme.colors.status.danger};
 `;
 

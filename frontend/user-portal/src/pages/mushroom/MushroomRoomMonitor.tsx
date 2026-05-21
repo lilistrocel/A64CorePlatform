@@ -451,7 +451,7 @@ const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: #111827;
+  background: #0F0F0F;
   padding: 0;
 `;
 
@@ -480,7 +480,7 @@ const PageTitle = styled.h1`
 
 const PageSubtitle = styled.p`
   font-size: 13px;
-  color: #6b8cba;
+  color: #0F6E56;
   margin: 0;
 `;
 
@@ -511,7 +511,7 @@ const StatPillNumber = styled.span`
 
 const StatPillLabel = styled.span`
   font-size: 10px;
-  color: #6b8cba;
+  color: #0F6E56;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -523,7 +523,7 @@ const LoadingPill = styled.div`
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #6b8cba;
+  color: #0F6E56;
   background: #0F0F0F;
   border: 1px solid #2a3d5a;
   border-radius: 10px;
@@ -579,7 +579,7 @@ const DistributionSection = styled.div`
 const DistributionLabel = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: #6b8cba;
+  color: #0F6E56;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -633,7 +633,7 @@ const FilterGroup = styled.div<FilterGroupProps>`
 const FilterLabel = styled.label`
   font-size: 10px;
   font-weight: 600;
-  color: #6b8cba;
+  color: #0F6E56;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -737,7 +737,7 @@ const ClearBtn = styled.button`
   border: 1px solid #2a3d5a;
   border-radius: 8px;
   background: transparent;
-  color: #6b8cba;
+  color: #0F6E56;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;

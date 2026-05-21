@@ -298,8 +298,8 @@ const EmptyInvoiceHint = styled.p`
 `;
 
 const ErrorBanner = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
+  background: rgba(158,42,42,0.06);
+  border: 1px solid rgba(158,42,42,0.18);
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;

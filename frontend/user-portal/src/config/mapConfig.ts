@@ -114,8 +114,8 @@ export const BLOCK_POLYGON_COLORS: Record<string, { fill: string; stroke: string
   empty: { fill: '#4B4844', stroke: '#4B4844' },      // Gray
   planned: { fill: '#0F6E56', stroke: '#0B5644' },    // Blue
   growing: { fill: '#0F6E56', stroke: '#0B5644' },    // Green
-  fruiting: { fill: '#A855F7', stroke: '#9333EA' },   // Purple
-  harvesting: { fill: '#B8842A', stroke: '#D97706' }, // Yellow/Orange
+  fruiting: { fill: '#4B4844', stroke: '#9333EA' },   // Purple
+  harvesting: { fill: '#B8842A', stroke: '#B8842A' }, // Yellow/Orange
   cleaning: { fill: '#B85C2A', stroke: '#EA580C' },   // Orange
   alert: { fill: '#9E2A2A', stroke: '#9E2A2A' },      // Red
   partial: { fill: '#06B6D4', stroke: '#0891B2' },    // Cyan
@@ -128,7 +128,7 @@ export const BOUNDARY_COLORS = {
   // Farm boundaries - Orange/Amber for clear distinction
   farm: {
     fill: '#B8842A',      // Amber
-    stroke: '#D97706',    // Darker amber
+    stroke: '#B8842A',    // Darker amber
     fillOpacity: 0.15,
   },
   // Block boundaries - Blue for active drawing

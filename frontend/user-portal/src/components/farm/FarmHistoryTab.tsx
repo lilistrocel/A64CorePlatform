@@ -173,7 +173,7 @@ const EfficiencyBadge = styled.span<{ $efficiency: number }>`
   background: ${({ $efficiency }) => {
     if ($efficiency >= 90) return '#0F6E56';
     if ($efficiency >= 75) return '#8bc34a';
-    if ($efficiency >= 60) return '#eab308';
+    if ($efficiency >= 60) return '#B8842A';
     return '#B85C2A';
   }};
   color: white;
@@ -705,7 +705,7 @@ const PerformanceBadge = styled.span<{ $category: string }>`
       case 'good':
         return '#0F6E56';
       case 'acceptable':
-        return '#eab308';
+        return '#B8842A';
       case 'poor':
         return '#B85C2A';
       default:
@@ -738,11 +738,11 @@ const QualityCard = styled.div<{ $grade: string }>`
     ${({ $grade }) => {
       switch ($grade) {
         case 'A':
-          return '#4caf50';
+          return '#0F6E56';
         case 'B':
           return '#ff9800';
         case 'C':
-          return '#f44336';
+          return '#9E2A2A';
         default:
           return '#4B4844';
       }

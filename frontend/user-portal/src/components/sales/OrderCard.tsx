@@ -82,7 +82,7 @@ const StatusBadge = styled.span<{ $status: string }>`
       case 'confirmed':
         return 'background: rgba(15,110,86,0.08); color: #1E40AF;';
       case 'processing':
-        return 'background: rgba(184,132,42,0.10); color: #92400E;';
+        return 'background: rgba(184,132,42,0.10); color: #B8842A;';
       case 'shipped':
         return 'background: rgba(15,110,86,0.08); color: #1E40AF;';
       case 'delivered':
@@ -108,7 +108,7 @@ const PaymentBadge = styled.span<{ $status: string }>`
       case 'paid':
         return 'background: rgba(15,110,86,0.10); color: #065F46;';
       case 'partial':
-        return 'background: rgba(184,132,42,0.10); color: #92400E;';
+        return 'background: rgba(184,132,42,0.10); color: #B8842A;';
       case 'pending':
         return 'background: rgba(158,42,42,0.08); color: #9E2A2A;';
       default:

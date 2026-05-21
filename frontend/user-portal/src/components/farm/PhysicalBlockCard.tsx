@@ -37,7 +37,7 @@ const Card = styled.div`
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #4caf50;
+  border-left: 4px solid #0F6E56;
   transition: all 150ms ease-in-out;
 
   &:hover {

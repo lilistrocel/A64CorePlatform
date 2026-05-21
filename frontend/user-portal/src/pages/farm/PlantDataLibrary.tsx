@@ -318,7 +318,7 @@ const ImportFeedback = styled.div<{ $type: 'success' | 'error' }>`
       ? `
     background: #DCFCE7;
     border: 1px solid #22C55E;
-    color: #166534;
+    color: #0B5644;
   `
       : `
     background: rgba(158,42,42,0.08);

@@ -56,7 +56,7 @@ const STATE_COLORS: Record<string, string> = {
   empty: '#4B4844',
   planned: '#0F6E56',
   growing: '#0F6E56',
-  fruiting: '#A855F7',
+  fruiting: '#4B4844',
   harvesting: '#B8842A',
   cleaning: '#B85C2A',
   alert: '#9E2A2A',
@@ -667,10 +667,10 @@ function InsightsTab({ analytics }: { analytics: any }) {
                   <MetricBadge $color={getPerformanceColor(farm.overallPerformanceScore)}>
                     Score: {formatNumber(farm.overallPerformanceScore, { decimals: 0 })}
                   </MetricBadge>
-                  <MetricBadge $color="#757575">
+                  <MetricBadge $color="#4B4844">
                     Yield: {formatNumber(farm.totalYieldKg, { decimals: 1, suffix: ' kg' })}
                   </MetricBadge>
-                  <MetricBadge $color="#757575">
+                  <MetricBadge $color="#4B4844">
                     Efficiency: {formatNumber(farm.avgYieldEfficiency, { decimals: 1, suffix: '%' })}
                   </MetricBadge>
                 </UnderPerformerMetrics>

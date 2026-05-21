@@ -238,11 +238,11 @@ const RadioLabel = styled.label`
 
 const NumberInput = styled.input<{ $hasError?: boolean }>`
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#D1D5DB')};
+  border: 1px solid ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#DCD8CF')};
   border-radius: 6px;
   font-size: 13px;
   background: white;
-  color: #111827;
+  color: #0F0F0F;
   width: 100px;
   transition: border-color 150ms ease-in-out;
 
@@ -266,11 +266,11 @@ const ReadonlyValue = styled.span`
 
 const SelectInput = styled.select`
   padding: 8px 12px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #DCD8CF;
   border-radius: 6px;
   font-size: 13px;
   background: white;
-  color: #111827;
+  color: #0F0F0F;
   cursor: pointer;
   min-width: 140px;
 
@@ -288,11 +288,11 @@ const SelectInput = styled.select`
 
 const TextInput = styled.input`
   padding: 8px 12px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #DCD8CF;
   border-radius: 6px;
   font-size: 13px;
   background: white;
-  color: #111827;
+  color: #0F0F0F;
   flex: 1;
   min-width: 160px;
 
@@ -336,12 +336,12 @@ const SkipLabel = styled.label`
 const NotesArea = styled.textarea`
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #DCD8CF;
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   background: white;
-  color: #111827;
+  color: #0F0F0F;
   min-height: 70px;
   resize: vertical;
   box-sizing: border-box;
@@ -423,7 +423,7 @@ const ErrorBanner = styled.div`
 const Divider = styled.div`
   width: 1px;
   height: 20px;
-  background: #D1D5DB;
+  background: #DCD8CF;
   align-self: center;
 `;
 

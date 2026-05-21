@@ -152,7 +152,7 @@ export function ReportAlertModal({
             <SeverityGrid>
               <SeverityOption
                 $selected={severity === 'low'}
-                $color="#4CAF50"
+                $color="#0F6E56"
                 onClick={() => !loading && setSeverity('low')}
               >
                 <SeverityIcon>ℹ️</SeverityIcon>

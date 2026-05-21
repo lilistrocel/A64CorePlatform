@@ -345,9 +345,9 @@ const SourceDocLink = styled.button`
 
 const ReverseButton = styled.button`
   padding: 4px 10px;
-  background: #fef2f2;
+  background: rgba(158,42,42,0.06);
   color: #9E2A2A;
-  border: 1px solid #fca5a5;
+  border: 1px solid rgba(158,42,42,0.18);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
@@ -466,7 +466,7 @@ const ModalConfirmButton = styled.button`
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: #b91c1c; }
+  &:hover { background: #9E2A2A; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 

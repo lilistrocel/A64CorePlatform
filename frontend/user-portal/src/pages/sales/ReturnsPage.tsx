@@ -194,7 +194,7 @@ const StatusBadge = styled.span<{ $status: ReturnStatus }>`
   ${({ $status, theme }) => {
     switch ($status) {
       case 'pending':
-        return `background: ${theme.colors.status.warning}; color: #92400E;`;
+        return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'processing':
         return `background: ${theme.colors.surface.sunken}; color: #1E40AF;`;
       case 'completed':

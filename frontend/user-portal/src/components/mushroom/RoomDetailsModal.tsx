@@ -803,7 +803,7 @@ const CloseButton = styled.button`
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #757575;
+  color: #4B4844;
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 150ms;
@@ -1090,7 +1090,7 @@ const AdvanceError = styled.div`
   font-size: 12px;
   color: #9E2A2A;
   background: ${({ theme }) => theme.colors.status.danger};
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(158,42,42,0.12);
   border-radius: 6px;
   padding: 8px 10px;
 `;
@@ -1302,7 +1302,7 @@ interface ContamCardProps {
 
 const ContamCard = styled.div<ContamCardProps>`
   background: ${({ $resolved }) => ($resolved ? '#f9fafb' : '#fff5f5')};
-  border: 1px solid ${({ $resolved }) => ($resolved ? '#DCD8CF' : '#fecaca')};
+  border: 1px solid ${({ $resolved }) => ($resolved ? '#DCD8CF' : 'rgba(158,42,42,0.12)')};
   border-radius: 10px;
   padding: 14px;
   opacity: ${({ $resolved }) => ($resolved ? 0.7 : 1)};
@@ -1361,7 +1361,7 @@ const StatusBadge = styled.span<StatusBadgeProps>`
 
 const ContamMeta = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: #4B4844;
   margin-bottom: 4px;
 `;
 

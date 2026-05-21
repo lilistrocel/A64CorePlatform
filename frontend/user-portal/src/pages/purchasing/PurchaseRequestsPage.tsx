@@ -155,7 +155,7 @@ const StatusBadge = styled.span<{ $status: PRStatus }>`
       case 'Draft': return theme.colors.surface.raised;
       case 'Pending Approval': return 'rgba(184,132,42,0.10)';
       case 'Approved': return theme.colors.accent.sageSoft || '#ecfdf5';
-      case 'Rejected': return theme.colors.status.danger || '#fef2f2';
+      case 'Rejected': return theme.colors.status.danger || 'rgba(158,42,42,0.06)';
       case 'Cancelled': return theme.colors.surface.raised;
       case 'Closed': return '#ede9fe';
       default: return theme.colors.surface.raised;

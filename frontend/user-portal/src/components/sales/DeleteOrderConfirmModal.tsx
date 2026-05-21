@@ -178,7 +178,7 @@ const ExpiredPanel = styled(AllocationRow)`
 
 const ExpiredTitle = styled.div`
   font-weight: 600;
-  color: #92400E;
+  color: #B8842A;
   margin-bottom: 10px;
 `;
 
@@ -212,11 +212,11 @@ const RadioDescription = styled.div`
 const DateInput = styled.input<{ $hasError?: boolean }>`
   margin-top: 6px;
   padding: 8px 12px;
-  border: 1px solid ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#D1D5DB')};
+  border: 1px solid ${({ $hasError }) => ($hasError ? '#9E2A2A' : '#DCD8CF')};
   border-radius: 6px;
   font-size: 13px;
   background: white;
-  color: #111827;
+  color: #0F0F0F;
   width: 180px;
   transition: border-color 150ms ease-in-out;
 

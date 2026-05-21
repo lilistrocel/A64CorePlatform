@@ -50,7 +50,7 @@ const TILES: TileConfig[] = [
     subtitle: 'Sellable harvest & waste',
     icon: Package,
     accent: '#B8842A',
-    accentHover: '#D97706',
+    accentHover: '#B8842A',
     route: '/sales/stock',
   },
   {
@@ -58,7 +58,7 @@ const TILES: TileConfig[] = [
     label: 'Purchase Orders',
     subtitle: 'Procurement & supplier orders',
     icon: ShoppingCart,
-    accent: '#6366F1',
+    accent: '#0F6E56',
     accentHover: '#4F46E5',
     route: '/sales/purchase-orders',
   },

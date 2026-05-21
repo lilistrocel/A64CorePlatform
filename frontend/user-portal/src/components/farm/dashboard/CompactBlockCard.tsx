@@ -839,7 +839,7 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
       case 'warning':
         return '#B8842A';
       case 'analytics':
-        return '#6366F1';
+        return '#0F6E56';
       default:
         return '#0F6E56';
     }
@@ -863,7 +863,7 @@ const ActionButton = styled.button<{ $variant?: 'success' | 'plan' | 'plant' | '
         case 'plant':
           return '#0B5644';
         case 'warning':
-          return '#D97706';
+          return '#B8842A';
         case 'analytics':
           return '#4F46E5';
         default:

@@ -147,7 +147,7 @@ const DangerButton = styled.button`
   font-size: 13px;
   cursor: pointer;
   transition: all 120ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.status.danger || 'rgba(158,42,42,0.06)'}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 

@@ -101,7 +101,7 @@ const StatusBadge = styled.span<{ $status: string }>`
       case 'empty':
         return '#4B4844';
       case 'planted':
-        return '#4CAF50';
+        return '#0F6E56';
       case 'growing':
         return '#8BC34A';
       case 'fruiting':
@@ -318,7 +318,7 @@ const AreaBudgetText = styled.div`
 const AddCropButton = styled.button`
   width: 100%;
   padding: 12px;
-  background: #4caf50;
+  background: #0F6E56;
   color: white;
   border: none;
   border-radius: 8px;
@@ -550,7 +550,7 @@ export function BlockDetail() {
               {block.targetCropName && (
                 <>
                   <span>•</span>
-                  <span style={{ fontWeight: 600, color: '#4CAF50' }}>🌱 {block.targetCropName}</span>
+                  <span style={{ fontWeight: 600, color: '#0F6E56' }}>🌱 {block.targetCropName}</span>
                 </>
               )}
             </BlockMeta>
@@ -731,7 +731,7 @@ export function BlockDetail() {
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>Yield Efficiency</InfoLabel>
-                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? '#4CAF50' : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? '#FF9800' : '#F44336' }}>
+                    <InfoValue style={{ color: (summary.yieldEfficiencyPercent ?? 0) >= 80 ? '#0F6E56' : (summary.yieldEfficiencyPercent ?? 0) >= 50 ? '#FF9800' : '#F44336' }}>
                       {formatPercentage(summary.yieldEfficiencyPercent ?? 0, 1)}
                     </InfoValue>
                   </InfoItem>

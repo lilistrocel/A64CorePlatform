@@ -67,7 +67,7 @@ const STATE_COLORS: Record<string, string> = {
   planned: '#0F6E56',
   planted: '#0F6E56',
   growing: '#0F6E56',
-  fruiting: '#A855F7',
+  fruiting: '#4B4844',
   harvesting: '#B8842A',
   cleaning: '#B85C2A',
   alert: '#9E2A2A',

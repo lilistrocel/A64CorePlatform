@@ -144,7 +144,7 @@ interface SummaryCardProps {
 const SummaryCard = styled(Card)<SummaryCardProps>`
   padding: 20px;
   text-align: center;
-  border-left: 4px solid ${({ $color }) => $color || '#6c757d'};
+  border-left: 4px solid ${({ $color }) => $color || '#4B4844'};
 `;
 
 const SummaryValue = styled.div`
@@ -155,7 +155,7 @@ const SummaryValue = styled.div`
 
 const SummaryLabel = styled.div`
   font-size: 0.875rem;
-  color: #6c757d;
+  color: #4B4844;
   margin-top: 4px;
 `;
 
@@ -284,7 +284,7 @@ const SourceBadge = styled.span<SourceBadgeProps>`
       case 'return':
         return `background: ${theme.colors.surface.sunken}; color: #7C3AED;`;
       case 'expired':
-        return `background: ${theme.colors.status.warning}; color: #D97706;`;
+        return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'damaged':
         return `background: ${theme.colors.status.danger}; color: #9E2A2A;`;
       case 'harvest':
@@ -319,7 +319,7 @@ const DisposalBadge = styled.span<DisposalBadgeProps>`
       case 'donated':
         return `background: ${theme.colors.surface.sunken}; color: #4F46E5;`;
       case 'sold_discount':
-        return `background: ${theme.colors.status.warning}; color: #D97706;`;
+        return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'discard':
         return `background: ${theme.colors.surface.raised}; color: ${theme.colors.text.secondary};`;
       case 'pending':
@@ -357,7 +357,7 @@ const ActionButton = styled.button<ActionButtonProps>`
       case 'danger':
         return 'background: #dc3545; color: white; &:hover { background: #c82333; }';
       default:
-        return 'background: #6c757d; color: white; &:hover { background: #5a6268; }';
+        return 'background: #4B4844; color: white; &:hover { background: #5a6268; }';
     }
   }}
 `;
@@ -365,7 +365,7 @@ const ActionButton = styled.button<ActionButtonProps>`
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px;
-  color: #6c757d;
+  color: #4B4844;
 `;
 
 const PaginationContainer = styled.div`
@@ -378,7 +378,7 @@ const PaginationContainer = styled.div`
 
 const PaginationInfo = styled.span`
   font-size: 0.875rem;
-  color: #6c757d;
+  color: #4B4844;
 `;
 
 const PaginationButtons = styled.div`
@@ -656,7 +656,7 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
             <SummaryValue>{formatNumber(summary.totalWasteRecords)}</SummaryValue>
             <SummaryLabel>Total Waste Records</SummaryLabel>
           </SummaryCard>
-          <SummaryCard $color="#D97706">
+          <SummaryCard $color="#B8842A">
             <SummaryValue>{formatNumber(summary.totalQuantity, { decimals: 2 })}</SummaryValue>
             <SummaryLabel>Total Quantity</SummaryLabel>
           </SummaryCard>
@@ -742,7 +742,7 @@ const WasteInventoryList: React.FC<WasteInventoryListProps> = ({ embedded = fals
                     <TableRow key={item.wasteId}>
                       <TableCell>
                         <strong>{item.plantName}</strong>
-                        {item.variety && <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>{item.variety}</div>}
+                        {item.variety && <div style={{ fontSize: '0.75rem', color: '#4B4844' }}>{item.variety}</div>}
                       </TableCell>
                       <TableCell>
                         {formatNumber(item.quantity, { decimals: 2 })} {item.unit}

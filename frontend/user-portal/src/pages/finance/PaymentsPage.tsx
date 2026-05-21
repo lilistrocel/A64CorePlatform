@@ -54,7 +54,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 const METHOD_COLORS: Record<PaymentMethod, { bg: string; text: string }> = {
   bank_transfer: { bg: 'rgba(15,110,86,0.08)', text: '#1e40af' },
   cheque: { bg: '#fef9c3', text: '#854d0e' },
-  cash: { bg: '#dcfce7', text: '#166534' },
+  cash: { bg: '#dcfce7', text: '#0B5644' },
 };
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -213,7 +213,7 @@ const ReversedBadge = styled.span`
   letter-spacing: 0.3px;
   background: rgba(158,42,42,0.08);
   color: #9E2A2A;
-  border: 1px solid #fca5a5;
+  border: 1px solid rgba(158,42,42,0.18);
   margin-left: 8px;
 `;
 

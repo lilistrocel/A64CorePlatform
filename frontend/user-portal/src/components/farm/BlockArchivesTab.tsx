@@ -213,7 +213,7 @@ const EfficiencyBadge = styled.span<{ $efficiency: number }>`
   background: ${({ $efficiency }) => {
     if ($efficiency >= 90) return '#0F6E56';
     if ($efficiency >= 75) return '#8bc34a';
-    if ($efficiency >= 60) return '#eab308';
+    if ($efficiency >= 60) return '#B8842A';
     return '#B85C2A';
   }};
   color: white;
@@ -275,7 +275,7 @@ const DeleteButton = styled.button`
   padding: 8px 16px;
   background: ${({ theme }) => theme.colors.status.danger};
   color: #c62828;
-  border: 1px solid #ef5350;
+  border: 1px solid #9E2A2A;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;

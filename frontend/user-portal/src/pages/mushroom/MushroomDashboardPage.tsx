@@ -308,7 +308,7 @@ const PageTitle = styled.h1`
 
 const PageSubtitle = styled.p`
   font-size: 14px;
-  color: #757575;
+  color: #4B4844;
   margin: 0;
 `;
 
@@ -627,9 +627,9 @@ interface AlertItemProps {
 
 const ALERT_SEVERITY_BG: Record<string, string> = {
   low: '#f0fdf4',
-  medium: '#fffbeb',
+  medium: 'rgba(184,132,42,0.06)',
   high: '#fff5f5',
-  critical: '#fef2f2',
+  critical: 'rgba(158,42,42,0.06)',
 };
 
 const AlertItem = styled.div<AlertItemProps>`
@@ -640,7 +640,7 @@ const AlertItem = styled.div<AlertItemProps>`
   background: ${({ $severity }) => ALERT_SEVERITY_BG[$severity] ?? '#fff5f5'};
   border-radius: 8px;
   border: 1px solid ${({ $severity }) =>
-    $severity === 'critical' ? '#fecaca' : '#f0f0f0'};
+    $severity === 'critical' ? 'rgba(158,42,42,0.12)' : '#f0f0f0'};
 `;
 
 const AlertRoom = styled.span`

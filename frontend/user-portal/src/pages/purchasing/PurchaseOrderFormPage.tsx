@@ -186,7 +186,7 @@ const DangerIconButton = styled.button`
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.status.danger || 'rgba(158,42,42,0.06)'}; }
 `;
 
 const AddLineButton = styled.button`

@@ -1535,7 +1535,7 @@ const RetryButton = styled.button`
   transition: all 150ms ease-in-out;
 
   &:hover {
-    background: #b91c1c;
+    background: #9E2A2A;
   }
 `;
 

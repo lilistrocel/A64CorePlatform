@@ -161,7 +161,7 @@ const WarningBanner = styled.div`
   border-radius: ${({ theme }) => theme.radii.md};
   margin-top: ${({ theme }) => theme.space['6']};
   font-size: ${({ theme }) => theme.fontSizes.bodySm};
-  color: #92400E;
+  color: #B8842A;
 `;
 
 const WarningIcon = styled.span`

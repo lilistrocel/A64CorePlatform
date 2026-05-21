@@ -50,9 +50,9 @@ const getToastColors = (type: ToastType) => {
     case 'success':
       return { bg: '#f0fdf4', border: '#22c55e', text: '#15803d', icon: '#22c55e' };
     case 'error':
-      return { bg: '#fef2f2', border: '#9E2A2A', text: '#b91c1c', icon: '#9E2A2A' };
+      return { bg: 'rgba(158,42,42,0.06)', border: '#9E2A2A', text: '#9E2A2A', icon: '#9E2A2A' };
     case 'warning':
-      return { bg: '#fffbeb', border: '#B8842A', text: '#b45309', icon: '#B8842A' };
+      return { bg: 'rgba(184,132,42,0.06)', border: '#B8842A', text: '#b45309', icon: '#B8842A' };
     case 'info':
       return { bg: 'rgba(15,110,86,0.05)', border: '#0F6E56', text: '#0B5644', icon: '#0F6E56' };
   }

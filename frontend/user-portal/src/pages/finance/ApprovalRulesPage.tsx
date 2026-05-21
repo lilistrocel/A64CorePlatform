@@ -702,7 +702,7 @@ const TesterResult = styled.div<{ $requiresApproval: boolean | null }>`
   background: ${({ $requiresApproval, theme }) => {
     if ($requiresApproval === null) return theme.colors.surface.canvas;
     return $requiresApproval
-      ? theme.colors.status.warning || '#fffbeb'
+      ? theme.colors.status.warning || 'rgba(184,132,42,0.06)'
       : theme.colors.accent.sageSoft || '#ecfdf5';
   }};
   color: ${({ $requiresApproval, theme }) => {

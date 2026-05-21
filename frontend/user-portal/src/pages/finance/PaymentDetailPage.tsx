@@ -52,7 +52,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 const METHOD_COLORS: Record<PaymentMethod, { bg: string; text: string }> = {
   bank_transfer: { bg: 'rgba(15,110,86,0.08)', text: '#1e40af' },
   cheque: { bg: '#fef9c3', text: '#854d0e' },
-  cash: { bg: '#dcfce7', text: '#166534' },
+  cash: { bg: '#dcfce7', text: '#0B5644' },
 };
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -104,9 +104,9 @@ const ActionsRow = styled.div`
 
 const ReverseButton = styled.button`
   padding: 9px 18px;
-  background: #fef2f2;
+  background: rgba(158,42,42,0.06);
   color: #9E2A2A;
-  border: 1px solid #fca5a5;
+  border: 1px solid rgba(158,42,42,0.18);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -121,8 +121,8 @@ const ReversedBanner = styled.div`
   gap: 12px;
   padding: 14px 18px;
   margin-bottom: 20px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
+  background: rgba(158,42,42,0.06);
+  border: 1px solid rgba(158,42,42,0.18);
   border-left: 4px solid #9E2A2A;
   border-radius: 8px;
   color: #7f1d1d;
@@ -141,7 +141,7 @@ const ReversedTag = styled.span`
   letter-spacing: 0.4px;
   background: rgba(158,42,42,0.08);
   color: #9E2A2A;
-  border: 1px solid #fca5a5;
+  border: 1px solid rgba(158,42,42,0.18);
   margin-left: 10px;
   vertical-align: middle;
 `;

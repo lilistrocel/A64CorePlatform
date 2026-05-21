@@ -76,7 +76,7 @@ export const PHASE_COLORS: Record<RoomPhase, string> = {
   harvesting: '#2e7d32',
   resting: '#80deea',
   cleaning: '#bdbdbd',
-  quarantined: '#ef5350',
+  quarantined: '#9E2A2A',
   decommissioned: '#4B4844',
   maintenance: '#ce93d8',
 };

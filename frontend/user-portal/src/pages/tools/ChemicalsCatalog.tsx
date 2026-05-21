@@ -653,7 +653,7 @@ const OutlineBtn = styled.button`
 
 const DangerBtn = styled(PrimaryBtn)`
   background: ${({ theme }) => theme.colors.status.danger};
-  &:hover:not(:disabled) { background: #b91c1c; }
+  &:hover:not(:disabled) { background: #9E2A2A; }
 `;
 
 const LinkBtn = styled.button`
@@ -672,7 +672,7 @@ const LinkBtn = styled.button`
 
 const DangerLinkBtn = styled(LinkBtn)`
   color: ${({ theme }) => theme.colors.status.danger};
-  &:hover { color: #b91c1c; }
+  &:hover { color: #9E2A2A; }
 `;
 
 const SmallBtn = styled.button`

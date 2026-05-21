@@ -281,7 +281,7 @@ const Label = styled.label`
 `;
 
 const Required = styled.span`
-  color: #ef5350;
+  color: #9E2A2A;
   margin-left: 2px;
 `;
 
@@ -298,7 +298,7 @@ interface InputProps {
 const Input = styled.input<InputProps>`
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#ef5350' : theme.colors.border.subtle)};
+  border: 1px solid ${({ $hasError, theme }) => ($hasError ? '#9E2A2A' : theme.colors.border.subtle)};
   border-radius: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.text.primary};
@@ -379,9 +379,9 @@ const TextArea = styled.textarea`
 
 const ValidationError = styled.div`
   font-size: 13px;
-  color: #ef5350;
+  color: #9E2A2A;
   background: ${({ theme }) => theme.colors.status.danger};
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(158,42,42,0.12);
   border-radius: 8px;
   padding: 10px 12px;
 `;

@@ -170,7 +170,7 @@ const ActionButton = styled.button<{ $variant?: 'view' | 'edit' | 'clone' | 'del
         background: #B8842A;
         color: white;
         &:hover {
-          background: #D97706;
+          background: #B8842A;
         }
       `;
     }

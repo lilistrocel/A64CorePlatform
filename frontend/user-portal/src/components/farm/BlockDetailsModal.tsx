@@ -100,7 +100,7 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
       planned: '#0F6E56',
       planted: '#0F6E56',
       growing: '#0F6E56',
-      fruiting: '#A855F7',
+      fruiting: '#4B4844',
       harvesting: '#B8842A',
       cleaning: '#B85C2A',
     };
@@ -1070,7 +1070,7 @@ const HarvestQualityBadge = styled.span<{ $grade: QualityGrade }>`
       case 'A':
         return '#0F6E56';
       case 'B':
-        return '#eab308';
+        return '#B8842A';
       case 'C':
         return '#B85C2A';
       default:

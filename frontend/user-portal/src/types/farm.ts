@@ -1027,7 +1027,7 @@ export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
   empty: '#4B4844',      // Gray
   planned: '#0F6E56',    // Blue
   growing: '#0F6E56',    // Green
-  fruiting: '#A855F7',   // Purple
+  fruiting: '#4B4844',   // Purple
   harvesting: '#B8842A', // Yellow/Orange
   cleaning: '#B85C2A',   // Orange
   alert: '#9E2A2A',      // Red

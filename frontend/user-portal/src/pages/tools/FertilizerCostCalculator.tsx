@@ -101,7 +101,7 @@ const LinkBtn = styled.button`
 
 const DangerLinkBtn = styled(LinkBtn)`
   color: ${({ theme }) => theme.colors.status.danger};
-  &:hover { color: #b91c1c; }
+  &:hover { color: #9E2A2A; }
 `;
 
 const Input = styled.input`

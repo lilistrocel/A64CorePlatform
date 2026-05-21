@@ -188,7 +188,7 @@ const DangerIconButton = styled.button`
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  &:hover { background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'}; }
+  &:hover { background: ${({ theme }) => theme.colors.status.danger || 'rgba(158,42,42,0.06)'}; }
 `;
 
 const AddLineButton = styled.button`
@@ -226,7 +226,7 @@ const UrgencyChip = styled.button<{ $active: boolean; $urgency: UrgencyLevel }>`
   }};
   background: ${({ $active, $urgency }) => {
     if (!$active) return 'transparent';
-    return $urgency === 'high' ? '#fef2f2' : $urgency === 'normal' ? 'rgba(184,132,42,0.10)' : '#f9fafb';
+    return $urgency === 'high' ? 'rgba(158,42,42,0.06)' : $urgency === 'normal' ? 'rgba(184,132,42,0.10)' : '#f9fafb';
   }};
   color: ${({ $active, $urgency }) => {
     if (!$active) return '#4B4844';

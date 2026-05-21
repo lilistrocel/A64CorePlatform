@@ -333,7 +333,7 @@ const ActiveIndicator = styled.div`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #f44336;
+  background: #9E2A2A;
   position: absolute;
   top: -2px;
   right: -2px;
@@ -343,7 +343,7 @@ const ClearButton = styled.button`
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
-  background: #f44336;
+  background: #9E2A2A;
   color: white;
   font-size: 14px;
   font-weight: 500;

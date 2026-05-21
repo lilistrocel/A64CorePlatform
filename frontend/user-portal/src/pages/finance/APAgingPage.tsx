@@ -384,7 +384,7 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
+  background: ${({ theme }) => theme.colors.status.danger || 'rgba(158,42,42,0.06)'};
   color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 10px;
   font-size: 13px;
@@ -414,7 +414,7 @@ const BUCKET_DEFS: BucketDef[] = [
     label: 'Not Due',
     sublabel: 'Current',
     bg: '#f0fdf4',
-    text: '#166534',
+    text: '#0B5644',
   },
   {
     key: 'days1To30',
@@ -434,8 +434,8 @@ const BUCKET_DEFS: BucketDef[] = [
     key: 'days61To90',
     label: '61–90 Days',
     sublabel: 'Overdue',
-    bg: '#fef2f2',
-    text: '#b91c1c',
+    bg: 'rgba(158,42,42,0.06)',
+    text: '#9E2A2A',
   },
   {
     key: 'daysOver90',

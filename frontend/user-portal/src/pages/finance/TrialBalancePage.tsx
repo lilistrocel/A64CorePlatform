@@ -309,7 +309,7 @@ const TotalsTRow = styled.tr<TotalRowProps>`
   border-top: 3px double ${({ $outOfBalance }) =>
     $outOfBalance ? '#9E2A2A' : '#d1d5db'};
   background: ${({ $outOfBalance }) =>
-    $outOfBalance ? '#fef2f2' : 'transparent'};
+    $outOfBalance ? 'rgba(158,42,42,0.06)' : 'transparent'};
 `;
 
 const TotalsTd = styled.td`
@@ -355,7 +355,7 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
+  background: ${({ theme }) => theme.colors.status.danger || 'rgba(158,42,42,0.06)'};
   color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 10px;
   font-size: 13px;

@@ -135,7 +135,7 @@ const Label = styled.label`
 `;
 
 const RequiredMark = styled.span`
-  color: #f44336;
+  color: #9E2A2A;
   margin-left: 4px;
 `;
 
@@ -193,7 +193,7 @@ const HelpText = styled.div`
 
 const ErrorText = styled.div`
   font-size: 12px;
-  color: #f44336;
+  color: #9E2A2A;
   margin-top: 4px;
 `;
 
@@ -724,7 +724,7 @@ export function PlantAssignmentModal({ isOpen, onClose, block, onSuccess }: Plan
                   <Label>
                     Number of Plants<RequiredMark>*</RequiredMark>
                     {isAutoCalculated && !isManualOverride && (
-                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#4caf50', fontWeight: 400 }}>
+                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#0F6E56', fontWeight: 400 }}>
                         (auto-calculated)
                       </span>
                     )}

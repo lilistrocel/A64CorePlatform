@@ -458,7 +458,7 @@ const ColorGroup = styled.div``;
 const ColorGroupTitle = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #757575;
+  color: #4B4844;
   margin-bottom: 8px;
 `;
 
@@ -492,10 +492,10 @@ const Footer = styled.div`
 
 const ResetButton = styled.button`
   padding: 10px 20px;
-  border: 2px solid #f44336;
+  border: 2px solid #9E2A2A;
   border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface.canvas};
-  color: #f44336;
+  color: #9E2A2A;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;

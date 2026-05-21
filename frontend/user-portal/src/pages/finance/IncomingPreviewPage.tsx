@@ -178,7 +178,7 @@ const PendingBadge = styled.span`
   border-radius: 99px;
   font-size: 12px;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.status.warning ?? '#fffbeb'};
+  background: ${({ theme }) => theme.colors.status.warning ?? 'rgba(184,132,42,0.06)'};
   color: ${({ theme }) => theme.colors.status.warning ?? '#B8842A'};
   border: 1px solid ${({ theme }) => theme.colors.status.warning ?? '#fde68a'};
   white-space: nowrap;
@@ -378,7 +378,7 @@ const UrgentPill = styled.span`
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
-  background: ${({ theme }) => theme.colors.status.danger ?? '#fef2f2'};
+  background: ${({ theme }) => theme.colors.status.danger ?? 'rgba(158,42,42,0.06)'};
   color: ${({ theme }) => theme.colors.status.danger ?? '#9E2A2A'};
   margin-left: 6px;
 `;

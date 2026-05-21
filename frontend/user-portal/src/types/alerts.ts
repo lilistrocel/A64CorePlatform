@@ -149,7 +149,7 @@ export interface AlertStatusConfig {
 export const ALERT_SEVERITY_CONFIG: Record<AlertSeverity, AlertSeverityConfig> = {
   low: {
     label: 'Low',
-    color: '#4CAF50', // Green
+    color: '#0F6E56', // Green
     icon: 'ℹ️',
   },
   medium: {
@@ -177,7 +177,7 @@ export const ALERT_STATUS_CONFIG: Record<AlertStatus, AlertStatusConfig> = {
   },
   resolved: {
     label: 'Resolved',
-    color: '#4CAF50', // Green
+    color: '#0F6E56', // Green
     icon: '✅',
   },
   dismissed: {

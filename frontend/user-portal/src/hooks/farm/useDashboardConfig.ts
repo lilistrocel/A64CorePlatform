@@ -94,7 +94,7 @@ const DEFAULT_CONFIG: DashboardConfig = {
       growing: '#34D399',
       fruiting: '#FCD34D',
       harvesting: '#B8842A',
-      cleaning: '#A855F7',
+      cleaning: '#4B4844',
       alert_critical: '#9E2A2A',
       alert_high: '#B85C2A',
       alert_medium: '#FCD34D',

@@ -172,7 +172,7 @@ const Td = styled.td`
 
 /** Line row is amber-tinted when variance exists */
 const LineRow = styled.tr<{ $hasVariance: boolean }>`
-  background: ${({ $hasVariance }) => ($hasVariance ? '#fffbeb' : 'transparent')};
+  background: ${({ $hasVariance }) => ($hasVariance ? 'rgba(184,132,42,0.06)' : 'transparent')};
   transition: background 100ms ease;
   &:last-child td { border-bottom: none; }
 `;

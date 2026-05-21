@@ -458,7 +458,7 @@ const PageTitle = styled.h1`
 
 const PageSubtitle = styled.p`
   font-size: 14px;
-  color: #757575;
+  color: #4B4844;
   margin: 0;
 `;
 
@@ -630,7 +630,7 @@ const STATUS_COLOR_MAP: Record<string, string> = {
   mixing: '#4B4844',
   depleted: '#4B4844',
   discarded: '#9E2A2A',
-  inoculating: '#6366F1',
+  inoculating: '#0F6E56',
 };
 
 const SubstrateStatus = styled.span<SubstrateStatusProps>`
@@ -790,7 +790,7 @@ const Label = styled.label`
 `;
 
 const Required = styled.span`
-  color: #ef5350;
+  color: #9E2A2A;
   margin-left: 2px;
 `;
 
@@ -855,9 +855,9 @@ const TextArea = styled.textarea`
 
 const FormError = styled.div`
   font-size: 13px;
-  color: #ef5350;
+  color: #9E2A2A;
   background: ${({ theme }) => theme.colors.status.danger};
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(158,42,42,0.12);
   border-radius: 8px;
   padding: 10px 12px;
 `;

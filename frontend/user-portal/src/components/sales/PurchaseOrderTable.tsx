@@ -117,7 +117,7 @@ const StatusBadge = styled.span<{ $status: string }>`
       case 'sent':
         return `background: ${theme.colors.surface.sunken}; color: #1E40AF;`;
       case 'confirmed':
-        return `background: ${theme.colors.status.warning}; color: #92400E;`;
+        return `background: ${theme.colors.status.warning}; color: #B8842A;`;
       case 'received':
         return `background: ${theme.colors.accent.sageSoft}; color: #065F46;`;
       case 'cancelled':

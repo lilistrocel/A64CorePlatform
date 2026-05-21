@@ -518,7 +518,7 @@ const DeleteButton = styled.button`
   flex-shrink: 0;
 
   &:hover:not(:disabled) {
-    background: #fef2f2;
+    background: rgba(158,42,42,0.06);
   }
 
   &:disabled {
@@ -701,7 +701,7 @@ const ApplicationBody = styled.div`
 
 const TypeSwitchWarning = styled.div`
   padding: 8px 12px;
-  background: #fffbeb;
+  background: rgba(184,132,42,0.06);
   border: 1px solid #B8842A;
   border-radius: 6px;
   font-size: 12px;
@@ -743,7 +743,7 @@ const InlineChemForm = styled.div`
 const InlineChemFormTitle = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #166534;
+  color: #0B5644;
 `;
 
 // Source field ────────────────────────────────────────────────────────────────

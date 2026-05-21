@@ -431,7 +431,7 @@ const CloseActionButton = styled.button`
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   &:hover {
-    background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
+    background: ${({ theme }) => theme.colors.status.danger || 'rgba(158,42,42,0.06)'};
   }
   &:disabled {
     opacity: 0.4;
@@ -479,7 +479,7 @@ const LoadingOverlay = styled.div`
 
 const ErrorBanner = styled.div`
   padding: 14px 18px;
-  background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
+  background: ${({ theme }) => theme.colors.status.danger || 'rgba(158,42,42,0.06)'};
   color: ${({ theme }) => theme.colors.status.danger || '#9E2A2A'};
   border-radius: 10px;
   font-size: 13px;
@@ -588,7 +588,7 @@ const DangerConfirmButton = styled.button`
   cursor: pointer;
   transition: background 150ms ease;
   &:hover {
-    background: #b91c1c;
+    background: #9E2A2A;
   }
   &:disabled {
     opacity: 0.5;

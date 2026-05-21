@@ -96,7 +96,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   ${props => {
     if (props.$variant === 'danger') {
       return `
-        background: #f44336;
+        background: #9E2A2A;
         color: white;
         &:hover {
           background: #d32f2f;
@@ -139,14 +139,14 @@ const Message = styled.div<{ $type: 'success' | 'error' | 'info' }>`
       return `
         background: ${theme.colors.accent.sageSoft};
         color: #2e7d32;
-        border: 1px solid #4caf50;
+        border: 1px solid #0F6E56;
       `;
     }
     if ($type === 'error') {
       return `
         background: ${theme.colors.status.danger};
         color: #c62828;
-        border: 1px solid #f44336;
+        border: 1px solid #9E2A2A;
       `;
     }
     return `

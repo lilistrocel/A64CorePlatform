@@ -296,7 +296,7 @@ const BannerSuccess = styled(BannerBase)`
 `;
 
 const BannerError = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.status.danger || '#fef2f2'};
+  background: ${({ theme }) => theme.colors.status.danger || 'rgba(158,42,42,0.06)'};
   color: ${({ theme }) => theme.colors.status.danger};
 `;
 
@@ -341,7 +341,7 @@ const Tr = styled.tr<TrProps>`
   border-bottom: 1px solid ${({ theme }) => theme.colors.surface.sunken};
   background: ${({ $warning, $dirty, theme }) => {
     if ($dirty) return (theme.colors.surface.sunken || 'rgba(15,110,86,0.05)') + '55';
-    if ($warning) return (theme.colors.status.warning || '#fffbeb');
+    if ($warning) return (theme.colors.status.warning || 'rgba(184,132,42,0.06)');
     return 'transparent';
   }};
   transition: background 120ms ease-in-out;
@@ -353,7 +353,7 @@ const Tr = styled.tr<TrProps>`
   &:hover {
     background: ${({ $dirty, $warning, theme }) => {
       if ($dirty) return (theme.colors.surface.sunken || 'rgba(15,110,86,0.05)') + '88';
-      if ($warning) return (theme.colors.status.warning || '#fffbeb') + 'cc';
+      if ($warning) return (theme.colors.status.warning || 'rgba(184,132,42,0.06)') + 'cc';
       return theme.colors.surface.canvas;
     }};
   }
@@ -393,7 +393,7 @@ interface TypePillProps {
 
 const TYPE_PILL_COLORS: Record<NonNullable<PurchaseItemType>, { bg: string; text: string }> = {
   raw_material: { bg: '#ecfdf5', text: '#0B5644' },
-  consumable: { bg: '#fffbeb', text: '#B8842A' },
+  consumable: { bg: 'rgba(184,132,42,0.06)', text: '#B8842A' },
   service: { bg: 'rgba(15,110,86,0.05)', text: '#1e40af' },
   fixed_asset_acquisition: { bg: '#f5f3ff', text: '#4c1d95' },
 };

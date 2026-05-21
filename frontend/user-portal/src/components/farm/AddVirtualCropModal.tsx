@@ -188,7 +188,7 @@ const Label = styled.label`
 `;
 
 const RequiredMark = styled.span`
-  color: #f44336;
+  color: #9E2A2A;
   margin-left: 4px;
 `;
 
@@ -333,7 +333,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>
         `;
       case 'success':
         return `
-          background: #4caf50;
+          background: #0F6E56;
           color: white;
           &:hover:not(:disabled) {
             background: #388e3c;
@@ -806,7 +806,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                   <Label>
                     Number of Plants<RequiredMark>*</RequiredMark>
                     {isAutoCalculated && !isManualOverride && (
-                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#4caf50', fontWeight: 400 }}>
+                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#0F6E56', fontWeight: 400 }}>
                         (auto-calculated)
                       </span>
                     )}

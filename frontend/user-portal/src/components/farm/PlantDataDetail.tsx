@@ -117,7 +117,7 @@ const ActionButton = styled.button<{ $variant?: 'edit' | 'clone' | 'delete' | 'c
         background: #B8842A;
         color: white;
         &:hover {
-          background: #D97706;
+          background: #B8842A;
         }
       `;
     }

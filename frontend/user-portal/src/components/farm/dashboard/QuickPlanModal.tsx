@@ -179,7 +179,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 28px;
-  color: #757575;
+  color: #4B4844;
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -269,7 +269,7 @@ const Input = styled.input`
 
 const Hint = styled.div`
   font-size: 12px;
-  color: #757575;
+  color: #4B4844;
   margin-top: 4px;
 `;
 

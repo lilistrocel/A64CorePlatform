@@ -175,7 +175,7 @@ const QualityBadge = styled.span<{ $grade: QualityGrade }>`
       case 'A':
         return '#0F6E56';
       case 'B':
-        return '#eab308';
+        return '#B8842A';
       case 'C':
         return '#B85C2A';
       default:
@@ -675,7 +675,7 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
               <HarvestInfo>
                 <HarvestDate>
                   {farmApi.formatDateForDisplay(harvest.harvestDate)}
-                  {harvest.metadata?.crop && <span style={{ fontWeight: 400, marginLeft: 8, color: '#4caf50' }}>({harvest.metadata.crop})</span>}
+                  {harvest.metadata?.crop && <span style={{ fontWeight: 400, marginLeft: 8, color: '#0F6E56' }}>({harvest.metadata.crop})</span>}
                 </HarvestDate>
                 <HarvestMeta>
                   <span>{formatNumber(harvest.quantityKg, { decimals: 1 })} kg</span>

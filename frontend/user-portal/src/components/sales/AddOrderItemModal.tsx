@@ -601,7 +601,7 @@ const RecommendedBadge = styled.span`
   gap: 3px;
   font-size: 11px;
   font-weight: 600;
-  color: #D97706;
+  color: #B8842A;
   background: rgba(184,132,42,0.10);
   border: 1px solid #FCD34D;
   border-radius: 4px;

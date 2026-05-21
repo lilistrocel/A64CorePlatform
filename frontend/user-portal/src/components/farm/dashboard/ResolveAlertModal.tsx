@@ -227,7 +227,7 @@ const Header = styled.div`
 const Title = styled.h2`
   font-size: 20px;
   font-weight: 600;
-  color: #111827;
+  color: #0F0F0F;
   margin: 0;
 `;
 
@@ -271,7 +271,7 @@ const BlockLabel = styled.span`
 `;
 
 const BlockValue = styled.span`
-  color: #111827;
+  color: #0F0F0F;
 `;
 
 const FormGroup = styled.div`

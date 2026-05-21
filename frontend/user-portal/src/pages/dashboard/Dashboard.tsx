@@ -175,7 +175,7 @@ const MODULE_COLORS: Record<string, string> = {
   employees: '#4B4844',
   customers: '#B8842A',
   orders: '#9E2A2A',
-  vehicles: '#6366F1',
+  vehicles: '#0F6E56',
   shipments: '#14B8A6',
   campaigns: '#EC4899',
   users: '#64748B',
@@ -201,7 +201,7 @@ const CROP_PALETTE: string[] = [
   '#14B8A6',
   '#B85C2A',
   '#06B6D4',
-  '#6366F1',
+  '#0F6E56',
   '#84CC16',
 ];
 

@@ -169,7 +169,7 @@ const Td = styled.td`
 
 /** Amber row highlight when invoice price differs from PO price */
 const LineRow = styled.tr<{ $hasVariance: boolean }>`
-  background: ${({ $hasVariance }) => ($hasVariance ? '#fffbeb' : 'transparent')};
+  background: ${({ $hasVariance }) => ($hasVariance ? 'rgba(184,132,42,0.06)' : 'transparent')};
 `;
 
 const VarianceCell = styled.span<{ $sign: 'positive' | 'negative' | 'zero' }>`

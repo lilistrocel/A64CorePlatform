@@ -345,7 +345,7 @@ const BadgePill = styled.span<{ $variant: 'control' | 'inactive' | 'locked' }>`
     }
     // locked
     return `
-      background: ${theme.colors.status.warning || '#fffbeb'};
+      background: ${theme.colors.status.warning || 'rgba(184,132,42,0.06)'};
       color: ${theme.colors.status.warning || '#B8842A'};
     `;
   }}
@@ -492,7 +492,7 @@ const LevelBadge = styled.span<{ $level: AccountLevel }>`
     }
     // drawer
     return `
-      background: ${theme.colors.status.warning || '#fffbeb'};
+      background: ${theme.colors.status.warning || 'rgba(184,132,42,0.06)'};
       color: ${theme.colors.status.warning || '#B8842A'};
     `;
   }}
@@ -1538,7 +1538,7 @@ export function ChartOfAccountsPage() {
                 {selectedAccount.isHeader && (
                   <BannerError
                     role="note"
-                    style={{ marginBottom: 20, background: '#fffbeb', color: '#B8842A', borderColor: '#fde68a' }}
+                    style={{ marginBottom: 20, background: 'rgba(184,132,42,0.06)', color: '#B8842A', borderColor: '#fde68a' }}
                   >
                     This is a header account. It is a section title and cannot be posted to directly.
                   </BannerError>

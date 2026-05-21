@@ -122,13 +122,13 @@ const SummaryItem = styled.div<{ $warning?: boolean }>`
   padding: 12px;
   background: ${({ $warning, theme }) => ($warning ? theme.colors.status.warning : theme.colors.accent.sageSoft)};
   border-radius: 8px;
-  border-left: 4px solid ${({ $warning }) => ($warning ? '#B8842A' : '#4caf50')};
+  border-left: 4px solid ${({ $warning }) => ($warning ? '#B8842A' : '#0F6E56')};
 `;
 
 const Icon = styled.div<{ $warning?: boolean }>`
   font-size: 20px;
   font-weight: 600;
-  color: ${({ $warning }) => ($warning ? '#B8842A' : '#4caf50')};
+  color: ${({ $warning }) => ($warning ? '#B8842A' : '#0F6E56')};
   flex-shrink: 0;
   margin-top: 2px;
 `;

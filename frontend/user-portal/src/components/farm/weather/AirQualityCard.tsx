@@ -142,7 +142,7 @@ const PollenLevel = styled.div<{ $level: number }>`
   color: ${({ $level }) => {
     if ($level === 0) return '#4B4844';   // None - gray
     if ($level === 1) return '#065F46';   // Low - green
-    if ($level === 2) return '#92400E';   // Moderate - yellow
+    if ($level === 2) return '#B8842A';   // Moderate - yellow
     if ($level === 3) return '#C2410C';   // High - orange
     return '#B91C1C';                      // Very High - red
   }};
