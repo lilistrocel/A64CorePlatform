@@ -1,201 +1,81 @@
-// Shared design tokens (non-color values are identical across themes)
-const sharedTokens = {
-  typography: {
-    fontFamily: {
-      primary: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif",
-      mono: "'JetBrains Mono', 'Courier New', monospace",
-    },
-    fontSize: {
-      xs: '0.75rem',    // 12px
-      sm: '0.875rem',   // 14px
-      base: '1rem',     // 16px
-      lg: '1.125rem',   // 18px
-      xl: '1.25rem',    // 20px
-      '2xl': '1.5rem',  // 24px
-      '3xl': '1.875rem',// 30px
-      '4xl': '2.25rem', // 36px
-    },
-    fontWeight: {
-      light: 300,
-      regular: 400,
-      medium: 500,
-      semibold: 600,
-      bold: 700,
-    },
-    lineHeight: {
-      tight: 1.25,
-      normal: 1.5,
-      relaxed: 1.75,
-    },
-  },
+/**
+ * A20Core — Shared theme (Slate identity).
+ *
+ * Self-contained copy of the Slate token assembly for the shared package.
+ * The canonical source lives in frontend/user-portal/src/theme/.
+ *
+ * Keep in sync: if tokens.ts in user-portal changes, update this file too.
+ */
 
-  spacing: {
-    xs: '0.25rem',   // 4px
-    sm: '0.5rem',    // 8px
-    md: '1rem',      // 16px
-    lg: '1.5rem',    // 24px
-    xl: '2rem',      // 32px
-    '2xl': '3rem',   // 48px
-    '3xl': '4rem',   // 64px
-  },
+// ── Palette ────────────────────────────────────────────────────────────
+const palette = {
+  linen: '#EDEAE3',
+  linenSoft: '#F4F2EC',
+  stone: '#DCD8CF',
+  stoneDeep: '#CFC9BD',
+  ink: '#0F0F0F',
+  slate: '#4B4844',
+  sage: '#0F6E56',
+  sageDeep: '#0B5644',
+  sageSoft: 'rgba(15, 110, 86, 0.10)',
+  rust: '#B85C2A',
+  rustDeep: '#9A4A20',
+  success: '#0F6E56',
+  warning: '#B8842A',
+  danger: '#9E2A2A',
+  info: '#4B4844',
+  paper: '#FFFFFF',
+  void: '#000000',
+} as const;
 
-  borderRadius: {
-    none: '0',
-    sm: '0.25rem',   // 4px
-    md: '0.5rem',    // 8px
-    lg: '0.75rem',   // 12px
-    xl: '1rem',      // 16px
-    full: '9999px',
-  },
+const colorsLight = {
+  surface: { canvas: palette.linen, raised: palette.linenSoft, sunken: palette.stone, overlay: 'rgba(15, 15, 15, 0.4)' },
+  text: { primary: palette.ink, secondary: palette.slate, tertiary: 'rgba(75, 72, 68, 0.6)', inverse: palette.linen, onAccent: palette.linen },
+  border: { default: palette.stoneDeep, subtle: palette.stone, strong: palette.slate, accent: palette.sage },
+  accent: { sage: palette.sage, sageDeep: palette.sageDeep, sageSoft: palette.sageSoft, rust: palette.rust, rustDeep: palette.rustDeep },
+  status: { success: palette.success, warning: palette.warning, danger: palette.danger, info: palette.info },
+} as const;
 
-  breakpoints: {
-    mobile: '320px',
-    tablet: '768px',
-    desktop: '1024px',
-    wide: '1440px',
-  },
+const colorsDark = {
+  surface: { canvas: '#1A1916', raised: '#252320', sunken: '#0F0E0C', overlay: 'rgba(15, 15, 15, 0.6)' },
+  text: { primary: palette.linen, secondary: 'rgba(237, 234, 227, 0.72)', tertiary: 'rgba(237, 234, 227, 0.48)', inverse: palette.ink, onAccent: palette.linen },
+  border: { default: 'rgba(237, 234, 227, 0.12)', subtle: 'rgba(237, 234, 227, 0.06)', strong: 'rgba(237, 234, 227, 0.24)', accent: palette.sage },
+  accent: colorsLight.accent,
+  status: colorsLight.status,
+} as const;
 
-  zIndex: {
-    base: 0,
-    dropdown: 1000,
-    sticky: 1050,
-    modal: 1100,
-    popover: 1200,
-    tooltip: 1300,
-    notification: 1400,
-  },
-};
+// ── Token scales ───────────────────────────────────────────────────────
+const fonts = { display: '"Playfair Display", "Times New Roman", Georgia, serif', body: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif', mono: '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace' } as const;
+const fontSizes = { hero: '88px', displayLg: '64px', displayMd: '48px', displaySm: '36px', h1: '32px', h2: '24px', h3: '20px', h4: '18px', bodyLg: '18px', bodyMd: '16px', bodySm: '14px', caption: '13px', monoLg: '14px', monoMd: '12px', monoSm: '11px' } as const;
+const fontWeights = { regular: 400, medium: 500, semibold: 600, bold: 700, black: 900 } as const;
+const lineHeights = { tight: 1.05, snug: 1.2, base: 1.55, loose: 1.7 } as const;
+const letterSpacings = { tight: '-0.03em', base: '0', wide: '0.08em', wider: '0.12em' } as const;
+const space = { '0': '0', px: '1px', '0.5': '2px', '1': '4px', '2': '8px', '3': '12px', '4': '16px', '5': '20px', '6': '24px', '8': '32px', '10': '40px', '12': '48px', '16': '64px', '20': '80px', '24': '96px', '32': '128px' } as const;
+const radii = { none: '0', sm: '2px', md: '4px', lg: '8px', xl: '12px', pill: '999px' } as const;
+const shadows = { none: 'none', xs: '0 1px 2px rgba(15, 15, 15, 0.04)', sm: '0 1px 3px rgba(15, 15, 15, 0.06), 0 1px 2px rgba(15, 15, 15, 0.04)', md: '0 4px 12px rgba(15, 15, 15, 0.08)', lg: '0 8px 24px rgba(15, 15, 15, 0.10)', focus: '0 0 0 3px rgba(15, 110, 86, 0.35)', focusRust: '0 0 0 3px rgba(184, 92, 42, 0.35)' } as const;
+const motion = { duration: { instant: '0ms', fast: '120ms', base: '200ms', slow: '320ms', slower: '480ms' }, easing: { standard: 'cubic-bezier(0.4, 0, 0.2, 1)', enter: 'cubic-bezier(0, 0, 0.2, 1)', exit: 'cubic-bezier(0.4, 0, 1, 1)' } } as const;
+const zIndices = { base: 0, dropdown: 1000, sticky: 1020, fixed: 1030, modalBackdrop: 1040, modal: 1050, popover: 1060, tooltip: 1070, toast: 1080 } as const;
+const breakpoints = { sm: '640px', md: '768px', lg: '1024px', xl: '1280px', '2xl': '1536px' } as const;
+const media = { sm: '@media (min-width: 640px)', md: '@media (min-width: 768px)', lg: '@media (min-width: 1024px)', xl: '@media (min-width: 1280px)', '2xl': '@media (min-width: 1536px)', motionReduce: '@media (prefers-reduced-motion: reduce)' } as const;
+const layout = { containerMax: '1440px', gutter: '24px', outerPadding: '40px', outerPaddingMobile: '16px', brandRuleHeight: '2px' } as const;
+const brandRule = { sage: `2px solid ${palette.sage}`, rust: `2px solid ${palette.rust}` } as const;
 
-// Primary palette (Blue) — same in both themes
-const primaryPalette = {
-  50: '#e3f2fd',
-  100: '#bbdefb',
-  200: '#90caf9',
-  300: '#64b5f6',
-  400: '#42a5f5',
-  500: '#2196f3',  // Main brand color
-  600: '#1e88e5',
-  700: '#1976d2',
-  800: '#1565c0',
-  900: '#0d47a1',
-};
+// ── Theme assembly ─────────────────────────────────────────────────────
+export const buildTheme = (mode: 'light' | 'dark') => ({
+  mode,
+  palette,
+  colors: mode === 'light' ? colorsLight : colorsDark,
+  fonts, fontSizes, fontWeights, lineHeights, letterSpacings,
+  space, radii, shadows, motion, zIndices, breakpoints, media, layout, brandRule,
+});
 
-// Secondary palette (Purple) — same in both themes
-const secondaryPalette = {
-  50: '#f3e5f5',
-  100: '#e1bee7',
-  500: '#9c27b0',
-  700: '#7b1fa2',
-  900: '#4a148c',
-};
+export const theme = buildTheme('light');
+export const themeDark = buildTheme('dark');
 
-// Semantic colors — same in both themes
-const semanticColors = {
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  info: '#3B82F6',
-};
+// Legacy aliases
+export const lightTheme = theme;
+export const darkTheme = themeDark;
 
-// ─── Light Theme ─────────────────────────────────────────────────────────────
-
-export const lightTheme = {
-  ...sharedTokens,
-  colors: {
-    primary: primaryPalette,
-    secondary: secondaryPalette,
-
-    // Neutral palette — light grays
-    neutral: {
-      50: '#fafafa',
-      100: '#f5f5f5',
-      200: '#eeeeee',
-      300: '#e0e0e0',
-      400: '#bdbdbd',
-      500: '#9e9e9e',
-      600: '#757575',
-      700: '#616161',
-      800: '#424242',
-      900: '#212121',
-    },
-
-    ...semanticColors,
-
-    // Background & surface
-    background: '#ffffff',
-    surface: '#f5f5f5',
-
-    // Semantic status background tints
-    warningBg: '#fef3c7',
-    errorBg: '#fee2e2',
-    successBg: '#f0fdf4',
-    infoBg: '#e0f2fe',
-
-    // Text
-    textPrimary: '#212121',
-    textSecondary: '#616161',
-    textDisabled: '#9e9e9e',
-  },
-
-  shadows: {
-    none: 'none',
-    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-  },
-};
-
-// ─── Dark Theme ──────────────────────────────────────────────────────────────
-
-export const darkTheme = {
-  ...sharedTokens,
-  colors: {
-    primary: primaryPalette,
-    secondary: secondaryPalette,
-
-    // Neutral palette — dark grays (inverted scale for dark mode)
-    neutral: {
-      50: '#1a1a1a',   // Darkest surface (was lightest)
-      100: '#242424',
-      200: '#2e2e2e',
-      300: '#3a3a3a',
-      400: '#4a4a4a',
-      500: '#6b6b6b',
-      600: '#8a8a8a',
-      700: '#a3a3a3',
-      800: '#d4d4d4',
-      900: '#f5f5f5',  // Lightest text (was darkest)
-    },
-
-    ...semanticColors,
-
-    // Background & surface
-    background: '#121212',
-    surface: '#1e1e1e',
-
-    // Semantic status background tints
-    warningBg: '#422006',
-    errorBg: '#450a0a',
-    successBg: '#052e16',
-    infoBg: '#082f49',
-
-    // Text
-    textPrimary: '#f5f5f5',
-    textSecondary: '#a3a3a3',
-    textDisabled: '#6b6b6b',
-  },
-
-  shadows: {
-    none: 'none',
-    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.4)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.6)',
-  },
-};
-
-// Default export (light theme) preserved for backward compatibility
-export const theme = lightTheme;
-
-export type Theme = typeof lightTheme;
+export type AppTheme = ReturnType<typeof buildTheme>;
+// Old name kept for backward compat
+export type Theme = AppTheme;
