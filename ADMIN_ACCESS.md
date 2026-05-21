@@ -319,10 +319,14 @@ curl -X GET "http://localhost/api/v1/admin/users?page=1&per_page=20" \
    docker exec a64core-mongodb-dev mongosh a64core_db --quiet --eval \
      'db.users.find({email: "admin@a64platform.com"}, {email:1, role:1, isActive:1})'
    ```
-3. If user doesn't exist, create super admin:
+3. If user doesn't exist, trigger the startup auto-seed manually:
    ```bash
-   docker exec a64core-api-dev python scripts/create_superadmin.py
+   # Auto-bootstrap uses ADMIN_EMAIL + ADMIN_PASSWORD from .env
+   docker exec a64coreplatform-api-1 python3 -c \
+     'import asyncio; from src.main import seed_admin; asyncio.run(seed_admin())'
    ```
+   (The same `seed_admin()` runs automatically on every FastAPI startup —
+   restarting the api container also recreates the super_admin if missing.)
 
 ### Admin Dashboard Not Loading
 
