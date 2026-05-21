@@ -273,7 +273,7 @@ YOUR TASKS:
 RESPONSE FORMAT (JSON):
 {{
     "collection": "collection_name",
-    "query": {{ /* MongoDB aggregation pipeline */ }},
+    "query": [ /* MongoDB aggregation pipeline — ALWAYS a JSON array of stages */ ],
     "explanation": "What this query does in simple terms",
     "filters": ["field1", "field2"],  // Fields being filtered
     "grouping": ["field1"],  // Fields being grouped (if any)
@@ -281,14 +281,24 @@ RESPONSE FORMAT (JSON):
     "estimated_documents": 100  // Rough estimate of results
 }}
 
+EXAMPLES of the `query` field (these are all VALID):
+- Simple match:   [ {{ "$match": {{ "state": "growing" }} }}, {{ "$limit": 100 }} ]
+- Count:          [ {{ "$match": {{ "state": "growing" }} }}, {{ "$count": "total" }} ]
+- Lookup + sort:  [ {{ "$match": {{ ... }} }}, {{ "$lookup": {{ ... }} }}, {{ "$sort": {{ ... }} }}, {{ "$limit": 100 }} ]
+
+INVALID examples (the validator WILL reject these):
+- `{{ "state": "growing" }}`   ← this is a find() filter, NOT a pipeline. Wrap in [{{ "$match": ... }}].
+- `{{ "filter": [...], "projection": [...] }}` ← object with sub-keys, not a pipeline.
+
 RULES:
-- Always use aggregation pipelines (even for simple finds)
-- Never use $where or JavaScript evaluation
-- Always include proper $match stages for filtering
-- Use $lookup for joins between collections
-- Include $sort for ordering results
-- Limit results to max 1000 documents with $limit
-- Return ONLY valid JSON, no markdown formatting"""
+- `query` MUST be a JSON array (list) of pipeline stages — never an object/dict.
+- Even simple finds → wrap in `[{{ "$match": filter }}, {{ "$limit": N }}]`.
+- Never use $where or JavaScript evaluation.
+- Always include proper $match stages for filtering.
+- Use $lookup for joins between collections.
+- Include $sort for ordering results.
+- Limit results to max 1000 documents with $limit (last stage).
+- Return ONLY valid JSON, no markdown formatting."""
 
     def _build_report_prompt(
         self,

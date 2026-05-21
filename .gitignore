@@ -127,6 +127,9 @@ test_*.spec.ts
 test_*.py
 test-*.mjs
 test_*.mjs
+# But track structured test suites under tests/ (not pycache or .pyc files)
+!tests/**/*.py
+!tests/**/__init__.py
 
 # Screenshots and images from testing
 *.png
@@ -162,6 +165,7 @@ database_backup/
 # Test artifacts and screenshots
 test-screenshots/
 test-screenshots-detailed/
+screenshots/
 test_block_monitor.js
 check_farms_api.mjs
 

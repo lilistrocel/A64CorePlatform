@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useContext, useCallback, useMemo, type ReactNode } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
@@ -10,6 +10,7 @@ import { getPendingTaskCount } from '../../services/tasksApi';
 import { Button } from '@a64core/shared';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
 import { DivisionSwitcher } from './DivisionSwitcher';
+import { AIAssistantPanel, AIAssistantFAB } from '../ai-assistant';
 
 // ─── Navigation item definitions ────────────────────────────────────────────
 
@@ -30,20 +31,16 @@ const SHARED_NAV_ITEMS: NavItemDef[] = [
 const SHARED_BOTTOM_NAV_ITEMS: NavItemDef[] = [
   { to: '/crm/customers', icon: '👥', label: 'CRM' },
   { to: '/hr', icon: '👔', label: 'HR' },
-  { to: '/logistics', icon: '🚚', label: 'Logistics' },
-  { to: '/sales', icon: '💰', label: 'Sales' },
-  { to: '/marketing', icon: '📢', label: 'Marketing' },
   { to: '/ai', icon: '🤖', label: 'AI Hub' },
   { to: '/profile', icon: '👤', label: 'Profile' },
   { to: '/settings', icon: '⚙️', label: 'Settings' },
 ];
 
 // Industry-specific navigation items
+// Note: Operations and Inventory are NOT here — they live inside OPERATIONS_NAV_GROUP
 const VEGETABLE_FRUITS_NAV: NavItemDef[] = [
   { to: '/farm/dashboard', icon: '🏞️', label: 'Farm Manager' },
   { to: '/farm/plants', icon: '🌿', label: 'Plant Library' },
-  { to: '/operations', icon: '📋', label: 'Operations', showBadge: true },
-  { to: '/inventory', icon: '📦', label: 'Inventory' },
 ];
 
 const MUSHROOM_NAV: NavItemDef[] = [
@@ -73,6 +70,32 @@ const PURCHASING_NAV_GROUP: NavItemDef = {
     { to: '/purchasing/vendors', icon: '📋', label: 'Vendors' },
     { to: '/purchasing/items', icon: '📦', label: 'Purchase Items' },
     { to: '/purchasing/payment-terms', icon: '💳', label: 'Payment Terms' },
+    { to: '/purchasing/pr', icon: '📝', label: 'Purchase Requests' },
+    { to: '/purchasing/po', icon: '🛒', label: 'Purchase Orders' },
+    { to: '/purchasing/gr', icon: '📥', label: 'Goods Receipts' },
+    { to: '/purchasing/ap', icon: '🧾', label: 'AP Invoices' },
+    { to: '/purchasing/approvals', icon: '✅', label: 'Approval Inbox' },
+  ],
+};
+
+// Finance group — accountant, finance_admin, auditor, admin, super_admin
+const FINANCE_NAV_GROUP: NavItemDef = {
+  icon: '📒',
+  label: 'Finance',
+  defaultExpanded: false,
+  children: [
+    { to: '/finance/chart-of-accounts', icon: '📋', label: 'Chart of Accounts' },
+    { to: '/finance/approval-rules', icon: '✅', label: 'Approval Rules' },
+    { to: '/finance/posting-setup', icon: '🗂️', label: 'Posting Setup' },
+    { to: '/finance/item-mapping', icon: '🏷️', label: 'Item GL Mapping' },
+    { to: '/finance/journal-entries', icon: '📒', label: 'Journal Entries' },
+    { to: '/finance/trial-balance', icon: '⚖️', label: 'Trial Balance' },
+    { to: '/finance/payments', icon: '💸', label: 'Vendor Payments' },
+    { to: '/finance/ap-aging', icon: '📊', label: 'AP Aging' },
+    { to: '/finance/vendor-sub-ledger', icon: '📑', label: 'Vendor Sub-Ledger' },
+    { to: '/finance/periods', icon: '📅', label: 'Fiscal Periods' },
+    { to: '/finance/pnl', icon: '📈', label: 'P&L Statement' },
+    { to: '/finance/incoming', icon: '📥', label: 'Incoming Preview' },
   ],
 };
 
@@ -109,7 +132,9 @@ export function MainLayout() {
     // Default: honour defaultExpanded on each group
     return {
       Tools: TOOLS_NAV_GROUP.defaultExpanded ?? false,
+      Operations: false,
       Purchasing: PURCHASING_NAV_GROUP.defaultExpanded ?? false,
+      Finance: FINANCE_NAV_GROUP.defaultExpanded ?? false,
     };
   }, [storageKey]);
 
@@ -197,7 +222,7 @@ export function MainLayout() {
     currentDivision?.industryType === 'mushroom' ? MUSHROOM_NAV : VEGETABLE_FRUITS_NAV;
 
   // Roles that can see the Purchasing sidebar group
-  const PURCHASING_ROLES = new Set([
+  const _PURCHASING_ROLES = new Set([
     'procurement_officer',
     'procurement_manager',
     'admin',
@@ -205,24 +230,122 @@ export function MainLayout() {
     'finance_admin',
   ]);
 
+  // Roles that can see the Finance sidebar group
+  const _FINANCE_ROLES = new Set([
+    'accountant',
+    'finance_admin',
+    'auditor',
+    'admin',
+    'super_admin',
+  ]);
+
   // Build the full ordered navigation list
   const navItems: NavItemDef[] = useMemo(
-    () => [
-      ...SHARED_NAV_ITEMS,
-      ...industryNavItems,
-      // Tools group — available to all users
-      TOOLS_NAV_GROUP,
-      // Purchasing group — procurement + admin roles only
-      ...(PURCHASING_ROLES.has(user?.role ?? '') ? [PURCHASING_NAV_GROUP] : []),
-      // AI Hub is super_admin only
-      ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
-        if (item.to === '/ai') return user?.role === 'super_admin';
-        return true;
-      }),
-      ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
-    ],
+    () => {
+      // Operations group children — Purchasing sub-group is role-gated
+      const operationsChildren: NavItemDef[] = [
+        { to: '/operations', icon: '📋', label: 'Task Manager', showBadge: true },
+        { to: '/inventory', icon: '📦', label: 'Inventory' },
+        ...(_PURCHASING_ROLES.has(user?.role ?? '') ? [PURCHASING_NAV_GROUP] : []),
+        { to: '/sales', icon: '💰', label: 'Sales' },
+        { to: '/logistics', icon: '🚚', label: 'Logistics' },
+        { to: '/marketing', icon: '📢', label: 'Marketing' },
+      ];
+
+      const OPERATIONS_NAV_GROUP: NavItemDef = {
+        icon: '🏭',
+        label: 'Operations',
+        defaultExpanded: false,
+        children: operationsChildren,
+      };
+
+      return [
+        ...SHARED_NAV_ITEMS,
+        ...industryNavItems,
+        // Tools group — available to all users
+        TOOLS_NAV_GROUP,
+        // Operations group — available to all users (Purchasing sub-group is role-gated inside)
+        OPERATIONS_NAV_GROUP,
+        // Finance group — accountant, finance_admin, auditor, admin, super_admin
+        ...(_FINANCE_ROLES.has(user?.role ?? '') ? [FINANCE_NAV_GROUP] : []),
+        // Bottom items — AI Hub is super_admin only
+        ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
+          if (item.to === '/ai') return user?.role === 'super_admin';
+          return true;
+        }),
+        ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
+      ];
+    },
     [industryNavItems, user?.role]
   );
+
+  // ── Recursive nav item renderer ────────────────────────────────────────────
+  // depth=0: top-level items/groups; depth=1: children of a top-level group;
+  // depth=2: grandchildren (e.g. Purchasing inside Operations).
+  // A group is "child-active" if ANY descendant route is currently active.
+  const hasActiveDescendant = (item: NavItemDef): boolean => {
+    if (!item.children) return false;
+    return item.children.some(
+      (child) =>
+        (child.to && location.pathname.startsWith(child.to)) ||
+        hasActiveDescendant(child)
+    );
+  };
+
+  const renderNavItem = (item: NavItemDef, depth: number): ReactNode => {
+    // ── Group item (has children) ──────────────────────────────────────────
+    if (item.children) {
+      const isExpanded = expandedGroups[item.label] ?? (item.defaultExpanded ?? false);
+      const isChildActive = hasActiveDescendant(item);
+      return (
+        <div key={item.label}>
+          <NavGroupHeader
+            $childActive={isChildActive}
+            $depth={depth}
+            onClick={() => toggleGroup(item.label)}
+            aria-expanded={isExpanded}
+            aria-label={`${item.label} navigation group`}
+            style={{ paddingLeft: `calc(${depth} * 14px + 1rem)` }}
+          >
+            {depth === 0
+              ? <NavIcon>{item.icon}</NavIcon>
+              : <NavChildIcon>{item.icon}</NavChildIcon>
+            }
+            <NavGroupLabel>{item.label}</NavGroupLabel>
+            <NavGroupCaret $expanded={isExpanded} aria-hidden="true">▾</NavGroupCaret>
+          </NavGroupHeader>
+          {isExpanded && (
+            <NavGroupChildren $depth={depth}>
+              {item.children.map((child) => renderNavItem(child, depth + 1))}
+            </NavGroupChildren>
+          )}
+        </div>
+      );
+    }
+
+    // ── Leaf item ─────────────────────────────────────────────────────────
+    return (
+      <NavItem
+        key={item.to ?? item.label}
+        to={item.to!}
+        onClick={(e) => handleNavClick(e, item.to!)}
+        style={{ paddingLeft: `calc(${depth} * 14px + 1rem)` }}
+      >
+        {depth === 0
+          ? <NavIcon>{item.icon}</NavIcon>
+          : <NavChildIcon>{item.icon}</NavChildIcon>
+        }
+        {item.showBadge ? (
+          <NavContent>
+            <span>{item.label}</span>
+            {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
+          </NavContent>
+        ) : (
+          <span>{item.label}</span>
+        )}
+      </NavItem>
+    );
+  };
 
   return (
     <LayoutContainer>
@@ -285,63 +408,7 @@ export function MainLayout() {
         />
 
         <Nav aria-label="Main navigation">
-          {navItems.map((item) => {
-            // ── Group item (no `to`, has `children`) ──────────────────────
-            if (item.children) {
-              const isExpanded = expandedGroups[item.label] ?? (item.defaultExpanded ?? false);
-              // "child-active" highlight: any child route is active
-              const hasActiveChild = item.children.some(
-                (child) => child.to && location.pathname.startsWith(child.to)
-              );
-              return (
-                <div key={item.label}>
-                  <NavGroupHeader
-                    $childActive={hasActiveChild}
-                    onClick={() => toggleGroup(item.label)}
-                    aria-expanded={isExpanded}
-                    aria-label={`${item.label} navigation group`}
-                  >
-                    <NavIcon>{item.icon}</NavIcon>
-                    <NavGroupLabel>{item.label}</NavGroupLabel>
-                    <NavGroupCaret $expanded={isExpanded} aria-hidden="true">▾</NavGroupCaret>
-                  </NavGroupHeader>
-                  {isExpanded && (
-                    <NavGroupChildren>
-                      {item.children.map((child) => (
-                        <NavItem
-                          key={child.to}
-                          to={child.to!}
-                          onClick={(e) => handleNavClick(e, child.to!)}
-                        >
-                          <NavChildIcon>{child.icon}</NavChildIcon>
-                          <span>{child.label}</span>
-                        </NavItem>
-                      ))}
-                    </NavGroupChildren>
-                  )}
-                </div>
-              );
-            }
-
-            // ── Regular item ──────────────────────────────────────────────
-            return (
-              <NavItem
-                key={item.to}
-                to={item.to!}
-                onClick={(e) => handleNavClick(e, item.to!)}
-              >
-                <NavIcon>{item.icon}</NavIcon>
-                {item.showBadge ? (
-                  <NavContent>
-                    <span>{item.label}</span>
-                    {pendingTaskCount > 0 && <Badge>{pendingTaskCount}</Badge>}
-                  </NavContent>
-                ) : (
-                  <span>{item.label}</span>
-                )}
-              </NavItem>
-            );
-          })}
+          {navItems.map((item) => renderNavItem(item, 0))}
         </Nav>
 
       </Sidebar>
@@ -363,6 +430,10 @@ export function MainLayout() {
       >
         ↑
       </BackToTopButton>
+
+      {/* AI Assistant — slide-out panel available on every authenticated page */}
+      <AIAssistantFAB />
+      <AIAssistantPanel />
     </LayoutContainer>
   );
 }
@@ -878,12 +949,15 @@ const GreenLed = styled.span`
 
 interface NavGroupHeaderProps {
   $childActive: boolean;
+  $depth: number;
 }
 
 const NavGroupHeader = styled.button<NavGroupHeaderProps>`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.sm};
+  /* Horizontal padding is overridden inline via style prop for depth-based indentation;
+     vertical padding and min-height remain constant for touch target compliance. */
   padding: ${({ theme }) => theme.spacing.md};
   min-height: 36px;
   width: 100%;
@@ -893,8 +967,13 @@ const NavGroupHeader = styled.button<NavGroupHeaderProps>`
     $childActive ? `${theme.colors.primary[500]}0d` : 'transparent'};
   color: ${({ $childActive, theme }) =>
     $childActive ? theme.colors.primary[500] : theme.colors.textSecondary};
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  /* Sub-group headers (depth >= 1) use smaller font and lighter weight */
+  font-size: ${({ $depth, theme }) =>
+    $depth >= 1 ? theme.typography.fontSize.sm : theme.typography.fontSize.base};
+  font-weight: ${({ $depth, theme }) =>
+    $depth >= 1
+      ? theme.typography.fontWeight.regular
+      : theme.typography.fontWeight.medium};
   font-family: inherit;
   cursor: pointer;
   text-align: left;
@@ -922,11 +1001,12 @@ const NavGroupCaret = styled.span<{ $expanded: boolean }>`
   color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
-const NavGroupChildren = styled.div`
+const NavGroupChildren = styled.div<{ $depth: number }>`
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding-left: 16px;
+  /* Each depth level adds 14px of left indent on top of the base 16px */
+  padding-left: ${({ $depth }) => 16 + $depth * 14}px;
 `;
 
 const NavChildIcon = styled.span`

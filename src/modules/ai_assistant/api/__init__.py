@@ -1,0 +1,3 @@
+"""
+AI Assistant — API package.
+"""

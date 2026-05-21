@@ -22,11 +22,11 @@ FAIL=0
 #    Catches `const X = lazy(...)` declared twice within one file.
 for f in $STAGED_TS_FILES; do
     [ -f "$REPO_ROOT/$f" ] || continue
-    DUPS=$(grep -nE '^[[:space:]]*(const|let|function|class|interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)\b' "$REPO_ROOT/$f" 2>/dev/null \
-        | sed -E 's/^([0-9]+):[[:space:]]*(const|let|function|class|interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)\b.*/\3 line:\1/' \
+    DUPS=$(grep -nE '^(export )?(const|let|function|class|interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)\b' "$REPO_ROOT/$f" 2>/dev/null \
+        | sed -E 's/^([0-9]+):(export )?(const|let|function|class|interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)\b.*/\4 line:\1/' \
         | sort -k1,1 \
         | awk 'BEGIN{prev=""} {if($1==prev){print prev_line; print $0} prev=$1; prev_line=$0}' \
-        | sort -u)
+        | sort -u 2>/dev/null || true)
     if [ -n "$DUPS" ]; then
         echo "✘  $f — duplicate top-level identifier(s):"
         echo "$DUPS" | sed 's/^/      /'

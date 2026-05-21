@@ -68,6 +68,21 @@ class Settings(BaseSettings):
     FARM_AI_MAX_TOKENS: int = 2048
     FARM_AI_DAILY_LIMIT: int = 50
 
+    # Claude AI Assistant (T-008)
+    ANTHROPIC_API_KEY: str = ""
+    CLAUDE_MODEL: str = "claude-sonnet-4-6"
+    AI_ASSISTANT_MAX_TOKENS: int = 4096
+    AI_ASSISTANT_MAX_TURNS: int = 50
+    AI_ASSISTANT_HISTORY_LIMIT: int = 3
+
+    # Document Attachment Storage (T-053)
+    ATTACHMENT_STORAGE_ROOT: str = "/app/data/attachments"
+    """
+    Root directory for document attachment files.
+    Picks up ATTACHMENT_STORAGE_ROOT env var if set.
+    Docker default: /app/data/attachments (bind-mounted from ./data/attachments).
+    """
+
     # Admin Seed (auto-create super_admin on first startup)
     ADMIN_EMAIL: str = "admin@a64platform.com"
     ADMIN_PASSWORD: str = "SuperAdmin123!"
