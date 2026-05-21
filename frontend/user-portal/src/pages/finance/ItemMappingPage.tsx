@@ -291,7 +291,7 @@ const BannerInfo = styled(BannerBase)`
 `;
 
 const BannerSuccess = styled(BannerBase)`
-  background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'};
+  background: ${({ theme }) => theme.colors.accent.sageSoft};
   color: ${({ theme }) => theme.colors.status.success || '#0B5644'};
 `;
 
@@ -392,10 +392,10 @@ interface TypePillProps {
 }
 
 const TYPE_PILL_COLORS: Record<NonNullable<PurchaseItemType>, { bg: string; text: string }> = {
-  raw_material: { bg: '#ecfdf5', text: '#0B5644' },
-  consumable: { bg: 'rgba(184,132,42,0.06)', text: '#B8842A' },
-  service: { bg: 'rgba(15,110,86,0.05)', text: '#1e40af' },
-  fixed_asset_acquisition: { bg: '#f5f3ff', text: '#4c1d95' },
+  raw_material: { bg: 'rgba(15,110,86,0.10)', text: '#0B5644' },    // sageSoft / sageDeep
+  consumable: { bg: 'rgba(184,132,42,0.10)', text: '#B8842A' },     // warning soft / warning
+  service: { bg: 'rgba(15,110,86,0.06)', text: '#0F6E56' },          // sageSoft / sage
+  fixed_asset_acquisition: { bg: 'rgba(75,72,68,0.08)', text: '#4B4844' }, // slate soft / slate
 };
 
 const TypePill = styled.span<TypePillProps>`
@@ -406,7 +406,7 @@ const TypePill = styled.span<TypePillProps>`
   font-weight: 600;
   white-space: nowrap;
   background: ${({ $type }) =>
-    $type ? TYPE_PILL_COLORS[$type]?.bg ?? '#f5f5f5' : '#f5f5f5'};
+    $type ? TYPE_PILL_COLORS[$type]?.bg ?? 'rgba(75,72,68,0.08)' : 'rgba(75,72,68,0.08)'};
   color: ${({ $type }) =>
     $type ? TYPE_PILL_COLORS[$type]?.text ?? '#4B4844' : '#4B4844'};
 `;
@@ -425,7 +425,7 @@ const StatusPill = styled.span<StatusPillProps>`
   font-weight: 600;
   background: ${({ $active, theme }) =>
     $active
-      ? theme.colors.accent.sageSoft || '#ecfdf5'
+      ? theme.colors.accent.sageSoft
       : theme.colors.surface.raised};
   color: ${({ $active, theme }) =>
     $active

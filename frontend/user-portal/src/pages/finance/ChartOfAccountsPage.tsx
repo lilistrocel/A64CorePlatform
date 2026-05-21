@@ -204,7 +204,7 @@ const SuccessButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
-  &:hover { background: ${({ theme }) => theme.colors.accent.sageSoft || '#ecfdf5'}; }
+  &:hover { background: ${({ theme }) => theme.colors.accent.sageSoft}; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 

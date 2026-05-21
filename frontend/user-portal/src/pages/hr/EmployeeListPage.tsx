@@ -164,11 +164,11 @@ const FilterSelect = styled.select`
   &:focus {
     outline: none;
     border-color: #0F6E56;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(15, 110, 86, 0.35);
   }
 
   &:hover {
-    border-color: #bdbdbd;
+    border-color: ${({ theme }) => theme.colors.border.strong};
   }
 `;
 

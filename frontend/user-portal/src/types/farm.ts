@@ -1031,7 +1031,7 @@ export const BLOCK_STATE_COLORS: Record<BlockState, string> = {
   harvesting: '#B8842A', // Yellow/Orange
   cleaning: '#B85C2A',   // Orange
   alert: '#9E2A2A',      // Red
-  partial: '#06B6D4',    // Cyan
+  partial: '#4B4844',    // Slate slate (neutral for partial state)
 };
 
 export const BLOCK_STATE_LABELS: Record<BlockState, string> = {
@@ -1381,8 +1381,8 @@ export const AQI_CATEGORY_COLORS: Record<string, string> = {
   'Moderate': '#B8842A',                       // Amber
   'Unhealthy for Sensitive Groups': '#B85C2A', // Orange
   'Unhealthy': '#9E2A2A',                      // Red
-  'Very Unhealthy': '#7C3AED',                 // Purple
-  'Hazardous': '#7F1D1D',                      // Dark Red
+  'Very Unhealthy': '#9E2A2A',                 // Slate danger (escalating severity)
+  'Hazardous': '#9E2A2A',                      // Slate danger
 };
 
 /**
@@ -1507,9 +1507,9 @@ export interface AgriWeatherData {
 // Risk level colors for UI
 export const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
   none: '#0F6E56',    // Green
-  low: '#84CC16',     // Lime
-  medium: '#B8842A',  // Amber
-  high: '#9E2A2A',    // Red
+  low: '#B8842A',     // Slate warning amber
+  medium: '#B85C2A',  // Slate rust
+  high: '#9E2A2A',    // Slate danger
 };
 
 export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
@@ -1522,8 +1522,8 @@ export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
 // Growing conditions colors
 export const GROWING_CONDITIONS_COLORS: Record<GrowingConditions, string> = {
   excellent: '#0F6E56',  // Green
-  good: '#84CC16',       // Lime
-  fair: '#B8842A',       // Amber
+  good: '#0B5644',       // Slate sageDeep
+  fair: '#B8842A',       // Slate warning amber
   poor: '#9E2A2A',       // Red
   unknown: '#4B4844',    // Gray
 };

@@ -154,17 +154,17 @@ export const ALERT_SEVERITY_CONFIG: Record<AlertSeverity, AlertSeverityConfig> =
   },
   medium: {
     label: 'Medium',
-    color: '#FF9800', // Orange
+    color: '#B8842A', // Slate warning amber
     icon: '⚠️',
   },
   high: {
     label: 'High',
-    color: '#FF5722', // Deep Orange
+    color: '#B85C2A', // Slate rust
     icon: '🔥',
   },
   critical: {
     label: 'Critical',
-    color: '#F44336', // Red
+    color: '#9E2A2A', // Slate danger
     icon: '🚨',
   },
 };
@@ -172,7 +172,7 @@ export const ALERT_SEVERITY_CONFIG: Record<AlertSeverity, AlertSeverityConfig> =
 export const ALERT_STATUS_CONFIG: Record<AlertStatus, AlertStatusConfig> = {
   active: {
     label: 'Active',
-    color: '#2196F3', // Blue
+    color: '#0F6E56', // Slate sage
     icon: '🔔',
   },
   resolved: {

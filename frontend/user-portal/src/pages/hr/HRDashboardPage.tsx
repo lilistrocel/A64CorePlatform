@@ -129,7 +129,7 @@ const EmployeeDate = styled.span`
 const VisaItem = styled.div`
   padding: 12px;
   background: ${({ theme }) => theme.colors.status.warning};
-  border: 1px solid #fbbf24;
+  border: 1px solid ${({ theme }) => theme.colors.status.warning};
   border-radius: 8px;
   margin-bottom: 8px;
 `;

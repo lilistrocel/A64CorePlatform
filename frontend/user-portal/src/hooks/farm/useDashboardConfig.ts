@@ -91,27 +91,27 @@ const DEFAULT_CONFIG: DashboardConfig = {
       empty: '#4B4844',
       planned: '#0F6E56',
       planted: '#0F6E56',
-      growing: '#34D399',
-      fruiting: '#FCD34D',
+      growing: '#0B5644',    // Slate sageDeep
+      fruiting: '#B8842A',   // Slate warning amber
       harvesting: '#B8842A',
       cleaning: '#4B4844',
       alert_critical: '#9E2A2A',
       alert_high: '#B85C2A',
-      alert_medium: '#FCD34D',
-      alert_low: '#FDE68A'
+      alert_medium: '#B8842A', // Slate warning amber
+      alert_low: '#CFC9BD'     // Slate stoneDeep (soft neutral)
     },
     performanceColors: {
       exceptional: '#0F6E56',
-      exceeding: '#34D399',
+      exceeding: '#0B5644',    // Slate sageDeep
       excellent: '#0F6E56',
-      good: '#FCD34D',
+      good: '#B8842A',         // Slate warning amber
       acceptable: '#B85C2A',
       poor: '#9E2A2A'
     },
     timelinessColors: {
       early: '#0F6E56',
       onTime: '#0F6E56',
-      slightlyLate: '#FCD34D',
+      slightlyLate: '#B8842A', // Slate warning amber
       late: '#B85C2A',
       veryLate: '#9E2A2A'
     }

@@ -68,17 +68,17 @@ export type ContaminationSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export const PHASE_COLORS: Record<RoomPhase, string> = {
   empty: '#4B4844',
-  preparing: '#90caf9',
+  preparing: '#CFC9BD',    // Slate stoneDeep (neutral light)
   inoculated: '#0F6E56',
-  colonizing: '#fdd835',
-  fruiting_initiation: '#ffa726',
-  fruiting: '#66bb6a',
-  harvesting: '#2e7d32',
-  resting: '#80deea',
-  cleaning: '#bdbdbd',
+  colonizing: '#B8842A',   // Slate warning amber
+  fruiting_initiation: '#B85C2A', // Slate rust
+  fruiting: '#0B5644',     // Slate sageDeep
+  harvesting: '#0F6E56',
+  resting: '#DCD8CF',      // Slate stone (cool neutral)
+  cleaning: '#CFC9BD',     // Slate stoneDeep
   quarantined: '#9E2A2A',
   decommissioned: '#4B4844',
-  maintenance: '#ce93d8',
+  maintenance: '#4B4844',  // Slate slate gray
 };
 
 export const PHASE_LABELS: Record<RoomPhase, string> = {
@@ -97,18 +97,18 @@ export const PHASE_LABELS: Record<RoomPhase, string> = {
 };
 
 export const PHASE_TEXT_COLORS: Record<RoomPhase, string> = {
-  empty: '#fff',
-  preparing: '#0B5644',
-  inoculated: '#fff',
-  colonizing: '#4e3400',
-  fruiting_initiation: '#4e2100',
-  fruiting: '#fff',
-  harvesting: '#fff',
-  resting: '#006064',
-  cleaning: '#424242',
-  quarantined: '#fff',
-  decommissioned: '#fff',
-  maintenance: '#4B4844',
+  empty: '#EDEAE3',        // Slate linen (text on dark bg)
+  preparing: '#0F0F0F',    // Slate ink (text on light bg)
+  inoculated: '#EDEAE3',
+  colonizing: '#0F0F0F',   // Slate ink (dark text on amber)
+  fruiting_initiation: '#EDEAE3',
+  fruiting: '#EDEAE3',
+  harvesting: '#EDEAE3',
+  resting: '#0F0F0F',      // Slate ink (dark text on stone)
+  cleaning: '#0F0F0F',
+  quarantined: '#EDEAE3',
+  decommissioned: '#EDEAE3',
+  maintenance: '#EDEAE3',
 };
 
 // ============================================================================

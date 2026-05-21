@@ -263,11 +263,11 @@ export function getFarmTypeColor(farmType: FarmTypeCompatibility): string {
   const colors: Record<FarmTypeCompatibility, string> = {
     open_field: '#0F6E56',
     greenhouse: '#0F6E56',
-    hydroponic: '#06B6D4',
+    hydroponic: '#0B5644',   // Slate sageDeep
     vertical_farm: '#4B4844',
-    aquaponic: '#14B8A6',
+    aquaponic: '#0F6E56',    // Slate sage
     indoor_farm: '#B8842A',
-    polytunnel: '#84CC16',
+    polytunnel: '#0B5644',   // Slate sageDeep
   };
   return colors[farmType] || '#4B4844';
 }
