@@ -176,7 +176,8 @@ const LogoWrapper = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 112px;
+  /* Hero-level on the division-picker; larger min + larger ceiling. */
+  height: clamp(120px, 16vw, 240px);
   width: auto;
 `;
 

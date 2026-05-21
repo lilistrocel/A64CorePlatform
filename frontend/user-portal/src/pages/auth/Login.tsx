@@ -397,14 +397,12 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 96px;
+  /* Bounded responsive height — scales with viewport, capped at both ends.
+     14vw is ~107px at 768 (tablet) and ~179px at 1280 (laptop). */
+  height: clamp(96px, 14vw, 200px);
   width: auto;
   display: block;
   margin: 0 auto;
-
-  @media (min-width: 640px) {
-    height: 120px;
-  }
 `;
 
 const Title = styled.h1`

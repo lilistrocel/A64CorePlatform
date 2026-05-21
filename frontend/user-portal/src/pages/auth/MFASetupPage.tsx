@@ -468,18 +468,11 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 80px;
+  /* Bounded responsive height — scales with viewport, capped at both ends. */
+  height: clamp(96px, 14vw, 200px);
   width: auto;
   display: block;
   margin: 0 auto;
-
-  @media (min-width: 360px) {
-    height: 96px;
-  }
-
-  @media (min-width: 640px) {
-    height: 120px;
-  }
 `;
 
 const Title = styled.h1`
