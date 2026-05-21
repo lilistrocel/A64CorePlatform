@@ -217,6 +217,23 @@ export function MainLayout() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Reason: on route change, scroll only the main content area to top —
+  // leave the sidebar's internal scroll position alone so the user stays at
+  // the nav item they just clicked. Targeted via ref instead of
+  // window.scrollTo so we don't disturb any other independently-scrolled
+  // container.
+  const mainContentRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+    // Reset window scroll too — on layouts where the window is the actual
+    // scroll container (no overflow constraint on MainContent), this is the
+    // only one that matters. Doesn't move the sidebar because it's
+    // position:fixed and its inner <nav> is its own scroll container.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname, location.search]);
+
   // Determine which industry-specific nav items to show
   const industryNavItems: NavItemDef[] =
     currentDivision?.industryType === 'mushroom' ? MUSHROOM_NAV : VEGETABLE_FRUITS_NAV;
@@ -417,7 +434,7 @@ export function MainLayout() {
       {isMobileMenuOpen && <Overlay onClick={closeMobileMenu} />}
 
       {/* Main Content */}
-      <MainContent>
+      <MainContent ref={mainContentRef}>
         <Outlet />
       </MainContent>
 
@@ -516,7 +533,18 @@ const Sidebar = styled.aside<SidebarProps>`
   overflow-y: auto;
 
   @media (min-width: 1024px) {
-    position: static;
+    /* Reason: was 'position: static' which made the sidebar scroll with the
+       page on desktop. When window scrolled down to reach a lower nav item,
+       clicking it then triggered the route-change reset of window scroll —
+       which visually scrolled the sidebar back to the top because it was
+       part of the normal flow.
+       Sticky + height:100vh + flex-shrink:0 pins the sidebar to the viewport.
+       The inner <Nav> has overflow-y:auto with flex:1 so the nav list scrolls
+       INSIDE the sidebar instead of pushing the whole sidebar down. Window
+       scroll only affects MainContent now. */
+    position: sticky;
+    top: 0;
+    height: 100vh;
     transform: translateX(0);
     flex-shrink: 0;
   }
@@ -553,14 +581,12 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 36px;
+  /* Sidebar logo — banner ~2.9:1, sidebar width ~240-280px so cap height
+     at 70px (→ ~200px wide, fits with breathing room). */
+  height: clamp(40px, 5vw, 70px);
   width: auto;
   display: block;
   margin: 0 auto;
-
-  @media (min-width: 1024px) {
-    height: 44px;
-  }
 `;
 
 const UserCard = styled.div`
