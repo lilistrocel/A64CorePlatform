@@ -176,7 +176,7 @@ const LogoWrapper = styled.div`
 `;
 
 const LogoImg = styled.img`
-  height: 56px;
+  height: 112px;
   width: auto;
 `;
 
