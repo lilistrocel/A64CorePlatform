@@ -62,17 +62,31 @@ export function isMfaRequired(response: any): response is MfaLoginRequiredRespon
 }
 
 export interface User {
-  id: string;
+  /** Legacy field — backend may return this alongside userId. Prefer userId. */
+  id?: string;
+  /** Primary key on the runtime object — always present after login. */
+  userId: string;
   email: string;
   firstName: string;
   lastName: string;
   role: string;
   permissions: string[];
+  /** Organization the user belongs to. null for super_admin platform users. */
+  organizationId: string | null;
+  /** Divisions the user has access to. */
+  divisionAccess?: string[];
+  /** User's default division. */
+  defaultDivisionId?: string | null;
   timezone?: string;
   locale?: string;
   phone?: string;
+  isActive?: boolean;
+  isEmailVerified?: boolean;
   mfaEnabled?: boolean;
   mfaSetupRequired?: boolean;
+  lastLoginAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 class AuthService {

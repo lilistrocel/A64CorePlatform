@@ -82,7 +82,10 @@ async def get_current_user(
         locale=user_doc.get("locale"),
         lastLoginAt=user_doc.get("lastLoginAt"),
         createdAt=user_doc["createdAt"],
-        updatedAt=user_doc["updatedAt"]
+        updatedAt=user_doc["updatedAt"],
+        organizationId=user_doc.get("organizationId"),
+        divisionAccess=user_doc.get("divisionAccess"),
+        defaultDivisionId=user_doc.get("defaultDivisionId"),
     )
 
     return user

@@ -131,7 +131,10 @@ class AuthService:
                 locale=user_data.locale,
                 lastLoginAt=None,
                 createdAt=user_doc["createdAt"],
-                updatedAt=user_doc["updatedAt"]
+                updatedAt=user_doc["updatedAt"],
+                organizationId=user_doc.get("organizationId"),
+                divisionAccess=user_doc.get("divisionAccess"),
+                defaultDivisionId=user_doc.get("defaultDivisionId"),
             )
 
         except DuplicateKeyError:
@@ -302,7 +305,10 @@ class AuthService:
             locale=user_doc.get("locale"),
             lastLoginAt=datetime.utcnow(),
             createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"]
+            updatedAt=user_doc["updatedAt"],
+            organizationId=user_doc.get("organizationId"),
+            divisionAccess=user_doc.get("divisionAccess"),
+            defaultDivisionId=user_doc.get("defaultDivisionId"),
         )
 
         return TokenResponse(
@@ -433,7 +439,10 @@ class AuthService:
             locale=user_doc.get("locale"),
             lastLoginAt=user_doc.get("lastLoginAt"),
             createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"]
+            updatedAt=user_doc["updatedAt"],
+            organizationId=user_doc.get("organizationId"),
+            divisionAccess=user_doc.get("divisionAccess"),
+            defaultDivisionId=user_doc.get("defaultDivisionId"),
         )
 
         return TokenResponse(
@@ -650,7 +659,10 @@ class AuthService:
             locale=user_doc.get("locale"),
             lastLoginAt=user_doc.get("lastLoginAt"),
             createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"]
+            updatedAt=user_doc["updatedAt"],
+            organizationId=user_doc.get("organizationId"),
+            divisionAccess=user_doc.get("divisionAccess"),
+            defaultDivisionId=user_doc.get("defaultDivisionId"),
         )
 
     @staticmethod
@@ -934,7 +946,10 @@ class AuthService:
             locale=user_doc.get("locale"),
             lastLoginAt=datetime.utcnow(),
             createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"]
+            updatedAt=user_doc["updatedAt"],
+            organizationId=user_doc.get("organizationId"),
+            divisionAccess=user_doc.get("divisionAccess"),
+            defaultDivisionId=user_doc.get("defaultDivisionId"),
         )
 
         return TokenResponse(
@@ -1108,7 +1123,10 @@ class AuthService:
             locale=user_doc.get("locale"),
             lastLoginAt=datetime.utcnow(),
             createdAt=user_doc["createdAt"],
-            updatedAt=user_doc["updatedAt"]
+            updatedAt=user_doc["updatedAt"],
+            organizationId=user_doc.get("organizationId"),
+            divisionAccess=user_doc.get("divisionAccess"),
+            defaultDivisionId=user_doc.get("defaultDivisionId"),
         )
 
         # Feature #335: Prepare success/warning message if backup code was used
