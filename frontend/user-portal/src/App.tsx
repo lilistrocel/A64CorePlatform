@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'styled-components';
 import { Suspense, lazy } from 'react';
-import { lightTheme, darkTheme, GlobalStyles } from '@a64core/shared';
+import { buildTheme, GlobalStyles } from '@/theme';
 import { queryClient } from './config/react-query.config';
 import { useThemeStore } from './stores/theme.store';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
@@ -182,7 +182,8 @@ const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.N
 
 function App() {
   const mode = useThemeStore((state) => state.mode);
-  const activeTheme = mode === 'dark' ? darkTheme : lightTheme;
+  // Slate is light-first. Dark mode is opt-in for ops/night surfaces only.
+  const activeTheme = buildTheme(mode === 'dark' ? 'dark' : 'light');
 
   return (
     <QueryClientProvider client={queryClient}>
