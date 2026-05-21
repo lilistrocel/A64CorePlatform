@@ -1,0 +1,86 @@
+# Docker build context exclusions.
+#
+# Anything matched here is NOT shipped into the build context, so it can't be
+# COPY'd into images and doesn't have to be walked by the daemon. Two reasons
+# we care:
+#
+# 1. Permission failures. `data/mongodb/` is owned by UID 999 (mongo runtime
+#    user) after the volume migration. A non-root `docker compose build`
+#    fails with "permission denied" trying to stat that tree. Same for
+#    `data/sensehub_images/` (root-owned). Excluding fixes the build for any
+#    fresh deployer.
+# 2. Speed. Large local-only directories (node_modules, dist, screenshots,
+#    backups, brand reference materials) bloat the context and slow every
+#    build cycle.
+
+# ─── Runtime data (perm-fragile or huge) ───────────────────────────────────
+data/mongodb/
+data/sensehub_images/
+data/attachments/
+data/starter-data/
+backups/
+
+# ─── Logs ──────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ─── Secrets / local config ────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+.credentials/
+
+# ─── VCS ───────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+
+# ─── Node / Python build artifacts ─────────────────────────────────────────
+**/node_modules/
+**/dist/
+**/build/
+**/.next/
+**/.cache/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/htmlcov/
+
+# ─── Editor / OS noise ─────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── Test artifacts (not for shipping) ─────────────────────────────────────
+.playwright-mcp/
+playwright-report/
+test-results/
+test-screenshots/
+test-screenshots-detailed/
+screenshots/
+
+# ─── Design / brand reference materials (not source code) ──────────────────
+Brand_Engineering/
+For Investors/
+OldData/
+
+# ─── Backup tarballs that may live alongside the repo ──────────────────────
+*.tar.gz
+*.tar
+
+# ─── Frontend build outputs ────────────────────────────────────────────────
+frontend/user-portal/dist/
+frontend/shared/dist/
+
+# ─── Misc ──────────────────────────────────────────────────────────────────
+*.iml
+.history/
+*.bak
