@@ -35,12 +35,27 @@ def _require_admin(current_user: UserResponse) -> None:
         )
 
 
+def _require_super_admin(current_user: UserResponse) -> None:
+    """
+    Raise HTTP 403 unless the user holds the super_admin role.
+
+    Used for organization create/update — super_admin is the sole gatekeeper
+    for tenant-level operations. Regular admins operate inside an existing
+    organization but cannot create new ones.
+    """
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super admin access required for this operation.",
+        )
+
+
 @router.post(
     "/",
     response_model=OrganizationResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create organization",
-    description="Create a new top-level organization. Admin only.",
+    description="Create a new top-level organization. Super admin only.",
 )
 async def create_organization(
     data: OrganizationCreate,
@@ -50,7 +65,7 @@ async def create_organization(
     Create a new organization.
 
     **Authentication:** Required (Bearer token)
-    **Authorization:** ADMIN or SUPER_ADMIN role required
+    **Authorization:** SUPER_ADMIN role required
 
     **Request Body:**
     - name: Organization display name
@@ -63,7 +78,7 @@ async def create_organization(
     - 403: Insufficient permissions
     - 409: Slug already in use
     """
-    _require_admin(current_user)
+    _require_super_admin(current_user)
     return await organization_service.create_organization(data)
 
 

@@ -100,7 +100,15 @@ export {
 } from './useApprovalRules';
 
 // Finance hooks — Companies (legal entity master data)
-export { useFinanceCompanies } from './useFinanceCompanies';
+export { useFinanceCompanies, useCreateCompany } from './useFinanceCompanies';
+
+// Organizations hooks — Tenant Setup Wizard
+export {
+  useOrganizations,
+  useCreateOrganization,
+  useAssignUserOrg,
+  organizationsQueryKeys,
+} from './useOrganizations';
 
 // Finance hooks — Tax Codes (VAT/tax master data)
 export { useTaxCodes } from './useTaxCodes';

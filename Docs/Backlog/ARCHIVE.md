@@ -1,8 +1,23 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 55 tasks
+> **Total completed:** 56 tasks
 
 ## 2026-05
+
+### T-056 | Tenant Setup Wizard — multi-step bootstrap for org-less super_admin
+- **Category:** Frontend · **Priority:** P0
+- **Completed:** 2026-05-21 · **Assigned:** frontend-dev-expert
+- **Description:** Multi-step wizard for fresh-deployment super_admin bootstrap.
+  New files: `services/tenantBootstrapService.ts`, `hooks/queries/useOrganizations.ts`,
+  `pages/admin/TenantSetupWizardPage.tsx`. Extended: `services/financeCompaniesService.ts`
+  (createCompany with seed message), `hooks/queries/useFinanceCompanies.ts` (useCreateCompany),
+  `stores/auth.store.ts` (refreshUser action), `components/common/ProtectedRoute.tsx`
+  (auto-redirect org-less super_admin), `components/layout/MainLayout.tsx` (Tenant Setup sidebar),
+  `App.tsx` (/admin/tenant-setup route). TypeScript clean (exit 0). All backend endpoints
+  verified via direct API calls. Backend note: API container required restart to pick up the
+  new /admin/users/{id}/organization PATCH endpoint (code existed but process wasn't reloaded).
+
+---
 
 ### T-055 | Tax code dropdown on ItemMappingPage + item-default tax code on PR/PO/AP forms
 - **Category:** Frontend · **Priority:** P1

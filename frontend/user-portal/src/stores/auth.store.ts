@@ -19,6 +19,13 @@ interface AuthState {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
+  /**
+   * Refresh the authenticated user's data by calling GET /auth/me.
+   * Used after operations that change the user document (e.g., org assignment)
+   * to reflect the new organizationId in the client-side store without
+   * requiring a full logout/login cycle.
+   */
+  refreshUser: () => Promise<void>;
   clearError: () => void;
   initializeAuth: () => void;
   verifyMfa: (code: string) => Promise<void>;
@@ -161,6 +168,20 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
           });
+        }
+      },
+
+      refreshUser: async () => {
+        // Silently refresh the user document from GET /auth/me.
+        // Does not set isLoading to avoid full-page loading states — this is a
+        // background refresh triggered after in-page mutations (e.g. org assignment).
+        if (!authService.isAuthenticated()) return;
+        try {
+          const user = await authService.getCurrentUser();
+          set({ user, isAuthenticated: true });
+        } catch {
+          // Non-fatal — if refresh fails, the old user state remains.
+          // The user may need to log out and back in for the change to appear.
         }
       },
 

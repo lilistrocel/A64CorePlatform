@@ -17,6 +17,15 @@ const DIVISION_EXEMPT_ROUTES = [
   '/admin',
 ];
 
+// Routes where the super_admin org-less redirect should NOT fire.
+// These must include the wizard itself and other pre-org-assignment pages.
+const TENANT_SETUP_EXEMPT_ROUTES = [
+  '/admin/tenant-setup',
+  '/profile',
+  '/settings',
+  '/logout',
+];
+
 function isDivisionExempt(pathname: string): boolean {
   return DIVISION_EXEMPT_ROUTES.some((route) => pathname.startsWith(route));
 }
@@ -118,6 +127,20 @@ export function ProtectedRoute() {
     if (!isAllowedRoute) {
       return <Navigate to="/mfa/setup" replace />;
     }
+  }
+
+  // ── Tenant setup gate (super_admin only) ─────────────────────────────────
+  // If the user is a super_admin with no organization assigned, redirect to the
+  // Tenant Setup Wizard. This fires after auth is fully loaded.
+  // Non-super-admins without an org see a toast (handled in MainLayout/components)
+  // and are NOT redirected here — they cannot fix themselves.
+  if (
+    user &&
+    user.role === 'super_admin' &&
+    !user.organizationId &&
+    !TENANT_SETUP_EXEMPT_ROUTES.some((r) => location.pathname.startsWith(r))
+  ) {
+    return <Navigate to="/admin/tenant-setup" replace />;
   }
 
   // ── Division gate ─────────────────────────────────────────────────────────

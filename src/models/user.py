@@ -83,6 +83,23 @@ class UserUpdate(BaseModel):
     locale: Optional[str] = Field(None, max_length=10)
 
 
+class UserOrganizationAssignment(BaseModel):
+    """
+    Schema for assigning a user to an organization (super_admin only).
+
+    Used by PATCH /api/v1/admin/users/{user_id}/organization. organizationId
+    is required; division fields are optional so a fresh-deployment super
+    admin can self-assign before any divisions exist.
+    """
+    organizationId: str = Field(..., min_length=1, description="Target organization UUID")
+    divisionAccess: Optional[List[str]] = Field(
+        None, description="Division IDs the user can access (optional)"
+    )
+    defaultDivisionId: Optional[str] = Field(
+        None, description="Last-used / default division ID (optional)"
+    )
+
+
 class UserResponse(UserBase):
     """
     User response model (public-facing)

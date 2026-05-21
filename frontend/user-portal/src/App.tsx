@@ -106,6 +106,7 @@ const ChemicalsCatalog = lazy(() =>
 
 // Admin pages
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
+const TenantSetupWizardPage = lazy(() => import('./pages/admin/TenantSetupWizardPage').then(m => ({ default: m.TenantSetupWizardPage })));
 
 // Finance module pages
 const ChartOfAccountsPage = lazy(() =>
@@ -332,6 +333,12 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/admin/users" element={<UserManagementPage />} />
+                {/* Tenant Setup Wizard — super_admin only.
+                    Accessible without an orgId (bootstrap scenario). */}
+                <Route
+                  path="/admin/tenant-setup"
+                  element={<TenantSetupWizardPage />}
+                />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
               </Route>
             </Route>

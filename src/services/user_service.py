@@ -11,7 +11,7 @@ import logging
 
 from fastapi import HTTPException, status
 
-from ..models.user import UserResponse, UserUpdate, UserRole
+from ..models.user import UserResponse, UserUpdate, UserRole, UserOrganizationAssignment
 from .database import mongodb
 
 logger = logging.getLogger(__name__)
@@ -235,6 +235,62 @@ class UserService:
         # Return updated user
         updated_user = await UserService.get_user_by_id(user_id)
         return updated_user
+
+    @staticmethod
+    async def assign_organization(
+        user_id: str,
+        assignment: UserOrganizationAssignment,
+    ) -> UserResponse:
+        """
+        Assign an organization (and optional divisions) to a user.
+
+        Privileged operation — caller must be super_admin. Used for tenant
+        bootstrap (the very first super_admin self-assigning to a freshly
+        created org) and for routine user onboarding into an existing org.
+
+        Args:
+            user_id: Target user UUID.
+            assignment: organizationId (required) + optional division fields.
+
+        Returns:
+            Updated UserResponse with the new organization assignment.
+
+        Raises:
+            HTTPException 404: If the user is missing or soft-deleted.
+        """
+        db = mongodb.get_database()
+
+        user_doc = await db.users.find_one({"userId": user_id, "deletedAt": None})
+        if not user_doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        update_fields: Dict[str, Any] = {
+            "organizationId": assignment.organizationId,
+            "updatedAt": datetime.utcnow(),
+        }
+        # Only overwrite division fields when the caller supplies them, so
+        # a partial assignment (org only) doesn't clobber prior division
+        # access set by a different action.
+        if assignment.divisionAccess is not None:
+            update_fields["divisionAccess"] = assignment.divisionAccess
+        if assignment.defaultDivisionId is not None:
+            update_fields["defaultDivisionId"] = assignment.defaultDivisionId
+
+        await db.users.update_one(
+            {"userId": user_id},
+            {"$set": update_fields},
+        )
+
+        logger.info(
+            "User %s assigned to organization %s",
+            user_id,
+            assignment.organizationId,
+        )
+
+        return await UserService.get_user_by_id(user_id)
 
     @staticmethod
     async def delete_user(user_id: str) -> bool:

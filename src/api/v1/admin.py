@@ -20,9 +20,11 @@ from ...models.user import (
     UserRoleUpdate,
     UserStatusUpdate,
     UserListResponse,
-    UserRole
+    UserRole,
+    UserOrganizationAssignment,
 )
 from ...services.database import mongodb
+from ...services.user_service import user_service
 from ...middleware.auth import get_current_user
 from ...middleware.permissions import require_role
 
@@ -357,6 +359,46 @@ async def update_user_status(
         createdAt=updated_user.get("createdAt"),
         updatedAt=updated_user.get("updatedAt")
     )
+
+
+@router.patch(
+    "/users/{user_id}/organization",
+    response_model=UserResponse,
+    summary="Assign organization to user (super_admin only)",
+)
+async def assign_user_organization(
+    user_id: str,
+    assignment: UserOrganizationAssignment,
+    current_user: UserResponse = Depends(get_current_user),
+) -> UserResponse:
+    """
+    Assign an organization (and optional divisions) to a user.
+
+    Restricted to super_admin: organization management is a tenant-level
+    operation. Regular admins cannot create orgs or move users between them.
+
+    **Used for**:
+    - Fresh-deployment bootstrap: the first super_admin self-assigns after
+      creating the initial organization via POST /organizations/.
+    - Routine onboarding: super_admin places a newly created user into an
+      existing organization.
+
+    **Request Body**:
+    - organizationId: target organization UUID (required)
+    - divisionAccess: optional list of division IDs
+    - defaultDivisionId: optional default division
+
+    **Returns**:
+    - 200: Updated user
+    - 403: Caller is not super_admin
+    - 404: User not found
+    """
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super admin access required to assign organizations.",
+        )
+    return await user_service.assign_organization(user_id, assignment)
 
 
 @router.delete("/users/{user_id}")

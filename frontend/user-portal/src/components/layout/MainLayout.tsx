@@ -102,6 +102,7 @@ const FINANCE_NAV_GROUP: NavItemDef = {
 // Admin-only navigation (super_admin role required)
 const ADMIN_NAV_ITEMS: NavItemDef[] = [
   { to: '/admin/users', icon: '🛡️', label: 'User Management' },
+  { to: '/admin/tenant-setup', icon: '🏗️', label: 'Tenant Setup' },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────

@@ -8,8 +8,9 @@
  * Query key namespace: ['finance', 'companies', orgId]
  */
 
-import { useQuery } from '@tanstack/react-query';
-import { listCompanies } from '../../services/financeCompaniesService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { listCompanies, createCompany } from '../../services/financeCompaniesService';
+import type { CreateCompanyPayload, CreateCompanyResult } from '../../services/financeCompaniesService';
 
 /**
  * Fetch all companies for the given organisation.
@@ -24,5 +25,21 @@ export function useFinanceCompanies(orgId: string | null | undefined) {
     enabled: !!orgId,
     // Companies are long-lived master data — 5 minutes before considered stale.
     staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Mutation to create a new finance company code (seeds CoA + tax codes).
+ * Invalidates the companies list for the affected org on success.
+ */
+export function useCreateCompany() {
+  const queryClient = useQueryClient();
+  return useMutation<CreateCompanyResult, Error, CreateCompanyPayload>({
+    mutationFn: (payload: CreateCompanyPayload) => createCompany(payload),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['finance', 'companies', variables.organizationId],
+      });
+    },
   });
 }
