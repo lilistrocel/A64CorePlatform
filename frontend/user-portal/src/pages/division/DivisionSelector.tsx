@@ -21,17 +21,23 @@ export function DivisionSelector() {
     availableDivisions,
     currentDivision,
     isLoading,
+    hasFetchedOnce,
     error,
     loadDivisions,
     setCurrentDivision,
   } = useDivisionStore();
 
-  // Load available divisions on mount (only if not already loaded)
+  // Load available divisions on mount, exactly once.
+  // Gated on hasFetchedOnce (not length === 0) so a legitimate [] response
+  // from a user with no division access doesn't loop — same fix pattern as
+  // ProtectedRoute in 553bc89 (closed #2). Without this guard, the previous
+  // commit's storm-prevention was half-applied: the loop could still happen
+  // if a no-division user landed on /select-division directly.
   useEffect(() => {
-    if (availableDivisions.length === 0 && !isLoading) {
+    if (!hasFetchedOnce && !isLoading) {
       loadDivisions();
     }
-  }, [availableDivisions.length, isLoading, loadDivisions]);
+  }, [hasFetchedOnce, isLoading, loadDivisions]);
 
   // Auto-select if only one division is available
   useEffect(() => {
