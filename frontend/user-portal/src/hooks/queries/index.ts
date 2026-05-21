@@ -129,6 +129,9 @@ export {
   itemMappingQueryKeys,
 } from './useItemMappings';
 
+// Finance hooks — Item Mappings Map (O(1) lookup of item finance defaults)
+export { useItemMappingsMap } from './useItemMappingsMap';
+
 // Purchasing hooks — Goods Receipts (Phase B)
 export {
   useGoodsReceipts,

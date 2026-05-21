@@ -144,6 +144,9 @@ class DocumentLineResponse(BaseModel):
     """Link to the GR line being invoiced. Populated only on AP lines."""
     poUnitPrice: Optional[Decimal] = None
     """PO unit price copied from source PO line. Populated only on AP lines."""
+    invoiceUnitPrice: Optional[Decimal] = None
+    """Vendor's invoiced unit price. Mirrors `unitPrice` for AP lines so the
+    frontend can read it under its semantic name. Populated for AP lines."""
     priceVarianceAmount: Optional[Decimal] = None
     """(invoiceUnitPrice - poUnitPrice) * quantity. Populated only on AP lines."""
     createdAt: datetime

@@ -53,6 +53,12 @@ export interface JournalEntry {
   postedBy: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Backend-populated. Non-null when another JE with sourceEventType='je_reversal'
+   * references this jeNumber via sourceDocNumber — the standard reversing-entry
+   * pattern. Used to render a "Reversed" badge without inspecting status.
+   */
+  reversedByJeNumber?: string | null;
   lines?: JournalEntryLine[];   // present only on detail GET
 }
 

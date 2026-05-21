@@ -55,6 +55,11 @@ class JournalEntryResponse(BaseModel):
     postedBy: str
     createdAt: datetime
     updatedAt: datetime
+    # Set by the API layer when another JE with sourceEventType='je_reversal'
+    # exists and references this JE's jeNumber via sourceDocNumber. Used by
+    # the UI to render a "Reversed" badge under the standard reversing-entry
+    # pattern (original stays posted; reversal is its own posted JE).
+    reversedByJeNumber: Optional[str] = None
     lines: List[JournalEntryLineResponse] = []
 
     model_config = {"from_attributes": True}

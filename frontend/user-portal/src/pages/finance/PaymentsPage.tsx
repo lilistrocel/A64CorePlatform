@@ -202,6 +202,27 @@ const MethodPill = styled.span<{ $bg: string; $text: string }>`
   color: ${({ $text }) => $text};
 `;
 
+const ReversedBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  margin-left: 8px;
+`;
+
+const ReversedRow = styled(ClickableRow)`
+  background: ${({ theme }) => theme.colors.neutral[50]};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  /* Strike-through across the amount cell only — keep the rest readable */
+`;
+
 const JeLink = styled.button`
   background: none;
   border: none;
@@ -438,12 +459,14 @@ export function PaymentsPage() {
                   bg: '#f3f4f6',
                   text: '#374151',
                 };
+                const isReversed = Boolean(payment.je?.reversedByJeNumber);
+                const RowComponent = isReversed ? ReversedRow : ClickableRow;
 
                 return (
-                  <ClickableRow
+                  <RowComponent
                     key={payment.paymentId}
                     onClick={() => handleRowClick(payment)}
-                    aria-label={`View payment ${payment.paymentNumber}`}
+                    aria-label={`View payment ${payment.paymentNumber}${isReversed ? ' (reversed)' : ''}`}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -457,6 +480,11 @@ export function PaymentsPage() {
                       <code style={{ fontSize: 13, fontWeight: 600 }}>
                         {payment.paymentNumber}
                       </code>
+                      {isReversed && (
+                        <ReversedBadge title="The journal entry for this payment has been voided. The accounting impact is fully reversed.">
+                          Reversed
+                        </ReversedBadge>
+                      )}
                     </Td>
                     <Td>{formatDate(payment.paymentDate)}</Td>
                     <Td>
@@ -479,7 +507,15 @@ export function PaymentsPage() {
                         <span style={{ color: '#9ca3af' }}>—</span>
                       )}
                     </Td>
-                    <Td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
+                    <Td
+                      style={{
+                        textAlign: 'right',
+                        fontFamily: 'monospace',
+                        fontWeight: 600,
+                        textDecoration: isReversed ? 'line-through' : 'none',
+                        color: isReversed ? '#9ca3af' : undefined,
+                      }}
+                    >
                       {formatCurrency(payment.totalAmount, payment.currencyCode)}
                     </Td>
                     <Td>
@@ -499,7 +535,7 @@ export function PaymentsPage() {
                     <Td style={{ fontSize: 13, color: '#6b7280' }}>
                       {payment.createdBy}
                     </Td>
-                  </ClickableRow>
+                  </RowComponent>
                 );
               })}
             </tbody>

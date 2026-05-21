@@ -147,6 +147,7 @@ export async function getApDocTotalsPaid(
  * it passes only invoices with outstanding > 0.
  */
 export async function getApAging(payload: GetApAgingRequest): Promise<ApAgingReport> {
+  // Backend wraps in SuccessResponse[T] (standardized 2026-05-21).
   const response = await apiClient.post<SuccessEnvelope<ApAgingReport>>(
     '/v1/finance/reports/ap-aging',
     payload
@@ -168,6 +169,7 @@ export async function getVendorSubLedger(
   if (params.asOfDate) queryParams.as_of_date = params.asOfDate;
   if (params.vendorId) queryParams.vendor_id = params.vendorId;
 
+  // Backend wraps in SuccessResponse[T] (standardized 2026-05-21).
   const response = await apiClient.get<SuccessEnvelope<VendorSubLedgerReport>>(
     '/v1/finance/reports/vendor-sub-ledger',
     { params: queryParams }

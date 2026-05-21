@@ -26,13 +26,14 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { useCreatePayment } from '../../hooks/queries/usePayments';
+import { getApDocTotalsPaid } from '../../services/financeReportsService';
 import { usePayments } from '../../hooks/queries/usePayments';
 import { useVendors } from '../../hooks/queries/usePurchasing';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
 import { AccountCombobox } from '../../components/finance/AccountCombobox';
-import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../services/api';
 import type { APInvoice } from '../../services/apInvoicesService';
 import type { PaginatedResult } from '../../services/purchasingApi';
@@ -351,6 +352,7 @@ interface ApplicationRow {
   amountToApply: string;  // controlled string so user can type decimals freely
   selected: boolean;
   currency: string;
+  companyCode: string;    // copied from the source invoice; used as the payment's companyCode
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -425,35 +427,35 @@ export function RecordPaymentPage() {
 
   // ── Compute outstanding amounts ────────────────────────────────────────────
 
-  // Build a map: apDocId → total amount already paid
-  const alreadyPaidMap = useMemo(() => {
-    // We need the detail of each payment to get applications.
-    // The list endpoint does NOT include applications array.
-    // Per spec: "frontend orchestrates: query payments, walk through applications"
-    // However, the list endpoint only returns ApPaymentResponse (no applications).
-    // The detail requires an individual fetch per payment, which is impractical for
-    // building a full map here.
-    //
-    // Pragmatic approach used here: we use the totalAmount on each payment as a
-    // rough proxy, but that's per-payment not per-invoice. The backend should ideally
-    // provide an open-AP endpoint. For now, we load outstanding amounts from what
-    // we can infer.
-    //
-    // The CORRECT solution would be to expose a GET /finance/ap-payments?vendor_id=&
-    // endpoint that returns applications in the list items, OR a dedicated open-AP
-    // endpoint. Since backend may not ship the open-AP endpoint, we'll show totalGross
-    // as the outstanding amount and note that accurate computation requires the detail
-    // endpoint per payment.
-    //
-    // For the initial implementation: outstanding = totalGross (safest assumption —
-    // user can override the amount-to-apply field manually). The server will validate
-    // against actual outstanding at POST time.
-    const m = new Map<string, number>();
-    // existingPayments is kept to avoid unused variable TS error; real computation
-    // would walk through payment detail applications here.
-    void existingPayments;
-    return m;
-  }, [existingPayments]);
+  // Reason: the backend endpoint POST /finance/ap-invoices/totals-paid (built
+  // in Phase D) returns per-invoice paid totals from ap_payment_applications.
+  // The previous implementation left this unwired so every invoice showed up
+  // even after being fully paid. We now call it with the loaded invoice docIds
+  // and use the returned map directly. existingPayments is no longer the
+  // source of truth for paid amounts — it's just retained for any future UI
+  // affordance like showing recent payments.
+  const apDocIds = useMemo(
+    () => approvedInvoices.map((inv) => inv.docId),
+    [approvedInvoices]
+  );
+  const { data: paidMapFromBackend } = useQuery({
+    queryKey: ['finance', 'ap-totals-paid', organizationId, apDocIds.join(',')],
+    queryFn: () =>
+      getApDocTotalsPaid({
+        organizationId,
+        apDocIds,
+      }),
+    enabled: !!organizationId && apDocIds.length > 0,
+    staleTime: 10_000,
+  });
+  const alreadyPaidMap = useMemo(
+    () => paidMapFromBackend ?? new Map<string, number>(),
+    [paidMapFromBackend]
+  );
+  // Reason: kept so the existing useQuery for payments still runs (provides
+  // refetch trigger on cache invalidation from useCreatePayment). Not used
+  // for math anymore.
+  void existingPayments;
 
   // Build rows when vendor's invoices load
   useEffect(() => {
@@ -476,6 +478,7 @@ export function RecordPaymentPage() {
         amountToApply: outstanding.toFixed(2),
         selected: false,
         currency: inv.currencyCode,
+        companyCode: inv.companyCode,
       };
     });
     // Only show invoices with outstanding > 0
@@ -558,9 +561,13 @@ export function RecordPaymentPage() {
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    // companyCode: fall back to 'DEFAULT' — the backend resolves the correct
-    // company from the organization's default posting setup.
-    const companyCode = 'DEFAULT';
+    // Reason: previously hardcoded 'DEFAULT' under the false assumption that
+    // the backend would resolve the org's default company. It doesn't — the
+    // posting setup is keyed by exact (organizationId, companyCode) match.
+    // Every selected invoice belongs to the same company (you can only pay
+    // one vendor per payment, and that vendor's invoices share companyCode),
+    // so taking the first row's value is safe.
+    const companyCode = selectedRows[0]?.companyCode ?? '1000';
     const currencyCode = selectedRows[0]?.currency ?? 'AED';
 
     try {
@@ -579,6 +586,11 @@ export function RecordPaymentPage() {
           apDocId: r.apDocId,
           apDocNumber: r.apDocNumber,
           amountApplied: r.amountToApply,
+          // Reason: denormalize the invoice totalGross so the backend can
+          // enforce its server-side overpayment guard. Without this hint
+          // the backend's guard skips entirely and over-payments are
+          // accepted (see _check_no_overpayment).
+          totalGross: r.totalGross,
         })),
       });
       showSuccessToast(`Payment ${created.paymentNumber} recorded successfully.`);

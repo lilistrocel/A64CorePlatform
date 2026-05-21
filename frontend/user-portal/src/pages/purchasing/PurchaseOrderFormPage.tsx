@@ -24,6 +24,7 @@ import {
   usePaymentTerms,
 } from '../../hooks/queries/usePurchasing';
 import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
+import { useItemMappingsMap } from '../../hooks/queries/useItemMappingsMap';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
 import { useAuthStore } from '../../stores/auth.store';
 import type { DocumentLineCreate } from '../../services/purchasingApi';
@@ -256,6 +257,9 @@ export function PurchaseOrderFormPage() {
   const { data: rawPaymentTerms } = usePaymentTerms({ organizationId: orgId, isActive: true });
   const paymentTermsList = Array.isArray(rawPaymentTerms) ? rawPaymentTerms : [];
 
+  // Item finance mappings — used to auto-default taxCode when user picks an item.
+  const itemMappings = useItemMappingsMap(orgId || null);
+
   // Fetch tax codes from finance service; fall back to seeded codes on error
   const { data: taxCodesData, isLoading: taxCodesLoading, isError: taxCodesError } = useTaxCodes(orgId || null);
   const activeTaxCodes = useMemo(() => {
@@ -301,7 +305,10 @@ export function PurchaseOrderFormPage() {
     }
   }, [existingPO, isEdit]);
 
-  // Pre-fill lines from source PR (from-pr mode)
+  // Pre-fill lines from source PR (from-pr mode).
+  // Preserve the PR line's taxCode — it was already defaulted from the item
+  // mapping (or manually chosen) when the PR was created. Fall back to null
+  // rather than hardcoding 'S' so the AP form's fallback chain works correctly.
   useEffect(() => {
     if (sourcePR && isFromPR && sourcePR.lines.length > 0) {
       setLines(sourcePR.lines.map((l) => ({
@@ -311,7 +318,7 @@ export function PurchaseOrderFormPage() {
         uom: l.uom,
         quantity: l.quantity,
         unitPrice: l.unitPrice,
-        taxCode: l.taxCode ?? 'S',
+        taxCode: l.taxCode ?? null,
         warehouseId: l.warehouseId,
         requestedVendorId: null,
         notes: l.notes,
@@ -506,9 +513,16 @@ export function PurchaseOrderFormPage() {
                       <Select
                         value={line.itemId}
                         onChange={(e) => {
-                          const item = itemsList.find((i) => i.itemId === e.target.value);
-                          setLine(line._key, 'itemId', e.target.value);
+                          const newItemId = e.target.value;
+                          const item = itemsList.find((i) => i.itemId === newItemId);
+                          setLine(line._key, 'itemId', newItemId);
                           if (item) setLine(line._key, 'uom', item.uom);
+                          // Auto-default taxCode from item's finance mapping.
+                          // Falls back to 'S' (Standard Rate) as last resort when
+                          // no mapping exists — sensible UAE VAT default for POs.
+                          const defaultTaxCode =
+                            itemMappings.get(newItemId)?.taxCodeDefault ?? 'S';
+                          setLine(line._key, 'taxCode', defaultTaxCode);
                         }}
                         disabled={isReadOnly}
                         style={{ width: '100%' }}

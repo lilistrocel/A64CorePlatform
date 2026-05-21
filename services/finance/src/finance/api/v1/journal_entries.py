@@ -13,7 +13,7 @@ import logging
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Dict, Iterable, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -45,6 +45,41 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Journal Entries"])
 
 _READ_ROLES = ("accountant", "finance_admin", "auditor", "super_admin", "admin")
+
+
+async def _fetch_reversal_map(
+    db: AsyncSession,
+    organization_id: str,
+    je_numbers: Iterable[str],
+) -> Dict[str, str]:
+    """
+    Batch-fetch the reversal JE number (if any) for each given original JE
+    number, scoped to one organization.
+
+    Returns a dict { originalJeNumber: reversalJeNumber }. Originals with no
+    reversal are simply absent from the map. A single SQL roundtrip regardless
+    of input size.
+    """
+    numbers = [n for n in je_numbers if n]
+    if not numbers:
+        return {}
+    rows = await db.execute(
+        select(JournalEntry.sourceDocNumber, JournalEntry.jeNumber).where(
+            JournalEntry.organizationId == organization_id,
+            JournalEntry.sourceEventType == "je_reversal",
+            JournalEntry.sourceDocNumber.in_(numbers),
+        )
+    )
+    return {orig: rev for orig, rev in rows.all() if orig}
+
+
+def _attach_reversed_by(
+    response: JournalEntryResponse,
+    reversal_map: Dict[str, str],
+) -> JournalEntryResponse:
+    """Set reversedByJeNumber on a JournalEntryResponse from the lookup map."""
+    response.reversedByJeNumber = reversal_map.get(response.jeNumber)
+    return response
 
 
 @router.get(
@@ -126,12 +161,16 @@ async def list_journal_entries(
     )
     entries = result.scalars().all()
 
-    return paginated(
-        items=[JournalEntryResponse.model_validate(e) for e in entries],
-        total=total,
-        page=page,
-        size=size,
+    # Enrich responses with reversedByJeNumber so the UI can show a
+    # "Reversed" badge under the standard reversing-entry pattern.
+    items = [JournalEntryResponse.model_validate(e) for e in entries]
+    reversal_map = await _fetch_reversal_map(
+        db, organization_id, (i.jeNumber for i in items)
     )
+    for item in items:
+        _attach_reversed_by(item, reversal_map)
+
+    return paginated(items=items, total=total, page=page, size=size)
 
 
 @router.get(
@@ -174,7 +213,12 @@ async def get_journal_entry(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Journal entry '{je_id}' not found.",
         )
-    return success(JournalEntryResponse.model_validate(entry))
+    response = JournalEntryResponse.model_validate(entry)
+    reversal_map = await _fetch_reversal_map(
+        db, organization_id, [response.jeNumber]
+    )
+    _attach_reversed_by(response, reversal_map)
+    return success(response)
 
 
 # ---------------------------------------------------------------------------
@@ -249,12 +293,28 @@ async def reverse_journal_entry(
         )
 
     # ------------------------------------------------------------------
-    # 2. Validate status — only posted JEs can be reversed
+    # 2. Validate — refuse if this JE is already reversed or voided
     # ------------------------------------------------------------------
     if original.status == JEStatusEnum.VOID:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot reverse a voided JE.",
+        )
+    existing_reversal = await db.scalar(
+        select(JournalEntry.jeNumber).where(
+            JournalEntry.organizationId == original.organizationId,
+            JournalEntry.companyCode == original.companyCode,
+            JournalEntry.sourceEventType == "je_reversal",
+            JournalEntry.sourceDocNumber == original.jeNumber,
+        )
+    )
+    if existing_reversal is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Journal entry {original.jeNumber} has already been reversed "
+                f"by {existing_reversal}."
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -325,6 +385,11 @@ async def reverse_journal_entry(
 
         # Reason: original DR lines become CR lines in the reversal, and vice versa.
         # This is the mathematical inverse that cancels the original posting.
+        # referenceLineId is preserved as-is: it carries the vendor/customer/
+        # sub-ledger key (e.g. vendorId on AP lines). Replacing it would orphan
+        # the credit/debit from the entity's sub-ledger and leave a phantom
+        # balance under a stranger UUID. JE-level lineage is already covered
+        # by sourceEventType='je_reversal' + sourceDocNumber=original.jeNumber.
         reversal_line = JournalEntryLine(
             jeLineId=str(uuid.uuid4()),
             jeId=reversal_id,
@@ -333,18 +398,19 @@ async def reverse_journal_entry(
             debit=orig_credit,   # original CR → reversal DR
             credit=orig_debit,   # original DR → reversal CR
             description=f"Reversal: {line.description}" if line.description else "Reversal",
-            referenceLineId=line.jeLineId,  # link back to original line for traceability
+            referenceLineId=line.referenceLineId,
             costCenterId=line.costCenterId,
         )
         db.add(reversal_line)
 
     # ------------------------------------------------------------------
-    # 7. Void the original JE
+    # 7. Standard reversing-entry pattern: the original STAYS posted.
+    #    Two posted JEs (original + reversal) live on the books and net
+    #    to zero. The void status is reserved for true posting errors
+    #    that should never affect any report (set via a different action,
+    #    not by this endpoint). The reason supplied here is captured in
+    #    the reversal JE's description (set above).
     # ------------------------------------------------------------------
-    original.status = JEStatusEnum.VOID
-    original.voidedAt = now_utc
-    original.voidedBy = current_user.userId
-    original.voidReason = body.reason
 
     # ------------------------------------------------------------------
     # 8. Flush so FK violations surface here (before commit)
@@ -379,10 +445,17 @@ async def reverse_journal_entry(
         body.reason,
     )
 
+    original_response = JournalEntryResponse.model_validate(original_reloaded)
+    reversal_response = JournalEntryResponse.model_validate(reversal_reloaded)
+    # The original now has a reversal; tag it so the client can render the
+    # "Reversed" badge without an extra fetch. The reversal itself never has
+    # a child reversal (it would be a no-op chain), so it stays None.
+    original_response.reversedByJeNumber = reversal_je_number
+
     return success(
         ReversalResponse(
-            original=JournalEntryResponse.model_validate(original_reloaded),
-            reversal=JournalEntryResponse.model_validate(reversal_reloaded),
+            original=original_response,
+            reversal=reversal_response,
         ),
         message=f"Journal entry {original.jeNumber} reversed successfully.",
     )

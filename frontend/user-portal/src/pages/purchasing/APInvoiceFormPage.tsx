@@ -30,9 +30,11 @@ import {
   useCreateAPFromGR,
   useUpdateAPInvoice,
   useAPInvoice,
+  useAPInvoices,
 } from '../../hooks/queries/useAPInvoices';
 import { useGoodsReceipt } from '../../hooks/queries/useGoodsReceipts';
 import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
+import { useItemMappingsMap } from '../../hooks/queries/useItemMappingsMap';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
 import { useAuthStore } from '../../stores/auth.store';
 import type { APLineCreate } from '../../services/apInvoicesService';
@@ -274,6 +276,8 @@ const VarianceHelpText = styled.p`
 
 interface APLineFormState {
   grLineId: string;
+  /** The operational item ID — used to look up the item's taxCodeDefault. */
+  itemId: string;
   itemCode: string;
   itemName: string;
   uom: string;
@@ -340,7 +344,25 @@ function GRPickerCard({
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const { data, isLoading } = usePostedGRsForAP({ organizationId, page, perPage: 20 });
-  const grs = data?.data ?? [];
+  // Reason: one AP per GR in v1 (the backend enforces this). Fetch existing
+  // non-rejected APs and build a Set of their source GR docIds so we can
+  // hide GRs that have already been invoiced. Without this filter, users see
+  // GRs they cannot legally use and only discover the conflict on submit.
+  const { data: apListResp } = useAPInvoices({
+    organizationId,
+    perPage: 200,
+  });
+  const grsWithAp = useMemo(() => {
+    const set = new Set<string>();
+    for (const ap of apListResp?.data ?? []) {
+      if (ap.status !== 'Rejected' && ap.baseDocId) {
+        set.add(ap.baseDocId);
+      }
+    }
+    return set;
+  }, [apListResp]);
+  const rawGRs = data?.data ?? [];
+  const grs = rawGRs.filter((gr) => !grsWithAp.has(gr.docId));
   const meta = data?.meta ?? { total: 0, page: 1, perPage: 20, totalPages: 1 };
 
   if (isLoading) {
@@ -472,6 +494,10 @@ export function APInvoiceFormPage() {
   const { data: fetchedTaxCodes } = useTaxCodes(orgId);
   const taxCodes = fetchedTaxCodes?.length ? fetchedTaxCodes : FALLBACK_TAX_CODES;
 
+  // Item finance mappings — used to auto-default taxCode from the item's
+  // configured taxCodeDefault when building lines from a GR.
+  const itemMappings = useItemMappingsMap(orgId || null);
+
   const createMutation = useCreateAPFromGR();
   const updateMutation = useUpdateAPInvoice();
 
@@ -492,23 +518,36 @@ export function APInvoiceFormPage() {
     }
   }, [invoiceDate]);
 
-  // Populate lines from source GR (create mode)
+  // Populate lines from source GR (create mode).
+  // Tax code priority order:
+  //   1. Item's configured taxCodeDefault from finance mapping
+  //   2. The GR line's existing taxCode (inherited from the PO line)
+  //   3. Hardcoded 'S' as last-resort UAE VAT default
   useEffect(() => {
     if (sourceGR && !isEdit && sourceGR.lines.length > 0) {
       setLines(
         sourceGR.lines.map((l) => ({
-          grLineId: l.grLineId,
+          // Reason: `l.grLineId` on a GR line is null — that field only
+          // exists on AP lines as a back-reference to the source GR. The
+          // GR line's own primary key is `l.lineId`. Passing the GR line's
+          // lineId as the AP payload's grLineId is what the backend expects.
+          grLineId: l.lineId,
+          itemId: l.itemId,
           itemCode: l.itemCode,
           itemName: l.itemName,
           uom: l.uom,
           quantity: l.quantity,
           poUnitPrice: l.unitPrice,
           invoiceUnitPrice: l.unitPrice,  // default to PO price
-          taxCode: taxCodes[0]?.taxCode ?? 'S',
+          // GRLine does not carry a taxCode — only itemId is available here.
+          // Use the item's finance mapping default; fall back to 'S'.
+          taxCode: itemMappings.get(l.itemId)?.taxCodeDefault ?? 'S',
         }))
       );
     }
-  }, [sourceGR, isEdit]);
+  // itemMappings is a stable Map reference rebuilt via useMemo; include it so
+  // the effect re-runs once the mapping data has loaded (avoids stale fallback).
+  }, [sourceGR, isEdit, itemMappings]);
 
   // Populate form from existing AP (edit mode)
   useEffect(() => {
@@ -519,16 +558,29 @@ export function APInvoiceFormPage() {
       setDueDate(existingAP.dueDate?.split('T')[0] ?? addDays(today, 30));
       setNotes(existingAP.notes ?? '');
       setLines(
-        existingAP.lines.map((l) => ({
-          grLineId: l.grLineId,
-          itemCode: l.itemCode,
-          itemName: l.itemName,
-          uom: l.uom,
-          quantity: l.quantity,
-          poUnitPrice: l.poUnitPrice,
-          invoiceUnitPrice: l.invoiceUnitPrice,
-          taxCode: l.taxCode,
-        }))
+        existingAP.lines.map((l) => {
+          // Reason: the API returns the AP line's actual invoice price as
+          // `unitPrice`. A nullable `invoiceUnitPrice` alias also exists but
+          // is not populated by the current response builder, so reading it
+          // alone yields undefined → React shows 0 in the number input.
+          // Coalesce against unitPrice to get the real stored value.
+          const recv = l as typeof l & { unitPrice?: number | string | null };
+          const storedPrice =
+            (l.invoiceUnitPrice ?? recv.unitPrice ?? 0) as number | string;
+          return {
+            grLineId: l.grLineId,
+            // itemId may not be present on the AP line response shape — default
+            // to empty string so the Map lookup returns undefined (no override).
+            itemId: (l as typeof l & { itemId?: string }).itemId ?? '',
+            itemCode: l.itemCode,
+            itemName: l.itemName,
+            uom: l.uom,
+            quantity: l.quantity,
+            poUnitPrice: Number(l.poUnitPrice ?? 0),
+            invoiceUnitPrice: Number(storedPrice),
+            taxCode: l.taxCode,
+          };
+        })
       );
       if (!selectedGrDocId && existingAP.grDocId) {
         setSelectedGrDocId(existingAP.grDocId);
@@ -622,10 +674,71 @@ export function APInvoiceFormPage() {
         navigate(`/purchasing/ap/${created.docId}`);
       }
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError(
-        axiosErr?.response?.data?.detail ?? axiosErr?.message ?? 'Failed to save.'
-      );
+      // Reason: FastAPI returns `detail` as either a string (business-rule
+      // errors via ValueError) OR an array of validation objects (Pydantic
+      // 422s). Setting state to the array and rendering it as a React child
+      // throws "Objects are not valid as a React child" and blanks the page.
+      // Stringify defensively so any shape lands as a readable banner.
+      const axiosErr = err as {
+        response?: { data?: { detail?: unknown } };
+        message?: string;
+      };
+      const detail = axiosErr?.response?.data?.detail;
+      let message: string;
+      if (typeof detail === 'string') {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        // Reason: translate Pydantic loc paths to human-friendly form errors.
+        // Backend's loc looks like ["body", "lines", 0, "grLineId"] — we map
+        // known fields and present row numbers as "Line N" instead of array
+        // indices.
+        const FIELD_LABELS: Record<string, string> = {
+          invoiceNumber: 'Vendor Invoice Number',
+          invoiceDate: 'Invoice Date',
+          dueDate: 'Due Date',
+          docDate: 'Posting Date',
+          notes: 'Notes',
+          grLineId: 'GR line reference',
+          invoiceUnitPrice: 'Invoice Unit Price',
+          taxCode: 'Tax Code',
+          description: 'Description',
+        };
+        const humaniseLoc = (loc: unknown[]): string => {
+          // Strip leading "body"
+          const parts = loc[0] === 'body' ? loc.slice(1) : loc;
+          // ["lines", 0, "grLineId"] → "Line 1 · GR line reference"
+          if (parts.length === 3 && parts[0] === 'lines' && typeof parts[1] === 'number') {
+            const fieldKey = String(parts[2]);
+            return `Line ${(parts[1] as number) + 1} · ${FIELD_LABELS[fieldKey] ?? fieldKey}`;
+          }
+          // ["invoiceNumber"] → "Vendor Invoice Number"
+          if (parts.length === 1) {
+            const fieldKey = String(parts[0]);
+            return FIELD_LABELS[fieldKey] ?? fieldKey;
+          }
+          return parts.map((p) => String(p)).join(' · ');
+        };
+        message = detail
+          .map((d) => {
+            if (typeof d === 'string') return d;
+            if (d && typeof d === 'object') {
+              const obj = d as { loc?: unknown[]; msg?: string };
+              const loc = Array.isArray(obj.loc) ? humaniseLoc(obj.loc) : '';
+              const rawMsg = obj.msg ?? 'invalid';
+              // Friendly substitutions for the most common Pydantic msgs
+              const friendlyMsg = rawMsg
+                .replace(/^Input should be a valid string$/i, 'is required (missing or empty).')
+                .replace(/^Field required$/i, 'is required.')
+                .replace(/^Input should be greater than or equal to/i, 'must be ≥');
+              return loc ? `${loc}: ${friendlyMsg}` : friendlyMsg;
+            }
+            return JSON.stringify(d);
+          })
+          .join('; ');
+      } else {
+        message = axiosErr?.message ?? 'Failed to save.';
+      }
+      setError(message);
     }
   };
 

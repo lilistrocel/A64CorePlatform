@@ -17,6 +17,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as apService from '../../services/apInvoicesService';
 import * as grService from '../../services/goodsReceiptsService';
+import { purchasingQueryKeys } from './usePurchasing';
 import type {
   APStatus,
   APFromGRCreate,
@@ -181,6 +182,12 @@ export function useApproveAPInvoice() {
     onSuccess: (_, { docId }) => {
       qc.invalidateQueries({ queryKey: apQueryKeys.detail(docId) });
       qc.invalidateQueries({ queryKey: apQueryKeys.all() });
+      // Reason: the Approval Inbox reads from purchasingQueryKeys.approvals.pending().
+      // PR + PO approve mutations invalidate it; the AP approve mutation, added
+      // later, missed it — so after AP approval the inbox showed a stale row
+      // with active Approve/Reject buttons. Hitting Approve again triggered
+      // an Approved→Approved transition error.
+      qc.invalidateQueries({ queryKey: purchasingQueryKeys.approvals.pending() });
     },
   });
 }
@@ -204,6 +211,10 @@ export function useRejectAPInvoice() {
     onSuccess: (_, { docId }) => {
       qc.invalidateQueries({ queryKey: apQueryKeys.detail(docId) });
       qc.invalidateQueries({ queryKey: apQueryKeys.all() });
+      // Reason: see approve mutation comment — the inbox keys off the
+      // shared purchasing approvals.pending() query and needs invalidation
+      // for AP rejects too.
+      qc.invalidateQueries({ queryKey: purchasingQueryKeys.approvals.pending() });
     },
   });
 }

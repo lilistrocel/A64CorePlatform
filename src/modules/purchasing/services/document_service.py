@@ -561,6 +561,12 @@ def _line_to_response(doc: Dict[str, Any]) -> DocumentLineResponse:
         # AP-specific fields (null for PR/PO/GR lines)
         grLineId=doc.get("grLineId"),
         poUnitPrice=Decimal(str(doc["poUnitPrice"])) if doc.get("poUnitPrice") is not None else None,
+        # Reason: AP lines carry the invoiced price as `unitPrice` in storage.
+        # Surface the same value as `invoiceUnitPrice` for AP lines so frontend
+        # consumers reading the semantic field name see the stored value.
+        # Only populate when this is an AP line (presence of poUnitPrice is
+        # the existing AP-line marker on stored docs).
+        invoiceUnitPrice=Decimal(str(doc.get("unitPrice", 0))) if doc.get("poUnitPrice") is not None else None,
         priceVarianceAmount=Decimal(str(doc["priceVarianceAmount"])) if doc.get("priceVarianceAmount") is not None else None,
         createdAt=doc["createdAt"],
         updatedAt=doc["updatedAt"],

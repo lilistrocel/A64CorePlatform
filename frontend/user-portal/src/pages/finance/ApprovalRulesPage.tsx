@@ -18,7 +18,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
-import { useToastStore } from '../../stores/toast.store';
+import { showSuccessToast } from '../../stores/toast.store';
 import {
   useApprovalRules,
   useCreateApprovalRule,
@@ -1325,7 +1325,7 @@ function TesterWidget({ organizationId, companies, companiesLoading }: TesterWid
 
 export function ApprovalRulesPage() {
   const { user } = useAuthStore();
-  const { showSuccessToast } = useToastStore();
+  // Reason: showSuccessToast is a module-level helper, imported directly above.
 
   // Resolve org ID from user runtime shape.
   // Per project memory: runtime shape uses userId not id.

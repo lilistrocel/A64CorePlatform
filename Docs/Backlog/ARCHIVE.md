@@ -1,8 +1,21 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 54 tasks
+> **Total completed:** 55 tasks
 
 ## 2026-05
+
+### T-055 | Tax code dropdown on ItemMappingPage + item-default tax code on PR/PO/AP forms
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-21 · **Assigned:** frontend-dev-expert
+- **Description:** (1) Replaced free-text tax code input on ItemMappingPage with a
+  `<select>` dropdown backed by `useTaxCodes` + `FALLBACK_TAX_CODES`. "— None —" empty
+  option included. (2) Created `useItemMappingsMap.ts` helper hook returning
+  `Map<itemId, PurchaseItemFinanceExt>`. Wired into PR, PO, and AP forms: picking an item
+  now auto-defaults `taxCode` from `itemMappings.get(itemId)?.taxCodeDefault`. PR uses
+  `?? null`; PO uses `?? 'S'` (last-resort UAE VAT fallback); AP init uses
+  `itemMappings.get(l.itemId)?.taxCodeDefault ?? 'S'`. Manual tax code edits are never
+  overwritten. TypeScript: 0 errors.
+
 
 ### T-053 | Reusable AttachmentList component — PR, PO, GR, AP, Payment detail pages
 - **Category:** Frontend · **Priority:** P1

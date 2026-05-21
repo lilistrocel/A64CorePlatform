@@ -15,7 +15,7 @@ import styled from 'styled-components';
 import { useJournalEntries, useJournalEntry, useReverseJournalEntry } from '../../hooks/queries/useJournalEntries';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
 import { useAuthStore } from '../../stores/auth.store';
-import { useToastStore } from '../../stores/toast.store';
+import { showSuccessToast } from '../../stores/toast.store';
 import type { JournalEntry } from '../../services/journalEntriesService';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -632,7 +632,9 @@ interface ReversalModalState {
 
 export function JournalEntriesPage() {
   const { user } = useAuthStore();
-  const { showSuccessToast } = useToastStore();
+  // Reason: showSuccessToast is a module-level helper, imported directly above.
+  // The previous `const { showSuccessToast } = useToastStore()` returned
+  // undefined and crashed the post-reverse handler — leaving the modal open.
   const [searchParams] = useSearchParams();
   const organizationId = user?.organizationId ?? '';
 
@@ -839,10 +841,12 @@ export function JournalEntriesPage() {
                 const isExpanded = expandedJeId === je.jeId;
                 const isVoided = je.status === 'void';
                 const isReversal = je.sourceEventType === 'je_reversal';
+                const isReversed = Boolean(je.reversedByJeNumber);
                 const colSpan = canReverse ? 8 : 7;
 
-                // Voided JEs use a muted row; posted JEs use the normal interactive row.
-                const RowComponent = isVoided ? VoidedJeRow : JeRow;
+                // Voided OR reversed JEs use a muted row to signal "no live
+                // accounting impact"; both should look the same to the reader.
+                const RowComponent = isVoided || isReversed ? VoidedJeRow : JeRow;
 
                 return (
                   <>
@@ -917,6 +921,13 @@ export function JournalEntriesPage() {
                       <Td>
                         {isVoided ? (
                           <StatusBadge $status="void">Voided</StatusBadge>
+                        ) : isReversed ? (
+                          <StatusBadge
+                            $status="void"
+                            title={`Reversed by ${je.reversedByJeNumber}`}
+                          >
+                            Reversed
+                          </StatusBadge>
                         ) : (
                           <StatusBadge $status={je.status}>
                             {je.status.charAt(0).toUpperCase() + je.status.slice(1)}
@@ -926,10 +937,10 @@ export function JournalEntriesPage() {
                       <Td style={{ fontSize: 12, color: '#6b7280' }}>
                         {formatDateTime(je.postedAt)}
                       </Td>
-                      {/* Actions column — Reverse Entry for posted JEs only */}
+                      {/* Actions column — Reverse Entry for posted, not-yet-reversed JEs */}
                       {canReverse && (
                         <Td>
-                          {je.status === 'posted' && (
+                          {je.status === 'posted' && !isReversed && (
                             <ReverseButton
                               type="button"
                               onClick={(e) => handleOpenReversalModal(je, e)}
@@ -994,9 +1005,9 @@ export function JournalEntriesPage() {
           <ModalCard>
             <ModalTitle id="reversal-modal-title">Reverse Journal Entry</ModalTitle>
             <ModalSubtitle>
-              You are about to reverse <strong>{reversalModal.jeNumber}</strong>. This will void
-              the original entry and create an offsetting reversal JE. This action cannot be
-              undone.
+              You are about to reverse <strong>{reversalModal.jeNumber}</strong>. A new offsetting
+              reversal JE will be posted; both entries remain on the books and net to zero. This
+              action cannot be undone.
             </ModalSubtitle>
 
             <ModalLabel htmlFor="reversal-reason">

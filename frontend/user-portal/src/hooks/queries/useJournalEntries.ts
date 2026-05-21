@@ -70,6 +70,15 @@ export function useReverseJournalEntry() {
       queryClient.invalidateQueries({
         queryKey: ['finance', 'journal-entries', variables.orgId],
       });
+      // Reversing a JE affects downstream payments + reports — refresh them
+      // so the "Reversed" badge appears on the Vendor Payments list and
+      // balances update on Vendor Sub-Ledger, AP Aging, and Trial Balance.
+      queryClient.invalidateQueries({ queryKey: ['finance', 'ap-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'ap-totals-paid'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'reports'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'trial-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'vendor-sub-ledger'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'ap-aging'] });
     },
   });
 }

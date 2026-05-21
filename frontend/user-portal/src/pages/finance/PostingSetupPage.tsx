@@ -19,7 +19,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
-import { useToastStore } from '../../stores/toast.store';
+import { showSuccessToast } from '../../stores/toast.store';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
 import { useFinanceCompanies } from '../../hooks/queries/useFinanceCompanies';
 import { usePostingSetup, useUpsertPostingSetup } from '../../hooks/queries/usePostingSetup';
@@ -487,7 +487,7 @@ function AccountSelect({
 
 export function PostingSetupPage() {
   const { user } = useAuthStore();
-  const { showSuccessToast } = useToastStore();
+  // Reason: showSuccessToast is a module-level helper, imported directly above.
 
   // ── Auth / org ─────────────────────────────────────────────────────────────
 

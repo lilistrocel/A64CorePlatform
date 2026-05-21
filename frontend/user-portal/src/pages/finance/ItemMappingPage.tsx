@@ -32,13 +32,16 @@ import {
 } from 'react';
 import styled from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
-import { useToastStore } from '../../stores/toast.store';
+import { showSuccessToast } from '../../stores/toast.store';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
 import { useItemMappings, useUpdateItemMapping } from '../../hooks/queries/useItemMappings';
+import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
+import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
 import { AccountCombobox } from '../../components/finance/AccountCombobox';
 import { parseApiErrors } from '../../utils/apiErrors';
 import type { ApiErrorItem } from '../../utils/apiErrors';
 import type { GLAccount } from '../../services/financeAccountsService';
+import type { TaxCode } from '../../services/taxCodesService';
 import type {
   PurchaseItemFinanceExt,
   PurchaseItemType,
@@ -442,11 +445,13 @@ const EditCell = styled.td`
   min-width: 280px;
 `;
 
-/** Narrow cell for tax code input. */
+/** Narrow cell for tax code dropdown — wider than the old text input to
+ *  accommodate the "{code} — {description} ({rate}%)" label format. */
 const NarrowEditCell = styled.td`
   padding: 6px 14px;
   vertical-align: middle;
-  min-width: 90px;
+  min-width: 150px;
+  max-width: 200px;
 `;
 
 const SmallSelect = styled.select`
@@ -459,30 +464,6 @@ const SmallSelect = styled.select`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   cursor: pointer;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500]}1a;
-  }
-
-  &:disabled {
-    background: ${({ theme }) => theme.colors.neutral[50]};
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
-const SmallInput = styled.input`
-  width: 100%;
-  box-sizing: border-box;
-  padding: 7px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 7px;
-  font-size: 13px;
-  font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
 
   &:focus {
     outline: none;
@@ -605,7 +586,7 @@ const UnassignedText = styled.span`
 
 export function ItemMappingPage() {
   const { user } = useAuthStore();
-  const { showSuccessToast } = useToastStore();
+  // Reason: showSuccessToast is a module-level helper, imported directly above.
 
   // ── Auth / org ─────────────────────────────────────────────────────────────
 
@@ -665,6 +646,16 @@ export function ItemMappingPage() {
 
   const { data: accountsData, isLoading: accountsLoading } =
     useFinanceAccounts(organizationId);
+
+  // Tax codes — used for the taxCodeDefault dropdown on each item row.
+  // Falls back to the seeded list on error so the dropdown remains functional.
+  const { data: taxCodesData, isError: taxCodesError } = useTaxCodes(organizationId || null);
+  const activeTaxCodes: TaxCode[] = useMemo(() => {
+    if (taxCodesError) {
+      return FALLBACK_TAX_CODES.filter((c) => c.isActive);
+    }
+    return (taxCodesData ?? []).filter((c) => c.isActive);
+  }, [taxCodesData, taxCodesError]);
 
   /**
    * Only active leaf accounts may receive journal-entry postings.
@@ -1076,6 +1067,7 @@ export function ItemMappingPage() {
                   item={item}
                   draft={getDraft(item.itemId, item)}
                   accounts={postableAccounts}
+                  taxCodes={activeTaxCodes}
                   canWrite={canWrite}
                   isSaving={savingRows.has(item.itemId)}
                   rowError={rowErrors.get(item.itemId) ?? null}
@@ -1125,6 +1117,8 @@ interface ItemRowProps {
   item: PurchaseItemFinanceExt;
   draft: RowDraft;
   accounts: GLAccount[];
+  /** Active tax codes for the taxCodeDefault dropdown. */
+  taxCodes: TaxCode[];
   canWrite: boolean;
   isSaving: boolean;
   rowError: string | null;
@@ -1156,6 +1150,7 @@ function ItemRow({
   item,
   draft,
   accounts,
+  taxCodes,
   canWrite,
   isSaving,
   rowError,
@@ -1228,18 +1223,23 @@ function ItemRow({
         )}
       </EditCell>
 
-      {/* Tax Code Default — free text, max 5 chars */}
+      {/* Tax Code Default — dropdown from active tax codes master data */}
       <NarrowEditCell>
         {canWrite ? (
-          <SmallInput
-            type="text"
-            maxLength={5}
+          <SmallSelect
             value={draft.taxCodeDefault}
             onChange={(e) => onPatchDraft({ taxCodeDefault: e.target.value })}
             disabled={isSaving}
             aria-label="Tax code default"
-            placeholder="—"
-          />
+          >
+            {/* Empty option maps to null on save (no default tax code) */}
+            <option value="">— None —</option>
+            {taxCodes.map((tc) => (
+              <option key={tc.taxCode} value={tc.taxCode}>
+                {tc.taxCode} — {tc.description} ({tc.rate}%)
+              </option>
+            ))}
+          </SmallSelect>
         ) : (
           <span>{draft.taxCodeDefault || <MutedCell>—</MutedCell>}</span>
         )}

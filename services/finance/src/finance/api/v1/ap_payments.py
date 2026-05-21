@@ -20,7 +20,7 @@ import logging
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -168,12 +168,42 @@ async def _check_no_overpayment(
             )
 
 
-def _build_payment_response(payment: ApPayment) -> ApPaymentResponse:
+async def _fetch_payment_reversal_map(
+    db: AsyncSession,
+    organization_id: str,
+    je_numbers: Iterable[str],
+) -> Dict[str, str]:
+    """
+    Batch-fetch reversal JE numbers for the supplied original JE numbers in
+    one round trip. Returns { originalJeNumber: reversalJeNumber }; originals
+    with no reversal are absent from the map.
+    """
+    numbers = [n for n in je_numbers if n]
+    if not numbers:
+        return {}
+    rows = await db.execute(
+        select(JournalEntry.sourceDocNumber, JournalEntry.jeNumber).where(
+            JournalEntry.organizationId == organization_id,
+            JournalEntry.sourceEventType == "je_reversal",
+            JournalEntry.sourceDocNumber.in_(numbers),
+        )
+    )
+    return {orig: rev for orig, rev in rows.all() if orig}
+
+
+def _build_payment_response(
+    payment: ApPayment,
+    reversal_map: Optional[Dict[str, str]] = None,
+) -> ApPaymentResponse:
     """
     Build an ApPaymentResponse from an ORM ApPayment instance.
 
     Args:
         payment: Loaded ApPayment ORM instance (applications relationship loaded).
+        reversal_map: Optional { originalJeNumber: reversalJeNumber } map for
+            flagging payments whose linked JE has been reversed. Pass {} (or
+            omit) when reversal status is irrelevant (e.g. immediately after
+            create — a brand new payment has no reversal yet).
 
     Returns:
         ApPaymentResponse Pydantic model.
@@ -187,6 +217,9 @@ def _build_payment_response(payment: ApPayment) -> ApPaymentResponse:
             totalDebit=Decimal(str(payment.journal_entry.totalDebit)),
             totalCredit=Decimal(str(payment.journal_entry.totalCredit)),
             status=payment.journal_entry.status.value,
+            reversedByJeNumber=(reversal_map or {}).get(
+                payment.journal_entry.jeNumber
+            ),
         )
     return ApPaymentResponse(
         paymentId=payment.paymentId,
@@ -369,18 +402,24 @@ async def create_ap_payment(
     total_amount = sum(Decimal(str(app.amountApplied)) for app in body.applications)
 
     for app in body.applications:
+        # Reason: the frontend now passes totalGross per application
+        # (denormalized from the AP invoice it already has loaded). The
+        # finance service does not call the operation API to fetch it.
+        # When the hint is present, _check_no_overpayment enforces:
+        #   sum(existing applications for this apDocId) + amountApplied
+        #     must not exceed totalGross.
+        # Without the hint, only the per-payment duplicate-apDocId UNIQUE
+        # constraint fires — which is what allowed the live over-payment
+        # bug across two separate payment records.
         await _check_no_overpayment(
             db=db,
             organization_id=org_id,
             ap_doc_id=app.apDocId,
             amount_applied=Decimal(str(app.amountApplied)),
             ap_doc_number=app.apDocNumber,
-            # Reason: no totalGross hint available from request in v1 (frontend-join
-            # approach means the finance backend doesn't have the invoice totals).
-            # The overpayment check inside _check_no_overpayment only fires when
-            # total_gross_hint is provided.  Duplicate apDocId on the same payment
-            # is caught by the UNIQUE constraint on ap_payment_applications.
-            total_gross_hint=None,
+            total_gross_hint=(
+                Decimal(str(app.totalGross)) if app.totalGross is not None else None
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -601,8 +640,20 @@ async def list_ap_payments(
     )
     payments = result.scalars().all()
 
+    # Batch-fetch reversal status for every payment's linked JE so the list
+    # can flag reversed payments without an extra round trip per row.
+    reversal_map = await _fetch_payment_reversal_map(
+        db,
+        organization_id,
+        (
+            p.journal_entry.jeNumber
+            for p in payments
+            if p.journal_entry is not None
+        ),
+    )
+
     return paginated(
-        items=[_build_payment_response(p) for p in payments],
+        items=[_build_payment_response(p, reversal_map) for p in payments],
         total=total,
         page=page,
         size=size,
@@ -658,6 +709,11 @@ async def get_ap_payment(
             detail=f"Payment '{payment_id}' not found.",
         )
 
-    response_data = _build_payment_response(payment)
+    reversal_map = await _fetch_payment_reversal_map(
+        db,
+        organization_id,
+        [payment.journal_entry.jeNumber] if payment.journal_entry else [],
+    )
+    response_data = _build_payment_response(payment, reversal_map)
     detail_response = ApPaymentDetailResponse(**response_data.model_dump())
     return success(detail_response)

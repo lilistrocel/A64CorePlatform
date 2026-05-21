@@ -12,7 +12,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
-import { useToastStore } from '../../stores/toast.store';
+import { showSuccessToast } from '../../stores/toast.store';
 import {
   useFinanceAccounts,
   useCreateFinanceAccount,
@@ -1172,7 +1172,7 @@ function AccountFormModal({
 
 export function ChartOfAccountsPage() {
   const { user } = useAuthStore();
-  const { showSuccessToast } = useToastStore();
+  // Reason: showSuccessToast is a module-level helper, imported directly above.
 
   // Determine org ID from user state.
   // Runtime shape has userId (not id) per project memory.

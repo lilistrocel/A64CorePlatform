@@ -24,6 +24,22 @@ import { apiClient } from './api';
 
 export type PaymentMethod = 'bank_transfer' | 'cheque' | 'cash';
 
+/** Inline JE summary attached to a payment. */
+export interface ApPaymentJeSummary {
+  jeId: string;
+  jeNumber: string;
+  totalDebit: string;
+  totalCredit: string;
+  status: string;               // 'posted' | 'void'
+  /**
+   * Set by the backend when another JE with sourceEventType='je_reversal'
+   * references this JE's jeNumber. Frontend treats a non-null value as
+   * "this payment has been reversed" — both the original and the reversal
+   * stay status='posted' under the standard reversing-entry pattern.
+   */
+  reversedByJeNumber?: string | null;
+}
+
 /** List-level payment record (no applications array). */
 export interface ApPaymentResponse {
   paymentId: string;
@@ -41,6 +57,7 @@ export interface ApPaymentResponse {
   totalAmount: string;          // decimal as string
   notes: string | null;
   jeId: string | null;
+  je?: ApPaymentJeSummary | null;  // populated by backend on both list + detail
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -57,12 +74,6 @@ export interface ApPaymentApplication {
 /** Detail-level payment record — includes applications and optional JE summary. */
 export interface ApPaymentDetailResponse extends ApPaymentResponse {
   applications: ApPaymentApplication[];
-  je?: {
-    jeId: string;
-    jeNumber: string;
-    totalDebit: string;
-    totalCredit: string;
-  };
 }
 
 // ─── Paginated list envelope (matches finance-side conventions) ───────────────

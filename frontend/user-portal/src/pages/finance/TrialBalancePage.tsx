@@ -6,7 +6,7 @@
  * whether to include voided JEs. Clicking "Generate" fires the query.
  *
  * Table layout:
- *   Account Number | Account Name | Drawer | Total Debit | Total Credit | Balance
+ *   Account Number | Account Name | Drawer | Total Debit | Total Credit
  *   Grouped visually by drawer (section header row per drawer group).
  *   Zero-balance accounts hidden by default; toggle shows them all.
  *   Footer totals row — highlighted red if DR ≠ CR (out-of-balance warning).
@@ -694,7 +694,6 @@ export function TrialBalancePage() {
                     <TBTh scope="col">Drawer</TBTh>
                     <TBThRight scope="col">Total Debit (AED)</TBThRight>
                     <TBThRight scope="col">Total Credit (AED)</TBThRight>
-                    <TBThRight scope="col">Balance (AED)</TBThRight>
                   </tr>
                 </TBTHead>
                 <tbody>
@@ -704,7 +703,7 @@ export function TrialBalancePage() {
                       <>
                         {/* Drawer section header */}
                         <DrawerHeaderRow key={`drawer-${drawer}`}>
-                          <DrawerHeaderCell colSpan={6}>
+                          <DrawerHeaderCell colSpan={5}>
                             {drawer}
                           </DrawerHeaderCell>
                         </DrawerHeaderRow>
@@ -727,7 +726,6 @@ export function TrialBalancePage() {
                                 ? formatNumber(acc.totalCredit)
                                 : ''}
                             </TBTdMono>
-                            <TBTdMono>{formatNumber(acc.balance)}</TBTdMono>
                           </TBTr>
                         ))}
                       </>
@@ -750,7 +748,6 @@ export function TrialBalancePage() {
                     <TotalsTdMono $outOfBalance={outOfBalance}>
                       {formatNumber(report.totals.totalCredit)}
                     </TotalsTdMono>
-                    <TotalsTdMono $outOfBalance={outOfBalance} />
                   </TotalsTRow>
                 </tfoot>
               </TBTable>

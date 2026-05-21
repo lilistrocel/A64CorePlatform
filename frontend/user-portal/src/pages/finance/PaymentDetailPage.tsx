@@ -115,6 +115,37 @@ const ReverseButton = styled.button`
   &:hover { background: #fee2e2; }
 `;
 
+const ReversedBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-left: 4px solid #dc2626;
+  border-radius: 8px;
+  color: #7f1d1d;
+  font-size: 14px;
+  line-height: 1.5;
+`;
+
+const ReversedTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  margin-left: 10px;
+  vertical-align: middle;
+`;
+
 const Card = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   border-radius: 12px;
@@ -331,6 +362,7 @@ export function PaymentDetailPage() {
 
   const methodLabel = METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod;
   const methodColor = METHOD_COLORS[payment.paymentMethod] ?? { bg: '#f3f4f6', text: '#374151' };
+  const isReversed = Boolean(payment.je?.reversedByJeNumber);
 
   const applicationsTotal = payment.applications.reduce(
     (sum, a) => sum + (parseFloat(a.amountApplied) || 0),
@@ -367,6 +399,7 @@ export function PaymentDetailPage() {
         <div>
           <PageTitle>
             <code style={{ fontSize: 24 }}>{payment.paymentNumber}</code>
+            {isReversed && <ReversedTag>Reversed</ReversedTag>}
           </PageTitle>
           <TitleSubLine>
             {formatDate(payment.paymentDate)} &middot; {payment.vendorCode}
@@ -374,7 +407,7 @@ export function PaymentDetailPage() {
           </TitleSubLine>
         </div>
         <ActionsRow>
-          {canReverse && payment.je && (
+          {canReverse && payment.je && !isReversed && (
             <ReverseButton
               type="button"
               onClick={handleReverseClick}
@@ -386,6 +419,18 @@ export function PaymentDetailPage() {
           )}
         </ActionsRow>
       </PageHeader>
+
+      {isReversed && (
+        <ReversedBanner role="status" aria-live="polite">
+          <strong>This payment has been reversed.</strong>
+          {' '}A reversing journal entry{' '}
+          {payment.je?.reversedByJeNumber ? <code>({payment.je.reversedByJeNumber})</code> : null}
+          {' '}has been posted against the original{' '}
+          {payment.je?.jeNumber ? <code>({payment.je.jeNumber})</code> : null}.
+          Both entries remain on the books for audit and net to zero — the accounting impact
+          is fully cancelled.
+        </ReversedBanner>
+      )}
 
       {/* Payment Header Card */}
       <Card>
@@ -512,13 +557,14 @@ export function PaymentDetailPage() {
             >
               <code style={{ fontSize: 14 }}>{payment.je.jeNumber}</code>
             </JeLink>
+            {isReversed && <ReversedTag style={{ marginLeft: 0 }}>Reversed</ReversedTag>}
             <JeInlineSummary>
               DR AP {formatCurrency(payment.je.totalDebit, payment.currencyCode)}
               {'  /  '}
               CR Bank {formatCurrency(payment.je.totalCredit, payment.currencyCode)}
             </JeInlineSummary>
           </JeSummaryRow>
-          {canReverse && (
+          {canReverse && !isReversed && (
             <p style={{ fontSize: 13, color: '#6b7280', marginTop: 12, marginBottom: 0 }}>
               To reverse this payment, click "Reverse this Payment" above. This will
               navigate to the linked journal entry where you can trigger the reversal.

@@ -39,6 +39,16 @@ class ApPaymentApplicationRequest(BaseModel):
         gt=0,
         description="Amount applied from this payment against this invoice (must be > 0)",
     )
+    totalGross: Optional[Decimal] = Field(
+        None,
+        gt=0,
+        description=(
+            "Invoice totalGross (denormalized from the operation-side AP doc). "
+            "When present, the server enforces overpayment guard: "
+            "sum(existing applications) + amountApplied must not exceed totalGross. "
+            "Optional for backward compat; omitting it skips the guard."
+        ),
+    )
 
 
 class CreateApPaymentRequest(BaseModel):
@@ -111,6 +121,9 @@ class JESummary(BaseModel):
     totalDebit: Decimal
     totalCredit: Decimal
     status: str
+    # Populated by the API layer when a child reversal JE exists pointing at
+    # this JE. Frontend uses this to flag the payment as Reversed.
+    reversedByJeNumber: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

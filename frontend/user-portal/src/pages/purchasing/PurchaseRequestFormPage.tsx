@@ -18,6 +18,7 @@ import {
   useVendors,
 } from '../../hooks/queries/usePurchasing';
 import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
+import { useItemMappingsMap } from '../../hooks/queries/useItemMappingsMap';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
 import { useAuthStore } from '../../stores/auth.store';
 import type { DocumentLineCreate, UrgencyLevel } from '../../services/purchasingApi';
@@ -278,6 +279,9 @@ export function PurchaseRequestFormPage() {
   const { data: vendorsData } = useVendors({ organizationId: orgId, isActive: true, perPage: 200 });
   const vendorsList = vendorsData?.data ?? [];
 
+  // Item finance mappings — used to auto-default taxCode when user picks an item.
+  const itemMappings = useItemMappingsMap(orgId || null);
+
   // Fetch tax codes from finance service; fall back to seeded codes on error
   const { data: taxCodesData, isLoading: taxCodesLoading, isError: taxCodesError } = useTaxCodes(orgId || null);
   const activeTaxCodes = useMemo(() => {
@@ -471,9 +475,16 @@ export function PurchaseRequestFormPage() {
                     <Select
                       value={line.itemId}
                       onChange={(e) => {
-                        const item = itemsList.find((i) => i.itemId === e.target.value);
-                        setLine(line._key, 'itemId', e.target.value);
+                        const newItemId = e.target.value;
+                        const item = itemsList.find((i) => i.itemId === newItemId);
+                        setLine(line._key, 'itemId', newItemId);
                         if (item) setLine(line._key, 'uom', item.uom);
+                        // Auto-default taxCode from item's configured finance mapping.
+                        // Only applies when item is newly selected — manual tax code
+                        // edits are not overwritten because they trigger a separate
+                        // onChange on the tax code select itself.
+                        const defaultTaxCode = itemMappings.get(newItemId)?.taxCodeDefault ?? null;
+                        setLine(line._key, 'taxCode', defaultTaxCode);
                       }}
                       disabled={isReadOnly}
                       style={{ width: '100%' }}

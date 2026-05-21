@@ -34,6 +34,8 @@ from ...models.orm.models import (
     JournalEntry,
     JournalEntryLine,
 )
+from ...models.schemas.common import SuccessResponse
+from ...utils.responses import success
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +100,7 @@ class TrialBalanceResponse(BaseModel):
 
 @router.get(
     "/reports/trial-balance",
-    response_model=TrialBalanceResponse,
+    response_model=SuccessResponse[TrialBalanceResponse],
     summary="Trial balance report",
     description=(
         "Returns every active GL account's net debit/credit balance as of the given date. "
@@ -123,7 +125,7 @@ async def get_trial_balance(
     ),
     db: AsyncSession = Depends(get_db),
     _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
-) -> TrialBalanceResponse:
+) -> SuccessResponse[TrialBalanceResponse]:
     """
     Compute the trial balance for an organisation as of a given date.
 
@@ -309,7 +311,7 @@ async def get_trial_balance(
         grand_debit == grand_credit,
     )
 
-    return TrialBalanceResponse(
+    return success(TrialBalanceResponse(
         organizationId=organization_id,
         companyCode=company_code,
         asOfDate=effective_date.isoformat(),
@@ -321,7 +323,7 @@ async def get_trial_balance(
             totalDebit=str(grand_debit),
             totalCredit=str(grand_credit),
         ),
-    )
+    ))
 
 
 # ===========================================================================
@@ -427,7 +429,7 @@ def _empty_buckets() -> Dict[str, Decimal]:
 
 @router.post(
     "/reports/ap-aging",
-    response_model=ApAgingResponse,
+    response_model=SuccessResponse[ApAgingResponse],
     status_code=status.HTTP_200_OK,
     summary="AP aging report",
     description=(
@@ -442,7 +444,7 @@ async def get_ap_aging(
     body: ApAgingRequest,
     db: AsyncSession = Depends(get_db),
     _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
-) -> ApAgingResponse:
+) -> SuccessResponse[ApAgingResponse]:
     """
     Compute the AP aging report from a caller-supplied invoice list.
 
@@ -551,7 +553,7 @@ async def get_ap_aging(
         grand_total,
     )
 
-    return ApAgingResponse(
+    return success(ApAgingResponse(
         asOfDate=effective_date.isoformat(),
         totals=ApAgingBuckets(
             notDue=str(grand_buckets["notDue"]),
@@ -562,7 +564,7 @@ async def get_ap_aging(
             total=str(grand_total),
         ),
         byVendor=vendor_rows,
-    )
+    ))
 
 
 # ===========================================================================
@@ -598,7 +600,7 @@ class VendorSubLedgerResponse(BaseModel):
 
 @router.get(
     "/reports/vendor-sub-ledger",
-    response_model=VendorSubLedgerResponse,
+    response_model=SuccessResponse[VendorSubLedgerResponse],
     summary="Vendor AP sub-ledger",
     description=(
         "Returns per-vendor aggregations of JE lines posted to the AP Control account. "
@@ -623,7 +625,7 @@ async def get_vendor_sub_ledger(
     ),
     db: AsyncSession = Depends(get_db),
     _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
-) -> VendorSubLedgerResponse:
+) -> SuccessResponse[VendorSubLedgerResponse]:
     """
     Compute the vendor AP sub-ledger for a company as of a given date.
 
@@ -755,8 +757,8 @@ async def get_vendor_sub_ledger(
         total_outstanding,
     )
 
-    return VendorSubLedgerResponse(
+    return success(VendorSubLedgerResponse(
         asOfDate=effective_date.isoformat(),
         totalOutstanding=str(total_outstanding),
         byVendor=vendor_rows,
-    )
+    ))

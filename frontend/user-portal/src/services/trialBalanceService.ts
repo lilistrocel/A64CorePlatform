@@ -75,6 +75,8 @@ export async function getTrialBalance(
   if (params.periodId) queryParams.period_id = params.periodId;
   if (params.includeVoided !== undefined) queryParams.include_voided = params.includeVoided;
 
+  // Backend reports now use SuccessResponse[T] envelope, matching the rest
+  // of the finance API. Unwrap once.
   const response = await apiClient.get<SuccessEnvelope<TrialBalanceResponse>>(
     '/v1/finance/reports/trial-balance',
     { params: queryParams }

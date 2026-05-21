@@ -62,6 +62,13 @@ export function useCreatePayment() {
       queryClient.invalidateQueries({
         queryKey: ['finance', 'ap-payments', variables.organizationId],
       });
+      // Reason: RecordPaymentPage uses ['finance', 'ap-totals-paid', ...] to
+      // compute outstanding amounts per invoice. Invalidate it so the next
+      // visit shows the updated paid totals (and fully-paid invoices drop
+      // out of the picker).
+      queryClient.invalidateQueries({
+        queryKey: ['finance', 'ap-totals-paid', variables.organizationId],
+      });
     },
   });
 }
