@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-05-19
-> **Tasks:** 2 active · 0 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018 completed, moved to ARCHIVE.md)
+> **Updated:** 2026-05-21
+> **Tasks:** 6 active · 0 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053 completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -67,6 +67,144 @@
 ---
 
 ## 🔵 Active
+
+### T-054 | Document attachment infrastructure — backend (PR, PO, GR, AP Invoice, Payment)
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** backend-dev-expert · **Started:** 2026-05-21
+- **Depends on:** T-053 ✅ (frontend AttachmentList component)
+- **Blocks:** —
+- **Description:** Reusable attachment backend for the five P2P doc types. Storage
+  abstraction (LocalStorageBackend), Mongo collection `document_attachments`,
+  endpoints at `/api/v1/attachments/{doc_type}/{doc_id}` and `/api/v1/attachments/file/{file_id}`.
+  Mime whitelist: PDF + JPEG + PNG + WebP. 10 MB cap. Soft delete. Read-only after
+  approval except PAYMENT type. Range request support for PDF streaming.
+- **Steps:**
+  1. Create `src/modules/attachments/` module skeleton with __init__.py files ✅
+  2. `storage/base.py` — abstract StorageBackend interface ✅
+  3. `storage/local.py` — LocalStorageBackend (pathlib) ✅
+  4. `models/attachment.py` — AttachmentMetadata Pydantic schema ✅
+  5. `services/attachment_service.py` — full business logic ✅
+  6. `api/v1/attachments.py` — 5 endpoints ✅
+  7. `utils/range_parser.py` — HTTP Range header parser (extracted for testability) ✅
+  8. `src/config/settings.py` — ATTACHMENT_STORAGE_ROOT ✅
+  9. `src/api/routes.py` — register router at /api/v1/attachments ✅
+  10. `docker-compose.yml` — bind mount ./data/attachments:/app/data/attachments ✅
+  11. `tests/unit/test_attachments/` — 27 tests (all pass) ✅
+
+---
+
+### T-052 | Phase E frontend — AP Aging + Vendor Sub-Ledger report pages
+- **Category:** Frontend · **Priority:** P1
+- **Assigned:** frontend-dev-expert · **Started:** 2026-05-21
+- **Depends on:** T-051 ✅ (finance reports backend endpoints — complete)
+- **Blocks:** —
+- **Description:** Build two finance report pages: APAgingPage (/finance/ap-aging) and
+  VendorSubLedgerPage (/finance/vendor-sub-ledger). AP Aging uses frontend orchestration:
+  fetch Approved AP invoices, call totals-paid endpoint, compute outstanding, POST to
+  finance aging endpoint. Vendor Sub-Ledger is a GET report cross-referenced with the
+  operation vendor list for vendorCode + vendorName. Both pages have role gate, loading,
+  error, empty states. Sidebar entries added after Vendor Payments, before Fiscal Periods.
+  New financeReportsService.ts and useFinanceReports.ts.
+- **Steps:**
+  1. financeReportsService.ts — getApDocTotalsPaid, getApAging, getVendorSubLedger ✅
+  2. useFinanceReports.ts — useApAging mutation, useVendorSubLedger query ✅
+  3. Export from hooks/queries/index.ts ✅
+  4. APAgingPage.tsx — toolbar + orchestration + bucket cards + by-vendor table ✅
+  5. VendorSubLedgerPage.tsx — toolbar + total card + table + View Entries link ✅
+  6. App.tsx — lazy imports + routes ✅
+  7. MainLayout.tsx — sidebar entries ✅
+  > Context: All files created 2026-05-21. Pages show graceful API errors until T-051 ships.
+
+---
+
+### T-049 | Phase D frontend — Vendor Payment UI (payments list, detail, form)
+- **Category:** Frontend · **Priority:** P0
+- **Assigned:** frontend-dev-expert · **Started:** 2026-05-20
+- **Depends on:** T-048 🔵 (backend AP payments endpoints, landing in parallel)
+- **Blocks:** —
+- **Description:** Build vendor payment pages: PaymentsPage (list + toolbar + New Payment button),
+  PaymentDetailPage (header + applied invoices + JE summary + Reverse affordance), and
+  RecordPaymentPage (single-form with invoice checkbox-table). Service layer
+  paymentsService.ts + usePayments.ts hooks. Sidebar entry after Trial Balance / before P&L.
+  Role gating: view for accountant/finance_admin/auditor/admin/super_admin; create for
+  finance_admin/admin/super_admin. AP aging deferred (backend not yet shipping).
+- **Steps:**
+  1. paymentsService.ts — typed API (listPayments, getPayment, createPayment)
+  2. usePayments.ts — TanStack Query hooks
+  3. Export from hooks/queries/index.ts
+  4. PaymentsPage.tsx — list + toolbar + method pill + New Payment → RecordPaymentPage
+  5. PaymentDetailPage.tsx — header + applied invoices table + JE inline summary + Reverse link
+  6. RecordPaymentPage.tsx — single-form: vendor, date, bank acct, method, invoice table, notes
+  7. App.tsx — lazy imports + routes (/finance/payments, /finance/payments/new, /finance/payments/:id)
+  8. MainLayout.tsx — sidebar entry 💸 after Trial Balance, before P&L Statement
+
+---
+
+### T-049 | Phase D frontend — Vendor Payment UI (payments list, detail, form)
+- **Category:** Frontend · **Priority:** P0
+- **Status:** 🟢 Ready (backend T-048 complete)
+- **Depends on:** T-048 ✅ (backend AP payments endpoints)
+- **Blocks:** —
+- **Description:** Build vendor payment pages: PaymentsPage (list + toolbar + New Payment button),
+  PaymentDetailPage (header + applied invoices + JE summary + Reverse affordance), and
+  RecordPaymentPage (single-form with invoice checkbox-table). Service layer
+  paymentsService.ts + usePayments.ts hooks. Sidebar entry after Trial Balance / before P&L.
+  Role gating: view for accountant/finance_admin/auditor/admin/super_admin; create for
+  finance_admin/admin/super_admin. AP aging deferred (backend not yet shipping).
+- **Steps:**
+  1. paymentsService.ts — typed API (listPayments, getPayment, createPayment, getApDocTotalsPaid)
+  2. usePayments.ts — TanStack Query hooks
+  3. Export from hooks/queries/index.ts
+  4. PaymentsPage.tsx — list + toolbar + method pill + New Payment → RecordPaymentPage
+  5. PaymentDetailPage.tsx — header + applied invoices table + JE inline summary + Reverse link
+  6. RecordPaymentPage.tsx — single-form: vendor, date, bank acct, method, invoice table, notes
+  7. App.tsx — lazy imports + routes (/finance/payments, /finance/payments/new, /finance/payments/:id)
+  8. MainLayout.tsx — sidebar entry after Trial Balance
+
+---
+
+### T-044 | Phase C frontend — AP Invoice pages + variance display
+- **Category:** Frontend · **Priority:** P0
+- **Assigned:** frontend-dev-expert · **Started:** 2026-05-20
+- **Depends on:** T-043 (Phase C.1 AP Invoice backend, landing in parallel)
+- **Blocks:** —
+- **Description:** Build AP Invoice list, detail, and form pages. Service layer
+  (apInvoicesService.ts), TanStack Query hooks (useAPInvoices.ts), sidebar entry,
+  lazy routes in App.tsx. Variance display: per-line amber row highlight + red/green
+  amounts, total variance in header with tooltip. "View Journal Entry →" banner on
+  Approved docs. Extend ApprovalInboxPage to handle AP_INVOICE docType.
+- **Steps:**
+  1. apInvoicesService.ts — typed API, full CRUD + state transitions
+  2. useAPInvoices.ts — TanStack Query hooks
+  3. Export from hooks/queries/index.ts
+  4. APInvoicesPage.tsx — list with variance column
+  5. APInvoiceDetailPage.tsx — header + lines + totals + banners + actions
+  6. APInvoiceFormPage.tsx — GR picker + from-GR form + edit mode
+  7. App.tsx — lazy imports + routes
+  8. MainLayout.tsx — sidebar entry between Goods Receipts and Approval Inbox
+  9. ApprovalInboxPage.tsx — extend DocType to include AP_INVOICE
+
+---
+
+### T-038 | Phase B frontend — Goods Receipts UI + Journal Entries list
+- **Category:** Frontend · **Priority:** P0
+- **Assigned:** frontend-dev-expert · **Started:** 2026-05-20
+- **Depends on:** T-037 (backend GR module, landing in parallel)
+- **Blocks:** —
+- **Description:** Build GoodsReceiptsPage, GoodsReceiptDetailPage, GoodsReceiptFormPage
+  (purchasing side) and JournalEntriesPage with inline row-expand (finance side). Service
+  layer, TanStack Query hooks, sidebar entries, lazy routes in App.tsx.
+- **Steps:**
+  1. goodsReceiptsService.ts — typed API calls mirroring purchasingApi.ts
+  2. journalEntriesService.ts — JE list + detail with correct envelope unwrap
+  3. useGoodsReceipts.ts + useJournalEntries.ts hooks
+  4. Export from hooks/queries/index.ts
+  5. GoodsReceiptsPage.tsx, GoodsReceiptDetailPage.tsx, GoodsReceiptFormPage.tsx
+  6. JournalEntriesPage.tsx with inline row-expand
+  7. App.tsx — lazy imports + routes
+  8. MainLayout.tsx — sidebar entries
+
+---
 
 ### T-001 | Supabase 2026-04-07 reimport — User runs stages
 - **Category:** Database · **Priority:** P0
@@ -209,6 +347,29 @@
 
 ---
 
+### T-051 | UAE VAT compliance — tax-point rule + reverse-charge mechanism
+- **Category:** Backend · **Priority:** P0
+- **Assigned:** backend-dev-expert · **Started:** 2026-05-21
+- **Depends on:** —
+- **Blocks:** —
+- **Description:** PM feedback items 2 and 3.
+  Item 2: UAE Article 25 tax-point rule — add `dateOfSupply` to
+  `ApInvoicePostedPayload`, populate from GR `docDate` in
+  `build_ap_invoice_event_payload`, compute `tax_point_date =
+  min(dateOfSupply, invoiceDate)` in handler, stamp on VAT line description.
+  Item 3: Reverse-charge VAT — migration 012 adds `isReverseCharge` to
+  `tax_codes`, ORM + schema updated, handler posts both DR Input VAT and
+  CR Output VAT for SR lines, AP credit = lineNet only for SR lines.
+- **Steps:**
+  1. Claim task (done)
+  2. Migration 012_tax_codes_reverse_charge.py
+  3. ORM model: add isReverseCharge to TaxCode
+  4. Pydantic schemas: add isReverseCharge to TaxCodeCreate/Update/Response
+  5. Seed: set isReverseCharge=True on SR in seed_tax_codes
+  6. Contract: add dateOfSupply to ApInvoicePostedPayload
+  7. document_service.py: populate dateOfSupply in build_ap_invoice_event_payload
+  8. Finance handler: tax-point logic + reverse-charge JE logic
+  9. Tests
 
 ## 🟢 Ready
 
@@ -219,3 +380,4 @@ _No ready tasks._
 ## 🔴 Blocked
 
 _No blocked tasks._
+

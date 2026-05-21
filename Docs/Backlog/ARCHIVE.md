@@ -1,11 +1,356 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 20 tasks
+> **Total completed:** 54 tasks
 
 ## 2026-05
 
+### T-053 | Reusable AttachmentList component — PR, PO, GR, AP, Payment detail pages
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-21 · **Assigned:** frontend-dev-expert
+- **Description:** Built a fully typed reusable `<AttachmentList>` component with drag-and-drop
+  upload zone, file list with click-to-download links, delete confirmation modal (no overlay
+  close), and progress bar. Integrated on all five document detail pages. Service layer and
+  TanStack Query hooks wired end-to-end. Gracefully handles 404 until backend ships.
+- **Files added:**
+  - `frontend/user-portal/src/services/attachmentsService.ts` — 110 lines
+    (uploadAttachment, listAttachments, getDownloadUrl, deleteAttachment)
+  - `frontend/user-portal/src/hooks/queries/useAttachments.ts` — 92 lines
+    (useAttachments query, useUploadAttachment mutation, useDeleteAttachment mutation)
+  - `frontend/user-portal/src/components/attachments/AttachmentList.tsx` — 453 lines
+    (full component with upload zone, list, delete modal)
+- **Files modified:**
+  - `frontend/user-portal/src/hooks/queries/index.ts` — +8 lines (export attachments hooks)
+  - `frontend/user-portal/src/pages/purchasing/PurchaseRequestDetailPage.tsx` — +8 lines
+  - `frontend/user-portal/src/pages/purchasing/PurchaseOrderDetailPage.tsx` — +8 lines
+  - `frontend/user-portal/src/pages/purchasing/GoodsReceiptDetailPage.tsx` — +8 lines
+  - `frontend/user-portal/src/pages/purchasing/APInvoiceDetailPage.tsx` — +8 lines
+  - `frontend/user-portal/src/pages/finance/PaymentDetailPage.tsx` — +7 lines
+
+### T-051 | Finance backend — AP Aging report, Vendor sub-ledger, Period audit fields
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-05-21 · **Assigned:** backend-dev-expert
+- **Description:** Three finance backend refinements:
+  (1) AP Aging POST endpoint `POST /reports/ap-aging` — frontend-orchestrated, buckets
+  outstanding invoices by overdue age across five bands, groups by vendor, sorted descending.
+  (2) Vendor sub-ledger GET endpoint `GET /reports/vendor-sub-ledger` — queries
+  journal_entry_lines on the AP Control account grouped by referenceLineId (vendorId),
+  returns credits/debits/balance/entryCount/lastActivityAt per vendor.
+  (3) Migration 013 — adds closeReason, reopenedAt, reopenedByUserId, reopenReason to
+  fiscal_periods. Updated close/reopen endpoints to accept body params; reopen requires
+  reason (5-500 chars); FiscalPeriodResponse surfaces all six audit fields.
+- **Files added/modified:**
+  - `services/finance/src/finance/models/orm/models.py` — +4 audit columns on FiscalPeriod
+  - `services/finance/src/finance/models/schemas/period.py` — +4 fields on FiscalPeriodResponse
+  - `services/finance/src/finance/api/v1/periods.py` — ClosePeriodRequest + ReopenPeriodRequest bodies, full audit trail logic
+  - `services/finance/src/finance/api/v1/reports.py` — AP Aging + Vendor Sub-ledger endpoints
+  - `services/finance/alembic/versions/013_period_audit_fields.py` — NEW migration
+  - `services/finance/tests/test_ap_aging.py` — NEW 8 tests (all pass)
+  - `services/finance/tests/test_vendor_sub_ledger.py` — NEW 9 tests (all pass)
+  - `services/finance/tests/test_period_audit.py` — NEW 9 tests (all pass)
+  - `services/finance/tests/test_periods.py` — updated reopen test to supply required reason
+
+### T-051 | UAE VAT compliance — tax-point rule + reverse-charge mechanism
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-21 · **Assigned:** backend-dev-expert
+- **Description:** PM feedback items 2 and 3.
+  Item 2: UAE VAT Article 25 tax-point rule — `dateOfSupply` (= GR docDate)
+  added to `ApInvoicePostedPayload` contract; `build_ap_invoice_event_payload`
+  fetches the source GR header's `docDate` via `_emit_ap_invoice_posted_event`
+  before building the payload; finance handler computes
+  `tax_point_date = min(dateOfSupply, invoiceDate)` and embeds it in the Input
+  VAT line description for FTA audit/VAT return traceability. JE date stays at
+  `apDate`; no new column added (memo-on-description approach per spec).
+  Item 3: Reverse-charge VAT mechanism — migration 012 adds `isReverseCharge`
+  BOOLEAN to `tax_codes` with backfill for SR; ORM, Pydantic schemas, and seed
+  loader updated; handler now looks up each line's tax code, posts both DR Input
+  VAT and CR Output VAT for SR lines (self-accounting), and credits AP for
+  lineNet only (not lineGross) on RC lines.
+- **Files modified:**
+  - `contracts/finance_events.py` (+14 lines)
+  - `services/finance/alembic/versions/012_tax_codes_reverse_charge.py` (new, 55 lines)
+  - `services/finance/src/finance/models/orm/models.py` (+7 lines)
+  - `services/finance/src/finance/models/schemas/tax_code.py` (+8 lines)
+  - `services/finance/src/finance/services/seed_loader.py` (+5 lines)
+  - `services/finance/src/finance/api/v1/events.py` (+185 lines net; handler rewritten)
+  - `services/finance/tests/test_posting_ap_invoice_posted.py` (+260 lines, 16 tests)
+  - `src/modules/purchasing/services/document_service.py` (+38 lines)
+
+### T-050 | Phase D.5 frontend — Fiscal Periods management UI
+- **Category:** Frontend · **Priority:** P0
+- **Completed:** 2026-05-20 · **Assigned:** frontend-dev-expert
+- **Description:** Built full Fiscal Periods management page at /finance/periods with
+  service layer, TanStack Query hooks, close/reopen confirmation modals, and bulk-create wizard.
+- **Files added:**
+  - `frontend/user-portal/src/services/fiscalPeriodsService.ts` (+115 lines) — typed API calls (listPeriods, createPeriod, closePeriod, reopenPeriod)
+  - `frontend/user-portal/src/hooks/queries/useFiscalPeriods.ts` (+80 lines) — TanStack Query hooks (useFiscalPeriods, useCreatePeriod, useClosePeriod, useReopenPeriod)
+  - `frontend/user-portal/src/pages/finance/PeriodsPage.tsx` (+600 lines) — full page component with table, close modal, reopen modal, bulk-create wizard
+- **Files modified:**
+  - `frontend/user-portal/src/hooks/queries/index.ts` — exports for the four fiscal period hooks
+  - `frontend/user-portal/src/App.tsx` — lazy import + `/finance/periods` route
+  - `frontend/user-portal/src/components/layout/MainLayout.tsx` — sidebar entry 📅 Fiscal Periods after Vendor Payments
+
+### T-048 | Phase D — Vendor Payment module (finance backend)
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-20 · **Assigned:** backend-dev-expert
+- **Description:** Phase D of the P2P cycle — the third and final journal entry (DR AP Control / CR Bank).
+  Finance-internal action: finance user picks open AP invoices and records payment.
+  JE created atomically in the same request (no outbox event).
+- **Files added:**
+  - `services/finance/alembic/versions/011_ap_payments.py` (+115 lines) — migration for ap_payments + ap_payment_applications
+  - `services/finance/src/finance/models/schemas/ap_payments.py` (+160 lines) — Pydantic request/response schemas
+  - `services/finance/src/finance/api/v1/ap_payments.py` (+380 lines) — payment router: POST /ap-payments, GET /ap-payments, GET /ap-payments/{id}, POST /ap-invoices/totals-paid
+  - `services/finance/tests/test_ap_payment.py` (+480 lines) — 21 tests all passing
+- **Files modified:**
+  - `services/finance/src/finance/models/orm/models.py` — added PaymentMethodEnum, ApPayment, ApPaymentApplication ORM models
+  - `services/finance/src/finance/api/v1/events.py` — added _next_payment_number helper
+  - `services/finance/src/finance/main.py` — wired ap_payments router
+- **Endpoints:**
+  - `POST /api/v1/finance/ap-payments` — record a payment (finance_admin/admin/super_admin)
+  - `GET /api/v1/finance/ap-payments` — list payments (all finance read roles)
+  - `GET /api/v1/finance/ap-payments/{id}` — get payment detail with JE summary
+  - `POST /api/v1/finance/ap-invoices/totals-paid` — get total paid per apDocId (v1 frontend-join)
+- **Cross-service join:** v1 frontend-join approach — frontend supplies AP invoice details; finance returns totalPaid per apDocId; frontend computes outstanding. No service-to-service HTTP.
+- **Aging report:** Deferred to D.5 — cross-service complexity out of scope for v1. Frontend-join endpoint provides the data needed for the frontend to build its own view.
+- **Rebuild needed:** Finance container rebuild required (new ORM models, new router, new migration).
+
+
+
+### T-046 | PM feedback: JE Reversal UI, Trial Balance page, Valuation Method relocation
+- **Category:** Frontend · **Priority:** P0
+- **Completed:** 2026-05-20 · **Assigned:** frontend-dev-expert
+- **Description:** Three PM feedback critical items:
+  (4) JE Reversal UI — "Reverse Entry" button on posted JEs (finance_admin/admin/super_admin),
+  confirm modal with required reason text (5–500 chars), calls POST /api/v1/finance/journal-entries/{id}/reverse,
+  Voided badge on original rows, Reversal badge on reversal rows, "Reversal of JE-..." link.
+  (5) Trial Balance page at /finance/trial-balance — toolbar with company/date/period/voided toggle,
+  "Generate" button, grouped-by-drawer table, out-of-balance footer warning.
+  (11) Valuation Method moved from per-item to company level per IAS 2 — new "Inventory Valuation"
+  section on PostingSetupPage, column removed from ItemMappingPage.
+- **Files added:**
+  - `src/services/trialBalanceService.ts` (+83 lines) — typed API for trial balance report
+  - `src/hooks/queries/useTrialBalance.ts` (+77 lines) — useTrialBalance + useFinancePeriods hooks
+  - `src/pages/finance/TrialBalancePage.tsx` (+763 lines) — full trial balance report page
+- **Files modified:**
+  - `src/services/journalEntriesService.ts` (+35 lines) — reverseJournalEntry function + types
+  - `src/hooks/queries/useJournalEntries.ts` (+35 lines) — useReverseJournalEntry mutation
+  - `src/hooks/queries/index.ts` (+6 lines) — exports for new hooks
+  - `src/pages/finance/JournalEntriesPage.tsx` (+381 lines) — reversal UI, modal, voided rows
+  - `src/services/postingSetupService.ts` (+16 lines) — ValuationMethod type + defaultValuationMethod field
+  - `src/pages/finance/PostingSetupPage.tsx` (+65 lines) — Inventory Valuation section
+  - `src/services/itemMappingService.ts` (-1 line) — removed valuationMethod from UpdateItemMappingBody
+  - `src/pages/finance/ItemMappingPage.tsx` (-30 lines) — removed Valuation Method column/logic
+  - `src/App.tsx` (+4 lines) — TrialBalancePage lazy import + route
+  - `src/components/layout/MainLayout.tsx` (+1 line) — Trial Balance sidebar entry
+
+---
+
+### T-047 | PM feedback items 4 & 5 — JE Reversal endpoint + Trial Balance report
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-20 · **Assigned:** backend-dev-expert
+- **Description:** Two new finance backend endpoints from PM critical feedback list.
+  Item 4: JE Reversal — POST /api/v1/finance/journal-entries/{je_id}/reverse,
+  creates offsetting JE with swapped DR/CR lines, voids the original, wraps in one transaction.
+  Item 5: Trial Balance report — GET /api/v1/finance/reports/trial-balance,
+  aggregates JE line balances per GL account as of a given date.
+- **Files added:**
+  - `services/finance/src/finance/api/v1/reports.py` (+219 lines) — new router with
+    trial balance endpoint; subquery-based aggregation for correct LEFT JOIN behaviour;
+    `TrialBalanceResponse`, `TrialBalanceAccount`, `TrialBalanceTotals` schemas inline.
+  - `services/finance/tests/test_je_reversal.py` (+312 lines) — 7 tests covering happy
+    path, already-void 400, 404, 403, closed-period-posts-in-current, description reason,
+    exact DR/CR swap.
+  - `services/finance/tests/test_trial_balance.py` (+300 lines) — 5 tests covering empty
+    db, Phase B GR JE totals balance (35000 DR == 35000 CR), as_of_date filter,
+    include_voided, 403 for non-finance roles.
+- **Files modified:**
+  - `services/finance/src/finance/api/v1/journal_entries.py` — added
+    `POST /journal-entries/{je_id}/reverse` endpoint (+115 lines); imports `_next_je_number`
+    from events module; role-gates to finance_admin/admin/super_admin.
+  - `services/finance/src/finance/models/schemas/journal_entries.py` — added
+    `ReversalRequest` (reason: str, 5–500 chars) and `ReversalResponse` schemas.
+  - `services/finance/src/finance/main.py` — registered `reports.router` at `_PREFIX`.
+- **Test results:** 17 new tests all pass (7 reversal + 5 trial balance + 5 existing JE read).
+  Pre-existing 25 failures in test_events_ingest/test_posting_* are unrelated to this change.
+- **Endpoint paths:**
+  - `POST /api/v1/finance/journal-entries/{je_id}/reverse?organization_id={org}`
+  - `GET /api/v1/finance/reports/trial-balance?organization_id={org}&company_code={cc}`
+- **Note:** Finance container rebuild required for these changes to take effect.
+
+### T-045 | Accounting/CoA fixes — Items 1, 10, 11, 12 from PM feedback
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-20 · **Assigned:** backend-dev-expert
+- **Description:** Four accounting correctness fixes from PM audit.
+- **Files modified:**
+  - `services/finance/src/finance/db/seeds/default_coa.py` — added 3 accounts:
+    `514000-004 Purchase Price Variance`, `617000-011 Rounding Differences`,
+    `223000-004 Goods Received Not Invoiced`; updated docstring count to 231.
+  - `services/finance/src/finance/models/orm/models.py` — added
+    `CompanyPostingSetup.defaultValuationMethod` (NOT NULL, default MovingAverage);
+    added deprecation docstring on `PurchaseItemFinanceExt.valuationMethod`.
+  - `services/finance/src/finance/models/schemas/posting_setup.py` — added
+    `defaultValuationMethod` to both `CompanyPostingSetupUpdate` (Optional) and
+    `CompanyPostingSetupResponse` (required field).
+  - `services/finance/src/finance/api/v1/company.py` — updated PUT handler to
+    skip None on non-nullable fields (`defaultValuationMethod`) to prevent
+    partial-update clobbering.
+- **Files added:**
+  - `services/finance/alembic/versions/010_posting_setup_default_valuation_method.py`
+    — Alembic migration 010; adds `defaultValuationMethod` ENUM column.
+  - `services/finance/scripts/migrate_grir_reclassification.py` — idempotent
+    async script: migrates `grIrClearingAccountId` from 221000-002 → 223000-004
+    and deactivates 221000-002 across all orgs.
+  - `services/finance/scripts/__init__.py` — package marker.
+  - `services/finance/tests/test_coa_fixes_pm_items.py` — 12 new tests (all pass).
+- **Dev DB inserts applied:**
+  - `617000-011 Rounding Differences` — inserted.
+  - `223000-004 Goods Received Not Invoiced` — inserted.
+  - `221000-002 Goods Received Not Invoiced` — set isActive=0 (row preserved).
+  - `company_posting_setup.grIrClearingAccountId` migrated to 223000-004.
+  - Migration 010 applied manually; alembic_version updated to 010.
+- **Verification:**
+  - All 3 new accounts active in dev DB; 221000-002 inactive.
+  - `grIrClearingAccountId` points at 223000-004 (accountName confirmed).
+  - JE-1000-2026-0001 lines unaffected — still reference 221000-002 correctly.
+  - `defaultValuationMethod=MovingAverage` in company_posting_setup.
+  - 12/12 new tests pass; existing passing tests unchanged (pre-existing failures
+    unrelated to this task).
+- **Note:** Finance container needs rebuild to load migration 010 and new seed
+  accounts for fresh deployments.
+
+### T-043 | Phase C.1 — AP Invoice module (operation side)
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-20 · **Assigned:** backend-dev-expert
+- **Description:** Built full AP Invoice module on the operation side. New doc type
+  `AP` with state machine Draft → Pending Approval → Approved | Rejected + Withdraw.
+  Emits `ap_invoice_posted` outbox event on Approve (matches `ApInvoicePostedPayload`
+  contract exactly). One-AP-per-GR enforcement, quantity locked to GR receipt, v1
+  hardcoded tax rates (S/SR=5%, Z/E/N=0%), price variance computation per line.
+  21/21 unit tests pass; 39/39 across all purchasing tests. No containers to restart
+  (volume-mounted src).
+- **Files added/changed:**
+  - `src/modules/purchasing/models/document.py` — added APStatus, AP_TAX_RATES,
+    APLineInput, APFromGRCreate, APCreate, APUpdate, APResponse, APDetailResponse;
+    extended DocumentLineResponse with grLineId, poUnitPrice, priceVarianceAmount;
+    DocType Literal extended with "AP"
+  - `src/modules/purchasing/services/document_service.py` — added
+    build_ap_invoice_event_payload, _header_to_ap_response, _AP_TRANSITIONS,
+    _AP_TRANSITIONS in _validate_transition, all AP service methods
+    (create_ap_from_gr, create_ap, list_aps, get_ap, update_ap, submit_ap,
+    approve_ap, reject_ap, withdraw_ap, soft_delete_ap,
+    _emit_ap_invoice_posted_event, _build_ap_lines_from_gr, _sum_ap_lines)
+  - `src/modules/purchasing/services/approval_engine.py` — extended DocTypeT with
+    AP_INVOICE, added AP_INVOICE fallback rule (accountant role, 10000 AED threshold)
+  - `src/modules/purchasing/api/v1/ap_invoices.py` — NEW: full router with 9 endpoints
+  - `src/modules/purchasing/api/v1/__init__.py` — wired ap_router
+  - `tests/unit/test_purchasing/test_ap_invoice_service.py` — NEW: 21 unit tests
+
+### T-044 | Phase C.5 — `_handle_ap_invoice_posted` finance handler
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-20 · **Assigned:** backend-dev-expert
+- **Description:** Implemented `_handle_ap_invoice_posted` in
+  `services/finance/src/finance/api/v1/events.py`. Produces the second JE of the P2P
+  cycle: DR GR/IR Clearing (expectedNet) + DR Input VAT (if non-zero) + DR/CR Purchase
+  Price Variance (if non-zero) + CR AP Control (totalGrossAmount). Wired into the
+  dispatch block `elif event.eventType == "ap_invoice_posted"`. Full variance sign
+  handling with balance proof. `referenceLineId` on CR line set to `vendorId` for
+  sub-ledger prep. 11/11 tests pass in
+  `services/finance/tests/test_posting_ap_invoice_posted.py`.
+
+### T-042 | Replace plain-text tax-code inputs with dropdown sourced from finance service
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-20 · **Assigned:** frontend-dev-expert
+- **Description:** Created `taxCodesService.ts` + `useTaxCodes` hook (same pattern as
+  `financeCompaniesService`/`useFinanceCompanies`). Wired into `PurchaseRequestFormPage` and
+  `PurchaseOrderFormPage` — replaced plain `<input>` with `<select>` populated from
+  `GET /api/v1/finance/tax-codes`. Fixed the hardcoded invalid default `'VAT5'` → `'S'`
+  in both the `emptyLine()` factory and the from-PR line copy. Fallback to 5 seeded codes
+  on network error. TypeScript clean (`npx tsc --noEmit` zero errors).
+
+### T-041 | AccountCombobox UX fixes + ItemMappingPage table width
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-20 · **Assigned:** frontend-dev-expert
+- **Description:** Three UX fixes: (1) Replaced two-mode chip/input toggle with a single
+  always-typeable input that shows the selected label when unfocused, select-all on focus,
+  and a ✕ clear button inside the input. (2) Rendered the dropdown via ReactDOM.createPortal
+  into document.body with fixed positioning + getBoundingClientRect so it escapes table-cell
+  overflow:hidden. (3) Raised EditCell min-width from 200px to 280px and Table min-width from
+  1000px to 1200px in ItemMappingPage. TypeScript clean (0 errors).
+
+### T-040 | Approval engine + document header chain-readiness precautions
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-05-20 · **Assigned:** backend-dev-expert
+- **Description:** Additive changes to make approval engine and document headers
+  chain-ready for Phase F (multi-step workflow rewrite) without revisiting Phases C/D.
+- **Files modified:**
+  - `src/modules/purchasing/services/approval_engine.py` (+44 lines net)
+    - Added `ApprovalStep` dataclass (step_number, required_role, step_label).
+    - Expanded `ApprovalDecision` with `next_step: Optional[ApprovalStep]` and
+      `workflow_id: Optional[str]` (null today). Added `approver_role` as a
+      backward-compat `@property` derived from `next_step.required_role`.
+    - `_fallback_rules` and `_query_finance` updated to build `ApprovalStep(1, role)`.
+  - `src/modules/purchasing/models/document.py` (+36 lines net)
+    - Added `ApprovalHistoryEntry` Pydantic model (7 fields, Literal decision).
+    - Added `approvalHistory: List[ApprovalHistoryEntry] = []` to `PRResponse`,
+      `POResponse`, `GRResponse` (GR always empty, for shape consistency).
+  - `src/modules/purchasing/services/document_service.py` (+94 lines net)
+    - Imported `ApprovalHistoryEntry`.
+    - `_header_to_pr_response`, `_header_to_po_response` pass `approvalHistory` from doc.
+    - `_header_to_gr_response` passes `approvalHistory=[]` (GR has no gate).
+    - `submit_pr` / `submit_po`: initialize `approvalHistory: []` via conditional update
+      before the main `$set` when field does not exist yet.
+    - `approve_pr` / `reject_pr` / `approve_po` / `reject_po`: add `$push` to `approvalHistory`
+      alongside `$set`; entry has stepNumber=1, workflowId=None.
+    - `build_pr_event_payload` and `build_po_event_payload` include `approvalHistory`.
+  - `contracts/finance_events.py` (+14 lines net)
+    - `PurchaseRequestStateChangedPayload` + `PurchaseOrderStateChangedPayload` each get
+      `approvalHistory: Optional[List[dict]] = None` (optional → backward-compat).
+- **Tests added:**
+  - `tests/unit/test_purchasing/test_approval_chain_readiness.py` (8 tests, all pass)
+    - backward-compat property returns same value as next_step.required_role
+    - fallback rules for PR / PO with step populated correctly
+    - approve_pr appends history entry with stepNumber=1, decision=Approved
+    - reject_pr appends history entry with stepNumber=1, decision=Rejected
+- **Test run:** 47/47 passed (8 new + 39 pre-existing unchanged)
+
+### T-037 | Phase B.1 — Goods Receipt (GR) module (operation side)
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-20 · **Assigned:** backend-dev-expert
+- **Description:** Built the GR document type (Draft → Posted state machine) that creates a
+  Goods Receipt from an Open/Sent PO. On Post: decrements PO line openQuantity, auto-closes the
+  PO when fully received, emits purchase_received outbox event matching PurchaseReceivedPayload
+  from contracts/finance_events.py. All steps atomic via _txn(). Immutability enforced.
+- **Files added:**
+  - `src/modules/purchasing/api/v1/goods_receipts.py` (new router, 6 endpoints)
+  - `tests/unit/test_purchasing/__init__.py`
+  - `tests/unit/test_purchasing/test_gr_service.py` (10 tests, all passing)
+- **Files modified:**
+  - `src/modules/purchasing/models/document.py` — added GR schemas + itemType on line response
+  - `src/modules/purchasing/services/document_service.py` — added GR state machine, service
+    methods, build_gr_event_payload, _header_to_gr_response, updated _resolve_item/_line_to_response
+  - `src/modules/purchasing/api/v1/__init__.py` — registered gr_router
+
 | ID | Task | Category | Completed | Verified |
 |----|------|----------|-----------|----------|
+| T-039 | Sidebar nav restructure — Operations group with recursive renderer | Frontend | 2026-05-20 | TypeScript clean (npx tsc --noEmit); user to verify UI |
+| T-038 | Phase B.3 — `_handle_purchase_received` posting handler (finance side) | Backend | 2026-05-20 | 9/9 new tests pass; 55 total passed / 6 pre-existing failures unchanged |
+| T-036 | Phase A.4 backend — per-item GL account mapping (finance side) | Backend | 2026-05-20 | migration 009 applied, DESCRIBE verified, 47 passed / 5 pre-existing X-Secret failures |
+| T-035 | Phase A.4 frontend — Item GL Account Mapping page (/finance/item-mapping) | Frontend | 2026-05-20 | pending Viet Anh (backend endpoint not live yet) |
+| T-032 | Phase A.1 + A.2 — JE tables + Posting Setup (finance backend) | Backend | 2026-05-20 | alembic upgrade head + DESCRIBE verified |
+| T-033 | Phase A.3 — Posting Setup UI (/finance/posting-setup) | Frontend | 2026-05-20 | pending Viet Anh |
+| T-034 | Searchable AccountCombobox for PostingSetupPage | Frontend | 2026-05-20 | pending Viet Anh |
+| T-031 | Finance — Incoming Preview page (/finance/incoming) | Frontend | 2026-05-20 | pending Viet Anh |
+| T-030 | Wire /api/v1/finance/companies into Approval Rules page — dynamic company dropdown | Frontend | 2026-05-20 | pending Viet Anh |
+| T-029 | Finance backend flags: seed backfill + companies org filter + CoA docstring | Backend | 2026-05-20 | pending Viet Anh |
+| T-028 | Frontend polish: 4 flags from CoA + Approval Rules session | Frontend | 2026-05-20 | pending Viet Anh |
+| T-027 | Approval Rules management page (finance UI) | Frontend | 2026-05-20 | pending Viet Anh |
+| T-026 | Surface four new GL Account fields on Chart of Accounts page UI | Frontend | 2026-05-20 | pending Viet Anh |
+| T-025 | CoA backend polish — description field + surface account_level/role/ifrs_tag | Backend | 2026-05-20 | pending Viet Anh |
+| T-024 | Chart of Accounts (CoA) page — Finance UI | Frontend | 2026-05-20 | pending Viet Anh |
+| T-023 | Activate finance stack and verify outbox end-to-end | DevOps | 2026-05-20 | verified |
+| T-022 | Vendor form modal — field-level validation and friendly error display | Frontend | 2026-05-20 | pending Viet Anh |
+| T-021 | Transactional outbox in purchasing document service — Phase 2 (Viet Anh) | Backend | 2026-05-20 | pending Viet Anh |
+| T-020 | Finance outbox reconciliation sweeper — Phase 1B follow-up (Viet Anh) | Backend + DevOps | 2026-05-20 | pending Viet Anh |
+| T-019 | Purchasing — Phase 1B PR + PO + approvals (Viet Anh) | Backend + Frontend | 2026-05-20 | pending Viet Anh |
 | T-018 | Purchasing — Phase 1A master data (Viet Anh) | Backend + Frontend + Database | 2026-05-19 | pending Viet Anh |
 | T-017 | Finance Service — Week 3 outbox bridge (Viet Anh) | Backend + DevOps | 2026-05-19 | ✅ |
 | T-016 | Finance Service — Week 1 scaffold (Viet Anh) | Backend | 2026-05-19 | ✅ |
@@ -20,6 +365,82 @@
 | T-012 | Plant Library — Fertigation Schedule editor (Viet Anh) | Frontend | 2026-05-08 | ✅ |
 | T-014 | Fert Calculator — Yield Mode (UI) (Viet Anh) | Frontend | 2026-05-11 | ✅ |
 | T-013 | Fert Calculator — Yield Mode (Excel) (Viet Anh) | Backend | 2026-05-11 | ✅ |
+
+### T-024 | Chart of Accounts (CoA) page — Finance UI
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-20
+- **Description:** Built the GL Chart of Accounts management page.
+- **Result:**
+  - `frontend/user-portal/src/utils/apiErrors.ts` — extracted `parseApiErrors` helper (65 lines)
+  - `frontend/user-portal/src/services/financeAccountsService.ts` — axios-based CRUD (214 lines)
+  - `frontend/user-portal/src/hooks/queries/useFinanceAccounts.ts` — TanStack Query hooks (151 lines)
+  - `frontend/user-portal/src/pages/finance/ChartOfAccountsPage.tsx` — full page (1406 lines)
+  - Routes `/finance/chart-of-accounts`, `/finance/coa` (redirect), `/finance` (redirect) added to `App.tsx`
+  - Finance sidebar group added to `MainLayout.tsx` (accountant/finance_admin/auditor/admin/super_admin)
+  - Finance hooks exported from `hooks/queries/index.ts`
+  - TypeScript clean: 0 errors from `npx tsc --noEmit`
+
+---
+
+### T-021 | Transactional outbox in purchasing document service — Phase 2 (Viet Anh)
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-20
+- **Author:** Viet Anh
+- **Description:** Closed the consistency hole in the purchasing document service where
+  two independent Mongo writes (header update, outbox insert) had no atomicity and the
+  outbox failure was silently swallowed. Wrapped all state mutations in Motor session
+  transactions so the header write and the outbox insert commit or abort together.
+- **Result:**
+  - **Modified:** `src/modules/finance_bridge/outbox_writer.py` — added optional
+    `session: Optional[AsyncIOMotorClientSession]` parameter to `OutboxWriter.publish`;
+    passes it to `insert_one(..., session=session)`. Backwards-compatible (default None).
+  - **Modified:** `src/modules/purchasing/services/document_service.py` — added
+    `_txn()` async context manager (`asynccontextmanager`) that yields a Motor session
+    inside an active Mongo multi-document transaction. Updated `_next_doc_number` to
+    accept a session (counter increments participate in the transaction). Updated
+    `_build_and_insert_lines` to accept a session. Updated `_emit_pr_event` and
+    `_emit_po_event` to accept session and forward to OutboxWriter; removed the
+    `try/except` swallows so exceptions propagate and abort the transaction. Wrapped
+    all 14 state-mutating methods in `_txn()`. Approval-engine network calls remain
+    outside the transaction (see module docstring for rationale).
+  - **Added:** `tests/unit/test_finance_bridge/test_transactional_outbox.py` — 7 new
+    tests covering session passthrough, backwards compatibility, transaction abort on
+    outbox failure, call ordering inside transaction, and exception propagation.
+  - **Updated:** `Docs/4-Finance-Mod-docs/INTEGRATION_MODEL.md` — §6.4 added,
+    §7 failure table updated, §9 action item marked done.
+- **Test result:** 29/29 finance bridge tests pass. Pre-existing failures in
+  `test_ai_assistant` and `test_excel_handler` are due to `passlib`/`anthropic`
+  not installed in the local Python env (Docker-only deps) — unrelated to this task.
+
+### T-020 | Finance outbox reconciliation sweeper — Phase 1B follow-up (Viet Anh)
+- **Category:** Backend + DevOps · **Priority:** P1
+- **Completed:** 2026-05-20
+- **Author:** Viet Anh
+- **Description:** Defense-in-depth safety net for the finance outbox consistency hole.
+  Two separate non-transactional Mongo writes in `document_service.py` can leave
+  finance_outbox with missing rows when the outbox write fails silently. This sweeper
+  runs every 5 minutes in the cron container, detects gaps, and back-fills them with
+  deterministic event IDs (uuid5) to guarantee idempotency.
+- **Result:**
+  - **Modified:** `src/modules/purchasing/services/document_service.py` — extracted
+    `build_pr_event_payload()` and `build_po_event_payload()` as module-level functions;
+    `_emit_pr_event` and `_emit_po_event` now delegate to them (no behavior change).
+  - **New file:** `cron/scripts/__init__.py` — package init
+  - **New file:** `cron/scripts/outbox_reconciler.py` — sweeper: scans document_headers,
+    checks finance_outbox presence, re-emits via OutboxWriter with deterministic eventId
+  - **New file:** `cron/run-outbox-reconciler.sh` — crontab shell wrapper
+  - **Modified:** `cron/Dockerfile` — added Python 3, pip, motor, pydantic
+  - **Modified:** `cron/crontab` — added `*/5 * * * *` entry for sweeper
+  - **Modified:** `docker-compose.yml` — cron service gets MONGODB_URL, MONGODB_DB_NAME,
+    FINANCE_OUTBOX_ENABLED, PYTHONPATH + volume mounts for src/, contracts/, cron/scripts/
+  - **New file:** `tests/unit/test_finance_bridge/test_outbox_reconciler.py` — 13 tests
+    (4 unit for make_sweeper_event_id, 3 unit for outbox_event_exists, 6 integration
+    scenarios A–E + deterministic-ID capture); all 13 passing
+  - **Test results:** 22/22 finance-bridge tests pass; pre-existing failures in
+    test_fertilizer_calculator and test_sensehub_crop_sync are unrelated (passlib not
+    installed locally)
+- **CodeMaps:** Regeneration needed — new cron/scripts/ package added; no new API
+  endpoints or MongoDB collections.
 
 ### T-017 | Finance Service — Week 3 outbox bridge (Viet Anh)
 - **Category:** Backend + DevOps · **Priority:** P1
