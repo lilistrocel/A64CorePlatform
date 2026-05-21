@@ -559,8 +559,8 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  /* Bounded responsive height — scales with viewport, capped at both ends. */
-  height: clamp(96px, 14vw, 200px);
+  /* Bounded responsive height. Capped so banner-shaped logo fits 440px card. */
+  height: clamp(56px, 8vw, 120px);
   width: auto;
   display: block;
   margin: 0 auto;

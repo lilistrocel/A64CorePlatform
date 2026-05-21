@@ -176,8 +176,8 @@ const LogoWrapper = styled.div`
 `;
 
 const LogoImg = styled.img`
-  /* Hero-level on the division-picker; larger min + larger ceiling. */
-  height: clamp(120px, 16vw, 240px);
+  /* Hero-level on the division-picker; logo is banner ~2.9:1. */
+  height: clamp(72px, 10vw, 150px);
   width: auto;
 `;
 

@@ -397,9 +397,10 @@ const Logo = styled.div`
 `;
 
 const LogoImg = styled.img`
-  /* Bounded responsive height — scales with viewport, capped at both ends.
-     14vw is ~107px at 768 (tablet) and ~179px at 1280 (laptop). */
-  height: clamp(96px, 14vw, 200px);
+  /* Bounded responsive height. Logo is banner-shaped (~2.9:1), so a
+     200px height gives ~580px width — overflows a 440px card.
+     Capped at 120px to keep width ≤ 350px on desktop. */
+  height: clamp(56px, 8vw, 120px);
   width: auto;
   display: block;
   margin: 0 auto;
