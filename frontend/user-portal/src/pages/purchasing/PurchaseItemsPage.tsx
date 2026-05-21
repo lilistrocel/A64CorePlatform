@@ -130,6 +130,15 @@ function ItemFormModal({ item, organizationId, onClose, onSaved }: ItemFormModal
 
   const handleSubmit = async () => {
     setError(null);
+    // Reason: refuse to submit when organizationId is missing. Empty-string org
+    // would create a record the finance consumer can't process (UUID validation
+    // fails downstream), leaving an orphan item + a failed outbox event.
+    if (!isEdit && !organizationId) {
+      setError(
+        'No organisation assigned to your account. Log out and back in to refresh — if the problem persists, contact admin.'
+      );
+      return;
+    }
     try {
       if (isEdit) {
         const update: PurchaseItemUpdate = {

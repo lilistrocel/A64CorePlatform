@@ -107,10 +107,67 @@ const ChemicalsCatalog = lazy(() =>
 // Admin pages
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
 
+// Finance module pages
+const ChartOfAccountsPage = lazy(() =>
+  import('./pages/finance/ChartOfAccountsPage').then(m => ({ default: m.ChartOfAccountsPage }))
+);
+const ApprovalRulesPage = lazy(() =>
+  import('./pages/finance/ApprovalRulesPage').then(m => ({ default: m.ApprovalRulesPage }))
+);
+const PostingSetupPage = lazy(() =>
+  import('./pages/finance/PostingSetupPage').then(m => ({ default: m.PostingSetupPage }))
+);
+const ItemMappingPage = lazy(() =>
+  import('./pages/finance/ItemMappingPage').then(m => ({ default: m.ItemMappingPage }))
+);
+const IncomingPreviewPage = lazy(() =>
+  import('./pages/finance/IncomingPreviewPage').then(m => ({ default: m.IncomingPreviewPage }))
+);
+
 // Purchasing module pages (Phase 1A master data)
 const VendorsPage = lazy(() => import('./pages/purchasing/VendorsPage').then(m => ({ default: m.VendorsPage })));
 const PurchaseItemsPage = lazy(() => import('./pages/purchasing/PurchaseItemsPage').then(m => ({ default: m.PurchaseItemsPage })));
 const PaymentTermsPage = lazy(() => import('./pages/purchasing/PaymentTermsPage').then(m => ({ default: m.PaymentTermsPage })));
+
+// Purchasing module pages (Phase 1B PR + PO + approvals)
+// Reason: `PurchaseOrdersPage` (line 75) already exists from the sales module, so the
+// purchasing version is aliased to `PurchasingPurchaseOrdersPage` to prevent the
+// duplicate-identifier Babel crash that caused the v1.15.0+1 frontend outage.
+const PurchaseRequestsPage = lazy(() => import('./pages/purchasing/PurchaseRequestsPage').then(m => ({ default: m.PurchaseRequestsPage })));
+const PurchaseRequestFormPage = lazy(() => import('./pages/purchasing/PurchaseRequestFormPage').then(m => ({ default: m.PurchaseRequestFormPage })));
+const PurchaseRequestDetailPage = lazy(() => import('./pages/purchasing/PurchaseRequestDetailPage').then(m => ({ default: m.PurchaseRequestDetailPage })));
+const PurchasingPurchaseOrdersPage = lazy(() => import('./pages/purchasing/PurchaseOrdersPage').then(m => ({ default: m.PurchaseOrdersPage })));
+const PurchaseOrderFormPage = lazy(() => import('./pages/purchasing/PurchaseOrderFormPage').then(m => ({ default: m.PurchaseOrderFormPage })));
+const PurchaseOrderDetailPage = lazy(() => import('./pages/purchasing/PurchaseOrderDetailPage').then(m => ({ default: m.PurchaseOrderDetailPage })));
+const ApprovalInboxPage = lazy(() => import('./pages/purchasing/ApprovalInboxPage').then(m => ({ default: m.ApprovalInboxPage })));
+
+// Purchasing module pages (Phase B — Goods Receipts)
+const GoodsReceiptsPage = lazy(() => import('./pages/purchasing/GoodsReceiptsPage').then(m => ({ default: m.GoodsReceiptsPage })));
+const GoodsReceiptDetailPage = lazy(() => import('./pages/purchasing/GoodsReceiptDetailPage').then(m => ({ default: m.GoodsReceiptDetailPage })));
+const GoodsReceiptFormPage = lazy(() => import('./pages/purchasing/GoodsReceiptFormPage').then(m => ({ default: m.GoodsReceiptFormPage })));
+
+// Purchasing module pages (Phase C — AP Invoices)
+const APInvoicesPage = lazy(() => import('./pages/purchasing/APInvoicesPage').then(m => ({ default: m.APInvoicesPage })));
+const APInvoiceDetailPage = lazy(() => import('./pages/purchasing/APInvoiceDetailPage').then(m => ({ default: m.APInvoiceDetailPage })));
+const APInvoiceFormPage = lazy(() => import('./pages/purchasing/APInvoiceFormPage').then(m => ({ default: m.APInvoiceFormPage })));
+
+// Finance module pages (Phase B — Journal Entries)
+const JournalEntriesPage = lazy(() => import('./pages/finance/JournalEntriesPage').then(m => ({ default: m.JournalEntriesPage })));
+
+// Finance module pages (PM feedback item 5 — Trial Balance)
+const TrialBalancePage = lazy(() => import('./pages/finance/TrialBalancePage').then(m => ({ default: m.TrialBalancePage })));
+
+// Finance module pages (Phase D — Vendor Payments)
+const PaymentsPage = lazy(() => import('./pages/finance/PaymentsPage').then(m => ({ default: m.PaymentsPage })));
+const PaymentDetailPage = lazy(() => import('./pages/finance/PaymentDetailPage').then(m => ({ default: m.PaymentDetailPage })));
+const RecordPaymentPage = lazy(() => import('./pages/finance/RecordPaymentPage').then(m => ({ default: m.RecordPaymentPage })));
+
+// Finance module pages (Phase D.5 — Fiscal Periods)
+const PeriodsPage = lazy(() => import('./pages/finance/PeriodsPage').then(m => ({ default: m.PeriodsPage })));
+
+// Finance module pages (Phase E — AP Aging + Vendor Sub-Ledger reports)
+const APAgingPage = lazy(() => import('./pages/finance/APAgingPage').then(m => ({ default: m.APAgingPage })));
+const VendorSubLedgerPage = lazy(() => import('./pages/finance/VendorSubLedgerPage').then(m => ({ default: m.VendorSubLedgerPage })));
 
 // Division selector (shown after login when user belongs to multiple divisions)
 const DivisionSelector = lazy(() =>
@@ -211,11 +268,66 @@ function App() {
                 <Route path="/tools/fertilizer-calculator" element={<FertilizerCostCalculator />} />
                 <Route path="/tools/chemicals" element={<ChemicalsCatalog />} />
 
+                {/* Finance module */}
+                <Route path="/finance/chart-of-accounts" element={<ChartOfAccountsPage />} />
+                <Route path="/finance/approval-rules" element={<ApprovalRulesPage />} />
+                <Route path="/finance/posting-setup" element={<PostingSetupPage />} />
+                <Route path="/finance/item-mapping" element={<ItemMappingPage />} />
+                <Route path="/finance/incoming" element={<IncomingPreviewPage />} />
+                {/* Short URL alias for engineers */}
+                <Route path="/finance/coa" element={<Navigate to="/finance/chart-of-accounts" replace />} />
+                <Route path="/finance" element={<Navigate to="/finance/chart-of-accounts" replace />} />
+
                 {/* Purchasing module (Phase 1A) */}
                 <Route path="/purchasing/vendors" element={<VendorsPage />} />
                 <Route path="/purchasing/items" element={<PurchaseItemsPage />} />
                 <Route path="/purchasing/payment-terms" element={<PaymentTermsPage />} />
                 <Route path="/purchasing" element={<Navigate to="/purchasing/vendors" replace />} />
+
+                {/* Purchasing module (Phase 1B — PR + PO + approvals) */}
+                <Route path="/purchasing/pr" element={<PurchaseRequestsPage />} />
+                <Route path="/purchasing/pr/new" element={<PurchaseRequestFormPage />} />
+                <Route path="/purchasing/pr/:docId" element={<PurchaseRequestDetailPage />} />
+                <Route path="/purchasing/pr/:docId/edit" element={<PurchaseRequestFormPage />} />
+                <Route path="/purchasing/po" element={<PurchasingPurchaseOrdersPage />} />
+                <Route path="/purchasing/po/new" element={<PurchaseOrderFormPage />} />
+                <Route path="/purchasing/po/from-pr/:prDocId" element={<PurchaseOrderFormPage />} />
+                <Route path="/purchasing/po/:docId" element={<PurchaseOrderDetailPage />} />
+                <Route path="/purchasing/po/:docId/edit" element={<PurchaseOrderFormPage />} />
+                <Route path="/purchasing/approvals" element={<ApprovalInboxPage />} />
+
+                {/* Purchasing module (Phase B — Goods Receipts) */}
+                <Route path="/purchasing/gr" element={<GoodsReceiptsPage />} />
+                <Route path="/purchasing/gr/new" element={<GoodsReceiptFormPage />} />
+                <Route path="/purchasing/gr/from-po/:poDocId" element={<GoodsReceiptFormPage />} />
+                <Route path="/purchasing/gr/:docId" element={<GoodsReceiptDetailPage />} />
+                <Route path="/purchasing/gr/:docId/edit" element={<GoodsReceiptFormPage />} />
+
+                {/* Purchasing module (Phase C — AP Invoices) */}
+                <Route path="/purchasing/ap" element={<APInvoicesPage />} />
+                <Route path="/purchasing/ap/new" element={<APInvoiceFormPage />} />
+                <Route path="/purchasing/ap/from-gr/:grDocId" element={<APInvoiceFormPage />} />
+                <Route path="/purchasing/ap/:docId" element={<APInvoiceDetailPage />} />
+                <Route path="/purchasing/ap/:docId/edit" element={<APInvoiceFormPage />} />
+
+                {/* Finance module (Phase B — Journal Entries) */}
+                <Route path="/finance/journal-entries" element={<JournalEntriesPage />} />
+
+                {/* Finance module (PM feedback item 5 — Trial Balance) */}
+                <Route path="/finance/trial-balance" element={<TrialBalancePage />} />
+
+                {/* Finance module (Phase D — Vendor Payments) */}
+                <Route path="/finance/payments" element={<PaymentsPage />} />
+                {/* /new MUST come before /:paymentId to avoid treating "new" as a paymentId */}
+                <Route path="/finance/payments/new" element={<RecordPaymentPage />} />
+                <Route path="/finance/payments/:paymentId" element={<PaymentDetailPage />} />
+
+                {/* Finance module (Phase D.5 — Fiscal Periods) */}
+                <Route path="/finance/periods" element={<PeriodsPage />} />
+
+                {/* Finance module (Phase E — AP Aging + Vendor Sub-Ledger) */}
+                <Route path="/finance/ap-aging" element={<APAgingPage />} />
+                <Route path="/finance/vendor-sub-ledger" element={<VendorSubLedgerPage />} />
 
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />

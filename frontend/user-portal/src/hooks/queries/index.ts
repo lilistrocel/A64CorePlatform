@@ -76,3 +76,127 @@ export {
   useDeletePaymentTerms,
   purchasingQueryKeys,
 } from './usePurchasing';
+
+// Finance hooks — GL Chart of Accounts
+export {
+  useFinanceAccounts,
+  useFinanceAccount,
+  useCreateFinanceAccount,
+  useUpdateFinanceAccount,
+  useDeactivateFinanceAccount,
+  useReactivateFinanceAccount,
+  financeAccountsQueryKeys,
+} from './useFinanceAccounts';
+
+// Finance hooks — Approval Rules
+export {
+  useApprovalRules,
+  useResolveApprovalRule,
+  useCreateApprovalRule,
+  useUpdateApprovalRule,
+  useDeleteApprovalRule,
+  useReactivateApprovalRule,
+  approvalRulesQueryKeys,
+} from './useApprovalRules';
+
+// Finance hooks — Companies (legal entity master data)
+export { useFinanceCompanies } from './useFinanceCompanies';
+
+// Finance hooks — Tax Codes (VAT/tax master data)
+export { useTaxCodes } from './useTaxCodes';
+
+// Finance hooks — Incoming Preview (read-only Pending Approval docs)
+export {
+  useIncomingPRs,
+  useIncomingPOs,
+  useIncomingPRDetail,
+  useIncomingPODetail,
+  incomingQueryKeys,
+} from './useIncomingDocs';
+
+// Finance hooks — Posting Setup (company_posting_setup config)
+export {
+  usePostingSetup,
+  useUpsertPostingSetup,
+  postingSetupQueryKeys,
+} from './usePostingSetup';
+
+// Finance hooks — Item GL Account Mapping (purchase_item_finance_ext)
+export {
+  useItemMappings,
+  useItemMapping,
+  useUpdateItemMapping,
+  itemMappingQueryKeys,
+} from './useItemMappings';
+
+// Purchasing hooks — Goods Receipts (Phase B)
+export {
+  useGoodsReceipts,
+  useGoodsReceipt,
+  useCreateGRFromPO,
+  useUpdateGoodsReceipt,
+  usePostGoodsReceipt,
+  useDeleteGoodsReceipt,
+  grQueryKeys,
+} from './useGoodsReceipts';
+
+// Finance hooks — Journal Entries (Phase B)
+export {
+  useJournalEntries,
+  useJournalEntry,
+  useReverseJournalEntry,
+  jeQueryKeys,
+} from './useJournalEntries';
+
+// Purchasing hooks — AP Invoices (Phase C)
+export {
+  useAPInvoices,
+  useAPInvoice,
+  usePostedGRsForAP,
+  useCreateAPFromGR,
+  useUpdateAPInvoice,
+  useSubmitAPInvoice,
+  useApproveAPInvoice,
+  useRejectAPInvoice,
+  useDeleteAPInvoice,
+  apQueryKeys,
+} from './useAPInvoices';
+
+// Finance hooks — Trial Balance (PM feedback item 5)
+export {
+  useTrialBalance,
+  useFinancePeriods,
+  trialBalanceQueryKeys,
+} from './useTrialBalance';
+
+// Finance hooks — AP Payments (Phase D)
+export {
+  usePayments,
+  usePayment,
+  useCreatePayment,
+  paymentsQueryKeys,
+} from './usePayments';
+
+// Finance hooks — Fiscal Periods (Phase D.5)
+export {
+  useFiscalPeriods,
+  useCreatePeriod,
+  useClosePeriod,
+  useReopenPeriod,
+  fiscalPeriodsQueryKeys,
+} from './useFiscalPeriods';
+
+// Finance hooks — AP Aging + Vendor Sub-Ledger reports (Phase E)
+export {
+  useApAging,
+  useVendorSubLedger,
+  financeReportsQueryKeys,
+} from './useFinanceReports';
+
+// Attachments hooks — reusable across PR, PO, GR, AP, PAYMENT detail pages
+export {
+  useAttachments,
+  useUploadAttachment,
+  useDeleteAttachment,
+  attachmentsQueryKeys,
+} from './useAttachments';

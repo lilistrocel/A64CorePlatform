@@ -18,6 +18,8 @@ import {
 } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
 import type { Vendor, VendorCreate, VendorUpdate } from '../../services/purchasingApi';
+import { parseApiErrors } from '../../utils/apiErrors';
+import type { ApiErrorItem } from '../../utils/apiErrors';
 
 // ─── Styled components ──────────────────────────────────────────────────────
 
@@ -301,6 +303,23 @@ const ErrorText = styled.p`
   margin: 0;
 `;
 
+/** Per-field inline error shown directly below the offending input. */
+const FieldError = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.error};
+  margin-top: 2px;
+`;
+
+/** Input variant that shows a red border when the field has an error. */
+const InputWithError = styled(Input)<{ $hasError?: boolean }>`
+  border-color: ${({ $hasError, theme }) =>
+    $hasError ? theme.colors.error : undefined};
+  &:focus {
+    border-color: ${({ $hasError, theme }) =>
+      $hasError ? theme.colors.error : theme.colors.primary[500]};
+  }
+`;
+
 // ─── Vendor Form Modal ───────────────────────────────────────────────────────
 
 interface VendorFormModalProps {
@@ -310,6 +329,59 @@ interface VendorFormModalProps {
   onClose: () => void;
   onSaved: () => void;
 }
+
+/** Field names we know how to map from the 422 detail loc array. */
+const API_FIELD_MAP: Record<string, string> = {
+  name: 'name',
+  vendor_code: 'vendorCode',
+  trn: 'trn',
+  address_line1: 'addressLine1',
+  city: 'city',
+  country: 'country',
+  contact_name: 'contactName',
+  contact_email: 'contactEmail',
+  contact_phone: 'contactPhone',
+  payment_terms_code: 'paymentTermsCode',
+  credit_limit: 'creditLimit',
+  notes: 'notes',
+  bank_name: 'bankName',
+  account_number: 'accountNumber',
+  iban: 'iban',
+  swift: 'swift',
+};
+
+/** Email validation — simple but effective for a form field. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** UAE TRN must be exactly 15 digits. */
+const TRN_RE = /^\d{15}$/;
+
+function validateForm(form: {
+  name: string;
+  trn: string;
+  contactEmail: string;
+  creditLimit: string;
+}): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (!form.name.trim()) {
+    errors.name = 'Vendor name is required.';
+  }
+  if (form.trn.trim() && !TRN_RE.test(form.trn.trim())) {
+    errors.trn = 'TRN must be exactly 15 digits.';
+  }
+  if (form.contactEmail.trim() && !EMAIL_RE.test(form.contactEmail.trim())) {
+    errors.contactEmail = 'Enter a valid email address.';
+  }
+  if (form.creditLimit.trim() !== '') {
+    const val = Number(form.creditLimit);
+    if (isNaN(val) || val < 0) {
+      errors.creditLimit = 'Credit limit must be a non-negative number.';
+    }
+  }
+
+  return errors;
+}
+
 
 function VendorFormModal({
   vendor,
@@ -335,20 +407,45 @@ function VendorFormModal({
     paymentTermsCode: vendor?.paymentTermsCode ?? '',
     creditLimit: vendor?.creditLimit != null ? String(vendor.creditLimit) : '',
     notes: vendor?.notes ?? '',
-    bankName: (vendor?.bankDetails as any)?.bankName ?? '',
-    accountNumber: (vendor?.bankDetails as any)?.accountNumber ?? '',
-    iban: (vendor?.bankDetails as any)?.iban ?? '',
-    swift: (vendor?.bankDetails as any)?.swift ?? '',
+    bankName: (vendor?.bankDetails as Record<string, unknown> | undefined)?.bankName as string ?? '',
+    accountNumber: (vendor?.bankDetails as Record<string, unknown> | undefined)?.accountNumber as string ?? '',
+    iban: (vendor?.bankDetails as Record<string, unknown> | undefined)?.iban as string ?? '',
+    swift: (vendor?.bankDetails as Record<string, unknown> | undefined)?.swift as string ?? '',
   });
 
-  const [error, setError] = useState<string | null>(null);
+  /** Top-level non-field error (network failures, 500s, unmapped 422s). */
+  const [bannerError, setBannerError] = useState<string | null>(null);
+  /** Per-field validation errors keyed by form field name. */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
-  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+  /** Update a single form field and clear its error immediately. */
+  const set = (key: string) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      setForm((f) => ({ ...f, [key]: e.target.value }));
+      if (fieldErrors[key]) {
+        setFieldErrors((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }
+    };
 
   const handleSubmit = async () => {
-    setError(null);
+    // Clear previous errors before each attempt.
+    setBannerError(null);
+
+    // --- Client-side validation ---
+    const clientErrors = validateForm(form);
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      return; // Do not hit the API if local validation fails.
+    }
+
+    setFieldErrors({});
+
     const bankDetails =
       form.bankName || form.accountNumber || form.iban || form.swift
         ? {
@@ -397,9 +494,23 @@ function VendorFormModal({
         await createMutation.mutateAsync(create);
       }
       onSaved();
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail ?? err?.message ?? 'An error occurred';
-      setError(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: unknown }; status?: number }; message?: string };
+      const detail = axiosErr?.response?.data?.detail;
+
+      if (Array.isArray(detail)) {
+        // FastAPI 422 — parse into per-field errors
+        const parsed = parseApiErrors(detail as ApiErrorItem[], API_FIELD_MAP);
+        const { __banner__, ...perField } = parsed;
+        setFieldErrors(perField);
+        if (__banner__) {
+          setBannerError(__banner__);
+        }
+      } else if (typeof detail === 'string') {
+        setBannerError(detail);
+      } else {
+        setBannerError(axiosErr?.message ?? 'An unexpected error occurred. Please try again.');
+      }
     }
   };
 
@@ -412,31 +523,62 @@ function VendorFormModal({
           <CloseButton onClick={onClose} aria-label="Close modal">✕</CloseButton>
         </ModalHeader>
         <ModalBody>
-          {error && <ErrorText>{error}</ErrorText>}
+          {/* Top-level banner: only non-field errors (500s, network, unmapped 422s) */}
+          {bannerError && <ErrorText role="alert">{bannerError}</ErrorText>}
+
           <FormRow>
             <Field>
-              <Label>Vendor Code</Label>
-              <Input
+              <Label htmlFor="vf-vendorCode">Vendor Code</Label>
+              <InputWithError
+                id="vf-vendorCode"
                 value={form.vendorCode}
                 onChange={set('vendorCode')}
                 placeholder="Auto-generated if blank"
                 disabled={isEdit}
+                $hasError={false}
               />
               {!isEdit && <Hint>Leave blank for auto-generated code</Hint>}
             </Field>
             <Field>
-              <Label>Name *</Label>
-              <Input value={form.name} onChange={set('name')} placeholder="Vendor display name" />
+              <Label htmlFor="vf-name">Name *</Label>
+              <InputWithError
+                id="vf-name"
+                value={form.name}
+                onChange={set('name')}
+                placeholder="Vendor display name"
+                $hasError={!!fieldErrors.name}
+                aria-describedby={fieldErrors.name ? 'vf-name-err' : undefined}
+                aria-invalid={!!fieldErrors.name}
+              />
+              {fieldErrors.name && (
+                <FieldError id="vf-name-err" role="alert">{fieldErrors.name}</FieldError>
+              )}
             </Field>
           </FormRow>
+
           <FormRow>
             <Field>
-              <Label>TRN (UAE)</Label>
-              <Input value={form.trn} onChange={set('trn')} placeholder="15-digit TRN if registered" maxLength={15} />
+              <Label htmlFor="vf-trn">TRN (UAE)</Label>
+              <InputWithError
+                id="vf-trn"
+                value={form.trn}
+                onChange={set('trn')}
+                placeholder="15-digit TRN"
+                maxLength={15}
+                $hasError={!!fieldErrors.trn}
+                aria-describedby={fieldErrors.trn ? 'vf-trn-err' : 'vf-trn-hint'}
+                aria-invalid={!!fieldErrors.trn}
+              />
+              {fieldErrors.trn ? (
+                <FieldError id="vf-trn-err" role="alert">{fieldErrors.trn}</FieldError>
+              ) : (
+                <Hint id="vf-trn-hint">Exactly 15 digits — leave blank if not VAT registered</Hint>
+              )}
             </Field>
             <Field>
-              <Label>Payment Terms</Label>
+              <Label htmlFor="vf-paymentTerms">Payment Terms</Label>
               <select
+                id="vf-paymentTerms"
                 value={form.paymentTermsCode}
                 onChange={set('paymentTermsCode')}
                 style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14 }}
@@ -448,70 +590,173 @@ function VendorFormModal({
               </select>
             </Field>
           </FormRow>
+
           <FormRow>
             <Field>
-              <Label>Address Line 1</Label>
-              <Input value={form.addressLine1} onChange={set('addressLine1')} placeholder="Street address" />
+              <Label htmlFor="vf-address">Address Line 1</Label>
+              <InputWithError
+                id="vf-address"
+                value={form.addressLine1}
+                onChange={set('addressLine1')}
+                placeholder="Street address"
+                $hasError={false}
+              />
             </Field>
             <Field>
-              <Label>City</Label>
-              <Input value={form.city} onChange={set('city')} placeholder="City" />
+              <Label htmlFor="vf-city">City</Label>
+              <InputWithError
+                id="vf-city"
+                value={form.city}
+                onChange={set('city')}
+                placeholder="City"
+                $hasError={false}
+              />
             </Field>
           </FormRow>
+
           <FormRow>
             <Field>
-              <Label>Contact Name</Label>
-              <Input value={form.contactName} onChange={set('contactName')} placeholder="Primary contact" />
+              <Label htmlFor="vf-contactName">Contact Name</Label>
+              <InputWithError
+                id="vf-contactName"
+                value={form.contactName}
+                onChange={set('contactName')}
+                placeholder="Primary contact"
+                $hasError={false}
+              />
             </Field>
             <Field>
-              <Label>Contact Email</Label>
-              <Input value={form.contactEmail} onChange={set('contactEmail')} type="email" placeholder="email@vendor.com" />
+              <Label htmlFor="vf-contactEmail">Contact Email</Label>
+              <InputWithError
+                id="vf-contactEmail"
+                value={form.contactEmail}
+                onChange={set('contactEmail')}
+                type="email"
+                placeholder="name@vendor.com"
+                $hasError={!!fieldErrors.contactEmail}
+                aria-describedby={
+                  fieldErrors.contactEmail ? 'vf-email-err' : 'vf-email-hint'
+                }
+                aria-invalid={!!fieldErrors.contactEmail}
+              />
+              {fieldErrors.contactEmail ? (
+                <FieldError id="vf-email-err" role="alert">{fieldErrors.contactEmail}</FieldError>
+              ) : (
+                <Hint id="vf-email-hint">Format: name@vendor.com</Hint>
+              )}
             </Field>
           </FormRow>
+
           <FormRow>
             <Field>
-              <Label>Contact Phone</Label>
-              <Input value={form.contactPhone} onChange={set('contactPhone')} placeholder="+971 xx xxx xxxx" />
+              <Label htmlFor="vf-contactPhone">Contact Phone</Label>
+              <InputWithError
+                id="vf-contactPhone"
+                value={form.contactPhone}
+                onChange={set('contactPhone')}
+                placeholder="+971 xx xxx xxxx"
+                $hasError={false}
+              />
             </Field>
             <Field>
-              <Label>Credit Limit (AED)</Label>
-              <Input value={form.creditLimit} onChange={set('creditLimit')} type="number" min="0" placeholder="0.00" />
-              <Hint>Currency locked to AED in v1</Hint>
+              <Label htmlFor="vf-creditLimit">Credit Limit (AED)</Label>
+              <InputWithError
+                id="vf-creditLimit"
+                value={form.creditLimit}
+                onChange={set('creditLimit')}
+                type="number"
+                min="0"
+                placeholder="0.00"
+                $hasError={!!fieldErrors.creditLimit}
+                aria-describedby={
+                  fieldErrors.creditLimit ? 'vf-credit-err' : 'vf-credit-hint'
+                }
+                aria-invalid={!!fieldErrors.creditLimit}
+              />
+              {fieldErrors.creditLimit ? (
+                <FieldError id="vf-credit-err" role="alert">{fieldErrors.creditLimit}</FieldError>
+              ) : (
+                <Hint id="vf-credit-hint">Numeric, AED — currency locked to AED in v1</Hint>
+              )}
             </Field>
           </FormRow>
+
           <details>
             <summary style={{ cursor: 'pointer', fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
               Bank Details (optional)
             </summary>
             <FormRow>
               <Field>
-                <Label>Bank Name</Label>
-                <Input value={form.bankName} onChange={set('bankName')} placeholder="Bank name" />
+                <Label htmlFor="vf-bankName">Bank Name</Label>
+                <InputWithError
+                  id="vf-bankName"
+                  value={form.bankName}
+                  onChange={set('bankName')}
+                  placeholder="Bank name"
+                  $hasError={!!fieldErrors.bankName}
+                />
+                {fieldErrors.bankName && (
+                  <FieldError role="alert">{fieldErrors.bankName}</FieldError>
+                )}
               </Field>
               <Field>
-                <Label>Account Number</Label>
-                <Input value={form.accountNumber} onChange={set('accountNumber')} />
+                <Label htmlFor="vf-accountNumber">Account Number</Label>
+                <InputWithError
+                  id="vf-accountNumber"
+                  value={form.accountNumber}
+                  onChange={set('accountNumber')}
+                  $hasError={!!fieldErrors.accountNumber}
+                />
+                {fieldErrors.accountNumber && (
+                  <FieldError role="alert">{fieldErrors.accountNumber}</FieldError>
+                )}
               </Field>
             </FormRow>
             <FormRow>
               <Field>
-                <Label>IBAN</Label>
-                <Input value={form.iban} onChange={set('iban')} placeholder="AE xx xxxx..." />
+                <Label htmlFor="vf-iban">IBAN</Label>
+                <InputWithError
+                  id="vf-iban"
+                  value={form.iban}
+                  onChange={set('iban')}
+                  placeholder="AE xx xxxx..."
+                  $hasError={!!fieldErrors.iban}
+                />
+                {fieldErrors.iban && (
+                  <FieldError role="alert">{fieldErrors.iban}</FieldError>
+                )}
               </Field>
               <Field>
-                <Label>SWIFT / BIC</Label>
-                <Input value={form.swift} onChange={set('swift')} />
+                <Label htmlFor="vf-swift">SWIFT / BIC</Label>
+                <InputWithError
+                  id="vf-swift"
+                  value={form.swift}
+                  onChange={set('swift')}
+                  $hasError={!!fieldErrors.swift}
+                />
+                {fieldErrors.swift && (
+                  <FieldError role="alert">{fieldErrors.swift}</FieldError>
+                )}
               </Field>
             </FormRow>
           </details>
+
           <Field>
-            <Label>Notes</Label>
-            <Input value={form.notes} onChange={set('notes')} placeholder="Internal notes" />
+            <Label htmlFor="vf-notes">Notes</Label>
+            <InputWithError
+              id="vf-notes"
+              value={form.notes}
+              onChange={set('notes')}
+              placeholder="Internal notes"
+              $hasError={false}
+            />
           </Field>
         </ModalBody>
         <ModalFooter>
           <GhostButton onClick={onClose}>Cancel</GhostButton>
-          <PrimaryButton onClick={handleSubmit} disabled={isLoading || !form.name}>
+          {/* Reason: always enabled — validation runs on click to give the user
+              field-level feedback rather than silently disabling the button. */}
+          <PrimaryButton onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Vendor'}
           </PrimaryButton>
         </ModalFooter>

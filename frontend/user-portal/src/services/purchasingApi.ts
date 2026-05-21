@@ -298,3 +298,451 @@ export async function updatePaymentTerms(termsId: string, data: PaymentTermsUpda
 export async function deletePaymentTerms(termsId: string): Promise<void> {
   await apiClient.delete(`/v1/purchasing/payment-terms/${termsId}`);
 }
+
+// ============================================================================
+// Phase 1B — Purchase Request and Purchase Order types
+// ============================================================================
+
+export type PRStatus =
+  | 'Draft'
+  | 'Pending Approval'
+  | 'Approved'
+  | 'Rejected'
+  | 'Cancelled'
+  | 'Closed';
+
+export type POStatus =
+  | 'Draft'
+  | 'Pending Approval'
+  | 'Open'
+  | 'Sent'
+  | 'Partially Received'
+  | 'Received'
+  | 'Closed'
+  | 'Cancelled';
+
+export type ApprovalState = 'NotRequired' | 'Pending' | 'Approved' | 'Rejected';
+export type UrgencyLevel = 'low' | 'normal' | 'high';
+export type DocType = 'PR' | 'PO' | 'AP';
+
+export interface DocumentLine {
+  lineId: string;
+  docId: string;
+  organizationId: string;
+  lineNumber: number;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description?: string | null;
+  uom: string;
+  quantity: number;
+  openQuantity: number;
+  closedQuantity: number;
+  unitPrice: number;
+  lineNet: number;
+  taxCode?: string | null;
+  taxRate: number;
+  lineTax: number;
+  lineGross: number;
+  warehouseId?: string | null;
+  requestedVendorId?: string | null;
+  baseLineId?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentLineCreate {
+  itemId: string;
+  description?: string | null;
+  uom: string;
+  quantity: number;
+  unitPrice?: number;
+  taxCode?: string | null;
+  warehouseId?: string | null;
+  requestedVendorId?: string | null;
+  notes?: string | null;
+}
+
+// Purchase Request types
+
+export interface PurchaseRequest {
+  docId: string;
+  organizationId: string;
+  companyCode: string;
+  docType: 'PR';
+  docNumber: string;
+  docDate: string;
+  status: PRStatus;
+  requestedBy: string;
+  requestedDate: string;
+  department?: string | null;
+  urgency: UrgencyLevel;
+  subtotalNet: number;
+  totalTax: number;
+  totalGross: number;
+  currencyCode: string;
+  notes?: string | null;
+  baseDocId?: string | null;
+  approvalState: ApprovalState;
+  approvalRequestedFrom?: string | null;
+  approvalRequestedAt?: string | null;
+  approvalDecidedBy?: string | null;
+  approvalDecidedAt?: string | null;
+  approvalComment?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+export interface PurchaseRequestDetail extends PurchaseRequest {
+  lines: DocumentLine[];
+}
+
+export interface PRCreate {
+  department?: string | null;
+  urgency?: UrgencyLevel;
+  notes?: string | null;
+  expectedDeliveryDate?: string | null;
+  lines: DocumentLineCreate[];
+}
+
+export interface PRUpdate {
+  department?: string | null;
+  urgency?: UrgencyLevel | null;
+  notes?: string | null;
+  expectedDeliveryDate?: string | null;
+  lines?: DocumentLineCreate[] | null;
+}
+
+// Purchase Order types
+
+export interface PurchaseOrder {
+  docId: string;
+  organizationId: string;
+  companyCode: string;
+  docType: 'PO';
+  docNumber: string;
+  docDate: string;
+  postingDate?: string | null;
+  dueDate?: string | null;
+  expectedDeliveryDate?: string | null;
+  status: POStatus;
+  vendorId?: string | null;
+  vendorCode?: string | null;
+  vendorName?: string | null;
+  paymentTermsCode?: string | null;
+  issuedBy: string;
+  issuedDate?: string | null;
+  baseDocId?: string | null;
+  subtotalNet: number;
+  totalTax: number;
+  totalGross: number;
+  currencyCode: string;
+  notes?: string | null;
+  approvalState: ApprovalState;
+  approvalRequestedFrom?: string | null;
+  approvalRequestedAt?: string | null;
+  approvalDecidedBy?: string | null;
+  approvalDecidedAt?: string | null;
+  approvalComment?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+export interface PurchaseOrderDetail extends PurchaseOrder {
+  lines: DocumentLine[];
+}
+
+export interface POCreate {
+  vendorId: string;
+  paymentTermsCode?: string | null;
+  expectedDeliveryDate?: string | null;
+  notes?: string | null;
+  lines: DocumentLineCreate[];
+}
+
+export interface POFromPRCreate {
+  vendorId: string;
+  paymentTermsCode?: string | null;
+  expectedDeliveryDate?: string | null;
+  notes?: string | null;
+}
+
+export interface POUpdate {
+  vendorId?: string | null;
+  paymentTermsCode?: string | null;
+  expectedDeliveryDate?: string | null;
+  notes?: string | null;
+  lines?: DocumentLineCreate[] | null;
+}
+
+// Approval inbox types
+
+export interface PendingApprovalItem {
+  docId: string;
+  docType: DocType;
+  docNumber: string;
+  requesterName?: string | null;
+  totalGross: number;
+  currencyCode: string;
+  approvalRequestedAt?: string | null;
+  approvalRequestedFrom?: string | null;
+  department?: string | null;
+  urgency?: UrgencyLevel | null;
+  vendorName?: string | null;
+  notes?: string | null;
+}
+
+export interface ApprovalHistoryItem {
+  docId: string;
+  docType: DocType;
+  docNumber: string;
+  finalState: string;
+  approvalDecidedBy?: string | null;
+  approvalDecidedAt?: string | null;
+  approvalComment?: string | null;
+  totalGross: number;
+  currencyCode: string;
+}
+
+// ============================================================================
+// Purchase Request API calls
+// ============================================================================
+
+export async function getPurchaseRequests(params?: {
+  organizationId?: string;
+  page?: number;
+  perPage?: number;
+  status?: PRStatus;
+  search?: string;
+  requesterId?: string;
+}): Promise<PaginatedResult<PurchaseRequest>> {
+  const response = await apiClient.get<PaginatedResult<PurchaseRequest>>(
+    '/v1/purchasing/pr',
+    { params }
+  );
+  return response.data;
+}
+
+export async function getPurchaseRequest(docId: string, organizationId?: string): Promise<PurchaseRequestDetail> {
+  const response = await apiClient.get<SuccessResult<PurchaseRequestDetail>>(
+    `/v1/purchasing/pr/${docId}`,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function createPurchaseRequest(data: PRCreate, organizationId?: string): Promise<PurchaseRequestDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseRequestDetail>>(
+    '/v1/purchasing/pr',
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function updatePurchaseRequest(docId: string, data: PRUpdate, organizationId?: string): Promise<PurchaseRequestDetail> {
+  const response = await apiClient.patch<SuccessResult<PurchaseRequestDetail>>(
+    `/v1/purchasing/pr/${docId}`,
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function deletePurchaseRequest(docId: string, organizationId?: string): Promise<void> {
+  await apiClient.delete(`/v1/purchasing/pr/${docId}`, {
+    params: organizationId ? { organization_id: organizationId } : undefined,
+  });
+}
+
+export async function submitPurchaseRequest(docId: string, organizationId?: string): Promise<PurchaseRequestDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseRequestDetail>>(
+    `/v1/purchasing/pr/${docId}/submit`,
+    {},
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function approvePurchaseRequest(
+  docId: string,
+  data: { comment?: string | null },
+  organizationId?: string
+): Promise<PurchaseRequestDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseRequestDetail>>(
+    `/v1/purchasing/pr/${docId}/approve`,
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function rejectPurchaseRequest(
+  docId: string,
+  data: { comment: string },
+  organizationId?: string
+): Promise<PurchaseRequestDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseRequestDetail>>(
+    `/v1/purchasing/pr/${docId}/reject`,
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function cancelPurchaseRequest(docId: string, organizationId?: string): Promise<PurchaseRequestDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseRequestDetail>>(
+    `/v1/purchasing/pr/${docId}/cancel`,
+    {},
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+// ============================================================================
+// Purchase Order API calls
+// ============================================================================
+
+export async function getPurchaseOrders(params?: {
+  organizationId?: string;
+  page?: number;
+  perPage?: number;
+  status?: POStatus;
+  search?: string;
+  vendorId?: string;
+}): Promise<PaginatedResult<PurchaseOrder>> {
+  const response = await apiClient.get<PaginatedResult<PurchaseOrder>>(
+    '/v1/purchasing/po',
+    { params }
+  );
+  return response.data;
+}
+
+export async function getPurchaseOrder(docId: string, organizationId?: string): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.get<SuccessResult<PurchaseOrderDetail>>(
+    `/v1/purchasing/po/${docId}`,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function createPurchaseOrder(data: POCreate, organizationId?: string): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseOrderDetail>>(
+    '/v1/purchasing/po',
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function createPurchaseOrderFromPR(
+  prDocId: string,
+  data: POFromPRCreate,
+  organizationId?: string
+): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseOrderDetail>>(
+    `/v1/purchasing/po/from-pr/${prDocId}`,
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function updatePurchaseOrder(docId: string, data: POUpdate, organizationId?: string): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.patch<SuccessResult<PurchaseOrderDetail>>(
+    `/v1/purchasing/po/${docId}`,
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function deletePurchaseOrder(docId: string, organizationId?: string): Promise<void> {
+  await apiClient.delete(`/v1/purchasing/po/${docId}`, {
+    params: organizationId ? { organization_id: organizationId } : undefined,
+  });
+}
+
+export async function submitPurchaseOrder(docId: string, organizationId?: string): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseOrderDetail>>(
+    `/v1/purchasing/po/${docId}/submit`,
+    {},
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function approvePurchaseOrder(
+  docId: string,
+  data: { comment?: string | null },
+  organizationId?: string
+): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseOrderDetail>>(
+    `/v1/purchasing/po/${docId}/approve`,
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function rejectPurchaseOrder(
+  docId: string,
+  data: { comment: string },
+  organizationId?: string
+): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseOrderDetail>>(
+    `/v1/purchasing/po/${docId}/reject`,
+    data,
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function sendPurchaseOrder(docId: string, organizationId?: string): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseOrderDetail>>(
+    `/v1/purchasing/po/${docId}/send`,
+    {},
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function cancelPurchaseOrder(docId: string, organizationId?: string): Promise<PurchaseOrderDetail> {
+  const response = await apiClient.post<SuccessResult<PurchaseOrderDetail>>(
+    `/v1/purchasing/po/${docId}/cancel`,
+    {},
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function convertPRToPO(prDocId: string, data: POFromPRCreate, organizationId?: string): Promise<PurchaseOrderDetail> {
+  return createPurchaseOrderFromPR(prDocId, data, organizationId);
+}
+
+// ============================================================================
+// Approval inbox API calls
+// ============================================================================
+
+export async function getPendingApprovals(organizationId?: string): Promise<PendingApprovalItem[]> {
+  const response = await apiClient.get<SuccessResult<PendingApprovalItem[]>>(
+    '/v1/purchasing/approvals/pending',
+    { params: organizationId ? { organization_id: organizationId } : undefined }
+  );
+  return response.data.data;
+}
+
+export async function getApprovalHistory(params?: {
+  organizationId?: string;
+  page?: number;
+  perPage?: number;
+}): Promise<PaginatedResult<ApprovalHistoryItem>> {
+  const response = await apiClient.get<PaginatedResult<ApprovalHistoryItem>>(
+    '/v1/purchasing/approvals/history',
+    { params }
+  );
+  return response.data;
+}
