@@ -133,6 +133,11 @@ test_*.mjs
 
 # Screenshots and images from testing
 *.png
+# But track brand source artwork (used for re-exports) and existing tracked logos.
+!Logo/*.png
+!frontend/user-portal/public/*.png
+!public/*.png
+!public/admin/*.png
 clear-browser-cache.html
 
 # Playwright MCP and reports
