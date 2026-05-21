@@ -20,6 +20,10 @@ interface DivisionState {
   currentDivision: Division | null;
   availableDivisions: Division[];
   isLoading: boolean;
+  // True once loadDivisions has completed at least once (success OR error).
+  // Used by ProtectedRoute to avoid a request storm when the API legitimately
+  // returns [] for users with no division access.
+  hasFetchedOnce: boolean;
   error: string | null;
 
   loadDivisions: () => Promise<void>;
@@ -34,6 +38,7 @@ export const useDivisionStore = create<DivisionState>()(
       currentDivision: null,
       availableDivisions: [],
       isLoading: false,
+      hasFetchedOnce: false,
       error: null,
 
       loadDivisions: async () => {
@@ -46,6 +51,7 @@ export const useDivisionStore = create<DivisionState>()(
           set({
             availableDivisions: response.data,
             isLoading: false,
+            hasFetchedOnce: true,
             error: null,
           });
         } catch (error: unknown) {
@@ -54,6 +60,7 @@ export const useDivisionStore = create<DivisionState>()(
             'Failed to load divisions. Please try again.';
           set({
             isLoading: false,
+            hasFetchedOnce: true,
             error: typeof message === 'string' ? message : 'Failed to load divisions.',
           });
         }
@@ -88,10 +95,12 @@ export const useDivisionStore = create<DivisionState>()(
       },
 
       clearDivisionState: () => {
+        // Reset hasFetchedOnce so the next login triggers a fresh fetch.
         set({
           currentDivision: null,
           availableDivisions: [],
           isLoading: false,
+          hasFetchedOnce: false,
           error: null,
         });
       },

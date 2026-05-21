@@ -27,6 +27,7 @@ export function ProtectedRoute() {
     currentDivision,
     availableDivisions,
     isLoading: divisionsLoading,
+    hasFetchedOnce: divisionsFetched,
     error: divisionError,
     loadDivisions,
     setCurrentDivision,
@@ -41,13 +42,14 @@ export function ProtectedRoute() {
     }
   }, [isAuthenticated, user, authLoading, loadUser]);
 
-  // Load available divisions when the user is authenticated and loaded.
-  // The divisionError guard prevents an infinite retry loop when the API fails.
+  // Load available divisions exactly once per session after auth.
+  // Gated on hasFetchedOnce (not length === 0) so a legitimate [] response
+  // from the API (user with no division access) doesn't loop.
   useEffect(() => {
-    if (isAuthenticated && user && availableDivisions.length === 0 && !divisionsLoading && !divisionError) {
+    if (isAuthenticated && user && !divisionsFetched && !divisionsLoading) {
       loadDivisions();
     }
-  }, [isAuthenticated, user, availableDivisions.length, divisionsLoading, divisionError, loadDivisions]);
+  }, [isAuthenticated, user, divisionsFetched, divisionsLoading, loadDivisions]);
 
   // Auto-select if there is exactly one division available and none selected yet
   useEffect(() => {
@@ -81,12 +83,13 @@ export function ProtectedRoute() {
   }, [user?.mfaSetupRequired, user?.mfaEnabled]);
 
   // While user or divisions are still loading, show a full-page spinner.
-  // Only block on the INITIAL division load (availableDivisions empty). Re-fetches
-  // should NOT unmount children — otherwise DivisionSelector enters a mount/unmount
-  // infinite loop because loadDivisions() toggles isLoading which toggles this flag.
+  // Only block on the INITIAL division load (before hasFetchedOnce flips true).
+  // Re-fetches should NOT unmount children — otherwise DivisionSelector enters a
+  // mount/unmount infinite loop because loadDivisions() toggles isLoading which
+  // toggles this flag.
   const isBootstrapping =
     authLoading ||
-    (isAuthenticated && user && divisionsLoading && availableDivisions.length === 0 && !divisionError);
+    (isAuthenticated && user && divisionsLoading && !divisionsFetched);
 
   if (isBootstrapping) {
     return (
