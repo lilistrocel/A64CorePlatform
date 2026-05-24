@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-05-24
-> **Tasks:** 6 active · 1 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a completed, moved to ARCHIVE.md)
+> **Tasks:** 6 active · 2 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -372,6 +372,44 @@
   9. Tests
 
 ## 🟢 Ready
+
+### T-059 | Wave 0 — Finance as opt-in add-on (architectural hygiene)
+- **Category:** Backend + Frontend + DevOps + Docs · **Priority:** P0
+- **Assigned:** unclaimed · **Depends on:** T-057-1a ✅ · **Blocks:** T-060+
+  (every future finance wave)
+- **Goal:** Establish operations-vs-finance boundary as a first-class
+  deployment mode. Per-tenant `financeEnabled` flag + runtime capability
+  check + structurally separable docker-compose. Without this, every
+  subsequent finance wave will accrete coupling that has to be unwound.
+- **Design doc:** `Docs/2-Working-Progress/Wave-0-Design.md` (approved
+  2026-05-24)
+- **Sub-tasks:**
+  - T-059.1 Backend: `/api/v1/system/capabilities` endpoint, per-tenant
+    `modules.financeEnabled` field on organizations, one-shot migration
+    script (default true for existing orgs), outbox writer gate that skips
+    event emission when tenant has `financeEnabled=false` (Redis-cached
+    org lookup, 60s TTL)
+  - T-059.2 Backend: `/system/health` on finance service + Redis-cached
+    reachability ping from ops side (1s timeout, 60s cache key
+    `system:finance:reachable`)
+  - T-059.3 Frontend: `useCapabilities()` hook + route gating + sidebar
+    gating + graceful degradation in PR/PO/GR/AP forms (tax codes,
+    cost centres become free-text when finance off; amber banner when
+    enabled-but-unreachable)
+  - T-059.4 Frontend: Tenant Settings → Modules toggle UI; super_admin
+    only; audit-logged
+  - T-059.5 DevOps: split `docker-compose.finance.yml` (finance +
+    finance_consumer + mysql); update nginx confs with conditional
+    upstreams returning 503 when finance unavailable
+  - T-059.6 CI: new `ops-only-smoke` Playwright job (mongo + redis +
+    backend + nginx + user-portal only; full PR→PO→GR→AP smoke); import-
+    boundary lint blocking `from services.finance import …` in `src/`
+  - T-059.7 Docs: new `Docs/1-Main-Documentation/Deployment-Modes.md` +
+    update CLAUDE.md modules section + DevLog entry
+- **Acceptance criteria:** see design doc §11
+- **Estimated effort:** 4-7 days (backend + frontend in parallel)
+
+---
 
 ### T-058 | Purchasing line enrichment — Wave 1b: service-line accounting
 - **Category:** Backend + Frontend · **Priority:** P1
