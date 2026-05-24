@@ -19,6 +19,7 @@ import {
 } from '../../hooks/queries/usePurchasing';
 import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
 import { useItemMappingsMap } from '../../hooks/queries/useItemMappingsMap';
+import { useCostCenters } from '../../hooks/queries/useCostCenters';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
 import { useAuthStore } from '../../stores/auth.store';
 import type { DocumentLineCreate, UrgencyLevel } from '../../services/purchasingApi';
@@ -252,7 +253,9 @@ function emptyLine(): LineFormState {
     uom: 'KG',
     quantity: 1,
     unitPrice: 0,
+    discountPercent: 0,
     taxCode: null,
+    costCenterId: null,
     warehouseId: null,
     requestedVendorId: null,
     notes: null,
@@ -281,6 +284,13 @@ export function PurchaseRequestFormPage() {
 
   // Item finance mappings — used to auto-default taxCode when user picks an item.
   const itemMappings = useItemMappingsMap(orgId || null);
+
+  // Cost centres for the per-line dropdown — long-lived master data (5-min cache).
+  const { data: costCentersData } = useCostCenters(orgId || null);
+  const activeCostCenters = useMemo(
+    () => (costCentersData ?? []).filter((c) => c.isActive),
+    [costCentersData]
+  );
 
   // Fetch tax codes from finance service; fall back to seeded codes on error
   const { data: taxCodesData, isLoading: taxCodesLoading, isError: taxCodesError } = useTaxCodes(orgId || null);
@@ -322,7 +332,9 @@ export function PurchaseRequestFormPage() {
             uom: l.uom,
             quantity: l.quantity,
             unitPrice: l.unitPrice,
+            discountPercent: l.discountPercent ?? 0,
             taxCode: l.taxCode,
+            costCenterId: l.costCenterId ?? null,
             warehouseId: l.warehouseId,
             requestedVendorId: l.requestedVendorId,
             notes: l.notes,
@@ -362,7 +374,9 @@ export function PurchaseRequestFormPage() {
         uom: l.uom,
         quantity: Number(l.quantity),
         unitPrice: Number(l.unitPrice),
+        discountPercent: Number(l.discountPercent ?? 0),
         taxCode: l.taxCode || null,
+        costCenterId: l.costCenterId || null,
         warehouseId: l.warehouseId || null,
         requestedVendorId: l.requestedVendorId || null,
         notes: l.notes || null,
@@ -457,18 +471,24 @@ export function PurchaseRequestFormPage() {
           <thead>
             <tr>
               <Th style={{ width: 220 }}>Item *</Th>
-              <Th style={{ width: 100 }}>UOM</Th>
-              <Th style={{ width: 90 }}>Qty *</Th>
-              <Th style={{ width: 110 }}>Unit Price (AED)</Th>
-              <Th style={{ width: 150 }}>Suggested Vendor</Th>
+              <Th style={{ width: 80 }}>UOM</Th>
+              <Th style={{ width: 80 }}>Qty *</Th>
+              <Th style={{ width: 100 }}>Unit Price (AED)</Th>
+              <Th style={{ width: 70 }}>Disc %</Th>
+              <Th style={{ width: 140 }}>Suggested Vendor</Th>
               <Th style={{ width: 80 }}>Tax Code</Th>
+              <Th style={{ width: 130 }}>Cost Center</Th>
               <Th style={{ width: 70 }}>Net</Th>
               <Th style={{ width: 50 }}></Th>
             </tr>
           </thead>
           <tbody>
             {lines.map((line) => {
-              const net = (Number(line.quantity) * Number(line.unitPrice)).toFixed(2);
+              // Client-side recompute mirrors backend _compute_line_totals:
+              //   lineNet = qty * unitPrice * (1 - discountPercent/100)
+              // so the displayed Net updates as the user edits qty / price / Disc%.
+              const discFactor = Math.max(0, 1 - Number(line.discountPercent ?? 0) / 100);
+              const net = (Number(line.quantity) * Number(line.unitPrice) * discFactor).toFixed(2);
               return (
                 <tr key={line._key}>
                   <Td>
@@ -523,7 +543,19 @@ export function PurchaseRequestFormPage() {
                       step="0.01"
                       value={line.unitPrice}
                       onChange={(e) => setLine(line._key, 'unitPrice', e.target.value)}
-                      style={{ width: '100px' }}
+                      style={{ width: '90px' }}
+                      disabled={isReadOnly}
+                    />
+                  </Td>
+                  <Td>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={line.discountPercent ?? 0}
+                      onChange={(e) => setLine(line._key, 'discountPercent', e.target.value)}
+                      style={{ width: '60px' }}
                       disabled={isReadOnly}
                     />
                   </Td>
@@ -558,6 +590,21 @@ export function PurchaseRequestFormPage() {
                             </option>
                           ))
                       }
+                    </Select>
+                  </Td>
+                  <Td>
+                    <Select
+                      value={line.costCenterId ?? ''}
+                      onChange={(e) => setLine(line._key, 'costCenterId', e.target.value || null)}
+                      disabled={isReadOnly}
+                      style={{ width: '100%' }}
+                    >
+                      <option value="">— None —</option>
+                      {activeCostCenters.map((cc) => (
+                        <option key={cc.costCenterId} value={cc.costCenterId}>
+                          {cc.costCenterId} — {cc.name}
+                        </option>
+                      ))}
                     </Select>
                   </Td>
                   <Td style={{ textAlign: 'right', fontWeight: 600 }}>{net}</Td>

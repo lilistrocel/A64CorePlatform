@@ -99,7 +99,9 @@ class DocumentLineCreate(BaseModel):
     uom: str = Field(..., max_length=50)
     quantity: Decimal = Field(..., gt=0)
     unitPrice: Decimal = Field(default=Decimal("0"), ge=0)
+    discountPercent: Decimal = Field(default=Decimal("0"), ge=0, le=100)
     taxCode: Optional[str] = Field(None, max_length=20)
+    costCenterId: Optional[str] = Field(None, max_length=20)
     warehouseId: Optional[str] = None
     requestedVendorId: Optional[str] = None
     notes: Optional[str] = Field(None, max_length=500)
@@ -130,11 +132,13 @@ class DocumentLineResponse(BaseModel):
     openQuantity: Decimal
     closedQuantity: Decimal
     unitPrice: Decimal
+    discountPercent: Decimal = Decimal("0")
     lineNet: Decimal
     taxCode: Optional[str] = None
     taxRate: Decimal
     lineTax: Decimal
     lineGross: Decimal
+    costCenterId: Optional[str] = None
     warehouseId: Optional[str] = None
     requestedVendorId: Optional[str] = None
     baseLineId: Optional[str] = None

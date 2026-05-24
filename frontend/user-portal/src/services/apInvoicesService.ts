@@ -37,6 +37,8 @@ export interface APLine {
   poUnitPrice: number;
   /** Editable by the user: the vendor's billed unit price */
   invoiceUnitPrice: number;
+  /** Per-line discount inherited from the PO/GR chain — read-only here */
+  discountPercent?: number;
   /** Computed server-side: invoiceUnitPrice - poUnitPrice (per unit) */
   priceVarianceAmount: number;
   taxCode: string;
@@ -44,6 +46,8 @@ export interface APLine {
   lineNet: number;
   lineTax: number;
   lineGross: number;
+  /** Cost-centre tag inherited from the PO/GR chain — drives JE tagging */
+  costCenterId?: string | null;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;

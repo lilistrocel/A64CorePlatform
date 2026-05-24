@@ -5,6 +5,81 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0] - 2026-05-24
+
+**Type:** Minor Release — Purchasing line enrichment Wave 1a (T-057-1a):
+per-line discount + per-line cost-centre with full PR → PO → GR → AP
+carry-through and per-cost-centre JE tagging on AP posting.
+
+**Author:** Viet Anh
+
+### Added
+
+#### Purchasing — Per-line Discount and Cost-Centre (T-057-1a / Wave 1a)
+
+- **Schema:** `DocumentLineCreate` and `DocumentLineResponse`
+  (`src/modules/purchasing/models/document.py`) gain two new fields —
+  `discountPercent: Decimal` (default 0, range 0–100) and
+  `costCenterId: Optional[str]`.
+- **Service:** `_compute_line_totals` applies the discount factor
+  `(1 − discountPercent/100)` to `lineNet`, propagating to `lineTax` and
+  `lineGross`. `_build_gr_lines_from_po`, `_build_ap_lines_from_gr`, and the
+  PR→PO converter inherit both fields from the source line and re-apply the
+  discount (variance is also discounted on AP). `_line_to_response` surfaces
+  both fields with safe defaults for pre-existing line documents.
+- **Event payloads:** `build_ap_invoice_event_payload` and
+  `build_purchase_received_event_payload` propagate `costCenterId` per line so
+  the finance handler can read it.
+- **Contracts:** `ApInvoiceLine` and `GoodsReceivedLine` in
+  `contracts/finance_events.py` gain `costCenterId: Optional[str]` (forward-
+  compat; GR handler ignores it for now).
+- **Finance posting:** `_handle_ap_invoice_posted` now buckets payload lines
+  by `costCenterId` and emits one **DR GR/IR Clearing** + one **DR Input VAT**
+  JE line per distinct cost-centre (lines without a cost-centre collapse into
+  a single un-tagged bucket). Each split line carries `costCenterId` on the
+  `journal_entry_lines` row, enabling cost-centre attribution in reports. The
+  **CR AP Control**, **CR Output VAT** (reverse-charge), and **DR/CR PPV**
+  lines stay single aggregates per existing semantics.
+- **Frontend:**
+  - Editable **Disc %** input column + **Cost Center** dropdown column on
+    `PurchaseRequestFormPage` and `PurchaseOrderFormPage`, with client-side
+    recompute mirroring the backend formula so the displayed line total
+    updates as the user types.
+  - Read-only display columns for inherited Disc % + Cost Center on
+    `GoodsReceiptFormPage` and `APInvoiceFormPage` (values flow through
+    automatically via the backend's carry-through).
+  - AP form's client-side variance recompute also applies the discount
+    factor so the displayed variance matches the JE the finance handler
+    will post.
+  - New service `frontend/user-portal/src/services/costCentersService.ts`
+    and TanStack hook `frontend/user-portal/src/hooks/queries/useCostCenters.ts`
+    (5-minute `staleTime`, mirrors `useFinanceCompanies` pattern).
+  - Frontend types extended: `DocumentLine{,Create}` in `purchasingApi.ts`,
+    `GRLine` in `goodsReceiptsService.ts`, `APLine` in `apInvoicesService.ts`.
+
+#### Tests
+
+- `tests/unit/test_purchasing/test_line_discount_and_costcenter.py` — 7
+  new purchasing unit tests covering discount math, cost-centre persistence,
+  line response round-trip, and AP event payload propagation.
+- `services/finance/tests/test_posting_ap_invoice_cost_center.py` — 4
+  new finance JE-tagging tests covering: two distinct cost-centres → two
+  DR JE lines per account, all-same cost-centre → single tagged line,
+  mixed tagged/un-tagged → both buckets, no cost-centre anywhere → baseline
+  JE shape preserved.
+
+### Notes
+
+- Backend changes require a Docker restart of the `backend` and `finance`
+  containers to take effect. Frontend changes hot-reload via Vite.
+- CodeMaps were not regenerated — only new schema fields, no new endpoints
+  or service modules.
+- Wave 1b (T-058 — service-line accounting) and Wave 0 (T-059 — finance as
+  opt-in add-on) remain on the backlog as the next two steps of the
+  9-wave finance roadmap documented in `Docs/2-Working-Progress/`.
+
+---
+
 ## [1.16.0] - 2026-05-20
 
 **Type:** Minor Release — AI assistant (Claude Sonnet 4.6), Finance microservice Phase B/C/D, Purchasing Phase 1B workflow, unified attachments module, production ops tooling.

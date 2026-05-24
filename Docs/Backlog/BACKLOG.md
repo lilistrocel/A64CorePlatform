@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-05-24
-> **Tasks:** 6 active · 1 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056 completed, moved to ARCHIVE.md)
+> **Tasks:** 6 active · 1 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -373,117 +373,34 @@
 
 ## 🟢 Ready
 
-### T-057 | Purchasing line enrichment — accounting equivalence (Wave 1)
+### T-058 | Purchasing line enrichment — Wave 1b: service-line accounting
 - **Category:** Backend + Frontend · **Priority:** P1
-- **Assigned:** unclaimed · **Depends on:** — · **Blocks:** —
-- **Goal:** Bring purchase-document line entry to functional parity with SAP
-  in terms of accounting depth, without copying SAP UI cruft. Three
-  per-line fields added, all of which affect the books, no UI ornamentation.
-- **Scope (three changes; do as one bundled change unless agent splits):**
-
-  **A. Per-line discount**
-  - Schema: add `discountPercent: Decimal = Field(default=0, ge=0, le=100)`
-    to `DocumentLineCreate` and `DocumentLineResponse` in
-    `src/modules/purchasing/models/document.py`.
-  - DB: write the field on `purchase_document_lines` (MongoDB, no migration).
-  - Service recompute: `lineNet = quantity * unitPrice * (1 - discountPercent/100)`;
-    `lineTax = lineNet * taxRate`; `lineGross = lineNet + lineTax`. Update
-    `document_service` line builder and header totals (`subtotalNet`,
-    `totalTax`, `totalGross`).
-  - Carry through PR → PO → GR → AP so the AP invoice JE credits AP for
-    the discounted lineGross, not the pre-discount value.
-  - Frontend: add a `Disc %` column to all four document forms
-    (PurchaseRequestFormPage, PurchaseOrderFormPage, GR-from-PO,
-    APInvoiceFormPage). Client-side recompute mirrors server-side so the
-    displayed line total updates as the user types.
-
-  **B. Per-line cost center**
-  - Schema: add `costCenterId: Optional[str] = None` to `DocumentLineCreate`
-    and `DocumentLineResponse`.
-  - Carry through PR → PO → GR → AP via existing line propagation. AP
-    invoice posting must set `costCenterId` on the resulting JE line so
-    the existing `journal_entry_lines.costCenterId` column is populated.
-  - Frontend: cost-center dropdown per line. Source data from finance
-    service `GET /finance/cost-centers?organization_id=...` (endpoint
-    already exists per `services/finance/src/finance/api/v1/cost_centers.py`).
-    Add `frontend/user-portal/src/services/costCentersService.ts` and
-    `frontend/user-portal/src/hooks/queries/useCostCenters.ts` mirroring
-    the `useFinanceCompanies` pattern. Optional field — blank stays blank
-    through the chain and the JE line costCenterId is NULL.
-
-  **C. Item/Service Type — service-line accounting**
-  - Spike note: the catalog `ItemType` already includes `"service"`
-    (`src/modules/purchasing/models/document.py:58`). Leverage this
-    instead of adding a separate per-line `lineType` flag. The "type
-    toggle" in the UI becomes a *filter* on the item picker.
-  - Service-line accounting flow: when `line.itemType == "service"`,
-    1. GR step is bypassed for that line — PO can transition to "Received"
-       on confirmation, no physical GR document required for service lines.
-    2. AP invoice posting: DR Expense (item's expense account from item
-       mapping), CR AP — no GRNI clearing, no inventory account hit.
-  - Required item-mapping field: `expenseAccountId: Optional[str]` on
-    `purchase_item_finance_ext`. Verify if present; add via migration if
-    missing. Server-side validation: service items MUST have an
-    expenseAccountId configured before they can be used on a PR line.
-  - Document-flow changes:
-    - PO → GR transition: skip service lines from GR creation prompt.
-    - PO status: a PO with only service lines auto-transitions to
-      "Received" on approval; mixed PO transitions to "Received" once all
-      non-service lines are fully received.
-    - AP invoice posting handler in
-      `services/finance/src/finance/api/v1/events.py`: branch on
-      `line.itemType` — service goes DR Expense, others use the existing
-      GRNI-clearing path.
-  - Frontend: PR/PO line item picker offers a type filter (Item / Service /
-    All); a `Type` chip on each line shows "Item" or "Service" derived
-    from itemType (no user-editable toggle since it's determined by the
-    catalog item).
-
+- **Assigned:** unclaimed · **Depends on:** T-057-1a ✅ · **Blocks:** —
+- **Goal:** Wave 1b of T-057. Service-line accounting: when `line.itemType ==
+  "service"`, bypass GR and post AP as DR Expense / CR AP (no GRNI, no
+  inventory account). Type-filter chip on PR/PO line item picker.
+- **Required item-mapping field:** `expenseAccountId: Optional[str]` on
+  `purchase_item_finance_ext`. Verify present; add via Alembic migration
+  if missing. Service items MUST have an expenseAccountId before they can
+  be used on a PR line (server-side validation).
+- **Document-flow changes:**
+  - PO → GR transition: skip service lines from GR creation prompt.
+  - PO status: a PO with only service lines auto-transitions to "Received"
+    on approval; mixed PO transitions to "Received" once all non-service
+    lines are fully received.
+  - AP invoice posting handler in `services/finance/src/finance/api/v1/events.py`:
+    branch on `line.itemType` — service goes DR Expense, others use the
+    existing GRNI-clearing path.
+- **Frontend:** PR/PO line item picker offers a type filter (Item / Service /
+  All); a `Type` chip on each line shows "Item" or "Service" derived from
+  itemType (no user-editable toggle since it's determined by the catalog item).
 - **Acceptance criteria:**
-  - All four document forms (PR, PO, GR, AP) accept discountPercent and
-    costCenterId on each line and persist them.
-  - JE produced by AP invoice posting carries costCenterId on every line
-    (visible via Journal Entries → row-expand).
-  - Discount changes the lineNet, lineTax, lineGross — confirmed by
-    posting an AP invoice and inspecting the JE: DR Expense (or DR
-    Inventory) = discounted lineNet; CR AP = discounted lineGross.
-  - A service item creates a PR → PO → AP chain (no GR step), and the
-    AP invoice posts DR Expense / CR AP (no GRNI involvement, no
-    inventory account touched).
-  - All existing tests still pass; new tests cover discounted-line totals,
-    cost-center JE tagging, and service-line accounting flow.
-  - Frontend type-check clean (`npx tsc --noEmit` exits 0); no new
-    console errors in dev.
-
-- **Out of scope (do NOT add — explicitly trimmed):**
-  Multi-currency per line, Document Date / Valid Until / per-line
-  Required Date, document numbering series, owner-vs-requester split,
-  per-document email notification preferences, Info Price column,
-  Country/Region per line, header-level discount, Copy From / Copy To
-  templates, Summary views, in-form Branch picker, Referenced Document
-  picker. Rationale: none affect the books or are required by an
-  accounting standard. They are SAP UI conveniences and can be
-  revisited individually if operationally requested.
-
-- **Suggested split if agent prefers waves:**
-  - Wave 1a: discount + cost center (both purely additive, no flow changes) — ~half day
-  - Wave 1b: service-line accounting (alters PO → GR → AP flow) — ~1–1.5 days
-
-- **Files likely to change:**
-  - `src/modules/purchasing/models/document.py`
-  - `src/modules/purchasing/services/document_service.py`
-  - `services/finance/src/finance/api/v1/events.py` (AP invoice handler:
-    branch on itemType + cost center pass-through)
-  - `services/finance/alembic/versions/` (new migration if
-    `expenseAccountId` not already on `purchase_item_finance_ext`)
-  - `frontend/user-portal/src/pages/purchasing/PurchaseRequestFormPage.tsx`
-  - `frontend/user-portal/src/pages/purchasing/PurchaseOrderFormPage.tsx`
-  - `frontend/user-portal/src/pages/purchasing/APInvoiceFormPage.tsx`
-  - GR-from-PO form (path TBD — confirm during exploration)
-  - New: `frontend/user-portal/src/services/costCentersService.ts`
-  - New: `frontend/user-portal/src/hooks/queries/useCostCenters.ts`
-  - `Docs/4-Finance-Mod-docs/FINANCE_USER_GUIDE.docx` — regenerate to
-    document discount + cost center + service-line flow.
+  - A service item creates a PR → PO → AP chain (no GR step), and the AP
+    invoice posts DR Expense / CR AP (no GRNI involvement, no inventory
+    account touched).
+  - Mixed PO (service + raw_material lines) handles GR flow correctly for
+    non-service lines only.
+  - All existing tests still pass; new tests cover service-line accounting flow.
 
 ---
 

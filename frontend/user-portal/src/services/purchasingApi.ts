@@ -339,11 +339,13 @@ export interface DocumentLine {
   openQuantity: number;
   closedQuantity: number;
   unitPrice: number;
+  discountPercent?: number;
   lineNet: number;
   taxCode?: string | null;
   taxRate: number;
   lineTax: number;
   lineGross: number;
+  costCenterId?: string | null;
   warehouseId?: string | null;
   requestedVendorId?: string | null;
   baseLineId?: string | null;
@@ -358,7 +360,9 @@ export interface DocumentLineCreate {
   uom: string;
   quantity: number;
   unitPrice?: number;
+  discountPercent?: number;
   taxCode?: string | null;
+  costCenterId?: string | null;
   warehouseId?: string | null;
   requestedVendorId?: string | null;
   notes?: string | null;

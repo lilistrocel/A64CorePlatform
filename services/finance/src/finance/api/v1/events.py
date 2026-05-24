@@ -868,18 +868,29 @@ async def _handle_ap_invoice_posted(
 
     # ------------------------------------------------------------------
     # 3. Compute aggregate amounts respecting reverse-charge per line
+    #    AND per-cost-center buckets for JE line tagging.
     # ------------------------------------------------------------------
     # Reason: AP credit = lineGross for standard lines (vendor billed VAT)
     #                    = lineNet only for reverse-charge lines (foreign supplier
     #                      did not bill VAT; buyer self-accounts the VAT separately)
+    # Reason: per-cost-center buckets let us emit one DR GR/IR Clearing and one
+    # DR Input VAT JE line per distinct costCenterId. Lines without a cost
+    # centre collapse into a single (None-keyed) bucket. The CR AP Control line
+    # stays unsplit (vendor liability, not per-CC).
     total_ap_credit = Decimal("0")
     total_dr_input_vat = Decimal("0")
     total_cr_output_vat = Decimal("0")
+
+    # cc_id -> {"expected_net": Decimal, "input_vat": Decimal}
+    # Insertion-ordered dict (Python 3.7+) — preserves first-seen order so
+    # JE lines emit in a stable, line-order-driven sequence.
+    cc_buckets: Dict[Optional[str], Dict[str, Decimal]] = {}
 
     for line, is_rc in zip(payload.lines, line_rc_flags):
         line_tax = Decimal(str(line.lineTax))
         line_net = Decimal(str(line.lineNet))
         line_gross = Decimal(str(line.lineGross))
+        line_variance = Decimal(str(line.priceVarianceAmount))
 
         total_dr_input_vat += line_tax  # ALL lines contribute to DR Input VAT
 
@@ -890,6 +901,15 @@ async def _handle_ap_invoice_posted(
         else:
             # Standard: no CR Output VAT; AP = lineGross (vendor charged us VAT)
             total_ap_credit += line_gross
+
+        # Per-line GR/IR contribution = lineNet - priceVarianceAmount (exactly
+        # what GR posting originally credited to GR/IR Clearing for this line).
+        cc_id = line.costCenterId  # may be None
+        bucket = cc_buckets.setdefault(
+            cc_id, {"expected_net": Decimal("0"), "input_vat": Decimal("0")}
+        )
+        bucket["expected_net"] += line_net - line_variance
+        bucket["input_vat"] += line_tax
 
     has_vat = total_dr_input_vat > Decimal("0")
     has_reverse_charge = total_cr_output_vat > Decimal("0")
@@ -1051,37 +1071,55 @@ async def _handle_ap_invoice_posted(
     line_num = 1
 
     # ------------------------------------------------------------------
-    # Line 1: DR GR/IR Clearing — clears the GR holding for expectedNet
+    # Line 1+: DR GR/IR Clearing — clears the GR holding for expectedNet.
+    # Split into one JE line per distinct costCenterId so cost-centre
+    # reports can attribute the cleared cost. Lines without a CC collapse
+    # into a single un-tagged JE line.
+    # Sum of all DR GR/IR line debits == expected_net (preserves balance).
     # ------------------------------------------------------------------
-    db.add(JournalEntryLine(
-        jeLineId=str(uuid.uuid4()),
-        jeId=je_id,
-        lineNumber=line_num,
-        accountId=setup.grIrClearingAccountId,
-        debit=expected_net,
-        credit=None,
-        description=f"Clear GR/IR — {payload.grDocNumber}",
-    ))
-    line_num += 1
-
-    # ------------------------------------------------------------------
-    # Line 2: DR Input VAT — reclaimable VAT for ALL lines (only if > 0)
-    # Description carries the FTA tax-point date as an audit memo.
-    # ------------------------------------------------------------------
-    if has_vat:
+    for cc_id, bucket in cc_buckets.items():
+        bucket_expected_net = bucket["expected_net"]
+        if bucket_expected_net == Decimal("0"):
+            continue  # skip empty buckets (no real-money posting)
+        cc_suffix = f" (CC {cc_id})" if cc_id else ""
         db.add(JournalEntryLine(
             jeLineId=str(uuid.uuid4()),
             jeId=je_id,
             lineNumber=line_num,
-            accountId=setup.inputVatAccountId,
-            debit=total_dr_input_vat,
+            accountId=setup.grIrClearingAccountId,
+            debit=bucket_expected_net,
             credit=None,
-            # Reason: tax_point_date is embedded here per UAE Article 25 so
-            # that VAT return queries can read the FTA-compliant tax point from
-            # the JE line description without needing a separate column.
-            description=f"Input VAT — tax point {tax_point_date}",
+            description=f"Clear GR/IR — {payload.grDocNumber}{cc_suffix}",
+            costCenterId=cc_id,
         ))
         line_num += 1
+
+    # ------------------------------------------------------------------
+    # Line N: DR Input VAT — reclaimable VAT for ALL lines (only if > 0).
+    # Split per cost centre, mirroring the GR/IR split. Sum of all DR
+    # Input VAT line debits == total_dr_input_vat. Each line description
+    # carries the FTA Article 25 tax-point date as an audit memo.
+    # ------------------------------------------------------------------
+    if has_vat:
+        for cc_id, bucket in cc_buckets.items():
+            bucket_input_vat = bucket["input_vat"]
+            if bucket_input_vat == Decimal("0"):
+                continue
+            cc_suffix = f" (CC {cc_id})" if cc_id else ""
+            db.add(JournalEntryLine(
+                jeLineId=str(uuid.uuid4()),
+                jeId=je_id,
+                lineNumber=line_num,
+                accountId=setup.inputVatAccountId,
+                debit=bucket_input_vat,
+                credit=None,
+                # Reason: tax_point_date is embedded here per UAE Article 25 so
+                # that VAT return queries can read the FTA-compliant tax point
+                # from the JE line description without needing a separate column.
+                description=f"Input VAT — tax point {tax_point_date}{cc_suffix}",
+                costCenterId=cc_id,
+            ))
+            line_num += 1
 
     # ------------------------------------------------------------------
     # Line 3 (conditional): CR Output VAT — reverse-charge self-accounting

@@ -291,6 +291,7 @@ def build_gr_event_payload(
             "lineTax": str(ln.get("lineTax", 0)),
             "lineGross": str(ln.get("lineGross", 0)),
             "taxCode": ln.get("taxCode"),
+            "costCenterId": ln.get("costCenterId"),
             "baseLineId": ln.get("baseLineId"),
         })
 
@@ -379,6 +380,7 @@ def build_ap_invoice_event_payload(
             "lineTax": str(ln.get("lineTax", 0)),
             "lineGross": str(ln.get("lineGross", 0)),
             "taxCode": ln.get("taxCode"),
+            "costCenterId": ln.get("costCenterId"),
             "grLineId": ln.get("grLineId"),
             "baseLineId": ln.get("baseLineId"),
         })
@@ -549,11 +551,13 @@ def _line_to_response(doc: Dict[str, Any]) -> DocumentLineResponse:
         openQuantity=Decimal(str(doc.get("openQuantity", doc["quantity"]))),
         closedQuantity=Decimal(str(doc.get("closedQuantity", 0))),
         unitPrice=Decimal(str(doc.get("unitPrice", 0))),
+        discountPercent=Decimal(str(doc.get("discountPercent", 0))),
         lineNet=Decimal(str(doc.get("lineNet", 0))),
         taxCode=doc.get("taxCode"),
         taxRate=Decimal(str(doc.get("taxRate", 0))),
         lineTax=Decimal(str(doc.get("lineTax", 0))),
         lineGross=Decimal(str(doc.get("lineGross", 0))),
+        costCenterId=doc.get("costCenterId"),
         warehouseId=doc.get("warehouseId"),
         requestedVendorId=doc.get("requestedVendorId"),
         baseLineId=doc.get("baseLineId"),
@@ -683,9 +687,13 @@ def _compute_line_totals(
     """
     qty = Decimal(str(line_in.quantity))
     price = Decimal(str(line_in.unitPrice))
+    disc_pct = Decimal(str(getattr(line_in, "discountPercent", Decimal("0")) or Decimal("0")))
+    # Reason: discount factor multiplies the gross line into the net after discount.
+    # discountPercent is clamped 0..100 at the schema layer.
+    discount_factor = (Decimal("100") - disc_pct) / Decimal("100")
     # Reason: tax rate lookup not available in Phase 1B — default to 5% VAT if taxCode is set
     tax_rate = Decimal("5") if line_in.taxCode else Decimal("0")
-    line_net = qty * price
+    line_net = (qty * price * discount_factor).quantize(Decimal("0.01"))
     line_tax = (line_net * tax_rate / Decimal("100")).quantize(Decimal("0.01"))
     line_gross = line_net + line_tax
 
@@ -700,11 +708,13 @@ def _compute_line_totals(
         "openQuantity": float(qty),
         "closedQuantity": 0.0,
         "unitPrice": float(price),
+        "discountPercent": float(disc_pct),
         "lineNet": float(line_net),
         "taxCode": line_in.taxCode,
         "taxRate": float(tax_rate),
         "lineTax": float(line_tax),
         "lineGross": float(line_gross),
+        "costCenterId": getattr(line_in, "costCenterId", None),
         "warehouseId": line_in.warehouseId,
         "requestedVendorId": line_in.requestedVendorId,
         "notes": line_in.notes,
@@ -1722,7 +1732,11 @@ class DocumentService:
             qty = Decimal(str(pr_line["quantity"]))
             price = Decimal(str(pr_line.get("unitPrice", 0)))
             tax_rate = Decimal(str(pr_line.get("taxRate", 0)))
-            line_net = qty * price
+            # Reason: discountPercent + costCenterId inherited from the PR line —
+            # both fields carry through PR → PO → GR → AP unchanged.
+            disc_pct = Decimal(str(pr_line.get("discountPercent", 0) or 0))
+            discount_factor = (Decimal("100") - disc_pct) / Decimal("100")
+            line_net = (qty * price * discount_factor).quantize(Decimal("0.01"))
             line_tax = (line_net * tax_rate / Decimal("100")).quantize(Decimal("0.01"))
             line_gross = line_net + line_tax
 
@@ -1740,11 +1754,13 @@ class DocumentService:
                 "openQuantity": float(qty),
                 "closedQuantity": 0.0,
                 "unitPrice": float(price),
+                "discountPercent": float(disc_pct),
                 "lineNet": float(line_net),
                 "taxCode": pr_line.get("taxCode"),
                 "taxRate": float(tax_rate),
                 "lineTax": float(line_tax),
                 "lineGross": float(line_gross),
+                "costCenterId": pr_line.get("costCenterId"),
                 "warehouseId": pr_line.get("warehouseId"),
                 "requestedVendorId": None,
                 "baseLineId": pr_line["lineId"],
@@ -2576,7 +2592,10 @@ class DocumentService:
 
             price = Decimal(str(po_line.get("unitPrice", 0)))
             tax_rate = Decimal(str(po_line.get("taxRate", 0)))
-            line_net = recv_qty * price
+            # Reason: discount inherited from the PO line — GR cannot override it.
+            disc_pct = Decimal(str(po_line.get("discountPercent", 0) or 0))
+            discount_factor = (Decimal("100") - disc_pct) / Decimal("100")
+            line_net = (recv_qty * price * discount_factor).quantize(Decimal("0.01"))
             line_tax = (line_net * tax_rate / Decimal("100")).quantize(Decimal("0.01"))
             line_gross = line_net + line_tax
 
@@ -2593,11 +2612,13 @@ class DocumentService:
                 "openQuantity": float(recv_qty),
                 "closedQuantity": 0.0,
                 "unitPrice": float(price),
+                "discountPercent": float(disc_pct),
                 "lineNet": float(line_net),
                 "taxCode": po_line.get("taxCode"),
                 "taxRate": float(tax_rate),
                 "lineTax": float(line_tax),
                 "lineGross": float(line_gross),
+                "costCenterId": po_line.get("costCenterId"),
                 "warehouseId": None,
                 "requestedVendorId": None,
                 "baseLineId": base_line_id,
@@ -3192,8 +3213,16 @@ class DocumentService:
             tax_code = gr_line.get("taxCode")
             tax_rate = AP_TAX_RATES.get(tax_code or "", Decimal("0"))
 
-            price_variance = (invoice_price - po_price) * qty
-            line_net = qty * invoice_price
+            # Reason: discount inherited from GR (which inherited from PO). AP cannot
+            # override it. Variance must also be discounted so the JE balances:
+            # at GR time DR Inventory was qty * po_price * (1 - disc); here AP must
+            # credit AP for qty * invoice_price * (1 - disc) and route the difference
+            # through PPV — that difference equals discounted_variance.
+            disc_pct = Decimal(str(gr_line.get("discountPercent", 0) or 0))
+            discount_factor = (Decimal("100") - disc_pct) / Decimal("100")
+
+            price_variance = ((invoice_price - po_price) * qty * discount_factor).quantize(Decimal("0.01"))
+            line_net = (qty * invoice_price * discount_factor).quantize(Decimal("0.01"))
             line_tax = (line_net * tax_rate / Decimal("100")).quantize(Decimal("0.01"))
             line_gross = line_net + line_tax
 
@@ -3210,6 +3239,7 @@ class DocumentService:
                 "openQuantity": float(qty),
                 "closedQuantity": 0.0,
                 "unitPrice": float(invoice_price),   # = invoiceUnitPrice
+                "discountPercent": float(disc_pct),
                 "poUnitPrice": float(po_price),
                 "priceVarianceAmount": float(price_variance),
                 "lineNet": float(line_net),
@@ -3217,6 +3247,7 @@ class DocumentService:
                 "taxRate": float(tax_rate),
                 "lineTax": float(line_tax),
                 "lineGross": float(line_gross),
+                "costCenterId": gr_line.get("costCenterId"),
                 "grLineId": gr_line_id,
                 "baseLineId": gr_line.get("baseLineId"),  # PO line traceability
                 "warehouseId": None,

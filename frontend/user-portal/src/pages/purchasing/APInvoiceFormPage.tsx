@@ -285,6 +285,11 @@ interface APLineFormState {
   poUnitPrice: number;
   invoiceUnitPrice: number;
   taxCode: string;
+  // Inherited from the GR line (which inherited from the PO line). Read-only
+  // here — surfaced for user visibility and used in the client-side recompute
+  // so the displayed totals match what the backend will persist.
+  discountPercent: number;
+  costCenterId: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -304,11 +309,16 @@ function computeLineTotals(
   line: APLineFormState,
   taxCodes: typeof FALLBACK_TAX_CODES
 ): { lineNet: number; lineTax: number; lineGross: number; variance: number } {
-  const lineNet = line.invoiceUnitPrice * line.quantity;
+  // Reason: mirror backend _build_ap_lines_from_gr — both lineNet and variance
+  // are reduced by the discount factor inherited from the GR/PO chain so the
+  // displayed totals match the JE the finance handler will post.
+  const discountFactor = Math.max(0, 1 - (line.discountPercent ?? 0) / 100);
+  const lineNet = line.invoiceUnitPrice * line.quantity * discountFactor;
   const taxRate = getTaxRate(line.taxCode, taxCodes);
   const lineTax = lineNet * taxRate;
   const lineGross = lineNet + lineTax;
-  const variance = (line.invoiceUnitPrice - line.poUnitPrice) * line.quantity;
+  const variance =
+    (line.invoiceUnitPrice - line.poUnitPrice) * line.quantity * discountFactor;
   return { lineNet, lineTax, lineGross, variance };
 }
 
@@ -542,6 +552,8 @@ export function APInvoiceFormPage() {
           // GRLine does not carry a taxCode — only itemId is available here.
           // Use the item's finance mapping default; fall back to 'S'.
           taxCode: itemMappings.get(l.itemId)?.taxCodeDefault ?? 'S',
+          discountPercent: l.discountPercent ?? 0,
+          costCenterId: l.costCenterId ?? null,
         }))
       );
     }
@@ -579,6 +591,8 @@ export function APInvoiceFormPage() {
             poUnitPrice: Number(l.poUnitPrice ?? 0),
             invoiceUnitPrice: Number(storedPrice),
             taxCode: l.taxCode,
+            discountPercent: l.discountPercent ?? 0,
+            costCenterId: l.costCenterId ?? null,
           };
         })
       );
@@ -861,7 +875,9 @@ export function APInvoiceFormPage() {
                 <Th>UoM</Th>
                 <Th>PO Unit Price</Th>
                 <Th style={{ minWidth: 140 }}>Invoice Unit Price *</Th>
+                <Th>Disc %</Th>
                 <Th>Tax Code</Th>
+                <Th>Cost Center</Th>
                 <Th>Line Net</Th>
                 <Th>Tax</Th>
                 <Th>Line Gross</Th>
@@ -899,6 +915,9 @@ export function APInvoiceFormPage() {
                         aria-label={`Invoice unit price for ${line.itemCode}`}
                       />
                     </Td>
+                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                      {line.discountPercent ? `${line.discountPercent}%` : '—'}
+                    </Td>
                     <Td>
                       <Select
                         value={line.taxCode}
@@ -912,6 +931,9 @@ export function APInvoiceFormPage() {
                           </option>
                         ))}
                       </Select>
+                    </Td>
+                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                      {line.costCenterId ?? '—'}
                     </Td>
                     <Td style={{ fontSize: 13 }}>{formatAmt(line.lineNet, currency)}</Td>
                     <Td style={{ fontSize: 13 }}>{formatAmt(line.lineTax, currency)}</Td>

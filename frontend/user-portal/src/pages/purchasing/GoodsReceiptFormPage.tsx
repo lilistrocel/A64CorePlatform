@@ -295,6 +295,11 @@ interface GRLineFormState {
   uom: string;
   maxQuantity: number;   // PO line openQuantity — upper bound for validation
   quantity: number;
+  // Inherited from the source PO line — surfaced as read-only context so the
+  // user can see what will land on the JE. Backend re-derives both during GR
+  // creation; these are display-only here (not part of the submit payload).
+  discountPercent: number;
+  costCenterId: string | null;
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -352,6 +357,8 @@ export function GoodsReceiptFormPage() {
             uom: l.uom,
             maxQuantity: l.openQuantity,
             quantity: l.openQuantity,
+            discountPercent: l.discountPercent ?? 0,
+            costCenterId: l.costCenterId ?? null,
           }))
       );
     }
@@ -373,6 +380,8 @@ export function GoodsReceiptFormPage() {
           uom: l.uom,
           maxQuantity: l.quantity,   // best-effort: GR qty itself (backend enforces limits)
           quantity: l.quantity,
+          discountPercent: l.discountPercent ?? 0,
+          costCenterId: l.costCenterId ?? null,
         }))
       );
       if (!selectedPoDocId) {
@@ -532,6 +541,8 @@ export function GoodsReceiptFormPage() {
                 <Th>UOM</Th>
                 <Th>Max (Open Qty)</Th>
                 <Th style={{ width: 130 }}>Qty to Receive *</Th>
+                <Th style={{ width: 70 }}>Disc %</Th>
+                <Th style={{ width: 160 }}>Cost Center</Th>
               </tr>
             </thead>
             <tbody>
@@ -565,6 +576,12 @@ export function GoodsReceiptFormPage() {
                       {isOver && (
                         <ValidationHint> Max {line.maxQuantity}</ValidationHint>
                       )}
+                    </Td>
+                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                      {line.discountPercent ? `${line.discountPercent}%` : '—'}
+                    </Td>
+                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                      {line.costCenterId ?? '—'}
                     </Td>
                   </tr>
                 );

@@ -1,8 +1,59 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 56 tasks
+> **Total completed:** 57 tasks
 
 ## 2026-05
+
+### T-057-1a | Purchasing line enrichment — Wave 1a: discount + cost center
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Completed:** 2026-05-24 · **Assigned:** inline (long-context delegation
+  unavailable; backend-dev-expert + frontend-dev-expert delegation failed
+  with "Usage credits required for long context requests")
+- **Released in:** v1.17.0
+- **Description:** Two purely additive per-line fields on purchasing
+  documents — `discountPercent` (0–100) and `costCenterId` — with full
+  PR → PO → GR → AP carry-through and per-cost-centre JE tagging on AP
+  invoice posting.
+
+**Backend:** `DocumentLineCreate/Response` schema additions; `_compute_line_totals`
+applies discount factor; `_build_gr_lines_from_po`, `_build_ap_lines_from_gr`, and
+the PR→PO converter inherit + re-apply discount (variance also discounted on AP);
+`build_ap_invoice_event_payload` + `build_purchase_received_event_payload`
+propagate `costCenterId`; `_line_to_response` surfaces both fields with safe
+defaults; contracts (`ApInvoiceLine`, `GoodsReceivedLine`) gain `costCenterId`.
+
+**Finance posting:** `_handle_ap_invoice_posted` now buckets payload lines by
+`costCenterId` and emits one DR GR/IR Clearing + one DR Input VAT JE line per
+distinct cost-centre, each tagged with `costCenterId`. CR AP Control + CR
+Output VAT (reverse-charge) + DR/CR PPV stay single aggregates. JE balance
+invariant preserved.
+
+**Frontend:** Editable Disc% + Cost Center dropdown columns on PR + PO forms
+with client-side recompute mirroring backend formula; read-only display
+columns on GR + AP forms (values inherited via backend carry-through); AP
+form client-side variance recompute also discounted. New
+`costCentersService.ts` + `useCostCenters.ts` (5-min staleTime). Frontend
+types extended on `purchasingApi.ts`, `goodsReceiptsService.ts`,
+`apInvoicesService.ts`.
+
+**Tests:** 7 new purchasing unit tests + 4 new finance JE-tagging tests, all
+green. 46 purchasing suite (39 baseline + 7 new) passing; 20 AP posting
+suite (16 baseline + 4 new) passing. Pre-existing 25 finance test failures
+(trial_balance / vendor_sub_ledger / ap_aging / je_reversal /
+purchase_item_ext) are environment issues unrelated to this work —
+baseline and post-change failure counts match exactly. Frontend tsc: zero
+new errors introduced.
+
+**Notes:**
+- Backend changes require Docker restart of `backend` + `finance` containers.
+- New file `services/finance/tests/test_posting_ap_invoice_cost_center.py` is
+  matched by the global `test_*.py` gitignore rule and committed with
+  `git add -f` (same pattern as existing finance test files).
+- Wave 1b (T-058 — service-line accounting) and Wave 0 (T-059 — finance as
+  opt-in add-on) follow; see `Docs/2-Working-Progress/Wave-0-Design.md` and
+  the 9-wave finance roadmap.
+
+---
 
 ### T-056 | Tenant Setup Wizard — multi-step bootstrap for org-less super_admin
 - **Category:** Frontend · **Priority:** P0

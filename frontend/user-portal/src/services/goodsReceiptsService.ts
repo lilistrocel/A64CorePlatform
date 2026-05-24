@@ -34,7 +34,9 @@ export interface GRLine {
   uom: string;
   quantity: number;
   unitPrice: number;
+  discountPercent?: number;
   lineNet: number;
+  costCenterId?: string | null;
   warehouseId?: string | null;
   notes?: string | null;
   createdAt: string;

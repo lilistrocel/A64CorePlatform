@@ -105,6 +105,9 @@ class GoodsReceivedLine(BaseModel):
     lineTax: Decimal
     lineGross: Decimal
     taxCode: Optional[str] = None
+    costCenterId: Optional[str] = None
+    """Optional cost-centre tag inherited from the PO line. Forward-compat field
+    used by future per-CC GR posting; today's GR handler ignores it."""
     baseLineId: Optional[UUID] = None
     """Link to the source PO line this receipt was created from."""
 
@@ -235,6 +238,11 @@ class ApInvoiceLine(BaseModel):
     lineTax: Decimal
     lineGross: Decimal
     taxCode: Optional[str] = None
+    costCenterId: Optional[str] = None
+    """Optional cost-centre tag inherited from the PO/GR chain. The finance
+    handler tags the GR/IR Clearing and Input VAT JE lines with this value
+    (splitting one aggregate line per distinct cost centre). The CR AP Control
+    line stays unsplit (vendor-level liability)."""
     grLineId: UUID
     """Link to the source GR line being invoiced."""
     baseLineId: Optional[UUID] = None
