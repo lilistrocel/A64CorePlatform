@@ -225,3 +225,57 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `component::PhysicalBlockGrid` | renders | `component::PhysicalBlockCard` |
 | `frontend.App` | renders | `frontend.pages.crm.CustomerDetailPage` |
 | `frontend.App` | renders | `frontend.pages.crm.CRMPage` |
+
+---
+
+## Wave 0 Addendum — 2026-05-24 (T-059)
+
+### New components
+
+| Type | Name | File |
+|------|------|------|
+| component | `FinanceGate` | `frontend/user-portal/src/components/finance/FinanceGate.tsx` — wraps every `/finance/*` route; `<Navigate to="/dashboard">` when `modules.finance.enabled=false`. |
+| component | `FinanceUnreachableBanner` | `frontend/user-portal/src/components/finance/FinanceUnreachableBanner.tsx` — amber banner shown only when `enabled && !reachable`; mounted at top of all four purchasing form pages. |
+| component | `ModulesSettingsCard` | `frontend/user-portal/src/components/settings/ModulesSettingsCard.tsx` — Tenant Settings → Modules toggle. super_admin only, confirmation modal on disable, modal does NOT close on overlay click. |
+
+### New hook + derivatives
+
+| Type | Name | File |
+|------|------|------|
+| hook | `useCapabilities` | `frontend/user-portal/src/hooks/useCapabilities.ts` — TanStack Query, key `['system','capabilities']`, 60s staleTime, placeholderData preserves prior value through refetch. |
+| hook | `useFinanceEnabled` | same file — sugar over `useCapabilities` for the on/off bit. |
+| hook | `useFinanceUnreachable` | same file — true only when `enabled && !reachable`. |
+
+### New service + types
+
+| Type | Name | File |
+|------|------|------|
+| function | `getCapabilities` | `frontend/user-portal/src/services/systemService.ts` — silently degrades to safe default on 404 so stale backends don't toast. |
+| function | `updateOrganizationModules` | same file — PATCH `/v1/organizations/{orgId}/modules`. |
+| type | `Capabilities` | `frontend/user-portal/src/types/capabilities.ts` |
+| type | `ModuleCapabilities` | same file |
+| type | `FinanceModuleCapability` | same file |
+
+### Modified pages / layout
+
+| File | Wave 0 change |
+|------|---------------|
+| `App.tsx` | All 11 `/finance/*` routes wrapped in `<FinanceGate>`. |
+| `components/layout/MainLayout.tsx` | Finance sidebar group hidden when `useFinanceEnabled()===false`. |
+| `pages/purchasing/PurchaseRequestFormPage.tsx` | taxCode + costCenterId columns swap `<Select>` for `<Input>` when off; banner at top. |
+| `pages/purchasing/PurchaseOrderFormPage.tsx` | Same. |
+| `pages/purchasing/GoodsReceiptFormPage.tsx` | Cost Center column hidden when off; banner at top. |
+| `pages/purchasing/APInvoiceFormPage.tsx` | taxCode degrades to free-text; Cost Center column hidden; banner at top. |
+| `pages/settings/Settings.tsx` | Mounts `<ModulesSettingsCard />` (self-gates on super_admin). |
+
+### Wave 0 render edges
+
+| Source | Edge | Target |
+|--------|------|--------|
+| `frontend.App` | gates | `page::ChartOfAccountsPage` (via FinanceGate) |
+| `frontend.App` | gates | `page::JournalEntriesPage` (via FinanceGate) |
+| `frontend.App` | gates | `page::TrialBalancePage` (+ 8 other finance pages) |
+| `component::MainLayout` | conditionally_renders | `FINANCE_NAV_GROUP` (based on `useFinanceEnabled`) |
+| `page::Settings` | renders | `component::ModulesSettingsCard` |
+| `component::ModulesSettingsCard` | calls | `function::updateOrganizationModules` |
+| `component::FinanceUnreachableBanner` | reads | `hook::useFinanceUnreachable` |

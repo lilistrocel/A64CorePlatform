@@ -369,3 +369,32 @@ and their connections to frontend service calls.
 | `alertsApi` | calls | `endpoint_POST_farm_farms_farmId_blocks_blockId_alerts` | apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/alerts') |
 | `alertsApi` | calls | `endpoint_POST_farm_farms_farmId_blocks_blockId_alerts_id_resolve` | apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/alerts/${alertId}/res |
 | `weatherApi` | calls | `endpoint_GET_farm_farms_farmId_weather_current` | apiClient.get('/v1/farm/farms/${farmId}/weather/current') |
+
+---
+
+## Wave 0 Addendum — 2026-05-24 (T-059)
+
+### Module: `system` (new — ops backend)
+
+| Endpoint | File | Description |
+|----------|------|-------------|
+| `GET /api/v1/system/capabilities` | `src/api/v1/system.py` | Returns per-tenant `{tenantId, modules:{finance:{enabled,reachable,version}}, checkedAt}`. Auth required (any role). Built via `build_capabilities_response()` — same helper folds the payload into `GET /api/v1/auth/me`. |
+
+### Module: `core` — additions
+
+| Endpoint | File | Description |
+|----------|------|-------------|
+| `PATCH /api/v1/organizations/{org_id}/modules` | `src/api/v1/organizations.py` | Super_admin only. Body: `{financeEnabled: bool}`. Toggles tenant module flag, writes `admin_audit_log`, invalidates per-tenant Redis cache so the change propagates within ms. |
+
+### Module: `finance_service` — additions
+
+| Endpoint | File | Description |
+|----------|------|-------------|
+| `GET /api/v1/system/health` | `services/finance/src/finance/api/v1/health.py` | Wave 0 capability probe. Returns `{status, service, version}`. Pinged by ops backend with 1s timeout; result cached 60s in Redis under `system:finance:reachable`. |
+
+### Auth/Me response extension
+
+`GET /api/v1/auth/me` response now extends `UserResponse` with a
+`capabilities` field of the same shape as `/system/capabilities`.
+Frontend uses this for first-paint gating without a second
+round-trip.

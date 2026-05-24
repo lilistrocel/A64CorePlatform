@@ -623,3 +623,53 @@ Each module contains API, service, and model layers.
 | `sales.service.OrderService` | depends_on | `crm.service.CustomerRepository` |
 | `sales.service.OrderService` | depends_on | `farm_manager.service.FarmDatabaseManager` |
 | `logistics.service.ShipmentService` | depends_on | `sales.service.OrderService` |
+
+---
+
+## Wave 0 Addendum — 2026-05-24 (T-059)
+
+### `finance_bridge` — additions
+
+Existing module (`outbox_writer`, `feature_flag`) gains two helpers
+plus a per-tenant gate inside the writer.
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| function | `get_finance_reachability` | service | `src/modules/finance_bridge/reachability.py` |
+| function | `invalidate_reachability_cache` | service | `src/modules/finance_bridge/reachability.py` |
+| function | `is_finance_enabled_for_org` | service | `src/modules/finance_bridge/tenant_flag.py` |
+| function | `invalidate_tenant_flag_cache` | service | `src/modules/finance_bridge/tenant_flag.py` |
+| class (modified) | `OutboxWriter.publish` | service | `src/modules/finance_bridge/outbox_writer.py` — now consults `is_finance_enabled_for_org` after the global env flag |
+
+### `core` — additions
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| api_endpoint | `GET /api/v1/system/capabilities` | api | `src/api/v1/system.py` |
+| pydantic_model | `CapabilitiesResponse` | model | `src/api/v1/system.py` |
+| pydantic_model | `ModuleCapabilities` | model | `src/api/v1/system.py` |
+| pydantic_model | `FinanceModuleCapability` | model | `src/api/v1/system.py` |
+| function | `build_capabilities_response` | service | `src/api/v1/system.py` |
+| api_endpoint | `PATCH /api/v1/organizations/{org_id}/modules` | api | `src/api/v1/organizations.py` |
+| pydantic_model | `OrganizationModules` | model | `src/models/organization.py` |
+| pydantic_model | `OrganizationModulesUpdate` | model | `src/models/organization.py` |
+| function | `organization_service.update_modules` | service | `src/services/organization_service.py` |
+| config | `FINANCE_SERVICE_URL` | config | `src/config/settings.py` |
+| config | `FINANCE_CAPABILITY_CACHE_TTL_S` | config | `src/config/settings.py` |
+| migration | `wave0_add_finance_flag` | script | `scripts/migrations/wave0_add_finance_flag.py` |
+
+### `finance_service` — additions
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| api_endpoint | `GET /api/v1/system/health` | api | `services/finance/src/finance/api/v1/health.py` (`system_router`) |
+
+### Wave 0 dependency edges
+
+| Source | Edge | Target | Note |
+|--------|------|--------|------|
+| `core.system.build_capabilities_response` | depends_on | `finance_bridge.reachability.get_finance_reachability` | Reads cached finance health. |
+| `core.system.build_capabilities_response` | depends_on | `finance_bridge.tenant_flag.is_finance_enabled_for_org` | Reads per-tenant flag. |
+| `core.auth.get_current_user_info` | depends_on | `core.system.build_capabilities_response` | `/auth/me` folds in capabilities. |
+| `finance_bridge.outbox_writer.publish` | depends_on | `finance_bridge.tenant_flag.is_finance_enabled_for_org` | Per-tenant gate. |
+| `core.organizations.update_organization_modules` | depends_on | `finance_bridge.tenant_flag.invalidate_tenant_flag_cache` | Cache bust on toggle. |

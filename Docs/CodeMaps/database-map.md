@@ -194,3 +194,34 @@ This map covers all collections, document schemas, and inter-collection relation
 | `crm.service.CustomerRepository` | stores_in | `crm.service.CRMDatabaseManager` | CustomerRepository reads/writes 'customers' collection via crm_db. |
 | `sales.service.OrderRepository` | stores_in | `sales.service.SalesDatabaseManager` | OrderRepository reads/writes 'sales_orders' collection via sales_db. |
 | `logistics.service.ShipmentRepository` | stores_in | `logistics.service.LogisticsDatabaseManager` | ShipmentRepository reads/writes 'shipments' collection via logistics_db. |
+
+---
+
+## Wave 0 Addendum — 2026-05-24 (T-059)
+
+### `organizations` — schema additions
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `modules` | object | `{financeEnabled: true}` | Per-tenant module toggle subdocument. |
+| `modules.financeEnabled` | bool | `true` | Hides finance UI + gates outbox writer when false. Hydrated by `OrganizationModules` Pydantic model in `src/models/organization.py`. |
+
+### New audit collection writes
+
+| Collection | Writer | When |
+|------------|--------|------|
+| `admin_audit_log` | `PATCH /api/v1/organizations/{org_id}/modules` (`src/api/v1/organizations.py`) | Each tenant module toggle. Document shape: `{action:"organization.modules.updated", targetOrganizationId, performedBy, performedByEmail, performedByRole, timestamp, details:{before, after, patch}}`. |
+
+### Per-tenant gate on `finance_outbox`
+
+`OutboxWriter.publish()` (`src/modules/finance_bridge/outbox_writer.py`)
+now consults `organizations.modules.financeEnabled` for the calling
+tenant; events are NOT inserted into `finance_outbox` when the flag
+is false. Cached lookup via Redis key
+`org:{organization_id}:financeEnabled` (60s TTL).
+
+### Migration
+
+| Script | Idempotent | Purpose |
+|--------|------------|---------|
+| `scripts/migrations/wave0_add_finance_flag.py` | yes | Sets `modules.financeEnabled=true` on every org missing the field. |
