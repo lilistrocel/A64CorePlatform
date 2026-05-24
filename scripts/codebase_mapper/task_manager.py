@@ -13,6 +13,7 @@ Usage:
     python scripts/codebase_mapper/task_manager.py reseed --changed-files "<file1 file2 ...>"
 """
 
+import os
 import sys
 import argparse
 import json
@@ -20,8 +21,13 @@ from datetime import datetime, timedelta
 from pymongo import MongoClient, ReturnDocument
 from pymongo.errors import ConnectionFailure
 
-MONGO_URL = "mongodb://localhost:27017"
-DB_NAME = "a64core_db"
+# Reason: hard-coded localhost fails when running from inside the api
+# container (mongo advertises hostname `mongodb` for replica-set
+# discovery). Honour MONGO_URL env var so the script works in both
+# host (`localhost:27017`) and container (`mongodb:27017/?replicaSet=rs0`)
+# contexts.
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+DB_NAME = os.environ.get("MONGODB_DB_NAME", "a64core_db")
 DEAD_AGENT_TIMEOUT_MINUTES = 30
 
 # Maps file path prefixes to task IDs that should be re-seeded

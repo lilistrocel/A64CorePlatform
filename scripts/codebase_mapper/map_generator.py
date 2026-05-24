@@ -15,13 +15,16 @@ Usage:
 
 import sys
 import argparse
+import os
 from datetime import datetime
 from pathlib import Path
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
-MONGO_URL = "mongodb://localhost:27017"
-DB_NAME = "a64core_db"
+# Reason: see task_manager.py — honour MONGO_URL env var so the mapper
+# works in both host and container contexts.
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+DB_NAME = os.environ.get("MONGODB_DB_NAME", "a64core_db")
 CODEMAPS_DIR = Path("Docs/CodeMaps")
 
 
