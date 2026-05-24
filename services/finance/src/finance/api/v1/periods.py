@@ -15,17 +15,32 @@ Audit trail (migration 013):
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import List, Optional
+import uuid
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from typing import List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...db.session import get_db
 from ...middleware.auth import TokenPayload, require_roles
-from ...models.orm.models import CompanyCode, FiscalPeriod, PeriodStatusEnum
+from ...models.orm.models import (
+    AccountTypeEnum,
+    AuditLog,
+    CompanyCode,
+    CompanyPostingSetup,
+    DrawerEnum,
+    FiscalPeriod,
+    GLAccount,
+    JEStatusEnum,
+    JournalEntry,
+    JournalEntryLine,
+    PeriodStatusEnum,
+)
 from ...models.schemas.common import SuccessResponse
 from ...models.schemas.period import FiscalPeriodCreate, FiscalPeriodResponse
 from ...utils.responses import success
@@ -64,6 +79,496 @@ class ReopenPeriodRequest(BaseModel):
         min_length=5,
         max_length=500,
         description="Required justification for reopening this period (5–500 chars).",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Response body schemas (Wave 2 / T-060.1 — closing JE info on close response)
+# ---------------------------------------------------------------------------
+
+
+class ClosingJeInfo(BaseModel):
+    """Closing-JE metadata returned alongside the period on close/reopen."""
+
+    jeId: str
+    jeNumber: str
+    jeDate: date
+    netIncome: Decimal
+    currencyCode: str = "AED"
+
+    model_config = {"from_attributes": True}
+
+
+class ClosePeriodResponse(BaseModel):
+    """Response shape for POST /periods/{id}/close (Wave 2)."""
+
+    period: FiscalPeriodResponse
+    closingJe: Optional[ClosingJeInfo] = Field(
+        None,
+        description=(
+            "Closing JE auto-posted when this period contains the fiscal "
+            "year-end. Null for ordinary monthly closes."
+        ),
+    )
+
+
+class ReopenPeriodResponse(BaseModel):
+    """Response shape for POST /periods/{id}/reopen (Wave 2)."""
+
+    period: FiscalPeriodResponse
+    closingJeReversal: Optional[ClosingJeInfo] = Field(
+        None,
+        description=(
+            "Offsetting JE posted to reverse the original closing JE when "
+            "reopening a fiscal year-end period. Null if no closing JE was "
+            "found for this period."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Helpers — Wave 2 / T-060.1 (period close + closing JE)
+# ---------------------------------------------------------------------------
+
+# Current Year Profit/(Loss) account is identified by code in the standard
+# UAE-agri seed CoA (`Docs/4-Finance-Mod-docs/FINANCE_MODULE_GUIDE.md` §5).
+# We look it up per-organization because the CoA is org-scoped. If a tenant
+# customised their CoA away from this code, surface a clear error rather
+# than silently picking a wrong account.
+_CURRENT_YEAR_PL_ACCOUNT_CODE = "312000-002"
+
+# P&L drawers — anything that contributes to Net Income calculation.
+# Sign convention by AccountType (matches Trial Balance):
+#   REVENUE / EQUITY / LIABILITY → balance = sum(credit) - sum(debit)
+#   EXPENSE / ASSET → balance = sum(debit) - sum(credit)
+_PL_DRAWERS = (
+    DrawerEnum.REVENUE,
+    DrawerEnum.COST_OF_SALES,
+    DrawerEnum.OPERATING_COST,
+    DrawerEnum.NON_OPERATING,
+    DrawerEnum.OTHER_INCOME,
+    DrawerEnum.TAXATION,
+)
+
+# Floating-point tolerance for balance validation (1 fil = 0.01 AED).
+_BALANCE_TOLERANCE = Decimal("0.01")
+
+
+async def _resolve_closing_accounts(
+    db: AsyncSession,
+    organization_id: str,
+    company_code: str,
+) -> Tuple[str, str]:
+    """
+    Resolve the two GL accounts the closing JE writes to.
+
+    Returns (currentYearPlAccountId, retainedEarningsAccountId).
+
+    Raises HTTPException 400 with a remediation hint when either account
+    is missing — closing cannot proceed without both.
+    """
+    cy_account = await db.scalar(
+        select(GLAccount.accountId).where(
+            GLAccount.organizationId == organization_id,
+            GLAccount.accountNumber == _CURRENT_YEAR_PL_ACCOUNT_CODE,
+        )
+    )
+    if cy_account is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Current Year Profit/(Loss) account ({_CURRENT_YEAR_PL_ACCOUNT_CODE}) "
+                "is missing from the Chart of Accounts. Add it before closing "
+                "the fiscal year-end period."
+            ),
+        )
+
+    setup = await db.scalar(
+        select(CompanyPostingSetup).where(
+            CompanyPostingSetup.organizationId == organization_id,
+            CompanyPostingSetup.companyCode == company_code,
+        )
+    )
+    if setup is None or setup.retainedEarningsAccountId is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Retained Earnings account is not configured in Posting Setup "
+                f"for company {company_code}. Set it on the Posting Setup page "
+                "before closing the fiscal year-end period."
+            ),
+        )
+
+    return cy_account, setup.retainedEarningsAccountId
+
+
+async def _is_fiscal_year_end_period(
+    db: AsyncSession, period: FiscalPeriod
+) -> bool:
+    """
+    Return True if `period` is the last period of its fiscal year.
+
+    Detection: compare period.endDate to the MAX endDate across all periods
+    in the same (companyCode, fiscalYear). Robust regardless of whether the
+    company uses a calendar year, an August-start agri year, or a 4-4-5
+    calendar.
+    """
+    max_end = await db.scalar(
+        select(func.max(FiscalPeriod.endDate)).where(
+            FiscalPeriod.companyCode == period.companyCode,
+            FiscalPeriod.fiscalYear == period.fiscalYear,
+        )
+    )
+    return max_end is not None and period.endDate == max_end
+
+
+async def _compute_fiscal_year_net_income(
+    db: AsyncSession,
+    organization_id: str,
+    company_code: str,
+    fiscal_year: int,
+) -> Decimal:
+    """
+    Net Income for the fiscal year = sum of P&L drawer activity.
+
+    REVENUE + OTHER_INCOME contribute via (credit - debit).
+    COST_OF_SALES + OPERATING_COST + NON_OPERATING + TAXATION contribute
+    via (credit - debit) too (their balances are debit-positive, so a
+    positive sum means a debit balance → expense → reduces NI).
+
+    Net Income = Σ (credit - debit) for all P&L lines in the fiscal year.
+
+    A positive return = profit; negative = loss.
+    """
+    # Find all period IDs belonging to this fiscal year for this company.
+    period_ids_q = await db.execute(
+        select(FiscalPeriod.periodId).where(
+            FiscalPeriod.companyCode == company_code,
+            FiscalPeriod.fiscalYear == fiscal_year,
+        )
+    )
+    period_ids = [row[0] for row in period_ids_q.all()]
+    if not period_ids:
+        return Decimal("0")
+
+    # Aggregate JE line debits/credits joined to P&L-drawer accounts.
+    result = await db.execute(
+        select(
+            func.coalesce(func.sum(JournalEntryLine.credit), 0)
+            - func.coalesce(func.sum(JournalEntryLine.debit), 0)
+        )
+        .select_from(JournalEntryLine)
+        .join(JournalEntry, JournalEntryLine.jeId == JournalEntry.jeId)
+        .join(GLAccount, JournalEntryLine.accountId == GLAccount.accountId)
+        .where(
+            JournalEntry.organizationId == organization_id,
+            JournalEntry.companyCode == company_code,
+            JournalEntry.periodId.in_(period_ids),
+            JournalEntry.status == JEStatusEnum.POSTED,
+            GLAccount.drawer.in_(_PL_DRAWERS),
+        )
+    )
+    net_income = result.scalar_one() or Decimal("0")
+    # Convert to Decimal explicitly (SQLAlchemy may return float on SQLite).
+    return Decimal(str(net_income))
+
+
+async def _validate_period_balanced(
+    db: AsyncSession,
+    organization_id: str,
+    company_code: str,
+    period_id: str,
+) -> None:
+    """
+    Refuse to close a period whose JEs don't balance (Σ DR != Σ CR within
+    the period). A mismatch signals corrupted data and must be investigated
+    before close — silently closing would hide the problem.
+    """
+    result = await db.execute(
+        select(
+            func.coalesce(func.sum(JournalEntryLine.debit), 0).label("dr"),
+            func.coalesce(func.sum(JournalEntryLine.credit), 0).label("cr"),
+        )
+        .select_from(JournalEntryLine)
+        .join(JournalEntry, JournalEntryLine.jeId == JournalEntry.jeId)
+        .where(
+            JournalEntry.organizationId == organization_id,
+            JournalEntry.companyCode == company_code,
+            JournalEntry.periodId == period_id,
+            JournalEntry.status == JEStatusEnum.POSTED,
+        )
+    )
+    row = result.one()
+    dr = Decimal(str(row.dr or 0))
+    cr = Decimal(str(row.cr or 0))
+    delta = (dr - cr).copy_abs()
+    if delta > _BALANCE_TOLERANCE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Period {period_id} does not balance: Σ DR = {dr}, "
+                f"Σ CR = {cr}, delta = {delta}. Investigate and correct "
+                "before closing."
+            ),
+        )
+
+
+async def _next_je_number(
+    db: AsyncSession, company_code: str, fiscal_year: int
+) -> str:
+    """
+    Generate the next sequential JE number for (companyCode, fiscalYear).
+
+    Mirrors the implementation in events.py — duplicated here to keep
+    api/v1 modules from importing each other (cleaner module graph).
+    Format: JE-{companyCode}-{YYYY}-{NNNN} (zero-padded to 4 digits).
+    """
+    prefix = f"JE-{company_code}-{fiscal_year}-"
+    result = await db.execute(
+        select(func.max(JournalEntry.jeNumber)).where(
+            JournalEntry.companyCode == company_code,
+            JournalEntry.jeNumber.like(f"{prefix}%"),
+        )
+    )
+    max_number = result.scalar_one_or_none()
+    if max_number is None:
+        next_seq = 1
+    else:
+        suffix_str = max_number.rsplit("-", 1)[-1]
+        try:
+            next_seq = int(suffix_str) + 1
+        except ValueError:
+            next_seq = 1
+    return f"{prefix}{next_seq:04d}"
+
+
+async def _post_closing_je(
+    db: AsyncSession,
+    organization_id: str,
+    period: FiscalPeriod,
+    net_income: Decimal,
+    user_id: str,
+    now_utc: datetime,
+) -> JournalEntry:
+    """
+    Construct + write the year-end closing JE inside the caller's session.
+
+    Two lines:
+      Profit case (net_income > 0):
+        DR  Current Year P/(L)            <net_income>
+        CR  Retained Earnings - Prior     <net_income>
+      Loss case (net_income < 0):
+        DR  Retained Earnings - Prior     <|net_income|>
+        CR  Current Year P/(L)            <|net_income|>
+      Zero case: no JE posted (caller skips this function).
+
+    The JE is dated period.endDate so it falls inside the period being
+    closed. sourceEventType="period_close" + sourceDocId=period.periodId
+    let us locate it on reopen.
+    """
+    cy_account, re_account = await _resolve_closing_accounts(
+        db, organization_id, period.companyCode
+    )
+
+    amount = net_income.copy_abs()
+    if net_income >= 0:
+        dr_account = cy_account
+        cr_account = re_account
+    else:
+        dr_account = re_account
+        cr_account = cy_account
+
+    je_number = await _next_je_number(db, period.companyCode, period.fiscalYear)
+    je_id = str(uuid.uuid4())
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=organization_id,
+        companyCode=period.companyCode,
+        jeNumber=je_number,
+        jeDate=period.endDate,
+        periodId=period.periodId,
+        sourceEventType="period_close",
+        # Reason: sourceEventId is NOT NULL; using periodId gives a direct
+        # trace from the JE back to the period that triggered it. Mirrors
+        # how the reversal endpoint uses original.jeId for traceability.
+        sourceEventId=period.periodId,
+        sourceDocId=period.periodId,
+        sourceDocNumber=f"PERIOD-CLOSE-{period.fiscalYear}-{period.periodNumber}",
+        description=(
+            f"Year-end closing entry for fiscal year {period.fiscalYear}: "
+            f"roll net {'profit' if net_income >= 0 else 'loss'} of "
+            f"{amount} into Retained Earnings."
+        ),
+        totalDebit=amount,
+        totalCredit=amount,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy=user_id,
+    )
+    db.add(je)
+
+    # Line 1: debit
+    db.add(
+        JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=1,
+            accountId=dr_account,
+            debit=amount,
+            credit=Decimal("0"),
+            description="Year-end closing — debit leg",
+            referenceLineId=None,
+            costCenterId=None,
+        )
+    )
+    # Line 2: credit
+    db.add(
+        JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=2,
+            accountId=cr_account,
+            debit=Decimal("0"),
+            credit=amount,
+            description="Year-end closing — credit leg",
+            referenceLineId=None,
+            costCenterId=None,
+        )
+    )
+
+    await db.flush()
+    return je
+
+
+async def _find_closing_je_for_period(
+    db: AsyncSession, period_id: str
+) -> Optional[JournalEntry]:
+    """Locate the year-end closing JE for a period (None if never closed)."""
+    result = await db.execute(
+        select(JournalEntry)
+        .options(selectinload(JournalEntry.lines))
+        .where(
+            JournalEntry.sourceEventType == "period_close",
+            JournalEntry.sourceDocId == period_id,
+            JournalEntry.status == JEStatusEnum.POSTED,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def _post_closing_je_reversal(
+    db: AsyncSession,
+    original: JournalEntry,
+    user_id: str,
+    today: date,
+    now_utc: datetime,
+    period_id_for_reversal: str,
+) -> JournalEntry:
+    """
+    Post an offsetting JE that reverses the closing JE on reopen.
+
+    Follows the same pattern as POST /journal-entries/{jeId}/reverse —
+    the original stays POSTED, a new JE with debit/credit swapped is
+    inserted. The pair nets to zero on the books and the audit trail
+    preserves both events.
+
+    The reversal is dated `today` and posted into the period being
+    reopened (passed in as `period_id_for_reversal`) — reopen brings the
+    period back to OPEN status before this runs, so the
+    `_resolve_fiscal_period_or_raise` check downstream won't refuse.
+    """
+    reversal_id = str(uuid.uuid4())
+    # Reason: a sequential `_next_je_number` would race with the close
+    # transaction's recently-inserted closing JE in some session-isolation
+    # scenarios (notably the test SQLite). Reversals don't need to sit on
+    # the sequential per-company series — append a "-REV-{short}" suffix
+    # to the original's number. Uniqueness is guaranteed by the per-org
+    # original jeNumber being unique + a 6-hex-char UUID disambiguator
+    # for the (extremely unlikely) case of reopen being run twice.
+    short_suffix = uuid.uuid4().hex[:6].upper()
+    reversal_number = f"{original.jeNumber}-REV-{short_suffix}"
+
+    reversal = JournalEntry(
+        jeId=reversal_id,
+        organizationId=original.organizationId,
+        companyCode=original.companyCode,
+        jeNumber=reversal_number,
+        jeDate=today,
+        periodId=period_id_for_reversal,
+        sourceEventType="period_close_reversal",
+        sourceEventId=original.jeId,
+        sourceDocId=original.jeId,
+        sourceDocNumber=original.jeNumber,
+        description=(
+            f"Reversal of year-end closing entry {original.jeNumber} on "
+            f"period reopen."
+        ),
+        totalDebit=Decimal(str(original.totalCredit)),
+        totalCredit=Decimal(str(original.totalDebit)),
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy=user_id,
+    )
+    db.add(reversal)
+
+    for line in original.lines:
+        orig_debit = Decimal(str(line.debit)) if line.debit is not None else None
+        orig_credit = (
+            Decimal(str(line.credit)) if line.credit is not None else None
+        )
+        db.add(
+            JournalEntryLine(
+                jeLineId=str(uuid.uuid4()),
+                jeId=reversal_id,
+                lineNumber=line.lineNumber,
+                accountId=line.accountId,
+                debit=orig_credit,
+                credit=orig_debit,
+                description=(
+                    f"Reversal: {line.description}"
+                    if line.description
+                    else "Reversal"
+                ),
+                referenceLineId=line.referenceLineId,
+                costCenterId=line.costCenterId,
+            )
+        )
+
+    await db.flush()
+    return reversal
+
+
+def _audit_entry(
+    organization_id: str,
+    actor_user_id: str,
+    action: str,
+    period: FiscalPeriod,
+    before_status: PeriodStatusEnum,
+    after_status: PeriodStatusEnum,
+    closing_je: Optional[JournalEntry] = None,
+    reason: Optional[str] = None,
+) -> AuditLog:
+    """Build an AuditLog row for a period close/reopen transition."""
+    return AuditLog(
+        auditId=str(uuid.uuid4()),
+        organizationId=organization_id,
+        actorUserId=actor_user_id,
+        action=action,
+        entityType="FiscalPeriod",
+        entityId=period.periodId,
+        beforeJson={
+            "status": before_status.value,
+            "companyCode": period.companyCode,
+            "fiscalYear": period.fiscalYear,
+            "periodNumber": period.periodNumber,
+        },
+        afterJson={
+            "status": after_status.value,
+            "reason": reason,
+            "closingJeId": closing_je.jeId if closing_je else None,
+            "closingJeNumber": closing_je.jeNumber if closing_je else None,
+        },
     )
 
 
@@ -140,32 +645,48 @@ async def create_period(
 
 @router.patch(
     "/periods/{period_id}/close",
-    response_model=SuccessResponse[FiscalPeriodResponse],
+    response_model=SuccessResponse[ClosePeriodResponse],
     summary="Close a fiscal period",
 )
 async def close_period(
     period_id: str,
     body: ClosePeriodRequest = None,
+    organization_id: str = Query(
+        ...,
+        description=(
+            "Org scope. Required to locate the Current Year P/(L) account "
+            "and Posting Setup when auto-posting the closing JE on fiscal "
+            "year-end close."
+        ),
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenPayload = Depends(require_roles(*_WRITE_ROLES)),
-) -> SuccessResponse[FiscalPeriodResponse]:
+) -> SuccessResponse[ClosePeriodResponse]:
     """
-    Close a fiscal period, recording who closed it and optionally why.
+    Close a fiscal period (Wave 2 / T-060.1).
 
-    On close:
-      - closedAt, closedByUserId, closeReason are populated.
-      - reopenedAt, reopenedByUserId, reopenReason are cleared (fresh state for
-        a future reopen). This supports the close-reopen-close cycle correctly.
+    Pipeline (atomic):
+      1. Refuse if period not OPEN.
+      2. Validate the period's JEs balance (Σ DR == Σ CR ± 0.01 AED).
+      3. If this period is the **fiscal year-end** (its endDate matches
+         the latest endDate for its fiscalYear), compute net income for
+         the fiscal year and auto-post the closing JE:
+           DR Current Year P/(L) / CR Retained Earnings (or reversed
+           if loss).
+      4. Flip period.status → CLOSED, populate audit fields, clear any
+         reopen-trail fields.
+      5. Write an audit_log row referencing the closing JE (when posted).
+      All steps run in a single MySQL transaction; either everything
+      succeeds or nothing changes.
 
-    Args:
-        period_id: UUID of the period to close.
-        body: Optional request body with reason (max 500 chars).
-        db: Async DB session.
-        current_user: Authenticated user (write roles).
+    Response carries the period plus the closing-JE metadata when one
+    was posted (null for ordinary monthly closes).
 
     Raises:
-        HTTPException 404: If period not found.
-        HTTPException 409: If period is already closed or locked.
+      404 if period not found.
+      409 if period is not OPEN.
+      400 if period doesn't balance, or if closing accounts are
+          unconfigured at year-end.
     """
     period = await db.get(FiscalPeriod, period_id)
     if not period:
@@ -176,14 +697,41 @@ async def close_period(
     if period.status != PeriodStatusEnum.OPEN:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Period is already {period.status.value} and cannot be closed again.",
+            detail=(
+                f"Period is already {period.status.value} and cannot "
+                "be closed again."
+            ),
         )
 
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-    reason_text = (body.reason if body is not None else None)
+    # Pre-close validation — refuse if books don't balance for the period.
+    await _validate_period_balanced(
+        db, organization_id, period.companyCode, period.periodId
+    )
 
-    # Reason: populate close audit fields, clear any prior reopen audit fields
-    # so the record always reflects only the MOST RECENT transition.
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    reason_text = body.reason if body is not None else None
+    before_status = period.status
+
+    # Auto-post closing JE if this is the fiscal year-end period.
+    closing_je: Optional[JournalEntry] = None
+    if await _is_fiscal_year_end_period(db, period):
+        net_income = await _compute_fiscal_year_net_income(
+            db, organization_id, period.companyCode, period.fiscalYear
+        )
+        # Reason: zero-net-income years still close cleanly — skip the JE
+        # because debiting/crediting zero would just be noise.
+        if net_income.copy_abs() > _BALANCE_TOLERANCE:
+            closing_je = await _post_closing_je(
+                db=db,
+                organization_id=organization_id,
+                period=period,
+                net_income=net_income,
+                user_id=current_user.userId,
+                now_utc=now_utc,
+            )
+
+    # Reason: populate close audit fields, clear any prior reopen audit
+    # fields so the record always reflects only the MOST RECENT transition.
     period.status = PeriodStatusEnum.CLOSED
     period.closedAt = now_utc
     period.closedByUserId = current_user.userId
@@ -192,53 +740,93 @@ async def close_period(
     period.reopenedByUserId = None
     period.reopenReason = None
 
+    db.add(
+        _audit_entry(
+            organization_id=organization_id,
+            actor_user_id=current_user.userId,
+            action="CLOSE",
+            period=period,
+            before_status=before_status,
+            after_status=PeriodStatusEnum.CLOSED,
+            closing_je=closing_je,
+            reason=reason_text,
+        )
+    )
+
+    await db.flush()
+    # Reason: flush expires attributes with server_default/onupdate
+    # (`updatedAt`); refresh so Pydantic's `from_attributes=True` doesn't
+    # trigger a sync lazy load inside an async context.
+    await db.refresh(period)
+
     logger.info(
-        "[Finance/Periods] period_id=%s closed by userId=%s reason=%r",
+        "[Finance/Periods] period_id=%s closed by userId=%s reason=%r "
+        "closing_je=%s",
         period_id,
         current_user.userId,
         reason_text,
+        closing_je.jeNumber if closing_je else None,
     )
 
+    je_info: Optional[ClosingJeInfo] = None
+    if closing_je is not None:
+        je_info = ClosingJeInfo(
+            jeId=closing_je.jeId,
+            jeNumber=closing_je.jeNumber,
+            jeDate=closing_je.jeDate,
+            netIncome=Decimal(str(closing_je.totalDebit)),
+            currencyCode="AED",
+        )
+
     return success(
-        FiscalPeriodResponse.model_validate(period),
+        ClosePeriodResponse(
+            period=FiscalPeriodResponse.model_validate(period),
+            closingJe=je_info,
+        ),
         message="Period closed successfully.",
     )
 
 
 @router.patch(
     "/periods/{period_id}/reopen",
-    response_model=SuccessResponse[FiscalPeriodResponse],
+    response_model=SuccessResponse[ReopenPeriodResponse],
     summary="Reopen a closed fiscal period",
 )
 async def reopen_period(
     period_id: str,
     body: ReopenPeriodRequest,
+    organization_id: str = Query(
+        ...,
+        description=(
+            "Org scope. Required to locate any closing JE that needs "
+            "reversing when reopening a fiscal year-end period."
+        ),
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenPayload = Depends(require_roles(*_WRITE_ROLES)),
-) -> SuccessResponse[FiscalPeriodResponse]:
+) -> SuccessResponse[ReopenPeriodResponse]:
     """
-    Reopen a closed fiscal period, recording who reopened it and why.
+    Reopen a closed fiscal period (Wave 2 / T-060.1).
+
+    Pipeline (atomic):
+      1. Refuse if period is OPEN or LOCKED.
+      2. Flip period.status → OPEN, populate reopen audit fields, clear
+         the close-trail fields.
+      3. If a closing JE was previously posted for this period (year-end
+         close), post an offsetting JE in this period to reverse it.
+         Original closing JE stays POSTED — the pair nets to zero on
+         the books, matching the existing reversal convention from
+         POST /journal-entries/{jeId}/reverse.
+      4. Write an audit_log row referencing the reversal JE (when posted).
+      All steps run in a single MySQL transaction.
 
     A reason is required (5–500 chars) — production accounting demands an
     audit justification every time a closed period is re-opened.
 
-    On reopen:
-      - reopenedAt, reopenedByUserId, reopenReason are populated.
-      - closedAt, closedByUserId, closeReason are cleared so a subsequent
-        close starts fresh audit fields.
-
-    Locked periods cannot be reopened.
-
-    Args:
-        period_id: UUID of the period to reopen.
-        body: Required request body with reason (5–500 chars).
-        db: Async DB session.
-        current_user: Authenticated user (write roles).
-
     Raises:
-        HTTPException 404: If period not found.
-        HTTPException 409: If period is open.
-        HTTPException 423: If period is locked.
+      404 if period not found.
+      409 if period is already OPEN.
+      423 if period is LOCKED.
     """
     period = await db.get(FiscalPeriod, period_id)
     if not period:
@@ -258,6 +846,8 @@ async def reopen_period(
         )
 
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    today = now_utc.date()
+    before_status = period.status
 
     # Reason: populate reopen audit fields, clear prior close audit fields
     # so the record always reflects only the MOST RECENT transition.
@@ -269,14 +859,60 @@ async def reopen_period(
     period.closedByUserId = None
     period.closeReason = None
 
+    # Reverse any year-end closing JE that was posted on close.
+    reversal_je: Optional[JournalEntry] = None
+    original_closing = await _find_closing_je_for_period(db, period_id)
+    if original_closing is not None:
+        reversal_je = await _post_closing_je_reversal(
+            db=db,
+            original=original_closing,
+            user_id=current_user.userId,
+            today=today,
+            now_utc=now_utc,
+            period_id_for_reversal=period_id,
+        )
+
+    db.add(
+        _audit_entry(
+            organization_id=organization_id,
+            actor_user_id=current_user.userId,
+            action="REOPEN",
+            period=period,
+            before_status=before_status,
+            after_status=PeriodStatusEnum.OPEN,
+            closing_je=reversal_je,
+            reason=body.reason,
+        )
+    )
+
+    await db.flush()
+    # Reason: same as close — refresh so the response serialiser doesn't
+    # trigger an async lazy load on auto-updated attributes.
+    await db.refresh(period)
+
     logger.info(
-        "[Finance/Periods] period_id=%s reopened by userId=%s reason=%r",
+        "[Finance/Periods] period_id=%s reopened by userId=%s reason=%r "
+        "reversal_je=%s",
         period_id,
         current_user.userId,
         body.reason,
+        reversal_je.jeNumber if reversal_je else None,
     )
 
+    rev_info: Optional[ClosingJeInfo] = None
+    if reversal_je is not None:
+        rev_info = ClosingJeInfo(
+            jeId=reversal_je.jeId,
+            jeNumber=reversal_je.jeNumber,
+            jeDate=reversal_je.jeDate,
+            netIncome=Decimal(str(reversal_je.totalDebit)),
+            currencyCode="AED",
+        )
+
     return success(
-        FiscalPeriodResponse.model_validate(period),
+        ReopenPeriodResponse(
+            period=FiscalPeriodResponse.model_validate(period),
+            closingJeReversal=rev_info,
+        ),
         message="Period reopened successfully.",
     )

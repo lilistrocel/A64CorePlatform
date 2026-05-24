@@ -1,5 +1,7 @@
 """Tests for fiscal period endpoints."""
 
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -68,7 +70,7 @@ async def test_create_duplicate_period_returns_409(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_close_and_reopen_period(client: AsyncClient) -> None:
-    """Period should close and reopen correctly."""
+    """Period should close and reopen correctly (non-year-end — no closing JE)."""
     await _ensure_company(client)
     create_resp = await client.post(
         "/api/v1/finance/periods",
@@ -83,22 +85,31 @@ async def test_close_and_reopen_period(client: AsyncClient) -> None:
     )
     period_id = create_resp.json()["data"]["periodId"]
 
-    # Close it
+    # Close it — Wave 2 requires organization_id query param.
     close_resp = await client.patch(
         f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": _ORG},
         headers=auth_headers(),
     )
     assert close_resp.status_code == 200
-    assert close_resp.json()["data"]["status"] == "closed"
+    body = close_resp.json()["data"]
+    assert body["period"]["status"] == "closed"
+    # This is period 3 of fiscalYear 2026 — not the year-end (since no
+    # later periods exist yet, it actually IS the latest endDate, BUT no
+    # P&L activity → no closing JE).
+    assert body["closingJe"] is None
 
-    # Reopen it (reason is required as of migration 013 — min 5 chars)
+    # Reopen it (reason required, min 5 chars).
     reopen_resp = await client.patch(
         f"/api/v1/finance/periods/{period_id}/reopen",
+        params={"organization_id": _ORG},
         json={"reason": "Test reopen for unit test"},
         headers=auth_headers(),
     )
     assert reopen_resp.status_code == 200
-    assert reopen_resp.json()["data"]["status"] == "open"
+    reopen_body = reopen_resp.json()["data"]
+    assert reopen_body["period"]["status"] == "open"
+    assert reopen_body["closingJeReversal"] is None
 
 
 @pytest.mark.asyncio
@@ -119,9 +130,467 @@ async def test_close_already_closed_period_returns_409(client: AsyncClient) -> N
     period_id = create_resp.json()["data"]["periodId"]
 
     await client.patch(
-        f"/api/v1/finance/periods/{period_id}/close", headers=auth_headers()
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": _ORG},
+        headers=auth_headers(),
     )
     resp = await client.patch(
-        f"/api/v1/finance/periods/{period_id}/close", headers=auth_headers()
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": _ORG},
+        headers=auth_headers(),
     )
     assert resp.status_code == 409
+
+
+# ─── Wave 2 / T-060.1 — Closing JE on fiscal year-end ─────────────────────
+
+import uuid as _uuid_test
+from datetime import datetime, date as _date
+from decimal import Decimal
+
+
+async def _seed_company_coa_posting(
+    db_session, organization_id: str, company_code: str
+) -> tuple[str, str, str, str]:
+    """
+    Seed everything the closing-JE tests need directly via the ORM
+    session — bypasses the POST /companies endpoint (which auto-seeds
+    the full 231-account CoA and would collide with the per-test
+    accounts we're adding here).
+
+    Creates:
+      - CompanyCode
+      - 4 GL accounts: Current Year P/(L), Retained Earnings, Revenue, Cash
+      - CompanyPostingSetup with retainedEarningsAccountId set
+
+    Returns (cy_account_id, re_account_id, revenue_account_id, cash_account_id).
+    """
+    from finance.models.orm.models import (
+        AccountTypeEnum,
+        CompanyCode,
+        CompanyPostingSetup,
+        DrawerEnum,
+        GLAccount,
+    )
+
+    cy_id = str(_uuid_test.uuid4())
+    re_id = str(_uuid_test.uuid4())
+    rev_id = str(_uuid_test.uuid4())
+    cash_id = str(_uuid_test.uuid4())
+
+    db_session.add(
+        CompanyCode(
+            companyCode=company_code,
+            organizationId=organization_id,
+            legalName=f"Closing Test {company_code}",
+        )
+    )
+    for aid, num, name, drawer, atype in [
+        (cy_id, "312000-002", "Current Year Profit / (Loss)",
+         DrawerEnum.EQUITY, AccountTypeEnum.EQUITY),
+        (re_id, "312000-001", "Retained Earnings - Prior Years",
+         DrawerEnum.EQUITY, AccountTypeEnum.EQUITY),
+        (rev_id, "411000-001", "Sales Revenue",
+         DrawerEnum.REVENUE, AccountTypeEnum.REVENUE),
+        (cash_id, "126000-001", "Cash at Bank",
+         DrawerEnum.ASSETS, AccountTypeEnum.ASSET),
+    ]:
+        db_session.add(
+            GLAccount(
+                accountId=aid,
+                organizationId=organization_id,
+                accountNumber=num,
+                accountName=name,
+                drawer=drawer,
+                accountType=atype,
+                isHeader=False,
+                isActive=True,
+            )
+        )
+    db_session.add(
+        CompanyPostingSetup(
+            setupId=str(_uuid_test.uuid4()),
+            organizationId=organization_id,
+            companyCode=company_code,
+            retainedEarningsAccountId=re_id,
+            isComplete=False,
+        )
+    )
+    await db_session.commit()
+    return cy_id, re_id, rev_id, cash_id
+
+
+async def _post_test_revenue_je(
+    db_session,
+    organization_id: str,
+    company_code: str,
+    period_id: str,
+    revenue_account_id: str,
+    cash_account_id: str,
+    amount: Decimal,
+    je_date,
+) -> None:
+    """
+    Post a minimal JE: DR Cash / CR Revenue for `amount`. Establishes
+    Net Income = amount for the fiscal year. Both lines balance.
+    """
+    from finance.models.orm.models import (
+        JEStatusEnum,
+        JournalEntry,
+        JournalEntryLine,
+    )
+
+    je_id = str(_uuid_test.uuid4())
+    db_session.add(
+        JournalEntry(
+            jeId=je_id,
+            organizationId=organization_id,
+            companyCode=company_code,
+            jeNumber=f"JE-{company_code}-{je_date.year}-T001",
+            jeDate=je_date,
+            periodId=period_id,
+            sourceEventType="test_seed",
+            sourceEventId=je_id,
+            description="Test revenue posting",
+            totalDebit=amount,
+            totalCredit=amount,
+            status=JEStatusEnum.POSTED,
+            postedAt=datetime.utcnow(),
+            postedBy="user-test",
+        )
+    )
+    db_session.add(
+        JournalEntryLine(
+            jeLineId=str(_uuid_test.uuid4()),
+            jeId=je_id,
+            lineNumber=1,
+            accountId=cash_account_id,
+            debit=amount,
+            credit=Decimal("0"),
+            description="Cash debit",
+        )
+    )
+    db_session.add(
+        JournalEntryLine(
+            jeLineId=str(_uuid_test.uuid4()),
+            jeId=je_id,
+            lineNumber=2,
+            accountId=revenue_account_id,
+            debit=Decimal("0"),
+            credit=amount,
+            description="Revenue credit",
+        )
+    )
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_close_year_end_auto_posts_closing_je(
+    client: AsyncClient, db_session
+) -> None:
+    """
+    Closing the fiscal year-end period should auto-post a closing JE
+    that rolls net income from Current Year P/(L) into Retained Earnings.
+    """
+    org_id = f"org-close-{uuid.uuid4().hex[:8]}"
+    company_code = f"CL{uuid.uuid4().hex[:6].upper()}"
+    cy_id, re_id, rev_id, cash_id = await _seed_company_coa_posting(
+        db_session, org_id, company_code
+    )
+
+    # Seed one fiscal period that IS the year-end (only period for FY 2026)
+    create_resp = await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code,
+            "fiscalYear": 2026,
+            "periodNumber": 12,
+            "startDate": "2026-12-01",
+            "endDate": "2026-12-31",
+        },
+        headers=auth_headers(),
+    )
+    period_id = create_resp.json()["data"]["periodId"]
+
+    # Post a Revenue JE (Net Income = 1000 AED).
+    from datetime import date as _date
+
+    await _post_test_revenue_je(
+        db_session,
+        org_id,
+        company_code,
+        period_id,
+        revenue_account_id=rev_id,
+        cash_account_id=cash_id,
+        amount=Decimal("1000.00"),
+        je_date=_date(2026, 12, 15),
+    )
+
+    # Close the year-end period.
+    resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id},
+        headers=auth_headers(),
+    )
+    assert resp.status_code == 200, resp.text
+
+    body = resp.json()["data"]
+    assert body["period"]["status"] == "closed"
+    assert body["closingJe"] is not None
+    assert Decimal(body["closingJe"]["netIncome"]) == Decimal("1000.00")
+    assert body["closingJe"]["jeDate"] == "2026-12-31"
+
+    # Verify the closing JE has two lines: DR cy / CR re.
+    from finance.models.orm.models import JournalEntry, JournalEntryLine
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    je = (
+        await db_session.execute(
+            select(JournalEntry)
+            .options(selectinload(JournalEntry.lines))
+            .where(JournalEntry.jeId == body["closingJe"]["jeId"])
+        )
+    ).scalar_one()
+    assert je.sourceEventType == "period_close"
+    assert je.sourceDocId == period_id
+    assert len(je.lines) == 2
+    dr_line = next(l for l in je.lines if l.debit > 0)
+    cr_line = next(l for l in je.lines if l.credit > 0)
+    assert dr_line.accountId == cy_id
+    assert cr_line.accountId == re_id
+    assert Decimal(str(dr_line.debit)) == Decimal("1000.00")
+    assert Decimal(str(cr_line.credit)) == Decimal("1000.00")
+
+
+@pytest.mark.asyncio
+async def test_reopen_year_end_reverses_closing_je(
+    client: AsyncClient, db_session
+) -> None:
+    """
+    Reopening a year-end period should post an offsetting reversal JE
+    so the closing JE + reversal net to zero on the books.
+    """
+    from datetime import datetime, date as _date
+
+    org_id = f"org-reopen-{uuid.uuid4().hex[:8]}"
+    company_code = f"RO{uuid.uuid4().hex[:6].upper()}"
+    cy_id, re_id, rev_id, cash_id = await _seed_company_coa_posting(
+        db_session, org_id, company_code
+    )
+
+    create_resp = await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code,
+            "fiscalYear": 2026,
+            "periodNumber": 12,
+            "startDate": "2026-12-01",
+            "endDate": "2026-12-31",
+        },
+        headers=auth_headers(),
+    )
+    period_id = create_resp.json()["data"]["periodId"]
+
+    await _post_test_revenue_je(
+        db_session, org_id, company_code, period_id,
+        revenue_account_id=rev_id,
+        cash_account_id=cash_id,
+        amount=Decimal("500.00"),
+        je_date=_date(2026, 12, 15),
+    )
+
+    # Close
+    close_resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id},
+        headers=auth_headers(),
+    )
+    closing_je_number = close_resp.json()["data"]["closingJe"]["jeNumber"]
+
+    # Reopen
+    reopen_resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/reopen",
+        params={"organization_id": org_id},
+        json={"reason": "Need to post adjusting entry"},
+        headers=auth_headers(),
+    )
+    assert reopen_resp.status_code == 200, reopen_resp.text
+    rev_body = reopen_resp.json()["data"]
+    assert rev_body["period"]["status"] == "open"
+    assert rev_body["closingJeReversal"] is not None
+    assert rev_body["closingJeReversal"]["jeNumber"] != closing_je_number
+
+    # Verify the reversal swaps DR/CR
+    from finance.models.orm.models import JournalEntry, JournalEntryLine
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    reversal = (
+        await db_session.execute(
+            select(JournalEntry)
+            .options(selectinload(JournalEntry.lines))
+            .where(JournalEntry.jeId == rev_body["closingJeReversal"]["jeId"])
+        )
+    ).scalar_one()
+    assert reversal.sourceEventType == "period_close_reversal"
+    assert reversal.sourceDocNumber == closing_je_number
+    assert len(reversal.lines) == 2
+    # Sum must equal original closing JE (zero net effect)
+    total_dr = sum(Decimal(str(l.debit or 0)) for l in reversal.lines)
+    total_cr = sum(Decimal(str(l.credit or 0)) for l in reversal.lines)
+    assert total_dr == Decimal("500.00")
+    assert total_cr == Decimal("500.00")
+
+
+@pytest.mark.asyncio
+async def test_close_refuses_unbalanced_period(
+    client: AsyncClient, db_session
+) -> None:
+    """A period whose JEs don't balance must refuse close with HTTP 400."""
+    from datetime import datetime, date as _date
+
+    org_id = f"org-unbal-{uuid.uuid4().hex[:8]}"
+    company_code = f"UB{uuid.uuid4().hex[:6].upper()}"
+
+    from finance.models.orm.models import (
+        CompanyCode,
+        AccountTypeEnum,
+        DrawerEnum,
+        GLAccount,
+        JEStatusEnum,
+        JournalEntry,
+        JournalEntryLine,
+    )
+
+    a1 = str(_uuid_test.uuid4())
+    a2 = str(_uuid_test.uuid4())
+    db_session.add(
+        CompanyCode(
+            companyCode=company_code,
+            organizationId=org_id,
+            legalName=f"Unbalanced {company_code}",
+        )
+    )
+    db_session.add(
+        GLAccount(
+            accountId=a1, organizationId=org_id, accountNumber="126000-001",
+            accountName="Cash", drawer=DrawerEnum.ASSETS,
+            accountType=AccountTypeEnum.ASSET, isHeader=False, isActive=True,
+        )
+    )
+    db_session.add(
+        GLAccount(
+            accountId=a2, organizationId=org_id, accountNumber="411000-001",
+            accountName="Revenue", drawer=DrawerEnum.REVENUE,
+            accountType=AccountTypeEnum.REVENUE, isHeader=False, isActive=True,
+        )
+    )
+    await db_session.commit()
+
+    create_resp = await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code, "fiscalYear": 2026, "periodNumber": 1,
+            "startDate": "2026-01-01", "endDate": "2026-01-31",
+        },
+        headers=auth_headers(),
+    )
+    period_id = create_resp.json()["data"]["periodId"]
+
+    # Post an UNBALANCED JE (DR 100 / CR 90 — short 10).
+    je_id = str(_uuid_test.uuid4())
+    db_session.add(
+        JournalEntry(
+            jeId=je_id, organizationId=org_id, companyCode=company_code,
+            jeNumber=f"JE-{company_code}-2026-X001", jeDate=_date(2026, 1, 15),
+            periodId=period_id, sourceEventType="test_unbalanced",
+            sourceEventId=je_id, totalDebit=Decimal("100"),
+            totalCredit=Decimal("90"), status=JEStatusEnum.POSTED,
+            postedAt=datetime.utcnow(), postedBy="user-test",
+        )
+    )
+    db_session.add(
+        JournalEntryLine(
+            jeLineId=str(_uuid_test.uuid4()), jeId=je_id, lineNumber=1,
+            accountId=a1, debit=Decimal("100"), credit=Decimal("0"),
+        )
+    )
+    db_session.add(
+        JournalEntryLine(
+            jeLineId=str(_uuid_test.uuid4()), jeId=je_id, lineNumber=2,
+            accountId=a2, debit=Decimal("0"), credit=Decimal("90"),
+        )
+    )
+    await db_session.commit()
+
+    resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id},
+        headers=auth_headers(),
+    )
+    assert resp.status_code == 400
+    assert "does not balance" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_close_year_end_without_re_account_returns_400(
+    client: AsyncClient, db_session
+) -> None:
+    """Year-end close must error cleanly if RE account isn't configured."""
+    from datetime import date as _date
+
+    org_id = f"org-nore-{uuid.uuid4().hex[:8]}"
+    company_code = f"NR{uuid.uuid4().hex[:6].upper()}"
+
+    # Seed everything via session — NO posting setup so RE account is missing.
+    from finance.models.orm.models import (
+        AccountTypeEnum, CompanyCode, DrawerEnum, GLAccount,
+    )
+
+    rev_id = str(_uuid_test.uuid4())
+    cy_id = str(_uuid_test.uuid4())
+    cash_id = str(_uuid_test.uuid4())
+    db_session.add(
+        CompanyCode(
+            companyCode=company_code,
+            organizationId=org_id,
+            legalName=f"NoRE {company_code}",
+        )
+    )
+    for aid, num, name, drawer, atype in [
+        (cy_id, "312000-002", "Current Year P/(L)", DrawerEnum.EQUITY, AccountTypeEnum.EQUITY),
+        (rev_id, "411000-001", "Revenue", DrawerEnum.REVENUE, AccountTypeEnum.REVENUE),
+        (cash_id, "126000-001", "Cash", DrawerEnum.ASSETS, AccountTypeEnum.ASSET),
+    ]:
+        db_session.add(
+            GLAccount(
+                accountId=aid, organizationId=org_id, accountNumber=num,
+                accountName=name, drawer=drawer, accountType=atype,
+                isHeader=False, isActive=True,
+            )
+        )
+    await db_session.commit()
+
+    create_resp = await client.post(
+        "/api/v1/finance/periods",
+        json={"companyCode": company_code, "fiscalYear": 2026,
+              "periodNumber": 12, "startDate": "2026-12-01",
+              "endDate": "2026-12-31"},
+        headers=auth_headers(),
+    )
+    period_id = create_resp.json()["data"]["periodId"]
+
+    await _post_test_revenue_je(
+        db_session, org_id, company_code, period_id,
+        revenue_account_id=rev_id, cash_account_id=cash_id,
+        amount=Decimal("250.00"), je_date=_date(2026, 12, 20),
+    )
+
+    resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id},
+        headers=auth_headers(),
+    )
+    assert resp.status_code == 400
+    assert "retained earnings" in resp.json()["detail"].lower()
