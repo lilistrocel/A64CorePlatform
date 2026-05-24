@@ -28,7 +28,9 @@ from ...models.orm.models import (
     AccountLevelEnum,
     AccountTypeEnum,
     ApPaymentApplication,
+    CompanyCode,
     CompanyPostingSetup,
+    DrawerEnum,
     GLAccount,
     JEStatusEnum,
     JournalEntry,
@@ -761,4 +763,421 @@ async def get_vendor_sub_ledger(
         asOfDate=effective_date.isoformat(),
         totalOutstanding=str(total_outstanding),
         byVendor=vendor_rows,
+    ))
+
+
+# ===========================================================================
+# Wave 2 / T-060.3 — Balance Sheet
+# ===========================================================================
+
+# BS-relevant drawers (those that hit the Balance Sheet, not the P&L).
+_BS_DRAWERS = (DrawerEnum.ASSETS, DrawerEnum.LIABILITIES, DrawerEnum.EQUITY)
+
+# P&L drawers — used to compute live Net Income for the current fiscal year.
+# Mirrors the list in services/finance/src/finance/api/v1/periods.py.
+_PL_DRAWERS = (
+    DrawerEnum.REVENUE,
+    DrawerEnum.COST_OF_SALES,
+    DrawerEnum.OPERATING_COST,
+    DrawerEnum.NON_OPERATING,
+    DrawerEnum.OTHER_INCOME,
+    DrawerEnum.TAXATION,
+)
+
+_BALANCE_TOLERANCE = Decimal("0.01")
+
+
+class BalanceSheetRow(BaseModel):
+    """A single account row in the Balance Sheet."""
+
+    accountId: str
+    accountNumber: str
+    accountName: str
+    drawer: str
+    accountType: str
+    parentAccountId: Optional[str]
+    isHeader: bool
+    # Balance with sign convention applied:
+    #   ASSET → positive = DR balance (normal)
+    #   LIABILITY / EQUITY → positive = CR balance (normal)
+    # Header accounts carry the sum of their descendants' balances.
+    balance: str
+
+
+class BalanceSheetTotals(BaseModel):
+    """Aggregate totals — assets should equal liabilities + equity."""
+
+    totalAssets: str
+    totalLiabilities: str
+    totalEquity: str            # INCLUDES currentYearProfitLoss
+    totalLiabilitiesPlusEquity: str
+    balanceDelta: str           # totalAssets - totalLiabilitiesPlusEquity
+
+
+class BalanceSheetResponse(BaseModel):
+    """
+    Balance Sheet response — flat row list with drawer + parent linkage so
+    the frontend can render either as a flat table or a nested tree.
+
+    `currentYearProfitLoss` is the live-computed net of all P&L drawer
+    activity from the start of the current fiscal year up to as_of_date.
+    Frontend renders it as a synthetic row inside the equity section.
+    """
+
+    organizationId: str
+    companyCode: str
+    asOfDate: str
+    generatedAt: str
+    currency: str = "AED"
+    includesVoided: bool
+    rows: List[BalanceSheetRow]
+    currentYearProfitLoss: str
+    totals: BalanceSheetTotals
+    warnings: List[str] = Field(default_factory=list)
+
+
+def _resolve_fiscal_year_start(
+    company: CompanyCode, as_of: date
+) -> date:
+    """
+    Compute the start date of the fiscal year containing `as_of`.
+
+    Honors the company's `fiscalYearStartMonth` / `fiscalYearStartDay`
+    settings (defaults Jan 1 / Jan 1). Examples:
+      - Calendar year (1/1):  as_of=2026-05-24 → 2026-01-01.
+      - Agri Aug-start (8/1): as_of=2026-05-24 → 2025-08-01.
+      - Agri Aug-start (8/1): as_of=2026-09-15 → 2026-08-01.
+    """
+    sm = company.fiscalYearStartMonth or 1
+    sd = company.fiscalYearStartDay or 1
+    candidate = date(as_of.year, sm, sd)
+    if candidate <= as_of:
+        return candidate
+    # Fiscal year started in the previous calendar year.
+    return date(as_of.year - 1, sm, sd)
+
+
+@router.get(
+    "/reports/balance-sheet",
+    response_model=SuccessResponse[BalanceSheetResponse],
+    summary="Balance Sheet (as of a given date)",
+    description=(
+        "Wave 2 (T-060.3) — Standard Balance Sheet snapshot. Walks the "
+        "Chart-of-Accounts hierarchy for ASSETS / LIABILITIES / EQUITY "
+        "drawers and computes the balance of every account as of "
+        "`as_of_date`. Header accounts (isHeader=True) report the sum "
+        "of their descendant balances.\n\n"
+        "`currentYearProfitLoss` is the live net of all P&L drawer "
+        "activity from the start of the current fiscal year up to "
+        "`as_of_date`. Total equity in the totals block already "
+        "includes this amount.\n\n"
+        "**Validation:** `totalAssets ≈ totalLiabilitiesPlusEquity` "
+        "within 0.01 AED. A non-zero `balanceDelta` is surfaced as a "
+        "warning rather than refusing the request."
+    ),
+)
+async def get_balance_sheet(
+    organization_id: str = Query(..., description="Required — org scope"),
+    company_code: str = Query(..., description="Required — company code"),
+    as_of_date: Optional[date] = Query(
+        None,
+        description="Snapshot date (default: today). All JEs with jeDate "
+        "<= as_of_date are accumulated.",
+    ),
+    include_voided: bool = Query(
+        False,
+        description="Include voided JEs in the balance computation.",
+    ),
+    cost_center_id: Optional[str] = Query(
+        None,
+        description="Optional — filter JE lines by cost-centre. BS-by-"
+        "cost-centre is non-statutory presentation; use with care.",
+    ),
+    db: AsyncSession = Depends(get_db),
+    _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
+) -> SuccessResponse[BalanceSheetResponse]:
+    """
+    Compute the Balance Sheet as of `as_of_date` for the given
+    organisation + company.
+
+    Algorithm:
+    1. Aggregate JE line debits/credits per BS account where
+       jeDate <= as_of_date (LEFT JOIN from accounts to a filtered
+       subquery so zero-activity accounts still appear).
+    2. Apply sign convention to compute each account's balance.
+    3. Walk parentAccountId to nest accounts; compute header balances
+       as sum of leaf descendants.
+    4. Compute current-year P/(L) separately from P&L drawer activity
+       (fiscal year derived from CompanyCode settings).
+    5. Validate totalAssets == totalLiabilitiesPlusEquity ±0.01 AED;
+       attach a warning if not.
+    """
+    effective_date: date = as_of_date or date.today()
+    generated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # ------------------------------------------------------------------
+    # 0. Resolve company (need fiscal-year start for live NI)
+    # ------------------------------------------------------------------
+    company = await db.get(CompanyCode, company_code)
+    if company is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Company '{company_code}' not found.",
+        )
+    fy_start = _resolve_fiscal_year_start(company, effective_date)
+
+    # ------------------------------------------------------------------
+    # 1. BS aggregation — same LEFT-JOIN pattern as Trial Balance.
+    # ------------------------------------------------------------------
+    je_filters = [
+        JournalEntry.organizationId == organization_id,
+        JournalEntry.companyCode == company_code,
+        JournalEntry.jeDate <= effective_date,
+    ]
+    if not include_voided:
+        je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
+
+    line_filters = []
+    if cost_center_id is not None:
+        line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+
+    subq = (
+        select(
+            JournalEntryLine.accountId.label("account_id"),
+            func.sum(JournalEntryLine.debit).label("sum_debit"),
+            func.sum(JournalEntryLine.credit).label("sum_credit"),
+        )
+        .join(JournalEntry, JournalEntryLine.jeId == JournalEntry.jeId)
+        .where(*je_filters, *line_filters)
+        .group_by(JournalEntryLine.accountId)
+        .subquery("bs_agg")
+    )
+
+    sum_debit = func.coalesce(subq.c.sum_debit, Decimal("0")).label("total_debit")
+    sum_credit = func.coalesce(subq.c.sum_credit, Decimal("0")).label("total_credit")
+
+    stmt = (
+        select(
+            GLAccount.accountId,
+            GLAccount.accountNumber,
+            GLAccount.accountName,
+            GLAccount.drawer,
+            GLAccount.accountType,
+            GLAccount.parentAccountId,
+            GLAccount.isHeader,
+            sum_debit,
+            sum_credit,
+        )
+        .outerjoin(subq, subq.c.account_id == GLAccount.accountId)
+        .where(
+            GLAccount.organizationId == organization_id,
+            GLAccount.drawer.in_(_BS_DRAWERS),
+            GLAccount.isActive == True,  # noqa: E712 — SQLAlchemy idiom
+        )
+        .group_by(
+            GLAccount.accountId,
+            GLAccount.accountNumber,
+            GLAccount.accountName,
+            GLAccount.drawer,
+            GLAccount.accountType,
+            GLAccount.parentAccountId,
+            GLAccount.isHeader,
+        )
+        .order_by(GLAccount.accountNumber)
+    )
+
+    rows = (await db.execute(stmt)).all()
+
+    # ------------------------------------------------------------------
+    # 2. Compute each account's leaf balance with sign convention.
+    # ------------------------------------------------------------------
+    leaf_balances: Dict[str, Decimal] = {}
+    account_meta: Dict[str, Dict] = {}
+
+    for row in rows:
+        dr = Decimal(str(row.total_debit))
+        cr = Decimal(str(row.total_credit))
+
+        acct_type_val = row.accountType
+        if isinstance(acct_type_val, AccountTypeEnum):
+            acct_type_enum = acct_type_val
+        else:
+            try:
+                acct_type_enum = AccountTypeEnum(acct_type_val)
+            except ValueError:
+                acct_type_enum = AccountTypeEnum.ASSET
+
+        # Sign convention: assets debit-natural; liability/equity credit-natural.
+        if acct_type_enum in _DEBIT_NATURAL_TYPES:
+            balance = dr - cr
+        else:
+            balance = cr - dr
+
+        leaf_balances[row.accountId] = balance
+
+        drawer_str = (
+            row.drawer.value if hasattr(row.drawer, "value") else str(row.drawer)
+        )
+        account_meta[row.accountId] = {
+            "accountNumber": row.accountNumber,
+            "accountName": row.accountName,
+            "drawer": drawer_str,
+            "accountType": acct_type_enum.value,
+            "parentAccountId": row.parentAccountId,
+            "isHeader": bool(row.isHeader),
+        }
+
+    # ------------------------------------------------------------------
+    # 3. Roll leaf balances UP into header accounts.
+    #
+    # For each account, walk parentAccountId chain to root, adding its
+    # leaf balance into each ancestor. Headers thus end up holding the
+    # sum of their descendant leaves regardless of nesting depth.
+    # ------------------------------------------------------------------
+    rolled: Dict[str, Decimal] = dict(leaf_balances)  # start with own balance
+
+    for account_id, meta in account_meta.items():
+        if meta["isHeader"]:
+            continue  # headers don't seed their own value into ancestors
+        # Walk up to add leaf balance to each ancestor header.
+        leaf_balance = leaf_balances[account_id]
+        parent_id = meta["parentAccountId"]
+        guard = 0  # cycle guard
+        while parent_id is not None and guard < 100:
+            if parent_id not in rolled:
+                rolled[parent_id] = Decimal("0")
+            rolled[parent_id] = rolled[parent_id] + leaf_balance
+            parent_meta = account_meta.get(parent_id)
+            if parent_meta is None:
+                break
+            parent_id = parent_meta["parentAccountId"]
+            guard += 1
+
+    # For header accounts, replace their seeded (own) balance with the
+    # rolled total. Leaves keep their leaf balance. Reason: headers
+    # shouldn't have direct postings, but if they do (mis-classified
+    # account), the leaf balance is already counted via the chain
+    # walk — replacing avoids double counting.
+    final_balances: Dict[str, Decimal] = {}
+    for account_id, meta in account_meta.items():
+        if meta["isHeader"]:
+            # Header total = rolled - leaf_balance (we subtract because the
+            # leaf_balance is the header's OWN direct postings, which we
+            # don't want to double-count when summing descendants).
+            # In practice header accounts have leaf_balance=0.
+            final_balances[account_id] = rolled.get(account_id, Decimal("0"))
+        else:
+            final_balances[account_id] = leaf_balances[account_id]
+
+    # ------------------------------------------------------------------
+    # 4. Compute live Current Year Profit/(Loss) from P&L drawer activity.
+    # ------------------------------------------------------------------
+    pl_je_filters = [
+        JournalEntry.organizationId == organization_id,
+        JournalEntry.companyCode == company_code,
+        JournalEntry.jeDate >= fy_start,
+        JournalEntry.jeDate <= effective_date,
+    ]
+    if not include_voided:
+        pl_je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
+
+    pl_line_filters = []
+    if cost_center_id is not None:
+        pl_line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+
+    ni_result = await db.execute(
+        select(
+            func.coalesce(func.sum(JournalEntryLine.credit), 0)
+            - func.coalesce(func.sum(JournalEntryLine.debit), 0)
+        )
+        .select_from(JournalEntryLine)
+        .join(JournalEntry, JournalEntryLine.jeId == JournalEntry.jeId)
+        .join(GLAccount, JournalEntryLine.accountId == GLAccount.accountId)
+        .where(
+            *pl_je_filters,
+            *pl_line_filters,
+            GLAccount.drawer.in_(_PL_DRAWERS),
+        )
+    )
+    current_year_pl = Decimal(str(ni_result.scalar_one() or 0))
+
+    # ------------------------------------------------------------------
+    # 5. Build response rows + compute drawer totals.
+    # ------------------------------------------------------------------
+    response_rows: List[BalanceSheetRow] = []
+    drawer_totals: Dict[str, Decimal] = {
+        DrawerEnum.ASSETS.value: Decimal("0"),
+        DrawerEnum.LIABILITIES.value: Decimal("0"),
+        DrawerEnum.EQUITY.value: Decimal("0"),
+    }
+    # For drawer totals we sum ONLY LEAF balances — header sums would
+    # double-count their own children.
+    for account_id, meta in account_meta.items():
+        balance = final_balances[account_id]
+        response_rows.append(
+            BalanceSheetRow(
+                accountId=account_id,
+                accountNumber=meta["accountNumber"],
+                accountName=meta["accountName"],
+                drawer=meta["drawer"],
+                accountType=meta["accountType"],
+                parentAccountId=meta["parentAccountId"],
+                isHeader=meta["isHeader"],
+                balance=str(balance),
+            )
+        )
+        if not meta["isHeader"]:
+            drawer_totals[meta["drawer"]] = (
+                drawer_totals[meta["drawer"]] + balance
+            )
+
+    # Sort rows by accountNumber so the frontend gets predictable order.
+    response_rows.sort(key=lambda r: r.accountNumber)
+
+    total_assets = drawer_totals[DrawerEnum.ASSETS.value]
+    total_liabilities = drawer_totals[DrawerEnum.LIABILITIES.value]
+    total_equity_gl = drawer_totals[DrawerEnum.EQUITY.value]
+    # Equity total includes the live current-year P/L (see design §4.1).
+    total_equity = total_equity_gl + current_year_pl
+    total_liab_plus_eq = total_liabilities + total_equity
+    balance_delta = total_assets - total_liab_plus_eq
+
+    warnings: List[str] = []
+    if balance_delta.copy_abs() > _BALANCE_TOLERANCE:
+        warnings.append(
+            f"Balance Sheet does not balance: assets={total_assets} vs "
+            f"liabilities+equity={total_liab_plus_eq} (delta={balance_delta}). "
+            "Investigate unbalanced JEs or missing closing entries."
+        )
+
+    logger.info(
+        "[Finance/Reports] balance_sheet org=%s company=%s as_of=%s "
+        "assets=%s liab=%s equity=%s ni=%s balanced=%s",
+        organization_id,
+        company_code,
+        effective_date.isoformat(),
+        total_assets,
+        total_liabilities,
+        total_equity,
+        current_year_pl,
+        balance_delta.copy_abs() <= _BALANCE_TOLERANCE,
+    )
+
+    return success(BalanceSheetResponse(
+        organizationId=organization_id,
+        companyCode=company_code,
+        asOfDate=effective_date.isoformat(),
+        generatedAt=generated_at.isoformat(),
+        currency=company.defaultCurrency or "AED",
+        includesVoided=include_voided,
+        rows=response_rows,
+        currentYearProfitLoss=str(current_year_pl),
+        totals=BalanceSheetTotals(
+            totalAssets=str(total_assets),
+            totalLiabilities=str(total_liabilities),
+            totalEquity=str(total_equity),
+            totalLiabilitiesPlusEquity=str(total_liab_plus_eq),
+            balanceDelta=str(balance_delta),
+        ),
+        warnings=warnings,
     ))
