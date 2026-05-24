@@ -1181,3 +1181,451 @@ async def get_balance_sheet(
         ),
         warnings=warnings,
     ))
+
+
+# ===========================================================================
+# Wave 2 / T-060.4 — Income Statement (a.k.a. Statutory P&L)
+# ===========================================================================
+#
+# Distinct from the existing /finance/pnl (operational P&L derived from
+# sales/harvest data). This endpoint computes the statutory income
+# statement directly from the GL — drawer-grouped period activity with
+# Gross Profit / EBIT / Net Income subtotals.
+
+
+# Order in which drawers appear on the report (top to bottom).
+_IS_DRAWER_ORDER = (
+    DrawerEnum.REVENUE,
+    DrawerEnum.COST_OF_SALES,
+    DrawerEnum.OPERATING_COST,
+    DrawerEnum.OTHER_INCOME,
+    DrawerEnum.NON_OPERATING,
+    DrawerEnum.TAXATION,
+)
+
+
+class IncomeStatementAccount(BaseModel):
+    """A single P&L account row in the income statement."""
+
+    accountId: str
+    accountNumber: str
+    accountName: str
+    drawer: str
+    accountType: str
+    parentAccountId: Optional[str]
+    isHeader: bool
+    balance: str  # natural-side balance (positive = normal)
+
+
+class IncomeStatementDrawerSection(BaseModel):
+    """Per-drawer block: all accounts of a single drawer + drawer total."""
+
+    drawer: str
+    total: str  # sum of leaf-account balances in this drawer (natural side)
+    rows: List[IncomeStatementAccount]
+
+
+class IncomeStatementSubtotals(BaseModel):
+    """
+    Standard P&L subtotals derived from drawer totals.
+
+    Sign convention: each value is the conventional accounting sign —
+    Revenue and Other Income contribute positively; Cost of Sales,
+    Operating Cost, Non-Operating, and Taxation contribute negatively
+    when summed into Net Income.
+
+      grossProfit = revenue - costOfSales
+      operatingIncome (EBIT) = grossProfit - operatingCost
+      netIncome = operatingIncome + otherIncome - nonOperating - taxation
+    """
+
+    revenue: str
+    costOfSales: str
+    grossProfit: str
+    grossMarginPercent: Optional[str]  # null when revenue = 0
+    operatingCost: str
+    operatingIncome: str  # EBIT
+    otherIncome: str
+    nonOperating: str
+    taxation: str
+    netIncome: str
+
+
+class IncomeStatementPeriod(BaseModel):
+    """A single period's IS data (used for primary + optional comparison)."""
+
+    periodStart: str  # ISO date
+    periodEnd: str
+    sections: List[IncomeStatementDrawerSection]
+    subtotals: IncomeStatementSubtotals
+
+
+class IncomeStatementResponse(BaseModel):
+    """
+    Income Statement response.
+
+    `primary` is always returned. `comparison` is populated only when
+    `compare_period_start` + `compare_period_end` were provided. The
+    frontend renders comparative columns side-by-side using the
+    matching drawer + subtotal keys.
+    """
+
+    organizationId: str
+    companyCode: str
+    generatedAt: str
+    currency: str
+    includesVoided: bool
+    primary: IncomeStatementPeriod
+    comparison: Optional[IncomeStatementPeriod] = None
+    warnings: List[str] = Field(default_factory=list)
+
+
+async def _compute_income_statement_period(
+    db: AsyncSession,
+    organization_id: str,
+    company_code: str,
+    period_start: date,
+    period_end: date,
+    include_voided: bool,
+    cost_center_id: Optional[str],
+) -> IncomeStatementPeriod:
+    """
+    Compute the income statement for ONE period.
+
+    Re-used by both the primary period and the optional comparison
+    period. Same LEFT-JOIN aggregation pattern as Balance Sheet,
+    filtered to P&L drawers and date-bounded by [period_start,
+    period_end].
+    """
+    # ── Aggregate JE line activity per P&L account, period-bounded ──────
+    je_filters = [
+        JournalEntry.organizationId == organization_id,
+        JournalEntry.companyCode == company_code,
+        JournalEntry.jeDate >= period_start,
+        JournalEntry.jeDate <= period_end,
+    ]
+    if not include_voided:
+        je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
+
+    line_filters = []
+    if cost_center_id is not None:
+        line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+
+    subq = (
+        select(
+            JournalEntryLine.accountId.label("account_id"),
+            func.sum(JournalEntryLine.debit).label("sum_debit"),
+            func.sum(JournalEntryLine.credit).label("sum_credit"),
+        )
+        .join(JournalEntry, JournalEntryLine.jeId == JournalEntry.jeId)
+        .where(*je_filters, *line_filters)
+        .group_by(JournalEntryLine.accountId)
+        .subquery("is_agg")
+    )
+
+    sum_debit = func.coalesce(subq.c.sum_debit, Decimal("0")).label("total_debit")
+    sum_credit = func.coalesce(subq.c.sum_credit, Decimal("0")).label("total_credit")
+
+    stmt = (
+        select(
+            GLAccount.accountId,
+            GLAccount.accountNumber,
+            GLAccount.accountName,
+            GLAccount.drawer,
+            GLAccount.accountType,
+            GLAccount.parentAccountId,
+            GLAccount.isHeader,
+            sum_debit,
+            sum_credit,
+        )
+        .outerjoin(subq, subq.c.account_id == GLAccount.accountId)
+        .where(
+            GLAccount.organizationId == organization_id,
+            GLAccount.drawer.in_(_IS_DRAWER_ORDER),
+            GLAccount.isActive == True,  # noqa: E712
+        )
+        .group_by(
+            GLAccount.accountId,
+            GLAccount.accountNumber,
+            GLAccount.accountName,
+            GLAccount.drawer,
+            GLAccount.accountType,
+            GLAccount.parentAccountId,
+            GLAccount.isHeader,
+        )
+        .order_by(GLAccount.drawer, GLAccount.accountNumber)
+    )
+    rows = (await db.execute(stmt)).all()
+
+    # ── Compute leaf balances with sign convention ──────────────────────
+    leaf_balances: Dict[str, Decimal] = {}
+    account_meta: Dict[str, Dict] = {}
+
+    for row in rows:
+        dr = Decimal(str(row.total_debit))
+        cr = Decimal(str(row.total_credit))
+
+        acct_type_val = row.accountType
+        if isinstance(acct_type_val, AccountTypeEnum):
+            acct_type_enum = acct_type_val
+        else:
+            try:
+                acct_type_enum = AccountTypeEnum(acct_type_val)
+            except ValueError:
+                acct_type_enum = AccountTypeEnum.REVENUE
+
+        # Sign convention: expenses DR-natural → balance = DR - CR.
+        # Revenue / other income CR-natural → balance = CR - DR.
+        if acct_type_enum in _DEBIT_NATURAL_TYPES:
+            balance = dr - cr
+        else:
+            balance = cr - dr
+
+        leaf_balances[row.accountId] = balance
+
+        drawer_val = row.drawer
+        drawer_str = (
+            drawer_val.value if hasattr(drawer_val, "value") else str(drawer_val)
+        )
+        account_meta[row.accountId] = {
+            "accountNumber": row.accountNumber,
+            "accountName": row.accountName,
+            "drawer": drawer_str,
+            "accountType": acct_type_enum.value,
+            "parentAccountId": row.parentAccountId,
+            "isHeader": bool(row.isHeader),
+        }
+
+    # ── Roll leaf balances up into header accounts (same as BS) ─────────
+    rolled: Dict[str, Decimal] = dict(leaf_balances)
+    for account_id, meta in account_meta.items():
+        if meta["isHeader"]:
+            continue
+        leaf_balance = leaf_balances[account_id]
+        parent_id = meta["parentAccountId"]
+        guard = 0
+        while parent_id is not None and guard < 100:
+            if parent_id not in rolled:
+                rolled[parent_id] = Decimal("0")
+            rolled[parent_id] = rolled[parent_id] + leaf_balance
+            parent_meta = account_meta.get(parent_id)
+            if parent_meta is None:
+                break
+            parent_id = parent_meta["parentAccountId"]
+            guard += 1
+
+    final_balances: Dict[str, Decimal] = {}
+    for account_id, meta in account_meta.items():
+        if meta["isHeader"]:
+            final_balances[account_id] = rolled.get(account_id, Decimal("0"))
+        else:
+            final_balances[account_id] = leaf_balances[account_id]
+
+    # ── Group rows by drawer, compute drawer totals ─────────────────────
+    drawer_groups: Dict[str, List[IncomeStatementAccount]] = {
+        d.value: [] for d in _IS_DRAWER_ORDER
+    }
+    drawer_totals: Dict[str, Decimal] = {
+        d.value: Decimal("0") for d in _IS_DRAWER_ORDER
+    }
+
+    for account_id, meta in account_meta.items():
+        balance = final_balances[account_id]
+        drawer_groups[meta["drawer"]].append(
+            IncomeStatementAccount(
+                accountId=account_id,
+                accountNumber=meta["accountNumber"],
+                accountName=meta["accountName"],
+                drawer=meta["drawer"],
+                accountType=meta["accountType"],
+                parentAccountId=meta["parentAccountId"],
+                isHeader=meta["isHeader"],
+                balance=str(balance),
+            )
+        )
+        if not meta["isHeader"]:
+            drawer_totals[meta["drawer"]] = (
+                drawer_totals[meta["drawer"]] + balance
+            )
+
+    sections: List[IncomeStatementDrawerSection] = []
+    for drawer_enum in _IS_DRAWER_ORDER:
+        rows_for_drawer = sorted(
+            drawer_groups[drawer_enum.value], key=lambda r: r.accountNumber
+        )
+        sections.append(
+            IncomeStatementDrawerSection(
+                drawer=drawer_enum.value,
+                total=str(drawer_totals[drawer_enum.value]),
+                rows=rows_for_drawer,
+            )
+        )
+
+    # ── Subtotals ────────────────────────────────────────────────────────
+    revenue = drawer_totals[DrawerEnum.REVENUE.value]
+    cogs = drawer_totals[DrawerEnum.COST_OF_SALES.value]
+    operating_cost = drawer_totals[DrawerEnum.OPERATING_COST.value]
+    other_income = drawer_totals[DrawerEnum.OTHER_INCOME.value]
+    non_operating = drawer_totals[DrawerEnum.NON_OPERATING.value]
+    taxation = drawer_totals[DrawerEnum.TAXATION.value]
+
+    gross_profit = revenue - cogs
+    operating_income = gross_profit - operating_cost
+    net_income = operating_income + other_income - non_operating - taxation
+
+    gross_margin: Optional[str] = None
+    if revenue != Decimal("0"):
+        # Two-decimal percent for display; frontend may reformat.
+        gross_margin = str((gross_profit / revenue * Decimal("100")).quantize(
+            Decimal("0.01")
+        ))
+
+    subtotals = IncomeStatementSubtotals(
+        revenue=str(revenue),
+        costOfSales=str(cogs),
+        grossProfit=str(gross_profit),
+        grossMarginPercent=gross_margin,
+        operatingCost=str(operating_cost),
+        operatingIncome=str(operating_income),
+        otherIncome=str(other_income),
+        nonOperating=str(non_operating),
+        taxation=str(taxation),
+        netIncome=str(net_income),
+    )
+
+    return IncomeStatementPeriod(
+        periodStart=period_start.isoformat(),
+        periodEnd=period_end.isoformat(),
+        sections=sections,
+        subtotals=subtotals,
+    )
+
+
+@router.get(
+    "/reports/income-statement",
+    response_model=SuccessResponse[IncomeStatementResponse],
+    summary="Income Statement (statutory P&L)",
+    description=(
+        "Wave 2 (T-060.4) — Statutory income statement computed from the "
+        "General Ledger. Distinct from /finance/pnl (which is the "
+        "operational/management P&L derived from sales + harvest data). "
+        "Groups P&L drawer activity over `[period_start, period_end]` "
+        "and computes standard subtotals: Gross Profit, Operating "
+        "Income (EBIT), Net Income.\n\n"
+        "Optional `compare_period_start` + `compare_period_end` enable "
+        "a comparative column with the same shape. The frontend renders "
+        "the two columns side-by-side using matching drawer/subtotal "
+        "keys.\n\n"
+        "Optional `cost_center_id` filters JE lines so a single "
+        "cost-centre's P&L can be inspected."
+    ),
+)
+async def get_income_statement(
+    organization_id: str = Query(..., description="Required — org scope"),
+    company_code: str = Query(..., description="Required — company code"),
+    period_start: date = Query(..., description="Inclusive period start"),
+    period_end: date = Query(..., description="Inclusive period end"),
+    compare_period_start: Optional[date] = Query(
+        None, description="Optional comparison period start"
+    ),
+    compare_period_end: Optional[date] = Query(
+        None, description="Optional comparison period end"
+    ),
+    include_voided: bool = Query(
+        False, description="Include voided JEs in the totals"
+    ),
+    cost_center_id: Optional[str] = Query(
+        None, description="Optional cost-centre filter on JE lines"
+    ),
+    db: AsyncSession = Depends(get_db),
+    _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
+) -> SuccessResponse[IncomeStatementResponse]:
+    """
+    Compute the income statement for the given period.
+
+    Raises:
+      400 if period_end < period_start, or if the comparison-period
+          query params are partially provided.
+      404 if the company is unknown.
+    """
+    if period_end < period_start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"period_end ({period_end}) must be on or after "
+                f"period_start ({period_start})."
+            ),
+        )
+
+    if (compare_period_start is None) != (compare_period_end is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "compare_period_start and compare_period_end must be "
+                "provided together or omitted together."
+            ),
+        )
+    if compare_period_start and compare_period_end:
+        if compare_period_end < compare_period_start:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"compare_period_end ({compare_period_end}) must be on "
+                    f"or after compare_period_start ({compare_period_start})."
+                ),
+            )
+
+    # Verify the company exists (consistent with BS endpoint).
+    company = await db.get(CompanyCode, company_code)
+    if company is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Company '{company_code}' not found.",
+        )
+
+    generated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Compute primary period
+    primary = await _compute_income_statement_period(
+        db=db,
+        organization_id=organization_id,
+        company_code=company_code,
+        period_start=period_start,
+        period_end=period_end,
+        include_voided=include_voided,
+        cost_center_id=cost_center_id,
+    )
+
+    # Compute optional comparison period
+    comparison: Optional[IncomeStatementPeriod] = None
+    if compare_period_start and compare_period_end:
+        comparison = await _compute_income_statement_period(
+            db=db,
+            organization_id=organization_id,
+            company_code=company_code,
+            period_start=compare_period_start,
+            period_end=compare_period_end,
+            include_voided=include_voided,
+            cost_center_id=cost_center_id,
+        )
+
+    logger.info(
+        "[Finance/Reports] income_statement org=%s company=%s "
+        "period=%s..%s ni=%s",
+        organization_id,
+        company_code,
+        period_start.isoformat(),
+        period_end.isoformat(),
+        primary.subtotals.netIncome,
+    )
+
+    return success(IncomeStatementResponse(
+        organizationId=organization_id,
+        companyCode=company_code,
+        generatedAt=generated_at.isoformat(),
+        currency=company.defaultCurrency or "AED",
+        includesVoided=include_voided,
+        primary=primary,
+        comparison=comparison,
+        warnings=[],
+    ))
