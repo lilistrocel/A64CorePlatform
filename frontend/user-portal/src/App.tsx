@@ -6,6 +6,7 @@ import { lightTheme, darkTheme, GlobalStyles } from '@a64core/shared';
 import { queryClient } from './config/react-query.config';
 import { useThemeStore } from './stores/theme.store';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { FinanceGate } from './components/finance/FinanceGate';
 import { MFAVerifyGuard, MFASetupGuard } from './components/common/MFARouteGuards';
 import { MainLayout } from './components/layout/MainLayout';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
@@ -269,15 +270,16 @@ function App() {
                 <Route path="/tools/fertilizer-calculator" element={<FertilizerCostCalculator />} />
                 <Route path="/tools/chemicals" element={<ChemicalsCatalog />} />
 
-                {/* Finance module */}
-                <Route path="/finance/chart-of-accounts" element={<ChartOfAccountsPage />} />
-                <Route path="/finance/approval-rules" element={<ApprovalRulesPage />} />
-                <Route path="/finance/posting-setup" element={<PostingSetupPage />} />
-                <Route path="/finance/item-mapping" element={<ItemMappingPage />} />
-                <Route path="/finance/incoming" element={<IncomingPreviewPage />} />
+                {/* Finance module — Wave 0: each route gated on the
+                    per-tenant modules.finance.enabled capability. */}
+                <Route path="/finance/chart-of-accounts" element={<FinanceGate><ChartOfAccountsPage /></FinanceGate>} />
+                <Route path="/finance/approval-rules" element={<FinanceGate><ApprovalRulesPage /></FinanceGate>} />
+                <Route path="/finance/posting-setup" element={<FinanceGate><PostingSetupPage /></FinanceGate>} />
+                <Route path="/finance/item-mapping" element={<FinanceGate><ItemMappingPage /></FinanceGate>} />
+                <Route path="/finance/incoming" element={<FinanceGate><IncomingPreviewPage /></FinanceGate>} />
                 {/* Short URL alias for engineers */}
-                <Route path="/finance/coa" element={<Navigate to="/finance/chart-of-accounts" replace />} />
-                <Route path="/finance" element={<Navigate to="/finance/chart-of-accounts" replace />} />
+                <Route path="/finance/coa" element={<FinanceGate><Navigate to="/finance/chart-of-accounts" replace /></FinanceGate>} />
+                <Route path="/finance" element={<FinanceGate><Navigate to="/finance/chart-of-accounts" replace /></FinanceGate>} />
 
                 {/* Purchasing module (Phase 1A) */}
                 <Route path="/purchasing/vendors" element={<VendorsPage />} />
@@ -312,23 +314,23 @@ function App() {
                 <Route path="/purchasing/ap/:docId/edit" element={<APInvoiceFormPage />} />
 
                 {/* Finance module (Phase B — Journal Entries) */}
-                <Route path="/finance/journal-entries" element={<JournalEntriesPage />} />
+                <Route path="/finance/journal-entries" element={<FinanceGate><JournalEntriesPage /></FinanceGate>} />
 
                 {/* Finance module (PM feedback item 5 — Trial Balance) */}
-                <Route path="/finance/trial-balance" element={<TrialBalancePage />} />
+                <Route path="/finance/trial-balance" element={<FinanceGate><TrialBalancePage /></FinanceGate>} />
 
                 {/* Finance module (Phase D — Vendor Payments) */}
-                <Route path="/finance/payments" element={<PaymentsPage />} />
+                <Route path="/finance/payments" element={<FinanceGate><PaymentsPage /></FinanceGate>} />
                 {/* /new MUST come before /:paymentId to avoid treating "new" as a paymentId */}
-                <Route path="/finance/payments/new" element={<RecordPaymentPage />} />
-                <Route path="/finance/payments/:paymentId" element={<PaymentDetailPage />} />
+                <Route path="/finance/payments/new" element={<FinanceGate><RecordPaymentPage /></FinanceGate>} />
+                <Route path="/finance/payments/:paymentId" element={<FinanceGate><PaymentDetailPage /></FinanceGate>} />
 
                 {/* Finance module (Phase D.5 — Fiscal Periods) */}
-                <Route path="/finance/periods" element={<PeriodsPage />} />
+                <Route path="/finance/periods" element={<FinanceGate><PeriodsPage /></FinanceGate>} />
 
                 {/* Finance module (Phase E — AP Aging + Vendor Sub-Ledger) */}
-                <Route path="/finance/ap-aging" element={<APAgingPage />} />
-                <Route path="/finance/vendor-sub-ledger" element={<VendorSubLedgerPage />} />
+                <Route path="/finance/ap-aging" element={<FinanceGate><APAgingPage /></FinanceGate>} />
+                <Route path="/finance/vendor-sub-ledger" element={<FinanceGate><VendorSubLedgerPage /></FinanceGate>} />
 
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />

@@ -14,6 +14,7 @@ from fastapi import HTTPException, status
 from ..models.organization import (
     Organization,
     OrganizationCreate,
+    OrganizationModules,
     OrganizationResponse,
     OrganizationUpdate,
 )
@@ -62,6 +63,7 @@ class OrganizationService:
             slug=org.slug,
             industries=org.industries,
             logoUrl=org.logoUrl,
+            modules=org.modules,
             isActive=org.isActive,
             createdAt=org.createdAt,
             updatedAt=org.updatedAt,
@@ -91,6 +93,7 @@ class OrganizationService:
             slug=doc["slug"],
             industries=doc.get("industries", []),
             logoUrl=doc.get("logoUrl"),
+            modules=OrganizationModules(**doc.get("modules", {})),
             isActive=doc["isActive"],
             createdAt=doc["createdAt"],
             updatedAt=doc["updatedAt"],
@@ -129,6 +132,7 @@ class OrganizationService:
                     slug=doc["slug"],
                     industries=doc.get("industries", []),
                     logoUrl=doc.get("logoUrl"),
+                    modules=OrganizationModules(**doc.get("modules", {})),
                     isActive=doc["isActive"],
                     createdAt=doc["createdAt"],
                     updatedAt=doc["updatedAt"],
@@ -193,6 +197,69 @@ class OrganizationService:
             slug=updated_doc["slug"],
             industries=updated_doc.get("industries", []),
             logoUrl=updated_doc.get("logoUrl"),
+            modules=OrganizationModules(**updated_doc.get("modules", {})),
+            isActive=updated_doc["isActive"],
+            createdAt=updated_doc["createdAt"],
+            updatedAt=updated_doc["updatedAt"],
+        )
+
+    @staticmethod
+    async def update_modules(
+        organization_id: str, financeEnabled: Optional[bool]
+    ) -> OrganizationResponse:
+        """
+        Partially update a tenant's per-module toggles (Wave 0 — T-059.4).
+
+        Only set fields are applied. Returns the updated organization.
+
+        Args:
+            organization_id: UUID string of the organization.
+            financeEnabled: New value for modules.financeEnabled, or None
+                to leave unchanged.
+
+        Returns:
+            Updated OrganizationResponse.
+
+        Raises:
+            HTTPException 404: If the organization does not exist.
+        """
+        db = mongodb.get_database()
+        collection = db["organizations"]
+
+        existing = await collection.find_one({"organizationId": organization_id})
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Organization '{organization_id}' not found.",
+            )
+
+        set_fields: dict = {"updatedAt": datetime.utcnow()}
+        if financeEnabled is not None:
+            set_fields["modules.financeEnabled"] = financeEnabled
+
+        if len(set_fields) == 1:
+            # Reason: nothing to change beyond updatedAt — skip the write.
+            updated_doc = existing
+        else:
+            await collection.update_one(
+                {"organizationId": organization_id},
+                {"$set": set_fields},
+            )
+            updated_doc = await collection.find_one(
+                {"organizationId": organization_id}
+            )
+            logger.info(
+                f"Updated organization modules for '{organization_id}': "
+                f"{set_fields}"
+            )
+
+        return OrganizationResponse(
+            organizationId=updated_doc["organizationId"],
+            name=updated_doc["name"],
+            slug=updated_doc["slug"],
+            industries=updated_doc.get("industries", []),
+            logoUrl=updated_doc.get("logoUrl"),
+            modules=OrganizationModules(**updated_doc.get("modules", {})),
             isActive=updated_doc["isActive"],
             createdAt=updated_doc["createdAt"],
             updatedAt=updated_doc["updatedAt"],

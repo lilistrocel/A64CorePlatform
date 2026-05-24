@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/auth.store';
 import { authService, type MfaStatusResponse } from '../../services/auth.service';
 import { useToastStore } from '../../stores/toast.store';
 import { TelegramBotSettings } from '../../components/settings/TelegramBotSettings';
+import { ModulesSettingsCard } from '../../components/settings/ModulesSettingsCard';
 
 // Month names for farming year configuration
 const MONTH_NAMES = [
@@ -861,6 +862,9 @@ export function Settings() {
           </ModalContent>
         </ModalOverlay>
       )}
+
+      {/* Wave 0 — super_admin only; component self-gates */}
+      <ModulesSettingsCard />
 
       {isAdmin && <TelegramBotSettings />}
     </SettingsContainer>

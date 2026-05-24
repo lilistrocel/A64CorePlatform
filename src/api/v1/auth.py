@@ -34,8 +34,18 @@ from ...services.user_service import user_service
 from ...services.mfa_service import mfa_service
 from ...middleware.auth import get_current_user
 from ...middleware.rate_limit import login_rate_limiter
+from .system import CapabilitiesResponse, build_capabilities_response
 
 router = APIRouter()
+
+
+class UserMeResponse(UserResponse):
+    """
+    Response shape for GET /auth/me — extends UserResponse with the Wave 0
+    capability bootstrap so the frontend gets module-status on login
+    without a second round-trip.
+    """
+    capabilities: CapabilitiesResponse
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -197,22 +207,32 @@ async def refresh_token(refresh_token: str = Body(..., embed=True)) -> TokenResp
     return token_response
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserMeResponse)
 async def get_current_user_info(
     current_user: UserResponse = Depends(get_current_user)
-) -> UserResponse:
+) -> UserMeResponse:
     """
-    Get current authenticated user's information
+    Get current authenticated user's information.
 
     **Authentication:** Required (Bearer token)
 
     **Returns:**
-    - 200: User information
+    - 200: User profile + module capabilities (Wave 0)
     - 401: Not authenticated
 
-    **Response:** Complete user profile (excluding password)
+    **Response:** Complete user profile (excluding password) plus a
+    `capabilities` block of the same shape as
+    `GET /api/v1/system/capabilities`. Folding the two payloads together
+    lets the frontend gate routes/sidebar on first paint without a
+    second request.
     """
-    return current_user
+    capabilities = await build_capabilities_response(current_user)
+    # Reason: UserMeResponse extends UserResponse, so we pass through
+    # every existing field and tack on `capabilities`.
+    return UserMeResponse(
+        **current_user.model_dump(),
+        capabilities=capabilities,
+    )
 
 
 @router.patch("/me", response_model=UserResponse)

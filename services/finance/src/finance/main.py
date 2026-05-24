@@ -73,6 +73,12 @@ app.add_exception_handler(Exception, global_exception_handler)
 # ---- Routers ----
 _PREFIX = "/api/v1/finance"
 
+# Wave 0 — /api/v1/system/health (not finance-prefixed).
+# The ops backend pings this internally via the docker network at
+# http://finance:8001/api/v1/system/health to populate the capability
+# endpoint's `modules.finance.reachable` flag.
+app.include_router(health.system_router, prefix="/api/v1/system")
+
 app.include_router(health.router, prefix=_PREFIX)
 app.include_router(company.router, prefix=_PREFIX)
 app.include_router(accounts.router, prefix=_PREFIX)

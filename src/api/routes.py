@@ -5,7 +5,7 @@ Consolidates all API routers and endpoints
 """
 
 from fastapi import APIRouter
-from .v1 import auth, users, admin, modules, dashboard, organizations, divisions, industries
+from .v1 import auth, users, admin, modules, dashboard, organizations, divisions, industries, system
 
 # Import AI analytics routes
 from src.modules.ai_analytics.api.v1 import chat as ai_chat
@@ -27,6 +27,10 @@ api_router.include_router(dashboard.router, tags=["Dashboard"])  # Dashboard rou
 api_router.include_router(organizations.router, tags=["Organizations"])  # /organizations prefix in router
 api_router.include_router(divisions.router, tags=["Divisions"])          # /divisions prefix in router
 api_router.include_router(industries.router, tags=["Industries"])        # /industries prefix in router
+
+# Wave 0 — capability discovery (per-tenant module status)
+# Endpoints at /api/v1/system/*
+api_router.include_router(system.router, tags=["System"])
 
 # Include AI analytics routes
 api_router.include_router(ai_chat.router, tags=["AI Analytics"])  # AI routes at /api/v1/ai/*

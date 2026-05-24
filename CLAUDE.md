@@ -106,6 +106,17 @@ When user requests "keep journal" or "create journal", create a dated journal us
 
 **Prerequisites:** Docker 20.10+, Python 3.11+, Node.js 18+, MongoDB/Redis/MySQL via Docker, Vertex AI credentials, WeatherBit API key, 25+ env vars.
 
+## Modules / Deployment Modes (Wave 0)
+
+A64 ships in two deployment shapes; same git artifacts, different `docker compose` invocations:
+
+- **Ops-only:** `docker compose -f docker-compose.yml up -d` — mongo, redis, api, nginx, user-portal. Full PR→PO→GR→AP works; tax codes / cost centres become free-text.
+- **Full stack:** add `-f docker-compose.finance.yml --profile finance` to start mysql, finance, finance_consumer. Run `python scripts/migrations/wave0_add_finance_flag.py` after first start.
+
+The per-tenant `organizations.modules.financeEnabled` flag hides the Finance sidebar/routes and gates `OutboxWriter.publish()` so events stop queuing. Toggle via **Settings → Tenant Modules** (super_admin only, audit-logged) or `PATCH /api/v1/organizations/{orgId}/modules`. See `Docs/1-Main-Documentation/Deployment-Modes.md`.
+
+**CI guard:** `scripts/ci/check_finance_imports.sh` blocks `from services.finance` imports in `src/` — the ops backend must stay decoupled.
+
 ## Documentation & CodeMaps
 
 ### Key Documentation Paths

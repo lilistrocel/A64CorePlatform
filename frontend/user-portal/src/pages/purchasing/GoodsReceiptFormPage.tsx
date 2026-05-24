@@ -29,6 +29,8 @@ import {
 } from '../../hooks/queries/useGoodsReceipts';
 import { usePurchaseOrder, usePurchaseOrders } from '../../hooks/queries/usePurchasing';
 import { useAuthStore } from '../../stores/auth.store';
+import { useFinanceEnabled } from '../../hooks/useCapabilities';
+import { FinanceUnreachableBanner } from '../../components/finance/FinanceUnreachableBanner';
 import type { GRLineCreate } from '../../services/goodsReceiptsService';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -462,6 +464,10 @@ export function GoodsReceiptFormPage() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const pageTitle = isEdit ? 'Edit Goods Receipt' : 'New Goods Receipt from PO';
 
+  // Wave 0 — hide the cost-centre column entirely when finance is off
+  // (matches the design audit table — GR shows cost centre as display only).
+  const financeOn = useFinanceEnabled();
+
   const handleBack = () => {
     if (isEdit) navigate(`/purchasing/gr/${editDocId}`);
     else navigate('/purchasing/gr');
@@ -485,6 +491,8 @@ export function GoodsReceiptFormPage() {
     <Container>
       <BackLink onClick={handleBack}>&larr; Back</BackLink>
       <Title>{pageTitle}</Title>
+
+      <FinanceUnreachableBanner />
 
       {sourcePO && !isEdit && (
         <Card style={{ borderLeft: '4px solid #2563eb', padding: '12px 20px', marginBottom: 16 }}>
@@ -542,7 +550,7 @@ export function GoodsReceiptFormPage() {
                 <Th>Max (Open Qty)</Th>
                 <Th style={{ width: 130 }}>Qty to Receive *</Th>
                 <Th style={{ width: 70 }}>Disc %</Th>
-                <Th style={{ width: 160 }}>Cost Center</Th>
+                {financeOn && <Th style={{ width: 160 }}>Cost Center</Th>}
               </tr>
             </thead>
             <tbody>
@@ -580,9 +588,11 @@ export function GoodsReceiptFormPage() {
                     <Td style={{ color: '#6b7280', fontSize: 13 }}>
                       {line.discountPercent ? `${line.discountPercent}%` : '—'}
                     </Td>
-                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
-                      {line.costCenterId ?? '—'}
-                    </Td>
+                    {financeOn && (
+                      <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                        {line.costCenterId ?? '—'}
+                      </Td>
+                    )}
                   </tr>
                 );
               })}

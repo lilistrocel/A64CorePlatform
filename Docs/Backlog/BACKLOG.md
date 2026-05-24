@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-05-24
-> **Tasks:** 6 active · 2 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a completed, moved to ARCHIVE.md)
+> **Tasks:** 7 active · 1 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -373,10 +373,39 @@
 
 ## 🟢 Ready
 
-### T-059 | Wave 0 — Finance as opt-in add-on (architectural hygiene)
+_See Active for T-059 (Wave 0)._
+
+---
+
+### T-059 | Wave 0 — Finance as opt-in add-on (architectural hygiene) — 🔵 Active
 - **Category:** Backend + Frontend + DevOps + Docs · **Priority:** P0
-- **Assigned:** unclaimed · **Depends on:** T-057-1a ✅ · **Blocks:** T-060+
+- **Assigned:** Viet Anh (inline implementation) · **Started:** 2026-05-24
+- **Depends on:** T-057-1a ✅ · **Blocks:** T-060+
   (every future finance wave)
+- **Approver defaults (design doc §13):** super_admin only · accept any
+  tax-code string · nginx 503 on finance-down · existing audit_log schema
+- > Context (2026-05-24): All 7 sub-tasks implemented in one inline
+  > session.
+  > - T-059.1 ✅ /api/v1/system/capabilities + per-tenant flag +
+  >   OutboxWriter gate + migration script
+  > - T-059.2 ✅ /api/v1/system/health on finance + Redis-cached
+  >   reachability check
+  > - T-059.3 ✅ useCapabilities hook + FinanceGate (route gating) +
+  >   sidebar gating + free-text fallback in PR/PO/GR/AP forms +
+  >   FinanceUnreachableBanner
+  > - T-059.4 ✅ PATCH /organizations/{id}/modules + ModulesSettingsCard
+  >   (super_admin, audit-logged, confirmation modal that doesn't
+  >   close on overlay click)
+  > - T-059.5 ✅ nginx dev+prod confs return 503 JSON on finance
+  >   unreachable (docker-compose.finance.yml already existed)
+  > - T-059.6 ✅ ops-only-smoke workflow + scripts/ci/check_finance_imports.sh
+  >   (lint passes locally)
+  > - T-059.7 ✅ Docs/1-Main-Documentation/Deployment-Modes.md +
+  >   CLAUDE.md modules section + DevLog
+  > Pending: user verification (boot stack + Playwright smoke),
+  > backend unit tests (deferred — testing-backend-specialist),
+  > CodeMaps regeneration (4 new src/ modules + new endpoint).
+  > See `Docs/3-DevLog/2026-05-24_wave0-finance-opt-in.md`.
 - **Goal:** Establish operations-vs-finance boundary as a first-class
   deployment mode. Per-tenant `financeEnabled` flag + runtime capability
   check + structurally separable docker-compose. Without this, every

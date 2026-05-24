@@ -6,6 +6,7 @@ import { useDivisionStore } from '../../stores/division.store';
 import { useThemeStore } from '../../stores/theme.store';
 import { useFarmingYearStore } from '../../stores/farmingYear.store';
 import { useFarmingYearsList } from '../../hooks/queries/useFarmingYears';
+import { useFinanceEnabled } from '../../hooks/useCapabilities';
 import { getPendingTaskCount } from '../../services/tasksApi';
 import { Button } from '@a64core/shared';
 import { UnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
@@ -113,6 +114,10 @@ export function MainLayout() {
   const { mode, toggleTheme } = useThemeStore();
   const { selectedYear, setYear, initialize } = useFarmingYearStore();
   const { data: farmingYearsData } = useFarmingYearsList(5, true);
+  // Wave 0 — hide the entire Finance sidebar group when the tenant has
+  // modules.financeEnabled=false (or when the capability hasn't loaded yet
+  // for an unauthenticated initial paint).
+  const financeOn = useFinanceEnabled();
   const navigate = useNavigate();
   const location = useLocation();
   const unsavedChanges = useContext(UnsavedChangesContext);
@@ -285,7 +290,8 @@ export function MainLayout() {
         // Operations group — available to all users (Purchasing sub-group is role-gated inside)
         OPERATIONS_NAV_GROUP,
         // Finance group — accountant, finance_admin, auditor, admin, super_admin
-        ...(_FINANCE_ROLES.has(user?.role ?? '') ? [FINANCE_NAV_GROUP] : []),
+        // AND the per-tenant finance module must be enabled (Wave 0)
+        ...(financeOn && _FINANCE_ROLES.has(user?.role ?? '') ? [FINANCE_NAV_GROUP] : []),
         // Bottom items — AI Hub is super_admin only
         ...SHARED_BOTTOM_NAV_ITEMS.filter((item) => {
           if (item.to === '/ai') return user?.role === 'super_admin';
@@ -294,7 +300,7 @@ export function MainLayout() {
         ...(user?.role === 'super_admin' ? ADMIN_NAV_ITEMS : []),
       ];
     },
-    [industryNavItems, user?.role]
+    [industryNavItems, user?.role, financeOn]
   );
 
   // ── Recursive nav item renderer ────────────────────────────────────────────

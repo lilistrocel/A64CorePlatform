@@ -36,6 +36,8 @@ import { useGoodsReceipt } from '../../hooks/queries/useGoodsReceipts';
 import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
 import { useItemMappingsMap } from '../../hooks/queries/useItemMappingsMap';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
+import { useFinanceEnabled } from '../../hooks/useCapabilities';
+import { FinanceUnreachableBanner } from '../../components/finance/FinanceUnreachableBanner';
 import { useAuthStore } from '../../stores/auth.store';
 import type { APLineCreate } from '../../services/apInvoicesService';
 
@@ -504,6 +506,10 @@ export function APInvoiceFormPage() {
   const { data: fetchedTaxCodes } = useTaxCodes(orgId);
   const taxCodes = fetchedTaxCodes?.length ? fetchedTaxCodes : FALLBACK_TAX_CODES;
 
+  // Wave 0 — per-tenant finance capability gate. When false the tax-code
+  // dropdown degrades to free-text and the cost-centre column is hidden.
+  const financeOn = useFinanceEnabled();
+
   // Item finance mappings — used to auto-default taxCode from the item's
   // configured taxCodeDefault when building lines from a GR.
   const itemMappings = useItemMappingsMap(orgId || null);
@@ -786,6 +792,8 @@ export function APInvoiceFormPage() {
       <BackLink onClick={handleBack}>&larr; Back</BackLink>
       <Title>{pageTitle}</Title>
 
+      <FinanceUnreachableBanner />
+
       {/* Source GR context banner */}
       {sourceGR && !isEdit && (
         <Card style={{ borderLeft: '4px solid #2563eb', padding: '12px 20px', marginBottom: 16 }}>
@@ -877,7 +885,7 @@ export function APInvoiceFormPage() {
                 <Th style={{ minWidth: 140 }}>Invoice Unit Price *</Th>
                 <Th>Disc %</Th>
                 <Th>Tax Code</Th>
-                <Th>Cost Center</Th>
+                {financeOn && <Th>Cost Center</Th>}
                 <Th>Line Net</Th>
                 <Th>Tax</Th>
                 <Th>Line Gross</Th>
@@ -919,22 +927,35 @@ export function APInvoiceFormPage() {
                       {line.discountPercent ? `${line.discountPercent}%` : '—'}
                     </Td>
                     <Td>
-                      <Select
-                        value={line.taxCode}
-                        style={{ width: '90px', fontSize: 13 }}
-                        onChange={(e) => setLineTaxCode(line.grLineId, e.target.value)}
-                        aria-label={`Tax code for ${line.itemCode}`}
-                      >
-                        {taxCodes.filter((tc) => tc.isActive).map((tc) => (
-                          <option key={tc.taxCode} value={tc.taxCode}>
-                            {tc.taxCode} ({tc.rate}%)
-                          </option>
-                        ))}
-                      </Select>
+                      {financeOn ? (
+                        <Select
+                          value={line.taxCode}
+                          style={{ width: '90px', fontSize: 13 }}
+                          onChange={(e) => setLineTaxCode(line.grLineId, e.target.value)}
+                          aria-label={`Tax code for ${line.itemCode}`}
+                        >
+                          {taxCodes.filter((tc) => tc.isActive).map((tc) => (
+                            <option key={tc.taxCode} value={tc.taxCode}>
+                              {tc.taxCode} ({tc.rate}%)
+                            </option>
+                          ))}
+                        </Select>
+                      ) : (
+                        <Input
+                          type="text"
+                          value={line.taxCode}
+                          style={{ width: '90px', fontSize: 13 }}
+                          onChange={(e) => setLineTaxCode(line.grLineId, e.target.value)}
+                          aria-label={`Tax code for ${line.itemCode}`}
+                          placeholder="Tax code"
+                        />
+                      )}
                     </Td>
-                    <Td style={{ color: '#6b7280', fontSize: 13 }}>
-                      {line.costCenterId ?? '—'}
-                    </Td>
+                    {financeOn && (
+                      <Td style={{ color: '#6b7280', fontSize: 13 }}>
+                        {line.costCenterId ?? '—'}
+                      </Td>
+                    )}
                     <Td style={{ fontSize: 13 }}>{formatAmt(line.lineNet, currency)}</Td>
                     <Td style={{ fontSize: 13 }}>{formatAmt(line.lineTax, currency)}</Td>
                     <Td style={{ fontSize: 13 }}>

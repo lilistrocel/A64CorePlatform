@@ -5,6 +5,140 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.0] - 2026-05-24
+
+**Type:** Minor Release — Wave 0: Finance as opt-in add-on (T-059).
+Establishes the operations-vs-finance boundary as a first-class
+deployment mode. Per-tenant `modules.financeEnabled` flag, runtime
+capability endpoint, frontend route/sidebar gating, free-text
+fallback in purchasing forms, nginx 503-on-unreachable, ops-only CI
+smoke + import-boundary lint.
+
+**Author:** Viet Anh
+
+### Added
+
+#### Capability discovery — `/api/v1/system/capabilities` (T-059.1, .2)
+
+- New endpoint at `src/api/v1/system.py` returns
+  `{tenantId, modules: {finance: {enabled, reachable, version}},
+  checkedAt}`. Auth required, no further role gate. Shape mirrored
+  into `GET /api/v1/auth/me` via new `UserMeResponse` so the
+  frontend gets capabilities on login without a second round-trip.
+- `src/modules/finance_bridge/reachability.py` — cached health-ping
+  against `FINANCE_SERVICE_URL/api/v1/system/health` (1s timeout,
+  60s TTL in Redis under `system:finance:reachable` +
+  `system:finance:version`). Never raises; degrades to
+  `(False, None)` on any network failure.
+- `src/modules/finance_bridge/tenant_flag.py` — Redis-cached lookup
+  for `organizations.modules.financeEnabled` (60s TTL, key
+  `org:{id}:financeEnabled`). Missing field defaults to `true`.
+- Finance side: new `/api/v1/system/health` endpoint
+  (`services/finance/src/finance/api/v1/health.py`) reporting
+  service version. Existing `/api/v1/finance/health` also gained the
+  `version` field.
+
+#### Per-tenant flag + outbox gate (T-059.1)
+
+- `organizations.modules.financeEnabled: bool` (default `true`).
+  Added `OrganizationModules` Pydantic model
+  (`src/models/organization.py`), threaded through
+  `OrganizationResponse`. `OrganizationService` now hydrates the
+  field on every read/create/update path and exposes
+  `update_modules()`.
+- `OutboxWriter.publish()` now consults the per-tenant flag after
+  the global env gate; when off, returns `None` without inserting
+  into `finance_outbox`. Stops events from queuing for tenants
+  whose consumer is never going to read them.
+- One-shot migration `scripts/migrations/wave0_add_finance_flag.py`
+  sets `modules.financeEnabled=true` on every org missing the field
+  (idempotent — skips orgs that already have a value either way).
+
+#### Admin toggle — `PATCH /api/v1/organizations/{org_id}/modules` (T-059.4)
+
+- New endpoint. **super_admin only.** Body
+  `{"financeEnabled": bool}`. Writes an `admin_audit_log` entry
+  with `before` / `after` / `patch` snapshot. Invalidates the
+  per-tenant Redis cache so the change propagates within
+  milliseconds rather than waiting for TTL.
+
+#### Frontend gating + degradation (T-059.3, .4)
+
+- `useCapabilities()` hook (TanStack Query, 60s staleTime,
+  placeholderData keeps previous value through refetch). Plus
+  derivative `useFinanceEnabled()` / `useFinanceUnreachable()`.
+  Service layer (`systemService.ts`) silently degrades to a safe
+  default capability on 404 so stale backends don't toast.
+- `<FinanceGate>` wraps all 11 finance routes in `App.tsx`;
+  Navigates to `/dashboard` when finance is off. Sidebar Finance
+  group hidden via `MainLayout.tsx`.
+- `<FinanceUnreachableBanner>` — amber banner rendered at top of
+  all four purchasing form pages; shows only when
+  `enabled=true && reachable=false`.
+- Purchasing forms degrade when finance is off:
+  - `PurchaseRequestFormPage`, `PurchaseOrderFormPage` — taxCode +
+    costCenterId columns swap `<Select>` for free-text `<Input>`.
+  - `GoodsReceiptFormPage` — Cost Center column (`<Th>` + `<Td>`)
+    hidden entirely.
+  - `APInvoiceFormPage` — taxCode degrades to free-text;
+    Cost Center column hidden.
+- `<ModulesSettingsCard>` in Settings page (super_admin only;
+  self-gates so non-admins never see it). Checkbox + confirmation
+  modal on disable; modal does **not** close on overlay click
+  (project convention for data-entry modals).
+
+#### DevOps + CI (T-059.5, .6)
+
+- nginx `nginx.dev.conf` + `nginx.prod.conf` — `/api/v1/finance/`
+  location now `proxy_intercept_errors on` and routes 502/504/503
+  to a new `@finance_unavailable` named location that returns 503
+  with JSON body `{"detail":"Finance module not available",
+  "module":"finance"}`. Quick-fail timeouts (2/5/5s) so brief
+  outages don't block requests.
+- New CI workflow `.github/workflows/ops-only-smoke.yml` boots
+  mongo + redis + api + nginx + user-portal (no finance overlay),
+  runs the Wave 0 migration, verifies `/api/v1/finance/*` returns
+  503, and sanity-checks `/api/v1/system/capabilities` reports
+  `finance.reachable=false`. Falls back to a Playwright run when
+  the smoke suite is present.
+- New lint script `scripts/ci/check_finance_imports.sh` fails the
+  build on any `from services.finance` import inside `src/`.
+  Wired as a `needs:`-gating job before the smoke run.
+
+#### Settings (T-059.1)
+
+- `FINANCE_SERVICE_URL` (default `http://finance:8001`) and
+  `FINANCE_CAPABILITY_CACHE_TTL_S` (default 60) added to
+  `src/config/settings.py`.
+
+#### Docs (T-059.7)
+
+- New `Docs/1-Main-Documentation/Deployment-Modes.md` — ops-only
+  vs full-stack mode, per-tenant flag mechanics, capability
+  endpoint contract, free-text fallback table, common failure
+  modes, CI coverage.
+- `CLAUDE.md` — new "Modules / Deployment Modes (Wave 0)" section.
+- DevLog `Docs/3-DevLog/2026-05-24_wave0-finance-opt-in.md`.
+
+### Verification
+
+- Backend Python syntax check on all 13 edited files — clean.
+- Frontend `tsc --noEmit` — clean.
+- Import-boundary lint — passes (no `from services.finance` in `src/`).
+- Live API smoke: login → /capabilities → disable → /capabilities
+  flips to `enabled=false` within ~90ms → audit_log entry verified
+  in mongo → re-enable → state restored.
+
+### Deferred (post-merge)
+
+- Backend unit tests for `tenant_flag.py`, `reachability.py`, and
+  the outbox writer gate (testing-backend-specialist).
+- Playwright UI smoke through PR → PO → GR → AP with finance off
+  (blocked locally on chrome-for-testing install requiring sudo).
+- CodeMaps regeneration — 4 new src/ modules + new endpoint.
+
+---
+
 ## [1.17.0] - 2026-05-24
 
 **Type:** Minor Release — Purchasing line enrichment Wave 1a (T-057-1a):

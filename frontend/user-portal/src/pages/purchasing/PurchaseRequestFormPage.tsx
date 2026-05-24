@@ -21,6 +21,8 @@ import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
 import { useItemMappingsMap } from '../../hooks/queries/useItemMappingsMap';
 import { useCostCenters } from '../../hooks/queries/useCostCenters';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
+import { useFinanceEnabled } from '../../hooks/useCapabilities';
+import { FinanceUnreachableBanner } from '../../components/finance/FinanceUnreachableBanner';
 import { useAuthStore } from '../../stores/auth.store';
 import type { DocumentLineCreate, UrgencyLevel } from '../../services/purchasingApi';
 
@@ -285,6 +287,11 @@ export function PurchaseRequestFormPage() {
   // Item finance mappings — used to auto-default taxCode when user picks an item.
   const itemMappings = useItemMappingsMap(orgId || null);
 
+  // Wave 0 — per-tenant finance capability. When false the dropdowns
+  // below degrade to free-text inputs so ops-only deployments can still
+  // capture a typed tax code / cost-centre without finance master data.
+  const financeOn = useFinanceEnabled();
+
   // Cost centres for the per-line dropdown — long-lived master data (5-min cache).
   const { data: costCentersData } = useCostCenters(orgId || null);
   const activeCostCenters = useMemo(
@@ -405,6 +412,8 @@ export function PurchaseRequestFormPage() {
         &larr; {isEdit ? `Back to ${existingPR?.docNumber ?? 'PR'}` : 'Back to Purchase Requests'}
       </BackLink>
       <Title>{isEdit ? 'Edit Purchase Request' : 'New Purchase Request'}</Title>
+
+      <FinanceUnreachableBanner />
 
       {isReadOnly && (
         <Card style={{ borderLeft: '4px solid #f59e0b', padding: '12px 20px', marginBottom: 16 }}>
@@ -575,37 +584,59 @@ export function PurchaseRequestFormPage() {
                     </Select>
                   </Td>
                   <Td>
-                    <Select
-                      value={line.taxCode ?? ''}
-                      onChange={(e) => setLine(line._key, 'taxCode', e.target.value || null)}
-                      disabled={isReadOnly}
-                      style={{ width: '100%' }}
-                    >
-                      <option value="">None / Untaxed</option>
-                      {taxCodesLoading && !taxCodesError
-                        ? <option disabled>Loading...</option>
-                        : activeTaxCodes.map((tc) => (
-                            <option key={tc.taxCode} value={tc.taxCode}>
-                              {tc.taxCode} — {tc.description} ({tc.rate}%)
-                            </option>
-                          ))
-                      }
-                    </Select>
+                    {financeOn ? (
+                      <Select
+                        value={line.taxCode ?? ''}
+                        onChange={(e) => setLine(line._key, 'taxCode', e.target.value || null)}
+                        disabled={isReadOnly}
+                        style={{ width: '100%' }}
+                      >
+                        <option value="">None / Untaxed</option>
+                        {taxCodesLoading && !taxCodesError
+                          ? <option disabled>Loading...</option>
+                          : activeTaxCodes.map((tc) => (
+                              <option key={tc.taxCode} value={tc.taxCode}>
+                                {tc.taxCode} — {tc.description} ({tc.rate}%)
+                              </option>
+                            ))
+                        }
+                      </Select>
+                    ) : (
+                      <Input
+                        type="text"
+                        value={line.taxCode ?? ''}
+                        onChange={(e) => setLine(line._key, 'taxCode', e.target.value || null)}
+                        disabled={isReadOnly}
+                        placeholder="Tax code (free-text)"
+                        style={{ width: '100%' }}
+                      />
+                    )}
                   </Td>
                   <Td>
-                    <Select
-                      value={line.costCenterId ?? ''}
-                      onChange={(e) => setLine(line._key, 'costCenterId', e.target.value || null)}
-                      disabled={isReadOnly}
-                      style={{ width: '100%' }}
-                    >
-                      <option value="">— None —</option>
-                      {activeCostCenters.map((cc) => (
-                        <option key={cc.costCenterId} value={cc.costCenterId}>
-                          {cc.costCenterId} — {cc.name}
-                        </option>
-                      ))}
-                    </Select>
+                    {financeOn ? (
+                      <Select
+                        value={line.costCenterId ?? ''}
+                        onChange={(e) => setLine(line._key, 'costCenterId', e.target.value || null)}
+                        disabled={isReadOnly}
+                        style={{ width: '100%' }}
+                      >
+                        <option value="">— None —</option>
+                        {activeCostCenters.map((cc) => (
+                          <option key={cc.costCenterId} value={cc.costCenterId}>
+                            {cc.costCenterId} — {cc.name}
+                          </option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Input
+                        type="text"
+                        value={line.costCenterId ?? ''}
+                        onChange={(e) => setLine(line._key, 'costCenterId', e.target.value || null)}
+                        disabled={isReadOnly}
+                        placeholder="Cost centre (free-text)"
+                        style={{ width: '100%' }}
+                      />
+                    )}
                   </Td>
                   <Td style={{ textAlign: 'right', fontWeight: 600 }}>{net}</Td>
                   <Td>

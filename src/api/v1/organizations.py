@@ -5,15 +5,25 @@ Provides CRUD operations for organizations and the ability to manage
 divisions within an organization. Admin-only write operations.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime, timezone
 from typing import List
 
-from ...models.organization import OrganizationCreate, OrganizationResponse, OrganizationUpdate
-from ...models.division import DivisionCreate, DivisionResponse
-from ...models.user import UserResponse, UserRole
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from ...core.cache.redis_cache import get_redis_cache
 from ...middleware.auth import get_current_user
-from ...services.organization_service import organization_service
+from ...models.division import DivisionCreate, DivisionResponse
+from ...models.organization import (
+    OrganizationCreate,
+    OrganizationModulesUpdate,
+    OrganizationResponse,
+    OrganizationUpdate,
+)
+from ...models.user import UserResponse, UserRole
+from ...modules.finance_bridge.tenant_flag import invalidate_tenant_flag_cache
+from ...services.database import mongodb
 from ...services.division_service import division_service
+from ...services.organization_service import organization_service
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
@@ -173,6 +183,80 @@ async def update_organization(
     """
     _require_admin(current_user)
     return await organization_service.update_organization(organization_id, data)
+
+
+@router.patch(
+    "/{organization_id}/modules",
+    response_model=OrganizationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update tenant module toggles",
+    description=(
+        "Wave 0 (T-059.4) — toggle the per-tenant module flags. "
+        "Currently only `financeEnabled` is supported. Super admin only. "
+        "Writes an audit log entry and invalidates the Redis cache so the "
+        "outbox writer + capability endpoint pick up the change within ms."
+    ),
+)
+async def update_organization_modules(
+    organization_id: str,
+    data: OrganizationModulesUpdate,
+    current_user: UserResponse = Depends(get_current_user),
+) -> OrganizationResponse:
+    """
+    PATCH /api/v1/organizations/{org_id}/modules
+
+    **Authorization:** SUPER_ADMIN role required.
+
+    Toggling `financeEnabled=false` immediately hides finance UI for all
+    users in this tenant on their next page load (capability endpoint is
+    cached 60s but the cache is invalidated on this write).
+
+    **Audit log:** entry written to `admin_audit_log` with the before/
+    after values, the actor's userId/email/role, and timestamp.
+    """
+    _require_super_admin(current_user)
+
+    # Reason: load current value for the audit trail before mutating.
+    before = await organization_service.get_organization(organization_id)
+    if before is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Organization '{organization_id}' not found.",
+        )
+
+    updated = await organization_service.update_modules(
+        organization_id=organization_id,
+        financeEnabled=data.financeEnabled,
+    )
+
+    # Audit log
+    db = mongodb.get_database()
+    audit_entry = {
+        "action": "organization.modules.updated",
+        "targetOrganizationId": organization_id,
+        "performedBy": current_user.userId,
+        "performedByEmail": current_user.email,
+        "performedByRole": (
+            current_user.role.value
+            if hasattr(current_user.role, "value")
+            else current_user.role
+        ),
+        "timestamp": datetime.now(tz=timezone.utc),
+        "details": {
+            "before": before.modules.model_dump(),
+            "after": updated.modules.model_dump(),
+            "patch": data.model_dump(exclude_none=True),
+        },
+    }
+    await db.admin_audit_log.insert_one(audit_entry)
+
+    # Reason: invalidate the per-tenant cache so subsequent outbox writes
+    # and capability lookups see the new value without waiting for TTL.
+    redis_cache = await get_redis_cache()
+    redis_client = redis_cache._redis if redis_cache.is_available else None
+    await invalidate_tenant_flag_cache(redis_client, organization_id)
+
+    return updated
 
 
 @router.get(

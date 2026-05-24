@@ -46,7 +46,10 @@ from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorDatabase
 
 from contracts.finance_events import EVENT_TYPE_REGISTRY
 
+from src.core.cache.redis_cache import get_redis_cache
+
 from .feature_flag import is_outbox_enabled
+from .tenant_flag import is_finance_enabled_for_org
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +116,30 @@ class OutboxWriter:
             # Reason: feature flag off — main app must work without finance service
             logger.debug(
                 "[FinanceBridge] outbox disabled; skipping event_type=%s", event_type
+            )
+            return None
+
+        # Wave 0 — per-tenant gate. Even when the deploy-wide outbox is on,
+        # tenants with `modules.financeEnabled=false` should not enqueue
+        # events that nobody will ever process. Cached in Redis (60s TTL)
+        # so we don't pay for a Mongo read per event.
+        try:
+            redis_cache = await get_redis_cache()
+            redis_client = redis_cache._redis if redis_cache.is_available else None
+        except Exception as exc:
+            # Reason: cache layer failure must not block the outbox path —
+            # fall through to a direct DB lookup inside the helper.
+            logger.warning(
+                "[FinanceBridge] failed to obtain redis client (will degrade to DB): %s",
+                exc,
+            )
+            redis_client = None
+
+        if not await is_finance_enabled_for_org(db, redis_client, organization_id):
+            logger.debug(
+                "[FinanceBridge] tenant flag off; skipping event_type=%s org=%s",
+                event_type,
+                organization_id,
             )
             return None
 

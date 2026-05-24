@@ -94,6 +94,16 @@ class Settings(BaseSettings):
     RATE_LIMIT_ADMIN: int = 1000
     RATE_LIMIT_SUPER_ADMIN: int = 2000
 
+    # Wave 0 — Finance Capability Check
+    # Used by /api/v1/system/capabilities and the per-tenant outbox gate
+    # to discover whether the finance microservice is reachable. Internal
+    # Docker network URL — not exposed to clients.
+    FINANCE_SERVICE_URL: str = "http://finance:8001"
+    # TTL (seconds) for cached reachability + per-tenant financeEnabled
+    # lookups. 60s mirrors the design doc; longer values reduce DB/finance
+    # load but slow down toggle-uptake.
+    FINANCE_CAPABILITY_CACHE_TTL_S: int = 60
+
     @model_validator(mode='after')
     def validate_production_settings(self):
         if self.ENVIRONMENT != "development":
