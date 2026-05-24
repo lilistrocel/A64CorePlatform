@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-05-24
-> **Tasks:** 7 active · 1 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a completed, moved to ARCHIVE.md)
+> **Tasks:** 7 active · 2 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -373,7 +373,8 @@
 
 ## 🟢 Ready
 
-_See Active for T-059 (Wave 0)._
+_T-059 (Wave 0) — see Active for context._
+_T-060 (Wave 2) — design approved 2026-05-24, ready to claim._
 
 ---
 
@@ -437,6 +438,115 @@ _See Active for T-059 (Wave 0)._
     update CLAUDE.md modules section + DevLog entry
 - **Acceptance criteria:** see design doc §11
 - **Estimated effort:** 4-7 days (backend + frontend in parallel)
+
+---
+
+### T-060 | Wave 2 — Statutory Financial Statements (BS, IS, CF) + Period Close
+- **Category:** Backend + Frontend + Docs · **Priority:** P0
+- **Assigned:** unclaimed · **Depends on:** T-059 ✅ (Wave 0 — module gate) ·
+  **Blocks:** Wave 2.5 (Manual JE UI + Opening Balance Wizard +
+  Cutover playbook); Phase E.1 (GR/IR reconciliation report)
+- **Goal:** Ship the three statutory financial statements (Balance
+  Sheet, Income Statement, Cash Flow) plus the minimum period-close
+  machinery they depend on (auto-posted closing JE on fiscal year-end
+  close). Maps to Phase 4 of `FINANCE_MODULE_GUIDE.md` and Phase D.5
+  of `POSTING_ENGINE_ROADMAP.md`. Reports compute on-demand from the
+  GL (same pattern as Trial Balance). No materialisation.
+- **Design doc:** `Docs/2-Working-Progress/Wave-2-Design.md`
+  (approved 2026-05-24, rev 2)
+- **Approver decisions (design doc §12):** "Operational P&L" +
+  "Income Statement" naming · closing JE auto-posts with preview
+  modal on close · cash-flow seed auto-runs with review banner ·
+  parentheses default for negatives · openpyxl for Excel ·
+  WeasyPrint for PDF (document Docker footprint) · cost-centre
+  filter on all three with BS footnote · Wave 2 scope split from
+  Wave 2.5 (Manual JE + Opening Balance + Cutover)
+- **Sub-tasks:**
+  - T-060.1 Backend (Phase D.5) — Extend `_resolve_fiscal_period_or_raise`
+    to refuse postings into closed periods. New endpoints
+    `POST /api/v1/finance/periods/{periodId}/close` (validates
+    + auto-posts closing JE for fiscal-year-end periods + sets
+    `period.status='closed'`, atomically) and
+    `POST /periods/{periodId}/reopen` (reverses closing JE via
+    existing reversal engine, sets status back to `open`). Audit
+    logged via existing finance audit_log.
+  - T-060.2 Backend — `gl_accounts.cashFlowCategory` column
+    (enum: `cash|working_capital|non_cash_adjustment|investing|financing|none`,
+    default `none`) + Alembic migration + idempotent seed defaults
+    keyed off code-range prefixes (`110000-*→investing`,
+    `121000-*→working_capital`, `126000-*→cash`, `211000-*→financing`,
+    etc.) + name-pattern overrides for depreciation/amortisation
+    accounts. CoA service reads/writes the new field.
+  - T-060.3 Backend — `GET /api/v1/finance/reports/balance-sheet`
+    endpoint + `/balance-sheet/drill` + hierarchical walk
+    (`parentAccountNumber` + `isHeader`) + `as_of_date` snapshot +
+    current-year-P/(L) computation from P&L drawers + balance
+    validator (warning when `assets - (liabilities + equity)` >
+    0.01 AED).
+  - T-060.4 Backend — `GET /reports/income-statement` endpoint +
+    drill + DrawerEnum grouping (REVENUE → COST_OF_SALES → OPERATING_COST
+    → NON_OPERATING → OTHER_INCOME → TAXATION) + Gross Profit /
+    EBIT / Net Income subtotals + comparative-period queries via
+    `asyncio.gather` + cost-centre filter using T-057-1a
+    `costCenterId` on `journal_entry_lines`.
+  - T-060.5 Backend — `GET /reports/cash-flow` endpoint + drill +
+    indirect-method computation (net income + non-cash adjustments
+    + working-capital deltas + investing + financing) using
+    `cashFlowCategory` + cash-validator warning.
+  - T-060.6 Backend — `GET /reports/export/{statement}?format=pdf|xlsx`
+    streaming download. Excel via `openpyxl`, PDF via WeasyPrint
+    (HTML → PDF). Update `services/finance/Dockerfile` with
+    Pango/Cairo system deps; document ~100 MB image-size hit in
+    DevLog.
+  - T-060.7 Frontend — `<FinanceReportPage>` shell component:
+    period/date picker with quick-picks (MTD/QTD/YTD/last closed),
+    comparative-period toggle, cost-centre multi-select filter,
+    negative-number toggle (parentheses default), scale toggle,
+    export buttons (PDF + Excel), drill-down modal pattern. Used
+    by all three statement pages.
+  - T-060.8 Frontend — `BalanceSheetPage` (`/finance/balance-sheet`,
+    behind `<FinanceGate>`).
+  - T-060.9 Frontend — `IncomeStatementPage`
+    (`/finance/income-statement`, behind `<FinanceGate>`). Sidebar
+    rename of existing P&L entry from "P&L Statement" to
+    "Operational P&L".
+  - T-060.10 Frontend — `CashFlowStatementPage`
+    (`/finance/cash-flow`, behind `<FinanceGate>`).
+  - T-060.11 Frontend (Phase D.5 UI) — Close/Reopen buttons on
+    existing `/finance/periods` page with pre-close validation
+    modal showing the closing-JE preview. Status badges
+    (OPEN/CLOSED/LOCKED).
+  - T-060.12 Frontend — Chart-of-Accounts inline edit of
+    `cashFlowCategory` (dropdown, super_admin / finance_admin
+    only). One-time review banner shown until dismissed.
+    Mutation invalidates the cash-flow report TanStack query.
+  - T-060.13 Tests — backend unit tests for each computation (BS
+    balances, IS Gross/EBIT/Net subtotals, CF reconciles to cash
+    delta, drill-down sums match line balances, comparative
+    queries, cost-centre filter consistency, closing JE round-trip
+    via close/reopen, period-close validation rejection paths).
+    Playwright UI smoke for each new page.
+  - T-060.14 Docs — `Docs/1-Main-Documentation/Financial-Statements.md`
+    (formulas, sign conventions, drill semantics, closing-JE
+    behaviour, cost-centre presentation note) + update
+    `Docs/4-Finance-Mod-docs/FINANCE_MODULE_GUIDE.md` Phase 4
+    status + CodeMap manual addenda + DevLog + CHANGELOG bump
+    (MINOR — new feature).
+- **Acceptance criteria:** see design doc §10. Highlights:
+  - BS balances within 0.01 AED tolerance.
+  - CF reconciles to actual cash account delta within 0.01 AED.
+  - Closing a year-end period auto-posts the closing JE; BS shows
+    `312000-002 Current Year P/(L)` = 0 on next render.
+  - Reopen reverses the closing JE atomically; audit logged.
+  - Posting into a closed period returns the existing HTTP 422.
+  - Cost-centre subtotals across all centres + un-tagged bucket
+    equals the unfiltered total (within tolerance).
+  - All three reports respect `<FinanceGate>` (redirect to
+    `/dashboard` when finance off).
+  - Each report's `meta.computeMs` < 500 ms on seed tenant with
+    100k JE rows.
+- **Estimated effort:** 12–18 days (~7 backend, ~5 frontend, ~2
+  tests + docs + period-close UI; mostly sequential)
 
 ---
 
