@@ -28,6 +28,7 @@ from ...models.orm.models import (
     AccountLevelEnum,
     AccountTypeEnum,
     ApPaymentApplication,
+    CashFlowCategoryEnum,
     CompanyCode,
     CompanyPostingSetup,
     DrawerEnum,
@@ -1628,4 +1629,441 @@ async def get_income_statement(
         primary=primary,
         comparison=comparison,
         warnings=[],
+    ))
+
+
+# ===========================================================================
+# Wave 2 / T-060.5 — Cash Flow Statement (indirect method)
+# ===========================================================================
+#
+# Indirect-method CF starts from Net Income, adds back non-cash items
+# (depreciation, amortisation, provisions), adjusts for working-capital
+# changes (AR/AP/inventory deltas), then layers investing + financing
+# activity. Bucket placement is driven by the GL account's
+# `cashFlowCategory` column (seeded by Alembic migration 014).
+#
+# Sign convention (uniform across all categories):
+#   - ASSET accounts:    cash contribution = -Δ(natural balance)
+#   - LIABILITY accounts: cash contribution = +Δ(natural balance)
+#   - EQUITY accounts:    cash contribution = +Δ(natural balance)
+# Where natural balance follows the same convention as Balance Sheet:
+#   - ASSETS / EXPENSES: balance = DR - CR
+#   - LIABILITIES / EQUITY / REVENUE: balance = CR - DR
+
+
+from datetime import timedelta  # noqa: E402  (kept near CF section)
+
+
+class CashFlowLine(BaseModel):
+    """A single contributing account row inside a CF section."""
+
+    accountId: str
+    accountNumber: str
+    accountName: str
+    drawer: str
+    contribution: str          # signed value contributed to cash flow
+
+
+class CashFlowOperatingSection(BaseModel):
+    """
+    Operating activities — net income + non-cash + working capital.
+
+    `nonCashAdjustments` and `workingCapitalChanges` are surfaced as
+    separate line lists so the frontend can render the textbook
+    indirect-method layout.
+    """
+
+    netIncome: str
+    nonCashAdjustments: List[CashFlowLine]
+    nonCashAdjustmentsTotal: str
+    workingCapitalChanges: List[CashFlowLine]
+    workingCapitalChangesTotal: str
+    total: str                  # netIncome + nonCash + workingCapital
+
+
+class CashFlowActivitySection(BaseModel):
+    """Investing or Financing activities — flat line list."""
+
+    items: List[CashFlowLine]
+    total: str
+
+
+class CashFlowResponse(BaseModel):
+    """Cash Flow Statement response (indirect method)."""
+
+    organizationId: str
+    companyCode: str
+    periodStart: str
+    periodEnd: str
+    generatedAt: str
+    currency: str
+    includesVoided: bool
+    operating: CashFlowOperatingSection
+    investing: CashFlowActivitySection
+    financing: CashFlowActivitySection
+    netChangeInCash: str
+    cashAtBeginning: str
+    cashAtEnd: str
+    cashDelta: str              # cashAtEnd - cashAtBeginning
+    reconciliationDelta: str    # netChangeInCash - cashDelta
+    warnings: List[str] = Field(default_factory=list)
+
+
+async def _balances_at_date(
+    db: AsyncSession,
+    organization_id: str,
+    company_code: str,
+    as_of: date,
+    include_voided: bool,
+    cost_center_id: Optional[str],
+) -> Dict[str, Decimal]:
+    """
+    Return {accountId: natural_balance} for every active BS account as of
+    `as_of`. Uses the same sign convention as Balance Sheet: ASSET DR-
+    natural, LIABILITY/EQUITY CR-natural.
+
+    Accounts with zero activity appear with balance Decimal("0").
+    """
+    je_filters = [
+        JournalEntry.organizationId == organization_id,
+        JournalEntry.companyCode == company_code,
+        JournalEntry.jeDate <= as_of,
+    ]
+    if not include_voided:
+        je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
+
+    line_filters = []
+    if cost_center_id is not None:
+        line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+
+    subq = (
+        select(
+            JournalEntryLine.accountId.label("account_id"),
+            func.sum(JournalEntryLine.debit).label("sum_debit"),
+            func.sum(JournalEntryLine.credit).label("sum_credit"),
+        )
+        .join(JournalEntry, JournalEntryLine.jeId == JournalEntry.jeId)
+        .where(*je_filters, *line_filters)
+        .group_by(JournalEntryLine.accountId)
+        .subquery(f"bal_agg_{as_of.isoformat().replace('-','')}")
+    )
+
+    sum_debit = func.coalesce(subq.c.sum_debit, Decimal("0"))
+    sum_credit = func.coalesce(subq.c.sum_credit, Decimal("0"))
+
+    stmt = (
+        select(
+            GLAccount.accountId,
+            GLAccount.accountType,
+            sum_debit.label("dr"),
+            sum_credit.label("cr"),
+        )
+        .outerjoin(subq, subq.c.account_id == GLAccount.accountId)
+        .where(
+            GLAccount.organizationId == organization_id,
+            GLAccount.drawer.in_(
+                (DrawerEnum.ASSETS, DrawerEnum.LIABILITIES, DrawerEnum.EQUITY)
+            ),
+            GLAccount.isActive == True,  # noqa: E712
+        )
+    )
+    rows = (await db.execute(stmt)).all()
+
+    balances: Dict[str, Decimal] = {}
+    for row in rows:
+        dr = Decimal(str(row.dr))
+        cr = Decimal(str(row.cr))
+        atype = row.accountType
+        if not isinstance(atype, AccountTypeEnum):
+            try:
+                atype = AccountTypeEnum(atype)
+            except ValueError:
+                atype = AccountTypeEnum.ASSET
+        if atype in _DEBIT_NATURAL_TYPES:
+            balances[row.accountId] = dr - cr
+        else:
+            balances[row.accountId] = cr - dr
+    return balances
+
+
+async def _net_income_for_period(
+    db: AsyncSession,
+    organization_id: str,
+    company_code: str,
+    period_start: date,
+    period_end: date,
+    include_voided: bool,
+    cost_center_id: Optional[str],
+) -> Decimal:
+    """Sum P&L drawer activity (credit - debit) for the period."""
+    pl_je_filters = [
+        JournalEntry.organizationId == organization_id,
+        JournalEntry.companyCode == company_code,
+        JournalEntry.jeDate >= period_start,
+        JournalEntry.jeDate <= period_end,
+    ]
+    if not include_voided:
+        pl_je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
+    pl_line_filters = []
+    if cost_center_id is not None:
+        pl_line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+
+    result = await db.execute(
+        select(
+            func.coalesce(func.sum(JournalEntryLine.credit), 0)
+            - func.coalesce(func.sum(JournalEntryLine.debit), 0)
+        )
+        .select_from(JournalEntryLine)
+        .join(JournalEntry, JournalEntryLine.jeId == JournalEntry.jeId)
+        .join(GLAccount, JournalEntryLine.accountId == GLAccount.accountId)
+        .where(
+            *pl_je_filters,
+            *pl_line_filters,
+            GLAccount.drawer.in_(
+                (
+                    DrawerEnum.REVENUE,
+                    DrawerEnum.COST_OF_SALES,
+                    DrawerEnum.OPERATING_COST,
+                    DrawerEnum.NON_OPERATING,
+                    DrawerEnum.OTHER_INCOME,
+                    DrawerEnum.TAXATION,
+                )
+            ),
+        )
+    )
+    return Decimal(str(result.scalar_one() or 0))
+
+
+@router.get(
+    "/reports/cash-flow",
+    response_model=SuccessResponse[CashFlowResponse],
+    summary="Cash Flow Statement (indirect method)",
+    description=(
+        "Wave 2 (T-060.5) — Indirect-method Cash Flow Statement. "
+        "Starts from net income, adds back non-cash items, adjusts for "
+        "working-capital changes, then layers investing + financing "
+        "activity. Bucket placement comes from each GL account's "
+        "`cashFlowCategory` (seeded by Alembic migration 014).\n\n"
+        "**Validation:** Net Change in Cash should equal Cash at End − "
+        "Cash at Beginning within 0.01 AED. Any mismatch is surfaced "
+        "as a warning rather than refusing the report — typically "
+        "caused by accounts the operator hasn't classified yet (still "
+        "`cashFlowCategory='none'`), which silently drop out of the "
+        "computation."
+    ),
+)
+async def get_cash_flow(
+    organization_id: str = Query(..., description="Required — org scope"),
+    company_code: str = Query(..., description="Required — company code"),
+    period_start: date = Query(..., description="Inclusive period start"),
+    period_end: date = Query(..., description="Inclusive period end"),
+    include_voided: bool = Query(
+        False, description="Include voided JEs"
+    ),
+    cost_center_id: Optional[str] = Query(
+        None, description="Optional cost-centre filter on JE lines"
+    ),
+    db: AsyncSession = Depends(get_db),
+    _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
+) -> SuccessResponse[CashFlowResponse]:
+    """
+    Compute the indirect-method cash flow statement for the period.
+
+    Raises:
+      400 if period_end < period_start.
+      404 if company unknown.
+    """
+    if period_end < period_start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"period_end ({period_end}) must be on or after "
+                f"period_start ({period_start})."
+            ),
+        )
+
+    company = await db.get(CompanyCode, company_code)
+    if company is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Company '{company_code}' not found.",
+        )
+
+    generated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # ── Net Income for the period (also the Operating starting point) ──
+    net_income = await _net_income_for_period(
+        db, organization_id, company_code, period_start, period_end,
+        include_voided, cost_center_id,
+    )
+
+    # ── Opening + closing BS balances ──────────────────────────────────
+    # Opening = everything posted with jeDate < period_start.
+    opening_as_of = period_start - timedelta(days=1)
+    opening = await _balances_at_date(
+        db, organization_id, company_code, opening_as_of,
+        include_voided, cost_center_id,
+    )
+    closing = await _balances_at_date(
+        db, organization_id, company_code, period_end,
+        include_voided, cost_center_id,
+    )
+
+    # ── Fetch account metadata (drawer, type, category) ────────────────
+    accts_result = await db.execute(
+        select(
+            GLAccount.accountId,
+            GLAccount.accountNumber,
+            GLAccount.accountName,
+            GLAccount.drawer,
+            GLAccount.accountType,
+            GLAccount.cashFlowCategory,
+        )
+        .where(
+            GLAccount.organizationId == organization_id,
+            GLAccount.drawer.in_(
+                (DrawerEnum.ASSETS, DrawerEnum.LIABILITIES, DrawerEnum.EQUITY)
+            ),
+            GLAccount.isActive == True,  # noqa: E712
+        )
+    )
+    accts = accts_result.all()
+
+    # ── Bucket Δ contributions by cashFlowCategory ─────────────────────
+    non_cash: List[CashFlowLine] = []
+    working_cap: List[CashFlowLine] = []
+    investing: List[CashFlowLine] = []
+    financing: List[CashFlowLine] = []
+
+    non_cash_total = Decimal("0")
+    working_cap_total = Decimal("0")
+    investing_total = Decimal("0")
+    financing_total = Decimal("0")
+    cash_at_begin = Decimal("0")
+    cash_at_end = Decimal("0")
+
+    for row in accts:
+        opening_bal = opening.get(row.accountId, Decimal("0"))
+        closing_bal = closing.get(row.accountId, Decimal("0"))
+        delta = closing_bal - opening_bal
+
+        # Sign convention: asset increase = cash outflow.
+        atype = row.accountType
+        if not isinstance(atype, AccountTypeEnum):
+            try:
+                atype = AccountTypeEnum(atype)
+            except ValueError:
+                atype = AccountTypeEnum.ASSET
+        if atype == AccountTypeEnum.ASSET:
+            contribution = -delta
+        else:
+            # Liability & Equity: increase = cash inflow.
+            contribution = delta
+
+        category = row.cashFlowCategory
+        if not isinstance(category, CashFlowCategoryEnum):
+            try:
+                category = CashFlowCategoryEnum(category)
+            except (ValueError, TypeError):
+                category = CashFlowCategoryEnum.NONE
+
+        # CASH category accounts: track opening / closing only.
+        if category == CashFlowCategoryEnum.CASH:
+            cash_at_begin = cash_at_begin + opening_bal
+            cash_at_end = cash_at_end + closing_bal
+            continue
+
+        # NONE category: silently excluded — this is the design intent
+        # for P&L accounts (already captured in netIncome) and any
+        # accounts the operator hasn't yet classified.
+        if category == CashFlowCategoryEnum.NONE:
+            continue
+
+        drawer_str = (
+            row.drawer.value if hasattr(row.drawer, "value") else str(row.drawer)
+        )
+        line = CashFlowLine(
+            accountId=row.accountId,
+            accountNumber=row.accountNumber,
+            accountName=row.accountName,
+            drawer=drawer_str,
+            contribution=str(contribution),
+        )
+
+        if category == CashFlowCategoryEnum.NON_CASH_ADJUSTMENT:
+            # Skip zero-contribution lines — keeps the report tidy.
+            if contribution != Decimal("0"):
+                non_cash.append(line)
+            non_cash_total = non_cash_total + contribution
+        elif category == CashFlowCategoryEnum.WORKING_CAPITAL:
+            if contribution != Decimal("0"):
+                working_cap.append(line)
+            working_cap_total = working_cap_total + contribution
+        elif category == CashFlowCategoryEnum.INVESTING:
+            if contribution != Decimal("0"):
+                investing.append(line)
+            investing_total = investing_total + contribution
+        elif category == CashFlowCategoryEnum.FINANCING:
+            if contribution != Decimal("0"):
+                financing.append(line)
+            financing_total = financing_total + contribution
+
+    # Sort lines deterministically.
+    non_cash.sort(key=lambda l: l.accountNumber)
+    working_cap.sort(key=lambda l: l.accountNumber)
+    investing.sort(key=lambda l: l.accountNumber)
+    financing.sort(key=lambda l: l.accountNumber)
+
+    operating_total = net_income + non_cash_total + working_cap_total
+    net_change = operating_total + investing_total + financing_total
+    cash_delta = cash_at_end - cash_at_begin
+    reconciliation_delta = net_change - cash_delta
+
+    warnings: List[str] = []
+    if reconciliation_delta.copy_abs() > _BALANCE_TOLERANCE:
+        warnings.append(
+            f"Cash Flow Statement does not reconcile: net change="
+            f"{net_change} vs (end−begin) cash delta={cash_delta} "
+            f"(reconciliation delta={reconciliation_delta}). Likely "
+            "cause: accounts with cashFlowCategory='none' that should "
+            "have been classified."
+        )
+
+    logger.info(
+        "[Finance/Reports] cash_flow org=%s company=%s period=%s..%s "
+        "ni=%s nonCash=%s wc=%s inv=%s fin=%s netChange=%s cashDelta=%s",
+        organization_id, company_code,
+        period_start.isoformat(), period_end.isoformat(),
+        net_income, non_cash_total, working_cap_total,
+        investing_total, financing_total, net_change, cash_delta,
+    )
+
+    return success(CashFlowResponse(
+        organizationId=organization_id,
+        companyCode=company_code,
+        periodStart=period_start.isoformat(),
+        periodEnd=period_end.isoformat(),
+        generatedAt=generated_at.isoformat(),
+        currency=company.defaultCurrency or "AED",
+        includesVoided=include_voided,
+        operating=CashFlowOperatingSection(
+            netIncome=str(net_income),
+            nonCashAdjustments=non_cash,
+            nonCashAdjustmentsTotal=str(non_cash_total),
+            workingCapitalChanges=working_cap,
+            workingCapitalChangesTotal=str(working_cap_total),
+            total=str(operating_total),
+        ),
+        investing=CashFlowActivitySection(
+            items=investing, total=str(investing_total),
+        ),
+        financing=CashFlowActivitySection(
+            items=financing, total=str(financing_total),
+        ),
+        netChangeInCash=str(net_change),
+        cashAtBeginning=str(cash_at_begin),
+        cashAtEnd=str(cash_at_end),
+        cashDelta=str(cash_delta),
+        reconciliationDelta=str(reconciliation_delta),
+        warnings=warnings,
     ))
