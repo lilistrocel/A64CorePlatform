@@ -5,7 +5,13 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from ..orm.models import AccountLevelEnum, AccountRoleEnum, AccountTypeEnum, DrawerEnum
+from ..orm.models import (
+    AccountLevelEnum,
+    AccountRoleEnum,
+    AccountTypeEnum,
+    CashFlowCategoryEnum,
+    DrawerEnum,
+)
 
 
 class GLAccountCreate(BaseModel):
@@ -24,6 +30,10 @@ class GLAccountCreate(BaseModel):
     accountLevel: AccountLevelEnum = AccountLevelEnum.ACTIVE
     accountRole: Optional[AccountRoleEnum] = None
     ifrsTag: Optional[str] = Field(None, max_length=10)
+    # Reason: Wave 2 (T-060.2) — operator can set the CF category on
+    # create. Defaults to NONE so an unclassified new account is simply
+    # excluded from CF until reviewed.
+    cashFlowCategory: CashFlowCategoryEnum = CashFlowCategoryEnum.NONE
 
 
 class GLAccountUpdate(BaseModel):
@@ -41,6 +51,8 @@ class GLAccountUpdate(BaseModel):
     accountLevel: Optional[AccountLevelEnum] = None
     accountRole: Optional[AccountRoleEnum] = None
     ifrsTag: Optional[str] = Field(None, max_length=10)
+    # Reason: inline-edit from Chart-of-Accounts UI (T-060.12).
+    cashFlowCategory: Optional[CashFlowCategoryEnum] = None
 
 
 class GLAccountResponse(BaseModel):
@@ -61,6 +73,7 @@ class GLAccountResponse(BaseModel):
     accountLevel: AccountLevelEnum
     accountRole: Optional[AccountRoleEnum]
     ifrsTag: Optional[str]
+    cashFlowCategory: CashFlowCategoryEnum
     createdAt: datetime
     updatedAt: datetime
 

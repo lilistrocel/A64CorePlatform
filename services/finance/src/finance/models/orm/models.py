@@ -99,6 +99,34 @@ class AccountRoleEnum(str, enum.Enum):
     OTHER = "other"
 
 
+class CashFlowCategoryEnum(str, enum.Enum):
+    """
+    Wave 2 (T-060.2) — categorises a GL account for indirect-method
+    cash flow statement.
+
+    - CASH                — actual cash & equivalents (drives "Cash at
+      beginning/end of period" line).
+    - WORKING_CAPITAL     — current AR/AP/inventory/prepayments etc.
+      Period delta contributes to "Changes in working capital".
+    - NON_CASH_ADJUSTMENT — depreciation / amortisation / provisions
+      whose period activity is added back to net income.
+    - INVESTING           — non-current asset purchases/disposals,
+      equity investments.
+    - FINANCING           — borrowings, share capital, dividends.
+    - NONE                — excluded from the cash flow statement
+      entirely. Default for new accounts and all P&L drawers (their
+      net result is captured via the net-income line, not by
+      double-counting).
+    """
+
+    CASH = "cash"
+    WORKING_CAPITAL = "working_capital"
+    NON_CASH_ADJUSTMENT = "non_cash_adjustment"
+    INVESTING = "investing"
+    FINANCING = "financing"
+    NONE = "none"
+
+
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
@@ -186,6 +214,22 @@ class GLAccount(Base):
     )
     # Reason: nullable — IFRS tag is optional metadata; most accounts will not have one.
     ifrsTag = Column("ifrs_tag", String(10), nullable=True)
+    # Reason: Wave 2 (T-060.2) — drives placement on the Cash Flow
+    # Statement. Defaults to 'none' for safety so existing rows + any
+    # newly-created account that the operator hasn't classified yet are
+    # simply excluded from CF until classified. Migration 014 backfills
+    # sensible defaults for the seeded CoA based on accountNumber
+    # prefix + name patterns.
+    cashFlowCategory = Column(
+        "cash_flow_category",
+        Enum(
+            CashFlowCategoryEnum,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+        server_default="none",
+        default=CashFlowCategoryEnum.NONE,
+    )
     createdAt = Column(DateTime, nullable=False, server_default=func.now())
     updatedAt = Column(
         DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
