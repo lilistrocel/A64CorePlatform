@@ -149,15 +149,22 @@ async def test_outbox_writer_passes_session_to_insert_one() -> None:
         importlib.reload(ff_module)
         importlib.reload(ow_module)
 
-        await ow_module.OutboxWriter.publish(
-            db=mock_db,
-            event_type="pr_state_changed",
-            organization_id=str(uuid.uuid4()),
-            company_code="1000",
-            payload=_make_pr_payload(),
-            source_user_id=str(uuid.uuid4()),
-            session=fake_session,
-        )
+        # Reason: Wave 0 added a per-tenant gate that calls Mongo; patch
+        # it to allow the write so this test stays focused on session.
+        with patch.object(
+            ow_module, "is_finance_enabled_for_org", AsyncMock(return_value=True)
+        ), patch.object(
+            ow_module, "get_redis_cache", AsyncMock(return_value=MagicMock(is_available=False))
+        ):
+            await ow_module.OutboxWriter.publish(
+                db=mock_db,
+                event_type="pr_state_changed",
+                organization_id=str(uuid.uuid4()),
+                company_code="1000",
+                payload=_make_pr_payload(),
+                source_user_id=str(uuid.uuid4()),
+                session=fake_session,
+            )
 
     # Verify insert_one was called with the session keyword argument
     mock_collection.insert_one.assert_awaited_once()
@@ -185,15 +192,22 @@ async def test_outbox_writer_session_none_passes_none_to_insert_one() -> None:
         importlib.reload(ff_module)
         importlib.reload(ow_module)
 
-        await ow_module.OutboxWriter.publish(
-            db=mock_db,
-            event_type="pr_state_changed",
-            organization_id=str(uuid.uuid4()),
-            company_code="1000",
-            payload=_make_pr_payload(),
-            source_user_id=str(uuid.uuid4()),
-            # session omitted — defaults to None
-        )
+        # Reason: Wave 0 added a per-tenant gate that calls Mongo; patch
+        # it to allow the write so this test stays focused on session.
+        with patch.object(
+            ow_module, "is_finance_enabled_for_org", AsyncMock(return_value=True)
+        ), patch.object(
+            ow_module, "get_redis_cache", AsyncMock(return_value=MagicMock(is_available=False))
+        ):
+            await ow_module.OutboxWriter.publish(
+                db=mock_db,
+                event_type="pr_state_changed",
+                organization_id=str(uuid.uuid4()),
+                company_code="1000",
+                payload=_make_pr_payload(),
+                source_user_id=str(uuid.uuid4()),
+                # session omitted — defaults to None
+            )
 
     mock_collection.insert_one.assert_awaited_once()
     _, kwargs = mock_collection.insert_one.call_args
