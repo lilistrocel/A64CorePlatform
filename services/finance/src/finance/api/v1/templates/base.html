@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }}</title>
+  <style>
+    /* A4 portrait — clean, legible, printable */
+    @page {
+      size: A4 portrait;
+      margin: 18mm 15mm 20mm 15mm;
+      @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 8pt;
+        color: #666;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      color: #111;
+      background: #fff;
+    }
+
+    /* ── Letterhead header ───────────────────────────────────────── */
+    .header {
+      border-bottom: 2px solid #1a3b6e;
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .org-name {
+      font-size: 15pt;
+      font-weight: bold;
+      color: #1a3b6e;
+      letter-spacing: 0.02em;
+    }
+
+    .company-code {
+      font-size: 8pt;
+      color: #555;
+      margin-top: 2px;
+    }
+
+    .report-meta {
+      text-align: right;
+      font-size: 8pt;
+      color: #444;
+      line-height: 1.5;
+    }
+
+    .statement-title {
+      font-size: 12pt;
+      font-weight: bold;
+      text-align: center;
+      margin: 10px 0 4px 0;
+      color: #1a3b6e;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .statement-subtitle {
+      font-size: 8.5pt;
+      text-align: center;
+      color: #555;
+      margin-bottom: 14px;
+    }
+
+    /* ── Table ───────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th {
+      font-size: 8.5pt;
+      font-weight: bold;
+      text-align: right;
+      padding: 4px 6px;
+      background: #1a3b6e;
+      color: #fff;
+      border: 1px solid #1a3b6e;
+    }
+
+    th.col-label {
+      text-align: left;
+    }
+
+    td {
+      padding: 3px 6px;
+      border-bottom: 1px solid #e8e8e8;
+      font-size: 8.5pt;
+      vertical-align: top;
+    }
+
+    td.label {
+      text-align: left;
+    }
+
+    td.amount {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* Indent hierarchy */
+    .indent-1 { padding-left: 16px; }
+    .indent-2 { padding-left: 28px; }
+
+    /* Row variants */
+    .row-header td {
+      font-weight: bold;
+      background: #f0f4f9;
+      color: #1a3b6e;
+      border-top: 1px solid #c0ccde;
+    }
+
+    .row-section-header td {
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 8pt;
+      letter-spacing: 0.05em;
+      background: #e6ecf5;
+      color: #1a3b6e;
+      border-top: 2px solid #1a3b6e;
+    }
+
+    .row-subtotal td {
+      font-weight: bold;
+      border-top: 1px solid #aaa;
+      background: #f7f7f7;
+    }
+
+    .row-total td {
+      font-weight: bold;
+      font-size: 9pt;
+      border-top: 2px solid #111;
+      border-bottom: 2px solid #111;
+      background: #f0f4f9;
+    }
+
+    .row-grand-total td {
+      font-weight: bold;
+      font-size: 9.5pt;
+      border-top: 3px double #1a3b6e;
+      border-bottom: 3px double #1a3b6e;
+      background: #dce6f4;
+      color: #1a3b6e;
+    }
+
+    .row-blank td {
+      border-bottom: none;
+      height: 6px;
+    }
+
+    /* ── Warnings ────────────────────────────────────────────────── */
+    .warnings {
+      margin-top: 14px;
+      padding: 6px 10px;
+      background: #fff8e1;
+      border-left: 3px solid #f59e0b;
+      font-size: 7.5pt;
+      color: #7c5a00;
+    }
+
+    .warnings p {
+      margin: 2px 0;
+    }
+
+    /* ── Footer note ─────────────────────────────────────────────── */
+    .footer-note {
+      margin-top: 16px;
+      font-size: 7pt;
+      color: #888;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Letterhead -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="org-name">{{ org_name }}</div>
+        <div class="company-code">Company: {{ company_code }}{% if currency %} &nbsp;|&nbsp; Currency: {{ currency }}{% endif %}</div>
+      </div>
+      <div class="report-meta">
+        Generated: {{ generated_at }}<br/>
+        {% if cost_center_label %}Cost Centre: {{ cost_center_label }}<br/>{% endif %}
+        {% if includes_voided %}Includes voided JEs<br/>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="statement-title">{{ title }}</div>
+  <div class="statement-subtitle">{{ subtitle }}</div>
+
+  {% block content %}{% endblock %}
+
+  {% if warnings %}
+  <div class="warnings">
+    {% for w in warnings %}
+    <p>&#9888; {{ w }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="footer-note">
+    All amounts in {{ currency or "AED" }} unless otherwise stated.
+    This report is computer-generated and is subject to audit verification.
+  </div>
+
+</body>
+</html>

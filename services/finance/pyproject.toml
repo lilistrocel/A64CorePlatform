@@ -25,6 +25,10 @@ dependencies = [
     "email-validator==2.2.0",
     # HTTP client (for health checks)
     "httpx==0.27.0",
+    # Report export — T-060.6
+    "openpyxl==3.1.5",
+    "weasyprint==65.1",
+    "jinja2==3.1.4",
     # Shared finance event contracts (outbox bridge — installed from /app/contracts)
     "a64-finance-contracts @ file:///app/contracts",
 ]

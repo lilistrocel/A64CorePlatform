@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<table>
+  <colgroup>
+    <col style="width: 65%;" />
+    <col style="width: 35%;" />
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="col-label">Description</th>
+      <th>Amount ({{ currency }})</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    {# ── Operating Activities ─────────────────────────────────────── #}
+    <tr class="row-section-header">
+      <td colspan="2">Operating Activities</td>
+    </tr>
+    <tr>
+      <td class="label indent-1">Net Income / (Loss)</td>
+      <td class="amount">{{ operating.netIncome | fmt_amount }}</td>
+    </tr>
+
+    {% if operating.nonCashAdjustments %}
+    <tr class="row-header">
+      <td class="label indent-1" colspan="2">Adjustments for Non-Cash Items</td>
+    </tr>
+    {% for line in operating.nonCashAdjustments %}
+    <tr>
+      <td class="label indent-2">{{ line.accountName }}</td>
+      <td class="amount">{{ line.contribution | fmt_amount }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="row-subtotal">
+      <td class="label indent-1">Total Non-Cash Adjustments</td>
+      <td class="amount">{{ operating.nonCashAdjustmentsTotal | fmt_amount }}</td>
+    </tr>
+    {% endif %}
+
+    {% if operating.workingCapitalChanges %}
+    <tr class="row-header">
+      <td class="label indent-1" colspan="2">Changes in Working Capital</td>
+    </tr>
+    {% for line in operating.workingCapitalChanges %}
+    <tr>
+      <td class="label indent-2">{{ line.accountName }}</td>
+      <td class="amount">{{ line.contribution | fmt_amount }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="row-subtotal">
+      <td class="label indent-1">Total Working Capital Changes</td>
+      <td class="amount">{{ operating.workingCapitalChangesTotal | fmt_amount }}</td>
+    </tr>
+    {% endif %}
+
+    <tr class="row-total">
+      <td class="label">Net Cash from Operating Activities</td>
+      <td class="amount">{{ operating.total | fmt_amount }}</td>
+    </tr>
+
+    <tr class="row-blank"><td colspan="2"></td></tr>
+
+    {# ── Investing Activities ─────────────────────────────────────── #}
+    <tr class="row-section-header">
+      <td colspan="2">Investing Activities</td>
+    </tr>
+    {% set investing_lines = investing['items'] %}
+    {% if investing_lines %}
+    {% for line in investing_lines %}
+    <tr>
+      <td class="label indent-1">{{ line.accountName }}</td>
+      <td class="amount">{{ line.contribution | fmt_amount }}</td>
+    </tr>
+    {% endfor %}
+    {% else %}
+    <tr>
+      <td class="label indent-1"><em>No investing activity</em></td>
+      <td class="amount">—</td>
+    </tr>
+    {% endif %}
+    <tr class="row-total">
+      <td class="label">Net Cash from Investing Activities</td>
+      <td class="amount">{{ investing.total | fmt_amount }}</td>
+    </tr>
+
+    <tr class="row-blank"><td colspan="2"></td></tr>
+
+    {# ── Financing Activities ─────────────────────────────────────── #}
+    <tr class="row-section-header">
+      <td colspan="2">Financing Activities</td>
+    </tr>
+    {% set financing_lines = financing['items'] %}
+    {% if financing_lines %}
+    {% for line in financing_lines %}
+    <tr>
+      <td class="label indent-1">{{ line.accountName }}</td>
+      <td class="amount">{{ line.contribution | fmt_amount }}</td>
+    </tr>
+    {% endfor %}
+    {% else %}
+    <tr>
+      <td class="label indent-1"><em>No financing activity</em></td>
+      <td class="amount">—</td>
+    </tr>
+    {% endif %}
+    <tr class="row-total">
+      <td class="label">Net Cash from Financing Activities</td>
+      <td class="amount">{{ financing.total | fmt_amount }}</td>
+    </tr>
+
+    <tr class="row-blank"><td colspan="2"></td></tr>
+
+    {# ── Reconciliation ───────────────────────────────────────────── #}
+    <tr class="row-section-header">
+      <td colspan="2">Cash Position</td>
+    </tr>
+    <tr class="row-grand-total">
+      <td class="label">Net Change in Cash</td>
+      <td class="amount">{{ net_change_in_cash | fmt_amount }}</td>
+    </tr>
+    <tr>
+      <td class="label indent-1">Cash at Beginning of Period</td>
+      <td class="amount">{{ cash_at_beginning | fmt_amount }}</td>
+    </tr>
+    <tr class="row-total">
+      <td class="label">Cash at End of Period</td>
+      <td class="amount">{{ cash_at_end | fmt_amount }}</td>
+    </tr>
+
+  </tbody>
+</table>
+{% endblock %}

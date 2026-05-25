@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<table>
+  <colgroup>
+    <col style="width: 60%;" />
+    <col style="width: 20%;" />
+    <col style="width: 20%;" />
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="col-label">Account</th>
+      <th>Balance ({{ currency }})</th>
+      <th>Account No.</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    {# ── ASSETS ─────────────────────────────────────────────────── #}
+    <tr class="row-section-header">
+      <td colspan="3">Assets</td>
+    </tr>
+    {% for row in rows %}
+      {% if row.drawer == "ASSETS" %}
+        <tr class="{% if row.isHeader %}row-header{% endif %}">
+          <td class="label {% if not row.isHeader %}indent-1{% endif %}">
+            {{ row.accountName }}
+          </td>
+          <td class="amount">{{ row.balance | fmt_amount }}</td>
+          <td class="amount">{{ row.accountNumber }}</td>
+        </tr>
+      {% endif %}
+    {% endfor %}
+    <tr class="row-subtotal">
+      <td class="label indent-1">Total Assets</td>
+      <td class="amount">{{ totals.totalAssets | fmt_amount }}</td>
+      <td></td>
+    </tr>
+
+    <tr class="row-blank"><td colspan="3"></td></tr>
+
+    {# ── LIABILITIES ─────────────────────────────────────────────── #}
+    <tr class="row-section-header">
+      <td colspan="3">Liabilities</td>
+    </tr>
+    {% for row in rows %}
+      {% if row.drawer == "LIABILITIES" %}
+        <tr class="{% if row.isHeader %}row-header{% endif %}">
+          <td class="label {% if not row.isHeader %}indent-1{% endif %}">
+            {{ row.accountName }}
+          </td>
+          <td class="amount">{{ row.balance | fmt_amount }}</td>
+          <td class="amount">{{ row.accountNumber }}</td>
+        </tr>
+      {% endif %}
+    {% endfor %}
+    <tr class="row-subtotal">
+      <td class="label indent-1">Total Liabilities</td>
+      <td class="amount">{{ totals.totalLiabilities | fmt_amount }}</td>
+      <td></td>
+    </tr>
+
+    <tr class="row-blank"><td colspan="3"></td></tr>
+
+    {# ── EQUITY ───────────────────────────────────────────────────── #}
+    <tr class="row-section-header">
+      <td colspan="3">Equity</td>
+    </tr>
+    {% for row in rows %}
+      {% if row.drawer == "EQUITY" %}
+        <tr class="{% if row.isHeader %}row-header{% endif %}">
+          <td class="label {% if not row.isHeader %}indent-1{% endif %}">
+            {{ row.accountName }}
+          </td>
+          <td class="amount">{{ row.balance | fmt_amount }}</td>
+          <td class="amount">{{ row.accountNumber }}</td>
+        </tr>
+      {% endif %}
+    {% endfor %}
+    {# Synthetic current-year P/L row #}
+    <tr>
+      <td class="label indent-1"><em>Current Year Profit / (Loss)</em></td>
+      <td class="amount">{{ current_year_pl | fmt_amount }}</td>
+      <td></td>
+    </tr>
+    <tr class="row-subtotal">
+      <td class="label indent-1">Total Equity</td>
+      <td class="amount">{{ totals.totalEquity | fmt_amount }}</td>
+      <td></td>
+    </tr>
+
+    <tr class="row-blank"><td colspan="3"></td></tr>
+
+    {# ── Grand total ──────────────────────────────────────────────── #}
+    <tr class="row-grand-total">
+      <td class="label">Total Liabilities + Equity</td>
+      <td class="amount">{{ totals.totalLiabilitiesPlusEquity | fmt_amount }}</td>
+      <td></td>
+    </tr>
+
+  </tbody>
+</table>
+{% endblock %}

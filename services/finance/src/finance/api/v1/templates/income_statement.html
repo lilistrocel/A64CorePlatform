@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<table>
+  <colgroup>
+    <col style="width: {% if comparison %}48%{% else %}60%{% endif %};" />
+    <col style="width: {% if comparison %}26%{% else %}40%{% endif %};" />
+    {% if comparison %}<col style="width: 26%;" />{% endif %}
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="col-label">Description</th>
+      <th>{{ primary.periodStart }} to {{ primary.periodEnd }}<br/>({{ currency }})</th>
+      {% if comparison %}
+      <th>{{ comparison.periodStart }} to {{ comparison.periodEnd }}<br/>({{ currency }})</th>
+      {% endif %}
+    </tr>
+  </thead>
+  <tbody>
+
+    {% for section in primary.sections %}
+    {# Map internal drawer enum values to display labels #}
+    {% set drawer_labels = {
+        "REVENUE": "Revenue",
+        "COST_OF_SALES": "Cost of Sales",
+        "OPERATING_COST": "Operating Expenses",
+        "OTHER_INCOME": "Other Income",
+        "NON_OPERATING": "Non-Operating Items",
+        "TAXATION": "Taxation"
+    } %}
+    {% set label = drawer_labels.get(section.drawer, section.drawer) %}
+
+    <tr class="row-section-header">
+      <td colspan="{% if comparison %}3{% else %}2{% endif %}">{{ label }}</td>
+    </tr>
+
+    {# Leaf accounts only — non-header rows #}
+    {% for row in section.rows %}
+      {% if not row.isHeader %}
+      <tr>
+        <td class="label indent-1">{{ row.accountName }}</td>
+        <td class="amount">{{ row.balance | fmt_amount }}</td>
+        {% if comparison %}
+          {% set comp_section = comparison.sections | selectattr("drawer", "equalto", section.drawer) | first %}
+          {% if comp_section %}
+            {% set comp_row = comp_section.rows | selectattr("accountId", "equalto", row.accountId) | first %}
+            <td class="amount">{% if comp_row %}{{ comp_row.balance | fmt_amount }}{% else %}—{% endif %}</td>
+          {% else %}
+            <td class="amount">—</td>
+          {% endif %}
+        {% endif %}
+      </tr>
+      {% endif %}
+    {% endfor %}
+
+    {# Section total #}
+    <tr class="row-subtotal">
+      <td class="label indent-1">Total {{ label }}</td>
+      <td class="amount">{{ section.total | fmt_amount }}</td>
+      {% if comparison %}
+        {% set comp_section = comparison.sections | selectattr("drawer", "equalto", section.drawer) | first %}
+        <td class="amount">{% if comp_section %}{{ comp_section.total | fmt_amount }}{% else %}—{% endif %}</td>
+      {% endif %}
+    </tr>
+
+    {# Insert subtotal rows after certain drawers #}
+    {% if section.drawer == "COST_OF_SALES" %}
+    <tr class="row-total">
+      <td class="label">Gross Profit</td>
+      <td class="amount">{{ primary.subtotals.grossProfit | fmt_amount }}</td>
+      {% if comparison %}<td class="amount">{{ comparison.subtotals.grossProfit | fmt_amount }}</td>{% endif %}
+    </tr>
+    {% if primary.subtotals.grossMarginPercent %}
+    <tr>
+      <td class="label indent-2"><em>Gross Margin</em></td>
+      <td class="amount"><em>{{ primary.subtotals.grossMarginPercent }}%</em></td>
+      {% if comparison %}<td class="amount"><em>{% if comparison.subtotals.grossMarginPercent %}{{ comparison.subtotals.grossMarginPercent }}%{% else %}—{% endif %}</em></td>{% endif %}
+    </tr>
+    {% endif %}
+    {% endif %}
+
+    {% if section.drawer == "OPERATING_COST" %}
+    <tr class="row-total">
+      <td class="label">Operating Income (EBIT)</td>
+      <td class="amount">{{ primary.subtotals.operatingIncome | fmt_amount }}</td>
+      {% if comparison %}<td class="amount">{{ comparison.subtotals.operatingIncome | fmt_amount }}</td>{% endif %}
+    </tr>
+    {% endif %}
+
+    <tr class="row-blank">
+      <td colspan="{% if comparison %}3{% else %}2{% endif %}"></td>
+    </tr>
+    {% endfor %}
+
+    {# ── Net Income ────────────────────────────────────────────── #}
+    <tr class="row-grand-total">
+      <td class="label">Net Income / (Loss)</td>
+      <td class="amount">{{ primary.subtotals.netIncome | fmt_amount }}</td>
+      {% if comparison %}<td class="amount">{{ comparison.subtotals.netIncome | fmt_amount }}</td>{% endif %}
+    </tr>
+
+  </tbody>
+</table>
+{% endblock %}

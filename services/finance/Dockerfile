@@ -1,8 +1,19 @@
 FROM python:3.11-slim
 
 # Install system dependencies
+# NOTE (T-060.6): WeasyPrint requires Pango/Cairo/GDK-Pixbuf for HTML→PDF rendering.
+# These add ~100 MB to the image layer — a known trade-off documented in the DevLog.
+# WeasyPrint's HTML/CSS-first templating approach was chosen over ReportLab/fpdf2
+# for maintainability (see Wave-2-Design.md §6 and 2026-05-24 DevLog entry).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -31,7 +42,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
         pytest==8.3.2 \
         pytest-asyncio==0.23.8 \
         pytest-mock==3.14.0 \
-        aiosqlite==0.20.0
+        aiosqlite==0.20.0 \
+        openpyxl==3.1.5 \
+        weasyprint==65.1 \
+        jinja2==3.1.4
 
 # Copy application source
 COPY services/finance/src/ ./src/

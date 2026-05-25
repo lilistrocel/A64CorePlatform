@@ -22,6 +22,7 @@ from .api.v1 import (
     cost_centers,
     customer_ext,
     events,
+    export,
     health,
     journal_entries,
     master_data,
@@ -95,6 +96,8 @@ app.include_router(events.router, prefix=_PREFIX)
 app.include_router(journal_entries.router, prefix=_PREFIX)
 # Finance Reports (trial balance, future P&L / BS)
 app.include_router(reports.router, prefix=_PREFIX)
+# T-060.6: Report export (PDF / Excel streaming downloads)
+app.include_router(export.router, prefix=_PREFIX)
 # Phase D: AP Payments (vendor payment recording + open-invoice totals lookup)
 app.include_router(ap_payments.router, prefix=_PREFIX)
 
