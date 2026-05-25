@@ -5,6 +5,83 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] - 2026-05-25
+
+**Type:** Minor Release — Wave 2 backend hardening + statutory-statement export +
+manual JE endpoint + BalanceSheetPage frontend (Viet Anh).
+
+### Added
+
+- **T-060.6 — Report export endpoint (PDF + Excel):** New
+  `GET /api/v1/finance/reports/export/{statement}?format=pdf|xlsx` streaming
+  download. Jinja2 HTML templates for all three statements; WeasyPrint (HTML→PDF)
+  and openpyxl (xlsx) renderers. Updated `services/finance/Dockerfile` with
+  Pango/Cairo/GDK-Pixbuf system deps (~100 MB image delta; documented in DevLog).
+  WeasyPrint pinned at 65.1 for Python 3.13 compatibility. New test file
+  `test_export.py`.
+- **T-060.6.1 — Multi cost-centre filter on report + export endpoints:**
+  `cost_center_id` query param changed from `Optional[str]` to `Optional[List[str]]`
+  on all three report endpoints and the export wrapper. Callers may repeat the param
+  (`?cost_center_id=A&cost_center_id=B`); single-value callers are unaffected. SQL
+  filter upgraded from `== :x` to `.in_()` (parameterised). 13 new tests in
+  `test_multi_cost_center.py`.
+- **T-061 — Manual JE creation endpoint:** New
+  `POST /api/v1/finance/journal-entries` for `finance_admin` / `super_admin`.
+  Full server-side validation: balanced lines, open fiscal period, no header
+  accounts, active cost centres. Inactive accounts allowed with warning in
+  `meta.warnings[]`. Audit log row written in same transaction (SHA-256
+  payload hash). JE number via existing `_next_je_number`. 18 new tests in
+  `test_manual_je_endpoint.py`. Surfaced during the 35,000 AED GR/IR
+  stranded-balance investigation (JE-1000-2026-0006).
+- **T-060.7 + T-060.7.1 — `<FinanceReportPage>` shell component:**
+  New component at `frontend/user-portal/src/components/finance/FinanceReportPage/`
+  (relocated from initial `src/features/finance/` draft to match project convention).
+  Render-prop API `{ filters, display, openDrillDown }`. Multi-select cost centres
+  serialised as repeated URLSearchParams keys. Compare-to dropdown
+  (None / Previous period / Same period prior year / Custom).
+- **T-060.8 — `BalanceSheetPage` frontend:** New page at
+  `/finance/balance-sheet` behind `<FinanceGate>`. `getBalanceSheet` service
+  function (repeated-key URLSearchParams), `useBalanceSheet` TanStack Query hook
+  (30 s stale window; fires when org + company are set). Sidebar entry and lazy
+  route added.
+
+### Changed
+
+- **T-060.9.1 — Inactive-account report visibility (IFRS/GAAP compliance):**
+  Removed 4 `isActive == True` filters from `reports.py` (Balance Sheet,
+  Income Statement, `_balances_at_date` × 2 for Cash Flow). `isActive` governs
+  new postings only; accounts with non-zero historical balances must appear on
+  statutory statements regardless of status.
+- **T-063 — Posting-setup semantic type guard:** `PUT /companies/{cc}/posting-setup`
+  now rejects (HTTP 422) any clearing-account assignment where the account's
+  `drawer` / `accountType` does not match the semantic requirement for that field
+  (e.g. `apControlAccountId` requires `LIABILITIES/liability`). All 10 clearing
+  fields covered. Header accounts also rejected. Guard runs before the balance
+  guard to produce the clearest error message.
+
+### Fixed
+
+- **T-060.9.1 — Posting-setup balance-change guard:** `PUT /companies/{cc}/posting-setup`
+  now returns HTTP 409 when the outgoing clearing account carries a non-zero
+  posted balance, preventing mid-flight stranded funds. Guard covers all 10
+  clearing-account fields. Surfaced by the 35,000 AED GR/IR incident.
+- **GR/IR stranded balance (JE-1000-2026-0006):** Company 1000's
+  `grIrClearingAccountId` had been silently changed while a 35,000 AED balance
+  was outstanding. A correcting JE (JE-1000-2026-0006) was posted via the new
+  manual-JE endpoint to zero the stranded balance. Investigation + repair
+  documented in `Docs/3-DevLog/2026-05-24_wave-2-statutory-statements-backend.md`.
+- **T-062 — Finance test suite (273 passed, 0 failed):** Fixed 62 pre-existing
+  test failures: SuccessResponse envelope unwrap in trial_balance / vendor_sub_ledger
+  / ap_aging; missing `organization_id` param in period_audit; ClosePeriodResponse
+  shape (`["data"]["period"]`); JE-reversal assertions updated to standard
+  reversing-entry pattern (not void semantics); posting-setup fixtures updated to
+  use type-correct accounts per T-063; `FINANCE_INGESTION_SECRET` env var added
+  to conftest.
+- **T-063.B — PPV data repair:** Company 1000's `purchasePriceVarianceAccountId`
+  pointed to `110000-003 "Buildings"` (a fixed-asset account). Repaired via direct
+  SQL to an OPERATING_COST/expense account. Documented in DevLog §"Data repair —
+  T-063.B".
+
 ## [1.18.0] - 2026-05-24
 
 **Type:** Minor Release — Wave 0: Finance as opt-in add-on (T-059).

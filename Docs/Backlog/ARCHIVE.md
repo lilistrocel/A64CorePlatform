@@ -1,8 +1,98 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 57 tasks
+> **Total completed:** 65 tasks
 
 ## 2026-05
+
+### T-060.6 | Finance — Report export endpoint (PDF + Excel)
+- **Category:** Backend + Tests · **Priority:** P1
+- **Completed:** 2026-05-24 · **Assigned:** backend-dev-expert
+- **Released in:** v1.19.0
+- **Description:** New `GET /api/v1/finance/reports/export/{statement}?format=pdf|xlsx`
+  streaming download. Jinja2 HTML templates for all three statements; WeasyPrint
+  (HTML→PDF) and openpyxl (xlsx) renderers. Dockerfile updated with Pango/Cairo/GDK-Pixbuf
+  system deps (~100 MB image delta). WeasyPrint 65.1 for Python 3.13 compatibility.
+
+---
+
+### T-060.6.1 | Finance — Multi cost-centre filter on report + export endpoints
+- **Category:** Backend + Tests · **Priority:** P1
+- **Completed:** 2026-05-24 · **Assigned:** backend-dev-expert
+- **Released in:** v1.19.0
+- **Description:** `cost_center_id` query param upgraded from `Optional[str]` to
+  `Optional[List[str]]` on balance-sheet, income-statement, cash-flow, and export
+  endpoints. SQL filter changed from `== :x` to `.in_()`. 13 tests added.
+
+---
+
+### T-060.7 + T-060.7.1 | Finance — FinanceReportPage shell component
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-24 · **Assigned:** frontend-dev-expert
+- **Released in:** v1.19.0
+- **Description:** `<FinanceReportPage>` shell at
+  `frontend/user-portal/src/components/finance/FinanceReportPage/`.
+  Render-prop API `{ filters, display, openDrillDown }`. Multi-select cost centres
+  (repeated URLSearchParams). Compare-to dropdown (None / Previous / YoY / Custom).
+  Relocated from initial `src/features/finance/` draft to project convention path.
+
+---
+
+### T-060.8 | Finance — BalanceSheetPage frontend
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-24 · **Assigned:** frontend-dev-expert
+- **Released in:** v1.19.0
+- **Description:** New `/finance/balance-sheet` page behind `<FinanceGate>`.
+  `getBalanceSheet` service, `useBalanceSheet` hook (30 s stale window),
+  sidebar entry, lazy route in `App.tsx`.
+
+---
+
+### T-060.9.1 | Finance — Inactive-account report visibility + posting-setup balance guard
+- **Category:** Backend + Tests · **Priority:** P0
+- **Completed:** 2026-05-24 · **Assigned:** backend-dev-expert
+- **Released in:** v1.19.0
+- **Description:** Removed 4 `isActive == True` filters from reports.py (IFRS/GAAP
+  compliance). Added balance-change guard on all 10 clearing-account fields in
+  `company.py` posting-setup endpoint (HTTP 409 if old account has non-zero balance).
+
+---
+
+### T-061 | Finance — Manual JE creation endpoint
+- **Category:** Backend + Tests · **Priority:** P1
+- **Completed:** 2026-05-24 · **Assigned:** backend-dev-expert
+- **Released in:** v1.19.0
+- **Description:** New `POST /api/v1/finance/journal-entries` for `finance_admin` /
+  `super_admin`. Full validation (balanced, open period, no header accounts, active
+  cost centres). Inactive accounts produce `meta.warnings[]`. Audit log in same
+  transaction. 18 tests. Surfaced by the 35,000 AED GR/IR stranded-balance incident.
+
+---
+
+### T-062 | Finance tests — Triage 62 pre-existing failures
+- **Category:** Tests · **Priority:** P1
+- **Completed:** 2026-05-24 · **Assigned:** testing-backend-specialist
+- **Released in:** v1.19.0
+- **Description:** Fixed 62 pre-existing failures across
+  test_trial_balance, test_vendor_sub_ledger, test_ap_aging, test_period_audit,
+  test_je_reversal, test_coa_fixes_pm_items, test_purchase_item_ext.
+  Root causes: envelope unwrap, missing org_id param, ClosePeriodResponse shape,
+  JE-reversal model change (void → standard reversing entry), posting-setup fixtures
+  needing type-correct accounts, FINANCE_INGESTION_SECRET env var.
+  Final result: 273 passed, 1 skipped, 0 failed.
+
+---
+
+### T-063 | Finance — Posting-setup semantic type guard + PPV data repair
+- **Category:** Backend + Data repair · **Priority:** P2
+- **Completed:** 2026-05-24 · **Assigned:** backend-dev-expert
+- **Released in:** v1.19.0
+- **Description:** All 10 clearing-account fields on posting-setup endpoint now
+  validated for correct `drawer`/`accountType` (HTTP 422 on mismatch; header
+  accounts also rejected). Company 1000's `purchasePriceVarianceAccountId` repaired
+  from fixed-asset `Buildings` to an OPERATING_COST/expense account (direct SQL;
+  documented in DevLog §"Data repair — T-063.B").
+
+---
 
 ### T-057-1a | Purchasing line enrichment — Wave 1a: discount + cost center
 - **Category:** Backend + Frontend · **Priority:** P1

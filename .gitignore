@@ -143,6 +143,7 @@ clear-browser-cache.html
 # Playwright MCP and reports
 .playwright-mcp/
 playwright-report/
+.tmp-verify/
 
 # Swagger/API snapshot artifacts
 *-swagger.txt

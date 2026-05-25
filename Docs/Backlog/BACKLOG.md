@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-05-24
-> **Tasks:** 7 active · 2 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a completed, moved to ARCHIVE.md)
+> **Updated:** 2026-05-25
+> **Tasks:** 6 active · 2 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-061, T-062, T-063 completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -375,8 +375,8 @@
 
 _T-059 (Wave 0) — see Active for context._
 _T-060 (Wave 2) — design approved 2026-05-24, ready to claim._
+_T-061, T-062, T-063 — completed 2026-05-24, moved to ARCHIVE.md._
 
----
 
 ### T-059 | Wave 0 — Finance as opt-in add-on (architectural hygiene) — 🔵 Active
 - **Category:** Backend + Frontend + DevOps + Docs · **Priority:** P0
@@ -498,18 +498,29 @@ _T-060 (Wave 2) — design approved 2026-05-24, ready to claim._
     (HTML → PDF). Update `services/finance/Dockerfile` with
     Pango/Cairo system deps; document ~100 MB image-size hit in
     DevLog.
+    **Status:** ✅ Done · Completed: 2026-05-24 · Assigned: backend-dev-expert
   - T-060.7 Frontend — `<FinanceReportPage>` shell component:
     period/date picker with quick-picks (MTD/QTD/YTD/last closed),
     comparative-period toggle, cost-centre multi-select filter,
     negative-number toggle (parentheses default), scale toggle,
     export buttons (PDF + Excel), drill-down modal pattern. Used
     by all three statement pages.
+    **Status:** ✅ Done · Completed: 2026-05-24 · Assigned: frontend-dev-expert
+  - T-060.7.1 Frontend — Follow-up: multi-select cost-centres (real `string[]`
+    array, repeated-key serialisation via URLSearchParams), Compare-to dropdown
+    (None / Previous period / Same period prior year / Custom — with resolved
+    compare dates + `compareMode` discriminator in filters), folder cleanup
+    (move from `src/features/finance/` → `src/components/finance/`,
+    co-locate `types.ts`).
+    **Status:** 🔵 Active · Started: 2026-05-24 · Assigned: frontend-dev-expert
   - T-060.8 Frontend — `BalanceSheetPage` (`/finance/balance-sheet`,
     behind `<FinanceGate>`).
+    **Status:** ✅ Done · Completed: 2026-05-24 · Assigned: frontend-dev-expert
   - T-060.9 Frontend — `IncomeStatementPage`
     (`/finance/income-statement`, behind `<FinanceGate>`). Sidebar
     rename of existing P&L entry from "P&L Statement" to
     "Operational P&L".
+    **Status:** ✅ Done · Completed: 2026-05-25 · Assigned: frontend-dev-expert
   - T-060.10 Frontend — `CashFlowStatementPage`
     (`/finance/cash-flow`, behind `<FinanceGate>`).
   - T-060.11 Frontend (Phase D.5 UI) — Close/Reopen buttons on
