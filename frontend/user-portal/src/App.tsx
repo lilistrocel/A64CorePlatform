@@ -171,6 +171,14 @@ const PeriodsPage = lazy(() => import('./pages/finance/PeriodsPage').then(m => (
 const APAgingPage = lazy(() => import('./pages/finance/APAgingPage').then(m => ({ default: m.APAgingPage })));
 const VendorSubLedgerPage = lazy(() => import('./pages/finance/VendorSubLedgerPage').then(m => ({ default: m.VendorSubLedgerPage })));
 
+// Finance module pages (Wave 2 — Statutory Statements T-060.8 / T-060.9)
+const BalanceSheetPage = lazy(() =>
+  import('./pages/finance/BalanceSheetPage').then(m => ({ default: m.BalanceSheetPage }))
+);
+const IncomeStatementPage = lazy(() =>
+  import('./pages/finance/IncomeStatementPage').then(m => ({ default: m.IncomeStatementPage }))
+);
+
 // Division selector (shown after login when user belongs to multiple divisions)
 const DivisionSelector = lazy(() =>
   import('./pages/division/DivisionSelector').then(m => ({ default: m.DivisionSelector }))
@@ -331,6 +339,10 @@ function App() {
                 {/* Finance module (Phase E — AP Aging + Vendor Sub-Ledger) */}
                 <Route path="/finance/ap-aging" element={<FinanceGate><APAgingPage /></FinanceGate>} />
                 <Route path="/finance/vendor-sub-ledger" element={<FinanceGate><VendorSubLedgerPage /></FinanceGate>} />
+
+                {/* Finance module (Wave 2 — Statutory Statements T-060.8 / T-060.9) */}
+                <Route path="/finance/balance-sheet" element={<FinanceGate><BalanceSheetPage /></FinanceGate>} />
+                <Route path="/finance/income-statement" element={<FinanceGate><IncomeStatementPage /></FinanceGate>} />
 
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />

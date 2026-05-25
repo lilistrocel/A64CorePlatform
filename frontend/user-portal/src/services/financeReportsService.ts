@@ -5,6 +5,7 @@
  *   - AP Aging report  (POST /api/v1/finance/reports/ap-aging)
  *   - Vendor Sub-Ledger (GET /api/v1/finance/reports/vendor-sub-ledger)
  *   - AP Invoice totals-paid (POST /api/v1/finance/ap-invoices/totals-paid)
+ *   - Balance Sheet  (GET /api/v1/finance/reports/balance-sheet)  — T-060.8
  *
  * The AP Aging workflow requires frontend orchestration:
  *   1. Fetch all Approved AP invoices from operation API.
@@ -154,6 +155,212 @@ export async function getApAging(payload: GetApAgingRequest): Promise<ApAgingRep
   );
   return response.data.data;
 }
+
+// ─── Balance Sheet Types (T-060.8) ───────────────────────────────────────────
+
+/**
+ * A single account row in the Balance Sheet response.
+ * `balance` is a decimal string — positive = normal-side balance.
+ * `isHeader` accounts aggregate their descendants' balances.
+ */
+export interface BalanceSheetRow {
+  accountId: string;
+  accountNumber: string;
+  accountName: string;
+  /** One of: "assets" | "liabilities" | "equity" */
+  drawer: string;
+  /** One of: "asset" | "liability" | "equity" | "revenue" | "expense" */
+  accountType: string;
+  parentAccountId: string | null;
+  isHeader: boolean;
+  /** Signed net balance (Decimal as string). */
+  balance: string;
+}
+
+export interface BalanceSheetTotals {
+  totalAssets: string;
+  totalLiabilities: string;
+  /** Includes currentYearProfitLoss. */
+  totalEquity: string;
+  totalLiabilitiesPlusEquity: string;
+  /** totalAssets − totalLiabilitiesPlusEquity — should be ≈0. */
+  balanceDelta: string;
+}
+
+export interface BalanceSheetReport {
+  organizationId: string;
+  companyCode: string;
+  asOfDate: string;
+  generatedAt: string;
+  currency: string;
+  includesVoided: boolean;
+  rows: BalanceSheetRow[];
+  /** Live-computed net P&L for the current fiscal year. */
+  currentYearProfitLoss: string;
+  totals: BalanceSheetTotals;
+  warnings: string[];
+}
+
+/** Query params for GET /api/v1/finance/reports/balance-sheet */
+export interface GetBalanceSheetParams {
+  organizationId: string;
+  companyCode: string;
+  asOfDate?: string;          // YYYY-MM-DD — omit for today
+  includeVoided?: boolean;
+  costCenterIds?: string[];   // serialised as repeated cost_center_id params
+}
+
+// ─── Balance Sheet API function ───────────────────────────────────────────────
+
+/**
+ * Fetch the Balance Sheet snapshot.
+ * GET /api/v1/finance/reports/balance-sheet
+ *
+ * Cost-centre IDs are serialised as repeated query params:
+ * ?cost_center_id=A&cost_center_id=B using URLSearchParams so we never
+ * mutate the global axios client's paramsSerializer.
+ */
+export async function getBalanceSheet(
+  params: GetBalanceSheetParams
+): Promise<BalanceSheetReport> {
+  // Build URLSearchParams explicitly to support repeated cost_center_id keys.
+  const sp = new URLSearchParams();
+  sp.set('organization_id', params.organizationId);
+  sp.set('company_code', params.companyCode);
+  if (params.asOfDate) sp.set('as_of_date', params.asOfDate);
+  if (params.includeVoided) sp.set('include_voided', 'true');
+  for (const id of params.costCenterIds ?? []) {
+    sp.append('cost_center_id', id);
+  }
+
+  const response = await apiClient.get<SuccessEnvelope<BalanceSheetReport>>(
+    `/v1/finance/reports/balance-sheet?${sp.toString()}`
+  );
+  return response.data.data;
+}
+
+// ─── Income Statement Types (T-060.9) ────────────────────────────────────────
+
+/**
+ * A single account row inside an IS drawer section.
+ * `balance` is a decimal string with natural-side sign convention applied:
+ *   - revenue / other_income → positive = CR balance
+ *   - expense (cost_of_sales, operating_cost, etc.) → positive = DR balance
+ */
+export interface IncomeStatementAccount {
+  accountId: string;
+  accountNumber: string;
+  accountName: string;
+  drawer: string;
+  accountType: string;
+  parentAccountId: string | null;
+  isHeader: boolean;
+  balance: string; // Decimal as string
+}
+
+/** A drawer block: all accounts + the drawer's total (sum of leaf balances). */
+export interface IncomeStatementSection {
+  drawer: string;
+  total: string; // Decimal as string
+  rows: IncomeStatementAccount[];
+}
+
+/**
+ * Standard IS subtotals — derived by the backend from drawer totals.
+ *
+ * grossProfit = revenue - costOfSales
+ * operatingIncome (EBIT) = grossProfit - operatingCost
+ * netIncome = operatingIncome + otherIncome - nonOperating - taxation
+ *
+ * `grossMarginPercent` is null when revenue is zero.
+ */
+export interface IncomeStatementSubtotals {
+  revenue: string;
+  costOfSales: string;
+  grossProfit: string;
+  grossMarginPercent: string | null;
+  operatingCost: string;
+  operatingIncome: string; // EBIT
+  otherIncome: string;
+  nonOperating: string;
+  taxation: string;
+  netIncome: string;
+}
+
+/**
+ * A single period's data — used for both primary and optional comparison.
+ */
+export interface IncomeStatementPeriod {
+  periodStart: string;
+  periodEnd: string;
+  sections: IncomeStatementSection[];
+  subtotals: IncomeStatementSubtotals;
+}
+
+/**
+ * Full Income Statement response.
+ *
+ * `primary` is always present.
+ * `comparison` is populated only when `compare_period_start` +
+ * `compare_period_end` were provided to the backend.
+ */
+export interface IncomeStatementReport {
+  organizationId: string;
+  companyCode: string;
+  generatedAt: string;
+  currency: string;
+  includesVoided: boolean;
+  primary: IncomeStatementPeriod;
+  comparison: IncomeStatementPeriod | null;
+  warnings: string[];
+}
+
+/** Query params for GET /api/v1/finance/reports/income-statement */
+export interface GetIncomeStatementParams {
+  organizationId: string;
+  companyCode: string;
+  periodStart: string;         // YYYY-MM-DD — required for range statements
+  periodEnd: string;           // YYYY-MM-DD — required for range statements
+  comparePeriodStart?: string; // YYYY-MM-DD — optional comparative period
+  comparePeriodEnd?: string;   // YYYY-MM-DD — optional comparative period
+  includeVoided?: boolean;
+  costCenterIds?: string[];    // serialised as repeated cost_center_id params
+}
+
+// ─── Income Statement API function ───────────────────────────────────────────
+
+/**
+ * Fetch the Income Statement for a date range.
+ * GET /api/v1/finance/reports/income-statement
+ *
+ * A single backend call supports both primary AND comparative periods.
+ * When `comparePeriodStart` + `comparePeriodEnd` are provided, the backend
+ * returns `response.comparison` populated; otherwise it is null.
+ *
+ * Cost-centre IDs serialised as repeated params via URLSearchParams.
+ */
+export async function getIncomeStatement(
+  params: GetIncomeStatementParams
+): Promise<IncomeStatementReport> {
+  const sp = new URLSearchParams();
+  sp.set('organization_id', params.organizationId);
+  sp.set('company_code', params.companyCode);
+  sp.set('period_start', params.periodStart);
+  sp.set('period_end', params.periodEnd);
+  if (params.comparePeriodStart) sp.set('compare_period_start', params.comparePeriodStart);
+  if (params.comparePeriodEnd) sp.set('compare_period_end', params.comparePeriodEnd);
+  if (params.includeVoided) sp.set('include_voided', 'true');
+  for (const id of params.costCenterIds ?? []) {
+    sp.append('cost_center_id', id);
+  }
+
+  const response = await apiClient.get<SuccessEnvelope<IncomeStatementReport>>(
+    `/v1/finance/reports/income-statement?${sp.toString()}`
+  );
+  return response.data.data;
+}
+
+// ─── Vendor Sub-Ledger ────────────────────────────────────────────────────────
 
 /**
  * Fetch the Vendor Sub-Ledger report.

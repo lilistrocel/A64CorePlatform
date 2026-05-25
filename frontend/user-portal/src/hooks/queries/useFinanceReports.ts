@@ -1,15 +1,9 @@
 /**
  * Finance Reports — TanStack Query hooks
  *
- * useApAging   — useMutation (POST with orchestrated body)
+ * useApAging         — useMutation (POST with orchestrated body)
  * useVendorSubLedger — useQuery (GET, fires when params are provided)
- *
- * AP Aging uses useMutation because the payload is dynamically built by
- * the page component after orchestrating invoice + payment fetches, and
- * the user explicitly triggers it with a "Generate" button.
- *
- * Vendor Sub-Ledger uses useQuery because it's a pure GET report that
- * re-runs automatically whenever its key params change.
+ * useBalanceSheet    — useQuery (GET, T-060.8; fires when org + company ready)
  */
 
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -19,6 +13,10 @@ import type {
   ApAgingReport,
   GetVendorSubLedgerParams,
   VendorSubLedgerReport,
+  GetBalanceSheetParams,
+  BalanceSheetReport,
+  GetIncomeStatementParams,
+  IncomeStatementReport,
 } from '../../services/financeReportsService';
 
 // ─── Query key factory ─────────────────────────────────────────────────────────
@@ -26,6 +24,10 @@ import type {
 export const financeReportsQueryKeys = {
   vendorSubLedger: (params: GetVendorSubLedgerParams) =>
     ['finance', 'reports', 'vendor-sub-ledger', params] as const,
+  balanceSheet: (params: GetBalanceSheetParams) =>
+    ['finance', 'reports', 'balance-sheet', params] as const,
+  incomeStatement: (params: GetIncomeStatementParams) =>
+    ['finance', 'reports', 'income-statement', params] as const,
 };
 
 // ─── AP Aging — mutation ───────────────────────────────────────────────────────
@@ -40,6 +42,61 @@ export const financeReportsQueryKeys = {
 export function useApAging() {
   return useMutation<ApAgingReport, Error, GetApAgingRequest>({
     mutationFn: (payload) => reportsService.getApAging(payload),
+  });
+}
+
+// ─── Balance Sheet — query (T-060.8) ──────────────────────────────────────────
+
+/**
+ * Fetch the Balance Sheet snapshot for the given params.
+ * Fires automatically whenever organizationId and companyCode are non-empty.
+ *
+ * Used in pairs by BalanceSheetPage: one query for the primary date and an
+ * optional second query for the comparative date (the BS backend takes a
+ * single as_of_date — compare requires two separate requests).
+ */
+export function useBalanceSheet(
+  params: GetBalanceSheetParams,
+  enabled = true
+) {
+  return useQuery<BalanceSheetReport, Error>({
+    queryKey: financeReportsQueryKeys.balanceSheet(params),
+    queryFn: () => reportsService.getBalanceSheet(params),
+    enabled: enabled && !!params.organizationId && !!params.companyCode,
+    // Balance-sheet data can tolerate a 30-second stale window; users can
+    // change the date to force a new query key (and thus a fresh fetch).
+    staleTime: 30_000,
+  });
+}
+
+// ─── Income Statement — query (T-060.9) ───────────────────────────────────────
+
+/**
+ * Fetch the Income Statement for the given period range.
+ *
+ * The backend supports primary + optional comparison in a SINGLE call.
+ * Pass `comparePeriodStart` + `comparePeriodEnd` to enable the comparison
+ * column — the response's `comparison` field will be non-null.
+ *
+ * Fires automatically when organizationId, companyCode, periodStart, and
+ * periodEnd are all non-empty.
+ */
+export function useIncomeStatement(
+  params: GetIncomeStatementParams,
+  enabled = true
+) {
+  return useQuery<IncomeStatementReport, Error>({
+    queryKey: financeReportsQueryKeys.incomeStatement(params),
+    queryFn: () => reportsService.getIncomeStatement(params),
+    enabled:
+      enabled &&
+      !!params.organizationId &&
+      !!params.companyCode &&
+      !!params.periodStart &&
+      !!params.periodEnd,
+    // IS data can tolerate a 30-second stale window; date changes force a
+    // new query key and thus a fresh fetch.
+    staleTime: 30_000,
   });
 }
 
