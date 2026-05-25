@@ -889,10 +889,14 @@ async def get_balance_sheet(
         False,
         description="Include voided JEs in the balance computation.",
     ),
-    cost_center_id: Optional[str] = Query(
+    cost_center_id: Optional[List[str]] = Query(
         None,
-        description="Optional — filter JE lines by cost-centre. BS-by-"
-        "cost-centre is non-statutory presentation; use with care.",
+        description=(
+            "Optional — filter JE lines to one or more cost centres. "
+            "Repeat the parameter for multiple values: "
+            "?cost_center_id=A&cost_center_id=B. "
+            "BS-by-cost-centre is non-statutory presentation; use with care."
+        ),
     ),
     db: AsyncSession = Depends(get_db),
     _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
@@ -939,8 +943,11 @@ async def get_balance_sheet(
         je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
 
     line_filters = []
-    if cost_center_id is not None:
-        line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+    if cost_center_id:
+        # Reason: .in_() handles a list of IDs safely (parameterised,
+        # no SQL injection risk). When the list is empty/None the clause
+        # is omitted entirely — all lines are included (existing behaviour).
+        line_filters.append(JournalEntryLine.costCenterId.in_(cost_center_id))
 
     subq = (
         select(
@@ -973,7 +980,10 @@ async def get_balance_sheet(
         .where(
             GLAccount.organizationId == organization_id,
             GLAccount.drawer.in_(_BS_DRAWERS),
-            GLAccount.isActive == True,  # noqa: E712 — SQLAlchemy idiom
+            # Reason: isActive governs NEW postings only — IFRS/GAAP requires
+            # that accounts with historical balances appear on the BS regardless
+            # of active status. Inactive accounts accumulate no new postings, so
+            # they will naturally drop off once their balance reaches zero.
         )
         .group_by(
             GLAccount.accountId,
@@ -1083,8 +1093,8 @@ async def get_balance_sheet(
         pl_je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
 
     pl_line_filters = []
-    if cost_center_id is not None:
-        pl_line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+    if cost_center_id:
+        pl_line_filters.append(JournalEntryLine.costCenterId.in_(cost_center_id))
 
     ni_result = await db.execute(
         select(
@@ -1288,7 +1298,7 @@ async def _compute_income_statement_period(
     period_start: date,
     period_end: date,
     include_voided: bool,
-    cost_center_id: Optional[str],
+    cost_center_id: Optional[List[str]],
 ) -> IncomeStatementPeriod:
     """
     Compute the income statement for ONE period.
@@ -1309,8 +1319,9 @@ async def _compute_income_statement_period(
         je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
 
     line_filters = []
-    if cost_center_id is not None:
-        line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+    if cost_center_id:
+        # Reason: use .in_() for multi-value cost centre filtering.
+        line_filters.append(JournalEntryLine.costCenterId.in_(cost_center_id))
 
     subq = (
         select(
@@ -1343,7 +1354,9 @@ async def _compute_income_statement_period(
         .where(
             GLAccount.organizationId == organization_id,
             GLAccount.drawer.in_(_IS_DRAWER_ORDER),
-            GLAccount.isActive == True,  # noqa: E712
+            # Reason: isActive governs NEW postings only — IFRS/GAAP requires
+            # that accounts with historical balances appear on the IS regardless
+            # of active status.
         )
         .group_by(
             GLAccount.accountId,
@@ -1535,8 +1548,13 @@ async def get_income_statement(
     include_voided: bool = Query(
         False, description="Include voided JEs in the totals"
     ),
-    cost_center_id: Optional[str] = Query(
-        None, description="Optional cost-centre filter on JE lines"
+    cost_center_id: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Optional — filter JE lines to one or more cost centres. "
+            "Repeat the parameter for multiple values: "
+            "?cost_center_id=A&cost_center_id=B."
+        ),
     ),
     db: AsyncSession = Depends(get_db),
     _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
@@ -1715,14 +1733,16 @@ async def _balances_at_date(
     company_code: str,
     as_of: date,
     include_voided: bool,
-    cost_center_id: Optional[str],
+    cost_center_id: Optional[List[str]],
 ) -> Dict[str, Decimal]:
     """
-    Return {accountId: natural_balance} for every active BS account as of
-    `as_of`. Uses the same sign convention as Balance Sheet: ASSET DR-
-    natural, LIABILITY/EQUITY CR-natural.
+    Return {accountId: natural_balance} for every BS account (active or
+    inactive) as of `as_of`. Uses the same sign convention as Balance Sheet:
+    ASSET DR-natural, LIABILITY/EQUITY CR-natural.
 
-    Accounts with zero activity appear with balance Decimal("0").
+    Accounts with zero activity appear with balance Decimal("0"). Inactive
+    accounts are included because IFRS/GAAP requires historical balances to
+    appear on statements regardless of current active status.
     """
     je_filters = [
         JournalEntry.organizationId == organization_id,
@@ -1733,8 +1753,8 @@ async def _balances_at_date(
         je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
 
     line_filters = []
-    if cost_center_id is not None:
-        line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+    if cost_center_id:
+        line_filters.append(JournalEntryLine.costCenterId.in_(cost_center_id))
 
     subq = (
         select(
@@ -1764,7 +1784,8 @@ async def _balances_at_date(
             GLAccount.drawer.in_(
                 (DrawerEnum.ASSETS, DrawerEnum.LIABILITIES, DrawerEnum.EQUITY)
             ),
-            GLAccount.isActive == True,  # noqa: E712
+            # Reason: isActive governs NEW postings only — CF requires all BS
+            # accounts with non-zero historical activity to be included.
         )
     )
     rows = (await db.execute(stmt)).all()
@@ -1793,7 +1814,7 @@ async def _net_income_for_period(
     period_start: date,
     period_end: date,
     include_voided: bool,
-    cost_center_id: Optional[str],
+    cost_center_id: Optional[List[str]],
 ) -> Decimal:
     """Sum P&L drawer activity (credit - debit) for the period."""
     pl_je_filters = [
@@ -1805,8 +1826,8 @@ async def _net_income_for_period(
     if not include_voided:
         pl_je_filters.append(JournalEntry.status == JEStatusEnum.POSTED)
     pl_line_filters = []
-    if cost_center_id is not None:
-        pl_line_filters.append(JournalEntryLine.costCenterId == cost_center_id)
+    if cost_center_id:
+        pl_line_filters.append(JournalEntryLine.costCenterId.in_(cost_center_id))
 
     result = await db.execute(
         select(
@@ -1860,8 +1881,13 @@ async def get_cash_flow(
     include_voided: bool = Query(
         False, description="Include voided JEs"
     ),
-    cost_center_id: Optional[str] = Query(
-        None, description="Optional cost-centre filter on JE lines"
+    cost_center_id: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Optional — filter JE lines to one or more cost centres. "
+            "Repeat the parameter for multiple values: "
+            "?cost_center_id=A&cost_center_id=B."
+        ),
     ),
     db: AsyncSession = Depends(get_db),
     _current_user: TokenPayload = Depends(require_roles(*_READ_ROLES)),
@@ -1924,7 +1950,9 @@ async def get_cash_flow(
             GLAccount.drawer.in_(
                 (DrawerEnum.ASSETS, DrawerEnum.LIABILITIES, DrawerEnum.EQUITY)
             ),
-            GLAccount.isActive == True,  # noqa: E712
+            # Reason: isActive governs NEW postings only — CF metadata fetch must
+            # include inactive accounts that still carry historical balances so
+            # their opening/closing delta is correctly bucketed.
         )
     )
     accts = accts_result.all()

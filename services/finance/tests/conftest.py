@@ -13,6 +13,8 @@ import os
 # Override DB and secret BEFORE importing any finance module
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ.setdefault("SECRET_KEY", "test_secret_key")
+# Service-to-service secret used by events ingest endpoint (test value)
+os.environ.setdefault("FINANCE_INGESTION_SECRET", "test-ingest-secret")
 
 from typing import AsyncGenerator  # noqa: E402
 
