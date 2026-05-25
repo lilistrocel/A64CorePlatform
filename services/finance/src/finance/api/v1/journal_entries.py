@@ -1,14 +1,17 @@
 """
 Journal Entries API
 
-JEs are created by posting handlers (Phase B+) and via the reversal action.
-The API exposes list/detail reads plus the single mutating action: reverse.
+JEs are created by posting handlers (Phase B+), via the reversal action,
+and as of T-061 via the manual create endpoint (POST /journal-entries).
 
 Permissions:
-  GET: accountant, finance_admin, auditor, admin, super_admin
-  POST /{je_id}/reverse: finance_admin, admin, super_admin
+  GET:              accountant, finance_admin, auditor, admin, super_admin
+  POST (create):    finance_admin, super_admin  (NOT finance_reviewer)
+  POST (reverse):   finance_admin, admin, super_admin
 """
 
+import hashlib
+import json
 import logging
 import uuid
 from datetime import date, datetime, timezone
@@ -23,7 +26,10 @@ from sqlalchemy.orm import selectinload
 from ...db.session import get_db
 from ...middleware.auth import TokenPayload, require_roles
 from ...models.orm.models import (
+    AuditLog,
+    CostCenter,
     FiscalPeriod,
+    GLAccount,
     JEStatusEnum,
     JournalEntry,
     JournalEntryLine,
@@ -32,13 +38,17 @@ from ...models.orm.models import (
 from ...models.schemas.common import PaginatedResponse, SuccessResponse
 from ...models.schemas.journal_entries import (
     JournalEntryResponse,
+    ManualJECreateRequest,
+    ManualJECreateResponse,
+    ManualJEMeta,
     ReversalRequest,
     ReversalResponse,
 )
 from ...utils.responses import paginated, success
 
-# Import the JE-number generator from the events module (single source of truth)
-from .events import _next_je_number
+# Import the JE-number generator and fiscal period resolver from the events
+# module — both are the single source of truth; not duplicated here.
+from .events import _next_je_number, _resolve_fiscal_period_or_raise
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +229,269 @@ async def get_journal_entry(
     )
     _attach_reversed_by(response, reversal_map)
     return success(response)
+
+
+# ---------------------------------------------------------------------------
+# Manual JE Creation (T-061)
+# ---------------------------------------------------------------------------
+
+# Reason: finance_reviewer is explicitly excluded — this is a write operation.
+# admin is also excluded to keep the privilege minimal; finance_admin and
+# super_admin are the only roles that should post correcting JEs.
+_MANUAL_CREATE_ROLES = ("finance_admin", "super_admin")
+
+
+@router.post(
+    "/journal-entries",
+    response_model=ManualJECreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a manual journal entry",
+    description=(
+        "Post a manually authored correcting / adjusting JE as finance_admin or super_admin. "
+        "Lines must be balanced (SUM debit == SUM credit). "
+        "jeDate must fall in an OPEN fiscal period. "
+        "Header accounts are rejected; inactive accounts are allowed with a warning."
+    ),
+)
+async def create_manual_journal_entry(
+    body: ManualJECreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenPayload = Depends(require_roles(*_MANUAL_CREATE_ROLES)),
+) -> ManualJECreateResponse:
+    """
+    Create a manual correcting/adjusting JE (T-061).
+
+    Validation order (all 422 unless noted):
+      1. Pydantic already validates: min 2 lines, each line has exactly one side,
+         amounts > 0, SUM(DR)==SUM(CR), reason non-whitespace.
+      2. jeDate must fall in an OPEN fiscal period (via _resolve_fiscal_period_or_raise).
+      3. Every accountId must exist in gl_accounts for the org.
+         - Header accounts (isHeader=True) → 422.
+         - Inactive accounts (isActive=False) → allowed; produce meta.warnings entry.
+      4. costCenterId, if provided, must be active for the org → 422 if not.
+
+    After validation the JE header, lines, and an audit_log row are written in
+    a single DB transaction (flush-then-commit).
+
+    Args:
+        body: Validated request body.
+        db: Async DB session.
+        current_user: Authenticated finance_admin or super_admin.
+
+    Returns:
+        ManualJECreateResponse with the created JE and any inactive-account warnings.
+
+    Raises:
+        HTTPException 422: For any validation failure listed above.
+        HTTPException 400: If no open period covers jeDate (from _resolve_fiscal_period_or_raise).
+    """
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    warnings: List[str] = []
+
+    # ------------------------------------------------------------------
+    # 1. Resolve fiscal period (raises HTTP 400 if closed/missing)
+    # ------------------------------------------------------------------
+    period_id = await _resolve_fiscal_period_or_raise(db, body.companyCode, body.jeDate)
+
+    # ------------------------------------------------------------------
+    # 2. Validate all accounts in a single batch query
+    # ------------------------------------------------------------------
+    account_ids = list({ln.accountId for ln in body.lines})
+    acct_result = await db.execute(
+        select(
+            GLAccount.accountId,
+            GLAccount.accountNumber,
+            GLAccount.accountName,
+            GLAccount.isHeader,
+            GLAccount.isActive,
+        ).where(
+            GLAccount.organizationId == body.organizationId,
+            GLAccount.accountId.in_(account_ids),
+        )
+    )
+    accounts_found = {
+        row.accountId: row
+        for row in acct_result.all()
+    }
+
+    # Check every requested account exists and is not a header
+    missing_ids = [aid for aid in account_ids if aid not in accounts_found]
+    if missing_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Account(s) not found for this organization: {missing_ids}",
+        )
+
+    for acct_row in accounts_found.values():
+        if acct_row.isHeader:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Account {acct_row.accountNumber} '{acct_row.accountName}' is a header "
+                    "account and cannot be posted to. Use a leaf account instead."
+                ),
+            )
+
+    # ------------------------------------------------------------------
+    # 3. Collect inactive-account warnings (soft — not a hard reject)
+    # ------------------------------------------------------------------
+    for line_idx, line in enumerate(body.lines, start=1):
+        acct = accounts_found[line.accountId]
+        if not acct.isActive:
+            warnings.append(
+                f"Line {line_idx} posts to inactive account "
+                f"{acct.accountNumber} '{acct.accountName}' "
+                "(Cleanup posting; intentional)."
+            )
+
+    # ------------------------------------------------------------------
+    # 4. Validate cost centres (if provided) — must be active for the org
+    # ------------------------------------------------------------------
+    cost_center_ids = list(
+        {ln.costCenterId for ln in body.lines if ln.costCenterId is not None}
+    )
+    if cost_center_ids:
+        cc_result = await db.execute(
+            select(CostCenter.costCenterId, CostCenter.isActive).where(
+                CostCenter.organizationId == body.organizationId,
+                CostCenter.costCenterId.in_(cost_center_ids),
+            )
+        )
+        found_ccs = {row.costCenterId: row.isActive for row in cc_result.all()}
+
+        for cc_id in cost_center_ids:
+            if cc_id not in found_ccs:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Cost centre '{cc_id}' not found for this organization.",
+                )
+            if not found_ccs[cc_id]:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Cost centre '{cc_id}' is inactive and cannot be used.",
+                )
+
+    # ------------------------------------------------------------------
+    # 5. Generate JE number (concurrent-safe MAX+1)
+    # ------------------------------------------------------------------
+    je_number = await _next_je_number(db, body.companyCode, body.jeDate.year)
+
+    # ------------------------------------------------------------------
+    # 6. Compute totals from the validated lines (source of truth)
+    # ------------------------------------------------------------------
+    total_debit = sum(
+        (ln.debit for ln in body.lines if ln.debit is not None), Decimal("0")
+    )
+    total_credit = sum(
+        (ln.credit for ln in body.lines if ln.credit is not None), Decimal("0")
+    )
+
+    # ------------------------------------------------------------------
+    # 7. Build JE header
+    # ------------------------------------------------------------------
+    je_id = str(uuid.uuid4())
+    # Reason: sourceEventId is NOT NULL in the schema. For manual JEs there is
+    # no system event, so we generate a fresh UUID as the "event ID" — it is
+    # unique, traceable, and satisfies the constraint.
+    source_event_id = str(uuid.uuid4())
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=body.organizationId,
+        companyCode=body.companyCode,
+        jeNumber=je_number,
+        jeDate=body.jeDate,
+        periodId=period_id,
+        sourceEventType="manual",
+        sourceEventId=source_event_id,
+        sourceDocId=None,
+        sourceDocNumber=None,
+        description=body.description,
+        totalDebit=total_debit,
+        totalCredit=total_credit,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy=current_user.userId,
+    )
+    db.add(je)
+
+    # ------------------------------------------------------------------
+    # 8. Build JE lines
+    # ------------------------------------------------------------------
+    for line_num, line in enumerate(body.lines, start=1):
+        je_line = JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_num,
+            accountId=line.accountId,
+            debit=line.debit,
+            credit=line.credit,
+            description=line.description,
+            costCenterId=line.costCenterId,
+        )
+        db.add(je_line)
+
+    # ------------------------------------------------------------------
+    # 9. Write audit_log row (same transaction — all-or-nothing)
+    # ------------------------------------------------------------------
+    # Reason: SHA-256 of the request JSON provides tamper-evidence in the
+    # audit trail. model_dump_json() gives canonical JSON with no ambiguity
+    # from dict key ordering (Pydantic sorts by field order).
+    payload_json = body.model_dump_json()
+    payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+
+    audit_row = AuditLog(
+        auditId=str(uuid.uuid4()),
+        organizationId=body.organizationId,
+        actorUserId=current_user.userId,
+        action="manual_je_posted",
+        entityType="JournalEntry",
+        entityId=je_id,
+        beforeJson=None,
+        afterJson={
+            "jeId": je_id,
+            "jeNumber": je_number,
+            "companyCode": body.companyCode,
+            "jeDate": body.jeDate.isoformat(),
+            "payloadHash": payload_hash,
+            "reason": body.reason,
+            "payload": json.loads(payload_json),
+        },
+    )
+    db.add(audit_row)
+
+    # ------------------------------------------------------------------
+    # 10. Flush (FK violations surface here) then commit
+    # ------------------------------------------------------------------
+    await db.flush()
+
+    # Reload the JE with lines for the response (lines may not be loaded
+    # in-memory after flush depending on the session state)
+    je_reloaded_result = await db.execute(
+        select(JournalEntry)
+        .options(selectinload(JournalEntry.lines))
+        .where(JournalEntry.jeId == je_id)
+    )
+    je_reloaded = je_reloaded_result.scalar_one()
+
+    await db.commit()
+
+    logger.info(
+        "[Finance/ManualJE] posted jeId=%s jeNumber=%s lines=%d "
+        "totalDebit=%s by user=%s reason=%r",
+        je_id,
+        je_number,
+        len(body.lines),
+        total_debit,
+        current_user.userId,
+        body.reason,
+    )
+
+    return ManualJECreateResponse(
+        data=JournalEntryResponse.model_validate(je_reloaded),
+        meta=ManualJEMeta(warnings=warnings),
+        message=None,
+    )
 
 
 # ---------------------------------------------------------------------------
