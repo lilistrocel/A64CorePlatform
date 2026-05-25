@@ -505,7 +505,127 @@ balance/reconciliation validation. Backend only — UI is the
 remaining 9 sub-tasks of T-060.
 
 The next session can either:
-- continue Wave 2 (T-060.6 export → 7-12 frontend → 13-14 polish),
+- continue Wave 2 (T-060.7–10 frontend),
   or
 - pause Wave 2 and pick a parallel priority (T-058 service-line
   accounting; Phase E reconciliation reports; etc.)
+
+---
+
+## T-060.6 — Report Export Endpoint (appended 2026-05-24)
+
+**Author:** Viet Anh
+
+### What was done
+
+Implemented `GET /api/v1/finance/reports/export/{statement}?format=pdf|xlsx`
+— a streaming download endpoint for all three statutory statements.
+
+**Files created:**
+- `services/finance/src/finance/api/v1/export.py` — endpoint + all
+  Excel (openpyxl) and PDF (WeasyPrint/Jinja2) builders
+- `services/finance/src/finance/api/v1/templates/base.html` — shared
+  A4-portrait HTML/CSS letterhead template (Jinja2, extends pattern)
+- `services/finance/src/finance/api/v1/templates/balance_sheet.html`
+- `services/finance/src/finance/api/v1/templates/income_statement.html`
+- `services/finance/src/finance/api/v1/templates/cash_flow.html`
+- `services/finance/tests/test_export.py` — 12 tests (6 happy-path,
+  4 negative/validation, 1 auth, 1 filename convention)
+
+**Files modified:**
+- `services/finance/src/finance/main.py` — registered `export.router`
+- `services/finance/Dockerfile` — added WeasyPrint system deps +
+  openpyxl/weasyprint/jinja2 to pip install
+- `services/finance/pyproject.toml` — added same deps to [dependencies]
+
+### Design decisions and deviations
+
+**No duplication of data logic:** The export endpoint calls the
+same `get_balance_sheet`, `get_income_statement`, `get_cash_flow`
+functions as the JSON endpoints. The response `.data.model_dump()`
+is passed to the format builders. Single source of truth — the
+exported file always matches the JSON view.
+
+**WeasyPrint version pinned at 65.1 (not 62.3 as spec said):**
+WeasyPrint 62.3 has a Python 3.13 incompatibility
+(`AttributeError: 'super' object has no attribute 'transform'`).
+The Docker container runs Python 3.11 where 62.3 may work, but
+the test environment (Python 3.13) requires 65.1+. Pinned to 65.1
+for both test and Docker consistency. Note: 65.1 is still a stable
+maintained release on the same API surface as 62.3 — no code changes
+required.
+
+**Jinja2 naming collision fix:** The `CashFlowActivitySection.items`
+field name collides with Python's `dict.items()` built-in when the
+Pydantic model is serialised to a plain dict via `.model_dump()`.
+Jinja2 template fixed to use `investing['items']` bracket notation
+instead of `investing.items` attribute access.
+
+**WeasyPrint ~100 MB Docker image growth:**
+Adding the Pango/Cairo/GDK-Pixbuf system packages adds approximately
+80–110 MB to the `python:3.11-slim` image layer. This is a known
+and accepted trade-off (documented in Wave-2-Design.md §6 — "WeasyPrint
+for PDF: document Docker footprint"). The HTML/CSS-first approach was
+preferred over ReportLab/fpdf2 for:
+- Maintainable templates (designers can edit HTML/CSS, not Python code)
+- Jinja2 inheritance with `{% extends "base.html" %}` shares header,
+  footer, and styling across all three statements
+- CSS paged-media support (`@page`, page-number counter) for A4 output
+
+If image size becomes a constraint, a future migration to `fpdf2` +
+a headless image or a sidecar PDF-render container are the two viable
+alternatives. YAGNI for now.
+
+### Test results
+
+```
+12 passed in 1.23s
+```
+
+All 6 statement × format combinations pass. The 60 pre-existing
+failures in other test files (`test_posting_purchase_received`,
+`test_trial_balance`, `test_vendor_sub_ledger`, etc.) are unrelated
+to this task and were present before this session.
+
+### CodeMap regen required
+
+Yes — new endpoint `GET /api/v1/finance/reports/export/{statement}`
+added. Run `bash scripts/codebase_mapper/rerun.sh` when the mapper
+MongoDB URL is fixed (see INDEX.md note).
+
+---
+
+## Data repair — T-063.B (2026-05-24)
+
+**Incident:** company `1000` (orgId `00000000-0000-0000-0000-000000000001`)
+had `purchasePriceVarianceAccountId` pointing to
+`c267ed98-75be-4356-b9d4-f854845cc3e9` — account `110000-003` "Buildings"
+(drawer=ASSETS, accountType=asset). PPV must be a P&L expense account.
+
+**Root cause:** the posting-setup endpoint had no semantic type guard; any
+active account could be assigned to any field. The T-063.A guard introduced
+in this session would have prevented this assignment.
+
+**PPV account used:** `b99d7ae4-5455-11f1-8dbc-4211d192a92b` — account
+`514000-004` "Purchase Price Variance" (drawer=COST_OF_SALES,
+accountType=expense). This account was already present in `default_coa.py`
+(added 2026-05-20 as Item 12) and seeded for the org. No Alembic migration
+required.
+
+**SQL repair applied:**
+```sql
+UPDATE company_posting_setup
+SET purchasePriceVarianceAccountId = 'b99d7ae4-5455-11f1-8dbc-4211d192a92b'
+WHERE companyCode = '1000';
+-- 1 row updated. Verified: accountNumber=514000-004, drawer=COST_OF_SALES.
+```
+
+Executed directly against the MySQL finance DB via `docker exec a64-finance`
+(bypassing the API to avoid the chicken-and-egg constraint of the new type
+guard requiring the correct account before it accepts the update).
+
+**Post-repair state:**
+- `company_posting_setup.purchasePriceVarianceAccountId` for company 1000
+  now points to `514000-004 Purchase Price Variance` (COST_OF_SALES/expense).
+- The new T-063.A semantic guard will prevent this misconfiguration from
+  recurring on any future PATCH to the posting-setup endpoint.
