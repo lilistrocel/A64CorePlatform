@@ -97,7 +97,7 @@ const FINANCE_NAV_GROUP: NavItemDef = {
     { to: '/finance/ap-aging', icon: '📉', label: 'AP Aging' },
     { to: '/finance/vendor-sub-ledger', icon: '📑', label: 'Vendor Sub-Ledger' },
     { to: '/finance/periods', icon: '📅', label: 'Fiscal Periods' },
-    { to: '/finance/pnl', icon: '📈', label: 'Operational P&L' },
+    { to: '/operations/pnl', icon: '📈', label: 'Operational P&L' },
     { to: '/finance/incoming', icon: '📥', label: 'Incoming Preview' },
   ],
 };

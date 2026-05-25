@@ -2,8 +2,8 @@
   "module_name": "finance",
   "display_name": "Finance",
   "version": "1.0.0",
-  "description": "Financial analytics and P&L reporting module for revenue, COGS, and profitability analysis",
-  "route_prefix": "/api/v1/finance",
+  "description": "Operational P&L analytics — sales-driven revenue/COGS/margin reporting from MongoDB. Distinct from the statutory finance microservice (services/finance/) which owns /api/v1/finance/* and the GL.",
+  "route_prefix": "/api/v1/operations",
   "dependencies": {
     "core": ">=1.3.0",
     "python": ">=3.11",

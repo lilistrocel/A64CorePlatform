@@ -21,7 +21,12 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "a64core")
 
     # API settings
-    API_PREFIX: str = "/api/v1/finance"
+    # Reason: this module serves the OPERATIONAL P&L (sales-driven, MongoDB),
+    # not the statutory financial statements. Those live in the separate
+    # finance microservice at services/finance/ which owns /api/v1/finance/*.
+    # Renamed to /api/v1/operations to make the architectural split visible
+    # at the URL layer.
+    API_PREFIX: str = "/api/v1/operations"
 
     # A64Core API integration
     A64CORE_API_URL: str = os.getenv("A64CORE_API_URL", "http://api:8000")

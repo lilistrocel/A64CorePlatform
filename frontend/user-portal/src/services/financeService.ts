@@ -2,7 +2,10 @@
  * Finance API Service
  *
  * Typed API calls for the P&L (Profit & Loss) module.
- * All endpoints are under /api/v1/finance/pnl/*
+ * All endpoints are under /api/v1/operations/pnl/* (served by the ops backend,
+ * NOT the finance microservice — this is the operational sales-driven P&L,
+ * distinct from /api/v1/finance/reports/income-statement which is the
+ * statutory IFRS-style Income Statement from the GL).
  */
 
 import { apiClient } from './api';
@@ -40,7 +43,7 @@ function buildPnlParams(filters: PnlFilterParams): Record<string, string | numbe
 // ─── Endpoint functions ───────────────────────────────────────────────────────
 
 /**
- * GET /api/v1/finance/pnl/summary
+ * GET /api/v1/operations/pnl/summary
  * Returns key KPI numbers for the selected filters.
  */
 export async function getPnlSummary(filters: PnlFilterParams = {}): Promise<PnlSummary> {
@@ -56,7 +59,7 @@ export async function getPnlSummary(filters: PnlFilterParams = {}): Promise<PnlS
     orders: { total: number; paid: number; pending: number; partial: number };
     period: { start: string; end: string };
   }
-  const response = await apiClient.get<BackendSummary>('/v1/finance/pnl/summary', {
+  const response = await apiClient.get<BackendSummary>('/v1/operations/pnl/summary', {
     params: buildPnlParams(filters),
   });
   const b = response.data;
@@ -103,14 +106,14 @@ export async function getPnlSummary(filters: PnlFilterParams = {}): Promise<PnlS
 }
 
 /**
- * GET /api/v1/finance/pnl/by-month
+ * GET /api/v1/operations/pnl/by-month
  */
 export async function getPnlByMonth(filters: PnlFilterParams = {}): Promise<PnlByMonthResponse> {
   interface BackendMonth {
     yearMonth: string; revenue: number; cogs: number; opex: number;
     grossProfit: number; netProfit: number; kgSold: number; orderCount: number;
   }
-  const response = await apiClient.get<BackendMonth[]>('/v1/finance/pnl/by-month', {
+  const response = await apiClient.get<BackendMonth[]>('/v1/operations/pnl/by-month', {
     params: buildPnlParams(filters),
   });
   return {
@@ -130,14 +133,14 @@ export async function getPnlByMonth(filters: PnlFilterParams = {}): Promise<PnlB
 }
 
 /**
- * GET /api/v1/finance/pnl/by-farm
+ * GET /api/v1/operations/pnl/by-farm
  */
 export async function getPnlByFarm(filters: PnlFilterParams = {}): Promise<PnlByFarmResponse> {
   interface BackendFarm {
     farmId: string; farmName: string; revenue: number; cogs: number;
     grossProfit: number; marginPercent: number; kgSold: number; orderCount: number;
   }
-  const response = await apiClient.get<BackendFarm[]>('/v1/finance/pnl/by-farm', {
+  const response = await apiClient.get<BackendFarm[]>('/v1/operations/pnl/by-farm', {
     params: buildPnlParams(filters),
   });
   return {
@@ -157,14 +160,14 @@ export async function getPnlByFarm(filters: PnlFilterParams = {}): Promise<PnlBy
 }
 
 /**
- * GET /api/v1/finance/pnl/by-crop
+ * GET /api/v1/operations/pnl/by-crop
  */
 export async function getPnlByCrop(filters: PnlFilterParams = {}): Promise<PnlByCropResponse> {
   interface BackendCrop {
     cropName: string; revenue: number; cogs: number; grossProfit: number;
     kgSold: number; avgPricePerKg: number;
   }
-  const response = await apiClient.get<BackendCrop[]>('/v1/finance/pnl/by-crop', {
+  const response = await apiClient.get<BackendCrop[]>('/v1/operations/pnl/by-crop', {
     params: buildPnlParams(filters),
   });
   const crops = (response.data || []).map((c) => ({
@@ -185,7 +188,7 @@ export async function getPnlByCrop(filters: PnlFilterParams = {}): Promise<PnlBy
 }
 
 /**
- * GET /api/v1/finance/pnl/ar-aging
+ * GET /api/v1/operations/pnl/ar-aging
  * Returns accounts receivable aging buckets and top customers.
  */
 export async function getArAging(filters: PnlFilterParams = {}): Promise<ArAgingResponse> {
@@ -207,7 +210,7 @@ export async function getArAging(filters: PnlFilterParams = {}): Promise<ArAging
     byCustomer: BackendCustomer[];
   }
 
-  const response = await apiClient.get<BackendArAging>('/v1/finance/pnl/ar-aging', {
+  const response = await apiClient.get<BackendArAging>('/v1/operations/pnl/ar-aging', {
     params: buildPnlParams(filters),
   });
   const b = response.data;
@@ -239,7 +242,7 @@ export async function getArAging(filters: PnlFilterParams = {}): Promise<ArAging
 }
 
 /**
- * GET /api/v1/finance/pnl/revenue-sources
+ * GET /api/v1/operations/pnl/revenue-sources
  * Returns revenue broken down by price-source confidence level.
  */
 export async function getRevenueSources(filters: PnlFilterParams = {}): Promise<RevenueSourcesResponse> {
@@ -247,7 +250,7 @@ export async function getRevenueSources(filters: PnlFilterParams = {}): Promise<
   // imputed_customer_crop_avg:{...}, no_data:{...}}
   interface SourceBucket { lineCount: number; revenue: number; orderCount: number }
   type BackendSources = Record<string, SourceBucket>;
-  const response = await apiClient.get<BackendSources>('/v1/finance/pnl/revenue-sources', {
+  const response = await apiClient.get<BackendSources>('/v1/operations/pnl/revenue-sources', {
     params: buildPnlParams(filters),
   });
   const b = response.data || {};

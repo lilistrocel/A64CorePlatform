@@ -346,7 +346,7 @@ function App() {
                 {/* Finance module (Wave 2 — Statutory Statements T-060.8 / T-060.9) */}
                 <Route path="/finance/balance-sheet" element={<FinanceGate><BalanceSheetPage /></FinanceGate>} />
                 <Route path="/finance/income-statement" element={<FinanceGate><IncomeStatementPage /></FinanceGate>} />
-                <Route path="/finance/pnl" element={<FinanceGate><PnLPage /></FinanceGate>} />
+                <Route path="/operations/pnl" element={<FinanceGate><PnLPage /></FinanceGate>} />
 
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />

@@ -5,6 +5,27 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.2] - 2026-05-25
+
+**Type:** Patch Release — operational P&L route prefix renamed from
+`/api/v1/finance` to `/api/v1/operations` to resolve URL collision with the
+finance microservice (Viet Anh).
+
+### Changed
+
+- **Operational P&L endpoints moved from `/api/v1/finance/pnl/*` to
+  `/api/v1/operations/pnl/*`:** Restores the ability for the Operational P&L
+  page to load data and resolves a URL collision with the finance microservice
+  that owns `/api/v1/finance/*` exclusively. The `src/modules/finance/` plugin
+  module (served by the ops backend) originally registered its routes under
+  `/api/v1/finance` before a dedicated finance microservice was introduced in
+  Wave 0+. Nginx routes all `/api/v1/finance/*` traffic to that microservice,
+  which has no pnl routes, causing silent 404s for every operational P&L call.
+  The new prefix `/api/v1/operations` correctly targets the ops backend.
+  Frontend route also moved from `/finance/pnl` to `/operations/pnl`; sidebar
+  label "Operational P&L" is unchanged.
+  **⚠ Ops backend restart required:** `docker compose restart api`
+
 ## [1.19.1] - 2026-05-25
 
 **Type:** Patch Release — sidebar sticky fix, Operational P&L route registration,
