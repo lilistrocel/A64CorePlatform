@@ -178,6 +178,9 @@ const BalanceSheetPage = lazy(() =>
 const IncomeStatementPage = lazy(() =>
   import('./pages/finance/IncomeStatementPage').then(m => ({ default: m.IncomeStatementPage }))
 );
+const PnLPage = lazy(() =>
+  import('./pages/pnl/PnLPage').then(m => ({ default: m.PnLPage }))
+);
 
 // Division selector (shown after login when user belongs to multiple divisions)
 const DivisionSelector = lazy(() =>
@@ -343,6 +346,7 @@ function App() {
                 {/* Finance module (Wave 2 — Statutory Statements T-060.8 / T-060.9) */}
                 <Route path="/finance/balance-sheet" element={<FinanceGate><BalanceSheetPage /></FinanceGate>} />
                 <Route path="/finance/income-statement" element={<FinanceGate><IncomeStatementPage /></FinanceGate>} />
+                <Route path="/finance/pnl" element={<FinanceGate><PnLPage /></FinanceGate>} />
 
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
