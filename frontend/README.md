@@ -65,6 +65,17 @@ npm test --workspace=shared
 ### Shared Library (`@a64core/shared`)
 Common components, theme, services, and utilities used by both portals.
 
+> **After pulling commits that touch `frontend/shared/src/**`** you must
+> rebuild the package before changes take effect in the portals:
+>
+> ```bash
+> cd frontend/shared && npm run build
+> ```
+>
+> The user-portal Vite dev server picks up the rebuilt `dist/index.js` via
+> the symlinked `node_modules/@a64core/shared`. Without the rebuild, source
+> changes in `shared/src/` are invisible to the portals at runtime.
+
 ### User Portal
 Business-facing application with CCM dashboard and module access.
 

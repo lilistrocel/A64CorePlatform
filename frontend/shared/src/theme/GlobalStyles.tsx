@@ -13,7 +13,11 @@ export const GlobalStyles = createGlobalStyle`
     -moz-osx-font-smoothing: grayscale;
     width: 100%;
     height: 100%;
-    overflow-x: hidden;
+    /* Reason: do NOT set overflow-x:hidden here. Per CSS spec, setting one
+       axis to a non-visible value promotes the other to 'auto', which makes
+       this element a scroll container and breaks position:sticky on
+       descendants (e.g. the layout sidebar). Clip horizontal overflow at
+       the actual layout boundary instead (see LayoutContainer). */
   }
 
   body {
@@ -25,13 +29,11 @@ export const GlobalStyles = createGlobalStyle`
     background-color: ${({ theme }) => theme.colors.background};
     width: 100%;
     min-height: 100vh;
-    overflow-x: hidden;
   }
 
   #root {
     width: 100%;
     min-height: 100vh;
-    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {

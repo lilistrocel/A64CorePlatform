@@ -5,6 +5,37 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.1] - 2026-05-25
+
+**Type:** Patch Release — sidebar sticky fix, Operational P&L route registration,
+IncomeStatementPage (T-060.9 frontend closing piece) (Viet Anh).
+
+### Added
+
+- **T-060.9 — IncomeStatementPage (frontend):** New page component at
+  `frontend/user-portal/src/pages/finance/IncomeStatementPage.tsx`. Closes
+  the final uncommitted piece of T-060.9; the route and sidebar entry were
+  already in place from the T-060.8 wave.
+
+### Fixed
+
+- **`/finance/pnl` route was never registered:** The "Operational P&L"
+  sidebar entry (formerly "P&L Statement") has pointed at `/finance/pnl`
+  since commit `5cad846`, but that commit omitted the `<Route>` declaration
+  in `App.tsx`. Clicking the sidebar entry caused a 404. Fix adds the
+  `PnLPage` lazy import and the missing route registration.
+- **Sidebar rode along with page scroll:** `frontend/shared`'s `GlobalStyles`
+  set `overflow-x: hidden` on `html`, `body`, and `#root`. Per the CSS spec,
+  setting one axis to a non-visible value auto-promotes the other axis from
+  `visible` to `auto`, turning the element into a scroll container.
+  `position: sticky` pins to its nearest scroll-container ancestor, not the
+  viewport — so the sidebar was binding to a container that never actually
+  scrolled (page scroll happened on `window`). Fix: removed `overflow-x:
+  hidden` from the shared GlobalStyles (and the duplicate in `index.css`);
+  moved horizontal clipping to `MainContent` (a sibling of Sidebar, safe for
+  sticky); added `min-width: 0` on `MainContent` so wide tables clip correctly.
+  **Requires `cd frontend/shared && npm run build` after pulling.**
+
 ## [1.19.0] - 2026-05-25
 
 **Type:** Minor Release — Wave 2 backend hardening + statutory-statement export +

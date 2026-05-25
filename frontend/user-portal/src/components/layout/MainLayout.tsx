@@ -471,6 +471,9 @@ const LayoutContainer = styled.div`
   flex-direction: column;
   min-height: 100vh;
   background: ${({ theme }) => theme.colors.neutral[50]};
+  /* Reason: do NOT set overflow-x here. LayoutContainer is the sidebar's
+     parent, and overflow on a sticky element's ancestor breaks sticky.
+     Horizontal clipping is done on MainContent (sibling of Sidebar) instead. */
 
   @media (min-width: 1024px) {
     flex-direction: row;
@@ -1088,8 +1091,15 @@ const BackToTopButton = styled.button<{ $visible: boolean }>`
 
 const MainContent = styled.main`
   flex: 1;
-  overflow-y: auto;
   width: 100%;
+  /* Horizontal clip — was previously on body/html/#root via the shared
+     GlobalStyles. Moved here because clipping on ancestors of the sticky
+     sidebar breaks position:sticky (CSS spec promotes the unspecified axis
+     to 'auto', making the element a scroll container). MainContent is a
+     sibling of Sidebar, so clipping here is safe. */
+  overflow-x: hidden;
+  /* min-width:0 lets flex-shrink work so wide tables clip correctly */
+  min-width: 0;
 
   /* Account for mobile header on mobile */
   margin-top: 64px;
