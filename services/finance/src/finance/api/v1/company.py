@@ -15,15 +15,26 @@ Also hosts the Company Posting Setup sub-resource:
 
 import logging
 import uuid
+from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db.session import get_db
 from ...middleware.auth import TokenPayload, get_current_user, require_roles
-from ...models.orm.models import AccountLevelEnum, CompanyCode, CompanyPostingSetup, GLAccount
+from ...models.orm.models import (
+    AccountLevelEnum,
+    AccountTypeEnum,
+    CompanyCode,
+    CompanyPostingSetup,
+    DrawerEnum,
+    GLAccount,
+    JEStatusEnum,
+    JournalEntry,
+    JournalEntryLine,
+)
 from ...models.schemas.common import SuccessResponse
 from ...models.schemas.company import (
     CompanyCodeCreate,
@@ -219,6 +230,226 @@ _REQUIRED_POSTING_FIELDS = (
     "retainedEarningsAccountId",
 )
 
+# All clearing/control account FK fields on CompanyPostingSetup.
+# Changing any of these while the OLD account carries a non-zero balance
+# strands funds — guard every one identically (same risk profile as GR/IR).
+_CLEARING_ACCOUNT_FIELDS = (
+    "apControlAccountId",
+    "arControlAccountId",
+    "bankAccountId",
+    "cashAccountId",
+    "grIrClearingAccountId",
+    "inputVatAccountId",
+    "outputVatAccountId",
+    "retainedEarningsAccountId",
+    "purchasePriceVarianceAccountId",
+    "roundingAccountId",
+)
+
+
+# ---------------------------------------------------------------------------
+# Semantic type requirements per clearing-account field (T-063.A).
+#
+# Each entry maps a posting-setup field name to the set of (drawer, accountType)
+# pairs that are ALLOWED for that field.  The set allows multi-drawer fields
+# (e.g. PPV may be in either COST_OF_SALES or OPERATING_COST) without
+# duplicating the check logic.
+#
+# Accounting rationale for each entry:
+#   apControlAccountId       — AP is a current liability; must be LIABILITIES/liability.
+#   arControlAccountId       — AR is a current asset; must be ASSETS/asset.
+#   bankAccountId            — Cash at bank is a current asset; must be ASSETS/asset.
+#   cashAccountId            — Petty cash is a current asset; must be ASSETS/asset.
+#   grIrClearingAccountId    — GRNI is an accrued liability; must be LIABILITIES/liability.
+#   inputVatAccountId        — Input VAT recoverable is an asset; must be ASSETS/asset.
+#   outputVatAccountId       — Output VAT payable is a liability; must be LIABILITIES/liability.
+#   retainedEarningsAccountId— RE is an equity account; must be EQUITY/equity.
+#   purchasePriceVarianceId  — PPV is a P&L variance expense; must be COST_OF_SALES or
+#                              OPERATING_COST, both with accountType=expense.
+#   roundingAccountId        — Rounding differences are an operating expense; must be
+#                              OPERATING_COST/expense (the spec notes OTHER_INCOME is also
+#                              valid if the site uses a gain-bias config, but we
+#                              enforce OPERATING_COST only to match the seeded default
+#                              and keep the guard conservative — can be relaxed later).
+# ---------------------------------------------------------------------------
+
+# Type alias: allowed (drawer, accountType) combinations per field.
+_AllowedTypes = frozenset[tuple[DrawerEnum, AccountTypeEnum]]
+
+_CLEARING_ACCOUNT_TYPE_REQUIREMENTS: dict[str, _AllowedTypes] = {
+    "apControlAccountId": frozenset({
+        (DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY),
+    }),
+    "arControlAccountId": frozenset({
+        (DrawerEnum.ASSETS, AccountTypeEnum.ASSET),
+    }),
+    "bankAccountId": frozenset({
+        (DrawerEnum.ASSETS, AccountTypeEnum.ASSET),
+    }),
+    "cashAccountId": frozenset({
+        (DrawerEnum.ASSETS, AccountTypeEnum.ASSET),
+    }),
+    "grIrClearingAccountId": frozenset({
+        (DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY),
+    }),
+    "inputVatAccountId": frozenset({
+        (DrawerEnum.ASSETS, AccountTypeEnum.ASSET),
+    }),
+    "outputVatAccountId": frozenset({
+        (DrawerEnum.LIABILITIES, AccountTypeEnum.LIABILITY),
+    }),
+    "retainedEarningsAccountId": frozenset({
+        (DrawerEnum.EQUITY, AccountTypeEnum.EQUITY),
+    }),
+    "purchasePriceVarianceAccountId": frozenset({
+        (DrawerEnum.COST_OF_SALES, AccountTypeEnum.EXPENSE),
+        (DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE),
+    }),
+    "roundingAccountId": frozenset({
+        (DrawerEnum.OPERATING_COST, AccountTypeEnum.EXPENSE),
+    }),
+}
+
+
+async def _check_clearing_account_type(
+    field_name: str,
+    account_id: str,
+    organization_id: str,
+    db: AsyncSession,
+) -> None:
+    """
+    Reject a clearing-account field assignment when the NEW account's
+    drawer / accountType does not match the semantic requirements for
+    that field (T-063.A).
+
+    This check runs BEFORE the balance guard:
+      - Type mismatch = configuration error → 422 Unprocessable Entity.
+      - Non-zero balance = workflow error  → 409 Conflict.
+    Separating the status codes lets callers distinguish the two failure
+    modes at a glance.
+
+    Header accounts (isHeader=True) are unconditionally rejected because
+    you cannot post individual transactions to a roll-up / summary account.
+    This mirrors the restriction that will be enforced on the manual JE
+    endpoint (T-061) for consistency.
+
+    Args:
+        field_name: Name of the posting-setup field (used in error messages).
+        account_id: The NEW GL account UUID to type-check.
+        organization_id: Org scope (account must belong to this org —
+            already validated upstream by _validate_account_id, but
+            needed here to load the account object).
+        db: Async DB session.
+
+    Raises:
+        HTTPException 422: If the account's drawer/accountType is not in
+            the allowed set for this field, or if isHeader=True.
+    """
+    allowed: _AllowedTypes = _CLEARING_ACCOUNT_TYPE_REQUIREMENTS.get(field_name, frozenset())
+    if not allowed:
+        # Reason: defensive guard — if a new clearing field is added to
+        # _CLEARING_ACCOUNT_FIELDS without a corresponding entry in
+        # _CLEARING_ACCOUNT_TYPE_REQUIREMENTS, fail loudly rather than
+        # silently skipping the check.
+        return
+
+    account = await db.get(GLAccount, account_id)
+    if account is None:
+        # Reason: _validate_account_id already enforces existence; this
+        # branch is unreachable in normal flow but kept for safety.
+        return
+
+    # Reject header accounts — posting to roll-up accounts silently
+    # inflates parent balances without creating visible leaf entries.
+    if account.isHeader:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Cannot assign account {account.accountNumber} "
+                f"'{account.accountName}' to {field_name} — "
+                f"header accounts (isHeader=true) cannot be used as posting "
+                f"targets. Use a detail (leaf) account instead."
+            ),
+        )
+
+    # Check the drawer+accountType combination.
+    actual_pair = (account.drawer, account.accountType)
+    if actual_pair not in allowed:
+        allowed_desc = " or ".join(
+            f"drawer={d.value}, accountType={t.value}" for d, t in sorted(
+                allowed, key=lambda p: p[0].value
+            )
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Cannot assign account {account.accountNumber} "
+                f"'{account.accountName}' "
+                f"(drawer={account.drawer.value}, accountType={account.accountType.value}) "
+                f"to {field_name} — this field requires an account with "
+                f"{allowed_desc}."
+            ),
+        )
+
+
+async def _check_clearing_account_balance(
+    field_name: str,
+    old_account_id: str,
+    organization_id: str,
+    company_code: str,
+    db: AsyncSession,
+) -> None:
+    """
+    Reject a clearing-account field change when the OLD account still carries
+    a non-zero posted balance for this company.
+
+    Computes signed_balance = SUM(debit) - SUM(credit) across all POSTED JE
+    lines for the old account.  A non-zero result means stranded funds would
+    result from the change — the caller must post a correcting JE first.
+
+    Args:
+        field_name: Name of the posting-setup field (used in error messages).
+        old_account_id: The current (outgoing) GL account UUID.
+        organization_id: Org scope.
+        company_code: Company scope.
+        db: Async DB session.
+
+    Raises:
+        HTTPException 409: If the old account has a non-zero posted balance.
+    """
+    # Reason: Only POSTED JEs count — voided entries are excluded because they
+    # have already been reversed and contribute zero net balance.
+    result = await db.execute(
+        select(
+            func.coalesce(func.sum(JournalEntryLine.debit), Decimal("0")).label("sum_debit"),
+            func.coalesce(func.sum(JournalEntryLine.credit), Decimal("0")).label("sum_credit"),
+        )
+        .join(JournalEntry, JournalEntryLine.jeId == JournalEntry.jeId)
+        .where(
+            JournalEntry.organizationId == organization_id,
+            JournalEntry.companyCode == company_code,
+            JournalEntry.status == JEStatusEnum.POSTED,
+            JournalEntryLine.accountId == old_account_id,
+        )
+    )
+    row = result.one()
+    sum_debit = Decimal(str(row.sum_debit))
+    sum_credit = Decimal(str(row.sum_credit))
+    signed_balance = sum_debit - sum_credit
+
+    if signed_balance != Decimal("0"):
+        # Fetch account number for a human-readable error message.
+        old_account = await db.get(GLAccount, old_account_id)
+        account_number = old_account.accountNumber if old_account else old_account_id
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Cannot change {field_name} — old account {account_number} holds a "
+                f"non-zero balance ({signed_balance:.2f}). Post a correcting JE to "
+                f"clear it first, or contact a finance admin to migrate the balance."
+            ),
+        )
+
 
 async def _validate_account_id(
     field_name: str,
@@ -368,6 +599,41 @@ async def upsert_posting_setup(
         )
     )
     setup = result.scalar_one_or_none()
+
+    # Reason: T-063.A — semantic type guard.  For each clearing-account field
+    # that is being SET TO A NON-NULL value AND the value differs from the
+    # current stored value (or the row doesn't exist yet), verify the new
+    # account's drawer/accountType matches the semantic requirements.
+    # Type mismatch is a configuration error → 422 (not 409).
+    # Runs BEFORE the balance guard: type errors are cheaper to detect and
+    # should produce the clearest error if both guards would otherwise fire.
+    for clearing_field in _CLEARING_ACCOUNT_FIELDS:
+        new_value = account_fields.get(clearing_field)
+        if new_value is None:
+            # Reason: null means "clear the field" or "don't change it" —
+            # either way there is no type to check on the incoming value.
+            continue
+        current_value = getattr(setup, clearing_field, None) if setup is not None else None
+        if new_value == current_value:
+            # Reason: field is not changing — skip both type and balance guards.
+            continue
+        await _check_clearing_account_type(clearing_field, new_value, organization_id, db)
+
+    # Reason: Guard against stranded-balance incidents (e.g. the 35k AED GR/IR
+    # incident — JE-1000-2026-0006).  For each clearing-account field that is
+    # being CHANGED (new value differs from current, and old value is non-null),
+    # verify the old account's posted balance is zero before allowing the swap.
+    # A non-zero balance means live transactions still reference the old account;
+    # changing the pointer mid-flight would leave those funds stranded.
+    if setup is not None:
+        for clearing_field in _CLEARING_ACCOUNT_FIELDS:
+            new_value = account_fields.get(clearing_field)
+            old_value = getattr(setup, clearing_field, None)
+            # Only check when: old account is set, new value differs from old.
+            if old_value is not None and new_value != old_value:
+                await _check_clearing_account_balance(
+                    clearing_field, old_value, organization_id, company_code, db
+                )
 
     if setup is None:
         setup = CompanyPostingSetup(
