@@ -211,3 +211,6 @@ export {
   useDeleteAttachment,
   attachmentsQueryKeys,
 } from './useAttachments';
+
+// Finance hooks — Audit Log (T-060.11-audit)
+export { useAuditLog, auditLogKeys } from './useAuditLog';

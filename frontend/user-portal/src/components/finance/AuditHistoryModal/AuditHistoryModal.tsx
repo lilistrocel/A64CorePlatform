@@ -1,0 +1,537 @@
+/**
+ * AuditHistoryModal
+ *
+ * Displays a read-only audit event list for a given entity (typically a
+ * FiscalPeriod). Fetches from GET /api/v1/finance/audit-log via useAuditLog.
+ *
+ * Design decisions:
+ *  - Modal does NOT close on overlay click (project-wide rule: feedback_modal_ux.md).
+ *    X button (top-right) or Esc key or the Close footer button close it.
+ *  - No pagination UI — backend default size=200 covers all realistic audit
+ *    histories for a single fiscal period (KISS principle).
+ *  - Actor names not resolved — no shared user-fetch hook exists in this
+ *    codebase. actorUserId is truncated to 8 chars + "…" with a title tooltip
+ *    showing the full UUID. Follow-up: T-064 (actor-name resolution).
+ *  - Parameterised on entityType so the modal is reusable for JournalEntry
+ *    audit history in a future task without modification.
+ *
+ * Props:
+ *  - isOpen        — controls visibility (parent manages open/close state)
+ *  - onClose       — called when X, Esc, or footer Close button triggers close
+ *  - organizationId — required for the audit-log query (cross-org filter)
+ *  - entityType    — e.g. "FiscalPeriod" (backend allow-list)
+ *  - entityId      — UUID of the entity whose audit history to show
+ *  - entityLabel   — human-readable label for the modal header, e.g. "2026 P1"
+ */
+
+import { useEffect, useRef } from 'react';
+import styled from 'styled-components';
+import { useAuditLog } from '../../../hooks/queries/useAuditLog';
+import type { AuditLogEntry } from '../../../services/auditLogService';
+import { useToastStore } from '../../../stores/toast.store';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Format an ISO datetime string to a user-readable local time.
+ * Shows date + time so audit events can be sequenced accurately.
+ * Falls back to "—" for falsy input (null, undefined, empty string).
+ */
+function formatAuditTimestamp(iso: string | undefined | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+/**
+ * Extract the reason text from an AuditLogEntry's afterJson.
+ * For CLOSE/REOPEN events, the backend stores { reason: "…", … } in afterJson.
+ * Returns an em dash when no reason was recorded.
+ */
+function extractReason(entry: AuditLogEntry): string {
+  if (!entry.afterJson) return '—';
+  const reason = (entry.afterJson as { reason?: string }).reason;
+  return typeof reason === 'string' && reason.trim() ? reason.trim() : '—';
+}
+
+/**
+ * Truncate a UUID-style actor ID to 8 chars + "…" for compact display.
+ * The full UUID is exposed via title tooltip for accessibility/clipboard.
+ */
+function truncateUserId(userId: string): string {
+  if (!userId) return '—';
+  return `${userId.slice(0, 8)}…`;
+}
+
+// ─── Styled components ────────────────────────────────────────────────────────
+
+/**
+ * Backdrop: no onClick handler — modal closes only via X, Esc, or footer button.
+ * Project-wide rule: data-entry (and read-only audit) modals do NOT close on
+ * overlay click (feedback_modal_ux.md).
+ */
+const ModalBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+`;
+
+const ModalBox = styled.div`
+  background: ${({ theme }) => theme.colors.background};
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 680px;
+  padding: 28px 28px 24px;
+  position: relative;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.div`
+  flex-shrink: 0;
+  padding-right: 40px; /* room for X button */
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 18px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  margin: 0 0 4px;
+  line-height: 1.3;
+`;
+
+const ModalSubtitle = styled.p`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin: 0 0 20px;
+`;
+
+const ModalCloseBtn = styled.button`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 150ms ease;
+  flex-shrink: 0;
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[100]};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+  }
+`;
+
+const ModalBody = styled.div`
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+`;
+
+const ModalFooter = styled.div`
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+`;
+
+const CloseButton = styled.button`
+  padding: 9px 22px;
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: pointer;
+  transition: background 150ms ease;
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[200]};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 2px;
+  }
+`;
+
+// ─── State displays ────────────────────────────────────────────────────────────
+
+const StateBox = styled.div`
+  padding: 40px 24px;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 14px;
+  line-height: 1.6;
+`;
+
+const RetryButton = styled.button`
+  margin-top: 12px;
+  padding: 8px 18px;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease;
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary[700]};
+  }
+`;
+
+const Spinner = styled.div`
+  width: 28px;
+  height: 28px;
+  border: 3px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 12px;
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+// ─── Table ─────────────────────────────────────────────────────────────────────
+
+const TableWrapper = styled.div`
+  border: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  border-radius: 10px;
+  overflow-x: auto;
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+`;
+
+const THead = styled.thead`
+  background: ${({ theme }) => theme.colors.neutral[100]};
+`;
+
+const Th = styled.th`
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.neutral[200]};
+  white-space: nowrap;
+`;
+
+const Tr = styled.tr`
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[100]};
+  &:last-child {
+    border-bottom: none;
+  }
+  &:hover {
+    background: ${({ theme }) => theme.colors.neutral[50]};
+  }
+`;
+
+const Td = styled.td`
+  padding: 11px 14px;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const TdMuted = styled(Td)`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+`;
+
+const TdReason = styled(Td)`
+  max-width: 200px;
+  white-space: pre-wrap;
+  word-break: break-word;
+`;
+
+// ─── Action badge ─────────────────────────────────────────────────────────────
+
+/**
+ * Action badge colour convention:
+ *   CLOSE   → amber (matches the CLOSED period status badge)
+ *   REOPEN  → red (matches the "reopen" warning colour)
+ *   Others  → neutral
+ *
+ * These are implemented with hardcoded fallbacks so the badge remains
+ * readable even if the theme does not define all semantic colour sets.
+ */
+interface ActionBadgeProps {
+  $action: string;
+}
+
+const ActionBadge = styled.span<ActionBadgeProps>`
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  ${({ $action, theme }) => {
+    switch ($action.toUpperCase()) {
+      case 'CLOSE':
+        return `
+          background: ${theme.colors.warning?.light ?? '#fef9c3'};
+          color: ${theme.colors.warning?.dark ?? '#a16207'};
+        `;
+      case 'REOPEN':
+        return `
+          background: ${theme.colors.errorBg ?? '#fef2f2'};
+          color: ${theme.colors.error ?? '#dc2626'};
+        `;
+      default:
+        return `
+          background: ${theme.colors.neutral[100]};
+          color: ${theme.colors.textSecondary};
+        `;
+    }
+  }}
+`;
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export interface AuditHistoryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  /** Required for the audit-log API query. Must match the active org. */
+  organizationId: string;
+  /**
+   * Entity type string — must be in the backend allow-list.
+   * "FiscalPeriod" for period audit history.
+   * "JournalEntry" for JE audit history (future use).
+   */
+  entityType: string;
+  /** UUID of the entity whose audit events to display. */
+  entityId: string;
+  /**
+   * Human-readable label for the modal header.
+   * e.g. "2026 P1", "JE-00042".
+   */
+  entityLabel: string;
+}
+
+export function AuditHistoryModal({
+  isOpen,
+  onClose,
+  organizationId,
+  entityType,
+  entityId,
+  entityLabel,
+}: AuditHistoryModalProps) {
+  const addToast = useToastStore((s) => s.addToast);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // ── Data fetch ─────────────────────────────────────────────────────────────
+
+  const { data, isLoading, isError, error, refetch } = useAuditLog({
+    organizationId,
+    entityType,
+    entityId,
+    // No action filter — show all events for this entity.
+    // No page/size override — use the service defaults (page=1, size=200).
+  });
+
+  // ── Esc key handler ────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // ── Focus management ───────────────────────────────────────────────────────
+
+  // Focus the X close button when the modal opens so keyboard users can
+  // immediately dismiss it or tab to the table content.
+  useEffect(() => {
+    if (isOpen) {
+      requestAnimationFrame(() => closeBtnRef.current?.focus());
+    }
+  }, [isOpen]);
+
+  // ── Error toast ────────────────────────────────────────────────────────────
+
+  // Surface API errors via toast in addition to the inline retry state.
+  useEffect(() => {
+    if (!isError || !error) return;
+    const e = error as { response?: { data?: { detail?: string }; status?: number }; message?: string };
+    const msg =
+      e?.response?.data?.detail ??
+      e?.message ??
+      'Failed to load audit history.';
+    addToast('error', msg);
+  }, [isError, error, addToast]);
+
+  // ── Guard ──────────────────────────────────────────────────────────────────
+
+  if (!isOpen) return null;
+
+  const entries = data?.items ?? [];
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  return (
+    <ModalBackdrop
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="audit-modal-title"
+      /* Backdrop click intentionally does nothing — project-wide rule. */
+    >
+      <ModalBox>
+        {/* X close button */}
+        <ModalCloseBtn
+          ref={closeBtnRef}
+          onClick={onClose}
+          aria-label={`Close audit history for ${entityLabel}`}
+        >
+          ×
+        </ModalCloseBtn>
+
+        <ModalHeader>
+          <ModalTitle id="audit-modal-title">
+            Audit History — {entityLabel}
+          </ModalTitle>
+          <ModalSubtitle>
+            {entityType} · actor IDs are shown as truncated UUIDs (hover for full ID)
+          </ModalSubtitle>
+        </ModalHeader>
+
+        <ModalBody>
+          {/* Loading state */}
+          {isLoading && (
+            <StateBox aria-live="polite">
+              <Spinner aria-hidden="true" />
+              Loading audit history…
+            </StateBox>
+          )}
+
+          {/* Error state */}
+          {isError && !isLoading && (
+            <StateBox role="alert">
+              <p>Failed to load audit history.</p>
+              <RetryButton
+                type="button"
+                onClick={() => void refetch()}
+              >
+                Retry
+              </RetryButton>
+            </StateBox>
+          )}
+
+          {/* Empty state */}
+          {!isLoading && !isError && entries.length === 0 && (
+            <StateBox>
+              No audit events recorded for this {entityType} yet.
+            </StateBox>
+          )}
+
+          {/* Data table */}
+          {!isLoading && !isError && entries.length > 0 && (
+            <TableWrapper>
+              <Table
+                role="table"
+                aria-label={`Audit history for ${entityLabel}`}
+              >
+                <THead>
+                  <tr>
+                    <Th scope="col">Action</Th>
+                    <Th scope="col">Actor</Th>
+                    <Th scope="col">Reason</Th>
+                    <Th scope="col">Timestamp</Th>
+                  </tr>
+                </THead>
+                <tbody>
+                  {entries.map((entry) => (
+                    <Tr key={entry.auditLogId}>
+                      <Td>
+                        <ActionBadge
+                          $action={entry.action}
+                          aria-label={`Action: ${entry.action}`}
+                        >
+                          {entry.action}
+                        </ActionBadge>
+                      </Td>
+                      <TdMuted>
+                        {/*
+                         * Actor name resolution is not implemented — no shared
+                         * user-fetch hook exists. Render truncated UUID with
+                         * tooltip showing full UUID. See T-064 follow-up task.
+                         */}
+                        <span
+                          title={entry.actorUserId}
+                          aria-label={`Actor user ID: ${entry.actorUserId}`}
+                          style={{ cursor: 'help' }}
+                        >
+                          {truncateUserId(entry.actorUserId)}
+                        </span>
+                      </TdMuted>
+                      <TdReason>
+                        {extractReason(entry)}
+                      </TdReason>
+                      <TdMuted>
+                        {formatAuditTimestamp(entry.timestamp)}
+                      </TdMuted>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrapper>
+          )}
+        </ModalBody>
+
+        <ModalFooter>
+          <CloseButton
+            type="button"
+            onClick={onClose}
+            aria-label="Close audit history modal"
+          >
+            Close
+          </CloseButton>
+        </ModalFooter>
+      </ModalBox>
+    </ModalBackdrop>
+  );
+}

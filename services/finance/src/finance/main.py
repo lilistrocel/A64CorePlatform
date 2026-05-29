@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.v1 import (
     accounts,
     ap_payments,
+    audit_log,
     company,
     cost_centers,
     customer_ext,
@@ -100,6 +101,8 @@ app.include_router(reports.router, prefix=_PREFIX)
 app.include_router(export.router, prefix=_PREFIX)
 # Phase D: AP Payments (vendor payment recording + open-invoice totals lookup)
 app.include_router(ap_payments.router, prefix=_PREFIX)
+# T-060.11-audit: Audit log read endpoint
+app.include_router(audit_log.router, prefix=_PREFIX)
 
 
 # ---- Startup / Shutdown ----
