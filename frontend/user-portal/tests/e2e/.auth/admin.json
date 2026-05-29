@@ -1,0 +1,26 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost",
+      "localStorage": [
+        {
+          "name": "accessToken",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJiZmYyNmI4Zi01Y2U5LTQ5YjItOTEyNi04NjE3NGVhZWE4MjMiLCJlbWFpbCI6ImFkbWluQGE2NHBsYXRmb3JtLmNvbSIsInJvbGUiOiJzdXBlcl9hZG1pbiIsImV4cCI6MTc4MDA1OTA3NywidHlwZSI6ImFjY2VzcyJ9.oi02Y5MCIk5SrqOyE7SPv5mI8A27pPhBOICb9K15eHM"
+        },
+        {
+          "name": "division-storage",
+          "value": "{\"state\":{\"currentDivision\":{\"name\":\"Vegetable & Fruits Division\",\"divisionCode\":\"VEG-01\",\"industryType\":\"vegetable_fruits\",\"description\":\"Main vegetable and fruit farming operations\",\"settings\":{},\"divisionId\":\"00000000-0000-0000-0000-000000000010\",\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"isActive\":true,\"createdAt\":\"2026-02-24T15:44:42.669000\",\"updatedAt\":\"2026-02-24T15:44:42.669000\"}},\"version\":0}"
+        },
+        {
+          "name": "refreshToken",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJiZmYyNmI4Zi01Y2U5LTQ5YjItOTEyNi04NjE3NGVhZWE4MjMiLCJ0b2tlbklkIjoiMDA0YzMxMjYtZDYxOC00YTUzLTg2MjMtMmYxZjc0NGVmZTExIiwiZXhwIjoxNzgwNjYwMjc3LCJ0eXBlIjoicmVmcmVzaCJ9.7NlXfeAIDzybV9I_r3NvBT99oy_gT_a7r5fweLnKHn0"
+        },
+        {
+          "name": "auth-storage",
+          "value": "{\"state\":{\"user\":{\"email\":\"admin@a64platform.com\",\"firstName\":\"Super\",\"lastName\":\"Admin\",\"phone\":null,\"avatar\":null,\"timezone\":null,\"locale\":null,\"userId\":\"bff26b8f-5ce9-49b2-9126-86174eaea823\",\"role\":\"super_admin\",\"isActive\":true,\"isEmailVerified\":true,\"mfaEnabled\":false,\"mfaSetupRequired\":false,\"lastLoginAt\":\"2026-05-29T11:51:17.842983\",\"createdAt\":\"2026-01-22T14:13:05.439000\",\"updatedAt\":\"2026-05-29T11:50:42.855000\",\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"divisionAccess\":[\"00000000-0000-0000-0000-000000000010\",\"00000000-0000-0000-0000-000000000020\"],\"defaultDivisionId\":\"00000000-0000-0000-0000-000000000010\"},\"isAuthenticated\":true},\"version\":0}"
+        }
+      ]
+    }
+  ]
+}
