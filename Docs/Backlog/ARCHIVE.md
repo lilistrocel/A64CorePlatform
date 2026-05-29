@@ -1,8 +1,64 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 65 tasks
+> **Total completed:** 72 tasks
 
 ## 2026-05
+
+### T-060.10 | Finance — CashFlowStatementPage (indirect method)
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-29 · **Assigned:** frontend-dev-expert
+- **Released in:** v1.20.0
+- **Description:** Cash Flow Statement page at `/finance/cash-flow` (indirect method). Operating / Investing / Financing sections with reconciliation footer. Comparative period uses two parallel queries. reconciliationDelta > 0.01 triggers warning banner.
+
+---
+
+### T-060.11-audit | Finance — Audit log endpoint + history modal
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Completed:** 2026-05-29 · **Assigned:** backend-dev-expert + frontend-dev-expert
+- **Released in:** v1.20.0
+- **Description:** `GET /api/v1/finance/audit-log` with entity-type allowlist and cross-org isolation. Frontend AuditHistoryModal renders close/reopen events per fiscal period. 13 pytest tests.
+
+---
+
+### T-060.11-preview | Finance — Close dry-run + proposed-JE preview table
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Completed:** 2026-05-29 · **Assigned:** backend-dev-expert + frontend-dev-expert
+- **Released in:** v1.20.0
+- **Description:** `PATCH /periods/{id}/close?dry_run=true` computes closing JE without writing. Two-stage close modal: Stage A shows ClosingJePreviewPanel; Stage B has reason textarea + Confirm. Property test verifies preview equals commit output. 5 new pytest tests.
+
+---
+
+### T-060.12 | Finance — CoA inline edit of cashFlowCategory
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-29 · **Assigned:** frontend-dev-expert
+- **Released in:** v1.20.0
+- **Description:** 6-value cashFlowCategory enum inline-edit in CoA detail pane. Per-user review banner with localStorage dismissal. On save, invalidates CoA + all CF report queries.
+
+---
+
+### T-060.13 | Finance — Playwright UI smoke tests for Wave 2 pages
+- **Category:** Testing · **Priority:** P1
+- **Completed:** 2026-05-29 · **Assigned:** frontend-testing-playwright
+- **Released in:** v1.20.0
+- **Description:** 49 tests across 7 spec files (BS / IS / CF / Periods / ManualJE / CoA / auth-and-sidebar). Global-setup storageState reuse. All passing in ~41s. playwright.config.ts + @playwright/test devDep added.
+
+---
+
+### T-060.14 | Finance — Financial-Statements.md docs + Wave 2 closing chore
+- **Category:** Docs · **Priority:** P1
+- **Completed:** 2026-05-29 · **Assigned:** change-guardian
+- **Released in:** v1.20.0
+- **Description:** Financial-Statements.md (635 lines) documenting all three statements. CHANGELOG v1.20.0 entry. FINANCE_MODULE_GUIDE.md Phase 4 status updated. CodeMaps INDEX.md Wave 2 addendum. BACKLOG / ARCHIVE updated.
+
+---
+
+### T-061.1 | Finance — Manual JE entry form (Wave 2.5)
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-29 · **Assigned:** frontend-dev-expert
+- **Released in:** v1.20.0
+- **Description:** Manual JE form at `/finance/journal-entries/new` (RHF + Zod). CostCenterCombobox component. Live balance indicator. Inactive-account warning modal. Period-validation. Unsaved-changes guard. "+New Manual JE" toolbar button on JE list page and sidebar entry. Fixes: AccountCombobox prop mismatch (valueAccountId / hasError); periods hook gate on companyCode; FiscalPeriodsListResponse envelope corrected.
+
+---
 
 ### T-060.6 | Finance — Report export endpoint (PDF + Excel)
 - **Category:** Backend + Tests · **Priority:** P1

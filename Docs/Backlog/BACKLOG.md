@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-05-25
-> **Tasks:** 6 active · 2 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-061, T-062, T-063 completed, moved to ARCHIVE.md)
+> **Updated:** 2026-05-29
+> **Tasks:** 5 active · 2 ready · 0 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063 completed, moved to ARCHIVE.md)
 
 ## Rules for Agents
 
@@ -376,7 +376,147 @@
 _T-059 (Wave 0) — see Active for context._
 _T-060 (Wave 2) — design approved 2026-05-24, ready to claim._
 _T-061, T-062, T-063 — completed 2026-05-24, moved to ARCHIVE.md._
+_T-065 – T-068 — out-of-scope spin-offs from T-061.1 (Manual JE frontend),
+captured 2026-05-29 so they can be revisited when prioritisation revisits
+finance UX maturity. None are urgent today; each waits on user need._
 
+
+### T-065 | Manual JE — Templates / recurring entries
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Assigned:** unclaimed · **Depends on:** T-061 ✅ (backend), T-061.1 (frontend, in progress) · **Blocks:** —
+- > Context (2026-05-29): Spun off from T-061.1 scope discussion. Once finance
+  > admins can post manual JEs through the UI, the next pain point is the
+  > monthly close. Every month requires roughly the same JE set: depreciation
+  > on PP&E, amortisation of prepaid expenses, accruals for unbilled revenue
+  > and unbilled expenses, etc. Re-entering these by hand each month is both
+  > tedious and error-prone (typos, account mis-selections).
+- **Goal:** Add a "JE Template" entity that captures a structured manual-JE
+  shape (description, line accounts, line cost-centres, optional amount
+  formulas — e.g. "1/12 of fixed-asset cost"). User saves an existing manual
+  JE as a template, then on subsequent runs they pick the template + a
+  posting date + (optional) amount overrides → form pre-fills → submit.
+- **Scope highlights:**
+  - Backend: new `je_templates` table; CRUD endpoints; "apply template" mutation
+    that constructs the JE payload server-side
+  - Frontend: "Save as Template" button on the manual JE form (post-submit);
+    "Apply Template" picker on form open; template list+manage page
+  - Amount formulas (v1): only literal amounts. Formulas like "1/12 of
+    fixed-asset balance as of last close" are v2.
+  - Recurring auto-post (cron-style "post on the 1st of every month"): v2.
+    Keep v1 manual-trigger only.
+- **Acceptance criteria:** can save a JE as template; can apply template +
+  date to construct a new JE without re-entering accounts/lines; templates
+  scoped per company; audit_log captures both template creation and each
+  application.
+- **Estimated effort:** ~3–4 days (1.5 backend, 2 frontend, .5 tests)
+- **When to prioritise:** as soon as a finance admin posts the same JE
+  shape twice (typically month 2 of monthly-close discipline).
+
+---
+
+### T-066 | Manual JE — Bulk import from spreadsheet
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Assigned:** unclaimed · **Depends on:** T-061 ✅ (backend), T-061.1 (frontend) · **Blocks:** —
+- > Context (2026-05-29): Spun off from T-061.1. The biggest one-shot use
+  > of manual JEs is migrating opening balances from a previous accounting
+  > system. A typical migration JE has 50–500 lines (one per account that
+  > had a balance on cutover date). Entering this through the form is
+  > impractical. Equally relevant: external accountants often deliver
+  > adjusting-JE worksheets in Excel during audit prep — uploading them
+  > directly avoids transcription errors.
+- **Goal:** Accept a CSV/XLSX file describing JE header(s) + lines and post
+  them atomically (or atomically per JE if multiple).
+- **Scope highlights:**
+  - Backend: new `POST /api/v1/finance/journal-entries/bulk` accepting
+    multipart/form-data; parses CSV/XLSX via openpyxl (already a dep);
+    validates structure → constructs JE batch → posts all-or-nothing per JE
+  - Frontend: upload page with CSV/XLSX template download, file picker,
+    pre-post validation summary (X JEs parsed, Y errors), Submit
+  - Template spec: header row with mandatory columns (jeNumber-grouping
+    key, jeDate, description, reason) + line columns (accountNumber, debit,
+    credit, costCenter, description); JEs grouped by the grouping key
+  - Errors: invalid account number, unbalanced JE, account is header, closed
+    period — all surfaced as a downloadable error report tied to the
+    source rows
+- **Acceptance criteria:** can upload a 100-line opening-balance JE and
+  see it posted as one transaction; can upload a multi-JE file and see N
+  transactions posted; invalid rows surface error report with row numbers;
+  audit_log records the original filename + actor + payload hash.
+- **Estimated effort:** ~4–5 days (2.5 backend, 2 frontend, .5 tests)
+- **When to prioritise:** before the first real-tenant onboarding that
+  needs opening balances OR before the first external-auditor adjusting-JE
+  workflow.
+
+---
+
+### T-067 | Manual JE — Approval workflow for high-value entries
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Assigned:** unclaimed · **Depends on:** T-061 ✅, T-061.1, existing approval-rules engine
+  · **Blocks:** —
+- > Context (2026-05-29): Spun off from T-061.1. Standard SOX-style control:
+  > a single finance admin can post small adjusting JEs unilaterally, but
+  > anything over a configurable threshold (e.g. > 10,000 AED) must be
+  > reviewed and approved by a second authorised user before it posts.
+  > Today's manual JE endpoint posts immediately on submit — no review gate.
+  > The existing approval-rules engine (used for PR/PO already) is the
+  > natural home for the rule logic; this task wires manual JEs into it.
+- **Goal:** Add an "approval required" state for manual JEs above a
+  configurable rule threshold. JE is created with `status='draft_pending_approval'`
+  and only flips to `status='posted'` once approved.
+- **Scope highlights:**
+  - Backend: extend `JEStatusEnum` with `draft_pending_approval` (requires an
+    Alembic migration); manual JE endpoint consults approval-rules engine
+    to decide whether to skip-or-gate; new `POST .../journal-entries/{id}/approve`
+    and `.../reject` endpoints; email/notification on pending approval
+  - Frontend: approval inbox section for finance admins; per-JE approve/reject
+    modal with reason; pending JE shows distinct status badge throughout
+    UI (JE list, drill-downs, etc.)
+  - Rules: thresholds per company + per role (e.g. "manual JEs > 10K need
+    second sign-off from finance_admin role"); reuse the existing rules
+    table or add a manual-JE-specific rule type
+- **Acceptance criteria:** posting a JE under threshold posts immediately
+  (existing behaviour); posting over threshold creates draft, second user
+  can approve via inbox, original creator cannot self-approve, rejection
+  records reason in audit_log.
+- **Estimated effort:** ~5–7 days (3 backend, 3 frontend, 1 tests)
+- **When to prioritise:** before the first real audit, or when a finance
+  admin first asks "can someone else review my correcting JEs before
+  they post?"
+
+---
+
+### T-068 | Manual JE — Draft state (save and finish later)
+- **Category:** Backend + Frontend · **Priority:** P3
+- **Assigned:** unclaimed · **Depends on:** T-061 ✅, T-061.1 · **Blocks:** —
+- > Context (2026-05-29): Spun off from T-061.1. Long multi-line JEs (e.g.
+  > opening-balance entries with 50+ lines) take time to prepare. Today
+  > there's no way to save a partial JE and come back — every form session
+  > is either Submit (post immediately) or Cancel (lose work). T-066 bulk
+  > import partially mitigates this for the long-line case, but in-form
+  > drafts are a useful UX even for short JEs interrupted by a meeting.
+- **Goal:** Add `status='draft'` for manual JEs. Save-as-draft button
+  alongside Submit; draft JEs do NOT post to the GL but persist for the
+  user to resume.
+- **Scope highlights:**
+  - Backend: add `draft` to `JEStatusEnum` (Alembic migration); manual JE
+    endpoint accepts `?save_as_draft=true`; new `PATCH .../journal-entries/{id}/post`
+    that promotes a draft to posted (re-validates everything fresh)
+  - Frontend: Save-as-Draft button on form; draft JEs visible only to their
+    creator in a "My Drafts" section of the JE list; clicking a draft opens
+    the form pre-filled with its lines; auto-save every 30s (optional, v2)
+  - Drafts skip ALL validations until Submit: unbalanced drafts allowed,
+    closed-period date allowed, etc. Only the Post action enforces the
+    full ruleset.
+- **Acceptance criteria:** can save an unbalanced JE as draft and reload
+  it days later; the draft does not appear in financial reports; promoting
+  to posted runs full validation; only the original author can see / edit
+  / promote their own drafts.
+- **Estimated effort:** ~3–4 days (1.5 backend, 1.5 frontend, .5–1 tests)
+- **When to prioritise:** P3 — useful but easy to work around via bulk
+  import (T-066) or by keeping a draft in a text editor outside the app.
+  Revisit only if specific user requests come in.
+
+---
 
 ### T-059 | Wave 0 — Finance as opt-in add-on (architectural hygiene) — 🔵 Active
 - **Category:** Backend + Frontend + DevOps + Docs · **Priority:** P0
@@ -523,26 +663,33 @@ _T-061, T-062, T-063 — completed 2026-05-24, moved to ARCHIVE.md._
     **Status:** ✅ Done · Completed: 2026-05-25 · Assigned: frontend-dev-expert
   - T-060.10 Frontend — `CashFlowStatementPage`
     (`/finance/cash-flow`, behind `<FinanceGate>`).
+    **Status:** ✅ Done · Completed: 2026-05-25 · Assigned: frontend-dev-expert
   - T-060.11 Frontend (Phase D.5 UI) — Close/Reopen buttons on
     existing `/finance/periods` page with pre-close validation
     modal showing the closing-JE preview. Status badges
     (OPEN/CLOSED/LOCKED).
+    **Status:** ✅ Done · Completed: 2026-05-29 · Assigned: frontend-dev-expert
   - T-060.12 Frontend — Chart-of-Accounts inline edit of
     `cashFlowCategory` (dropdown, super_admin / finance_admin
     only). One-time review banner shown until dismissed.
     Mutation invalidates the cash-flow report TanStack query.
+    **Status:** ✅ Done · Completed: 2026-05-29 · Assigned: frontend-dev-expert
   - T-060.13 Tests — backend unit tests for each computation (BS
     balances, IS Gross/EBIT/Net subtotals, CF reconciles to cash
     delta, drill-down sums match line balances, comparative
     queries, cost-centre filter consistency, closing JE round-trip
     via close/reopen, period-close validation rejection paths).
     Playwright UI smoke for each new page.
+    **Status:** ✅ Done · Completed: 2026-05-29 · Assigned: frontend-testing-playwright
+    **Result:** 49/49 tests pass (chromium). 7 spec files covering auth/sidebar, balance
+    sheet, cash flow, income statement, CoA CF category, manual JE, fiscal periods.
   - T-060.14 Docs — `Docs/1-Main-Documentation/Financial-Statements.md`
     (formulas, sign conventions, drill semantics, closing-JE
     behaviour, cost-centre presentation note) + update
     `Docs/4-Finance-Mod-docs/FINANCE_MODULE_GUIDE.md` Phase 4
     status + CodeMap manual addenda + DevLog + CHANGELOG bump
     (MINOR — new feature).
+    **Status:** ✅ Done · Completed: 2026-05-29 · Assigned: api-developer
 - **Acceptance criteria:** see design doc §10. Highlights:
   - BS balances within 0.01 AED tolerance.
   - CF reconciles to actual cash account delta within 0.01 AED.
@@ -589,6 +736,46 @@ _T-061, T-062, T-063 — completed 2026-05-24, moved to ARCHIVE.md._
   - Mixed PO (service + raw_material lines) handles GR flow correctly for
     non-service lines only.
   - All existing tests still pass; new tests cover service-line accounting flow.
+
+---
+
+### T-060.11-audit | Per-period audit history endpoint + UI
+- **Category:** Backend + Frontend · **Priority:** P3
+- **Assigned:** frontend-dev-expert · **Started:** 2026-05-29 · **Depends on:** T-060.11 ✅ · **Blocks:** —
+- **Status:** 🔵 Active (frontend complete 2026-05-29, pending user verification)
+- **Description:** The backend writes an `audit_log` row for every fiscal period
+  close/reopen event (action=CLOSE or REOPEN, entityType=FiscalPeriod,
+  entityId=periodId). This task adds the endpoint and frontend UI.
+- **Steps:**
+  1. Backend — add audit log list endpoint on finance service ✅ (2026-05-29, backend-dev-expert)
+     - `services/finance/src/finance/api/v1/audit_log.py` — new file
+     - `services/finance/src/finance/main.py` — router registered
+     - `services/finance/tests/test_audit_log_endpoint.py` — 13 tests, all pass
+  2. Frontend — auditLogService.ts: `listAuditLog(params)` ✅ (2026-05-29)
+  3. Frontend — useAuditLog.ts: `useAuditLog(params)` query hook ✅ (2026-05-29)
+  4. Frontend — AuditHistoryModal component ✅ (2026-05-29)
+  5. Frontend — PeriodsPage.tsx: Audit button + modal wired for super_admin/finance_admin/finance_reviewer ✅ (2026-05-29)
+  6. Backlog — T-064 added (actor-name resolution follow-up) ✅ (2026-05-29)
+  > Context: Backend rebuild required for finance container before button works.
+  > Frontend is hot-reload only — Vite picks up all changes automatically.
+  > Actor names render as truncated UUID — see T-064.
+
+---
+
+### T-064 | Frontend: audit log actor-name resolution
+- **Category:** Frontend · **Priority:** P3
+- **Assigned:** unclaimed · **Depends on:** T-060.11-audit ✅ · **Blocks:** —
+- **Description:** The AuditHistoryModal (T-060.11-audit) renders `actorUserId` as a
+  truncated UUID (first 8 chars + "…") with a tooltip for the full UUID, because no
+  shared user-fetch hook exists in the codebase. This follow-up task adds actor-name
+  resolution so the audit table shows a human-readable display name instead.
+  - Add a shared `useAdminUsers` hook (or extend UserManagementPage inline fetch into
+    a reusable hook) that fetches from `GET /v1/users` and returns a userId→name map.
+  - The AuditHistoryModal should batch-resolve all unique actorUserIds in the current
+    page of results in a single query (not N individual fetches).
+  - Render "Loading…" while resolution is in progress, fall back to truncated UUID
+    if resolution fails for a given actor.
+  - Cache result with TanStack Query (staleTime 5min — user list doesn't change often).
 
 ---
 

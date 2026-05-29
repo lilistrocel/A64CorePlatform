@@ -238,16 +238,21 @@ Planned next. Includes:
 - AP sub-ledger maintenance per vendor.
 - Vendor balance and AP aging visibility.
 
-### ⏳ Phase 4 — Reports + period close + cutover
+### ✅ Phase 4 — Reports + period close + cutover
 
-- Trial Balance, P&L, Balance Sheet (on-demand aggregation).
-- AP/AR Aging (0-30, 31-60, 61-90, 90+).
-- General Ledger detail listing.
-- Period close ceremony (validation, snapshot, lock).
-- Manual journal entry UI (Park & Post pattern).
-- Reversal mechanism (no edits, only reverse-and-repost).
-- Opening balance entry wizard.
-- Cutover playbook for existing customers upgrading.
+Wave 2 complete: statutory financial statements (BS/IS/CF), period close/reopen with
+dry-run preview, manual JE entry, audit log surfacing, full UI smoke coverage.
+See `Docs/1-Main-Documentation/Financial-Statements.md`.
+
+- Trial Balance, P&L, Balance Sheet (on-demand aggregation). ✅
+- AP/AR Aging (0-30, 31-60, 61-90, 90+). ✅
+- General Ledger detail listing. ✅
+- Period close ceremony (validation, snapshot, lock) with dry-run preview. ✅
+- Manual journal entry UI (correcting / adjusting entries). ✅
+- Reversal mechanism (no edits, only reverse-and-repost). ✅
+- Audit log surfacing per fiscal period. ✅
+- Opening balance entry wizard. (deferred)
+- Cutover playbook for existing customers upgrading. (deferred)
 
 ### Later phases (deferred)
 

@@ -5,6 +5,31 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.0] - 2026-05-29
+
+**Type:** Minor Release — Wave 2 close: statutory financial statements (BS/IS/CF),
+period close/reopen with dry-run preview, manual JE entry, audit log surfacing,
+documentation, and full Playwright UI smoke coverage (Viet Anh).
+
+### Added
+- T-060.10 — CashFlowStatementPage (indirect-method UI with reconciliation warning)
+- T-060.11-audit — Audit log endpoint + history modal per fiscal period
+- T-060.11-preview — Close dry-run + proposed-closing-JE preview table
+- T-060.12 — Chart-of-Accounts inline edit of cashFlowCategory
+- T-061.1 — Manual JE entry form (super_admin / finance_admin)
+- T-060.13 — Playwright UI smoke tests (49 tests, 7 spec files)
+- T-060.14 — Financial-Statements.md user/dev reference (635 lines)
+
+### Fixed
+- useFiscalPeriods hook now gates on companyCode (was firing 422 on Manual JE form mount)
+- fiscalPeriodsService list-response envelope corrected — was speculatively typed
+  as paginated; backend returns simple `{ data, message }`. Caused PeriodsPage to
+  render "No periods" despite the API returning data
+- ManualJournalEntryPage account combobox now uses the existing production
+  AccountCombobox's prop interface (valueAccountId, hasError); deleted an orphan
+  shadow directory that the T-061.1 agent created without noticing the existing
+  component, causing a silent prop mismatch that wiped the input on every select
+
 ## [1.19.2] - 2026-05-25
 
 **Type:** Patch Release — operational P&L route prefix renamed from
