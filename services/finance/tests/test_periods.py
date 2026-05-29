@@ -594,3 +594,365 @@ async def test_close_year_end_without_re_account_returns_400(
     )
     assert resp.status_code == 400
     assert "retained earnings" in resp.json()["detail"].lower()
+
+
+# ─── T-060.11-preview — dry_run flag tests ─────────────────────────────────
+
+from sqlalchemy import func as sa_func
+
+
+@pytest.mark.asyncio
+async def test_dry_run_year_end_returns_preview_no_db_write(
+    client: AsyncClient, db_session
+) -> None:
+    """
+    dry_run=true on a year-end period with revenue JEs should return
+    closingJePreview with balanced lines and NOT write any JE to the DB.
+    """
+    from datetime import date as _date
+    from finance.models.orm.models import JournalEntry
+    from sqlalchemy import select
+
+    org_id = f"org-dryrun-{uuid.uuid4().hex[:8]}"
+    company_code = f"DR{uuid.uuid4().hex[:6].upper()}"
+    cy_id, re_id, rev_id, cash_id = await _seed_company_coa_posting(
+        db_session, org_id, company_code
+    )
+
+    create_resp = await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code,
+            "fiscalYear": 2026,
+            "periodNumber": 12,
+            "startDate": "2026-12-01",
+            "endDate": "2026-12-31",
+        },
+        headers=auth_headers(),
+    )
+    period_id = create_resp.json()["data"]["periodId"]
+
+    await _post_test_revenue_je(
+        db_session, org_id, company_code, period_id,
+        revenue_account_id=rev_id,
+        cash_account_id=cash_id,
+        amount=Decimal("750.00"),
+        je_date=_date(2026, 12, 10),
+    )
+
+    # dry_run=true — should return preview, no mutations
+    resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id, "dry_run": "true"},
+        headers=auth_headers(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()["data"]
+
+    # Response must carry closingJePreview, not closingJe
+    assert "closingJePreview" in body
+    preview = body["closingJePreview"]
+    assert preview["isYearEnd"] is True
+    assert preview["note"] is None
+
+    # Lines must be balanced: totalDebit == totalCredit
+    td = Decimal(preview["totalDebit"])
+    tc = Decimal(preview["totalCredit"])
+    assert td == tc
+    assert td == Decimal("750.00")
+
+    # Must have exactly 2 lines; one debit, one credit
+    lines = preview["lines"]
+    assert len(lines) == 2
+    dr_lines = [l for l in lines if l["debit"] is not None and Decimal(l["debit"]) > 0]
+    cr_lines = [l for l in lines if l["credit"] is not None and Decimal(l["credit"]) > 0]
+    assert len(dr_lines) == 1
+    assert len(cr_lines) == 1
+    assert Decimal(dr_lines[0]["debit"]) == Decimal("750.00")
+    assert Decimal(cr_lines[0]["credit"]) == Decimal("750.00")
+
+    # Period must still be OPEN (no status change)
+    assert body["period"]["status"] == "open"
+
+    # No JE for this period should exist in the DB
+    je_count = (
+        await db_session.execute(
+            select(sa_func.count(JournalEntry.jeId)).where(
+                JournalEntry.periodId == period_id,
+                JournalEntry.sourceEventType == "period_close",
+            )
+        )
+    ).scalar_one()
+    assert je_count == 0
+
+    # No audit_log entry should exist
+    from finance.models.orm.models import AuditLog
+    audit_count = (
+        await db_session.execute(
+            select(sa_func.count(AuditLog.auditId)).where(
+                AuditLog.entityId == period_id,
+            )
+        )
+    ).scalar_one()
+    assert audit_count == 0
+
+
+@pytest.mark.asyncio
+async def test_dry_run_mid_year_period_returns_empty_preview_no_db_write(
+    client: AsyncClient, db_session
+) -> None:
+    """
+    dry_run=true on a mid-year period should return closingJePreview with
+    isYearEnd=False, empty lines, and a note.  No DB changes.
+    """
+    from finance.models.orm.models import JournalEntry
+    from sqlalchemy import select
+
+    org_id = f"org-drymid-{uuid.uuid4().hex[:8]}"
+    company_code = f"DM{uuid.uuid4().hex[:6].upper()}"
+    cy_id, re_id, rev_id, cash_id = await _seed_company_coa_posting(
+        db_session, org_id, company_code
+    )
+
+    # Two periods so period 6 is NOT the year-end (period 12 is later)
+    create_resp_mid = await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code,
+            "fiscalYear": 2026,
+            "periodNumber": 6,
+            "startDate": "2026-06-01",
+            "endDate": "2026-06-30",
+        },
+        headers=auth_headers(),
+    )
+    mid_period_id = create_resp_mid.json()["data"]["periodId"]
+
+    await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code,
+            "fiscalYear": 2026,
+            "periodNumber": 12,
+            "startDate": "2026-12-01",
+            "endDate": "2026-12-31",
+        },
+        headers=auth_headers(),
+    )
+
+    resp = await client.patch(
+        f"/api/v1/finance/periods/{mid_period_id}/close",
+        params={"organization_id": org_id, "dry_run": "true"},
+        headers=auth_headers(),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()["data"]
+
+    preview = body["closingJePreview"]
+    assert preview["isYearEnd"] is False
+    assert preview["lines"] == []
+    assert Decimal(preview["totalDebit"]) == Decimal("0")
+    assert Decimal(preview["totalCredit"]) == Decimal("0")
+    assert preview["note"] is not None
+    assert len(preview["note"]) > 0
+
+    # Period still open
+    assert body["period"]["status"] == "open"
+
+    # No JE or audit_log created
+    je_count = (
+        await db_session.execute(
+            select(sa_func.count(JournalEntry.jeId)).where(
+                JournalEntry.periodId == mid_period_id,
+            )
+        )
+    ).scalar_one()
+    assert je_count == 0
+
+
+@pytest.mark.asyncio
+async def test_dry_run_already_closed_period_returns_409(
+    client: AsyncClient, db_session
+) -> None:
+    """
+    dry_run=true on an already-closed period must return HTTP 409 —
+    same error contract as the real close.
+    """
+    org_id = f"org-drycl-{uuid.uuid4().hex[:8]}"
+    company_code = f"DC{uuid.uuid4().hex[:6].upper()}"
+    await _seed_company_coa_posting(db_session, org_id, company_code)
+
+    create_resp = await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code,
+            "fiscalYear": 2026,
+            "periodNumber": 5,
+            "startDate": "2026-05-01",
+            "endDate": "2026-05-31",
+        },
+        headers=auth_headers(),
+    )
+    period_id = create_resp.json()["data"]["periodId"]
+
+    # Real close first
+    await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id},
+        headers=auth_headers(),
+    )
+
+    # dry_run on an already-closed period must still return 409
+    resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id, "dry_run": "true"},
+        headers=auth_headers(),
+    )
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_dry_run_does_not_require_reason(
+    client: AsyncClient, db_session
+) -> None:
+    """
+    dry_run=true must succeed without a `reason` in the request body —
+    the user is just previewing, not committing.
+    """
+    from datetime import date as _date
+
+    org_id = f"org-dryreason-{uuid.uuid4().hex[:8]}"
+    company_code = f"DN{uuid.uuid4().hex[:6].upper()}"
+    cy_id, re_id, rev_id, cash_id = await _seed_company_coa_posting(
+        db_session, org_id, company_code
+    )
+
+    create_resp = await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code,
+            "fiscalYear": 2026,
+            "periodNumber": 12,
+            "startDate": "2026-12-01",
+            "endDate": "2026-12-31",
+        },
+        headers=auth_headers(),
+    )
+    period_id = create_resp.json()["data"]["periodId"]
+
+    await _post_test_revenue_je(
+        db_session, org_id, company_code, period_id,
+        revenue_account_id=rev_id,
+        cash_account_id=cash_id,
+        amount=Decimal("500.00"),
+        je_date=_date(2026, 12, 20),
+    )
+
+    # No body at all (no reason) — should succeed for dry_run=true
+    resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id, "dry_run": "true"},
+        headers=auth_headers(),
+        # Intentionally no JSON body
+    )
+    assert resp.status_code == 200, resp.text
+    assert "closingJePreview" in resp.json()["data"]
+
+
+@pytest.mark.asyncio
+async def test_dry_run_lines_match_real_close_lines(
+    client: AsyncClient, db_session
+) -> None:
+    """
+    Property test: for the same period, dry_run and a real close must
+    produce IDENTICAL JE lines (account IDs, debit/credit amounts,
+    line numbers, descriptions).
+
+    This is the key invariant enforced by the compute→commit split —
+    _compute_closing_je_preview is called once, and the result is either
+    returned directly (dry_run) or persisted as-is (commit).
+    """
+    from datetime import date as _date
+    from finance.models.orm.models import JournalEntry
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    org_id = f"org-dryconsist-{uuid.uuid4().hex[:8]}"
+    company_code = f"DC{uuid.uuid4().hex[:6].upper()}"
+    cy_id, re_id, rev_id, cash_id = await _seed_company_coa_posting(
+        db_session, org_id, company_code
+    )
+
+    create_resp = await client.post(
+        "/api/v1/finance/periods",
+        json={
+            "companyCode": company_code,
+            "fiscalYear": 2026,
+            "periodNumber": 12,
+            "startDate": "2026-12-01",
+            "endDate": "2026-12-31",
+        },
+        headers=auth_headers(),
+    )
+    period_id = create_resp.json()["data"]["periodId"]
+
+    await _post_test_revenue_je(
+        db_session, org_id, company_code, period_id,
+        revenue_account_id=rev_id,
+        cash_account_id=cash_id,
+        amount=Decimal("999.99"),
+        je_date=_date(2026, 12, 25),
+    )
+
+    # Step 1: dry_run to get the preview
+    dry_resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id, "dry_run": "true"},
+        headers=auth_headers(),
+    )
+    assert dry_resp.status_code == 200, dry_resp.text
+    preview_lines = dry_resp.json()["data"]["closingJePreview"]["lines"]
+
+    # Step 2: real close (period still OPEN — dry_run made no changes)
+    real_resp = await client.patch(
+        f"/api/v1/finance/periods/{period_id}/close",
+        params={"organization_id": org_id, "dry_run": "false"},
+        headers=auth_headers(),
+    )
+    assert real_resp.status_code == 200, real_resp.text
+    je_id = real_resp.json()["data"]["closingJe"]["jeId"]
+
+    # Step 3: load the actual posted JE lines from the DB
+    je = (
+        await db_session.execute(
+            select(JournalEntry)
+            .options(selectinload(JournalEntry.lines))
+            .where(JournalEntry.jeId == je_id)
+        )
+    ).scalar_one()
+    actual_lines = sorted(je.lines, key=lambda l: l.lineNumber)
+
+    # Step 4: compare preview lines to actual JE lines (line by line)
+    assert len(preview_lines) == len(actual_lines), (
+        f"Line count mismatch: preview has {len(preview_lines)}, "
+        f"actual JE has {len(actual_lines)}"
+    )
+    for preview_line, actual_line in zip(
+        sorted(preview_lines, key=lambda l: l["lineNumber"]),
+        actual_lines,
+    ):
+        assert preview_line["accountId"] == actual_line.accountId, (
+            f"accountId mismatch on line {preview_line['lineNumber']}"
+        )
+        preview_debit = Decimal(str(preview_line["debit"] or 0))
+        preview_credit = Decimal(str(preview_line["credit"] or 0))
+        actual_debit = Decimal(str(actual_line.debit or 0))
+        actual_credit = Decimal(str(actual_line.credit or 0))
+        assert preview_debit == actual_debit, (
+            f"Debit mismatch on line {preview_line['lineNumber']}: "
+            f"preview={preview_debit} actual={actual_debit}"
+        )
+        assert preview_credit == actual_credit, (
+            f"Credit mismatch on line {preview_line['lineNumber']}: "
+            f"preview={preview_credit} actual={actual_credit}"
+        )

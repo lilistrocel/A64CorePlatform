@@ -12,6 +12,13 @@ Audit trail (migration 013):
   closedAt / closedByUserId / closeReason — populated on close, cleared on reopen.
   reopenedAt / reopenedByUserId / reopenReason — populated on reopen, cleared on close.
   On a close-reopen-close cycle the fields always reflect the MOST RECENT transition.
+
+T-060.11-preview (2026-05-29):
+  `close_period` now accepts `dry_run=true` query flag. All pre-close validations
+  still run. When dry_run=true the closing-JE lines are computed but never written;
+  the response carries `closingJePreview` instead of `closingJe`. When dry_run=false
+  (default) the behaviour is unchanged — the preview is computed first and then used
+  as the source for the real write, guaranteeing the preview matches the commit.
 """
 
 import logging
@@ -58,7 +65,13 @@ _WRITE_ROLES = ("finance_admin", "super_admin", "admin")
 
 
 class ClosePeriodRequest(BaseModel):
-    """Optional body for the close-period endpoint."""
+    """Optional body for the close-period endpoint.
+
+    When dry_run=true the `reason` field is not required — the user is
+    previewing the proposed closing JE before committing.  On dry_run=false
+    (the real close) `reason` remains optional (it was always optional here;
+    the audit record still captures it when supplied).
+    """
 
     reason: Optional[str] = Field(
         None,
@@ -100,7 +113,7 @@ class ClosingJeInfo(BaseModel):
 
 
 class ClosePeriodResponse(BaseModel):
-    """Response shape for POST /periods/{id}/close (Wave 2)."""
+    """Response shape for POST /periods/{id}/close (Wave 2, dry_run=false)."""
 
     period: FiscalPeriodResponse
     closingJe: Optional[ClosingJeInfo] = Field(
@@ -124,6 +137,75 @@ class ReopenPeriodResponse(BaseModel):
             "found for this period."
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# T-060.11-preview — dry-run preview schemas
+# ---------------------------------------------------------------------------
+
+
+class ClosingJePreviewLine(BaseModel):
+    """One proposed line of the would-be closing JE.
+
+    Amounts are Decimal strings so the frontend can render them without
+    floating-point rounding surprises.  Exactly one of `debit` / `credit`
+    is non-null on each line (the other is None).
+    """
+
+    lineNumber: int
+    accountId: str
+    accountNumber: str
+    accountName: str
+    debit: Optional[Decimal] = None
+    credit: Optional[Decimal] = None
+    description: str
+
+
+class ClosingJeTargetAccount(BaseModel):
+    """Identifies the Retained Earnings account that receives the net."""
+
+    accountId: str
+    accountNumber: str
+    accountName: str
+
+
+class ClosingJePreview(BaseModel):
+    """
+    Proposed closing-JE structure returned when dry_run=true.
+
+    For a **year-end period** with non-zero net income:
+      - `isYearEnd` = True
+      - `lines` contains the two balanced JE lines (DR / CR)
+      - `totalDebit` == `totalCredit`
+      - `netIncome` = absolute value of net income (positive for profit,
+        negative for loss)
+      - `targetAccount` identifies the Retained Earnings destination
+      - `note` = None
+
+    For a **mid-year (monthly) period** or a year-end period with zero
+    net income:
+      - `isYearEnd` = True/False accordingly
+      - `lines` = []
+      - `totalDebit` = `totalCredit` = Decimal("0")
+      - `netIncome` = Decimal("0")
+      - `targetAccount` = None
+      - `note` describes why no JE would be posted
+    """
+
+    isYearEnd: bool
+    lines: List[ClosingJePreviewLine]
+    totalDebit: Decimal
+    totalCredit: Decimal
+    netIncome: Decimal
+    targetAccount: Optional[ClosingJeTargetAccount] = None
+    note: Optional[str] = None
+
+
+class PreviewClosePeriodResponse(BaseModel):
+    """Response shape for PATCH /periods/{id}/close?dry_run=true."""
+
+    period: FiscalPeriodResponse
+    closingJePreview: ClosingJePreview
 
 
 # ---------------------------------------------------------------------------
@@ -342,6 +424,246 @@ async def _next_je_number(
     return f"{prefix}{next_seq:04d}"
 
 
+# ---------------------------------------------------------------------------
+# T-060.11-preview — pure compute phase (no DB writes)
+# ---------------------------------------------------------------------------
+
+
+async def _compute_closing_je_preview(
+    db: AsyncSession,
+    period: FiscalPeriod,
+    organization_id: str,
+) -> ClosingJePreview:
+    """
+    Compute what the closing JE *would* look like for this period.
+
+    No DB writes.  Returns a ClosingJePreview that the caller can either
+    render directly (dry_run=True) or use as the blueprint for the real
+    JE write (_post_closing_je_from_preview), guaranteeing that the
+    preview and the committed JE are identical.
+
+    Year-end detection:
+        Compares period.endDate to MAX(endDate) across all periods for the
+        same (companyCode, fiscalYear).  Robust against arbitrary fiscal
+        calendars — no hard-coded month assumption.
+
+    For a **year-end period** with |net income| > 0.01 AED:
+        Line 1 — debit leg  (DR Current Year P/(L)  or DR Retained Earnings)
+        Line 2 — credit leg (CR Retained Earnings   or CR Current Year P/(L))
+        totalDebit == totalCredit == |net_income|
+
+    For a **mid-year period** or a year-end period with zero net income:
+        lines = [], totals = 0, note populated.
+
+    Args:
+        db:              Active async session (read-only in this function).
+        period:          The FiscalPeriod ORM row being considered for close.
+        organization_id: Org scope for CoA and PostingSetup lookups.
+
+    Returns:
+        ClosingJePreview — structured preview the caller can show or commit.
+
+    Raises:
+        HTTPException 400: If year-end close is detected but closing accounts
+                           are not configured (same error the real close raises).
+    """
+    is_year_end = await _is_fiscal_year_end_period(db, period)
+
+    if not is_year_end:
+        return ClosingJePreview(
+            isYearEnd=False,
+            lines=[],
+            totalDebit=Decimal("0"),
+            totalCredit=Decimal("0"),
+            netIncome=Decimal("0"),
+            targetAccount=None,
+            note="No closing JE — period status flip only (mid-year close).",
+        )
+
+    # Compute net income first. Accounts are only needed (and validated) when
+    # net income is non-zero — a zero-NI year-end still closes cleanly without
+    # posting a JE, so we must not require PostingSetup in that case.
+    net_income = await _compute_fiscal_year_net_income(
+        db, organization_id, period.companyCode, period.fiscalYear
+    )
+
+    if net_income.copy_abs() <= _BALANCE_TOLERANCE:
+        return ClosingJePreview(
+            isYearEnd=True,
+            lines=[],
+            totalDebit=Decimal("0"),
+            totalCredit=Decimal("0"),
+            netIncome=Decimal("0"),
+            targetAccount=None,
+            note=(
+                "Net income for the fiscal year is zero (within 0.01 AED tolerance). "
+                "No closing JE will be posted."
+            ),
+        )
+
+    # Net income is non-zero — resolve closing accounts now. If they are missing,
+    # surface a clear 400 before building any lines. (Same behaviour as old code.)
+    cy_account_id, re_account_id = await _resolve_closing_accounts(
+        db, organization_id, period.companyCode
+    )
+
+    # Fetch account metadata (number + name) for both accounts so the preview
+    # lines carry human-readable info, not just opaque UUIDs.
+    accounts_result = await db.execute(
+        select(
+            GLAccount.accountId,
+            GLAccount.accountNumber,
+            GLAccount.accountName,
+        ).where(
+            GLAccount.accountId.in_([cy_account_id, re_account_id])
+        )
+    )
+    acct_map: dict[str, Tuple[str, str]] = {
+        row.accountId: (row.accountNumber, row.accountName)
+        for row in accounts_result.all()
+    }
+
+    cy_num, cy_name = acct_map.get(cy_account_id, (_CURRENT_YEAR_PL_ACCOUNT_CODE, "Current Year P/(L)"))
+    re_num, re_name = acct_map.get(re_account_id, ("312000-001", "Retained Earnings"))
+
+    amount = net_income.copy_abs()
+    profit = net_income >= 0
+
+    # Profit: DR Current Year P/(L) / CR Retained Earnings
+    # Loss:   DR Retained Earnings  / CR Current Year P/(L)
+    if profit:
+        dr_id, dr_num, dr_name = cy_account_id, cy_num, cy_name
+        cr_id, cr_num, cr_name = re_account_id, re_num, re_name
+        dr_desc = "Year-end closing — debit leg"
+        cr_desc = "Year-end closing — credit leg"
+    else:
+        dr_id, dr_num, dr_name = re_account_id, re_num, re_name
+        cr_id, cr_num, cr_name = cy_account_id, cy_num, cy_name
+        dr_desc = "Year-end closing — debit leg"
+        cr_desc = "Year-end closing — credit leg"
+
+    lines = [
+        ClosingJePreviewLine(
+            lineNumber=1,
+            accountId=dr_id,
+            accountNumber=dr_num,
+            accountName=dr_name,
+            debit=amount,
+            credit=None,
+            description=dr_desc,
+        ),
+        ClosingJePreviewLine(
+            lineNumber=2,
+            accountId=cr_id,
+            accountNumber=cr_num,
+            accountName=cr_name,
+            debit=None,
+            credit=amount,
+            description=cr_desc,
+        ),
+    ]
+
+    target = ClosingJeTargetAccount(
+        accountId=re_account_id,
+        accountNumber=re_num,
+        accountName=re_name,
+    )
+
+    return ClosingJePreview(
+        isYearEnd=True,
+        lines=lines,
+        totalDebit=amount,
+        totalCredit=amount,
+        netIncome=net_income,
+        targetAccount=target,
+        note=None,
+    )
+
+
+async def _post_closing_je_from_preview(
+    db: AsyncSession,
+    organization_id: str,
+    period: FiscalPeriod,
+    preview: ClosingJePreview,
+    user_id: str,
+    now_utc: datetime,
+) -> JournalEntry:
+    """
+    Persist the closing JE whose lines were already computed by
+    `_compute_closing_je_preview`.  No re-computation happens here —
+    the `preview` is the single source of truth for both the dry-run
+    response and the real write.  This guarantees that the preview the
+    user sees matches the JE that is actually posted.
+
+    Caller is responsible for:
+      - Verifying `preview.lines` is non-empty before calling.
+      - Calling `_next_je_number` AFTER deciding to commit (not during preview)
+        so no sequence number is consumed by a dry-run.
+
+    Args:
+        db:              Active async session (will db.add + db.flush).
+        organization_id: Org scope for JournalEntry header.
+        period:          FiscalPeriod being closed.
+        preview:         Output of `_compute_closing_je_preview`.
+        user_id:         Actor user ID for `postedBy`.
+        now_utc:         Commit timestamp (UTC, tz-naive for MySQL compat).
+
+    Returns:
+        The newly flushed JournalEntry ORM row.
+    """
+    je_number = await _next_je_number(db, period.companyCode, period.fiscalYear)
+    je_id = str(uuid.uuid4())
+
+    # Reason: net_income from preview may be negative (loss); use copy_abs for
+    # totalDebit/totalCredit — they must always be positive by convention.
+    amount = preview.netIncome.copy_abs()
+    profit = preview.netIncome >= 0
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=organization_id,
+        companyCode=period.companyCode,
+        jeNumber=je_number,
+        jeDate=period.endDate,
+        periodId=period.periodId,
+        sourceEventType="period_close",
+        # Reason: sourceEventId is NOT NULL; using periodId gives a direct
+        # trace from the JE back to the period that triggered it.
+        sourceEventId=period.periodId,
+        sourceDocId=period.periodId,
+        sourceDocNumber=f"PERIOD-CLOSE-{period.fiscalYear}-{period.periodNumber}",
+        description=(
+            f"Year-end closing entry for fiscal year {period.fiscalYear}: "
+            f"roll net {'profit' if profit else 'loss'} of "
+            f"{amount} into Retained Earnings."
+        ),
+        totalDebit=preview.totalDebit,
+        totalCredit=preview.totalCredit,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy=user_id,
+    )
+    db.add(je)
+
+    for line in preview.lines:
+        db.add(
+            JournalEntryLine(
+                jeLineId=str(uuid.uuid4()),
+                jeId=je_id,
+                lineNumber=line.lineNumber,
+                accountId=line.accountId,
+                debit=line.debit if line.debit is not None else Decimal("0"),
+                credit=line.credit if line.credit is not None else Decimal("0"),
+                description=line.description,
+                referenceLineId=None,
+                costCenterId=None,
+            )
+        )
+
+    await db.flush()
+    return je
+
+
 async def _post_closing_je(
     db: AsyncSession,
     organization_id: str,
@@ -353,92 +675,79 @@ async def _post_closing_je(
     """
     Construct + write the year-end closing JE inside the caller's session.
 
-    Two lines:
-      Profit case (net_income > 0):
-        DR  Current Year P/(L)            <net_income>
-        CR  Retained Earnings - Prior     <net_income>
-      Loss case (net_income < 0):
-        DR  Retained Earnings - Prior     <|net_income|>
-        CR  Current Year P/(L)            <|net_income|>
-      Zero case: no JE posted (caller skips this function).
+    DEPRECATED internal path — preserved so the reopen reversal logic
+    continues to work without changes. New callers should use the
+    compute → commit split:
+        preview = await _compute_closing_je_preview(...)
+        je = await _post_closing_je_from_preview(...)
 
-    The JE is dated period.endDate so it falls inside the period being
-    closed. sourceEventType="period_close" + sourceDocId=period.periodId
-    let us locate it on reopen.
+    This wrapper builds a minimal ClosingJePreview from `net_income` and
+    delegates to `_post_closing_je_from_preview`, keeping both paths
+    identical.
     """
+    # Build a throwaway preview to delegate — this avoids duplicating JE
+    # line construction logic. We pass it through the same path so both
+    # produce byte-for-byte identical output.
     cy_account, re_account = await _resolve_closing_accounts(
         db, organization_id, period.companyCode
     )
-
     amount = net_income.copy_abs()
-    if net_income >= 0:
-        dr_account = cy_account
-        cr_account = re_account
+    profit = net_income >= 0
+
+    # Fetch account metadata for labels (same query as in _compute_closing_je_preview).
+    accounts_result = await db.execute(
+        select(
+            GLAccount.accountId,
+            GLAccount.accountNumber,
+            GLAccount.accountName,
+        ).where(
+            GLAccount.accountId.in_([cy_account, re_account])
+        )
+    )
+    acct_map: dict[str, Tuple[str, str]] = {
+        row.accountId: (row.accountNumber, row.accountName)
+        for row in accounts_result.all()
+    }
+    cy_num, cy_name = acct_map.get(cy_account, (_CURRENT_YEAR_PL_ACCOUNT_CODE, "Current Year P/(L)"))
+    re_num, re_name = acct_map.get(re_account, ("312000-001", "Retained Earnings"))
+
+    if profit:
+        dr_id, dr_num, dr_name = cy_account, cy_num, cy_name
+        cr_id, cr_num, cr_name = re_account, re_num, re_name
     else:
-        dr_account = re_account
-        cr_account = cy_account
+        dr_id, dr_num, dr_name = re_account, re_num, re_name
+        cr_id, cr_num, cr_name = cy_account, cy_num, cy_name
 
-    je_number = await _next_je_number(db, period.companyCode, period.fiscalYear)
-    je_id = str(uuid.uuid4())
-
-    je = JournalEntry(
-        jeId=je_id,
-        organizationId=organization_id,
-        companyCode=period.companyCode,
-        jeNumber=je_number,
-        jeDate=period.endDate,
-        periodId=period.periodId,
-        sourceEventType="period_close",
-        # Reason: sourceEventId is NOT NULL; using periodId gives a direct
-        # trace from the JE back to the period that triggered it. Mirrors
-        # how the reversal endpoint uses original.jeId for traceability.
-        sourceEventId=period.periodId,
-        sourceDocId=period.periodId,
-        sourceDocNumber=f"PERIOD-CLOSE-{period.fiscalYear}-{period.periodNumber}",
-        description=(
-            f"Year-end closing entry for fiscal year {period.fiscalYear}: "
-            f"roll net {'profit' if net_income >= 0 else 'loss'} of "
-            f"{amount} into Retained Earnings."
-        ),
+    preview = ClosingJePreview(
+        isYearEnd=True,
+        lines=[
+            ClosingJePreviewLine(
+                lineNumber=1, accountId=dr_id, accountNumber=dr_num,
+                accountName=dr_name, debit=amount, credit=None,
+                description="Year-end closing — debit leg",
+            ),
+            ClosingJePreviewLine(
+                lineNumber=2, accountId=cr_id, accountNumber=cr_num,
+                accountName=cr_name, debit=None, credit=amount,
+                description="Year-end closing — credit leg",
+            ),
+        ],
         totalDebit=amount,
         totalCredit=amount,
-        status=JEStatusEnum.POSTED,
-        postedAt=now_utc,
-        postedBy=user_id,
+        netIncome=net_income,
+        targetAccount=ClosingJeTargetAccount(
+            accountId=re_account, accountNumber=re_num, accountName=re_name,
+        ),
+        note=None,
     )
-    db.add(je)
-
-    # Line 1: debit
-    db.add(
-        JournalEntryLine(
-            jeLineId=str(uuid.uuid4()),
-            jeId=je_id,
-            lineNumber=1,
-            accountId=dr_account,
-            debit=amount,
-            credit=Decimal("0"),
-            description="Year-end closing — debit leg",
-            referenceLineId=None,
-            costCenterId=None,
-        )
+    return await _post_closing_je_from_preview(
+        db=db,
+        organization_id=organization_id,
+        period=period,
+        preview=preview,
+        user_id=user_id,
+        now_utc=now_utc,
     )
-    # Line 2: credit
-    db.add(
-        JournalEntryLine(
-            jeLineId=str(uuid.uuid4()),
-            jeId=je_id,
-            lineNumber=2,
-            accountId=cr_account,
-            debit=Decimal("0"),
-            credit=amount,
-            description="Year-end closing — credit leg",
-            referenceLineId=None,
-            costCenterId=None,
-        )
-    )
-
-    await db.flush()
-    return je
 
 
 async def _find_closing_je_for_period(
@@ -645,8 +954,14 @@ async def create_period(
 
 @router.patch(
     "/periods/{period_id}/close",
-    response_model=SuccessResponse[ClosePeriodResponse],
-    summary="Close a fiscal period",
+    # Reason: response_model=None because the route returns one of two different
+    # Pydantic shapes depending on dry_run — SuccessResponse[ClosePeriodResponse]
+    # (commit) or SuccessResponse[PreviewClosePeriodResponse] (dry-run). FastAPI
+    # would strip `closingJePreview` if response_model were fixed to
+    # ClosePeriodResponse. Correctness is enforced by the models in the return
+    # statements; the OpenAPI schema is intentionally untyped for this endpoint.
+    response_model=None,
+    summary="Close a fiscal period (or preview the closing JE with dry_run=true)",
 )
 async def close_period(
     period_id: str,
@@ -659,34 +974,48 @@ async def close_period(
             "year-end close."
         ),
     ),
+    dry_run: bool = Query(
+        False,
+        description=(
+            "When true: run all pre-close validations and compute the proposed "
+            "closing JE, but do NOT write anything to the database. Returns a "
+            "`closingJePreview` instead of `closingJe`. `reason` is not required "
+            "on the dry-run path. The preview lines are identical to what a real "
+            "close would post — this is enforced by the compute→commit split."
+        ),
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenPayload = Depends(require_roles(*_WRITE_ROLES)),
-) -> SuccessResponse[ClosePeriodResponse]:
+):
     """
-    Close a fiscal period (Wave 2 / T-060.1).
+    Close a fiscal period (Wave 2 / T-060.1 + T-060.11-preview).
 
-    Pipeline (atomic):
+    When ``dry_run=false`` (default) — real close, atomic:
       1. Refuse if period not OPEN.
       2. Validate the period's JEs balance (Σ DR == Σ CR ± 0.01 AED).
-      3. If this period is the **fiscal year-end** (its endDate matches
-         the latest endDate for its fiscalYear), compute net income for
-         the fiscal year and auto-post the closing JE:
-           DR Current Year P/(L) / CR Retained Earnings (or reversed
-           if loss).
-      4. Flip period.status → CLOSED, populate audit fields, clear any
+      3. Compute the proposed closing JE (pure, no writes).
+      4. If this period is the **fiscal year-end** and net income is non-zero,
+         persist the closing JE using the computed preview as the blueprint.
+         DR Current Year P/(L) / CR Retained Earnings (or reversed if loss).
+      5. Flip period.status → CLOSED, populate audit fields, clear any
          reopen-trail fields.
-      5. Write an audit_log row referencing the closing JE (when posted).
+      6. Write an audit_log row referencing the closing JE (when posted).
       All steps run in a single MySQL transaction; either everything
       succeeds or nothing changes.
 
-    Response carries the period plus the closing-JE metadata when one
-    was posted (null for ordinary monthly closes).
+    When ``dry_run=true`` — preview only, no DB writes:
+      1. Refuse if period not OPEN.
+      2. Validate balance (same as real close).
+      3. Compute and return the proposed closing JE in ``closingJePreview``.
+      No status change, no JE write, no audit_log entry.
+      The ``reason`` field in the request body is NOT required on this path.
 
     Raises:
       404 if period not found.
-      409 if period is not OPEN.
+      409 if period is not OPEN (same on dry-run — prevents previewing an
+          already-closed period as if it could be re-closed).
       400 if period doesn't balance, or if closing accounts are
-          unconfigured at year-end.
+          unconfigured at year-end (same on dry-run — surfaces errors early).
     """
     period = await db.get(FiscalPeriod, period_id)
     if not period:
@@ -703,32 +1032,61 @@ async def close_period(
             ),
         )
 
-    # Pre-close validation — refuse if books don't balance for the period.
+    # Pre-close validation — same on both paths. Surface errors before any
+    # compute work, and before any writes (dry-run or real).
     await _validate_period_balanced(
         db, organization_id, period.companyCode, period.periodId
     )
 
+    # Compute the proposed JE (pure — no DB writes regardless of dry_run).
+    # This is the single source of truth for both the preview response and
+    # the real JE write, so the two paths are guaranteed to be identical.
+    preview = await _compute_closing_je_preview(db, period, organization_id)
+
+    # ------------------------------------------------------------------ #
+    # DRY-RUN PATH — return preview, no mutations                         #
+    # ------------------------------------------------------------------ #
+    if dry_run:
+        # Reason: refresh is NOT called here because we haven't mutated the
+        # period row — the ORM object already reflects the DB state.
+        logger.info(
+            "[Finance/Periods] dry_run period_id=%s org=%s isYearEnd=%s "
+            "netIncome=%s lines=%d",
+            period_id,
+            organization_id,
+            preview.isYearEnd,
+            preview.netIncome,
+            len(preview.lines),
+        )
+        return success(
+            PreviewClosePeriodResponse(
+                period=FiscalPeriodResponse.model_validate(period),
+                closingJePreview=preview,
+            ),
+            message=None,
+        )
+
+    # ------------------------------------------------------------------ #
+    # COMMIT PATH — persist JE, flip status, write audit                  #
+    # ------------------------------------------------------------------ #
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     reason_text = body.reason if body is not None else None
     before_status = period.status
 
-    # Auto-post closing JE if this is the fiscal year-end period.
+    # Persist the closing JE from the preview if lines were computed.
+    # Reason: `_next_je_number` is called inside _post_closing_je_from_preview —
+    # deliberately NOT called during _compute_closing_je_preview so that dry-run
+    # calls never consume a sequence slot.
     closing_je: Optional[JournalEntry] = None
-    if await _is_fiscal_year_end_period(db, period):
-        net_income = await _compute_fiscal_year_net_income(
-            db, organization_id, period.companyCode, period.fiscalYear
+    if preview.lines:
+        closing_je = await _post_closing_je_from_preview(
+            db=db,
+            organization_id=organization_id,
+            period=period,
+            preview=preview,
+            user_id=current_user.userId,
+            now_utc=now_utc,
         )
-        # Reason: zero-net-income years still close cleanly — skip the JE
-        # because debiting/crediting zero would just be noise.
-        if net_income.copy_abs() > _BALANCE_TOLERANCE:
-            closing_je = await _post_closing_je(
-                db=db,
-                organization_id=organization_id,
-                period=period,
-                net_income=net_income,
-                user_id=current_user.userId,
-                now_utc=now_utc,
-            )
 
     # Reason: populate close audit fields, clear any prior reopen audit
     # fields so the record always reflects only the MOST RECENT transition.

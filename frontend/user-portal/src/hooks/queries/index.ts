@@ -188,12 +188,13 @@ export {
   paymentsQueryKeys,
 } from './usePayments';
 
-// Finance hooks — Fiscal Periods (Phase D.5)
+// Finance hooks — Fiscal Periods (Phase D.5 + T-060.11-preview-fe)
 export {
   useFiscalPeriods,
   useCreatePeriod,
   useClosePeriod,
   useReopenPeriod,
+  useClosePeriodPreview,
   fiscalPeriodsQueryKeys,
 } from './useFiscalPeriods';
 
