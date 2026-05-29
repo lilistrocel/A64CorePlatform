@@ -1,15 +1,16 @@
 /**
  * Journal Entries API Service
  *
- * Typed API calls for the JE (Journal Entry) read-only module.
- * JEs are produced by the finance consumer when operational documents are posted.
- * The UI is read-only; no create/edit/delete/void from the frontend in v1.
+ * Typed API calls for the JE (Journal Entry) module.
+ * JEs are produced by the finance consumer when operational documents are posted,
+ * or via the manual JE form (T-061.1) for correcting / adjusting entries.
  *
  * Endpoints: /api/v1/finance/journal-entries
  *
  * Envelope conventions (finance side uses a different shape from purchasing):
- *   - List:   response.data  →  { items, total, page, size, pages }
- *   - Detail: response.data.data  (success envelope — note the double .data.data)
+ *   - List:         response.data  →  { items, total, page, size, pages }
+ *   - Detail:       response.data.data  (success envelope)
+ *   - Manual create: ManualJECreateResponse — { data: JournalEntry, meta: { warnings[] } }
  */
 
 import { apiClient } from './api';
@@ -91,6 +92,48 @@ export interface ReverseJEResult {
   reversal: JournalEntry;
 }
 
+// ============================================================================
+// Manual JE Creation types (T-061.1)
+// ============================================================================
+
+/**
+ * A single line in a manual JE request.
+ * Exactly one of debit / credit must be non-null; the other must be null.
+ * Amount must be > 0.
+ */
+export interface ManualJELineRequest {
+  accountId: string;
+  debit: string | null;
+  credit: string | null;
+  costCenterId?: string | null;
+  description?: string | null;
+}
+
+/**
+ * Request body for POST /api/v1/finance/journal-entries (manual create).
+ * All Pydantic validations are also performed client-side.
+ */
+export interface ManualJECreateRequest {
+  organizationId: string;
+  companyCode: string;
+  jeDate: string;          // YYYY-MM-DD
+  description: string;
+  reason: string;
+  lines: ManualJELineRequest[];
+}
+
+/** Backend response meta for manual JE creation — may carry inactive-account warnings. */
+export interface ManualJEMeta {
+  warnings: string[];
+}
+
+/** Response envelope for POST /api/v1/finance/journal-entries. */
+export interface ManualJECreateResponse {
+  data: JournalEntry;
+  meta: ManualJEMeta;
+  message: string | null;
+}
+
 export interface ListJournalEntriesParams {
   organizationId: string;
   companyCode?: string;
@@ -166,6 +209,23 @@ export async function getJournalEntry(
     { params: { organization_id: organizationId } }
   );
   return response.data.data;
+}
+
+/**
+ * Create a manual (correcting / adjusting) journal entry.
+ * POST /api/v1/finance/journal-entries
+ *
+ * Roles: finance_admin, super_admin only.
+ * Returns ManualJECreateResponse with the posted JE and optional inactive-account warnings.
+ */
+export async function createManualJournalEntry(
+  body: ManualJECreateRequest
+): Promise<ManualJECreateResponse> {
+  const response = await apiClient.post<ManualJECreateResponse>(
+    '/v1/finance/journal-entries',
+    body
+  );
+  return response.data;
 }
 
 /**

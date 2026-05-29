@@ -90,6 +90,7 @@ const FINANCE_NAV_GROUP: NavItemDef = {
     { to: '/finance/posting-setup', icon: '🗂️', label: 'Posting Setup' },
     { to: '/finance/item-mapping', icon: '🏷️', label: 'Item GL Mapping' },
     { to: '/finance/journal-entries', icon: '📒', label: 'Journal Entries' },
+    { to: '/finance/journal-entries/new', icon: '✍️', label: 'New Manual JE' },
     { to: '/finance/trial-balance', icon: '⚖️', label: 'Trial Balance' },
     { to: '/finance/balance-sheet', icon: '🏛️', label: 'Balance Sheet' },
     { to: '/finance/income-statement', icon: '📊', label: 'Income Statement' },

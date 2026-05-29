@@ -8,7 +8,11 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as jeService from '../../services/journalEntriesService';
-import type { ListJournalEntriesParams } from '../../services/journalEntriesService';
+import type {
+  ListJournalEntriesParams,
+  ManualJECreateRequest,
+  ManualJECreateResponse,
+} from '../../services/journalEntriesService';
 
 // ─── Query key factory ─────────────────────────────────────────────────────────
 
@@ -45,6 +49,31 @@ export function useJournalEntry(jeId: string | null, organizationId: string) {
     queryFn: () => jeService.getJournalEntry(jeId!, organizationId),
     enabled: !!jeId && !!organizationId,
     staleTime: 60_000,   // JEs are immutable — longer cache is fine
+  });
+}
+
+/**
+ * Mutation: create a manual (correcting / adjusting) journal entry.
+ * On success, invalidates the JE list and downstream caches so the new JE
+ * appears immediately in the list page and financial reports are re-fetched.
+ *
+ * Returns ManualJECreateResponse — the caller should inspect meta.warnings[]
+ * and show a warning toast if non-empty.
+ */
+export function useCreateManualJournalEntry() {
+  const queryClient = useQueryClient();
+  return useMutation<ManualJECreateResponse, unknown, ManualJECreateRequest>({
+    mutationFn: (body: ManualJECreateRequest) =>
+      jeService.createManualJournalEntry(body),
+    onSuccess: (_result, variables) => {
+      // Invalidate JE list queries for this org so the new JE appears
+      queryClient.invalidateQueries({
+        queryKey: ['finance', 'journal-entries', variables.organizationId],
+      });
+      // A new JE changes trial balance, reports, etc.
+      queryClient.invalidateQueries({ queryKey: ['finance', 'reports'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'trial-balance'] });
+    },
   });
 }
 

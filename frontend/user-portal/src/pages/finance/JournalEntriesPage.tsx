@@ -10,7 +10,7 @@
  */
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useJournalEntries, useJournalEntry, useReverseJournalEntry } from '../../hooks/queries/useJournalEntries';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
@@ -470,9 +470,24 @@ const ModalConfirmButton = styled.button`
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
+const NewJEButton = styled.button`
+  padding: 10px 18px;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 150ms ease;
+  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+`;
+
 // ─── Role gate for reverse action ─────────────────────────────────────────────
 
 const REVERSE_ROLES = new Set(['finance_admin', 'admin', 'super_admin']);
+const MANUAL_JE_ROLES = new Set(['finance_admin', 'super_admin']);
 
 // ─── Human-friendly source event type labels ──────────────────────────────────
 
@@ -636,9 +651,11 @@ export function JournalEntriesPage() {
   // The previous `const { showSuccessToast } = useToastStore()` returned
   // undefined and crashed the post-reverse handler — leaving the modal open.
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const organizationId = user?.organizationId ?? '';
 
   const canReverse = REVERSE_ROLES.has(user?.role ?? '');
+  const canCreateManualJE = MANUAL_JE_ROLES.has(user?.role ?? '');
 
   // Filter state — initialise search from URL param (cross-page link from GR detail)
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
@@ -760,6 +777,15 @@ export function JournalEntriesPage() {
       <Title>Journal Entries</Title>
 
       <ToolbarRow>
+        {canCreateManualJE && (
+          <NewJEButton
+            type="button"
+            onClick={() => navigate('/finance/journal-entries/new')}
+            aria-label="Create a new manual journal entry"
+          >
+            ✍ New Manual JE
+          </NewJEButton>
+        )}
         <SearchInput
           placeholder="Search by JE number or source doc..."
           value={search}

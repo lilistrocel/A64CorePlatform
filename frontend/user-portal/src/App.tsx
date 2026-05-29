@@ -153,8 +153,9 @@ const APInvoicesPage = lazy(() => import('./pages/purchasing/APInvoicesPage').th
 const APInvoiceDetailPage = lazy(() => import('./pages/purchasing/APInvoiceDetailPage').then(m => ({ default: m.APInvoiceDetailPage })));
 const APInvoiceFormPage = lazy(() => import('./pages/purchasing/APInvoiceFormPage').then(m => ({ default: m.APInvoiceFormPage })));
 
-// Finance module pages (Phase B — Journal Entries)
+// Finance module pages (Phase B — Journal Entries + T-061.1 Manual JE)
 const JournalEntriesPage = lazy(() => import('./pages/finance/JournalEntriesPage').then(m => ({ default: m.JournalEntriesPage })));
+const ManualJournalEntryPage = lazy(() => import('./pages/finance/ManualJournalEntryPage').then(m => ({ default: m.ManualJournalEntryPage })));
 
 // Finance module pages (PM feedback item 5 — Trial Balance)
 const TrialBalancePage = lazy(() => import('./pages/finance/TrialBalancePage').then(m => ({ default: m.TrialBalancePage })));
@@ -327,7 +328,10 @@ function App() {
                 <Route path="/purchasing/ap/:docId" element={<APInvoiceDetailPage />} />
                 <Route path="/purchasing/ap/:docId/edit" element={<APInvoiceFormPage />} />
 
-                {/* Finance module (Phase B — Journal Entries) */}
+                {/* Finance module (Phase B — Journal Entries + T-061.1 Manual JE) */}
+                {/* NOTE: /new must be registered BEFORE /:jeId to avoid the literal "new" being
+                    matched as a JE UUID by the detail route. React Router matches in declaration order. */}
+                <Route path="/finance/journal-entries/new" element={<FinanceGate><ManualJournalEntryPage /></FinanceGate>} />
                 <Route path="/finance/journal-entries" element={<FinanceGate><JournalEntriesPage /></FinanceGate>} />
 
                 {/* Finance module (PM feedback item 5 — Trial Balance) */}

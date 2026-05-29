@@ -151,11 +151,12 @@ export {
   grQueryKeys,
 } from './useGoodsReceipts';
 
-// Finance hooks — Journal Entries (Phase B)
+// Finance hooks — Journal Entries (Phase B + T-061.1 manual create)
 export {
   useJournalEntries,
   useJournalEntry,
   useReverseJournalEntry,
+  useCreateManualJournalEntry,
   jeQueryKeys,
 } from './useJournalEntries';
 
