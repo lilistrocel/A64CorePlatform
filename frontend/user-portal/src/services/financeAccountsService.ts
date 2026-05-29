@@ -54,6 +54,34 @@ export type AccountRole =
   | 'other'
   | null;
 
+/**
+ * Cash-flow statement category for an account.
+ * Mirrors CashFlowCategoryEnum from the finance service ORM (T-060.2).
+ * - none             → excluded from CF statement (default)
+ * - cash             → actual cash & cash equivalents
+ * - working_capital  → current AR/AP/inventory delta (operating section)
+ * - non_cash_adjustment → depreciation / amortisation add-backs (operating)
+ * - investing        → non-current asset purchases/disposals
+ * - financing        → borrowings, share capital, dividends
+ */
+export type CashFlowCategory =
+  | 'cash'
+  | 'working_capital'
+  | 'non_cash_adjustment'
+  | 'investing'
+  | 'financing'
+  | 'none';
+
+/** Human-readable labels for each cash-flow category value. */
+export const CASH_FLOW_CATEGORY_LABELS: Record<CashFlowCategory, string> = {
+  cash: 'Cash & Equivalents',
+  working_capital: 'Working Capital',
+  non_cash_adjustment: 'Non-Cash Adjustment',
+  investing: 'Investing',
+  financing: 'Financing',
+  none: '— (unset)',
+};
+
 // Fixed display order for drawers in the tree.
 export const DRAWER_ORDER: DrawerEnum[] = [
   'ASSETS',
@@ -138,6 +166,8 @@ export interface GLAccount {
   isControlAccount: boolean;
   isActive: boolean;
   isLockedNumber: boolean;
+  /** Cash-flow statement categorisation (T-060.2 / T-060.12). Default: 'none'. */
+  cashFlowCategory: CashFlowCategory;
   createdAt: string;
   updatedAt: string;
 }
@@ -173,6 +203,8 @@ export interface GLAccountUpdate {
   parentAccountId?: string | null;
   isHeader?: boolean;
   isActive?: boolean;
+  /** Inline-edit from the CoA page (T-060.12). */
+  cashFlowCategory?: CashFlowCategory;
 }
 
 /** Backend paginated list response wrapper. */

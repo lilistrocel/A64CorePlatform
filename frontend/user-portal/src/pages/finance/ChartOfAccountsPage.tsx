@@ -9,16 +9,17 @@
  * (Project-wide rule: data-entry modals close via X button, never on backdrop click.)
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import styled from 'styled-components';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import styled, { keyframes } from 'styled-components';
 import { useAuthStore } from '../../stores/auth.store';
-import { showSuccessToast } from '../../stores/toast.store';
+import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
 import {
   useFinanceAccounts,
   useCreateFinanceAccount,
   useUpdateFinanceAccount,
   useDeactivateFinanceAccount,
   useReactivateFinanceAccount,
+  useUpdateCashFlowCategory,
 } from '../../hooks/queries/useFinanceAccounts';
 import {
   DRAWER_ORDER,
@@ -26,12 +27,14 @@ import {
   ACCOUNT_TYPE_LABELS,
   ACCOUNT_LEVEL_LABELS,
   ACCOUNT_ROLE_LABELS,
+  CASH_FLOW_CATEGORY_LABELS,
   type GLAccount,
   type GLAccountCreate,
   type DrawerEnum,
   type AccountTypeEnum,
   type AccountLevel,
   type AccountRole,
+  type CashFlowCategory,
 } from '../../services/financeAccountsService';
 import { parseApiErrors } from '../../utils/apiErrors';
 import type { ApiErrorItem } from '../../utils/apiErrors';
@@ -39,7 +42,13 @@ import type { ApiErrorItem } from '../../utils/apiErrors';
 // ─── Role gate ─────────────────────────────────────────────────────────────────
 
 const WRITE_ROLES = new Set(['finance_admin', 'super_admin', 'admin']);
+/** Roles permitted to edit cashFlowCategory (stricter than general write). */
+const CF_EDIT_ROLES = new Set(['finance_admin', 'super_admin']);
 const PLATFORM_DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
+
+/** localStorage key for the one-time CF category review banner dismissal. */
+const makeBannerKey = (userId: string) =>
+  `coa.cashFlowCategoryBannerDismissed.${userId}`;
 
 // ─── API field map for 422 errors ──────────────────────────────────────────────
 
@@ -696,6 +705,278 @@ const HintText = styled.span`
   color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
+// ─── Cash-flow category review banner ─────────────────────────────────────────
+
+const BannerContainer = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.warningBg || '#fffbeb'};
+  border: 1px solid ${({ theme }) => theme.colors.warning || '#f59e0b'};
+  margin-bottom: 20px;
+`;
+
+const BannerIcon = styled.span`
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1.3;
+`;
+
+const BannerText = styled.div`
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.6;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const BannerTitle = styled.strong`
+  display: block;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: ${({ theme }) => theme.colors.warning || '#b45309'};
+`;
+
+const BannerDismiss = styled.button`
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  align-self: flex-start;
+  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.warning || '#f59e0b'};
+    outline-offset: 2px;
+  }
+`;
+
+// ─── Cash-flow category inline-edit cell ──────────────────────────────────────
+
+/** Subtle flash animation when a save completes successfully. */
+const flashGreen = keyframes`
+  0%   { background-color: transparent; }
+  30%  { background-color: #d1fae5; }
+  100% { background-color: transparent; }
+`;
+
+const CfCellWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const CfValueText = styled.span<{ $muted: boolean; $clickable: boolean }>`
+  font-size: 14px;
+  color: ${({ $muted, theme }) =>
+    $muted ? theme.colors.textDisabled : theme.colors.textPrimary};
+  cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
+  border-radius: 4px;
+  padding: 2px 4px;
+  transition: background 100ms ease;
+  ${({ $clickable, theme }) =>
+    $clickable &&
+    `
+    &:hover {
+      background: ${theme.colors.neutral[100]};
+      text-decoration: underline;
+    }
+    &:focus-visible {
+      outline: 2px solid ${theme.colors.primary[500]};
+      outline-offset: 2px;
+    }
+  `}
+`;
+
+const CfSelect = styled.select`
+  padding: 5px 9px;
+  border: 1px solid ${({ theme }) => theme.colors.primary[500]};
+  border-radius: 6px;
+  font-size: 13px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-family: inherit;
+  cursor: pointer;
+  &:focus {
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
+    outline-offset: 1px;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const CfSpinner = styled.span`
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid ${({ theme }) => theme.colors.primary[200] || '#bfdbfe'};
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+const CfSuccessFlash = styled.span`
+  animation: ${flashGreen} 800ms ease forwards;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 14px;
+`;
+
+const CF_CATEGORY_OPTIONS: Array<{ value: CashFlowCategory; label: string }> = [
+  { value: 'none', label: '— (unset)' },
+  { value: 'cash', label: 'Cash & Equivalents' },
+  { value: 'working_capital', label: 'Working Capital' },
+  { value: 'non_cash_adjustment', label: 'Non-Cash Adjustment' },
+  { value: 'investing', label: 'Investing' },
+  { value: 'financing', label: 'Financing' },
+];
+
+interface CashFlowCategoryCellProps {
+  account: GLAccount;
+  organizationId: string;
+  canEdit: boolean;
+}
+
+function CashFlowCategoryCell({
+  account,
+  organizationId,
+  canEdit,
+}: CashFlowCategoryCellProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const selectRef = useRef<HTMLSelectElement>(null);
+  const mutation = useUpdateCashFlowCategory();
+
+  const currentValue = account.cashFlowCategory ?? 'none';
+  const displayLabel = CASH_FLOW_CATEGORY_LABELS[currentValue] ?? currentValue;
+  const isMuted = currentValue === 'none';
+
+  /** Open the dropdown. */
+  const handleOpen = () => {
+    if (!canEdit || mutation.isPending) return;
+    setIsEditing(true);
+  };
+
+  /** Allow keyboard open via Enter or Space when the text span is focused. */
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!canEdit) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsEditing(true);
+    }
+  };
+
+  /** Focus the <select> as soon as it appears. */
+  useEffect(() => {
+    if (isEditing && selectRef.current) {
+      selectRef.current.focus();
+    }
+  }, [isEditing]);
+
+  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newValue = e.target.value as CashFlowCategory;
+    setIsEditing(false);
+
+    if (newValue === currentValue) return; // No-op if unchanged.
+
+    try {
+      await mutation.mutateAsync({
+        accountId: account.accountId,
+        orgId: organizationId,
+        cashFlowCategory: newValue,
+      });
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 900);
+    } catch (err: unknown) {
+      const axiosErr = err as {
+        response?: { data?: { detail?: unknown } };
+        message?: string;
+      };
+      const detail = axiosErr?.response?.data?.detail;
+      const message =
+        typeof detail === 'string'
+          ? detail
+          : axiosErr?.message ?? 'Failed to save cash flow category.';
+      showErrorToast(message);
+    }
+  };
+
+  const handleBlur = () => {
+    // If the select loses focus without a change (e.g. Escape/click-away), close it.
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <CfCellWrapper>
+        <CfSelect
+          ref={selectRef}
+          defaultValue={currentValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          disabled={mutation.isPending}
+          aria-label="Cash flow category"
+        >
+          {CF_CATEGORY_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </CfSelect>
+        {mutation.isPending && <CfSpinner aria-label="Saving..." />}
+      </CfCellWrapper>
+    );
+  }
+
+  if (mutation.isPending) {
+    return (
+      <CfCellWrapper>
+        <CfSpinner aria-label="Saving..." />
+      </CfCellWrapper>
+    );
+  }
+
+  if (justSaved) {
+    return (
+      <CfCellWrapper>
+        <CfSuccessFlash aria-live="polite">{displayLabel}</CfSuccessFlash>
+      </CfCellWrapper>
+    );
+  }
+
+  return (
+    <CfCellWrapper>
+      <CfValueText
+        $muted={isMuted}
+        $clickable={canEdit}
+        onClick={canEdit ? handleOpen : undefined}
+        onKeyDown={canEdit ? handleKeyDown : undefined}
+        tabIndex={canEdit ? 0 : undefined}
+        role={canEdit ? 'button' : undefined}
+        aria-label={
+          canEdit
+            ? `Cash flow category: ${displayLabel}. Click to edit.`
+            : `Cash flow category: ${displayLabel}`
+        }
+      >
+        {displayLabel}
+      </CfValueText>
+    </CfCellWrapper>
+  );
+}
+
 // ─── Confirm dialog ────────────────────────────────────────────────────────────
 
 interface ConfirmDialogProps {
@@ -1172,7 +1453,7 @@ function AccountFormModal({
 
 export function ChartOfAccountsPage() {
   const { user } = useAuthStore();
-  // Reason: showSuccessToast is a module-level helper, imported directly above.
+  // Reason: showSuccessToast / showErrorToast are module-level helpers, imported above.
 
   // Determine org ID from user state.
   // Runtime shape has userId (not id) per project memory.
@@ -1185,6 +1466,25 @@ export function ChartOfAccountsPage() {
   }, [user]);
 
   const canWrite = WRITE_ROLES.has(user?.role ?? '');
+  /** finance_admin / super_admin can change cashFlowCategory inline. */
+  const canEditCfCategory = CF_EDIT_ROLES.has(user?.role ?? '');
+
+  // ── One-time CF category review banner ────────────────────────────────────
+  // Stored per-user in localStorage so dismissal persists across sessions.
+
+  const bannerKey = user?.userId ? makeBannerKey(user.userId) : null;
+  const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(() => {
+    if (!bannerKey) return true;
+    return localStorage.getItem(bannerKey) === 'true';
+  });
+
+  const dismissBanner = useCallback(() => {
+    if (bannerKey) localStorage.setItem(bannerKey, 'true');
+    setIsBannerDismissed(true);
+  }, [bannerKey]);
+
+  /** Show the banner only to users who can actually do something about it. */
+  const showBanner = canEditCfCategory && !isBannerDismissed;
 
   // ── Filters ────────────────────────────────────────────────────────────────
 
@@ -1362,6 +1662,28 @@ export function ChartOfAccountsPage() {
           <PrimaryButton onClick={openCreate}>+ New Account</PrimaryButton>
         )}
       </PageHeader>
+
+      {showBanner && (
+        <BannerContainer role="region" aria-label="Cash Flow Category Review">
+          <BannerIcon aria-hidden="true">&#9888;</BannerIcon>
+          <BannerText>
+            <BannerTitle>Cash Flow Category Review</BannerTitle>
+            The new Cash Flow Statement uses each account&apos;s &quot;Cash Flow
+            Category&quot; tag to bucket activity into Operating&nbsp;/
+            Investing&nbsp;/ Financing sections. Default categorisation is seeded
+            but may not match your accounting policy. Select any account and edit
+            the <strong>Cash Flow Category</strong> field in the right pane to
+            adjust as needed.
+          </BannerText>
+          <BannerDismiss
+            onClick={dismissBanner}
+            aria-label="Dismiss Cash Flow Category Review banner"
+            title="Dismiss this banner"
+          >
+            &#x2715;
+          </BannerDismiss>
+        </BannerContainer>
+      )}
 
       <ToolbarRow>
         <SearchInput
@@ -1635,6 +1957,18 @@ export function ChartOfAccountsPage() {
                       <StatusBadge $active={selectedAccount.isActive}>
                         {selectedAccount.isActive ? 'Active' : 'Inactive'}
                       </StatusBadge>
+                    </FieldValue>
+                  </FieldItem>
+
+                  {/* Cash Flow Category — inline-editable for finance_admin / super_admin */}
+                  <FieldItem>
+                    <FieldLabel>Cash Flow Category</FieldLabel>
+                    <FieldValue>
+                      <CashFlowCategoryCell
+                        account={selectedAccount}
+                        organizationId={organizationId}
+                        canEdit={canEditCfCategory}
+                      />
                     </FieldValue>
                   </FieldItem>
 

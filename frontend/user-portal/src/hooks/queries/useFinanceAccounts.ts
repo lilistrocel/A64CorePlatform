@@ -11,6 +11,7 @@ import type {
   DrawerEnum,
   GLAccountCreate,
   GLAccountUpdate,
+  CashFlowCategory,
   ListAccountsParams,
 } from '../../services/financeAccountsService';
 
@@ -145,6 +146,43 @@ export function useReactivateFinanceAccount() {
       });
       queryClient.invalidateQueries({
         queryKey: financeAccountsQueryKeys.detail(variables.accountId),
+      });
+    },
+  });
+}
+
+/**
+ * Inline-edit mutation for the cashFlowCategory field (T-060.12).
+ *
+ * On success:
+ *   1. Invalidates the CoA list so the detail pane refreshes.
+ *   2. Invalidates ALL cash-flow report queries so the next visit to the
+ *      Cash Flow Statement page fetches fresh data.
+ */
+export function useUpdateCashFlowCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      accountId,
+      cashFlowCategory,
+    }: {
+      accountId: string;
+      orgId: string;
+      cashFlowCategory: CashFlowCategory;
+    }) =>
+      financeAccountsService.updateAccount(accountId, { cashFlowCategory }),
+    onSuccess: (_result, variables) => {
+      // Refresh the CoA list so the in-pane display picks up the new value.
+      queryClient.invalidateQueries({
+        queryKey: financeAccountsQueryKeys.all(variables.orgId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: financeAccountsQueryKeys.detail(variables.accountId),
+      });
+      // Invalidate all cash-flow report queries — the CF statement bucketing
+      // depends on cashFlowCategory, so any cached CF report is now stale.
+      queryClient.invalidateQueries({
+        queryKey: ['finance', 'reports', 'cash-flow'],
       });
     },
   });
