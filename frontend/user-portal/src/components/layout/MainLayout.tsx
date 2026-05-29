@@ -93,6 +93,7 @@ const FINANCE_NAV_GROUP: NavItemDef = {
     { to: '/finance/trial-balance', icon: '⚖️', label: 'Trial Balance' },
     { to: '/finance/balance-sheet', icon: '🏛️', label: 'Balance Sheet' },
     { to: '/finance/income-statement', icon: '📊', label: 'Income Statement' },
+    { to: '/finance/cash-flow', icon: '💰', label: 'Cash Flow' },
     { to: '/finance/payments', icon: '💸', label: 'Vendor Payments' },
     { to: '/finance/ap-aging', icon: '📉', label: 'AP Aging' },
     { to: '/finance/vendor-sub-ledger', icon: '📑', label: 'Vendor Sub-Ledger' },

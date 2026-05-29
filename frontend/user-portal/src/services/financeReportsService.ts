@@ -360,6 +360,122 @@ export async function getIncomeStatement(
   return response.data.data;
 }
 
+// ─── Cash Flow Statement Types (T-060.10) ────────────────────────────────────
+
+/**
+ * A single contributing account row inside a CF section.
+ * `contribution` is a signed decimal string:
+ *   positive = cash inflow, negative = cash outflow.
+ */
+export interface CashFlowLine {
+  accountId: string;
+  accountNumber: string;
+  accountName: string;
+  drawer: string;
+  contribution: string; // Decimal as string, signed
+}
+
+/**
+ * Operating activities section — indirect method.
+ *
+ * Layout:
+ *   Net Income
+ *   + Non-cash adjustments (depreciation, amortisation, provisions)
+ *   + Working-capital changes (AR, AP, inventory deltas)
+ *   ─────────────────────
+ *   Net Cash from Operating Activities (total)
+ */
+export interface CashFlowOperatingSection {
+  netIncome: string;                         // Decimal as string
+  nonCashAdjustments: CashFlowLine[];
+  nonCashAdjustmentsTotal: string;           // Decimal as string
+  workingCapitalChanges: CashFlowLine[];
+  workingCapitalChangesTotal: string;        // Decimal as string
+  total: string;                             // netIncome + nonCash + workingCapital
+}
+
+/**
+ * Investing or Financing activities section — flat line list.
+ */
+export interface CashFlowActivitySection {
+  items: CashFlowLine[];
+  total: string; // Decimal as string
+}
+
+/**
+ * Full Cash Flow Statement response (indirect method).
+ *
+ * Backend computes whether netChangeInCash reconciles to (cashAtEnd - cashAtBeginning)
+ * within 0.01 AED. Any mismatch is surfaced in `warnings[]` and also in
+ * `reconciliationDelta` (non-zero when books don't reconcile).
+ *
+ * `cashDelta`         = cashAtEnd - cashAtBeginning
+ * `reconciliationDelta` = netChangeInCash - cashDelta  (should be ≈ 0)
+ *
+ * NOTE: The CF backend does NOT accept compare_period_start / compare_period_end.
+ * When a comparative period is needed, the frontend fires two parallel queries.
+ */
+export interface CashFlowReport {
+  organizationId: string;
+  companyCode: string;
+  periodStart: string;           // ISO date
+  periodEnd: string;             // ISO date
+  generatedAt: string;           // ISO datetime
+  currency: string;
+  includesVoided: boolean;
+  operating: CashFlowOperatingSection;
+  investing: CashFlowActivitySection;
+  financing: CashFlowActivitySection;
+  netChangeInCash: string;       // operating.total + investing.total + financing.total
+  cashAtBeginning: string;       // sum of CASH-category accounts at period start - 1 day
+  cashAtEnd: string;             // sum of CASH-category accounts at period end
+  cashDelta: string;             // cashAtEnd - cashAtBeginning
+  reconciliationDelta: string;   // netChangeInCash - cashDelta (≈ 0 when reconciled)
+  warnings: string[];
+}
+
+/** Query params for GET /api/v1/finance/reports/cash-flow */
+export interface GetCashFlowParams {
+  organizationId: string;
+  companyCode: string;
+  periodStart: string;           // YYYY-MM-DD — required
+  periodEnd: string;             // YYYY-MM-DD — required
+  includeVoided?: boolean;
+  costCenterIds?: string[];      // serialised as repeated cost_center_id params
+}
+
+// ─── Cash Flow API function ───────────────────────────────────────────────────
+
+/**
+ * Fetch the Cash Flow Statement for a date range.
+ * GET /api/v1/finance/reports/cash-flow
+ *
+ * The CF backend endpoint does NOT support a single-call comparative period
+ * (no compare_period_start / compare_period_end params). When the caller
+ * needs a comparison column, useCashFlow is called twice in parallel with
+ * different period params (see useFinanceReports.ts).
+ *
+ * Cost-centre IDs serialised as repeated params via URLSearchParams.
+ */
+export async function getCashFlow(
+  params: GetCashFlowParams
+): Promise<CashFlowReport> {
+  const sp = new URLSearchParams();
+  sp.set('organization_id', params.organizationId);
+  sp.set('company_code', params.companyCode);
+  sp.set('period_start', params.periodStart);
+  sp.set('period_end', params.periodEnd);
+  if (params.includeVoided) sp.set('include_voided', 'true');
+  for (const id of params.costCenterIds ?? []) {
+    sp.append('cost_center_id', id);
+  }
+
+  const response = await apiClient.get<SuccessEnvelope<CashFlowReport>>(
+    `/v1/finance/reports/cash-flow?${sp.toString()}`
+  );
+  return response.data.data;
+}
+
 // ─── Vendor Sub-Ledger ────────────────────────────────────────────────────────
 
 /**

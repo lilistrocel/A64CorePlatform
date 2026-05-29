@@ -171,12 +171,15 @@ const PeriodsPage = lazy(() => import('./pages/finance/PeriodsPage').then(m => (
 const APAgingPage = lazy(() => import('./pages/finance/APAgingPage').then(m => ({ default: m.APAgingPage })));
 const VendorSubLedgerPage = lazy(() => import('./pages/finance/VendorSubLedgerPage').then(m => ({ default: m.VendorSubLedgerPage })));
 
-// Finance module pages (Wave 2 — Statutory Statements T-060.8 / T-060.9)
+// Finance module pages (Wave 2 — Statutory Statements T-060.8 / T-060.9 / T-060.10)
 const BalanceSheetPage = lazy(() =>
   import('./pages/finance/BalanceSheetPage').then(m => ({ default: m.BalanceSheetPage }))
 );
 const IncomeStatementPage = lazy(() =>
   import('./pages/finance/IncomeStatementPage').then(m => ({ default: m.IncomeStatementPage }))
+);
+const CashFlowStatementPage = lazy(() =>
+  import('./pages/finance/CashFlowStatementPage').then(m => ({ default: m.CashFlowStatementPage }))
 );
 const PnLPage = lazy(() =>
   import('./pages/pnl/PnLPage').then(m => ({ default: m.PnLPage }))
@@ -343,9 +346,10 @@ function App() {
                 <Route path="/finance/ap-aging" element={<FinanceGate><APAgingPage /></FinanceGate>} />
                 <Route path="/finance/vendor-sub-ledger" element={<FinanceGate><VendorSubLedgerPage /></FinanceGate>} />
 
-                {/* Finance module (Wave 2 — Statutory Statements T-060.8 / T-060.9) */}
+                {/* Finance module (Wave 2 — Statutory Statements T-060.8 / T-060.9 / T-060.10) */}
                 <Route path="/finance/balance-sheet" element={<FinanceGate><BalanceSheetPage /></FinanceGate>} />
                 <Route path="/finance/income-statement" element={<FinanceGate><IncomeStatementPage /></FinanceGate>} />
+                <Route path="/finance/cash-flow" element={<FinanceGate><CashFlowStatementPage /></FinanceGate>} />
                 <Route path="/operations/pnl" element={<FinanceGate><PnLPage /></FinanceGate>} />
 
                 <Route path="/profile" element={<Profile />} />

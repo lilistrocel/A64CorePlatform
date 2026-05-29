@@ -4,6 +4,9 @@
  * useApAging         — useMutation (POST with orchestrated body)
  * useVendorSubLedger — useQuery (GET, fires when params are provided)
  * useBalanceSheet    — useQuery (GET, T-060.8; fires when org + company ready)
+ * useIncomeStatement — useQuery (GET, T-060.9; single call, compare supported)
+ * useCashFlow        — useQuery (GET, T-060.10; no compare param on backend;
+ *                                use two parallel calls for comparison column)
  */
 
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -17,6 +20,8 @@ import type {
   BalanceSheetReport,
   GetIncomeStatementParams,
   IncomeStatementReport,
+  GetCashFlowParams,
+  CashFlowReport,
 } from '../../services/financeReportsService';
 
 // ─── Query key factory ─────────────────────────────────────────────────────────
@@ -28,6 +33,8 @@ export const financeReportsQueryKeys = {
     ['finance', 'reports', 'balance-sheet', params] as const,
   incomeStatement: (params: GetIncomeStatementParams) =>
     ['finance', 'reports', 'income-statement', params] as const,
+  cashFlow: (params: GetCashFlowParams) =>
+    ['finance', 'reports', 'cash-flow', params] as const,
 };
 
 // ─── AP Aging — mutation ───────────────────────────────────────────────────────
@@ -95,6 +102,38 @@ export function useIncomeStatement(
       !!params.periodStart &&
       !!params.periodEnd,
     // IS data can tolerate a 30-second stale window; date changes force a
+    // new query key and thus a fresh fetch.
+    staleTime: 30_000,
+  });
+}
+
+// ─── Cash Flow — query (T-060.10) ─────────────────────────────────────────────
+
+/**
+ * Fetch the Cash Flow Statement for the given period range.
+ *
+ * IMPORTANT: The CF backend endpoint does NOT accept compare_period_start /
+ * compare_period_end — it computes a single period only. When a comparative
+ * column is needed, CashFlowStatementPage fires this hook TWICE in parallel
+ * (primary + compare params), mirroring the BalanceSheetPage pattern.
+ *
+ * Fires automatically when organizationId, companyCode, periodStart, and
+ * periodEnd are all non-empty (and `enabled` is true).
+ */
+export function useCashFlow(
+  params: GetCashFlowParams,
+  enabled = true
+) {
+  return useQuery<CashFlowReport, Error>({
+    queryKey: financeReportsQueryKeys.cashFlow(params),
+    queryFn: () => reportsService.getCashFlow(params),
+    enabled:
+      enabled &&
+      !!params.organizationId &&
+      !!params.companyCode &&
+      !!params.periodStart &&
+      !!params.periodEnd,
+    // CF data can tolerate a 30-second stale window; period changes force a
     // new query key and thus a fresh fetch.
     staleTime: 30_000,
   });
