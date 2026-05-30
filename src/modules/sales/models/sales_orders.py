@@ -35,7 +35,17 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.alias_generators import to_camel
+
+# Response models emit camelCase fields via the to_camel alias generator;
+# routes pair this with response_model_by_alias=True. populate_by_name=True
+# means consumers may still post snake_case input bodies.
+_RESPONSE_CONFIG = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    from_attributes=True,
+)
 
 from src.core.documents.document_links import DocumentLinkRef, DocumentLineLinkMixin
 from src.core.documents.document_status import DocumentStatus
@@ -70,6 +80,8 @@ class SalesOrderLineCreate(BaseModel):
         cost_center_id:   Optional cost centre allocation.
         notes:            Per-line free text.
     """
+
+    model_config = ConfigDict(populate_by_name=True)
 
     item_id: str = Field(..., description="FK to items collection")
     item_code: str = Field(..., max_length=50, description="Denormalised item code")
@@ -113,6 +125,8 @@ class SalesOrderLineUpdate(BaseModel):
     The service recomputes all totals after applying the update.
     """
 
+    model_config = ConfigDict(populate_by_name=True)
+
     item_id: Optional[str] = None
     item_code: Optional[str] = Field(None, max_length=50)
     item_name: Optional[str] = Field(None, max_length=200)
@@ -131,6 +145,8 @@ class SalesOrderLineUpdate(BaseModel):
 
 
 class SalesOrderLineResponse(DocumentLineLinkMixin):
+    model_config = _RESPONSE_CONFIG
+
     """
     Full representation of a Sales Order line as returned by the API.
 
@@ -215,6 +231,8 @@ class CreditCheckSnapshot(BaseModel):
         override_reason:         Required string when result == 'override'.
     """
 
+    model_config = _RESPONSE_CONFIG
+
     checked_at: datetime
     customer_credit_limit: Optional[Decimal] = Field(
         None,
@@ -251,6 +269,8 @@ class SalesOrderTotals(BaseModel):
         gross: net + tax.
     """
 
+    model_config = _RESPONSE_CONFIG
+
     net: Decimal = Field(..., description="Sum of line_net across all lines")
     tax: Decimal = Field(..., description="Sum of line_tax across all lines")
     gross: Decimal = Field(..., description="net + tax")
@@ -262,6 +282,8 @@ class SalesOrderTotals(BaseModel):
 
 
 class SalesOrderCreate(BPReferenceMixin, JournalMemoMixin):
+    model_config = ConfigDict(populate_by_name=True)
+
     """
     Input payload for creating a new Sales Order from scratch.
 
@@ -341,6 +363,8 @@ class SalesOrderUpdate(BaseModel):
     Only allowed in DRAFT status — the service raises ValueError otherwise.
     """
 
+    model_config = ConfigDict(populate_by_name=True)
+
     customer_id: Optional[str] = None
     customer_name: Optional[str] = Field(None, max_length=200)
     doc_date: Optional[date] = None
@@ -387,6 +411,8 @@ class SalesOrderResponse(BPReferenceMixin, JournalMemoMixin):
     ``SalesOrderListItem`` instead (avoid N+1 and large payloads).
     """
 
+    model_config = _RESPONSE_CONFIG
+
     doc_entry: str = Field(..., description="UUID — stable cross-service reference")
     doc_number: str = Field(..., description="Human-readable e.g. 'SO-2026-0001'")
     doc_type: str = Field("SO", description="Constant — always 'SO'")
@@ -425,9 +451,6 @@ class SalesOrderResponse(BPReferenceMixin, JournalMemoMixin):
     updated_at: datetime
     updated_by: str
 
-    class Config:
-        from_attributes = True
-
 
 class SalesOrderListItem(BPReferenceMixin):
     """
@@ -435,6 +458,8 @@ class SalesOrderListItem(BPReferenceMixin):
 
     Excludes the full lines array to keep list payloads lean.
     """
+
+    model_config = _RESPONSE_CONFIG
 
     doc_entry: str
     doc_number: str
@@ -448,9 +473,6 @@ class SalesOrderListItem(BPReferenceMixin):
     totals: SalesOrderTotals
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------
@@ -474,6 +496,8 @@ class SalesOrderStatusTransitionRequest(BaseModel):
         override_credit_check: When True, attempt to override a 'blocked' result.
         override_reason:       Required when override_credit_check is True.
     """
+
+    model_config = ConfigDict(populate_by_name=True)
 
     new_status: DocumentStatus = Field(..., description="Target status for the transition")
     reason: Optional[str] = Field(
@@ -519,6 +543,8 @@ class SalesOrderFromQuoteRequest(BaseModel):
         delivery_date:   Optional requested delivery date for the new SO.
         notes:           Optional notes override (falls back to Quote notes).
     """
+
+    model_config = ConfigDict(populate_by_name=True)
 
     delivery_date: Optional[date] = Field(
         None, description="Requested delivery date for the new SO"

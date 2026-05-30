@@ -101,6 +101,7 @@ def _resolve_org_id(
 @router.get(
     "",
     response_model=PaginatedResponse[SalesOrderListItem],
+    response_model_by_alias=True,
     summary="List Sales Orders (v2)",
     description=(
         "Return a paginated list of Sales Orders (v2) for the given organisation. "
@@ -170,6 +171,7 @@ async def list_sales_orders_endpoint(
 @router.get(
     "/{doc_entry}",
     response_model=SuccessResponse[SalesOrderResponse],
+    response_model_by_alias=True,
     summary="Get Sales Order detail (v2)",
 )
 async def get_sales_order_endpoint(
@@ -212,6 +214,7 @@ async def get_sales_order_endpoint(
 @router.post(
     "",
     response_model=SuccessResponse[SalesOrderResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Sales Order (v2)",
 )
@@ -252,6 +255,7 @@ async def create_sales_order_endpoint(
 @router.post(
     "/from-quote/{quote_doc_entry}",
     response_model=SuccessResponse[SalesOrderResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Sales Order from Quote (v2)",
 )
@@ -316,6 +320,7 @@ async def create_sales_order_from_quote_endpoint(
 @router.patch(
     "/{doc_entry}",
     response_model=SuccessResponse[SalesOrderResponse],
+    response_model_by_alias=True,
     summary="Update draft Sales Order (v2)",
 )
 async def update_sales_order_endpoint(
@@ -431,6 +436,7 @@ async def delete_sales_order_endpoint(
 @router.post(
     "/{doc_entry}/transition",
     response_model=SuccessResponse[SalesOrderResponse],
+    response_model_by_alias=True,
     summary="Transition Sales Order status (v2)",
 )
 async def transition_sales_order_status(

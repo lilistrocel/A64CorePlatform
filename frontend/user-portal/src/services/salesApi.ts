@@ -504,10 +504,186 @@ export interface QuoteListParams {
 }
 
 // ============================================================================
+// Sales Order v2 types (T-200.4)
+// Backend endpoint: /v1/sales/orders-v2
+// Doc prefix: SO-YYYY-NNNN
+// Status flow: draft → open → partly_closed → closed / cancelled
+// ============================================================================
+
+export type SalesOrderStatus =
+  | 'draft'
+  | 'open'
+  | 'partly_closed'
+  | 'closed'
+  | 'cancelled';
+
+export interface SalesOrderTotals {
+  net: number;
+  tax: number;
+  gross: number;
+}
+
+export interface SalesOrderLine {
+  lineId: string;
+  lineNumber: number;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description: string;
+  quantity: number;
+  uom: string;
+  unitPrice: number;
+  discountPercent: number;
+  lineNet: number;
+  taxCodeId: string | null;
+  taxPercent: number;
+  lineTax: number;
+  lineGross: number;
+  warehouseId: string | null;
+  costCenterId: string | null;
+  notes: string | null;
+  // Fulfilment tracking
+  orderedQty: number;
+  consumedQty: number;
+  deliveredQty: number;
+  invoicedQty: number;
+  cancelledQty: number;
+  committedQty: number;
+  // Doc-chain links
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+}
+
+export interface CreditCheckSnapshot {
+  checkedAt: string;
+  customerCreditLimit: number | null;
+  outstandingAr: number;
+  thisOrderTotal: number;
+  result: 'approved' | 'blocked' | 'override';
+  overrideByUserId: string | null;
+  overrideReason: string | null;
+}
+
+export interface SalesOrder {
+  docEntry: string;
+  docNumber: string;
+  docType: string;
+  organizationId: string;
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  bpRefNo: string | null;
+  docDate: string;
+  deliveryDate: string | null;
+  status: SalesOrderStatus;
+  currency: string;
+  exchangeRate: number;
+  paymentTermsId: string | null;
+  salesEmployeeId: string | null;
+  ownerUserId: string;
+  journalMemo: string | null;
+  notes: string | null;
+  totals: SalesOrderTotals;
+  creditCheck: CreditCheckSnapshot | null;
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+  lines: SalesOrderLine[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface SalesOrderListItem {
+  docEntry: string;
+  docNumber: string;
+  organizationId: string;
+  customerId: string;
+  customerName: string;
+  bpRefNo: string | null;
+  docDate: string;
+  deliveryDate: string | null;
+  status: SalesOrderStatus;
+  currency: string;
+  totals: SalesOrderTotals;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SalesOrderLineCreate {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description?: string | null;
+  quantity: number;
+  uom: string;
+  unitPrice: number;
+  discountPercent?: number;
+  taxCodeId?: string | null;
+  taxPercent?: number;
+  warehouseId?: string | null;
+  costCenterId?: string | null;
+  notes?: string | null;
+}
+
+export interface SalesOrderCreate {
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  bpRefNo?: string | null;
+  docDate: string;
+  deliveryDate?: string | null;
+  currency?: string;
+  exchangeRate?: number;
+  paymentTermsId?: string | null;
+  salesEmployeeId?: string | null;
+  journalMemo?: string | null;
+  notes?: string | null;
+  lines: SalesOrderLineCreate[];
+}
+
+export interface SalesOrderUpdate {
+  customerId?: string | null;
+  customerName?: string | null;
+  bpRefNo?: string | null;
+  docDate?: string | null;
+  deliveryDate?: string | null;
+  currency?: string | null;
+  exchangeRate?: number | null;
+  paymentTermsId?: string | null;
+  salesEmployeeId?: string | null;
+  journalMemo?: string | null;
+  notes?: string | null;
+  lines?: SalesOrderLineCreate[] | null;
+}
+
+export interface SalesOrderTransition {
+  newStatus: SalesOrderStatus;
+  reason?: string | null;
+  overrideCreditCheck?: boolean;
+  overrideReason?: string | null;
+}
+
+export interface SalesOrderFromQuoteRequest {
+  deliveryDate?: string | null;
+  notes?: string | null;
+}
+
+export interface SalesOrderListParams {
+  organizationId?: string;
+  status?: SalesOrderStatus | null;
+  customerId?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  hasOpenLines?: boolean | null;
+  page?: number;
+  size?: number;
+}
+
+// ============================================================================
 // Stub types for remaining not-yet-implemented Wave 3 documents
 // ============================================================================
 
-export interface SalesOrderV2 { docEntry: string; docNumber: string; status: string; }
 export interface Delivery { docEntry: string; docNumber: string; status: string; }
 export interface ReturnRequest { docEntry: string; docNumber: string; status: string; }
 export interface Return { docEntry: string; docNumber: string; status: string; }
@@ -1000,9 +1176,197 @@ const NOT_IMPLEMENTED = (doc: string) =>
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-export const listSalesOrders = () => NOT_IMPLEMENTED('SalesOrder');
-export const getSalesOrder = (_id: string, _orgId: string) => NOT_IMPLEMENTED('SalesOrder');
-export const createSalesOrder = (_data: unknown) => NOT_IMPLEMENTED('SalesOrder');
+// ============================================================================
+// Sales Order v2 API — fully implemented (T-200.4)
+// Rule 1: path does NOT include /api/ — apiClient already prepends /api/
+// ============================================================================
+
+const SO_BASE = '/v1/sales/orders-v2';
+
+/**
+ * List Sales Orders with optional filters and pagination.
+ */
+export async function listSalesOrders(
+  params: SalesOrderListParams,
+): Promise<{ data: SalesOrderListItem[]; meta: PaginationMeta }> {
+  const queryParams: Record<string, string | number | boolean> = {};
+  if (params.organizationId) queryParams['organization_id'] = params.organizationId;
+  if (params.status) queryParams['status'] = params.status;
+  if (params.customerId) queryParams['customer_id'] = params.customerId;
+  if (params.dateFrom) queryParams['date_from'] = params.dateFrom;
+  if (params.dateTo) queryParams['date_to'] = params.dateTo;
+  if (params.hasOpenLines != null) queryParams['has_open_lines'] = params.hasOpenLines;
+  if (params.page) queryParams['page'] = params.page;
+  if (params.size) queryParams['size'] = params.size;
+
+  const response = await apiClient.get<PaginatedEnvelope<SalesOrderListItem>>(
+    SO_BASE,
+    { params: queryParams },
+  );
+  return response.data;
+}
+
+/**
+ * Get a single Sales Order with all embedded lines.
+ */
+export async function getSalesOrder(
+  docId: string,
+  orgId: string,
+): Promise<SalesOrder> {
+  const response = await apiClient.get<SuccessEnvelope<SalesOrder>>(
+    `${SO_BASE}/${docId}`,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a Sales Order from scratch in DRAFT status.
+ */
+export async function createSalesOrder(
+  data: SalesOrderCreate,
+  orgId: string,
+): Promise<SalesOrder> {
+  const body = {
+    organization_id: orgId,
+    company_code: data.companyCode,
+    customer_id: data.customerId,
+    customer_name: data.customerName,
+    bp_ref_no: data.bpRefNo ?? null,
+    doc_date: data.docDate,
+    delivery_date: data.deliveryDate ?? null,
+    currency: data.currency ?? 'AED',
+    exchange_rate: data.exchangeRate ?? 1.0,
+    payment_terms_id: data.paymentTermsId ?? null,
+    sales_employee_id: data.salesEmployeeId ?? null,
+    journal_memo: data.journalMemo ?? null,
+    notes: data.notes ?? null,
+    lines: data.lines.map((l) => ({
+      item_id: l.itemId,
+      item_code: l.itemCode,
+      item_name: l.itemName,
+      description: l.description ?? null,
+      quantity: l.quantity,
+      uom: l.uom,
+      unit_price: l.unitPrice,
+      discount_percent: l.discountPercent ?? 0,
+      tax_code_id: l.taxCodeId ?? null,
+      tax_percent: l.taxPercent ?? 0,
+      warehouse_id: l.warehouseId ?? null,
+      cost_center_id: l.costCenterId ?? null,
+      notes: l.notes ?? null,
+    })),
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<SalesOrder>>(SO_BASE, body);
+  return response.data.data;
+}
+
+/**
+ * Create a Sales Order from an existing Sales Quote (from-quote flow).
+ * Backend copies all Quote lines and links the SO back to the Quote via baseDocRef.
+ */
+export async function createSalesOrderFromQuote(
+  quoteDocEntry: string,
+  data: SalesOrderFromQuoteRequest,
+  orgId: string,
+): Promise<SalesOrder> {
+  const body = {
+    delivery_date: data.deliveryDate ?? null,
+    notes: data.notes ?? null,
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<SalesOrder>>(
+    `${SO_BASE}/from-quote/${quoteDocEntry}`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Partially update a DRAFT Sales Order.
+ * If `lines` is provided the existing line set is replaced wholesale.
+ */
+export async function updateSalesOrder(
+  docId: string,
+  data: SalesOrderUpdate,
+  orgId: string,
+): Promise<SalesOrder> {
+  const body: Record<string, unknown> = {};
+  if (data.customerId !== undefined) body['customer_id'] = data.customerId;
+  if (data.customerName !== undefined) body['customer_name'] = data.customerName;
+  if (data.bpRefNo !== undefined) body['bp_ref_no'] = data.bpRefNo;
+  if (data.docDate !== undefined) body['doc_date'] = data.docDate;
+  if (data.deliveryDate !== undefined) body['delivery_date'] = data.deliveryDate;
+  if (data.currency !== undefined) body['currency'] = data.currency;
+  if (data.exchangeRate !== undefined) body['exchange_rate'] = data.exchangeRate;
+  if (data.paymentTermsId !== undefined) body['payment_terms_id'] = data.paymentTermsId;
+  if (data.salesEmployeeId !== undefined) body['sales_employee_id'] = data.salesEmployeeId;
+  if (data.journalMemo !== undefined) body['journal_memo'] = data.journalMemo;
+  if (data.notes !== undefined) body['notes'] = data.notes;
+  if (data.lines !== undefined && data.lines !== null) {
+    body['lines'] = data.lines.map((l) => ({
+      item_id: l.itemId,
+      item_code: l.itemCode,
+      item_name: l.itemName,
+      description: l.description ?? null,
+      quantity: l.quantity,
+      uom: l.uom,
+      unit_price: l.unitPrice,
+      discount_percent: l.discountPercent ?? 0,
+      tax_code_id: l.taxCodeId ?? null,
+      tax_percent: l.taxPercent ?? 0,
+      warehouse_id: l.warehouseId ?? null,
+      cost_center_id: l.costCenterId ?? null,
+      notes: l.notes ?? null,
+    }));
+  }
+
+  const response = await apiClient.patch<SuccessEnvelope<SalesOrder>>(
+    `${SO_BASE}/${docId}`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Hard-delete a DRAFT Sales Order.
+ * If the SO was created from a Quote, the Quote's consumed_qty is restored.
+ */
+export async function deleteSalesOrder(
+  docId: string,
+  orgId: string,
+): Promise<void> {
+  await apiClient.delete(`${SO_BASE}/${docId}`, {
+    params: { organization_id: orgId },
+  });
+}
+
+/**
+ * Transition Sales Order status.
+ * On DRAFT → OPEN performs a credit-limit check; 409 if blocked.
+ */
+export async function transitionSalesOrder(
+  docId: string,
+  transition: SalesOrderTransition,
+  orgId: string,
+): Promise<SalesOrder> {
+  const body = {
+    new_status: transition.newStatus,
+    reason: transition.reason ?? null,
+    override_credit_check: transition.overrideCreditCheck ?? false,
+    override_reason: transition.overrideReason ?? null,
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<SalesOrder>>(
+    `${SO_BASE}/${docId}/transition`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
 
 export const listDeliveries = () => NOT_IMPLEMENTED('Delivery');
 export const getDelivery = (_id: string, _orgId: string) => NOT_IMPLEMENTED('Delivery');

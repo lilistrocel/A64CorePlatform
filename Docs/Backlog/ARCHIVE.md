@@ -1,8 +1,42 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 79 tasks
+> **Total completed:** 80 tasks
 
 ## 2026-05
+
+### T-200.4 | Sales Order v2 (SO) UI — list + form (3 modes) + detail + from-quote flow
+- **Category:** Frontend (+ backend pre-flight) · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-100.7 ✅ (SO backend), T-200.3 ✅ (Quote UI — Convert button now lands on this page)
+- **Blocks:** T-200.5 (Delivery UI — "Create Delivery" button wired on SO detail)
+- **Description:** Three new Wave 3 Sales Order pages + backend pre-flight hardening.
+  Backend: applied `_RESPONSE_CONFIG` (camelCase alias_generator) to 5 SO response models and
+  `response_model_by_alias=True` to all 6 response-bearing routes.
+  Frontend: full typed SO section in salesApi.ts, useSalesOrders.ts hook file with 7 hooks,
+  SalesOrdersV2Page list (filter chips, fulfilment pill), SalesOrderFormPage (new/from-quote/edit modes
+  with credit-limit error banner), SalesOrderDetailPage (fulfilment columns, progress bars, doc-chain card).
+  Unblocks the Quote→Convert→SO flow — T-200.3's "Convert to SO" button on QuoteDetailPage now routes
+  to a live, pre-filled form via `/sales/orders-v2/from-quote/:quoteDocEntry`.
+- **Files created:**
+  - `frontend/user-portal/src/pages/sales/SalesOrdersV2Page.tsx` — list, filter chips, fulfilment pill, pagination
+  - `frontend/user-portal/src/pages/sales/SalesOrderFormPage.tsx` — create/from-quote/edit, CustomerCombobox, useFieldArray, credit-limit banner
+  - `frontend/user-portal/src/pages/sales/SalesOrderDetailPage.tsx` — detail with fulfilment columns, progress bars, doc-chain, action bar
+  - `frontend/user-portal/src/hooks/queries/useSalesOrders.ts` — 7 TanStack Query hooks (soQueryKeys, all mutations)
+  - `Docs/3-DevLog/2026-05-30_T-200.4-sales-order-v2-ui.md` — session DevLog
+- **Files modified:**
+  - `src/modules/sales/models/sales_orders.py` — `_RESPONSE_CONFIG` applied to 5 response models, `class Config` blocks removed
+  - `src/modules/sales/api/v1/sales_orders.py` — `response_model_by_alias=True` on 6 routes
+  - `frontend/user-portal/src/services/salesApi.ts` — full SO types + API functions (7 functions)
+  - `frontend/user-portal/src/hooks/queries/index.ts` — SO hook exports added
+  - `frontend/user-portal/src/App.tsx` — 3 lazy imports + 5 routes (/orders-v2, /new, /from-quote/:id, /:docId/edit, /:docId)
+- **Test results:** 211 backend tests pass (unchanged). TypeScript: zero errors. ESLint: zero errors (1 unused var found + fixed).
+- **Four hardening rules:**
+  1. Path constant: `SO_BASE = '/v1/sales/orders-v2'` in `salesApi.ts` (no `/api/` prefix).
+  2. `_RESPONSE_CONFIG`: `sales_orders.py` lines for `SalesOrderLineResponse`, `CreditCheckSnapshot`, `SalesOrderTotals`, `SalesOrderResponse`, `SalesOrderListItem`.
+  3. Status literals lowercase: `'draft' | 'open' | 'partly_closed' | 'closed' | 'cancelled'` in `salesApi.ts`.
+  4. No Audit History button: `SalesOrderDetailPage.tsx` has no AuditHistoryModal or audit button.
+
+---
 
 ### T-200.3 | Sales Quote (SQ) UI — list + form + detail — Wave 3
 - **Category:** Frontend (+ backend pre-flight) · **Priority:** P1

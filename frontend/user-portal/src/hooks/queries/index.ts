@@ -258,3 +258,15 @@ export {
   useTransitionQuote,
   quotesQueryKeys,
 } from './useQuotes';
+
+// Sales Wave 3 — Sales Order v2 hooks (T-200.4)
+export {
+  useSalesOrdersV2,
+  useSalesOrderV2,
+  useCreateSalesOrderV2,
+  useCreateSalesOrderFromQuote,
+  useUpdateSalesOrderV2,
+  useDeleteSalesOrderV2,
+  useTransitionSalesOrderV2,
+  soQueryKeys,
+} from './useSalesOrders';

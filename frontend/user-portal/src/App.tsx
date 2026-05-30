@@ -111,6 +111,17 @@ const QuoteDetailPage = lazy(() =>
 const QuoteFormPage = lazy(() =>
   import('./pages/sales/QuoteFormPage').then(m => ({ default: m.QuoteFormPage }))
 );
+// T-200.4: Sales Order v2 pages
+// Route order matters: /new and /from-quote/:quoteDocEntry must be before /:docId.
+const SalesOrdersV2Page = lazy(() =>
+  import('./pages/sales/SalesOrdersV2Page').then(m => ({ default: m.SalesOrdersV2Page }))
+);
+const SalesOrderFormPage = lazy(() =>
+  import('./pages/sales/SalesOrderFormPage').then(m => ({ default: m.SalesOrderFormPage }))
+);
+const SalesOrderDetailPage = lazy(() =>
+  import('./pages/sales/SalesOrderDetailPage').then(m => ({ default: m.SalesOrderDetailPage }))
+);
 
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
@@ -323,6 +334,12 @@ function App() {
                 <Route path="/sales/quotes/new" element={<QuoteFormPage />} />
                 <Route path="/sales/quotes/:docId/edit" element={<QuoteFormPage />} />
                 <Route path="/sales/quotes/:docId" element={<QuoteDetailPage />} />
+                {/* T-200.4: Sales Orders v2 — /new and /from-quote/:quoteDocEntry before /:docId */}
+                <Route path="/sales/orders-v2" element={<SalesOrdersV2Page />} />
+                <Route path="/sales/orders-v2/new" element={<SalesOrderFormPage />} />
+                <Route path="/sales/orders-v2/from-quote/:quoteDocEntry" element={<SalesOrderFormPage />} />
+                <Route path="/sales/orders-v2/:docId/edit" element={<SalesOrderFormPage />} />
+                <Route path="/sales/orders-v2/:docId" element={<SalesOrderDetailPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />
