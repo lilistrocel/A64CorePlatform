@@ -19,9 +19,10 @@ import { apiClient } from './api';
 
 // AR_INVOICE added in T-200.0 (Wave 3 sales UI).
 // CUSTOMER_RECEIPT added in T-200.1 (Wave 3 sales UI).
+// QUOTE added in T-200.3 (Wave 3 sales UI).
 // Backend endpoints to be wired in follow-up attachment tasks —
 // the component handles 404 gracefully (shows empty list, no crash).
-export type AttachmentDocType = 'PR' | 'PO' | 'GR' | 'AP' | 'PAYMENT' | 'AR_INVOICE' | 'CUSTOMER_RECEIPT';
+export type AttachmentDocType = 'PR' | 'PO' | 'GR' | 'AP' | 'PAYMENT' | 'AR_INVOICE' | 'CUSTOMER_RECEIPT' | 'QUOTE';
 
 export interface AttachmentMetadata {
   fileId: string;

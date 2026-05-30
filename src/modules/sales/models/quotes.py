@@ -32,12 +32,25 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.alias_generators import to_camel
 
 from src.core.documents.document_links import DocumentLinkRef, DocumentLineLinkMixin
 from src.core.documents.document_status import DocumentStatus
 from src.core.documents.bp_ref import BPReferenceMixin
 from src.core.documents.journal_memo import JournalMemoMixin
+
+# ---------------------------------------------------------------------------
+# Response model configuration (Rule 2 — camelCase via alias_generator)
+# ---------------------------------------------------------------------------
+# Response models emit camelCase fields via the to_camel alias generator;
+# routes pair this with response_model_by_alias=True. populate_by_name=True
+# means consumers may still post snake_case input bodies.
+_RESPONSE_CONFIG = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    from_attributes=True,
+)
 
 # ---------------------------------------------------------------------------
 # Line schemas
@@ -129,6 +142,8 @@ class QuoteLineUpdate(BaseModel):
 
 
 class QuoteLineResponse(DocumentLineLinkMixin):
+    model_config = _RESPONSE_CONFIG
+
     """
     Full representation of a Quote line as returned by the API.
 
@@ -181,6 +196,8 @@ class QuoteTotals(BaseModel):
         tax:   Sum of all line_tax values.
         gross: net + tax.
     """
+
+    model_config = _RESPONSE_CONFIG
 
     net: Decimal = Field(..., description="Sum of line_net across all lines")
     tax: Decimal = Field(..., description="Sum of line_tax across all lines")
@@ -317,6 +334,8 @@ class QuoteResponse(BPReferenceMixin, JournalMemoMixin):
     Inherits JournalMemoMixin: exposes journal_memo.
     """
 
+    model_config = _RESPONSE_CONFIG
+
     doc_entry: str = Field(..., description="UUID — stable cross-service reference")
     doc_number: str = Field(..., description="Human-readable e.g. 'SQ-2026-0001'")
     doc_type: str = Field("SQ", description="Constant — always 'SQ'")
@@ -351,9 +370,6 @@ class QuoteResponse(BPReferenceMixin, JournalMemoMixin):
     updated_at: datetime
     updated_by: str
 
-    class Config:
-        from_attributes = True
-
 
 class QuoteListItem(BPReferenceMixin):
     """
@@ -361,6 +377,8 @@ class QuoteListItem(BPReferenceMixin):
 
     Excludes the full lines array to keep list payloads lean.
     """
+
+    model_config = _RESPONSE_CONFIG
 
     doc_entry: str
     doc_number: str
@@ -374,9 +392,6 @@ class QuoteListItem(BPReferenceMixin):
     totals: QuoteTotals
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------

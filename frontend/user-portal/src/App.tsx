@@ -100,6 +100,17 @@ const CustomerReceiptFormPage = lazy(() =>
 const ARAgingReportPage = lazy(() =>
   import('./pages/sales/ARAgingReportPage').then(m => ({ default: m.ARAgingReportPage }))
 );
+// T-200.3: Sales Quote pages
+// /new MUST be registered before /:docId to prevent "new" being matched as docId.
+const QuotesPage = lazy(() =>
+  import('./pages/sales/QuotesPage').then(m => ({ default: m.QuotesPage }))
+);
+const QuoteDetailPage = lazy(() =>
+  import('./pages/sales/QuoteDetailPage').then(m => ({ default: m.QuoteDetailPage }))
+);
+const QuoteFormPage = lazy(() =>
+  import('./pages/sales/QuoteFormPage').then(m => ({ default: m.QuoteFormPage }))
+);
 
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
@@ -307,6 +318,11 @@ function App() {
                 <Route path="/sales/customer-receipts/:docId" element={<CustomerReceiptDetailPage />} />
                 {/* T-200.2: AR Aging Report */}
                 <Route path="/sales/reports/ar-aging" element={<ARAgingReportPage />} />
+                {/* T-200.3: Sales Quotes */}
+                <Route path="/sales/quotes" element={<QuotesPage />} />
+                <Route path="/sales/quotes/new" element={<QuoteFormPage />} />
+                <Route path="/sales/quotes/:docId/edit" element={<QuoteFormPage />} />
+                <Route path="/sales/quotes/:docId" element={<QuoteDetailPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />

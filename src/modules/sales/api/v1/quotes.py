@@ -101,6 +101,7 @@ def _resolve_org_id(
 @router.get(
     "",
     response_model=PaginatedResponse[QuoteListItem],
+    response_model_by_alias=True,
     summary="List Sales Quotes",
     description=(
         "Return a paginated list of Sales Quotes for the given organisation. "
@@ -167,6 +168,7 @@ async def list_quotes_endpoint(
 @router.get(
     "/{doc_entry}",
     response_model=SuccessResponse[QuoteResponse],
+    response_model_by_alias=True,
     summary="Get Sales Quote detail",
 )
 async def get_quote_endpoint(
@@ -209,6 +211,7 @@ async def get_quote_endpoint(
 @router.post(
     "",
     response_model=SuccessResponse[QuoteResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Sales Quote",
 )
@@ -253,6 +256,7 @@ async def create_quote_endpoint(
 @router.patch(
     "/{doc_entry}",
     response_model=SuccessResponse[QuoteResponse],
+    response_model_by_alias=True,
     summary="Update draft Sales Quote",
 )
 async def update_quote_endpoint(
@@ -369,6 +373,7 @@ async def delete_quote_endpoint(
 @router.post(
     "/{doc_entry}/transition",
     response_model=SuccessResponse[QuoteResponse],
+    response_model_by_alias=True,
     summary="Transition Sales Quote status",
 )
 async def transition_quote_status(

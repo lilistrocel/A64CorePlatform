@@ -247,3 +247,14 @@ export {
 
 // Sales Wave 3 — AR Aging Report hook (T-200.2)
 export { useArAging, arAgingQueryKeys } from './useArAging';
+
+// Sales Wave 3 — Sales Quote hooks (T-200.3)
+export {
+  useQuotes,
+  useQuote,
+  useCreateQuote,
+  useUpdateQuote,
+  useDeleteQuote,
+  useTransitionQuote,
+  quotesQueryKeys,
+} from './useQuotes';

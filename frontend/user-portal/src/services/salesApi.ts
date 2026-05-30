@@ -359,10 +359,154 @@ export interface CustomerReceiptListParams {
 }
 
 // ============================================================================
-// Stub types for not-yet-implemented Wave 3 documents
+// Sales Quote types (T-200.3) — fully typed, backend endpoint /v1/sales/quotes
 // ============================================================================
 
-export interface Quote { docEntry: string; docNumber: string; status: string; }
+export type QuoteStatus = 'draft' | 'open' | 'closed' | 'cancelled';
+
+export interface QuoteTotals {
+  net: number;
+  tax: number;
+  gross: number;
+}
+
+export interface QuoteLine {
+  lineId: string;
+  lineNumber: number;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description: string;
+  quantity: number;
+  uom: string;
+  unitPrice: number;
+  discountPercent: number;
+  lineNet: number;
+  taxCodeId: string | null;
+  taxPercent: number;
+  lineTax: number;
+  lineGross: number;
+  warehouseId: string | null;
+  costCenterId: string | null;
+  orderedQty: number;
+  consumedQty: number;
+  notes: string | null;
+  // doc-chain link back to base and forward to target SOs
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+}
+
+export interface Quote {
+  docEntry: string;
+  docNumber: string;
+  docType: string;
+  organizationId: string;
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  bpRefNo: string | null;
+  docDate: string;
+  validUntilDate: string;
+  status: QuoteStatus;
+  currency: string;
+  exchangeRate: number;
+  paymentTermsId: string | null;
+  salesEmployeeId: string | null;
+  ownerUserId: string;
+  notes: string | null;
+  journalMemo: string | null;
+  totals: QuoteTotals;
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+  lines: QuoteLine[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface QuoteListItem {
+  docEntry: string;
+  docNumber: string;
+  organizationId: string;
+  customerId: string;
+  customerName: string;
+  bpRefNo: string | null;
+  docDate: string;
+  validUntilDate: string;
+  status: QuoteStatus;
+  currency: string;
+  totals: QuoteTotals;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuoteLineCreate {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description?: string | null;
+  quantity: number;
+  uom: string;
+  unitPrice: number;
+  discountPercent?: number;
+  taxCodeId?: string | null;
+  taxPercent?: number;
+  warehouseId?: string | null;
+  costCenterId?: string | null;
+  notes?: string | null;
+}
+
+export interface QuoteCreate {
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  bpRefNo?: string | null;
+  docDate: string;
+  validUntilDate: string;
+  currency?: string;
+  exchangeRate?: number;
+  paymentTermsId?: string | null;
+  salesEmployeeId?: string | null;
+  journalMemo?: string | null;
+  notes?: string | null;
+  lines: QuoteLineCreate[];
+}
+
+export interface QuoteUpdate {
+  customerId?: string | null;
+  customerName?: string | null;
+  bpRefNo?: string | null;
+  docDate?: string | null;
+  validUntilDate?: string | null;
+  currency?: string | null;
+  exchangeRate?: number | null;
+  paymentTermsId?: string | null;
+  salesEmployeeId?: string | null;
+  journalMemo?: string | null;
+  notes?: string | null;
+  lines?: QuoteLineCreate[] | null;
+}
+
+export interface QuoteTransition {
+  newStatus: QuoteStatus;
+  reason?: string | null;
+}
+
+export interface QuoteListParams {
+  organizationId?: string;
+  status?: QuoteStatus | null;
+  customerId?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  page?: number;
+  size?: number;
+}
+
+// ============================================================================
+// Stub types for remaining not-yet-implemented Wave 3 documents
+// ============================================================================
+
 export interface SalesOrderV2 { docEntry: string; docNumber: string; status: string; }
 export interface Delivery { docEntry: string; docNumber: string; status: string; }
 export interface ReturnRequest { docEntry: string; docNumber: string; status: string; }
@@ -682,13 +826,179 @@ export async function transitionCustomerReceipt(
 // Typed correctly so hooks compile; throw at runtime until implemented.
 // ============================================================================
 
+// ============================================================================
+// Sales Quote API — fully implemented (T-200.3)
+// Rule 1: path does NOT include /api/ — apiClient already prepends /api/.
+// ============================================================================
+
+const QUOTE_BASE = '/v1/sales/quotes';
+
+/**
+ * List Sales Quotes with optional filters and pagination.
+ */
+export async function listQuotes(
+  params: QuoteListParams,
+): Promise<{ data: QuoteListItem[]; meta: PaginationMeta }> {
+  const queryParams: Record<string, string | number> = {};
+  if (params.organizationId) queryParams['organization_id'] = params.organizationId;
+  if (params.status) queryParams['status'] = params.status;
+  if (params.customerId) queryParams['customer_id'] = params.customerId;
+  if (params.dateFrom) queryParams['date_from'] = params.dateFrom;
+  if (params.dateTo) queryParams['date_to'] = params.dateTo;
+  if (params.page) queryParams['page'] = params.page;
+  if (params.size) queryParams['size'] = params.size;
+
+  const response = await apiClient.get<PaginatedEnvelope<QuoteListItem>>(
+    QUOTE_BASE,
+    { params: queryParams },
+  );
+  return response.data;
+}
+
+/**
+ * Get a single Sales Quote with all embedded lines.
+ */
+export async function getQuote(
+  docId: string,
+  orgId: string,
+): Promise<Quote> {
+  const response = await apiClient.get<SuccessEnvelope<Quote>>(
+    `${QUOTE_BASE}/${docId}`,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a Sales Quote in DRAFT status.
+ * Backend accepts snake_case input bodies (populate_by_name=True).
+ */
+export async function createQuote(
+  data: QuoteCreate,
+  orgId: string,
+): Promise<Quote> {
+  const body = {
+    organization_id: orgId,
+    company_code: data.companyCode,
+    customer_id: data.customerId,
+    customer_name: data.customerName,
+    bp_ref_no: data.bpRefNo ?? null,
+    doc_date: data.docDate,
+    valid_until_date: data.validUntilDate,
+    currency: data.currency ?? 'AED',
+    exchange_rate: data.exchangeRate ?? 1.0,
+    payment_terms_id: data.paymentTermsId ?? null,
+    sales_employee_id: data.salesEmployeeId ?? null,
+    journal_memo: data.journalMemo ?? null,
+    notes: data.notes ?? null,
+    lines: data.lines.map((l) => ({
+      item_id: l.itemId,
+      item_code: l.itemCode,
+      item_name: l.itemName,
+      description: l.description ?? null,
+      quantity: l.quantity,
+      uom: l.uom,
+      unit_price: l.unitPrice,
+      discount_percent: l.discountPercent ?? 0,
+      tax_code_id: l.taxCodeId ?? null,
+      tax_percent: l.taxPercent ?? 0,
+      warehouse_id: l.warehouseId ?? null,
+      cost_center_id: l.costCenterId ?? null,
+      notes: l.notes ?? null,
+    })),
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<Quote>>(
+    QUOTE_BASE,
+    body,
+  );
+  return response.data.data;
+}
+
+/**
+ * Partially update a DRAFT Sales Quote.
+ * If `lines` is provided the existing line set is replaced wholesale.
+ */
+export async function updateQuote(
+  docId: string,
+  data: QuoteUpdate,
+  orgId: string,
+): Promise<Quote> {
+  const body: Record<string, unknown> = {};
+  if (data.customerId !== undefined) body['customer_id'] = data.customerId;
+  if (data.customerName !== undefined) body['customer_name'] = data.customerName;
+  if (data.bpRefNo !== undefined) body['bp_ref_no'] = data.bpRefNo;
+  if (data.docDate !== undefined) body['doc_date'] = data.docDate;
+  if (data.validUntilDate !== undefined) body['valid_until_date'] = data.validUntilDate;
+  if (data.currency !== undefined) body['currency'] = data.currency;
+  if (data.exchangeRate !== undefined) body['exchange_rate'] = data.exchangeRate;
+  if (data.paymentTermsId !== undefined) body['payment_terms_id'] = data.paymentTermsId;
+  if (data.salesEmployeeId !== undefined) body['sales_employee_id'] = data.salesEmployeeId;
+  if (data.journalMemo !== undefined) body['journal_memo'] = data.journalMemo;
+  if (data.notes !== undefined) body['notes'] = data.notes;
+  if (data.lines !== undefined && data.lines !== null) {
+    body['lines'] = data.lines.map((l) => ({
+      item_id: l.itemId,
+      item_code: l.itemCode,
+      item_name: l.itemName,
+      description: l.description ?? null,
+      quantity: l.quantity,
+      uom: l.uom,
+      unit_price: l.unitPrice,
+      discount_percent: l.discountPercent ?? 0,
+      tax_code_id: l.taxCodeId ?? null,
+      tax_percent: l.taxPercent ?? 0,
+      warehouse_id: l.warehouseId ?? null,
+      cost_center_id: l.costCenterId ?? null,
+      notes: l.notes ?? null,
+    }));
+  }
+
+  const response = await apiClient.patch<SuccessEnvelope<Quote>>(
+    `${QUOTE_BASE}/${docId}`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Hard-delete a DRAFT Sales Quote.
+ */
+export async function deleteQuote(
+  docId: string,
+  orgId: string,
+): Promise<void> {
+  await apiClient.delete(`${QUOTE_BASE}/${docId}`, {
+    params: { organization_id: orgId },
+  });
+}
+
+/**
+ * Transition Sales Quote status (e.g. DRAFT → OPEN, OPEN → CANCELLED).
+ */
+export async function transitionQuote(
+  docId: string,
+  transition: QuoteTransition,
+  orgId: string,
+): Promise<Quote> {
+  const body = {
+    new_status: transition.newStatus,
+    reason: transition.reason ?? null,
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<Quote>>(
+    `${QUOTE_BASE}/${docId}/transition`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
 const NOT_IMPLEMENTED = (doc: string) =>
-  Promise.reject(new Error(`${doc}: not implemented in T-200.0 — wire up in a follow-up task`));
+  Promise.reject(new Error(`${doc}: not implemented — wire up in a follow-up task`));
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-export const listQuotes = () => NOT_IMPLEMENTED('Quote');
-export const getQuote = (_id: string, _orgId: string) => NOT_IMPLEMENTED('Quote');
-export const createQuote = (_data: unknown) => NOT_IMPLEMENTED('Quote');
 
 export const listSalesOrders = () => NOT_IMPLEMENTED('SalesOrder');
 export const getSalesOrder = (_id: string, _orgId: string) => NOT_IMPLEMENTED('SalesOrder');

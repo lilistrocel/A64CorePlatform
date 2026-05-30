@@ -1,8 +1,39 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 78 tasks
+> **Total completed:** 79 tasks
 
 ## 2026-05
+
+### T-200.3 | Sales Quote (SQ) UI — list + form + detail — Wave 3
+- **Category:** Frontend (+ backend pre-flight) · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-200.0 ✅, T-200.1 ✅, T-200.2 ✅
+- **Blocks:** T-200.4 (Sales Order UI)
+- **Description:** Three new Wave 3 Sales Quote pages + backend pre-flight hardening.
+  Backend: applied `_RESPONSE_CONFIG` (camelCase alias_generator) to all four Quote response
+  models and `response_model_by_alias=True` to all five response-bearing routes.
+  Frontend: full typed Quote section in salesApi.ts, useQuotes.ts hook, QuotesPage list,
+  QuoteFormPage (create/edit), QuoteDetailPage with contextual action bar.
+  "Convert to SO" button on detail (status=open) navigates to `/sales/orders-v2/from-quote/:docEntry`
+  — that route lands in T-200.4.
+- **Files created:**
+  - `frontend/user-portal/src/pages/sales/QuotesPage.tsx` — list, filter chips, pagination
+  - `frontend/user-portal/src/pages/sales/QuoteFormPage.tsx` — create/edit with CustomerCombobox + useFieldArray
+  - `frontend/user-portal/src/pages/sales/QuoteDetailPage.tsx` — detail with action bar, doc chain, attachments
+  - `frontend/user-portal/src/hooks/queries/useQuotes.ts` — TanStack Query hooks
+  - `Docs/3-DevLog/2026-05-30_T-200.3-quote-ui.md` — session DevLog
+- **Files modified:**
+  - `src/modules/sales/models/quotes.py` — `_RESPONSE_CONFIG` applied, `class Config` blocks removed
+  - `src/modules/sales/api/v1/quotes.py` — `response_model_by_alias=True` on 5 routes
+  - `frontend/user-portal/src/services/salesApi.ts` — full Quote types + API functions
+  - `frontend/user-portal/src/services/attachmentsService.ts` — `'QUOTE'` added to AttachmentDocType
+  - `frontend/user-portal/src/hooks/queries/index.ts` — useQuotes exports
+  - `frontend/user-portal/src/App.tsx` — 4 lazy imports + routes
+- **Test results:** 211 backend tests pass (unchanged). TypeScript: zero errors. ESLint: zero warnings.
+- **Backend smoke:** `GET /api/v1/sales/quotes` → 200, camelCase `meta` keys confirmed.
+- **Known limitation:** "Convert to SO" link gives 404 until T-200.4 ships. Tooltip warns the accountant.
+
+---
 
 ### T-200.2 | AR Aging Report — backend endpoint + frontend page (Wave 3)
 - **Category:** Backend + Frontend · **Priority:** P1
