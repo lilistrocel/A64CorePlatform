@@ -2,7 +2,9 @@
   "metadata": {
     "generated_at": "2026-02-24",
     "scope": "frontend/user-portal/src",
-    "layer": "frontend"
+    "layer": "frontend",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "node_id_convention_summary": "Frontend uses double-colon notation: <kind>::<name>. Kinds: component (PascalCase name), hook (useFooBar), service (camelCase like salesService / purchasingApi), store (useFooStore), type (camelCase filename without extension), file (top-level entry points only). NEVER use frontend.kind.name dot-notation — that's reserved for backend."
   },
   "nodes": [
     {

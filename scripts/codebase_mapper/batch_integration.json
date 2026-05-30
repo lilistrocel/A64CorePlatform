@@ -1,4 +1,11 @@
 {
+  "metadata": {
+    "generated_at": "2026-02-24",
+    "scope": "cross-cutting: DB collections + frontend↔backend edges + env/config",
+    "layer": "integration",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "node_id_convention_summary": "DB collections use collection_<snake_case_name>. Cross-domain edges (frontend→backend calls): source uses frontend convention (service::salesService), target uses backend convention (sales.api.ar_invoices). Never mix conventions on the same side of an edge."
+  },
   "nodes": [
     {
       "node_id": "collection_users",

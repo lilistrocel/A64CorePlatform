@@ -2,6 +2,8 @@
   "meta": {
     "generated_at": "2026-02-24T00:00:00Z",
     "generator": "codebase_mapper/batch_backend",
+    "node_id_convention_doc": "scripts/codebase_mapper/NODE_ID_CONVENTIONS.md",
+    "node_id_convention_summary": "Backend uses dot-notation: <module>.<layer>.<thing>. Default to file-level granularity (e.g. sales.api.ar_invoices, sales.service.quote_service, sales.model.ar_invoices). farm_manager is the legacy outlier using per-endpoint + PascalCase class nodes; new modules MUST use file-level snake_case to match crm/hr/sales/purchasing.",
     "scope": [
       "src/modules/farm_manager/",
       "src/modules/hr/",

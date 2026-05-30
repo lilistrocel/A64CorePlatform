@@ -1,0 +1,367 @@
+# Codebase Mapper — Node ID Conventions
+
+> **Read this BEFORE any mapping work**. The conventions below are the
+> de-facto contract enforced by the existing knowledge graph. New mapping
+> agents that invent their own conventions will produce orphan edges
+> across task boundaries, requiring cleanup passes that delete real work.
+>
+> Each `batch_*.json` file references this doc in its `metadata.node_id_convention_doc`
+> field; the mapping agent must follow what is written here.
+
+---
+
+## Why one convention can't fit everything
+
+The graph spans two distinct ecosystems with different idiomatic styles:
+
+- **Backend** (Python — FastAPI, modules under `src/modules/<module>/`,
+  shared infra under `src/core/`) uses **dot-notation** (`module.layer.thing`).
+- **Frontend** (TypeScript — React, hooks, services, stores under
+  `frontend/user-portal/src/`) uses **double-colon notation** (`kind::name`).
+
+Both styles work, but mixing them within one layer creates orphan edges.
+The cross-domain mapping tasks (`map_api_frontend_links`) must understand
+both and emit edges that target nodes in each domain's native style.
+
+---
+
+## Backend (dot-notation)
+
+### General form
+
+```
+<module>.<layer>.<thing>
+```
+
+Where:
+- `<module>` is the directory name under `src/modules/` (e.g., `sales`,
+  `crm`, `hr`, `purchasing`, `farm_manager`, `marketing`, `logistics`,
+  `ai_analytics`) OR `core` for shared infrastructure.
+- `<layer>` is one of: `api`, `service`, `model`, `middleware`,
+  `repository`, `infrastructure`, `documents` (for `core.documents.*`),
+  `cache`, etc.
+- `<thing>` is the file or class name. **Granularity differs per layer**
+  — see below.
+
+### API endpoints
+
+**Two granularities exist in the graph; pick the one matching your task scope.**
+
+**File-level** (preferred for new work — used by `crm`, `hr`, `logistics`,
+`marketing`, `sales`, `purchasing`, `ai_analytics`):
+
+```
+sales.api.ar_invoices         → "CRUD /sales/ar-invoices"
+crm.api.customers             → "CRUD /crm/customers"
+purchasing.api.purchase_orders → "CRUD /purchasing/po"
+```
+
+- One node per router file.
+- `name` field uses CRUD-style label.
+- `description` lists key endpoints or behaviour.
+
+**Per-endpoint** (legacy, only `farm_manager`):
+
+```
+farm_manager.api.farms.create_farm  → "POST /farms"
+farm_manager.api.farms.get_farms    → "GET /farms"
+farm_manager.api.farms.get_farm     → "GET /farms/{farm_id}"
+```
+
+- One node per endpoint function.
+- Use this style ONLY if the task explicitly extends `farm_manager`.
+  All other modules should use file-level granularity.
+
+### Services
+
+**File-level snake_case** (current sales Wave 3 + most new code):
+
+```
+sales.service.quote_service
+sales.service.ar_invoice_service
+sales.service.customer_receipt_service
+```
+
+- One node per service file; `name` field uses the conceptual class
+  name in PascalCase (e.g., `name: "QuoteService"`).
+- Use this when services are module-level async functions rather than
+  classes.
+
+**Class-level PascalCase** (legacy farm_manager):
+
+```
+farm_manager.service.FarmService
+farm_manager.service.BlockService
+```
+
+- One node per service class.
+- Use this only when the file contains exactly one service class and
+  it's the canonical pattern in the module.
+
+**Default for new modules: file-level snake_case.** It's used by
+crm/hr/sales/purchasing and survives refactors better.
+
+### Models
+
+**File-level snake_case** (sales Wave 3 + most modules):
+
+```
+sales.model.ar_invoices       → "AR Invoice models"
+sales.model.return_requests   → "Return Request models"
+crm.model.customers
+```
+
+- One node per model file, grouping all related Pydantic models inside.
+- `exports` lists each Pydantic class in the file.
+
+**Per-class PascalCase** (legacy farm_manager):
+
+```
+farm_manager.model.Farm
+farm_manager.model.Block
+```
+
+### Core / shared infrastructure
+
+**Lowercase dotted path matching the file** (NOT PascalCase, even though
+each file may export a class):
+
+```
+core.documents.doc_number       → "next_doc_number"
+core.documents.document_links   → "DocumentLinkRef"
+core.documents.open_quantity    → "LineQuantityState"
+core.documents.bp_ref           → "BPReferenceMixin"
+core.documents.journal_memo     → "JournalMemoMixin"
+core.documents.document_status  → "DocumentStatus"
+core.cache.redis_cache          → "RedisCache"
+core.cache.decorators
+core.middleware.auth
+core.middleware.permissions
+```
+
+- One node per file. `name` field carries the primary exported symbol.
+
+### Middleware
+
+```
+core.middleware.auth
+sales.middleware.auth         (module-specific middleware)
+```
+
+---
+
+## Frontend (double-colon notation)
+
+### General form
+
+```
+<kind>::<name>
+```
+
+Where `<kind>` is one of: `component`, `hook`, `service`, `store`,
+`type`, `file`.
+
+### Components
+
+```
+component::ProtectedRoute
+component::SalesActionTiles
+component::AuditHistoryModal
+component::MainLayout
+```
+
+- `<name>` is the PascalCase component name.
+
+### Hooks
+
+```
+hook::useAdminUsers
+hook::useAuditLog
+hook::useBalanceSheet
+hook::useFiscalPeriods
+```
+
+- `<name>` is the camelCase hook name including the `use` prefix.
+
+### Services (axios wrappers)
+
+```
+service::salesService
+service::purchasingApi
+service::apiClient
+service::financeReportsService
+```
+
+- `<name>` is the camelCase exported name from the file. (Note the
+  inconsistency: some end in `Service`, some end in `Api` — this matches
+  the actual file naming.)
+
+### Stores (Zustand)
+
+```
+store::useAuthStore
+store::useDivisionStore
+store::useFarmingYearStore
+```
+
+- `<name>` is the camelCase store hook name including the `use` prefix.
+
+### Types
+
+**File-level** (preferred — one node per `.ts` file grouping its types):
+
+```
+type::sales
+type::aiHub
+type::widget
+```
+
+- `<name>` is the camelCase filename without extension.
+
+### Files (root entry points only)
+
+```
+file::App
+file::main
+```
+
+- Reserve for top-level entry files. Don't use `file::` for every TSX
+  file — use `component::` instead.
+
+---
+
+## Integration / cross-cutting
+
+### MongoDB collections
+
+```
+collection_users
+collection_refresh_tokens
+collection_sales_orders_v2
+collection_ar_invoices_v2
+collection_return_requests_v2
+```
+
+- Prefix `collection_` plus snake_case collection name as it appears in
+  MongoDB.
+
+### Other DB models (MySQL / SQLAlchemy)
+
+Use the dot-notation backend convention:
+
+```
+finance.model.JournalEntry
+finance.model.CompanyPostingSetup
+```
+
+---
+
+## Cross-task edges
+
+When a mapping task emits an edge whose `source_id` or `target_id` is in
+**another task's namespace**, both endpoints must use that namespace's
+native convention.
+
+### Backend → backend
+
+Use dot-notation on both sides:
+
+```
+sales.service.ar_invoice_service  --[depends_on]--> finance.api.customer_ext
+sales.service.delivery_service    --[stores_in]--> finance_bridge.outbox_writer
+```
+
+### Frontend → backend (calls API)
+
+Source is frontend (`::`), target is backend (`.`):
+
+```
+service::salesService  --[calls]--> sales.api.ar_invoices
+service::auditLogService  --[calls]--> finance.api.audit_log
+```
+
+### Frontend → frontend
+
+Use `::` on both sides:
+
+```
+component::AuditHistoryModal  --[uses]--> hook::useAdminUsers
+component::SalesActionTiles   --[renders_in]--> component::MainLayout
+hook::useFiscalPeriods        --[uses]--> service::fiscalPeriodsService
+```
+
+### Backend → frontend
+
+Don't emit these. Backend code doesn't reference frontend artefacts;
+the dependency direction is always frontend → backend.
+
+---
+
+## Edge types (use these exact strings)
+
+The graph uses these `edge_type` values. Don't invent new ones unless
+you also document them:
+
+- `calls` — A invokes a function/method/endpoint in B.
+- `uses` — A reads or composes B (most generic; prefer specific types
+  when applicable).
+- `imports` — A imports a symbol from B (same module, often).
+- `depends_on` — A would fail to operate without B (cross-module).
+- `reads_from` — A reads from a data source B (typically DB).
+- `stores_in` — A writes to a data store B (DB, outbox, cache).
+- `creates` — A constructs instances of B.
+- `extends` — A is a subclass of B.
+- `renders` — A renders B (frontend components).
+- `reexports` — A re-exports symbols from B (TypeScript barrel files).
+- `exports` — A exposes B as part of its public surface.
+
+---
+
+## Reserved namespaces
+
+These prefixes are claimed by specific mapping tasks. Don't emit nodes
+in them unless your task owns them:
+
+| Prefix                              | Owning task                  |
+|-------------------------------------|------------------------------|
+| `sales.*`                           | `map_sales_module`           |
+| `purchasing.*`                      | `map_purchasing_module` (TBA)|
+| `crm.*`                             | `map_crm_module`             |
+| `hr.*`                              | `map_hr_module`              |
+| `farm_manager.*`                    | `map_farm_*` (multiple)      |
+| `logistics.*`                       | `map_logistics_module`       |
+| `marketing.*`                       | `map_marketing_module`       |
+| `ai_analytics.*`                    | `map_ai_analytics_module`    |
+| `core.*`                            | `map_core_services`          |
+| `core.api.*`                        | `map_core_api`               |
+| `finance.*`                         | `map_finance_module` (TBA)   |
+| `finance_bridge.*`                  | `map_core_services`          |
+| `component::*`                      | `map_frontend_components`    |
+| `hook::*`, `service::*`, `store::*` | `map_frontend_hooks_services`|
+| `type::*`                           | `map_frontend_types`         |
+| `file::*`                           | `map_frontend_components`    |
+| `collection_*`                      | `map_database_collections`   |
+
+When emitting cross-namespace edges, target the consumer's expected
+node_id — if you create an edge pointing at a node that doesn't exist
+yet, the markdown generator will tolerate the dangle and Mongo doesn't
+enforce FK constraints. But pick the right convention so the sibling
+task's emitted nodes will match.
+
+---
+
+## When this doc is wrong
+
+This is descriptive of the de-facto graph as of 2026-05-30. If you
+discover a divergence:
+
+1. Don't silently invent your own convention — pick the closest match
+   here.
+2. Flag the divergence in your task report.
+3. After the run, update this doc and update the affected
+   `batch_*.json` `metadata.node_id_convention_doc` field if the format
+   has changed.
+
+Avoid letting the conventions drift. The cleanup tax is real — the
+2026-05-30 Wave 3 regen run had to delete 100 orphan edges across two
+tasks that diverged silently.
