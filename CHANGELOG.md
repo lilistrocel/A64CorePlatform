@@ -5,6 +5,91 @@ All notable changes to the A64 Core Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Wave 3 Phase 2: Sales AR cycle (Quote → Cash + Returns)
+
+**Scope:** Full quote-to-cash cycle for Wave 3 Phase 2 — 8 new MongoDB document
+collections, 10+ new finance event handlers, complete returns flow, and frontend
+cleanup. Version number TBD pending release.
+
+### Added
+
+- **T-100.1** — Shared document infrastructure (`src/core/documents/`): six foundational
+  helper modules (`doc_number`, `document_links`, `open_quantity`, `bp_ref`,
+  `journal_memo`, `document_status`) + 32 unit tests; `Docs/4-Finance-Mod-docs/`
+  `Document-Conventions.md` and SAP B1 field-mapping reference xlsx
+- **T-100.2** — Customer finance extension CRUD (`customer_finance_ext`): Alembic 015
+  upgrades upsert-only table to full CRUD with type guard, balance guard, and audit log
+- **T-100.2.1** — Alembic 017: idempotent AR control account seed (124000-001
+  Trade Receivables – Customers) for the 3-tier AR resolution chain
+- **T-100.3** — Sale item finance extension (`sale_item_finance_ext`): Alembic 016
+  + `/api/v1/finance/item-finance-ext` CRUD (5 endpoints); provides `revenueAccountId`,
+  `cogsAccountId`, `salesTaxCode` per item for AR Invoice and Delivery JE handlers
+- **T-100.6** — Sales Quote (QUOTE) document: `quotes_v2`-backed model/service/API;
+  6 endpoints; doc number SQ-YYYY-NNNN; DRAFT → OPEN → CLOSED / CANCELLED lifecycle;
+  21 unit tests
+- **T-100.7** — Sales Order v2 (SO) document: `sales_orders_v2` collection;
+  7 endpoints at `/api/v1/sales/orders-v2`; Quote→SO conversion; credit-limit check
+  via finance httpx; per-line open_qty tracking; 25 unit tests
+- **T-100.8** — Delivery Note (DN) document: `deliveries_v2` collection;
+  6 endpoints at `/api/v1/sales/deliveries`; inventory_movements decrement on
+  DRAFT→OPEN; SO auto-transition to PARTLY_CLOSED/CLOSED; `delivery_posted` /
+  `delivery_cancelled` outbox events emitted; 30 unit tests
+- **T-100.8.1** — `_handle_delivery_posted` finance handler: DR COGS / CR Inventory
+  per line (2×N JE lines); `_handle_delivery_cancelled` reversal
+- **T-100.9a** — AR Invoice (ARI) document: `ar_invoices_v2` collection;
+  endpoints at `/api/v1/sales/ar-invoices`; create-from-delivery; tracks
+  `creditedAmount` and `openAmount`; emits `sales_invoice_posted`; tests in e418dd9
+- **T-100.9b** — `_handle_sales_invoice_posted` finance handler: DR AR / CR Revenue
+  (per line) / CR Output VAT (combined); 3-tier AR account resolution chain;
+  `_handle_sales_invoice_cancelled` reversal; 19 unit tests
+- **T-100.10** — Customer Receipt (IPAY) document: `customer_receipts_v2` collection;
+  endpoints at `/api/v1/sales/customer-receipts`; atomic paid_amount updates on
+  AR Invoices; emits `customer_payment_received`; tests in e418dd9
+- **T-100.10.1** — `_handle_customer_payment_received` finance handler: DR Bank /
+  CR AR; `_validate_bank_account_or_raise`; 14 unit tests
+- **T-100.11** — Returns flow (bundled): Return Request (RR), Return Note (RTN),
+  AR Credit Note (ARC); 3 new collections (`return_requests_v2`, `returns_v2`,
+  `ar_credit_notes_v2`); `return_posted` / `credit_note_posted` finance handlers;
+  `creditedAmount` field on ARI; inventory_movements restoration; 90 tests total
+- **T-064** — `useAdminUsers` hook: resolves actorUserId→displayName in
+  AuditHistoryModal; gated by viewerRole prop for finance roles that lack
+  `/v1/users` access; `PeriodsPage` passes `viewerRole`
+
+### Fixed
+
+- **T-100.9a.2** (e418dd9) — BSON date encoding across all 5 Wave 3 sales services:
+  added `_to_dt()` helper; all `datetime.date` fields now stored as `datetime.datetime`
+  at midnight UTC in MongoDB writes
+- **T-100.11.1** — Returns flow: fixed 47 test failures left broken by T-100.11 agent
+  (Category A: missing `find_one_and_update` in `_FakeCollection`, wrong OutboxWriter
+  patch targets; Category B: wrong pagination param names, raw datetime.date in MongoDB,
+  `organizationId` missing from `CurrentUser`)
+- **T-100.11.2** (bebd9e8) — Finance posting setup for A001: Alembic 018 seeds
+  `company_codes` + `fiscal_period` + `company_posting_setup` rows for org A001 so
+  all Wave 3 outbox events (`delivery_posted`, `sales_invoice_posted`, `return_posted`,
+  `credit_note_posted`) process cleanly end-to-end
+
+### Removed
+
+- **T-070.0** — Sales-side Purchase Order module removed (backend `purchase_orders.py`,
+  frontend `PurchaseOrderForm.tsx`, `PurchaseOrderTable.tsx`, `PurchaseOrdersPage.tsx`,
+  `salesService.ts` PO functions, `types/sales.ts` PO types, `SalesActionTiles.tsx`
+  Purchase Orders tile); `/sales/purchase-orders` URL now redirects to `/purchasing/po`
+
+### Changed
+
+- `contracts/finance_events.py` — Wave 3 event contracts added: `DeliveryPostedPayload`,
+  `SalesInvoicePostedPayload`, `CustomerPaymentReceivedPayload`, `ReturnPostedPayload`,
+  `CreditNotePostedPayload` + cancellation variants; all registered in `EVENT_TYPE_REGISTRY`
+- `services/finance/src/finance/api/v1/events.py` — 11 new handlers + 4 account-
+  resolution helpers for Wave 3 sales events
+- `src/modules/sales/middleware/auth.py` — `CurrentUser` now exposes `organizationId`
+  attribute (was missing, causing HTTP 400 on every live API call)
+- `App.tsx` alias `PurchasingPurchaseOrdersPage` removed; clean `PurchaseOrdersPage`
+  import now that sales-side duplicate is gone (T-070.0)
+
+---
+
 ## [1.20.0] - 2026-05-29
 
 **Type:** Minor Release — Wave 2 close: statutory financial statements (BS/IS/CF),
