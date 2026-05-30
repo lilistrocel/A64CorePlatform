@@ -262,3 +262,206 @@ class ApprovalRuleResolveResponse(BaseModel):
     requiresApproval: bool
     matchedRule: Optional[ApprovalRuleResponse] = None
     reason: str
+
+
+# ---------------------------------------------------------------------------
+# CustomerFinanceExt schemas  (Wave 3 / T-100.2)
+# ---------------------------------------------------------------------------
+
+
+class CustomerFinanceExtCreate(BaseModel):
+    """
+    Request model for creating a customer finance extension (POST).
+
+    organizationId and customerId are required — they form the unique key.
+    All finance fields are optional; omit to leave unset.
+
+    Args:
+        organizationId: Org scope (multi-tenant).
+        customerId: UUID string from the ops MongoDB customers collection.
+        arControlAccountId: GL account UUID for AR control override. Must
+            reference an active leaf ASSETS/asset account. Null falls back
+            to CompanyPostingSetup.arControlAccountId.
+        paymentTermsId: Payment terms code string (e.g. "NET30").
+        defaultTaxCode: Tax code string (e.g. "S", "Z", "E").
+        creditLimit: Maximum credit; None means no limit enforced. Must be >= 0.
+        creditLimitCurrency: ISO 4217 currency code (default "AED").
+        bpRefDefault: Placeholder for customer PO numbering pattern.
+        notes: Free-text annotation.
+    """
+
+    organizationId: str = Field(..., min_length=1)
+    customerId: str = Field(..., min_length=1)
+    arControlAccountId: Optional[str] = Field(
+        None,
+        description="GL account UUID for per-customer AR control override",
+    )
+    paymentTermsId: Optional[str] = Field(None, max_length=50)
+    defaultTaxCode: Optional[str] = Field(None, max_length=10)
+    creditLimit: Optional[Decimal] = Field(
+        None,
+        ge=Decimal("0"),
+        description="None means no credit limit enforced",
+    )
+    creditLimitCurrency: str = Field(
+        default="AED",
+        min_length=3,
+        max_length=3,
+        description="ISO 4217 3-character currency code",
+    )
+    bpRefDefault: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = Field(None, max_length=500)
+
+
+class CustomerFinanceExtUpdate(BaseModel):
+    """
+    Request model for partially updating a customer finance extension (PATCH).
+
+    All fields are optional. Omit a field to leave it unchanged.
+    Pass null explicitly to clear an optional field.
+    """
+
+    arControlAccountId: Optional[str] = Field(
+        default=None,
+        description=(
+            "GL account UUID for AR control override. Null clears the override, "
+            "reverting to the company posting setup default."
+        ),
+    )
+    paymentTermsId: Optional[str] = Field(default=None, max_length=50)
+    defaultTaxCode: Optional[str] = Field(default=None, max_length=10)
+    creditLimit: Optional[Decimal] = Field(
+        default=None,
+        ge=Decimal("0"),
+        description="None means no credit limit enforced",
+    )
+    creditLimitCurrency: Optional[str] = Field(
+        default=None,
+        min_length=3,
+        max_length=3,
+    )
+    bpRefDefault: Optional[str] = Field(default=None, max_length=100)
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class CustomerFinanceExtResponse(BaseModel):
+    """Response model for customer finance extension."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    customer_finance_ext_id: str
+    customerId: str
+    organizationId: str
+    arControlAccountId: Optional[str] = None
+    paymentTermsId: Optional[str] = None
+    defaultTaxCode: Optional[str] = None
+    creditLimit: Optional[Decimal] = None
+    creditLimitCurrency: str
+    bpRefDefault: Optional[str] = None
+    notes: Optional[str] = None
+    createdBy: Optional[str] = None
+    updatedBy: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime
+
+
+# ---------------------------------------------------------------------------
+# SaleItemFinanceExt schemas  (Wave 3 / T-100.3)
+# ---------------------------------------------------------------------------
+
+
+class SaleItemFinanceExtCreate(BaseModel):
+    """
+    Request model for creating a sale item finance extension (POST).
+
+    organizationId and itemId are required — they form the unique key.
+    All finance fields are optional; omit to leave unset.
+
+    Args:
+        organizationId: Org scope (multi-tenant).
+        itemId: UUID string from the ops MongoDB items collection.
+        itemCode: Denormalized item code (informational display only).
+        itemName: Denormalized item name (informational display only).
+        revenueAccountId: GL account UUID for revenue posting. Must
+            reference an active non-header REVENUE/revenue account.
+        cogsAccountId: GL account UUID for COGS posting (Delivery JE).
+            Must reference an active non-header COST_OF_SALES/expense account.
+        salesTaxCode: Output VAT tax code string (e.g. "S", "Z").
+        isSellable: Whether this item is enabled for sale. Defaults True.
+        notes: Free-text annotation.
+    """
+
+    organizationId: str = Field(..., min_length=1)
+    itemId: str = Field(..., min_length=1)
+    itemCode: Optional[str] = Field(None, max_length=20)
+    itemName: Optional[str] = Field(None, max_length=200)
+    revenueAccountId: Optional[str] = Field(
+        None,
+        description=(
+            "GL account UUID for revenue posting. "
+            "Must be drawer=REVENUE, accountType=revenue, non-header, active."
+        ),
+    )
+    cogsAccountId: Optional[str] = Field(
+        None,
+        description=(
+            "GL account UUID for cost-of-goods-sold (Delivery JE). "
+            "Must be drawer=COST_OF_SALES, accountType=expense, non-header, active."
+        ),
+    )
+    # Reason: stored as string code (no hard FK) — mirrors T-100.2 customer_finance_ext
+    # defaultTaxCode deviation: tax_codes uses composite PK (organizationId, taxCode) and
+    # cross-table validation is done at the application layer, not at DB level.
+    salesTaxCode: Optional[str] = Field(None, max_length=10)
+    isSellable: bool = Field(default=True)
+    notes: Optional[str] = Field(None, max_length=500)
+
+
+class SaleItemFinanceExtUpdate(BaseModel):
+    """
+    Request model for partially updating a sale item finance extension (PATCH).
+
+    All fields are optional. Omit a field to leave it unchanged.
+    Pass null explicitly to clear an optional field.
+    """
+
+    itemCode: Optional[str] = Field(default=None, max_length=20)
+    itemName: Optional[str] = Field(default=None, max_length=200)
+    revenueAccountId: Optional[str] = Field(
+        default=None,
+        description=(
+            "GL account UUID for revenue. Null clears the assignment. "
+            "Non-null value must be drawer=REVENUE, accountType=revenue, non-header, active."
+        ),
+    )
+    cogsAccountId: Optional[str] = Field(
+        default=None,
+        description=(
+            "GL account UUID for COGS (Delivery JE). Null clears the assignment. "
+            "Non-null value must be drawer=COST_OF_SALES, accountType=expense, non-header, active."
+        ),
+    )
+    salesTaxCode: Optional[str] = Field(default=None, max_length=10)
+    isSellable: Optional[bool] = Field(default=None)
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class SaleItemFinanceExtResponse(BaseModel):
+    """Response model for sale item finance extension."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    sale_item_finance_ext_id: str
+    itemId: str
+    organizationId: str
+    itemCode: Optional[str] = None
+    itemName: Optional[str] = None
+    revenueAccountId: Optional[str] = None
+    cogsAccountId: Optional[str] = None
+    salesTaxCode: Optional[str] = None
+    isSellable: bool
+    notes: Optional[str] = None
+    createdBy: Optional[str] = None
+    updatedBy: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime

@@ -403,30 +403,54 @@ class Vendor(Base):
 
 class CustomerFinanceExt(Base):
     """
-    Customer Finance Extension.
+    Customer Finance Extension (Wave 3 / T-100.2).
 
-    Extends the MongoDB customer document with finance-specific fields.
-    customerId is the primary key and must match the Mongo document's customerId.
+    Finance-side attributes for customers managed in the main app (MongoDB).
+    Required by the sales_invoice_posted JE handler so every sales document
+    can resolve the correct AR control account, payment terms, and tax code
+    without cross-DB joins into the ops MongoDB.
+
+    PK is a generated UUID (customer_finance_ext_id).
+    Uniqueness is enforced at (organizationId, customerId).
+    customerId is the MongoDB customer document's _id (stored as string).
     """
 
     __tablename__ = "customer_finance_ext"
+    __table_args__ = (
+        UniqueConstraint("organizationId", "customerId", name="uk_customer_finance_ext"),
+    )
 
-    customerId = Column(String(36), primary_key=True)
+    customer_finance_ext_id = Column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    customerId = Column(String(36), nullable=False, index=True)
     organizationId = Column(String(36), nullable=False, index=True)
-    trn = Column(String(50), nullable=True)
-    paymentTerms = Column(String(50), nullable=True)
-    reconciliationAccountId = Column(
+    # Reason: per-customer AR control account override. Falls back to
+    # CompanyPostingSetup.arControlAccountId when null.
+    arControlAccountId = Column(
         String(36),
         ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
-    defaultRevenueAccountId = Column(
-        String(36),
-        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
-        nullable=True,
-    )
+    # Reason: string code (e.g. "NET30", "NET60") — not a FK to a payment_terms
+    # table because the finance service does not host that master data; it lives
+    # in the ops MongoDB. Stored for informational use and AR aging computation.
+    paymentTermsId = Column(String(50), nullable=True)
+    # Reason: string code (e.g. "S", "Z", "E") — references tax_codes.taxCode
+    # but a hard FK is avoided because tax codes use a composite PK
+    # (organizationId, taxCode) and cross-table validation is done at the
+    # application layer (endpoint handler), not at DB level.
+    defaultTaxCode = Column(String(10), nullable=True)
+    # Reason: None means no credit limit enforced (open credit).
     creditLimit = Column(Numeric(15, 2), nullable=True)
-    isBlocked = Column(Boolean, nullable=False, default=False)
+    creditLimitCurrency = Column(String(3), nullable=False, default="AED", server_default="AED")
+    # Reason: placeholder for customer's standard PO numbering pattern if known.
+    # Not used at run-time — informational only.
+    bpRefDefault = Column(String(100), nullable=True)
+    notes = Column(String(500), nullable=True)
+    createdBy = Column(String(36), nullable=True)
+    updatedBy = Column(String(36), nullable=True)
     createdAt = Column(DateTime, nullable=False, server_default=func.now())
     updatedAt = Column(
         DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
@@ -595,6 +619,81 @@ class PurchaseItemFinanceExt(Base):
     ifrsTag = Column(String(10), nullable=True)
     isActive = Column(Boolean, nullable=False, default=True)
     notes = Column(Text, nullable=True)
+    createdAt = Column(DateTime, nullable=False, server_default=func.now())
+    updatedAt = Column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SaleItemFinanceExt(Base):
+    """
+    Sale Item Finance Extension (Wave 3 / T-100.3).
+
+    Finance-side sales attributes for items managed in the main app (MongoDB).
+    Required by the AR Invoice and Delivery JE handlers so every sales document
+    can resolve the correct revenue account, COGS account, and output VAT code
+    per item without cross-DB joins into the ops MongoDB.
+
+    PK is a generated UUID (sale_item_finance_ext_id).
+    Uniqueness is enforced at (organizationId, itemId).
+    itemId is the MongoDB item document's _id (stored as string).
+
+    Parallel to purchase_item_finance_ext (purchase-side): this table holds the
+    SALES-side GL mapping only.  The two cogsAccountId fields serve different
+    JE handlers:
+      - purchase_item_finance_ext.cogsAccountId — used by purchase_received
+        posting for GR-COGS (direct-cost recognition at receipt, optional).
+      - sale_item_finance_ext.cogsAccountId — used by Delivery JE handler
+        (DR COGS / CR Inventory at shipment), the canonical inventory-depletion
+        entry.
+    Keeping them separate avoids a single row carrying mixed purchase+sale
+    semantics, reduces audit surface, and eliminates risk to the live
+    _handle_purchase_received handler.
+    """
+
+    __tablename__ = "sale_item_finance_ext"
+    __table_args__ = (
+        UniqueConstraint("organizationId", "itemId", name="uk_sale_item_finance_ext"),
+    )
+
+    sale_item_finance_ext_id = Column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    itemId = Column(String(36), nullable=False, index=True)
+    organizationId = Column(String(36), nullable=False, index=True)
+    # Reason: denormalized from the operational item so the finance UI can display
+    # useful item info without cross-DB joins.  Nullable so the row can be created
+    # manually before the ops event arrives, and updated on the next sync.
+    itemCode = Column(String(20), nullable=True)
+    itemName = Column(String(200), nullable=True)
+    # Reason: per-item revenue account override.  AR Invoice JE handler posts
+    # DR AR / CR Revenue using this account.  Must be drawer=REVENUE, accountType=revenue.
+    revenueAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    # Reason: per-item COGS account for Delivery JE (DR COGS / CR Inventory).
+    # Must be drawer=COST_OF_SALES, accountType=expense, isHeader=false.
+    cogsAccountId = Column(
+        String(36),
+        ForeignKey("gl_accounts.accountId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # Reason: string code (e.g. "S", "Z", "E") — references tax_codes.taxCode
+    # but a hard FK is avoided because tax codes use a composite PK
+    # (organizationId, taxCode) and cross-table validation is done at the
+    # application layer, not at DB level.  Mirrors defaultTaxCode on
+    # customer_finance_ext (T-100.2 deviation rationale).
+    salesTaxCode = Column(String(10), nullable=True)
+    # Reason: isSellable flag lets the AR Invoice UI filter down to only items
+    # that are configured for sale (i.e. have been enabled by finance).
+    # Defaults to True so items created via event sync are immediately visible.
+    isSellable = Column(Boolean, nullable=False, default=True, server_default="1")
+    notes = Column(String(500), nullable=True)
+    createdBy = Column(String(36), nullable=True)
+    updatedBy = Column(String(36), nullable=True)
     createdAt = Column(DateTime, nullable=False, server_default=func.now())
     updatedAt = Column(
         DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
