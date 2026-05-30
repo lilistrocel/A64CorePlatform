@@ -10,6 +10,9 @@ A Return Request is a commitment document (no GL impact). It records the
 customer's intention to return goods and authorises a Return to be created.
 
 Collection name: return_requests_v2
+
+Hardened for T-200.6: response models use _RESPONSE_CONFIG (to_camel alias +
+populate_by_name=True + from_attributes=True); routes use response_model_by_alias=True.
 """
 
 from __future__ import annotations
@@ -18,10 +21,20 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.alias_generators import to_camel
 
 from src.core.documents.document_links import DocumentLinkRef
 from src.core.documents.document_status import DocumentStatus
+
+# Response models emit camelCase fields via the to_camel alias generator;
+# routes pair this with response_model_by_alias=True. populate_by_name=True
+# means consumers may still post snake_case input bodies.
+_RESPONSE_CONFIG = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    from_attributes=True,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +121,8 @@ class ReturnRequestLineResponse(BaseModel):
         consumed_qty:    How much of requested_qty has been consumed by Returns.
     """
 
+    model_config = _RESPONSE_CONFIG
+
     line_id: str
     line_number: int
     item_id: str
@@ -138,6 +153,8 @@ class ReturnRequestLineResponse(BaseModel):
 
 class ReturnRequestTotals(BaseModel):
     """Totals sub-document for a Return Request."""
+
+    model_config = _RESPONSE_CONFIG
 
     net: Decimal
     tax: Decimal
@@ -226,6 +243,8 @@ class ReturnRequestResponse(BaseModel):
     Full Return Request as returned by the API.
     """
 
+    model_config = _RESPONSE_CONFIG
+
     doc_entry: str
     doc_number: str
     doc_type: str
@@ -253,6 +272,8 @@ class ReturnRequestListItem(BaseModel):
     """
     Slim Return Request row for paginated list views.
     """
+
+    model_config = _RESPONSE_CONFIG
 
     doc_entry: str
     doc_number: str

@@ -134,6 +134,18 @@ const DeliveryDetailPage = lazy(() =>
   import('./pages/sales/DeliveryDetailPage').then(m => ({ default: m.DeliveryDetailPage }))
 );
 
+// T-200.6: Return Request pages
+// Route order matters: /new and /from-delivery/:dnDocEntry must be before /:docId.
+const ReturnRequestsPage = lazy(() =>
+  import('./pages/sales/ReturnRequestsPage').then(m => ({ default: m.ReturnRequestsPage }))
+);
+const ReturnRequestFormPage = lazy(() =>
+  import('./pages/sales/ReturnRequestFormPage').then(m => ({ default: m.ReturnRequestFormPage }))
+);
+const ReturnRequestDetailPage = lazy(() =>
+  import('./pages/sales/ReturnRequestDetailPage').then(m => ({ default: m.ReturnRequestDetailPage }))
+);
+
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
 const CampaignManagementPage = lazy(() => import('./pages/marketing/CampaignManagementPage').then(m => ({ default: m.CampaignManagementPage })));
@@ -357,6 +369,12 @@ function App() {
                 <Route path="/sales/deliveries/from-so/:soDocEntry" element={<DeliveryFormPage />} />
                 <Route path="/sales/deliveries/:docId/edit" element={<DeliveryFormPage />} />
                 <Route path="/sales/deliveries/:docId" element={<DeliveryDetailPage />} />
+                {/* T-200.6: Return Request routes — specific paths before /:docId */}
+                <Route path="/sales/return-requests" element={<ReturnRequestsPage />} />
+                <Route path="/sales/return-requests/new" element={<ReturnRequestFormPage />} />
+                <Route path="/sales/return-requests/from-delivery/:dnDocEntry" element={<ReturnRequestFormPage />} />
+                <Route path="/sales/return-requests/:docId/edit" element={<ReturnRequestFormPage />} />
+                <Route path="/sales/return-requests/:docId" element={<ReturnRequestDetailPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />

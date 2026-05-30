@@ -815,10 +815,148 @@ export interface DeliveryListParams {
 }
 
 // ============================================================================
-// Stub types for remaining not-yet-implemented Wave 3 documents
+// Return Request types (T-200.6)
+// Backend endpoint: /v1/sales/return-requests
+// Doc prefix: RR-YYYY-NNNN
+// Status flow: draft → open → closed (auto when fully consumed) / cancelled
 // ============================================================================
 
-export interface ReturnRequest { docEntry: string; docNumber: string; status: string; }
+export type ReturnRequestStatus = 'draft' | 'open' | 'closed' | 'cancelled';
+
+export type ReturnReason =
+  | 'damaged'
+  | 'wrong_item'
+  | 'overshipped'
+  | 'customer_change'
+  | 'quality'
+  | 'other';
+
+export interface ReturnRequestTotals {
+  net: number;
+  tax: number;
+  gross: number;
+}
+
+export interface ReturnRequestLine {
+  lineId: string;
+  lineNumber: number;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description: string;
+  requestedQty: number;
+  uom: string;
+  unitPrice: number;
+  discountPercent: number;
+  lineNet: number;
+  taxCodeId: string | null;
+  taxPercent: number;
+  lineTax: number;
+  lineGross: number;
+  warehouseId: string | null;
+  costCenterId: string | null;
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+  orderedQty: number;
+  consumedQty: number;
+}
+
+export interface ReturnRequest {
+  docEntry: string;
+  docNumber: string;
+  docType: string;
+  organizationId: string;
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  validUntilDate: string;
+  reason: ReturnReason;
+  reasonText: string | null;
+  status: ReturnRequestStatus;
+  totals: ReturnRequestTotals;
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+  notes: string | null;
+  lines: ReturnRequestLine[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface ReturnRequestListItem {
+  docEntry: string;
+  docNumber: string;
+  organizationId: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  validUntilDate: string;
+  reason: ReturnReason;
+  status: ReturnRequestStatus;
+  totals: ReturnRequestTotals;
+  baseDocRef: DocumentLinkRef | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReturnRequestLineCreate {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description?: string | null;
+  requestedQty: number;
+  uom: string;
+  unitPrice: number;
+  discountPercent?: number;
+  taxCodeId?: string | null;
+  taxPercent?: number;
+  warehouseId?: string | null;
+  costCenterId?: string | null;
+  /** Required: link to source Delivery line */
+  baseDocRef: DocumentLinkRef;
+}
+
+export interface ReturnRequestCreate {
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  validUntilDate: string;
+  reason: ReturnReason;
+  reasonText?: string | null;
+  /** Required: source Delivery header ref */
+  baseDocRef: DocumentLinkRef;
+  lines: ReturnRequestLineCreate[];
+  notes?: string | null;
+}
+
+export interface ReturnRequestUpdate {
+  docDate?: string | null;
+  validUntilDate?: string | null;
+  reason?: ReturnReason | null;
+  reasonText?: string | null;
+  notes?: string | null;
+  lines?: ReturnRequestLineCreate[] | null;
+}
+
+export interface ReturnRequestTransition {
+  newStatus: ReturnRequestStatus;
+  reason?: string | null;
+}
+
+export interface ReturnRequestListParams {
+  organizationId?: string;
+  status?: ReturnRequestStatus | null;
+  customerId?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  page?: number;
+  size?: number;
+}
+
+/** Stub types for remaining not-yet-implemented Wave 3 documents */
 export interface Return { docEntry: string; docNumber: string; status: string; }
 export interface ARCreditNote { docEntry: string; docNumber: string; status: string; }
 
@@ -1653,10 +1791,198 @@ export async function transitionDelivery(
   return response.data.data;
 }
 
-// Customer Receipt stubs removed — replaced by full implementation below
+// ============================================================================
+// Return Request API — fully implemented (T-200.6)
+// Rule 1: path does NOT include /api/ — apiClient already prepends /api/
+// ============================================================================
 
-export const listReturnRequests = () => NOT_IMPLEMENTED('ReturnRequest');
-export const getReturnRequest = (_id: string, _orgId: string) => NOT_IMPLEMENTED('ReturnRequest');
+const RR_BASE = '/v1/sales/return-requests';
+
+/**
+ * List Return Requests with optional filters and pagination.
+ */
+export async function listReturnRequests(
+  params: ReturnRequestListParams,
+): Promise<{ data: ReturnRequestListItem[]; meta: PaginationMeta }> {
+  const queryParams: Record<string, string | number> = {};
+  if (params.organizationId) queryParams['organization_id'] = params.organizationId;
+  if (params.status) queryParams['status'] = params.status;
+  if (params.customerId) queryParams['customer_id'] = params.customerId;
+  if (params.dateFrom) queryParams['date_from'] = params.dateFrom;
+  if (params.dateTo) queryParams['date_to'] = params.dateTo;
+  if (params.page) queryParams['page'] = params.page;
+  if (params.size) queryParams['size'] = params.size;
+
+  const response = await apiClient.get<PaginatedEnvelope<ReturnRequestListItem>>(
+    RR_BASE,
+    { params: queryParams },
+  );
+  return response.data;
+}
+
+/**
+ * Get a single Return Request with all embedded lines.
+ */
+export async function getReturnRequest(
+  docId: string,
+  orgId: string,
+): Promise<ReturnRequest> {
+  const response = await apiClient.get<SuccessEnvelope<ReturnRequest>>(
+    `${RR_BASE}/${docId}`,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a Return Request directly (manual entry — rare; most RRs come from from-delivery).
+ * The baseDocRef must point to the source Delivery header.
+ */
+export async function createReturnRequest(
+  data: ReturnRequestCreate,
+  orgId: string,
+): Promise<ReturnRequest> {
+  const body = {
+    company_code: data.companyCode,
+    customer_id: data.customerId,
+    customer_name: data.customerName,
+    doc_date: data.docDate,
+    valid_until_date: data.validUntilDate,
+    reason: data.reason,
+    reason_text: data.reasonText ?? null,
+    base_doc_ref: {
+      doc_type: data.baseDocRef.docType,
+      doc_id: data.baseDocRef.docId,
+      doc_number: data.baseDocRef.docNumber,
+      line_id: data.baseDocRef.lineId ?? null,
+    },
+    lines: data.lines.map((l) => ({
+      item_id: l.itemId,
+      item_code: l.itemCode,
+      item_name: l.itemName,
+      description: l.description ?? null,
+      requested_qty: l.requestedQty,
+      uom: l.uom,
+      unit_price: l.unitPrice,
+      discount_percent: l.discountPercent ?? 0,
+      tax_code_id: l.taxCodeId ?? null,
+      tax_percent: l.taxPercent ?? 0,
+      warehouse_id: l.warehouseId ?? null,
+      cost_center_id: l.costCenterId ?? null,
+      base_doc_ref: {
+        doc_type: l.baseDocRef.docType,
+        doc_id: l.baseDocRef.docId,
+        doc_number: l.baseDocRef.docNumber,
+        line_id: l.baseDocRef.lineId ?? null,
+      },
+    })),
+    notes: data.notes ?? null,
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<ReturnRequest>>(
+    RR_BASE,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a Return Request from a posted Delivery Note.
+ * Backend copies open lines from the Delivery; caller may override requestedQty per line.
+ * This is the primary creation path — most RRs originate here.
+ *
+ * NOTE: The backend does NOT have a dedicated /from-delivery endpoint for RR.
+ * Instead, we create the RR directly with the Delivery as baseDocRef.
+ * The caller (ReturnRequestFormPage) constructs the payload from the Delivery data.
+ */
+export async function createReturnRequestFromDelivery(
+  data: ReturnRequestCreate,
+  orgId: string,
+): Promise<ReturnRequest> {
+  // Delegates to createReturnRequest — the Delivery reference is captured in
+  // baseDocRef (header) and each line's baseDocRef (line-level).
+  return createReturnRequest(data, orgId);
+}
+
+/**
+ * Partially update a DRAFT Return Request.
+ * If `lines` is provided the existing line set is replaced wholesale.
+ */
+export async function updateReturnRequest(
+  docId: string,
+  data: ReturnRequestUpdate,
+  orgId: string,
+): Promise<ReturnRequest> {
+  const body: Record<string, unknown> = {};
+  if (data.docDate !== undefined) body['doc_date'] = data.docDate;
+  if (data.validUntilDate !== undefined) body['valid_until_date'] = data.validUntilDate;
+  if (data.reason !== undefined) body['reason'] = data.reason;
+  if (data.reasonText !== undefined) body['reason_text'] = data.reasonText;
+  if (data.notes !== undefined) body['notes'] = data.notes;
+  if (data.lines !== undefined && data.lines !== null) {
+    body['lines'] = data.lines.map((l) => ({
+      item_id: l.itemId,
+      item_code: l.itemCode,
+      item_name: l.itemName,
+      description: l.description ?? null,
+      requested_qty: l.requestedQty,
+      uom: l.uom,
+      unit_price: l.unitPrice,
+      discount_percent: l.discountPercent ?? 0,
+      tax_code_id: l.taxCodeId ?? null,
+      tax_percent: l.taxPercent ?? 0,
+      warehouse_id: l.warehouseId ?? null,
+      cost_center_id: l.costCenterId ?? null,
+      base_doc_ref: {
+        doc_type: l.baseDocRef.docType,
+        doc_id: l.baseDocRef.docId,
+        doc_number: l.baseDocRef.docNumber,
+        line_id: l.baseDocRef.lineId ?? null,
+      },
+    }));
+  }
+
+  const response = await apiClient.patch<SuccessEnvelope<ReturnRequest>>(
+    `${RR_BASE}/${docId}`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Hard-delete a DRAFT Return Request.
+ */
+export async function deleteReturnRequest(
+  docId: string,
+  orgId: string,
+): Promise<void> {
+  await apiClient.delete(`${RR_BASE}/${docId}`, {
+    params: { organization_id: orgId },
+  });
+}
+
+/**
+ * Transition Return Request status (e.g. DRAFT → OPEN, OPEN → CANCELLED).
+ */
+export async function transitionReturnRequest(
+  docId: string,
+  transition: ReturnRequestTransition,
+  orgId: string,
+): Promise<ReturnRequest> {
+  const body = {
+    new_status: transition.newStatus,
+    reason: transition.reason ?? null,
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<ReturnRequest>>(
+    `${RR_BASE}/${docId}/transition`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
 
 export const listReturns = () => NOT_IMPLEMENTED('Return');
 export const getReturn = (_id: string, _orgId: string) => NOT_IMPLEMENTED('Return');

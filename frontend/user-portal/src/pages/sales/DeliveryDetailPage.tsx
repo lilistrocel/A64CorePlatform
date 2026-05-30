@@ -444,6 +444,11 @@ export function DeliveryDetailPage() {
                 <FileText size={15} />
                 Generate AR Invoice
               </PrimaryButton>
+              <SecondaryButton
+                onClick={() => navigate(`/sales/return-requests/from-delivery/${dn.docEntry}`)}
+              >
+                Request Return (RMA)
+              </SecondaryButton>
               {isSuperAdmin && (
                 <DangerButton onClick={handleCancel} disabled={transitionMut.isPending}>
                   Cancel

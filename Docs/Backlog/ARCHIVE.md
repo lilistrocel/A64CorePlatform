@@ -4,6 +4,25 @@
 
 ## 2026-05
 
+### T-200.6 | Return Request (RR) UI — list + form + detail + from-Delivery flow
+- **Category:** Frontend (+ backend pre-flight) · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-100.11 ✅ (Return Request backend)
+- **Blocks:** T-200.7 (Return Note UI — /sales/returns-v2/from-rr/:rrDocEntry ready to receive)
+- **Description:** Three new Wave 3 Return Request pages + backend pre-flight hardening.
+  Backend: rewrote `models/return_requests.py` with `_RESPONSE_CONFIG` (camelCase alias_generator,
+  populate_by_name, from_attributes); added `response_model_by_alias=True` to all 6 response-
+  bearing routes in `api/v1/return_requests.py`. Frontend: full RR type hierarchy + 7 API
+  functions in salesApi.ts; `useReturnRequests.ts` hook file with 8 hooks + `rrQueryKeys`;
+  `ReturnRequestsPage` (status chips, reason chips client-side, search, pagination, 4-color
+  StatusBadge); `ReturnRequestFormPage` (3-mode: new/from-delivery/edit — pre-fills from DN,
+  maxQty hint per line, Zod validation, useFieldArray); `ReturnRequestDetailPage` (consumption-
+  tracking lines table with requestedQty | consumedQty | remainingQty + progress bar per line,
+  Create Return Note button with T-200.7 tooltip, delete modal X-only). Added "Request Return
+  (RMA)" SecondaryButton to DeliveryDetailPage action bar (open status only). 5 new routes
+  added to App.tsx in correct order (/new, /from-delivery/:x before /:docId).
+  Checks: tsc 0 errors, eslint 0 errors, backend 211/211 tests passed.
+
 ### T-200.5 | Delivery Note (DN) UI — list + form + detail + from-SO flow
 - **Category:** Frontend (+ backend pre-flight) · **Priority:** P1
 - **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert (Viet Anh)

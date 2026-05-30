@@ -281,3 +281,15 @@ export {
   useTransitionDelivery,
   dnQueryKeys,
 } from './useDeliveries';
+
+// Sales Wave 3 — Return Request hooks (T-200.6)
+export {
+  useReturnRequests,
+  useReturnRequest,
+  useCreateReturnRequest,
+  useCreateReturnRequestFromDelivery,
+  useUpdateReturnRequest,
+  useDeleteReturnRequest,
+  useTransitionReturnRequest,
+  rrQueryKeys,
+} from './useReturnRequests';

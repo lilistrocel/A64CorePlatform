@@ -99,6 +99,7 @@ def _resolve_org_id(
 @router.get(
     "",
     response_model=PaginatedResponse[ReturnRequestListItem],
+    response_model_by_alias=True,
     summary="List Return Requests",
     description=(
         "Return a paginated list of Return Requests (RMAs) for the given "
@@ -165,6 +166,7 @@ async def list_return_requests_endpoint(
 @router.get(
     "/{doc_entry}",
     response_model=SuccessResponse[ReturnRequestResponse],
+    response_model_by_alias=True,
     summary="Get Return Request detail",
 )
 async def get_return_request_endpoint(
@@ -207,6 +209,7 @@ async def get_return_request_endpoint(
 @router.post(
     "",
     response_model=SuccessResponse[ReturnRequestResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Return Request",
 )
@@ -260,6 +263,7 @@ async def create_return_request_endpoint(
 @router.patch(
     "/{doc_entry}",
     response_model=SuccessResponse[ReturnRequestResponse],
+    response_model_by_alias=True,
     summary="Update draft Return Request",
 )
 async def update_return_request_endpoint(
@@ -322,6 +326,7 @@ async def update_return_request_endpoint(
 @router.delete(
     "/{doc_entry}",
     response_model=SuccessResponse[None],
+    response_model_by_alias=True,
     summary="Delete draft Return Request",
 )
 async def delete_return_request_endpoint(
@@ -379,6 +384,7 @@ async def delete_return_request_endpoint(
 @router.post(
     "/{doc_entry}/transition",
     response_model=SuccessResponse[ReturnRequestResponse],
+    response_model_by_alias=True,
     summary="Transition Return Request status",
 )
 async def transition_return_request_endpoint(
