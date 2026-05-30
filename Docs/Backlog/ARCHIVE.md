@@ -1,8 +1,33 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 77 tasks
+> **Total completed:** 78 tasks
 
 ## 2026-05
+
+### T-200.2 | AR Aging Report — backend endpoint + frontend page (Wave 3)
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** T-200.0 ✅, T-200.1 ✅
+- **Blocks:** —
+- **Description:** AR Aging report for Wave 3 sales. Backend `GET /api/v1/sales/reports/ar-aging` with five-bucket ageing logic (current / 1-30 / 31-60 / 61-90 / over90), Decimal string amounts, camelCase via `_RESPONSE_CONFIG` + `response_model_by_alias=True`. Frontend `ARAgingReportPage` at `/sales/reports/ar-aging` with filter bar (date, customer, currency), grand totals card, sortable customer table, CSV export (client-side), drill-down to AR Invoices list, overdue highlighting.
+- **Files created:**
+  - `src/modules/sales/models/reports.py` — ARAgingCustomerRow, ARAgingGrandTotals, ARAgingReport, ARAgingParams
+  - `src/modules/sales/services/reports_service.py` — compute_ar_aging()
+  - `src/modules/sales/api/v1/reports.py` — GET /ar-aging route with require_permission("sales.view")
+  - `src/modules/sales/tests/test_ar_aging.py` — 6 tests (all pass)
+  - `frontend/user-portal/src/hooks/queries/useArAging.ts` — useArAging hook
+  - `frontend/user-portal/src/pages/sales/ARAgingReportPage.tsx` — full page component
+  - `Docs/3-DevLog/2026-05-30_T-200.2-ar-aging-report.md`
+- **Files modified:**
+  - `src/modules/sales/api/v1/__init__.py` — registered reports_router at prefix /reports
+  - `frontend/user-portal/src/services/salesApi.ts` — AR Aging types + getArAging()
+  - `frontend/user-portal/src/hooks/queries/index.ts` — exports useArAging + arAgingQueryKeys
+  - `frontend/user-portal/src/App.tsx` — lazy import + /sales/reports/ar-aging route
+  - `frontend/user-portal/src/components/layout/MainLayout.tsx` — fixed sidebar route /sales/aging → /sales/reports/ar-aging
+- **Test results:** 211 passed (6 new + 205 baseline), 0 failed, 0 regressions.
+- **Live smoke:** ARI-2026-0001 (LETO, AED 700.00, dueDate 2026-06-29) → current bucket confirmed. camelCase JSON with Decimal strings.
+- **Four hardening rules:** All four confirmed (see DevLog for file:line refs).
+- **Hot reload:** Backend: `docker compose restart api` (new route file). Frontend: Vite HMR automatic.
 
 ### T-200.1 | Customer Receipt UI (list + form + detail + from-invoice flow) — Wave 3
 - **Category:** Frontend · **Priority:** P1

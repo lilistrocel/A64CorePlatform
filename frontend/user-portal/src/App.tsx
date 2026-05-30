@@ -96,6 +96,10 @@ const CustomerReceiptDetailPage = lazy(() =>
 const CustomerReceiptFormPage = lazy(() =>
   import('./pages/sales/CustomerReceiptFormPage').then(m => ({ default: m.CustomerReceiptFormPage }))
 );
+// T-200.2: AR Aging Report page
+const ARAgingReportPage = lazy(() =>
+  import('./pages/sales/ARAgingReportPage').then(m => ({ default: m.ARAgingReportPage }))
+);
 
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
@@ -301,6 +305,8 @@ function App() {
                 <Route path="/sales/customer-receipts/from-invoice/:ariDocEntry" element={<CustomerReceiptFormPage />} />
                 <Route path="/sales/customer-receipts/:docId/edit" element={<CustomerReceiptFormPage />} />
                 <Route path="/sales/customer-receipts/:docId" element={<CustomerReceiptDetailPage />} />
+                {/* T-200.2: AR Aging Report */}
+                <Route path="/sales/reports/ar-aging" element={<ARAgingReportPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />

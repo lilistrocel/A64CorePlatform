@@ -707,4 +707,72 @@ export const getReturn = (_id: string, _orgId: string) => NOT_IMPLEMENTED('Retur
 
 export const listArCreditNotes = () => NOT_IMPLEMENTED('ARCreditNote');
 export const getArCreditNote = (_id: string, _orgId: string) => NOT_IMPLEMENTED('ARCreditNote');
+
+// ============================================================================
+// AR Aging Report types + API (T-200.2)
+// ============================================================================
+
+/** One (customer, currency) row in the AR Aging report. */
+export interface ARAgingCustomerRow {
+  customerId: string;
+  customerName: string;
+  currency: string;
+  current: string;
+  days1To30: string;
+  days31To60: string;
+  days61To90: string;
+  over90: string;
+  total: string;
+  invoiceCount: number;
+}
+
+/** Cross-customer bucket totals. */
+export interface ARAgingGrandTotals {
+  current: string;
+  days1To30: string;
+  days31To60: string;
+  days61To90: string;
+  over90: string;
+  total: string;
+  customerCount: number;
+  invoiceCount: number;
+}
+
+/** Top-level AR Aging report shape. */
+export interface ARAgingReport {
+  asOfDate: string;
+  customers: ARAgingCustomerRow[];
+  grandTotals: ARAgingGrandTotals;
+}
+
+/** Query parameters accepted by the AR Aging endpoint. */
+export interface ARAgingParams {
+  organizationId?: string;
+  customerId?: string | null;
+  asOfDate?: string | null;
+  currency?: string | null;
+}
+
+// Rule 1: path does NOT include /api/ — apiClient already prepends /api/
+const AR_AGING_BASE = '/v1/sales/reports/ar-aging';
+
+/**
+ * Fetch the AR Aging report.
+ *
+ * Returns outstanding AR Invoice open_amounts grouped by (customer, currency)
+ * with five ageing buckets: current / 1-30 / 31-60 / 61-90 / over90.
+ */
+export async function getArAging(params: ARAgingParams): Promise<ARAgingReport> {
+  const queryParams: Record<string, string> = {};
+  if (params.organizationId) queryParams['organization_id'] = params.organizationId;
+  if (params.customerId) queryParams['customer_id'] = params.customerId;
+  if (params.asOfDate) queryParams['as_of_date'] = params.asOfDate;
+  if (params.currency) queryParams['currency'] = params.currency;
+
+  const response = await apiClient.get<SuccessEnvelope<ARAgingReport>>(
+    AR_AGING_BASE,
+    { params: queryParams },
+  );
+  return response.data.data;
+}
 /* eslint-enable @typescript-eslint/no-unused-vars */

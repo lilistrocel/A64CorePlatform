@@ -244,3 +244,6 @@ export {
   useTransitionCustomerReceipt,
   crQueryKeys,
 } from './useCustomerReceipts';
+
+// Sales Wave 3 — AR Aging Report hook (T-200.2)
+export { useArAging, arAgingQueryKeys } from './useArAging';

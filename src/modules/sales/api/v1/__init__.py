@@ -15,6 +15,8 @@ from .customer_receipts import router as customer_receipts_router
 from .return_requests import router as return_requests_router
 from .returns_v2 import router as returns_v2_router
 from .ar_credit_notes import router as ar_credit_notes_router
+# T-200.2: Sales reports (AR Aging)
+from .reports import router as reports_router
 
 api_router = APIRouter()
 
@@ -70,4 +72,11 @@ api_router.include_router(
     ar_credit_notes_router,
     prefix="/ar-credit-notes",
     tags=["Sales — AR Credit Notes"],
+)
+# T-200.2: Sales Reports — AR Aging
+# Prefix /reports gives full path /api/v1/sales/reports/ar-aging
+api_router.include_router(
+    reports_router,
+    prefix="/reports",
+    tags=["Sales — Reports"],
 )

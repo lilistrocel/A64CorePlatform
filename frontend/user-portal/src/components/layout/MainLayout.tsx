@@ -88,7 +88,7 @@ const SALES_NAV_GROUP: NavItemDef = {
   children: [
     { to: '/sales/ar-invoices', icon: '🧾', label: 'AR Invoices' },
     { to: '/sales/customer-receipts', icon: '💵', label: 'Customer Receipts' },
-    { to: '/sales/aging', icon: '📉', label: 'AR Aging' },
+    { to: '/sales/reports/ar-aging', icon: '📉', label: 'AR Aging' },
     { to: '/sales/quotes', icon: '📋', label: 'Quotes' },
     { to: '/sales/orders-v2', icon: '📑', label: 'Sales Orders' },
     { to: '/sales/deliveries', icon: '📦', label: 'Deliveries' },
