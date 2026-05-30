@@ -681,10 +681,143 @@ export interface SalesOrderListParams {
 }
 
 // ============================================================================
+// Delivery Note types (T-200.5)
+// Backend endpoint: /v1/sales/deliveries
+// Doc prefix: DN-YYYY-NNNN
+// Status flow: draft → open → cancelled (no partly_closed — instantaneous delivery)
+// ============================================================================
+
+export type DeliveryStatus = 'draft' | 'open' | 'cancelled';
+
+export interface DeliveryLine {
+  lineId: string;
+  lineNumber: number;
+  // soLineId / soLineNumber present in create payload but not in response model yet
+  soLineId?: string | null;
+  soLineNumber?: number | null;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description: string;
+  quantity: number;
+  uom: string;
+  warehouseId: string;
+  unitCost: number;
+  lineCogs: number;
+  costCenterId: string | null;
+  orderedQty: number;
+  invoicedQty: number;
+  creditedQty: number;
+  cancelledQty: number;
+  // Quantity returned — populated by Return Notes; not in response yet (T-100.11)
+  returnedQty?: number | null;
+  // doc-chain links
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+}
+
+export interface Delivery {
+  docEntry: string;
+  docNumber: string;
+  docType: string;
+  organizationId: string;
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  actualDeliveryDate: string;
+  status: DeliveryStatus;
+  deliveredByUserId: string | null;
+  notes: string | null;
+  totalCogs: number;
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+  outboxEventId: string | null;
+  outboxEventEmittedAt: string | null;
+  lines: DeliveryLine[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface DeliveryListItem {
+  docEntry: string;
+  docNumber: string;
+  organizationId: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  actualDeliveryDate: string;
+  status: DeliveryStatus;
+  totalCogs: number;
+  baseDocRef: DocumentLinkRef | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeliveryLineCreate {
+  soLineId: string;
+  soLineNumber: number;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description?: string | null;
+  quantity: number;
+  uom: string;
+  warehouseId: string;
+  costCenterId?: string | null;
+}
+
+/** Full create payload — used only when building manually (rare). */
+export interface DeliveryCreate {
+  companyCode: string;
+  docDate: string;
+  actualDeliveryDate: string;
+  deliveredByUserId?: string | null;
+  notes?: string | null;
+  lines: DeliveryLineCreate[];
+}
+
+/** Partial update — DRAFT only. */
+export interface DeliveryUpdate {
+  docDate?: string | null;
+  actualDeliveryDate?: string | null;
+  deliveredByUserId?: string | null;
+  notes?: string | null;
+  lines?: DeliveryLineCreate[] | null;
+}
+
+/** Request body for POST /from-so/:soDocEntry. */
+export interface DeliveryFromSORequest {
+  companyCode: string;
+  docDate: string;
+  actualDeliveryDate: string;
+  deliveredByUserId?: string | null;
+  notes?: string | null;
+  lines: DeliveryLineCreate[];
+}
+
+export interface DeliveryTransition {
+  newStatus: DeliveryStatus;
+  reason?: string | null;
+}
+
+export interface DeliveryListParams {
+  organizationId?: string;
+  status?: DeliveryStatus | null;
+  customerId?: string | null;
+  soDocEntry?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  page?: number;
+  size?: number;
+}
+
+// ============================================================================
 // Stub types for remaining not-yet-implemented Wave 3 documents
 // ============================================================================
 
-export interface Delivery { docEntry: string; docNumber: string; status: string; }
 export interface ReturnRequest { docEntry: string; docNumber: string; status: string; }
 export interface Return { docEntry: string; docNumber: string; status: string; }
 export interface ARCreditNote { docEntry: string; docNumber: string; status: string; }
@@ -1368,8 +1501,157 @@ export async function transitionSalesOrder(
   return response.data.data;
 }
 
-export const listDeliveries = () => NOT_IMPLEMENTED('Delivery');
-export const getDelivery = (_id: string, _orgId: string) => NOT_IMPLEMENTED('Delivery');
+// ============================================================================
+// Delivery Note API — fully implemented (T-200.5)
+// Rule 1: path does NOT include /api/ — apiClient already prepends /api/
+// ============================================================================
+
+const DELIVERY_BASE = '/v1/sales/deliveries';
+
+/**
+ * List Delivery Notes with optional filters and pagination.
+ */
+export async function listDeliveries(
+  params: DeliveryListParams,
+): Promise<{ data: DeliveryListItem[]; meta: PaginationMeta }> {
+  const queryParams: Record<string, string | number> = {};
+  if (params.organizationId) queryParams['organization_id'] = params.organizationId;
+  if (params.status) queryParams['status'] = params.status;
+  if (params.customerId) queryParams['customer_id'] = params.customerId;
+  if (params.soDocEntry) queryParams['so_doc_entry'] = params.soDocEntry;
+  if (params.dateFrom) queryParams['date_from'] = params.dateFrom;
+  if (params.dateTo) queryParams['date_to'] = params.dateTo;
+  if (params.page) queryParams['page'] = params.page;
+  if (params.size) queryParams['size'] = params.size;
+
+  const response = await apiClient.get<PaginatedEnvelope<DeliveryListItem>>(
+    DELIVERY_BASE,
+    { params: queryParams },
+  );
+  return response.data;
+}
+
+/**
+ * Get a single Delivery Note with all embedded lines.
+ */
+export async function getDelivery(
+  docId: string,
+  orgId: string,
+): Promise<Delivery> {
+  const response = await apiClient.get<SuccessEnvelope<Delivery>>(
+    `${DELIVERY_BASE}/${docId}`,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a Delivery Note from an existing Sales Order (primary creation path).
+ * Backend inherits customer from the SO; caller provides header + lines.
+ * Each line must reference a valid SO line via soLineId with available openQty.
+ */
+export async function createDeliveryFromSO(
+  soDocEntry: string,
+  data: DeliveryFromSORequest,
+  orgId: string,
+): Promise<Delivery> {
+  const body = {
+    company_code: data.companyCode,
+    doc_date: data.docDate,
+    actual_delivery_date: data.actualDeliveryDate,
+    delivered_by_user_id: data.deliveredByUserId ?? null,
+    notes: data.notes ?? null,
+    lines: data.lines.map((l) => ({
+      so_line_id: l.soLineId,
+      so_line_number: l.soLineNumber,
+      item_id: l.itemId,
+      item_code: l.itemCode,
+      item_name: l.itemName,
+      description: l.description ?? null,
+      quantity: l.quantity,
+      uom: l.uom,
+      warehouse_id: l.warehouseId,
+      cost_center_id: l.costCenterId ?? null,
+    })),
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<Delivery>>(
+    `${DELIVERY_BASE}/from-so/${soDocEntry}`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Partially update a DRAFT Delivery Note.
+ * If `lines` is provided the existing line set is replaced wholesale.
+ */
+export async function updateDelivery(
+  docId: string,
+  data: DeliveryUpdate,
+  orgId: string,
+): Promise<Delivery> {
+  const body: Record<string, unknown> = {};
+  if (data.docDate !== undefined) body['doc_date'] = data.docDate;
+  if (data.actualDeliveryDate !== undefined) body['actual_delivery_date'] = data.actualDeliveryDate;
+  if (data.deliveredByUserId !== undefined) body['delivered_by_user_id'] = data.deliveredByUserId;
+  if (data.notes !== undefined) body['notes'] = data.notes;
+  if (data.lines !== undefined && data.lines !== null) {
+    body['lines'] = data.lines.map((l) => ({
+      so_line_id: l.soLineId,
+      so_line_number: l.soLineNumber,
+      item_id: l.itemId,
+      item_code: l.itemCode,
+      item_name: l.itemName,
+      description: l.description ?? null,
+      quantity: l.quantity,
+      uom: l.uom,
+      warehouse_id: l.warehouseId,
+      cost_center_id: l.costCenterId ?? null,
+    }));
+  }
+
+  const response = await apiClient.patch<SuccessEnvelope<Delivery>>(
+    `${DELIVERY_BASE}/${docId}`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Hard-delete a DRAFT Delivery Note.
+ */
+export async function deleteDelivery(
+  docId: string,
+  orgId: string,
+): Promise<void> {
+  await apiClient.delete(`${DELIVERY_BASE}/${docId}`, {
+    params: { organization_id: orgId },
+  });
+}
+
+/**
+ * Transition Delivery Note status (e.g. DRAFT → OPEN (Post), DRAFT/OPEN → CANCELLED).
+ */
+export async function transitionDelivery(
+  docId: string,
+  transition: DeliveryTransition,
+  orgId: string,
+): Promise<Delivery> {
+  const body = {
+    new_status: transition.newStatus,
+    reason: transition.reason ?? null,
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<Delivery>>(
+    `${DELIVERY_BASE}/${docId}/transition`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
 
 // Customer Receipt stubs removed — replaced by full implementation below
 

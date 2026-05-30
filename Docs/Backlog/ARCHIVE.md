@@ -1,8 +1,42 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 80 tasks
+> **Total completed:** 81 tasks
 
 ## 2026-05
+
+### T-200.5 | Delivery Note (DN) UI — list + form + detail + from-SO flow
+- **Category:** Frontend (+ backend pre-flight) · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-100.8 ✅ (Delivery backend)
+- **Description:** Three new Wave 3 Delivery Note pages + backend pre-flight hardening.
+  Backend: applied `_RESPONSE_CONFIG` (camelCase alias_generator) to `DeliveryResponse` and
+  `DeliveryListItem`; added `response_model_by_alias=True` to all 5 response-bearing routes.
+  Frontend: full Delivery types + API functions in salesApi.ts, useDeliveries.ts hook file
+  with 6 hooks, DeliveriesPage (filter chips, source-SO links), DeliveryFormPage
+  (new/from-SO/edit modes — pre-fills from SO open lines), DeliveryDetailPage (lines with
+  returnedQty indicator, doc-chain card, Generate AR Invoice button, Delete modal X-only).
+  Closes the SO → Create Delivery 404 gap from T-200.4. Wires the DN → ARI Generate
+  AR Invoice button so the full Quote→SO→DN→ARI→Receipt chain is sidebar-driveable.
+- **Four hardening rules:**
+  1. Path constant `/v1/sales/deliveries` — `salesApi.ts:~770`
+  2. `_RESPONSE_CONFIG` on `DeliveryResponse` + `DeliveryListItem` — `deliveries.py:~232, ~257`
+  3. `response_model_by_alias=True` on all 5 routes — `deliveries.py` route decorators
+  4. Status literals `'draft' | 'open' | 'cancelled'` — `salesApi.ts:DeliveryStatus`
+- **Smoke:** 211/211 backend tests pass; camelCase list + detail keys confirmed live
+- **Files created:**
+  - `frontend/user-portal/src/pages/sales/DeliveriesPage.tsx` — ~330 lines
+  - `frontend/user-portal/src/pages/sales/DeliveryFormPage.tsx` — ~470 lines
+  - `frontend/user-portal/src/pages/sales/DeliveryDetailPage.tsx` — ~490 lines
+  - `frontend/user-portal/src/hooks/queries/useDeliveries.ts` — 125 lines
+  - `Docs/3-DevLog/2026-05-30_T-200.5-delivery-note-ui.md` — session DevLog
+- **Files modified:**
+  - `src/modules/sales/models/deliveries.py` — `_RESPONSE_CONFIG` + `model_config`, removed legacy `class Config`
+  - `src/modules/sales/api/v1/deliveries.py` — `response_model_by_alias=True` on 5 routes
+  - `frontend/user-portal/src/services/salesApi.ts` — full Delivery types + 6 API functions
+  - `frontend/user-portal/src/hooks/queries/index.ts` — Delivery hook exports added
+  - `frontend/user-portal/src/App.tsx` — lazy imports + 5 Delivery routes
+
+---
 
 ### T-200.4 | Sales Order v2 (SO) UI — list + form (3 modes) + detail + from-quote flow
 - **Category:** Frontend (+ backend pre-flight) · **Priority:** P1

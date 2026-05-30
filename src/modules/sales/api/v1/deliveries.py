@@ -103,6 +103,7 @@ def _resolve_org_id(
 @router.get(
     "",
     response_model=PaginatedResponse[DeliveryListItem],
+    response_model_by_alias=True,
     summary="List Delivery Notes",
     description=(
         "Return a paginated list of Delivery Notes for the given organisation. "
@@ -172,6 +173,7 @@ async def list_deliveries_endpoint(
 @router.get(
     "/{doc_entry}",
     response_model=SuccessResponse[DeliveryResponse],
+    response_model_by_alias=True,
     summary="Get Delivery Note detail",
 )
 async def get_delivery_endpoint(
@@ -214,6 +216,7 @@ async def get_delivery_endpoint(
 @router.post(
     "/from-so/{so_doc_entry}",
     response_model=SuccessResponse[DeliveryResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Delivery Note from Sales Order",
 )
@@ -289,6 +292,7 @@ async def create_delivery_from_so_endpoint(
 @router.patch(
     "/{doc_entry}",
     response_model=SuccessResponse[DeliveryResponse],
+    response_model_by_alias=True,
     summary="Update draft Delivery Note",
 )
 async def update_delivery_endpoint(
@@ -403,6 +407,7 @@ async def delete_delivery_endpoint(
 @router.post(
     "/{doc_entry}/transition",
     response_model=SuccessResponse[DeliveryResponse],
+    response_model_by_alias=True,
     summary="Transition Delivery Note status",
 )
 async def transition_delivery_status(

@@ -270,3 +270,14 @@ export {
   useTransitionSalesOrderV2,
   soQueryKeys,
 } from './useSalesOrders';
+
+// Sales Wave 3 — Delivery Note hooks (T-200.5)
+export {
+  useDeliveries,
+  useDelivery,
+  useCreateDeliveryFromSO,
+  useUpdateDelivery,
+  useDeleteDelivery,
+  useTransitionDelivery,
+  dnQueryKeys,
+} from './useDeliveries';
