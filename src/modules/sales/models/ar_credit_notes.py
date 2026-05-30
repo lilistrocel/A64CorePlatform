@@ -141,8 +141,8 @@ class CreditNoteLineResponse(BaseModel):
     revenue_account_id: str
     warehouse_id: Optional[str]
     cost_center_id: Optional[str]
-    base_doc_ref: Optional[dict]
-    target_doc_refs: List[dict]
+    base_doc_ref: Optional[DocumentLinkRef]
+    target_doc_refs: List[DocumentLinkRef]
 
 
 # ---------------------------------------------------------------------------
@@ -258,9 +258,9 @@ class ARCreditNoteResponse(BaseModel):
     credit_reason_text: Optional[str]
     status: DocumentStatus
     totals: CreditNoteTotals
-    base_return_doc_ref: Optional[dict]
+    base_return_doc_ref: Optional[DocumentLinkRef]
     allocations: List[CreditNoteAllocationResponse]
-    target_doc_refs: List[dict]
+    target_doc_refs: List[DocumentLinkRef]
     outbox_event_id: Optional[str]
     outbox_event_emitted_at: Optional[datetime]
     journal_memo: Optional[str]

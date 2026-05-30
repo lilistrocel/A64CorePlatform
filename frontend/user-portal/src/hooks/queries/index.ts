@@ -293,3 +293,16 @@ export {
   useTransitionReturnRequest,
   rrQueryKeys,
 } from './useReturnRequests';
+
+// Sales Wave 3 — Return Note v2 hooks (T-200.7)
+export {
+  useReturns,
+  useReturn,
+  useCreateReturnFromRR,
+  useCreateReturnFromDelivery,
+  useCreateReturn,
+  useUpdateReturn,
+  useDeleteReturn,
+  useTransitionReturn,
+  rtnQueryKeys,
+} from './useReturns';

@@ -1,8 +1,37 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 81 tasks
+> **Total completed:** 82 tasks
 
 ## 2026-05
+
+### T-200.7 | Return Note v2 (RTN) UI — list + form + detail + from-RR + from-DN flows
+- **Category:** Frontend (+ backend pre-flight) · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-100.11 ✅ (Return Note backend), T-200.6 ✅ (Return Request UI — unblocked from-rr route)
+- **Blocks:** T-200.8 (AR Credit Note UI — "Issue Credit Note" button on RTN detail is wired with tooltip)
+- **Description:** Three new Wave 3 Return Note v2 pages + backend pre-flight hardening.
+  Backend: added `_RESPONSE_CONFIG` (camelCase alias_generator, populate_by_name, from_attributes)
+  to `ReturnLineResponse`, `ReturnTotals`, `ReturnResponse`, `ReturnListItem` in `models/returns.py`;
+  added `response_model_by_alias=True` to all 7 routes in `api/v1/returns_v2.py`.
+  Smoke-verified camelCase response + RTN-2026-0001 via Playwright.
+  Frontend: full RTN type hierarchy + 8 API functions in salesApi.ts (`listReturns`, `getReturn`,
+  `createReturnFromRR` → POST /from-request/:rrDocEntry, `createReturnFromDelivery` → generic POST
+  client-side copy approach — disclosed in comments, no backend /from-delivery endpoint exists,
+  `createReturn`, `updateReturn`, `deleteReturn`, `transitionReturn`); `useReturns.ts` hook file
+  with 8 hooks + `rtnQueryKeys`; added to hooks/queries/index.ts.
+  `ReturnsV2Page` (status chips: Draft/Open/Cancelled; source-type chips: From RR/From DN;
+  search, pagination, SourceTag colored by docType).
+  `ReturnFormPage` (4-mode: new/from-rr/:rrDocEntry/from-delivery/:dnDocEntry/edit — pre-fills
+  from RR with requestedQty-consumedQty defaults; pre-fills from DN with quantity-returnedQty
+  defaults; maxQty hint per line; customer locked in from-X modes; AttachmentList edit-only;
+  Zod validation, useFieldArray, InfoBanner per mode).
+  `ReturnDetailPage` (read-only lines table with totals row; doc-chain card resolving RR/DN
+  source routes; Issue Credit Note button with Tooltip noting T-200.8; Cancel super_admin only;
+  delete modal X-close only; NO Audit History button).
+  Added "Receive Return (direct)" SecondaryButton to DeliveryDetailPage open action bar
+  (navigates to /sales/returns-v2/from-delivery/:dnDocEntry).
+  6 new routes added to App.tsx in correct order (/new, /from-rr/:x, /from-delivery/:x,
+  /:docId/edit before /:docId). Checks: tsc 0 errors, eslint 0 errors, backend 211/211 passed.
 
 ### T-200.6 | Return Request (RR) UI — list + form + detail + from-Delivery flow
 - **Category:** Frontend (+ backend pre-flight) · **Priority:** P1

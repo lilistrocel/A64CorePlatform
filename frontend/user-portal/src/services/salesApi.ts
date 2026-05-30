@@ -956,8 +956,173 @@ export interface ReturnRequestListParams {
   size?: number;
 }
 
+// ============================================================================
+// Return Note v2 types (T-200.7)
+// Backend endpoint: /v1/sales/returns-v2
+// Doc prefix: RTN-YYYY-NNNN
+// Status flow: draft → open → cancelled
+// Collection: returns_v2
+// ============================================================================
+
+export type ReturnNoteStatus = 'draft' | 'open' | 'cancelled';
+
+export interface ReturnNoteTotals {
+  net: number;
+  tax: number;
+  gross: number;
+  totalCogs: number;
+}
+
+export interface ReturnNoteLine {
+  lineId: string;
+  lineNumber: number;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description: string;
+  returnedQty: number;
+  uom: string;
+  warehouseId: string;
+  unitCost: number;
+  lineCogs: number;
+  unitPrice: number;
+  discountPercent: number;
+  lineNet: number;
+  taxCodeId: string | null;
+  taxPercent: number;
+  lineTax: number;
+  lineGross: number;
+  costCenterId: string | null;
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+  orderedQty: number;
+  consumedQty: number;
+}
+
+export interface ReturnNote {
+  docEntry: string;
+  docNumber: string;
+  docType: string;
+  organizationId: string;
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  actualReturnDate: string;
+  status: ReturnNoteStatus;
+  receivedByUserId: string | null;
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+  outboxEventId: string | null;
+  outboxEventEmittedAt: string | null;
+  totals: ReturnNoteTotals;
+  notes: string | null;
+  lines: ReturnNoteLine[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface ReturnNoteListItem {
+  docEntry: string;
+  docNumber: string;
+  organizationId: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  actualReturnDate: string;
+  status: ReturnNoteStatus;
+  totals: ReturnNoteTotals;
+  baseDocRef: DocumentLinkRef | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReturnNoteLineCreate {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description?: string | null;
+  returnedQty: number;
+  uom: string;
+  warehouseId: string;
+  unitPrice: number;
+  discountPercent?: number;
+  taxCodeId?: string | null;
+  taxPercent?: number;
+  costCenterId?: string | null;
+  /** Required: link to source RR line or Delivery line */
+  baseDocRef: DocumentLinkRef;
+}
+
+/**
+ * Payload for creating a Return Note from a Return Request (RR).
+ * The backend endpoint is POST /returns-v2/from-request/:rrDocEntry.
+ */
+export interface ReturnNoteFromRRRequest {
+  companyCode: string;
+  docDate: string;
+  actualReturnDate: string;
+  receivedByUserId?: string | null;
+  notes?: string | null;
+  lines: ReturnNoteLineCreate[];
+}
+
+/**
+ * Payload for creating a Return Note directly from a Delivery (no RR).
+ * Uses the generic POST /returns-v2 endpoint — client supplies all fields.
+ * The backend does not expose a dedicated /from-delivery endpoint.
+ */
+export interface ReturnNoteFromDNCreate {
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  actualReturnDate: string;
+  receivedByUserId?: string | null;
+  /** Source Delivery header ref — stored as baseDocRef on the RTN header. */
+  baseDocRef: DocumentLinkRef;
+  notes?: string | null;
+  lines: ReturnNoteLineCreate[];
+}
+
+export interface ReturnNoteCreate {
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  actualReturnDate: string;
+  receivedByUserId?: string | null;
+  baseDocRef: DocumentLinkRef;
+  notes?: string | null;
+  lines: ReturnNoteLineCreate[];
+}
+
+export interface ReturnNoteUpdate {
+  docDate?: string | null;
+  actualReturnDate?: string | null;
+  receivedByUserId?: string | null;
+  notes?: string | null;
+  lines?: ReturnNoteLineCreate[] | null;
+}
+
+export interface ReturnNoteTransition {
+  newStatus: ReturnNoteStatus;
+  reason?: string | null;
+}
+
+export interface ReturnNoteListParams {
+  organizationId?: string;
+  status?: ReturnNoteStatus | null;
+  customerId?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  page?: number;
+  size?: number;
+}
+
 /** Stub types for remaining not-yet-implemented Wave 3 documents */
-export interface Return { docEntry: string; docNumber: string; status: string; }
 export interface ARCreditNote { docEntry: string; docNumber: string; status: string; }
 
 // ============================================================================
@@ -1984,8 +2149,206 @@ export async function transitionReturnRequest(
   return response.data.data;
 }
 
-export const listReturns = () => NOT_IMPLEMENTED('Return');
-export const getReturn = (_id: string, _orgId: string) => NOT_IMPLEMENTED('Return');
+// ============================================================================
+// Return Note v2 API — fully implemented (T-200.7)
+// Rule 1: path does NOT include /api/ — apiClient already prepends /api/
+// ============================================================================
+
+const RTN_BASE = '/v1/sales/returns-v2';
+
+/** Helper: convert a ReturnNoteLineCreate to snake_case for the backend. */
+function _serializeRtnLine(l: ReturnNoteLineCreate): Record<string, unknown> {
+  return {
+    item_id: l.itemId,
+    item_code: l.itemCode,
+    item_name: l.itemName,
+    description: l.description ?? null,
+    returned_qty: l.returnedQty,
+    uom: l.uom,
+    warehouse_id: l.warehouseId,
+    unit_price: l.unitPrice,
+    discount_percent: l.discountPercent ?? 0,
+    tax_code_id: l.taxCodeId ?? null,
+    tax_percent: l.taxPercent ?? 0,
+    cost_center_id: l.costCenterId ?? null,
+    base_doc_ref: {
+      doc_type: l.baseDocRef.docType,
+      doc_id: l.baseDocRef.docId,
+      doc_number: l.baseDocRef.docNumber,
+      line_id: l.baseDocRef.lineId ?? null,
+    },
+  };
+}
+
+/**
+ * List Return Notes with optional filters and pagination.
+ */
+export async function listReturns(
+  params: ReturnNoteListParams,
+): Promise<{ data: ReturnNoteListItem[]; meta: PaginationMeta }> {
+  const queryParams: Record<string, string | number> = {};
+  if (params.organizationId) queryParams['organization_id'] = params.organizationId;
+  if (params.status) queryParams['status'] = params.status;
+  if (params.customerId) queryParams['customer_id'] = params.customerId;
+  if (params.dateFrom) queryParams['date_from'] = params.dateFrom;
+  if (params.dateTo) queryParams['date_to'] = params.dateTo;
+  if (params.page) queryParams['page'] = params.page;
+  if (params.size) queryParams['size'] = params.size;
+
+  const response = await apiClient.get<PaginatedEnvelope<ReturnNoteListItem>>(
+    RTN_BASE,
+    { params: queryParams },
+  );
+  return response.data;
+}
+
+/**
+ * Get a single Return Note with all embedded lines.
+ */
+export async function getReturn(
+  docId: string,
+  orgId: string,
+): Promise<ReturnNote> {
+  const response = await apiClient.get<SuccessEnvelope<ReturnNote>>(
+    `${RTN_BASE}/${docId}`,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a Return Note from a Return Request (from-RR path — primary RMA-gated flow).
+ * Uses dedicated backend endpoint POST /returns-v2/from-request/:rrDocEntry.
+ * Backend looks up customer + validates qty against the RR's consumedQty.
+ */
+export async function createReturnFromRR(
+  rrDocEntry: string,
+  data: ReturnNoteFromRRRequest,
+  orgId: string,
+): Promise<ReturnNote> {
+  const body = {
+    company_code: data.companyCode,
+    doc_date: data.docDate,
+    actual_return_date: data.actualReturnDate,
+    received_by_user_id: data.receivedByUserId ?? null,
+    notes: data.notes ?? null,
+    lines: data.lines.map(_serializeRtnLine),
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<ReturnNote>>(
+    `${RTN_BASE}/from-request/${rrDocEntry}`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a Return Note directly from a Delivery (from-DN / skip-RMA path).
+ * Backend has no dedicated /from-delivery endpoint, so we use the generic
+ * POST endpoint and supply all header fields. The Delivery is captured in
+ * baseDocRef header and each line's baseDocRef.
+ */
+export async function createReturnFromDelivery(
+  data: ReturnNoteFromDNCreate,
+  orgId: string,
+): Promise<ReturnNote> {
+  const body = {
+    company_code: data.companyCode,
+    customer_id: data.customerId,
+    customer_name: data.customerName,
+    doc_date: data.docDate,
+    actual_return_date: data.actualReturnDate,
+    received_by_user_id: data.receivedByUserId ?? null,
+    base_doc_ref: {
+      doc_type: data.baseDocRef.docType,
+      doc_id: data.baseDocRef.docId,
+      doc_number: data.baseDocRef.docNumber,
+      line_id: data.baseDocRef.lineId ?? null,
+    },
+    notes: data.notes ?? null,
+    lines: data.lines.map(_serializeRtnLine),
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<ReturnNote>>(
+    RTN_BASE,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a Return Note manually (blank form — rare).
+ * Delegates to createReturnFromDelivery since both hit POST /returns-v2.
+ */
+export async function createReturn(
+  data: ReturnNoteCreate,
+  orgId: string,
+): Promise<ReturnNote> {
+  return createReturnFromDelivery(data, orgId);
+}
+
+/**
+ * Partially update a DRAFT Return Note.
+ * If `lines` is provided the existing line set is replaced wholesale.
+ */
+export async function updateReturn(
+  docId: string,
+  data: ReturnNoteUpdate,
+  orgId: string,
+): Promise<ReturnNote> {
+  const body: Record<string, unknown> = {};
+  if (data.docDate !== undefined) body['doc_date'] = data.docDate;
+  if (data.actualReturnDate !== undefined) body['actual_return_date'] = data.actualReturnDate;
+  if (data.receivedByUserId !== undefined) body['received_by_user_id'] = data.receivedByUserId;
+  if (data.notes !== undefined) body['notes'] = data.notes;
+  if (data.lines !== undefined && data.lines !== null) {
+    body['lines'] = data.lines.map(_serializeRtnLine);
+  }
+
+  const response = await apiClient.patch<SuccessEnvelope<ReturnNote>>(
+    `${RTN_BASE}/${docId}`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Hard-delete a DRAFT Return Note.
+ */
+export async function deleteReturn(
+  docId: string,
+  orgId: string,
+): Promise<void> {
+  await apiClient.delete(`${RTN_BASE}/${docId}`, {
+    params: { organization_id: orgId },
+  });
+}
+
+/**
+ * Transition Return Note status (e.g. DRAFT → OPEN (Post), OPEN → CANCELLED).
+ * DRAFT → OPEN: restores inventory, emits return_posted to finance outbox.
+ * OPEN → CANCELLED: reverses inventory, emits return_cancelled.
+ */
+export async function transitionReturn(
+  docId: string,
+  transition: ReturnNoteTransition,
+  orgId: string,
+): Promise<ReturnNote> {
+  const body = {
+    new_status: transition.newStatus,
+    reason: transition.reason ?? null,
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<ReturnNote>>(
+    `${RTN_BASE}/${docId}/transition`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
 
 export const listArCreditNotes = () => NOT_IMPLEMENTED('ARCreditNote');
 export const getArCreditNote = (_id: string, _orgId: string) => NOT_IMPLEMENTED('ARCreditNote');

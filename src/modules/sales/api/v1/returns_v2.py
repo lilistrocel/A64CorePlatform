@@ -106,6 +106,7 @@ def _resolve_org_id(
 @router.get(
     "",
     response_model=PaginatedResponse[ReturnListItem],
+    response_model_by_alias=True,
     summary="List Return Notes",
     description=(
         "Return a paginated list of Return Notes for the given organisation. "
@@ -172,6 +173,7 @@ async def list_returns_endpoint(
 @router.get(
     "/{doc_entry}",
     response_model=SuccessResponse[ReturnResponse],
+    response_model_by_alias=True,
     summary="Get Return Note detail",
 )
 async def get_return_endpoint(
@@ -214,6 +216,7 @@ async def get_return_endpoint(
 @router.post(
     "",
     response_model=SuccessResponse[ReturnResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Return Note (direct)",
     description=(
@@ -272,6 +275,7 @@ async def create_return_direct_endpoint(
 @router.post(
     "/from-request/{rr_doc_entry}",
     response_model=SuccessResponse[ReturnResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Return Note from Return Request",
     description=(
@@ -339,6 +343,7 @@ async def create_return_from_request_endpoint(
 @router.patch(
     "/{doc_entry}",
     response_model=SuccessResponse[ReturnResponse],
+    response_model_by_alias=True,
     summary="Update draft Return Note",
 )
 async def update_return_endpoint(
@@ -459,6 +464,7 @@ async def delete_return_endpoint(
 @router.post(
     "/{doc_entry}/transition",
     response_model=SuccessResponse[ReturnResponse],
+    response_model_by_alias=True,
     summary="Transition Return Note status",
 )
 async def transition_return_endpoint(

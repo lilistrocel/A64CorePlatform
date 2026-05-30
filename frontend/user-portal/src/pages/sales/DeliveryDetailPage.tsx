@@ -449,6 +449,11 @@ export function DeliveryDetailPage() {
               >
                 Request Return (RMA)
               </SecondaryButton>
+              <SecondaryButton
+                onClick={() => navigate(`/sales/returns-v2/from-delivery/${dn.docEntry}`)}
+              >
+                Receive Return (direct)
+              </SecondaryButton>
               {isSuperAdmin && (
                 <DangerButton onClick={handleCancel} disabled={transitionMut.isPending}>
                   Cancel

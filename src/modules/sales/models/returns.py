@@ -9,6 +9,10 @@ Covers the lifecycle of a Return Note — physical goods coming back:
           → CANCELLED (inventory reversal, return_cancelled event emitted)
 
 Collection name: returns_v2
+
+Hardening (T-200.7):
+    Response models use _RESPONSE_CONFIG (to_camel alias + populate_by_name)
+    so routes can set response_model_by_alias=True and emit camelCase JSON.
 """
 
 from __future__ import annotations
@@ -17,10 +21,20 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 from src.core.documents.document_links import DocumentLinkRef
 from src.core.documents.document_status import DocumentStatus
+
+# Response models emit camelCase fields via the to_camel alias generator;
+# routes pair this with response_model_by_alias=True. populate_by_name=True
+# means consumers may still post snake_case input bodies.
+_RESPONSE_CONFIG = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    from_attributes=True,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +82,9 @@ class ReturnLineResponse(BaseModel):
     """
     Full Return line as returned by the API.
 
+    model_config = _RESPONSE_CONFIG ensures camelCase output when
+    response_model_by_alias=True is set on the route.
+
     Attributes:
         line_id:         UUID of this line.
         line_number:     1-indexed position.
@@ -94,6 +111,8 @@ class ReturnLineResponse(BaseModel):
         consumed_qty:    How much has been consumed by Credit Notes.
     """
 
+    model_config = _RESPONSE_CONFIG
+
     line_id: str
     line_number: int
     item_id: str
@@ -113,8 +132,8 @@ class ReturnLineResponse(BaseModel):
     line_tax: Decimal
     line_gross: Decimal
     cost_center_id: Optional[str]
-    base_doc_ref: Optional[dict]
-    target_doc_refs: List[dict]
+    base_doc_ref: Optional[DocumentLinkRef]
+    target_doc_refs: List[DocumentLinkRef]
     ordered_qty: Decimal
     consumed_qty: Decimal
 
@@ -126,6 +145,8 @@ class ReturnLineResponse(BaseModel):
 
 class ReturnTotals(BaseModel):
     """Totals sub-document for a Return Note."""
+
+    model_config = _RESPONSE_CONFIG
 
     net: Decimal
     tax: Decimal
@@ -209,6 +230,8 @@ class ReturnStatusTransitionRequest(BaseModel):
 class ReturnResponse(BaseModel):
     """Full Return as returned by the API."""
 
+    model_config = _RESPONSE_CONFIG
+
     doc_entry: str
     doc_number: str
     doc_type: str
@@ -220,8 +243,8 @@ class ReturnResponse(BaseModel):
     actual_return_date: date
     status: DocumentStatus
     received_by_user_id: Optional[str]
-    base_doc_ref: Optional[dict]
-    target_doc_refs: List[dict]
+    base_doc_ref: Optional[DocumentLinkRef]
+    target_doc_refs: List[DocumentLinkRef]
     outbox_event_id: Optional[str]
     outbox_event_emitted_at: Optional[datetime]
     totals: ReturnTotals
@@ -236,6 +259,8 @@ class ReturnResponse(BaseModel):
 class ReturnListItem(BaseModel):
     """Slim Return row for paginated list views."""
 
+    model_config = _RESPONSE_CONFIG
+
     doc_entry: str
     doc_number: str
     organization_id: str
@@ -245,6 +270,6 @@ class ReturnListItem(BaseModel):
     actual_return_date: date
     status: DocumentStatus
     totals: ReturnTotals
-    base_doc_ref: Optional[dict]
+    base_doc_ref: Optional[DocumentLinkRef]
     created_at: datetime
     updated_at: datetime

@@ -140,8 +140,8 @@ class ReturnRequestLineResponse(BaseModel):
     line_gross: Decimal
     warehouse_id: Optional[str]
     cost_center_id: Optional[str]
-    base_doc_ref: Optional[dict]
-    target_doc_refs: List[dict]
+    base_doc_ref: Optional[DocumentLinkRef]
+    target_doc_refs: List[DocumentLinkRef]
     ordered_qty: Decimal
     consumed_qty: Decimal
 
@@ -258,8 +258,8 @@ class ReturnRequestResponse(BaseModel):
     reason_text: Optional[str]
     status: DocumentStatus
     totals: ReturnRequestTotals
-    base_doc_ref: Optional[dict]
-    target_doc_refs: List[dict]
+    base_doc_ref: Optional[DocumentLinkRef]
+    target_doc_refs: List[DocumentLinkRef]
     notes: Optional[str]
     lines: List[ReturnRequestLineResponse]
     created_at: datetime
@@ -285,6 +285,6 @@ class ReturnRequestListItem(BaseModel):
     reason: str
     status: DocumentStatus
     totals: ReturnRequestTotals
-    base_doc_ref: Optional[dict]
+    base_doc_ref: Optional[DocumentLinkRef]
     created_at: datetime
     updated_at: datetime
