@@ -25,6 +25,7 @@ from .api.v1 import (
     events,
     export,
     health,
+    item_ext,
     journal_entries,
     master_data,
     periods,
@@ -89,6 +90,8 @@ app.include_router(tax_codes.router, prefix=_PREFIX)
 app.include_router(cost_centers.router, prefix=_PREFIX)
 app.include_router(vendors.router, prefix=_PREFIX)
 app.include_router(customer_ext.router, prefix=_PREFIX)
+# Wave 3 / T-100.3: Sale item finance extension (revenue + COGS + salesTaxCode per item)
+app.include_router(item_ext.router, prefix=_PREFIX)
 # Phase 1A: Master data extension endpoints (vendor_finance_ext, purchase_item_finance_ext, approval_rules)
 app.include_router(master_data.router, prefix=_PREFIX)
 # Week 3: Outbox bridge ingest endpoint (service-to-service, X-Service-Secret auth)
