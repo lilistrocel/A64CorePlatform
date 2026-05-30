@@ -1,8 +1,36 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 72 tasks
+> **Total completed:** 73 tasks
 
 ## 2026-05
+
+### T-100.9a.2 | Bug #4 — BSON date encoding in AR Invoice, AR Credit Note, SO, Delivery, and Quote services
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-30 · **Assigned:** backend-dev-expert
+- **Description:** PyMongo / Motor cannot encode bare `datetime.date` objects — only `datetime.datetime`. All five Wave 3 sales services were storing Pydantic `date` fields directly into MongoDB writes, causing HTTP 500 (`cannot encode object: datetime.date`) on every document creation and update. Fixed by adding a `_to_dt(d: date) -> datetime` helper in each service that converts to midnight UTC `datetime.datetime`. Task scope was AR Invoice + Credit Note; SO, Delivery, and Quote were fixed in the same session to unblock the live smoke.
+- **Services fixed (create + update paths):**
+  - `src/modules/sales/services/ar_invoice_service.py` — `docDate`, `dateOfSupply`, `invoiceDate`, `taxDate`, `dueDate` (was fixed in T-100.9a.1 session, confirmed here)
+  - `src/modules/sales/services/ar_credit_note_service.py` — `docDate`, `dateOfSupply`, `invoiceDate`, `taxDate` (was fixed in T-100.9a.1 session)
+  - `src/modules/sales/services/sales_order_service.py` — `docDate`, `deliveryDate` (3 locations: create-direct, create-from-quote, update field_map)
+  - `src/modules/sales/services/delivery_service.py` — `docDate`, `actualDeliveryDate` (2 locations: create, update field_map)
+  - `src/modules/sales/services/quote_service.py` — `docDate`, `validUntilDate` (2 locations: create, update field_map)
+- **Tests added:**
+  - 3 new tests in `src/modules/sales/tests/test_ar_invoices.py` (create-direct, update-draft, create-from-delivery all store `datetime.datetime` at midnight UTC)
+  - 4 new tests in `src/modules/sales/tests/test_ar_credit_notes.py` (`_to_dt` unit tests + update path test)
+- **Test results:** 47 failed (pre-existing T-100.11.1 failures in returns/return-requests/arc fake DB), 158 passed — net +7 from baseline. Zero new failures.
+- **Smoke chain verified (live stack):**
+  - SO-2026-0001 created via `POST /api/v1/sales/orders-v2` → HTTP 200, no BSON error
+  - SO transitioned to `open` via `POST /{doc_entry}/transition`
+  - DN-2026-0002 created via `POST /api/v1/sales/deliveries/from-so/{so}` → HTTP 200
+  - DN transitioned to `open` → inventory decremented, delivery_posted event emitted
+  - ARI-2026-0001 created via `POST /api/v1/sales/ar-invoices/from-delivery/{dn}` → HTTP 200, doc_entry `4247ee3b-1b6c-48d9-b14f-377168a37b40`
+  - ARI transitioned to `open` → `sales_invoice_posted` event emitted to `finance_outbox`
+  - All 5 date fields stored as `ISODate` in MongoDB: `docDate: ISODate('2026-05-30T00:00:00.000Z')`, `dueDate: ISODate('2026-06-29T00:00:00.000Z')`, etc.
+  - Finance returned HTTP 400 (company posting setup not configured for A001) — configuration issue, not a code bug; event was correctly emitted and processed
+- **Adjacent issue flagged:** T-100.11.1 — `_FakeCollection` in `test_ar_credit_notes.py` is missing `find_one_and_update` (needed by `next_doc_number`), causing 20 pre-existing test failures. Out of scope for this task.
+- **Hot reload required:** `docker compose restart api` — changes are in Python service files.
+
+---
 
 ### T-060.10 | Finance — CashFlowStatementPage (indirect method)
 - **Category:** Frontend · **Priority:** P1
