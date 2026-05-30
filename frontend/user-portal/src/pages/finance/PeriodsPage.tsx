@@ -2265,6 +2265,7 @@ export function PeriodsPage() {
           entityType="FiscalPeriod"
           entityId={auditTarget.periodId}
           entityLabel={`${auditTarget.fiscalYear} P${auditTarget.periodNumber}`}
+          viewerRole={user?.role}
         />
       )}
     </PageContainer>

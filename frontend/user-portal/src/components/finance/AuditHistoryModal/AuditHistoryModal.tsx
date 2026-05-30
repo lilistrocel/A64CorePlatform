@@ -9,26 +9,39 @@
  *    X button (top-right) or Esc key or the Close footer button close it.
  *  - No pagination UI — backend default size=200 covers all realistic audit
  *    histories for a single fiscal period (KISS principle).
- *  - Actor names not resolved — no shared user-fetch hook exists in this
- *    codebase. actorUserId is truncated to 8 chars + "…" with a title tooltip
- *    showing the full UUID. Follow-up: T-064 (actor-name resolution).
+ *  - Actor names resolved via useAdminUsers (T-064). Requires the viewing user
+ *    to have admin/super_admin role to call GET /v1/users. For roles that cannot
+ *    call that endpoint (finance_admin, finance_reviewer) the hook is disabled
+ *    and the display falls back to truncated UUID.
  *  - Parameterised on entityType so the modal is reusable for JournalEntry
  *    audit history in a future task without modification.
  *
  * Props:
- *  - isOpen        — controls visibility (parent manages open/close state)
- *  - onClose       — called when X, Esc, or footer Close button triggers close
+ *  - isOpen         — controls visibility (parent manages open/close state)
+ *  - onClose        — called when X, Esc, or footer Close button triggers close
  *  - organizationId — required for the audit-log query (cross-org filter)
- *  - entityType    — e.g. "FiscalPeriod" (backend allow-list)
- *  - entityId      — UUID of the entity whose audit history to show
- *  - entityLabel   — human-readable label for the modal header, e.g. "2026 P1"
+ *  - entityType     — e.g. "FiscalPeriod" (backend allow-list)
+ *  - entityId       — UUID of the entity whose audit history to show
+ *  - entityLabel    — human-readable label for the modal header, e.g. "2026 P1"
+ *  - viewerRole     — (optional) role of the currently authenticated user,
+ *                     used to gate the /v1/users fetch. Pass from useAuthStore.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import { useAuditLog } from '../../../hooks/queries/useAuditLog';
+import { useAdminUsers } from '../../../hooks/queries/useAdminUsers';
 import type { AuditLogEntry } from '../../../services/auditLogService';
 import { useToastStore } from '../../../stores/toast.store';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/**
+ * Roles that are permitted to call GET /v1/users (require_admin on the backend).
+ * Only for these roles will actor names be resolved; all others fall back to
+ * truncated UUID without an error.
+ */
+const USER_FETCH_ROLES = new Set(['admin', 'super_admin']);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -348,6 +361,14 @@ export interface AuditHistoryModalProps {
    * e.g. "2026 P1", "JE-00042".
    */
   entityLabel: string;
+  /**
+   * Role of the currently authenticated user.
+   * Used to decide whether to attempt GET /v1/users for actor-name resolution.
+   * Roles "admin" and "super_admin" can call that endpoint; others fall back
+   * to truncated-UUID rendering without triggering a 403.
+   * Optional — when omitted, actor-name resolution is disabled.
+   */
+  viewerRole?: string;
 }
 
 export function AuditHistoryModal({
@@ -357,11 +378,12 @@ export function AuditHistoryModal({
   entityType,
   entityId,
   entityLabel,
+  viewerRole,
 }: AuditHistoryModalProps) {
   const addToast = useToastStore((s) => s.addToast);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
-  // ── Data fetch ─────────────────────────────────────────────────────────────
+  // ── Audit log data fetch ───────────────────────────────────────────────────
 
   const { data, isLoading, isError, error, refetch } = useAuditLog({
     organizationId,
@@ -370,6 +392,36 @@ export function AuditHistoryModal({
     // No action filter — show all events for this entity.
     // No page/size override — use the service defaults (page=1, size=200).
   });
+
+  // ── Actor-name resolution (T-064) ──────────────────────────────────────────
+
+  // Only fetch the user list when the viewing user has a role that can call
+  // GET /v1/users. For finance_admin / finance_reviewer the hook is disabled
+  // and userMap remains an empty Map (actor column falls back to UUID).
+  const canFetchUsers = viewerRole !== undefined && USER_FETCH_ROLES.has(viewerRole);
+
+  const {
+    userMap,
+    isLoading: isResolvingActors,
+  } = useAdminUsers({ enabled: canFetchUsers && isOpen });
+
+  // Deduplicate actorUserIds from the current result set and build display names.
+  // This is O(n) over the entry list — no memoisation needed for typical audit
+  // logs (< 50 events per period). useMemo guards against recomputing on every
+  // render when the data reference hasn't changed.
+  const actorDisplayNames = useMemo<ReadonlyMap<string, string>>(() => {
+    const entries = data?.items ?? [];
+    const uniqueIds = [...new Set(entries.map((e) => e.actorUserId).filter(Boolean))];
+    const result = new Map<string, string>();
+
+    for (const id of uniqueIds) {
+      const resolved = userMap.get(id);
+      // Resolved name wins; otherwise keep undefined so we fall back to UUID.
+      if (resolved) result.set(id, resolved);
+    }
+
+    return result;
+  }, [data?.items, userMap]);
 
   // ── Esc key handler ────────────────────────────────────────────────────────
 
@@ -435,20 +487,23 @@ export function AuditHistoryModal({
             Audit History — {entityLabel}
           </ModalTitle>
           <ModalSubtitle>
-            {entityType} · actor IDs are shown as truncated UUIDs (hover for full ID)
+            {entityType}
+            {canFetchUsers
+              ? ' · actor names resolved (hover for full ID)'
+              : ' · actor IDs shown as truncated UUIDs (hover for full ID)'}
           </ModalSubtitle>
         </ModalHeader>
 
         <ModalBody>
-          {/* Loading state */}
-          {isLoading && (
+          {/* Loading state — show while audit entries OR actor names are loading */}
+          {(isLoading || (canFetchUsers && isResolvingActors)) && (
             <StateBox aria-live="polite">
               <Spinner aria-hidden="true" />
-              Loading audit history…
+              {isLoading ? 'Loading audit history…' : 'Resolving actor names…'}
             </StateBox>
           )}
 
-          {/* Error state */}
+          {/* Error state — only for audit fetch failure (user-fetch failure is silent) */}
           {isError && !isLoading && (
             <StateBox role="alert">
               <p>Failed to load audit history.</p>
@@ -462,14 +517,14 @@ export function AuditHistoryModal({
           )}
 
           {/* Empty state */}
-          {!isLoading && !isError && entries.length === 0 && (
+          {!isLoading && !isError && !(canFetchUsers && isResolvingActors) && entries.length === 0 && (
             <StateBox>
               No audit events recorded for this {entityType} yet.
             </StateBox>
           )}
 
-          {/* Data table */}
-          {!isLoading && !isError && entries.length > 0 && (
+          {/* Data table — shown once both audit data AND actor resolution are ready */}
+          {!isLoading && !isError && !(canFetchUsers && isResolvingActors) && entries.length > 0 && (
             <TableWrapper>
               <Table
                 role="table"
@@ -496,16 +551,19 @@ export function AuditHistoryModal({
                       </Td>
                       <TdMuted>
                         {/*
-                         * Actor name resolution is not implemented — no shared
-                         * user-fetch hook exists. Render truncated UUID with
-                         * tooltip showing full UUID. See T-064 follow-up task.
+                         * T-064: Render the resolved display name when available.
+                         * Full UUID is always exposed via title tooltip for
+                         * traceability. Falls back to truncated UUID when:
+                         *   - viewer lacks admin role (canFetchUsers=false)
+                         *   - user was deleted since the audit event was written
+                         *   - user is from a different org (defensive)
                          */}
                         <span
                           title={entry.actorUserId}
-                          aria-label={`Actor user ID: ${entry.actorUserId}`}
+                          aria-label={`Actor: ${actorDisplayNames.get(entry.actorUserId) ?? entry.actorUserId}`}
                           style={{ cursor: 'help' }}
                         >
-                          {truncateUserId(entry.actorUserId)}
+                          {actorDisplayNames.get(entry.actorUserId) ?? truncateUserId(entry.actorUserId)}
                         </span>
                       </TdMuted>
                       <TdReason>

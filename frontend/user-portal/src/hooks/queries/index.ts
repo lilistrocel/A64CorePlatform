@@ -216,3 +216,7 @@ export {
 
 // Finance hooks — Audit Log (T-060.11-audit)
 export { useAuditLog, auditLogKeys } from './useAuditLog';
+
+// Admin hooks — User list + userId→name resolution (T-064)
+export { useAdminUsers, adminUsersQueryKeys } from './useAdminUsers';
+export type { UserDisplayMap } from './useAdminUsers';
