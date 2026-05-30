@@ -129,6 +129,7 @@ def _resolve_org_id(
 @router.get(
     "",
     response_model=PaginatedResponse[ARInvoiceListItem],
+    response_model_by_alias=True,
     summary="List AR Invoices",
     description=(
         "Return a paginated list of AR Invoices for the given organisation. "
@@ -195,6 +196,7 @@ async def list_ar_invoices_endpoint(
 @router.get(
     "/{doc_entry}",
     response_model=SuccessResponse[ARInvoiceResponse],
+    response_model_by_alias=True,
     summary="Get AR Invoice detail",
 )
 async def get_ar_invoice_endpoint(
@@ -237,6 +239,7 @@ async def get_ar_invoice_endpoint(
 @router.post(
     "",
     response_model=SuccessResponse[ARInvoiceResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create AR Invoice (direct)",
 )
@@ -309,6 +312,7 @@ async def create_ar_invoice_endpoint(
 @router.post(
     "/from-delivery/{delivery_doc_entry}",
     response_model=SuccessResponse[ARInvoiceResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create AR Invoice from Delivery Note",
 )
@@ -388,6 +392,7 @@ async def create_ar_invoice_from_delivery_endpoint(
 @router.patch(
     "/{doc_entry}",
     response_model=SuccessResponse[ARInvoiceResponse],
+    response_model_by_alias=True,
     summary="Update draft AR Invoice",
 )
 async def update_ar_invoice_endpoint(
@@ -507,6 +512,7 @@ async def delete_ar_invoice_endpoint(
 @router.post(
     "/{doc_entry}/transition",
     response_model=SuccessResponse[ARInvoiceResponse],
+    response_model_by_alias=True,
     summary="Transition AR Invoice status",
 )
 async def transition_ar_invoice_status(

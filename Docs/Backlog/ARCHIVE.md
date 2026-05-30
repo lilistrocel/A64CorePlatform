@@ -1,8 +1,40 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 75 tasks
+> **Total completed:** 76 tasks
 
 ## 2026-05
+
+### T-200.0 | Sales UI foundation + AR Invoice (list + form + detail)
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert
+- **Depends on:** T-100 (Wave 3 backend) ✅ · **Blocks:** T-200.x (AR_INVOICE attachment backend)
+- **Description:** Built the Wave 3 Sales UI foundation. SALES_NAV_GROUP sidebar accordion with 9
+  children (AR Invoices live; all others placeholder for T-200.1+). Full salesApi.ts service layer
+  (AR Invoice API fully implemented; other Wave 3 docs stubbed with typed NOT_IMPLEMENTED stubs).
+  useArInvoices.ts TanStack Query hooks. AttachmentDocType extended with 'AR_INVOICE'. 5 routes
+  in App.tsx (list, new, from-delivery, detail, edit). Three complete AR Invoice pages:
+  ARInvoicesPage (list + filter chips + search + pagination), ARInvoiceFormPage (3 modes via
+  useParams, RHF + Zod, CustomerCombobox, useFieldArray, computed totals), ARInvoiceDetailPage
+  (4-col InfoGrid, lines table, doc-chain card, action bar, AttachmentList, AuditHistoryModal).
+  Status flow: DRAFT → OPEN (Post), OPEN → CANCELLED (Cancel, super_admin only).
+- **Files created:**
+  - `frontend/user-portal/src/services/salesApi.ts`
+  - `frontend/user-portal/src/hooks/queries/useArInvoices.ts`
+  - `frontend/user-portal/src/pages/sales/ARInvoicesPage.tsx`
+  - `frontend/user-portal/src/pages/sales/ARInvoiceFormPage.tsx`
+  - `frontend/user-portal/src/pages/sales/ARInvoiceDetailPage.tsx`
+  - `Docs/3-DevLog/2026-05-30_T-200.0-sales-ui-foundation-ar-invoice.md`
+- **Files modified:**
+  - `frontend/user-portal/src/components/layout/MainLayout.tsx` — SALES_NAV_GROUP
+  - `frontend/user-portal/src/App.tsx` — 5 AR Invoice routes
+  - `frontend/user-portal/src/hooks/queries/index.ts` — exports
+  - `frontend/user-portal/src/services/attachmentsService.ts` — AttachmentDocType += 'AR_INVOICE'
+- **Verification:** TS zero errors in new files. Lint zero errors in new files. Dev server boots 123ms.
+  Backend sanity: GET /api/v1/sales/ar-invoices → HTTP 200, correct { data, meta, links } envelope.
+- **Hot reload:** Yes — no Docker rebuild, no npm install, no migrations required.
+- **Backend gap:** AR_INVOICE attachment doc_type not yet whitelisted on backend → tracked as T-200.x.
+
+---
 
 ### T-100.11.2 | Finance posting setup for Returns flow (A001 default org config gap)
 - **Category:** Backend (Finance service) · **Priority:** P2

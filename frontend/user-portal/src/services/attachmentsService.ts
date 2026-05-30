@@ -17,7 +17,9 @@ import { apiClient } from './api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type AttachmentDocType = 'PR' | 'PO' | 'GR' | 'AP' | 'PAYMENT';
+// AR_INVOICE added in T-200.0 (Wave 3 sales UI). Backend endpoint to be wired
+// in the follow-up attachment task — the component handles 404 gracefully.
+export type AttachmentDocType = 'PR' | 'PO' | 'GR' | 'AP' | 'PAYMENT' | 'AR_INVOICE';
 
 export interface AttachmentMetadata {
   fileId: string;

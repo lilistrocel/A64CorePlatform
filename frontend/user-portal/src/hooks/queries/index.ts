@@ -220,3 +220,15 @@ export { useAuditLog, auditLogKeys } from './useAuditLog';
 // Admin hooks — User list + userId→name resolution (T-064)
 export { useAdminUsers, adminUsersQueryKeys } from './useAdminUsers';
 export type { UserDisplayMap } from './useAdminUsers';
+
+// Sales Wave 3 — AR Invoice hooks (T-200.0)
+export {
+  useArInvoices,
+  useArInvoice,
+  useCreateArInvoice,
+  useCreateArInvoiceFromDelivery,
+  useUpdateArInvoice,
+  useDeleteArInvoice,
+  useTransitionArInvoice,
+  ariQueryKeys,
+} from './useArInvoices';

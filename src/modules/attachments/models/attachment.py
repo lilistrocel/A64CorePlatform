@@ -23,15 +23,29 @@ class AttachmentDocType(str, Enum):
     """
     Valid document types that can have attachments.
 
-    Values are uppercase two-to-seven character codes matching the operation
-    system's docType field in document_headers and the PAYMENT table in finance.
+    Purchasing docs live in document_headers; Wave 3 sales docs live in
+    their own v2 collections (ar_invoices_v2, etc.). The list endpoint
+    queries the attachments collection directly so any doc_type works;
+    the upload endpoint still calls _verify_document against
+    document_headers — sales upload support is the responsibility of a
+    follow-up task (T-200.x).
     """
 
+    # Purchasing
     PR = "PR"
     PO = "PO"
     GR = "GR"
     AP = "AP"
     PAYMENT = "PAYMENT"
+    # Sales Wave 3 (T-200.0+) — list-only until upload support lands
+    QUOTE = "QUOTE"
+    SALES_ORDER = "SALES_ORDER"
+    DELIVERY = "DELIVERY"
+    AR_INVOICE = "AR_INVOICE"
+    CUSTOMER_RECEIPT = "CUSTOMER_RECEIPT"
+    RETURN_REQUEST = "RETURN_REQUEST"
+    RETURN = "RETURN"
+    AR_CREDIT_NOTE = "AR_CREDIT_NOTE"
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +141,11 @@ class AttachmentMetadata(BaseModel):
 
     fileId: str
     organizationId: str
-    docType: Literal["PR", "PO", "GR", "AP", "PAYMENT"]
+    docType: Literal[
+        "PR", "PO", "GR", "AP", "PAYMENT",
+        "QUOTE", "SALES_ORDER", "DELIVERY", "AR_INVOICE",
+        "CUSTOMER_RECEIPT", "RETURN_REQUEST", "RETURN", "AR_CREDIT_NOTE",
+    ]
     docId: str
     originalFilename: str
     mimeType: str

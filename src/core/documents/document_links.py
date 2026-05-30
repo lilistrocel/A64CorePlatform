@@ -29,7 +29,13 @@ from __future__ import annotations
 from typing import List, Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
+
+
+# Shared response config: serialise snake_case fields as camelCase aliases
+# while still accepting snake_case input (populate_by_name).
+_DOC_LINK_CONFIG = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +44,8 @@ from pydantic import BaseModel, Field
 
 
 class DocumentLinkRef(BaseModel):
+    model_config = _DOC_LINK_CONFIG
+
     """
     A reference to another document (header or line).
 
@@ -66,6 +74,8 @@ class DocumentLinkRef(BaseModel):
 
 
 class DocumentLineLinkMixin(BaseModel):
+    model_config = _DOC_LINK_CONFIG
+
     """
     Mixin for document-line Pydantic schemas.
 

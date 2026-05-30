@@ -37,6 +37,17 @@ from decimal import Decimal
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic.alias_generators import to_camel
+
+
+# Response models emit camelCase fields via the to_camel alias generator;
+# routes pair this with response_model_by_alias=True. populate_by_name=True
+# means consumers may still post snake_case input bodies.
+_RESPONSE_CONFIG = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    from_attributes=True,
+)
 
 from src.core.documents.document_links import DocumentLinkRef, DocumentLineLinkMixin
 from src.core.documents.document_status import DocumentStatus
@@ -99,6 +110,8 @@ class ARInvoiceLineCreate(BaseModel):
 
 
 class ARInvoiceLineResponse(DocumentLineLinkMixin):
+    model_config = _RESPONSE_CONFIG
+
     """
     Full representation of an AR Invoice line as returned by the API.
 
@@ -347,6 +360,8 @@ ARInvoiceFromDeliveryRequest.model_rebuild()
 
 
 class ARInvoiceTotals(BaseModel):
+    model_config = _RESPONSE_CONFIG
+
     """
     Header-level totals for an AR Invoice.
 
@@ -409,6 +424,8 @@ class ARInvoiceUpdate(BaseModel):
 
 
 class ARInvoiceResponse(BaseModel):
+    model_config = _RESPONSE_CONFIG
+
     """
     Full representation of an AR Invoice header returned by the API.
 
@@ -469,11 +486,10 @@ class ARInvoiceResponse(BaseModel):
     updated_at: datetime
     updated_by: str
 
-    class Config:
-        from_attributes = True
-
 
 class ARInvoiceListItem(BaseModel):
+    model_config = _RESPONSE_CONFIG
+
     """
     Slim view of an AR Invoice for paginated list responses.
 
@@ -493,9 +509,6 @@ class ARInvoiceListItem(BaseModel):
     base_doc_ref: Optional[DocumentLinkRef]
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------

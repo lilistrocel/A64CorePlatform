@@ -69,11 +69,24 @@ const VehicleManagementPage = lazy(() => import('./pages/logistics/VehicleManage
 const RouteManagementPage = lazy(() => import('./pages/logistics/RouteManagementPage').then(m => ({ default: m.RouteManagementPage })));
 const ShipmentTrackingPage = lazy(() => import('./pages/logistics/ShipmentTrackingPage').then(m => ({ default: m.ShipmentTrackingPage })));
 
-// Sales module
+// Sales module (legacy)
 const SalesDashboardPage = lazy(() => import('./pages/sales/SalesDashboardPage').then(m => ({ default: m.SalesDashboardPage })));
 const SalesOrdersPage = lazy(() => import('./pages/sales/SalesOrdersPage').then(m => ({ default: m.SalesOrdersPage })));
 const StockPage = lazy(() => import('./pages/sales/StockPage').then(m => ({ default: m.StockPage })));
 const ReturnsPage = lazy(() => import('./pages/sales/ReturnsPage').then(m => ({ default: m.ReturnsPage })));
+
+// Sales module — Wave 3 (T-200.0)
+// /new MUST be registered before /:docId and from-delivery/:dlvId to prevent
+// "new" / "from-delivery" being matched as a docId by the detail route.
+const ARInvoicesPage = lazy(() =>
+  import('./pages/sales/ARInvoicesPage').then(m => ({ default: m.ARInvoicesPage }))
+);
+const ARInvoiceDetailPage = lazy(() =>
+  import('./pages/sales/ARInvoiceDetailPage').then(m => ({ default: m.ARInvoiceDetailPage }))
+);
+const ARInvoiceFormPage = lazy(() =>
+  import('./pages/sales/ARInvoiceFormPage').then(m => ({ default: m.ARInvoiceFormPage }))
+);
 
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
@@ -265,6 +278,15 @@ function App() {
                 {/* Back-compat redirect: old /sales/purchase-orders → /purchasing/po (T-070.0) */}
                 <Route path="/sales/purchase-orders" element={<Navigate to="/purchasing/po" replace />} />
                 <Route path="/sales/returns" element={<ReturnsPage />} />
+
+                {/* Sales module — Wave 3 AR Invoices (T-200.0)
+                    Route order matters: /new and /from-delivery/:id MUST come before /:docId
+                    to avoid matching the literal string "new" as a docId. */}
+                <Route path="/sales/ar-invoices" element={<ARInvoicesPage />} />
+                <Route path="/sales/ar-invoices/new" element={<ARInvoiceFormPage />} />
+                <Route path="/sales/ar-invoices/from-delivery/:deliveryDocId" element={<ARInvoiceFormPage />} />
+                <Route path="/sales/ar-invoices/:docId/edit" element={<ARInvoiceFormPage />} />
+                <Route path="/sales/ar-invoices/:docId" element={<ARInvoiceDetailPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />
