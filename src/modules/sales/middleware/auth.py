@@ -4,6 +4,8 @@ Sales Module - Authentication Middleware
 Integrates with A64Core authentication system.
 """
 
+from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -31,7 +33,8 @@ class CurrentUser:
         lastName: str,
         role: str,
         isActive: bool,
-        isEmailVerified: bool
+        isEmailVerified: bool,
+        organizationId: Optional[str] = None,
     ):
         self.userId = userId
         self.email = email
@@ -40,6 +43,7 @@ class CurrentUser:
         self.role = role
         self.isActive = isActive
         self.isEmailVerified = isEmailVerified
+        self.organizationId = organizationId
 
 
 async def get_current_user(
@@ -108,7 +112,8 @@ async def get_current_user(
         lastName=user_doc["lastName"],
         role=user_doc["role"],
         isActive=user_doc["isActive"],
-        isEmailVerified=user_doc.get("isEmailVerified", False)
+        isEmailVerified=user_doc.get("isEmailVerified", False),
+        organizationId=user_doc.get("organizationId"),
     )
 
 

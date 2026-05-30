@@ -82,6 +82,22 @@ class _FakeCollection:
         matched = [dict(d) for d in self._docs if _matches(d, query or {})]
         return _FakeCursor(matched)
 
+    async def find_one_and_update(self, query, update, **kwargs):
+        """Supports upsert=True for next_doc_number counter pattern."""
+        upsert = kwargs.get("upsert", False)
+        for doc in self._docs:
+            if _matches(doc, query):
+                _apply_update_simple(doc, update)
+                return doc
+        if upsert:
+            new_doc: Dict[str, Any] = {}
+            if "_id" in query:
+                new_doc["_id"] = query["_id"]
+            _apply_update_simple(new_doc, update)
+            self._docs.append(new_doc)
+            return new_doc
+        return None
+
     async def insert_one(self, doc, **kwargs):
         self._docs.append(dict(doc))
 
@@ -181,6 +197,19 @@ def _matches(doc, query):
             if doc.get(key) != val:
                 return False
     return True
+
+
+def _apply_update_simple(doc: Dict[str, Any], update: Dict[str, Any]) -> None:
+    """Simple flat update — used by find_one_and_update (counters, no embedded lines)."""
+    if "$set" in update:
+        for k, v in update["$set"].items():
+            doc[k] = v
+    if "$inc" in update:
+        for k, delta in update["$inc"].items():
+            doc[k] = doc.get(k, 0) + delta
+    if "$push" in update:
+        for k, v in update["$push"].items():
+            doc.setdefault(k, []).append(v)
 
 
 # ---------------------------------------------------------------------------
@@ -421,8 +450,11 @@ async def test_update_open_arc_raises():
         db, payload=_make_arc_payload(), org_id=_ORG, user_id=_USER
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -469,8 +501,11 @@ async def test_delete_non_draft_raises():
         db, payload=_make_arc_payload(), org_id=_ORG, user_id=_USER
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -523,8 +558,11 @@ async def test_transition_draft_to_open_updates_credited_amount():
         db, payload=_make_arc_payload(), org_id=_ORG, user_id=_USER
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -547,8 +585,11 @@ async def test_transition_draft_to_open_auto_closes_invoice():
         db, payload=_make_arc_payload(amount=1050.0), org_id=_ORG, user_id=_USER
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -591,15 +632,11 @@ async def test_transition_draft_to_open_emits_outbox():
         db, payload=_make_arc_payload(), org_id=_ORG, user_id=_USER
     )
 
-    emitted_event_type = None
-
-    async def _mock_publish(**kwargs):
-        nonlocal emitted_event_type
-        emitted_event_type = kwargs.get("event_type")
-        return str(uuid.uuid4())
-
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = _mock_publish
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ) as mock_publish:
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -608,7 +645,9 @@ async def test_transition_draft_to_open_emits_outbox():
             user_id=_USER,
         )
 
-    assert emitted_event_type == "credit_note_posted"
+    mock_publish.assert_called_once()
+    call_kwargs = mock_publish.call_args.kwargs
+    assert call_kwargs.get("event_type") == "credit_note_posted"
 
 
 @pytest.mark.asyncio
@@ -631,8 +670,11 @@ async def test_transition_draft_to_open_increments_return_consumed_qty():
         user_id=_USER,
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -666,8 +708,11 @@ async def test_rtn_auto_closed_when_fully_consumed():
         user_id=_USER,
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -690,8 +735,11 @@ async def test_transition_open_to_cancelled_reversal():
         db, payload=_make_arc_payload(), org_id=_ORG, user_id=_USER
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -700,8 +748,11 @@ async def test_transition_open_to_cancelled_reversal():
             user_id=_USER,
         )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -724,8 +775,11 @@ async def test_transition_open_to_cancelled_restores_invoice_status():
         db, payload=_make_arc_payload(), org_id=_ORG, user_id=_USER
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -734,8 +788,11 @@ async def test_transition_open_to_cancelled_restores_invoice_status():
             user_id=_USER,
         )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -757,8 +814,11 @@ async def test_transition_open_to_cancelled_emits_outbox():
         db, payload=_make_arc_payload(), org_id=_ORG, user_id=_USER
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -767,15 +827,11 @@ async def test_transition_open_to_cancelled_emits_outbox():
             user_id=_USER,
         )
 
-    emitted_event_type = None
-
-    async def _mock_publish(**kwargs):
-        nonlocal emitted_event_type
-        emitted_event_type = kwargs.get("event_type")
-        return str(uuid.uuid4())
-
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = _mock_publish
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ) as mock_cancel_publish:
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -784,7 +840,9 @@ async def test_transition_open_to_cancelled_emits_outbox():
             user_id=_USER,
         )
 
-    assert emitted_event_type == "credit_note_cancelled"
+    mock_cancel_publish.assert_called_once()
+    call_kwargs = mock_cancel_publish.call_args.kwargs
+    assert call_kwargs.get("event_type") == "credit_note_cancelled"
 
 
 @pytest.mark.asyncio
@@ -819,8 +877,11 @@ async def test_transition_illegal_raises():
         db, payload=_make_arc_payload(), org_id=_ORG, user_id=_USER
     )
 
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
@@ -828,8 +889,11 @@ async def test_transition_illegal_raises():
             org_id=_ORG,
             user_id=_USER,
         )
-    with patch("src.modules.sales.services.ar_credit_note_service.OutboxWriter") as _mock:
-        _mock.publish = AsyncMock(return_value=str(uuid.uuid4()))
+    with patch(
+        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
+        new_callable=AsyncMock,
+        return_value=str(uuid.uuid4()),
+    ):
         await transition_status(
             db,
             doc_entry=created.doc_entry,
