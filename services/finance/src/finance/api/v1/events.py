@@ -37,7 +37,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...config import settings
 from ...db.session import get_db
 from ...models.orm.models import (
+    AccountTypeEnum,
     CompanyPostingSetup,
+    CustomerFinanceExt,
+    DrawerEnum,
     FiscalPeriod,
     GLAccount,
     JEStatusEnum,
@@ -48,6 +51,7 @@ from ...models.orm.models import (
     PeriodStatusEnum,
     PurchaseItemFinanceExt,
     PurchaseItemTypeEnum,
+    SaleItemFinanceExt,
     TaxCode,
     VendorFinanceExt,
 )
@@ -683,6 +687,510 @@ async def _handle_purchase_received(
 
 
 # ---------------------------------------------------------------------------
+# T-100.8.1 — Delivery posted / cancelled account-resolution helpers
+# ---------------------------------------------------------------------------
+
+
+async def _resolve_item_cogs_account_or_raise(
+    db: AsyncSession,
+    organization_id: str,
+    item_id: str,
+    item_code: str,
+) -> str:
+    """
+    Look up sale_item_finance_ext and return cogsAccountId.
+
+    Also validates that the resolved GL account is active and belongs to the
+    COST_OF_SALES drawer with accountType=expense.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        organization_id: Owning organisation.
+        item_id: UUID of the item from the delivery line.
+        item_code: Item code (for error messages only).
+
+    Returns:
+        cogsAccountId string (non-null, non-empty, validated).
+
+    Raises:
+        HTTPException 400: If no ext row exists, cogsAccountId is null,
+                           or the account is inactive / wrong type.
+    """
+    result = await db.execute(
+        select(SaleItemFinanceExt).where(
+            SaleItemFinanceExt.organizationId == organization_id,
+            SaleItemFinanceExt.itemId == item_id,
+        )
+    )
+    ext_row = result.scalar_one_or_none()
+    if ext_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Item {item_code} has no sale finance extension. "
+                "Create a sale_item_finance_ext row for this item first."
+            ),
+        )
+    if not ext_row.cogsAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Item {item_code} has no COGS account assigned. "
+                "Set cogsAccountId via the Item GL Mapping page."
+            ),
+        )
+    # Reason: validate at posting time that the assigned account is still
+    # active, still in the COST_OF_SALES drawer, and accountType=expense.
+    # Finance may have archived or re-typed the account since the mapping
+    # was saved, so a runtime check prevents silent mis-postings.
+    acct_result = await db.execute(
+        select(GLAccount).where(GLAccount.accountId == ext_row.cogsAccountId)
+    )
+    acct = acct_result.scalar_one_or_none()
+    if acct is None or not acct.isActive:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"COGS account for item {item_code} is inactive or not found. "
+                "Re-assign cogsAccountId to an active account."
+            ),
+        )
+    if acct.drawer != DrawerEnum.COST_OF_SALES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"COGS account for item {item_code} is in drawer '{acct.drawer.value}' "
+                f"— must be COST_OF_SALES."
+            ),
+        )
+    if acct.accountType != AccountTypeEnum.EXPENSE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"COGS account for item {item_code} has accountType "
+                f"'{acct.accountType.value}' — must be expense."
+            ),
+        )
+    return ext_row.cogsAccountId
+
+
+async def _resolve_item_inventory_account_validated_or_raise(
+    db: AsyncSession,
+    organization_id: str,
+    item_id: str,
+    item_code: str,
+) -> str:
+    """
+    Look up purchase_item_finance_ext.inventoryAccountId for the Delivery JE.
+
+    Validates that the account is active and belongs to the ASSETS drawer
+    with accountType=asset.  The inventory side of the COGS entry comes from
+    the purchasing extension because items are received (and inventoried) on
+    the purchasing side first.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        organization_id: Owning organisation.
+        item_id: UUID of the item from the delivery line.
+        item_code: Item code (for error messages only).
+
+    Returns:
+        inventoryAccountId string (non-null, non-empty, validated).
+
+    Raises:
+        HTTPException 400: If no ext row exists, inventoryAccountId is null,
+                           or the account is inactive / wrong type.
+    """
+    result = await db.execute(
+        select(PurchaseItemFinanceExt).where(
+            PurchaseItemFinanceExt.organizationId == organization_id,
+            PurchaseItemFinanceExt.itemId == item_id,
+        )
+    )
+    ext_row = result.scalar_one_or_none()
+    if ext_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Item {item_code} has no purchase finance extension. "
+                "Process a purchase_item_changed event for this item first."
+            ),
+        )
+    if not ext_row.inventoryAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Item {item_code} has no inventory account assigned "
+                f"in purchase_item_finance_ext. "
+                "Set inventoryAccountId via the Item GL Mapping page."
+            ),
+        )
+    # Reason: validate at posting time that the inventory account is still
+    # active and is in the ASSETS drawer with accountType=asset.
+    acct_result = await db.execute(
+        select(GLAccount).where(GLAccount.accountId == ext_row.inventoryAccountId)
+    )
+    acct = acct_result.scalar_one_or_none()
+    if acct is None or not acct.isActive:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Inventory account for item {item_code} is inactive or not found. "
+                "Re-assign inventoryAccountId to an active account."
+            ),
+        )
+    if acct.drawer != DrawerEnum.ASSETS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Inventory account for item {item_code} is in drawer "
+                f"'{acct.drawer.value}' — must be ASSETS."
+            ),
+        )
+    if acct.accountType != AccountTypeEnum.ASSET:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Inventory account for item {item_code} has accountType "
+                f"'{acct.accountType.value}' — must be asset."
+            ),
+        )
+    return ext_row.inventoryAccountId
+
+
+# ---------------------------------------------------------------------------
+# T-100.8.1 — delivery_posted posting handler (Wave 3 Phase 2)
+# ---------------------------------------------------------------------------
+
+
+async def _handle_delivery_posted(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle delivery_posted outbox events (T-100.8.1).
+
+    Produces one Journal Entry with two lines per delivery line:
+      DR  COGS account     (sale_item_finance_ext.cogsAccountId)   for lineCogs
+      CR  Inventory account (purchase_item_finance_ext.inventoryAccountId) for lineCogs
+
+    VAT is NOT recognised here — that happens at AR Invoice (T-100.9).
+    This handler posts only the cost-of-goods-sold side of the delivery.
+
+    Total line count = 2 × len(payload.lines).
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with delivery_posted payload.
+
+    Raises:
+        HTTPException 400: For all permanent validation failures (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from contracts.finance_events import DeliveryPostedPayload
+
+    payload = DeliveryPostedPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+
+    logger.info(
+        "[Finance/Posting] handling delivery_posted dn=%s so=%s customer=%s lines=%d total_cogs=%s",
+        payload.deliveryDocNumber,
+        payload.sourceSoDocNumber,
+        payload.customerName,
+        len(payload.lines),
+        payload.totalCogs,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Resolve company posting setup (confirms company is configured)
+    # ------------------------------------------------------------------
+    await _resolve_posting_setup_or_raise(db, org_id, company_code)
+
+    # ------------------------------------------------------------------
+    # 2. Resolve COGS + Inventory accounts for each line — fail fast if
+    #    anything is missing BEFORE any writes are made.
+    # ------------------------------------------------------------------
+    # Reason: resolve all accounts before opening the transaction so a
+    # missing item config causes a clean 400 without any partial writes.
+    line_accounts: list[tuple[Any, str, str]] = []
+    for line in payload.lines:
+        cogs_acct_id = await _resolve_item_cogs_account_or_raise(
+            db, org_id, str(line.itemId), line.itemCode
+        )
+        inv_acct_id = await _resolve_item_inventory_account_validated_or_raise(
+            db, org_id, str(line.itemId), line.itemCode
+        )
+        line_accounts.append((line, cogs_acct_id, inv_acct_id))
+
+    # ------------------------------------------------------------------
+    # 3. Resolve fiscal period from docDate (accounting date, not delivery date)
+    # ------------------------------------------------------------------
+    je_date = date.fromisoformat(payload.docDate)
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, je_date)
+
+    # ------------------------------------------------------------------
+    # 4. Generate JE number (concurrent-safe MAX+1)
+    # ------------------------------------------------------------------
+    je_number = await _next_je_number(db, company_code, je_date.year)
+
+    # ------------------------------------------------------------------
+    # 5. Build and persist the JE atomically
+    # ------------------------------------------------------------------
+    # Reason: compute total from per-line lineCogs rather than trusting the
+    # payload totalCogs so the DR and CR sides are always balanced.
+    total_cogs = sum(line.lineCogs for line, _, _ in line_accounts)
+    total_cogs_decimal = Decimal(str(total_cogs))
+
+    description = (
+        f"Delivery {payload.deliveryDocNumber} — Customer {payload.customerName}"
+    )
+
+    je_id = str(uuid.uuid4())
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=je_number,
+        jeDate=je_date,
+        periodId=period_id,
+        sourceEventType="delivery_posted",
+        sourceEventId=str(event.eventId),
+        sourceDocId=payload.deliveryDocEntry,
+        sourceDocNumber=payload.deliveryDocNumber,
+        description=description,
+        totalDebit=total_cogs_decimal,
+        totalCredit=total_cogs_decimal,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(je)
+
+    # Insert DR (COGS) + CR (Inventory) lines per delivery line
+    line_number = 1
+    for line, cogs_acct_id, inv_acct_id in line_accounts:
+        line_cogs = Decimal(str(line.lineCogs))
+        line_desc = f"{line.itemCode} — qty {line.quantity}"
+
+        # Debit COGS account
+        dr_line = JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_number,
+            accountId=cogs_acct_id,
+            debit=line_cogs,
+            credit=None,
+            description=f"COGS: {line_desc}",
+            # Reason: preserve back-link to the source SO line for audit trail.
+            referenceLineId=str(line.sourceSoLineNumber),
+            costCenterId=line.costCenterId,
+        )
+        db.add(dr_line)
+        line_number += 1
+
+        # Credit Inventory account
+        cr_line = JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_number,
+            accountId=inv_acct_id,
+            debit=None,
+            credit=line_cogs,
+            description=f"Inventory: {line_desc}",
+            referenceLineId=str(line.sourceSoLineNumber),
+            costCenterId=line.costCenterId,
+        )
+        db.add(cr_line)
+        line_number += 1
+
+    # Reason: flush here so FK violations surface inside this handler
+    # (consumer treats as 500 → retry) rather than in the outer commit path.
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted delivery JE jeNumber=%s jeId=%s "
+        "lines=%d total_cogs=%s customer=%s",
+        je_number,
+        je_id,
+        len(line_accounts) * 2,
+        total_cogs_decimal,
+        payload.customerName,
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-100.8.1 — delivery_cancelled reversal handler (Wave 3 Phase 2)
+# ---------------------------------------------------------------------------
+
+
+async def _handle_delivery_cancelled(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle delivery_cancelled outbox events (T-100.8.1).
+
+    Finds the original delivery_posted JE by sourceEventId == payload.originalEventId
+    and posts a reversing JE:
+      - DR lines become CR lines (same accounts, same amounts)
+      - CR lines become DR lines (same accounts, same amounts)
+
+    The original JE remains POSTED (it is not voided). Both JEs live on the
+    books and net to zero — standard accounting reversing-entry pattern.
+
+    Uses today's date for the reversal (no backdating — standard SAP behaviour).
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with delivery_cancelled payload.
+
+    Raises:
+        HTTPException 400: If the original JE is not found, or no open period
+                           covers today. Caller (consumer) will retry.
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from sqlalchemy.orm import selectinload
+
+    from contracts.finance_events import DeliveryCancelledPayload
+
+    payload = DeliveryCancelledPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+    original_event_id = payload.originalEventId
+
+    logger.info(
+        "[Finance/Posting] handling delivery_cancelled dn=%s original_event_id=%s",
+        payload.deliveryDocNumber,
+        original_event_id,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Find the original delivery_posted JE by sourceEventId
+    # ------------------------------------------------------------------
+    orig_result = await db.execute(
+        select(JournalEntry)
+        .options(selectinload(JournalEntry.lines))
+        .where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "delivery_posted",
+            JournalEntry.sourceEventId == original_event_id,
+        )
+    )
+    original = orig_result.scalar_one_or_none()
+    if original is None:
+        # Reason: permanent error — operator must investigate why the original
+        # JE does not exist. Consumer will retry; if the original event was
+        # never processed this will eventually surface to a dead-letter alert.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"No delivery_posted JE found for originalEventId={original_event_id}. "
+                "The original delivery_posted event may not have been processed yet."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Idempotency guard — check if a reversal JE already exists for this
+    #    original event. Duplicate delivery_cancelled events are no-ops.
+    # ------------------------------------------------------------------
+    existing_reversal_result = await db.execute(
+        select(JournalEntry.jeNumber).where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "delivery_cancelled",
+            JournalEntry.sourceDocNumber == original.jeNumber,
+        )
+    )
+    existing_reversal_number = existing_reversal_result.scalar_one_or_none()
+    if existing_reversal_number is not None:
+        logger.info(
+            "[Finance/Posting] delivery_cancelled already reversed: "
+            "original jeNumber=%s reversed by=%s — idempotent no-op",
+            original.jeNumber,
+            existing_reversal_number,
+        )
+        return
+
+    # ------------------------------------------------------------------
+    # 3. Resolve open fiscal period for today (reversals never backdate)
+    # ------------------------------------------------------------------
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    today = now_utc.date()
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, today)
+
+    # ------------------------------------------------------------------
+    # 4. Generate reversal JE number
+    # ------------------------------------------------------------------
+    reversal_je_number = await _next_je_number(db, company_code, today.year)
+
+    # ------------------------------------------------------------------
+    # 5. Build the reversal JE header
+    # ------------------------------------------------------------------
+    reversal_id = str(uuid.uuid4())
+    reversal_je = JournalEntry(
+        jeId=reversal_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=reversal_je_number,
+        jeDate=today,
+        periodId=period_id,
+        sourceEventType="delivery_cancelled",
+        sourceEventId=str(event.eventId),
+        # Reason: sourceDocNumber points to original JE number so the ledger
+        # shows a clear audit trail from the cancellation to its original entry.
+        sourceDocId=original.jeId,
+        sourceDocNumber=original.jeNumber,
+        description=(
+            f"Reversal of {original.jeNumber}: "
+            f"Delivery {payload.deliveryDocNumber} cancelled"
+        ),
+        # Reason: swap totalDebit/totalCredit — the reversal header mirrors
+        # the opposite entry direction (DR→CR, CR→DR).
+        totalDebit=Decimal(str(original.totalCredit)),
+        totalCredit=Decimal(str(original.totalDebit)),
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(reversal_je)
+
+    # ------------------------------------------------------------------
+    # 6. Build reversal lines — swap debit/credit for every original line
+    # ------------------------------------------------------------------
+    for line in original.lines:
+        orig_debit = Decimal(str(line.debit)) if line.debit is not None else None
+        orig_credit = Decimal(str(line.credit)) if line.credit is not None else None
+
+        # Reason: original DR (COGS) → reversal CR; original CR (Inventory) → reversal DR.
+        # This is the mathematical inverse that cancels the original posting.
+        reversal_line = JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=reversal_id,
+            lineNumber=line.lineNumber,
+            accountId=line.accountId,
+            debit=orig_credit,   # original CR (Inventory) → reversal DR
+            credit=orig_debit,   # original DR (COGS) → reversal CR
+            description=(
+                f"Reversal: {line.description}" if line.description else "Reversal"
+            ),
+            referenceLineId=line.referenceLineId,
+            costCenterId=line.costCenterId,
+        )
+        db.add(reversal_line)
+
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted delivery reversal JE jeNumber=%s jeId=%s "
+        "original=%s customer=%s",
+        reversal_je_number,
+        reversal_id,
+        original.jeNumber,
+        payload.customerName,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Phase C.5 — ap_invoice_posted posting handler
 # ---------------------------------------------------------------------------
 
@@ -1210,6 +1718,1653 @@ async def _handle_ap_invoice_posted(
 
 
 # ---------------------------------------------------------------------------
+# T-100.9b — AR invoice handlers (sales_invoice_posted / cancelled)
+# ---------------------------------------------------------------------------
+
+
+async def _resolve_ar_control_account_or_raise(
+    db: AsyncSession,
+    org_id: str,
+    company_code: str,
+    customer_id: str,
+    setup: CompanyPostingSetup,
+) -> str:
+    """
+    Resolve the AR control account for a sales invoice via the 3-tier chain.
+
+    Priority:
+      Tier 1: customer_finance_ext.arControlAccountId (per-customer override)
+      Tier 2: company_posting_setup.arControlAccountId (company default)
+      Tier 3: gl_accounts lookup by accountNumber '124000-001' (system fallback)
+
+    The resolved account is validated:
+      - Must be active
+      - Must have drawer=ASSETS, accountType=asset
+      - Must not be a header account
+
+    Args:
+        db: Active SQLAlchemy async session.
+        org_id: Organisation scope.
+        company_code: Company code (for error messages).
+        customer_id: MongoDB customer document ID string.
+        setup: Loaded CompanyPostingSetup for this company.
+
+    Returns:
+        Resolved AR control account GL account UUID string.
+
+    Raises:
+        HTTPException 400: If all three tiers fail to yield an account,
+                           or if the resolved account is inactive / wrong type.
+    """
+    ar_account_id: Optional[str] = None
+
+    # ------------------------------------------------------------------
+    # Tier 1: per-customer override in customer_finance_ext
+    # ------------------------------------------------------------------
+    cust_ext_result = await db.execute(
+        select(CustomerFinanceExt.arControlAccountId).where(
+            CustomerFinanceExt.organizationId == org_id,
+            CustomerFinanceExt.customerId == customer_id,
+        )
+    )
+    cust_ext_ar = cust_ext_result.scalar_one_or_none()
+    if cust_ext_ar:
+        ar_account_id = cust_ext_ar
+
+    # ------------------------------------------------------------------
+    # Tier 2: company posting setup default
+    # ------------------------------------------------------------------
+    if not ar_account_id and setup.arControlAccountId:
+        ar_account_id = setup.arControlAccountId
+
+    # ------------------------------------------------------------------
+    # Tier 3: system fallback — lookup by account number '124000-001'
+    # ------------------------------------------------------------------
+    if not ar_account_id:
+        fallback_result = await db.execute(
+            select(GLAccount.accountId).where(
+                GLAccount.organizationId == org_id,
+                GLAccount.accountNumber == "124000-001",
+                GLAccount.isActive == True,  # noqa: E712
+            )
+        )
+        ar_account_id = fallback_result.scalar_one_or_none()
+
+    if not ar_account_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"No AR control account found for customer {customer_id} in company "
+                f"{company_code}. Set customer_finance_ext.arControlAccountId, "
+                f"company_posting_setup.arControlAccountId, or ensure account "
+                f"124000-001 (Trade Receivables - Customers) exists and is active."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # Validate the resolved account
+    # ------------------------------------------------------------------
+    acct_result = await db.execute(
+        select(GLAccount).where(GLAccount.accountId == ar_account_id)
+    )
+    acct = acct_result.scalar_one_or_none()
+    if acct is None or not acct.isActive:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Resolved AR control account {ar_account_id} is inactive or not found. "
+                "Re-assign arControlAccountId to an active account."
+            ),
+        )
+    if acct.isHeader:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Resolved AR control account {acct.accountNumber} '{acct.accountName}' "
+                f"is a header account — posting to header accounts is not allowed. "
+                "Use a leaf (detail) account."
+            ),
+        )
+    if acct.drawer != DrawerEnum.ASSETS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Resolved AR control account {acct.accountNumber} '{acct.accountName}' "
+                f"is in drawer '{acct.drawer.value}' — AR control account must be ASSETS."
+            ),
+        )
+    if acct.accountType != AccountTypeEnum.ASSET:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Resolved AR control account {acct.accountNumber} '{acct.accountName}' "
+                f"has accountType '{acct.accountType.value}' — must be asset."
+            ),
+        )
+    return ar_account_id
+
+
+async def _validate_revenue_account_or_raise(
+    db: AsyncSession,
+    account_id: str,
+    item_code: str,
+    line_number: int,
+) -> None:
+    """
+    Validate that a revenue account is active, non-header, drawer=REVENUE,
+    accountType=revenue.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        account_id: The revenueAccountId from the invoice line.
+        item_code: Item code (for error messages).
+        line_number: Line number (for error messages).
+
+    Raises:
+        HTTPException 400: If the account fails any validation check.
+    """
+    acct_result = await db.execute(
+        select(GLAccount).where(GLAccount.accountId == account_id)
+    )
+    acct = acct_result.scalar_one_or_none()
+    if acct is None or not acct.isActive:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Revenue account {account_id} for line {line_number} (item {item_code}) "
+                f"is inactive or not found. Re-assign revenueAccountId to an active account."
+            ),
+        )
+    if acct.isHeader:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Revenue account {acct.accountNumber} '{acct.accountName}' "
+                f"on line {line_number} (item {item_code}) is a header account — "
+                "posting to header accounts is not allowed. Use a leaf account."
+            ),
+        )
+    if acct.drawer != DrawerEnum.REVENUE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Revenue account {acct.accountNumber} '{acct.accountName}' "
+                f"on line {line_number} (item {item_code}) is in drawer "
+                f"'{acct.drawer.value}' — must be REVENUE."
+            ),
+        )
+    if acct.accountType != AccountTypeEnum.REVENUE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Revenue account {acct.accountNumber} '{acct.accountName}' "
+                f"on line {line_number} (item {item_code}) has accountType "
+                f"'{acct.accountType.value}' — must be revenue."
+            ),
+        )
+
+
+async def _validate_bank_account_or_raise(
+    db: AsyncSession,
+    org_id: str,
+    account_id: str,
+) -> "GLAccount":
+    """
+    Validate that account_id is an active, non-header, ASSETS/asset GL account.
+
+    Used as the DR side of an incoming customer payment JE (Dr Bank / Cr AR).
+
+    Args:
+        db: Active SQLAlchemy async session.
+        org_id: Organisation scope (cross-org protection).
+        account_id: The bankAccountId from the CustomerPaymentReceivedPayload.
+
+    Returns:
+        The validated GLAccount ORM object.
+
+    Raises:
+        HTTPException 400: If the account is not found, inactive, a header account,
+                           wrong drawer (not ASSETS), or wrong accountType (not asset).
+    """
+    acct_result = await db.execute(
+        select(GLAccount).where(
+            GLAccount.accountId == account_id,
+            GLAccount.organizationId == org_id,
+        )
+    )
+    acct = acct_result.scalar_one_or_none()
+    if acct is None or not acct.isActive:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Bank account '{account_id}' is not found or inactive in this organisation. "
+                "Assign an active GL account as the bank account before recording payments."
+            ),
+        )
+    if acct.isHeader:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Bank account {acct.accountNumber} '{acct.accountName}' is a header account — "
+                "posting to header accounts is not allowed. Use a leaf (detail) account."
+            ),
+        )
+    if acct.drawer != DrawerEnum.ASSETS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Bank account {acct.accountNumber} '{acct.accountName}' is in drawer "
+                f"'{acct.drawer.value}' — bank/cash accounts must be in the ASSETS drawer."
+            ),
+        )
+    if acct.accountType != AccountTypeEnum.ASSET:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Bank account {acct.accountNumber} '{acct.accountName}' has accountType "
+                f"'{acct.accountType.value}' — must be asset."
+            ),
+        )
+    return acct
+
+
+async def _handle_sales_invoice_posted(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle sales_invoice_posted outbox events (T-100.9b).
+
+    Posts a Journal Entry that recognises revenue and creates the AR receivable:
+
+      DR  AR Control Account          totals.gross
+              (resolved via 3-tier chain: customer_finance_ext →
+               company_posting_setup → 124000-001 account number lookup)
+      CR  Revenue (per line)          line.lineNet  per revenueAccountId
+              (one credit line per invoice line, tagged with costCenterId)
+      CR  Output VAT (combined)       totals.tax    from setup.outputVatAccountId
+              (one combined line for the whole invoice; skipped if totals.tax == 0)
+
+    Down payment netting is NOT supported in v1 (totals.downPaymentApplied expected
+    to be 0). Cash-sale flow (combined Invoice + Payment) is a separate future path.
+
+    Idempotency: the outer ingest endpoint deduplicates on event_id via the
+    outbox_events_processed table before calling this handler — no explicit
+    guard is needed inside this function.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with sales_invoice_posted payload.
+
+    Raises:
+        HTTPException 400: For all permanent validation failures (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from contracts.finance_events import SalesInvoicePostedPayload
+
+    payload = SalesInvoicePostedPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+
+    totals = payload.totals
+    total_gross = Decimal(str(totals.get("gross", "0")))
+    total_tax = Decimal(str(totals.get("tax", "0")))
+    total_net = Decimal(str(totals.get("net", "0")))
+
+    logger.info(
+        "[Finance/Posting] handling sales_invoice_posted ari=%s customer=%s "
+        "net=%s tax=%s gross=%s lines=%d",
+        payload.arInvoiceDocNumber,
+        payload.customerName,
+        total_net,
+        total_tax,
+        total_gross,
+        len(payload.lines),
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Resolve company posting setup
+    # ------------------------------------------------------------------
+    setup = await _resolve_posting_setup_or_raise(db, org_id, company_code)
+
+    # ------------------------------------------------------------------
+    # 2. Validate outputVatAccountId is configured when VAT is non-zero
+    # ------------------------------------------------------------------
+    has_vat = total_tax > Decimal("0.0001")
+    if has_vat and not setup.outputVatAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Output VAT account (outputVatAccountId) not configured in posting setup "
+                f"for company {company_code}, but invoice {payload.arInvoiceDocNumber} "
+                f"carries non-zero tax ({total_tax}). Configure the Output VAT account first."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 3. Resolve AR control account via 3-tier chain
+    # ------------------------------------------------------------------
+    ar_account_id = await _resolve_ar_control_account_or_raise(
+        db, org_id, company_code, payload.customerId, setup
+    )
+
+    # ------------------------------------------------------------------
+    # 4. Validate all revenue accounts before any writes
+    # ------------------------------------------------------------------
+    # Reason: fail fast — resolve and validate all accounts before any writes
+    # so a misconfigured line causes a clean 400 with no partial JE in DB.
+    for line in payload.lines:
+        await _validate_revenue_account_or_raise(
+            db, line.revenueAccountId, line.itemCode, line.lineNumber
+        )
+
+    # ------------------------------------------------------------------
+    # 5. Resolve fiscal period from docDate
+    # ------------------------------------------------------------------
+    je_date = date.fromisoformat(payload.docDate)
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, je_date)
+
+    # ------------------------------------------------------------------
+    # 6. Generate JE number (concurrent-safe MAX+1)
+    # ------------------------------------------------------------------
+    je_number = await _next_je_number(db, company_code, je_date.year)
+
+    # ------------------------------------------------------------------
+    # 7. Compute sum of revenue lines from payload to verify balance
+    # ------------------------------------------------------------------
+    # Reason: compute total net from lines rather than trusting totals.net
+    # so the DR == CR invariant is always derived from the actual lines posted.
+    total_revenue_net = sum(Decimal(str(line.lineNet)) for line in payload.lines)
+
+    # Balance proof:
+    #   DR = total_gross (= total_net + total_tax)
+    #   CR = total_revenue_net (per line) + total_tax (output VAT)
+    #      = total_net + total_tax = total_gross  ✓
+    # Assert within 0.01 tolerance (rounding on multi-line invoices)
+    dr_total = total_gross
+    cr_total = total_revenue_net + total_tax
+    assert abs(dr_total - cr_total) <= Decimal("0.01"), (
+        f"JE imbalance! DR={dr_total} CR={cr_total} for ari={payload.arInvoiceDocNumber}"
+    )
+
+    # ------------------------------------------------------------------
+    # 8. Build JE header
+    # ------------------------------------------------------------------
+    je_id = str(uuid.uuid4())
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    description = (
+        f"AR Invoice {payload.arInvoiceDocNumber} — "
+        f"Customer {payload.customerName}, "
+        f"ref {payload.bpRefNo or 'n/a'}"
+    )
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=je_number,
+        jeDate=je_date,
+        periodId=period_id,
+        sourceEventType="sales_invoice_posted",
+        sourceEventId=str(event.eventId),
+        sourceDocId=payload.arInvoiceDocEntry,
+        sourceDocNumber=payload.arInvoiceDocNumber,
+        description=description,
+        totalDebit=dr_total,
+        totalCredit=cr_total,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(je)
+
+    line_num = 1
+
+    # ------------------------------------------------------------------
+    # 9. Line 1: DR AR Control Account for total_gross
+    # ------------------------------------------------------------------
+    db.add(JournalEntryLine(
+        jeLineId=str(uuid.uuid4()),
+        jeId=je_id,
+        lineNumber=line_num,
+        accountId=ar_account_id,
+        debit=total_gross,
+        credit=None,
+        description=f"AR — Customer {payload.customerName}",
+        # Reason: store customerId in referenceLineId for sub-ledger linkage
+        # before a dedicated AR sub-ledger table exists. Free-form per ORM comment.
+        referenceLineId=str(payload.customerId),
+    ))
+    line_num += 1
+
+    # ------------------------------------------------------------------
+    # 10. Per-line: CR Revenue (one line per invoice line)
+    # ------------------------------------------------------------------
+    for line in payload.lines:
+        line_net = Decimal(str(line.lineNet))
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_num,
+            accountId=line.revenueAccountId,
+            debit=None,
+            credit=line_net,
+            description=f"Revenue: {line.itemCode}",
+            referenceLineId=str(line.lineNumber),
+            costCenterId=line.costCenterId,
+        ))
+        line_num += 1
+
+    # ------------------------------------------------------------------
+    # 11. CR Output VAT (one combined line, only if tax > 0)
+    # ------------------------------------------------------------------
+    if has_vat:
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_num,
+            accountId=setup.outputVatAccountId,
+            debit=None,
+            credit=total_tax,
+            # Reason: embed tax_date (UAE VAT tax-point date) in description
+            # for FTA audit traceability, mirroring the AP invoice convention.
+            description=f"Output VAT — tax_date {payload.taxDate}",
+        ))
+        line_num += 1  # noqa: F841 — kept for symmetry
+
+    # Reason: flush here so FK violations surface inside this handler
+    # rather than in the outer commit path where they are harder to attribute.
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted AR invoice JE jeNumber=%s jeId=%s "
+        "ari=%s ar_account=%s revenue=%s output_vat=%s total=%s lines=%d",
+        je_number,
+        je_id,
+        payload.arInvoiceDocNumber,
+        ar_account_id,
+        total_revenue_net,
+        total_tax,
+        dr_total,
+        line_num - 1,
+    )
+
+
+async def _handle_sales_invoice_cancelled(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle sales_invoice_cancelled outbox events (T-100.9b).
+
+    Finds the original sales_invoice_posted JE by
+    sourceEventId == payload.originalEventId and posts a reversing JE:
+      - DR lines become CR lines (same accounts, same amounts)
+      - CR lines become DR lines (same accounts, same amounts)
+
+    The original JE remains POSTED (it is not voided). Both JEs live on the
+    books and net to zero — standard accounting reversing-entry pattern,
+    mirroring the delivery_cancelled reversal in T-100.8.1.
+
+    Idempotency: if a reversal JE already exists with
+    sourceEventType='sales_invoice_cancelled' pointing to the same original
+    JE number, this handler returns silently (no-op). The outer ingest
+    endpoint's outbox_events_processed check handles true event-id duplicates.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with sales_invoice_cancelled payload.
+
+    Raises:
+        HTTPException 400: If the original JE is not found, or no open period
+                           covers today. Permanent failure (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from sqlalchemy.orm import selectinload
+
+    from contracts.finance_events import SalesInvoiceCancelledPayload
+
+    payload = SalesInvoiceCancelledPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+    original_event_id = payload.originalEventId
+
+    logger.info(
+        "[Finance/Posting] handling sales_invoice_cancelled ari=%s original_event_id=%s",
+        payload.arInvoiceDocNumber,
+        original_event_id,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Find the original sales_invoice_posted JE by sourceEventId
+    # ------------------------------------------------------------------
+    orig_result = await db.execute(
+        select(JournalEntry)
+        .options(selectinload(JournalEntry.lines))
+        .where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "sales_invoice_posted",
+            JournalEntry.sourceEventId == original_event_id,
+        )
+    )
+    original = orig_result.scalar_one_or_none()
+    if original is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"No sales_invoice_posted JE found for originalEventId={original_event_id}. "
+                "The original sales_invoice_posted event may not have been processed yet."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Idempotency guard — check if a reversal JE already exists for
+    #    this original JE. Duplicate cancellation events are no-ops.
+    # ------------------------------------------------------------------
+    existing_reversal_result = await db.execute(
+        select(JournalEntry.jeNumber).where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "sales_invoice_cancelled",
+            JournalEntry.sourceDocNumber == original.jeNumber,
+        )
+    )
+    existing_reversal_number = existing_reversal_result.scalar_one_or_none()
+    if existing_reversal_number is not None:
+        logger.info(
+            "[Finance/Posting] sales_invoice_cancelled already reversed: "
+            "original jeNumber=%s reversed by=%s — idempotent no-op",
+            original.jeNumber,
+            existing_reversal_number,
+        )
+        return
+
+    # ------------------------------------------------------------------
+    # 3. Resolve open fiscal period for today (reversals never backdate)
+    # ------------------------------------------------------------------
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    today = now_utc.date()
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, today)
+
+    # ------------------------------------------------------------------
+    # 4. Generate reversal JE number
+    # ------------------------------------------------------------------
+    reversal_je_number = await _next_je_number(db, company_code, today.year)
+
+    # ------------------------------------------------------------------
+    # 5. Build the reversal JE header
+    # ------------------------------------------------------------------
+    reversal_id = str(uuid.uuid4())
+    reversal_je = JournalEntry(
+        jeId=reversal_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=reversal_je_number,
+        jeDate=today,
+        periodId=period_id,
+        sourceEventType="sales_invoice_cancelled",
+        sourceEventId=str(event.eventId),
+        # Reason: sourceDocNumber points to the original JE number so the ledger
+        # shows a clear audit trail from the cancellation to its original entry.
+        sourceDocId=original.jeId,
+        sourceDocNumber=original.jeNumber,
+        description=(
+            f"Reversal of {original.jeNumber}: "
+            f"AR Invoice {payload.arInvoiceDocNumber} cancelled"
+        ),
+        # Reason: swap totalDebit/totalCredit — the reversal header mirrors
+        # the opposite entry direction (DR→CR, CR→DR).
+        totalDebit=Decimal(str(original.totalCredit)),
+        totalCredit=Decimal(str(original.totalDebit)),
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(reversal_je)
+
+    # ------------------------------------------------------------------
+    # 6. Build reversal lines — swap debit/credit for every original line
+    # ------------------------------------------------------------------
+    for line in original.lines:
+        orig_debit = Decimal(str(line.debit)) if line.debit is not None else None
+        orig_credit = Decimal(str(line.credit)) if line.credit is not None else None
+
+        # Reason: original DR (AR) → reversal CR; original CR (Revenue/VAT) → reversal DR.
+        reversal_line = JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=reversal_id,
+            lineNumber=line.lineNumber,
+            accountId=line.accountId,
+            debit=orig_credit,    # original CR (Revenue/VAT) → reversal DR
+            credit=orig_debit,    # original DR (AR) → reversal CR
+            description=(
+                f"Reversal: {line.description}" if line.description else "Reversal"
+            ),
+            referenceLineId=line.referenceLineId,
+            costCenterId=line.costCenterId,
+        )
+        db.add(reversal_line)
+
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted AR invoice reversal JE jeNumber=%s jeId=%s "
+        "original=%s customer=%s",
+        reversal_je_number,
+        reversal_id,
+        original.jeNumber,
+        payload.customerName,
+    )
+
+
+async def _handle_customer_payment_received(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle customer_payment_received outbox events (T-100.10.1).
+
+    Posts a single 2-line Journal Entry that records cash collection:
+
+      DR  Bank / Cash Account       (payload.bankAccountId)    for amountReceived
+      CR  AR Control Account        (3-tier chain resolution)  for amountReceived
+
+    The JE is intentionally flat: one DR and one CR regardless of how many
+    invoice allocations are in the payload. Allocation detail lives in the
+    operations sub-ledger; the finance ledger records only the net cash movement.
+
+    AR control account resolution uses the same 3-tier chain as
+    _handle_sales_invoice_posted (customer_finance_ext → posting_setup → 124000-001).
+
+    Idempotency: the outer ingest endpoint deduplicates on event_id via the
+    outbox_events_processed table before calling this handler — no explicit
+    guard is needed inside this function.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with customer_payment_received payload.
+
+    Raises:
+        HTTPException 400: For all permanent validation failures (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from contracts.finance_events import CustomerPaymentReceivedPayload
+
+    payload = CustomerPaymentReceivedPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+
+    allocation_numbers = ", ".join(
+        a.arInvoiceDocNumber for a in payload.allocations
+    )
+    logger.info(
+        "[Finance/Posting] handling customer_payment_received receipt=%s customer=%s "
+        "amount=%s method=%s allocations=[%s]",
+        payload.receiptDocNumber,
+        payload.customerName,
+        payload.amountReceived,
+        payload.paymentMethod,
+        allocation_numbers,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Validate bank account (DR side)
+    # ------------------------------------------------------------------
+    await _validate_bank_account_or_raise(db, org_id, payload.bankAccountId)
+
+    # ------------------------------------------------------------------
+    # 2. Resolve company posting setup (needed for AR 3-tier chain tier 2)
+    # ------------------------------------------------------------------
+    setup = await _resolve_posting_setup_or_raise(db, org_id, company_code)
+
+    # ------------------------------------------------------------------
+    # 3. Resolve AR control account via 3-tier chain (CR side)
+    # ------------------------------------------------------------------
+    ar_account_id = await _resolve_ar_control_account_or_raise(
+        db, org_id, company_code, payload.customerId, setup
+    )
+
+    # ------------------------------------------------------------------
+    # 4. Resolve fiscal period from docDate
+    # ------------------------------------------------------------------
+    je_date = date.fromisoformat(payload.docDate)
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, je_date)
+
+    # ------------------------------------------------------------------
+    # 5. Generate JE number (concurrent-safe MAX+1)
+    # ------------------------------------------------------------------
+    je_number = await _next_je_number(db, company_code, je_date.year)
+
+    # ------------------------------------------------------------------
+    # 6. Build JE header
+    # ------------------------------------------------------------------
+    je_id = str(uuid.uuid4())
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    amount = Decimal(str(payload.amountReceived))
+
+    # Truncate description to 500 chars — allocation list can be long for bulk payments
+    description_full = (
+        f"Receipt {payload.receiptDocNumber} from {payload.customerName}"
+        f" — applied to {allocation_numbers}"
+    )
+    description = description_full[:500]
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=je_number,
+        jeDate=je_date,
+        periodId=period_id,
+        sourceEventType="customer_payment_received",
+        sourceEventId=str(event.eventId),
+        sourceDocId=payload.receiptDocEntry,
+        sourceDocNumber=payload.receiptDocNumber,
+        description=description,
+        totalDebit=amount,
+        totalCredit=amount,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(je)
+
+    # ------------------------------------------------------------------
+    # 7. Line 1: DR Bank Account for amountReceived
+    # ------------------------------------------------------------------
+    db.add(JournalEntryLine(
+        jeLineId=str(uuid.uuid4()),
+        jeId=je_id,
+        lineNumber=1,
+        accountId=payload.bankAccountId,
+        debit=amount,
+        credit=None,
+        description=(
+            f"Bank receipt — {payload.paymentMethod} ref {payload.paymentRef or 'n/a'}"
+        ),
+        referenceLineId=None,
+        costCenterId=None,
+    ))
+
+    # ------------------------------------------------------------------
+    # 8. Line 2: CR AR Control Account for amountReceived
+    # ------------------------------------------------------------------
+    db.add(JournalEntryLine(
+        jeLineId=str(uuid.uuid4()),
+        jeId=je_id,
+        lineNumber=2,
+        accountId=ar_account_id,
+        debit=None,
+        credit=amount,
+        description=f"AR cleared — Customer {payload.customerName}",
+        # Reason: store customerId in referenceLineId for sub-ledger linkage
+        # before a dedicated AR sub-ledger table exists.
+        referenceLineId=str(payload.customerId),
+        costCenterId=None,
+    ))
+
+    # Reason: flush here so FK violations surface inside this handler
+    # rather than in the outer commit path where they are harder to attribute.
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted customer payment JE jeNumber=%s jeId=%s "
+        "receipt=%s bank_account=%s ar_account=%s amount=%s",
+        je_number,
+        je_id,
+        payload.receiptDocNumber,
+        payload.bankAccountId,
+        ar_account_id,
+        amount,
+    )
+
+
+async def _handle_customer_payment_cancelled(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle customer_payment_cancelled outbox events (T-100.10.1).
+
+    Finds the original customer_payment_received JE by
+    sourceEventId == payload.originalEventId and posts a reversing JE:
+      - DR line (Bank) becomes CR line (same account, same amount)
+      - CR line (AR)   becomes DR line (same account, same amount)
+
+    The original JE remains POSTED. Both JEs live on the books and net to
+    zero — standard accounting reversing-entry pattern, mirroring the
+    delivery_cancelled and sales_invoice_cancelled reversals.
+
+    Idempotency: if a reversal JE already exists with
+    sourceEventType='customer_payment_cancelled' pointing to the same original
+    JE number, this handler returns silently (no-op). The outer ingest
+    endpoint's outbox_events_processed check handles true event-id duplicates.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with customer_payment_cancelled payload.
+
+    Raises:
+        HTTPException 400: If the original JE is not found, or no open period
+                           covers today. Permanent failure (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from sqlalchemy.orm import selectinload
+
+    from contracts.finance_events import CustomerPaymentCancelledPayload
+
+    payload = CustomerPaymentCancelledPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+    original_event_id = payload.originalEventId
+
+    logger.info(
+        "[Finance/Posting] handling customer_payment_cancelled receipt=%s original_event_id=%s",
+        payload.receiptDocNumber,
+        original_event_id,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Find the original customer_payment_received JE by sourceEventId
+    # ------------------------------------------------------------------
+    orig_result = await db.execute(
+        select(JournalEntry)
+        .options(selectinload(JournalEntry.lines))
+        .where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "customer_payment_received",
+            JournalEntry.sourceEventId == original_event_id,
+        )
+    )
+    original = orig_result.scalar_one_or_none()
+    if original is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"No customer_payment_received JE found for "
+                f"originalEventId={original_event_id}. "
+                "The original customer_payment_received event may not have been processed yet."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Idempotency guard — check if a reversal JE already exists for
+    #    this original JE. Duplicate cancellation events are no-ops.
+    # ------------------------------------------------------------------
+    existing_reversal_result = await db.execute(
+        select(JournalEntry.jeNumber).where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "customer_payment_cancelled",
+            JournalEntry.sourceDocNumber == original.jeNumber,
+        )
+    )
+    existing_reversal_number = existing_reversal_result.scalar_one_or_none()
+    if existing_reversal_number is not None:
+        logger.info(
+            "[Finance/Posting] customer_payment_cancelled already reversed: "
+            "original jeNumber=%s reversed by=%s — idempotent no-op",
+            original.jeNumber,
+            existing_reversal_number,
+        )
+        return
+
+    # ------------------------------------------------------------------
+    # 3. Resolve open fiscal period for today (reversals never backdate)
+    # ------------------------------------------------------------------
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    today = now_utc.date()
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, today)
+
+    # ------------------------------------------------------------------
+    # 4. Generate reversal JE number
+    # ------------------------------------------------------------------
+    reversal_je_number = await _next_je_number(db, company_code, today.year)
+
+    # ------------------------------------------------------------------
+    # 5. Build the reversal JE header
+    # ------------------------------------------------------------------
+    reversal_id = str(uuid.uuid4())
+    reversal_je = JournalEntry(
+        jeId=reversal_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=reversal_je_number,
+        jeDate=today,
+        periodId=period_id,
+        sourceEventType="customer_payment_cancelled",
+        sourceEventId=str(event.eventId),
+        # Reason: sourceDocNumber points to the original JE number so the ledger
+        # shows a clear audit trail from the cancellation to its original entry.
+        sourceDocId=original.jeId,
+        sourceDocNumber=original.jeNumber,
+        description=(
+            f"Reversal of {original.jeNumber}: "
+            f"Receipt {payload.receiptDocNumber} cancelled — {payload.customerName}"
+        ),
+        # Reason: swap totalDebit/totalCredit — the reversal header mirrors
+        # the opposite entry direction (DR→CR, CR→DR).
+        totalDebit=Decimal(str(original.totalCredit)),
+        totalCredit=Decimal(str(original.totalDebit)),
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(reversal_je)
+
+    # ------------------------------------------------------------------
+    # 6. Build reversal lines — swap debit/credit for every original line
+    # ------------------------------------------------------------------
+    for line in original.lines:
+        orig_debit = Decimal(str(line.debit)) if line.debit is not None else None
+        orig_credit = Decimal(str(line.credit)) if line.credit is not None else None
+
+        # Reason: original DR (Bank) → reversal CR; original CR (AR) → reversal DR.
+        reversal_line = JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=reversal_id,
+            lineNumber=line.lineNumber,
+            accountId=line.accountId,
+            debit=orig_credit,    # original CR (AR) → reversal DR
+            credit=orig_debit,    # original DR (Bank) → reversal CR
+            description=(
+                f"Reversal: {line.description}" if line.description else "Reversal"
+            ),
+            referenceLineId=line.referenceLineId,
+            costCenterId=line.costCenterId,
+        )
+        db.add(reversal_line)
+
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted customer payment reversal JE jeNumber=%s jeId=%s "
+        "original=%s customer=%s",
+        reversal_je_number,
+        reversal_id,
+        original.jeNumber,
+        payload.customerName,
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-100.11 — return_posted posting handler (Wave 3 Phase 2 finale)
+# ---------------------------------------------------------------------------
+
+
+async def _handle_return_posted(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle return_posted outbox events (T-100.11).
+
+    Produces one Journal Entry that restores inventory and reverses COGS:
+
+      DR  Inventory account  (purchase_item_finance_ext.inventoryAccountId)  lineCogs per line
+      CR  COGS account       (sale_item_finance_ext.cogsAccountId)            lineCogs per line
+
+    This is the symmetric reversal of the delivery_posted JE:
+      - delivery_posted:   DR COGS / CR Inventory
+      - return_posted:     DR Inventory / CR COGS
+
+    Total line count = 2 × len(payload.lines).
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with return_posted payload.
+
+    Raises:
+        HTTPException 400: For all permanent validation failures (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from contracts.finance_events import ReturnPostedPayload
+
+    payload = ReturnPostedPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+
+    logger.info(
+        "[Finance/Posting] handling return_posted rtn=%s customer=%s lines=%d total_cogs=%s",
+        payload.returnDocNumber,
+        payload.customerName,
+        len(payload.lines),
+        payload.totalCogs,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Resolve company posting setup
+    # ------------------------------------------------------------------
+    await _resolve_posting_setup_or_raise(db, org_id, company_code)
+
+    # ------------------------------------------------------------------
+    # 2. Resolve Inventory + COGS accounts for each line — fail fast
+    # ------------------------------------------------------------------
+    # Reason: resolve all accounts before any writes so a missing item config
+    # causes a clean 400 without partial writes.
+    line_accounts: list[tuple[Any, str, str]] = []
+    for line in payload.lines:
+        inv_acct_id = await _resolve_item_inventory_account_validated_or_raise(
+            db, org_id, str(line.itemId), line.itemCode
+        )
+        cogs_acct_id = await _resolve_item_cogs_account_or_raise(
+            db, org_id, str(line.itemId), line.itemCode
+        )
+        line_accounts.append((line, inv_acct_id, cogs_acct_id))
+
+    # ------------------------------------------------------------------
+    # 3. Resolve fiscal period from docDate (accounting date)
+    # ------------------------------------------------------------------
+    je_date = date.fromisoformat(payload.docDate)
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, je_date)
+
+    # ------------------------------------------------------------------
+    # 4. Generate JE number
+    # ------------------------------------------------------------------
+    je_number = await _next_je_number(db, company_code, je_date.year)
+
+    # ------------------------------------------------------------------
+    # 5. Build and persist the JE atomically
+    # ------------------------------------------------------------------
+    # Reason: compute total from per-line lineCogs to guarantee DR == CR balance.
+    total_cogs = sum(Decimal(str(line.lineCogs)) for line, _, _ in line_accounts)
+
+    description = (
+        f"Return {payload.returnDocNumber} — Customer {payload.customerName}"
+    )
+
+    je_id = str(uuid.uuid4())
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=je_number,
+        jeDate=je_date,
+        periodId=period_id,
+        sourceEventType="return_posted",
+        sourceEventId=str(event.eventId),
+        sourceDocId=payload.returnDocEntry,
+        sourceDocNumber=payload.returnDocNumber,
+        description=description,
+        totalDebit=total_cogs,
+        totalCredit=total_cogs,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(je)
+
+    # Insert DR (Inventory) + CR (COGS) lines per return line
+    line_number = 1
+    for line, inv_acct_id, cogs_acct_id in line_accounts:
+        line_cogs = Decimal(str(line.lineCogs))
+        line_desc = f"{line.itemCode} — qty {line.returnedQty}"
+
+        # DR Inventory account — goods restored to stock
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_number,
+            accountId=inv_acct_id,
+            debit=line_cogs,
+            credit=None,
+            description=f"Inventory: {line_desc}",
+            referenceLineId=str(line.lineNumber),
+            costCenterId=line.costCenterId,
+        ))
+        line_number += 1
+
+        # CR COGS account — COGS reversed
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_number,
+            accountId=cogs_acct_id,
+            debit=None,
+            credit=line_cogs,
+            description=f"COGS reversal: {line_desc}",
+            referenceLineId=str(line.lineNumber),
+            costCenterId=line.costCenterId,
+        ))
+        line_number += 1
+
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted return JE jeNumber=%s jeId=%s "
+        "lines=%d total_cogs=%s customer=%s",
+        je_number,
+        je_id,
+        len(line_accounts) * 2,
+        total_cogs,
+        payload.customerName,
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-100.11 — return_cancelled reversal handler (Wave 3 Phase 2 finale)
+# ---------------------------------------------------------------------------
+
+
+async def _handle_return_cancelled(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle return_cancelled outbox events (T-100.11).
+
+    Finds the original return_posted JE by
+    sourceEventId == payload.originalEventId and posts a reversing JE:
+      - DR lines (Inventory) become CR lines (same accounts, same amounts)
+      - CR lines (COGS)      become DR lines (same accounts, same amounts)
+
+    The original JE remains POSTED. Both JEs live on the books and net to
+    zero — standard accounting reversing-entry pattern.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with return_cancelled payload.
+
+    Raises:
+        HTTPException 400: If the original JE is not found, or no open period.
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from sqlalchemy.orm import selectinload
+
+    from contracts.finance_events import ReturnCancelledPayload
+
+    payload = ReturnCancelledPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+    original_event_id = payload.originalEventId
+
+    logger.info(
+        "[Finance/Posting] handling return_cancelled rtn=%s original_event_id=%s",
+        payload.returnDocNumber,
+        original_event_id,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Find the original return_posted JE by sourceEventId
+    # ------------------------------------------------------------------
+    orig_result = await db.execute(
+        select(JournalEntry)
+        .options(selectinload(JournalEntry.lines))
+        .where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "return_posted",
+            JournalEntry.sourceEventId == original_event_id,
+        )
+    )
+    original = orig_result.scalar_one_or_none()
+    if original is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"No return_posted JE found for originalEventId={original_event_id}. "
+                "The original return_posted event may not have been processed yet."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Idempotency guard
+    # ------------------------------------------------------------------
+    existing_reversal_result = await db.execute(
+        select(JournalEntry.jeNumber).where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "return_cancelled",
+            JournalEntry.sourceDocNumber == original.jeNumber,
+        )
+    )
+    existing_reversal_number = existing_reversal_result.scalar_one_or_none()
+    if existing_reversal_number is not None:
+        logger.info(
+            "[Finance/Posting] return_cancelled already reversed: "
+            "original jeNumber=%s reversed by=%s — idempotent no-op",
+            original.jeNumber,
+            existing_reversal_number,
+        )
+        return
+
+    # ------------------------------------------------------------------
+    # 3. Resolve open fiscal period for today (reversals never backdate)
+    # ------------------------------------------------------------------
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    today = now_utc.date()
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, today)
+
+    # ------------------------------------------------------------------
+    # 4. Generate reversal JE number
+    # ------------------------------------------------------------------
+    reversal_je_number = await _next_je_number(db, company_code, today.year)
+
+    # ------------------------------------------------------------------
+    # 5. Build the reversal JE header
+    # ------------------------------------------------------------------
+    reversal_id = str(uuid.uuid4())
+    reversal_je = JournalEntry(
+        jeId=reversal_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=reversal_je_number,
+        jeDate=today,
+        periodId=period_id,
+        sourceEventType="return_cancelled",
+        sourceEventId=str(event.eventId),
+        sourceDocId=original.jeId,
+        sourceDocNumber=original.jeNumber,
+        description=(
+            f"Reversal of {original.jeNumber}: "
+            f"Return {payload.returnDocNumber} cancelled"
+        ),
+        # Reason: swap totalDebit/totalCredit — reversal mirrors original in reverse.
+        totalDebit=Decimal(str(original.totalCredit)),
+        totalCredit=Decimal(str(original.totalDebit)),
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(reversal_je)
+
+    # ------------------------------------------------------------------
+    # 6. Build reversal lines — swap debit/credit for every original line
+    # ------------------------------------------------------------------
+    for line in original.lines:
+        orig_debit = Decimal(str(line.debit)) if line.debit is not None else None
+        orig_credit = Decimal(str(line.credit)) if line.credit is not None else None
+
+        # Reason: original DR (Inventory) → reversal CR; original CR (COGS) → reversal DR.
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=reversal_id,
+            lineNumber=line.lineNumber,
+            accountId=line.accountId,
+            debit=orig_credit,   # original CR (COGS) → reversal DR
+            credit=orig_debit,   # original DR (Inventory) → reversal CR
+            description=(
+                f"Reversal: {line.description}" if line.description else "Reversal"
+            ),
+            referenceLineId=line.referenceLineId,
+            costCenterId=line.costCenterId,
+        ))
+
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted return reversal JE jeNumber=%s jeId=%s "
+        "original=%s customer=%s",
+        reversal_je_number,
+        reversal_id,
+        original.jeNumber,
+        payload.customerName,
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-100.11 — credit_note_posted posting handler (Wave 3 Phase 2 finale)
+# ---------------------------------------------------------------------------
+
+
+async def _handle_credit_note_posted(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle credit_note_posted outbox events (T-100.11).
+
+    Posts a Journal Entry that is the symmetric reversal of sales_invoice_posted:
+
+      DR  Revenue (per line)          line.lineNet  per revenueAccountId
+              (one debit line per credit note line — reverses original revenue)
+      DR  Output VAT (combined)       totals.tax    from setup.outputVatAccountId
+              (one debit line for the whole credit note; skipped if tax == 0)
+      CR  AR Control Account          totals.gross  (3-tier chain resolution)
+              (reduces the customer's AR balance)
+
+    Balance proof:
+        DR = total_revenue_net (per line) + total_tax
+           = total_net + total_tax = total_gross
+        CR = total_gross ✓
+
+    Idempotency: handled by the outer ingest endpoint's outbox_events_processed
+    table before this handler is called.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with credit_note_posted payload.
+
+    Raises:
+        HTTPException 400: For all permanent validation failures (no retry).
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from contracts.finance_events import CreditNotePostedPayload
+
+    payload = CreditNotePostedPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+
+    totals = payload.totals
+    total_gross = Decimal(str(totals.get("gross", "0")))
+    total_tax = Decimal(str(totals.get("tax", "0")))
+    total_net = Decimal(str(totals.get("net", "0")))
+
+    logger.info(
+        "[Finance/Posting] handling credit_note_posted arc=%s customer=%s "
+        "net=%s tax=%s gross=%s lines=%d",
+        payload.arcDocNumber,
+        payload.customerName,
+        total_net,
+        total_tax,
+        total_gross,
+        len(payload.lines),
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Resolve company posting setup
+    # ------------------------------------------------------------------
+    setup = await _resolve_posting_setup_or_raise(db, org_id, company_code)
+
+    # ------------------------------------------------------------------
+    # 2. Validate outputVatAccountId is configured when VAT is non-zero
+    # ------------------------------------------------------------------
+    has_vat = total_tax > Decimal("0.0001")
+    if has_vat and not setup.outputVatAccountId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Output VAT account (outputVatAccountId) not configured in posting setup "
+                f"for company {company_code}, but credit note {payload.arcDocNumber} "
+                f"carries non-zero tax ({total_tax}). Configure the Output VAT account first."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 3. Resolve AR control account via 3-tier chain
+    # ------------------------------------------------------------------
+    ar_account_id = await _resolve_ar_control_account_or_raise(
+        db, org_id, company_code, payload.customerId, setup
+    )
+
+    # ------------------------------------------------------------------
+    # 4. Validate all revenue accounts before any writes (fail fast)
+    # ------------------------------------------------------------------
+    for line in payload.lines:
+        await _validate_revenue_account_or_raise(
+            db, line.revenueAccountId, line.itemCode, line.lineNumber
+        )
+
+    # ------------------------------------------------------------------
+    # 5. Resolve fiscal period from docDate
+    # ------------------------------------------------------------------
+    je_date = date.fromisoformat(payload.docDate)
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, je_date)
+
+    # ------------------------------------------------------------------
+    # 6. Generate JE number
+    # ------------------------------------------------------------------
+    je_number = await _next_je_number(db, company_code, je_date.year)
+
+    # ------------------------------------------------------------------
+    # 7. Balance verification
+    # ------------------------------------------------------------------
+    total_revenue_net = sum(Decimal(str(line.lineNet)) for line in payload.lines)
+    dr_total = total_revenue_net + total_tax
+    cr_total = total_gross
+    assert abs(dr_total - cr_total) <= Decimal("0.01"), (
+        f"JE imbalance! DR={dr_total} CR={cr_total} for arc={payload.arcDocNumber}"
+    )
+
+    # ------------------------------------------------------------------
+    # 8. Build JE header
+    # ------------------------------------------------------------------
+    je_id = str(uuid.uuid4())
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    description = (
+        f"CR Note {payload.arcDocNumber} — "
+        f"Customer {payload.customerName}, reason {payload.creditReason}"
+    )
+
+    je = JournalEntry(
+        jeId=je_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=je_number,
+        jeDate=je_date,
+        periodId=period_id,
+        sourceEventType="credit_note_posted",
+        sourceEventId=str(event.eventId),
+        sourceDocId=payload.arcDocEntry,
+        sourceDocNumber=payload.arcDocNumber,
+        description=description,
+        totalDebit=dr_total,
+        totalCredit=cr_total,
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(je)
+
+    line_num = 1
+
+    # ------------------------------------------------------------------
+    # 9. Per-line: DR Revenue (one line per credit note line — reversal)
+    # ------------------------------------------------------------------
+    for line in payload.lines:
+        line_net = Decimal(str(line.lineNet))
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_num,
+            accountId=line.revenueAccountId,
+            debit=line_net,
+            credit=None,
+            description=f"Revenue reversal: {line.itemCode}",
+            referenceLineId=str(line.lineNumber),
+            costCenterId=line.costCenterId,
+        ))
+        line_num += 1
+
+    # ------------------------------------------------------------------
+    # 10. DR Output VAT (one combined line, only if tax > 0 — reversal)
+    # ------------------------------------------------------------------
+    if has_vat:
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=je_id,
+            lineNumber=line_num,
+            accountId=setup.outputVatAccountId,
+            debit=total_tax,
+            credit=None,
+            description=f"Output VAT reversal — tax_date {payload.taxDate}",
+        ))
+        line_num += 1
+
+    # ------------------------------------------------------------------
+    # 11. CR AR Control Account for total_gross (reduces AR balance)
+    # ------------------------------------------------------------------
+    db.add(JournalEntryLine(
+        jeLineId=str(uuid.uuid4()),
+        jeId=je_id,
+        lineNumber=line_num,
+        accountId=ar_account_id,
+        debit=None,
+        credit=total_gross,
+        description=f"AR reduction — Customer {payload.customerName}",
+        # Reason: store customerId in referenceLineId for sub-ledger linkage.
+        referenceLineId=str(payload.customerId),
+    ))
+
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted credit note JE jeNumber=%s jeId=%s "
+        "arc=%s ar_account=%s revenue=%s output_vat=%s total=%s lines=%d",
+        je_number,
+        je_id,
+        payload.arcDocNumber,
+        ar_account_id,
+        total_revenue_net,
+        total_tax,
+        cr_total,
+        line_num,
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-100.11 — credit_note_cancelled reversal handler (Wave 3 Phase 2 finale)
+# ---------------------------------------------------------------------------
+
+
+async def _handle_credit_note_cancelled(
+    db: AsyncSession, event: BaseFinanceEvent
+) -> None:
+    """
+    Handle credit_note_cancelled outbox events (T-100.11).
+
+    Finds the original credit_note_posted JE by
+    sourceEventId == payload.originalEventId and posts a reversing JE:
+      - DR lines (Revenue, Output VAT) become CR lines
+      - CR line  (AR Control)          becomes DR line
+
+    The original JE remains POSTED. Both JEs live on the books and net to
+    zero — standard accounting reversing-entry pattern, mirroring the
+    sales_invoice_cancelled reversal in T-100.9b.
+
+    Args:
+        db: Active SQLAlchemy async session.
+        event: Validated BaseFinanceEvent envelope with credit_note_cancelled payload.
+
+    Raises:
+        HTTPException 400: If the original JE is not found, or no open period.
+        HTTPException 500: For unexpected DB errors (consumer will retry).
+    """
+    from sqlalchemy.orm import selectinload
+
+    from contracts.finance_events import CreditNoteCancelledPayload
+
+    payload = CreditNoteCancelledPayload(**event.payload)
+    org_id = str(event.organizationId)
+    company_code = event.companyCode
+    original_event_id = payload.originalEventId
+
+    logger.info(
+        "[Finance/Posting] handling credit_note_cancelled arc=%s original_event_id=%s",
+        payload.arcDocNumber,
+        original_event_id,
+    )
+
+    # ------------------------------------------------------------------
+    # 1. Find the original credit_note_posted JE by sourceEventId
+    # ------------------------------------------------------------------
+    orig_result = await db.execute(
+        select(JournalEntry)
+        .options(selectinload(JournalEntry.lines))
+        .where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "credit_note_posted",
+            JournalEntry.sourceEventId == original_event_id,
+        )
+    )
+    original = orig_result.scalar_one_or_none()
+    if original is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"No credit_note_posted JE found for originalEventId={original_event_id}. "
+                "The original credit_note_posted event may not have been processed yet."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Idempotency guard
+    # ------------------------------------------------------------------
+    existing_reversal_result = await db.execute(
+        select(JournalEntry.jeNumber).where(
+            JournalEntry.organizationId == org_id,
+            JournalEntry.sourceEventType == "credit_note_cancelled",
+            JournalEntry.sourceDocNumber == original.jeNumber,
+        )
+    )
+    existing_reversal_number = existing_reversal_result.scalar_one_or_none()
+    if existing_reversal_number is not None:
+        logger.info(
+            "[Finance/Posting] credit_note_cancelled already reversed: "
+            "original jeNumber=%s reversed by=%s — idempotent no-op",
+            original.jeNumber,
+            existing_reversal_number,
+        )
+        return
+
+    # ------------------------------------------------------------------
+    # 3. Resolve open fiscal period for today (reversals never backdate)
+    # ------------------------------------------------------------------
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    today = now_utc.date()
+    period_id = await _resolve_fiscal_period_or_raise(db, company_code, today)
+
+    # ------------------------------------------------------------------
+    # 4. Generate reversal JE number
+    # ------------------------------------------------------------------
+    reversal_je_number = await _next_je_number(db, company_code, today.year)
+
+    # ------------------------------------------------------------------
+    # 5. Build the reversal JE header
+    # ------------------------------------------------------------------
+    reversal_id = str(uuid.uuid4())
+    reversal_je = JournalEntry(
+        jeId=reversal_id,
+        organizationId=org_id,
+        companyCode=company_code,
+        jeNumber=reversal_je_number,
+        jeDate=today,
+        periodId=period_id,
+        sourceEventType="credit_note_cancelled",
+        sourceEventId=str(event.eventId),
+        sourceDocId=original.jeId,
+        sourceDocNumber=original.jeNumber,
+        description=(
+            f"Reversal of {original.jeNumber}: "
+            f"Credit Note {payload.arcDocNumber} cancelled"
+        ),
+        # Reason: swap totalDebit/totalCredit — reversal mirrors original in reverse.
+        totalDebit=Decimal(str(original.totalCredit)),
+        totalCredit=Decimal(str(original.totalDebit)),
+        status=JEStatusEnum.POSTED,
+        postedAt=now_utc,
+        postedBy="system",
+    )
+    db.add(reversal_je)
+
+    # ------------------------------------------------------------------
+    # 6. Build reversal lines — swap debit/credit for every original line
+    # ------------------------------------------------------------------
+    for line in original.lines:
+        orig_debit = Decimal(str(line.debit)) if line.debit is not None else None
+        orig_credit = Decimal(str(line.credit)) if line.credit is not None else None
+
+        # Reason: original DR (Revenue/VAT) → reversal CR; original CR (AR) → reversal DR.
+        db.add(JournalEntryLine(
+            jeLineId=str(uuid.uuid4()),
+            jeId=reversal_id,
+            lineNumber=line.lineNumber,
+            accountId=line.accountId,
+            debit=orig_credit,   # original CR (AR) → reversal DR
+            credit=orig_debit,   # original DR (Revenue/VAT) → reversal CR
+            description=(
+                f"Reversal: {line.description}" if line.description else "Reversal"
+            ),
+            referenceLineId=line.referenceLineId,
+            costCenterId=line.costCenterId,
+        ))
+
+    await db.flush()
+
+    logger.info(
+        "[Finance/Posting] posted credit note reversal JE jeNumber=%s jeId=%s "
+        "original=%s customer=%s",
+        reversal_je_number,
+        reversal_id,
+        original.jeNumber,
+        payload.customerName,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Ingest endpoint
 # ---------------------------------------------------------------------------
 
@@ -1311,6 +3466,36 @@ async def ingest_event(
         # Phase C.5 — AP Invoice posting:
         # DR GR/IR Clearing / DR Input VAT / DR|CR PPV / CR AP Control
         await _handle_ap_invoice_posted(db, event)
+    elif event.eventType == "delivery_posted":
+        # T-100.8.1 — Delivery COGS posting: DR COGS / CR Inventory (per line)
+        await _handle_delivery_posted(db, event)
+    elif event.eventType == "delivery_cancelled":
+        # T-100.8.1 — Delivery cancellation: reverse the original COGS JE
+        await _handle_delivery_cancelled(db, event)
+    elif event.eventType == "sales_invoice_posted":
+        # T-100.9b — AR Invoice: posts Dr AR / Cr Revenue / Cr Output VAT
+        await _handle_sales_invoice_posted(db, event)
+    elif event.eventType == "sales_invoice_cancelled":
+        # T-100.9b — AR Invoice cancellation: reverse the original JE
+        await _handle_sales_invoice_cancelled(db, event)
+    elif event.eventType == "customer_payment_received":
+        # T-100.10.1 — Customer Receipt: Dr Bank / Cr AR
+        await _handle_customer_payment_received(db, event)
+    elif event.eventType == "customer_payment_cancelled":
+        # T-100.10.1 — Customer Receipt cancellation: reverse the JE
+        await _handle_customer_payment_cancelled(db, event)
+    elif event.eventType == "return_posted":
+        # T-100.11 — Return Note: Dr Inventory / Cr COGS (per line)
+        await _handle_return_posted(db, event)
+    elif event.eventType == "return_cancelled":
+        # T-100.11 — Return Note cancellation: reverse the inventory restoration JE
+        await _handle_return_cancelled(db, event)
+    elif event.eventType == "credit_note_posted":
+        # T-100.11 — AR Credit Note: Dr Revenue / Dr Output VAT / Cr AR
+        await _handle_credit_note_posted(db, event)
+    elif event.eventType == "credit_note_cancelled":
+        # T-100.11 — AR Credit Note cancellation: reverse the credit note JE
+        await _handle_credit_note_cancelled(db, event)
     else:
         # All other event types: posting logic is a NO-OP stub pending future phases.
         logger.info(
