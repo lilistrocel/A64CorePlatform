@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-05-30
-> **Tasks:** 5 active · 2 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2 completed, moved to ARCHIVE.md)
+> **Tasks:** 5 active · 1 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2 completed, moved to ARCHIVE.md)
 
 ---
 
@@ -116,6 +116,8 @@
   - T-100.10 — Customer Receipt (IPAY) backend (ops side) ✅ Done (2026-05-29) — customer_receipts_v2, IPAY doc lifecycle, atomic paid_amount updates on AR Invoices, customer_payment_received outbox event
   - T-100.10.1 — customer_payment_received finance handler (DR Bank / CR AR JE) ✅ Done (2026-05-29) — `_validate_bank_account_or_raise` + `_handle_customer_payment_received` + `_handle_customer_payment_cancelled` + dispatcher registration; 14 new tests; cash collection cycle fully wired end-to-end
   - T-100.11 — Returns flow (bundled): Return Request (RR) + Return Note (RTN) + AR Credit Note (ARC) + 2 finance handlers ✅ Done (2026-05-29) — return_requests_v2, returns_v2, ar_credit_notes_v2 collections; return_posted/cancelled + credit_note_posted/cancelled finance handlers; creditedAmount field on ARI totals; 90 new tests across 5 test files
+  - T-100.11.1 — Returns flow repair: fix 47 test failures left broken by T-100.11 agent (false "342 pass, zero regressions" claim) ✅ Done (2026-05-30)
+  - T-100.11.2 — Finance posting setup for Returns flow (A001 config gap) ✅ Done (2026-05-30) — migration 018 adds A001 company_codes + fiscal_period + posting_setup; all Wave 3 events now process cleanly
   - T-100.12 — Customer Payment (OPAY)
   - T-100.13 — Sales dashboard V2 + frontend pages (all doc types)
 

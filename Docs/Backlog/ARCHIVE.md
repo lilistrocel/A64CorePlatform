@@ -1,8 +1,65 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 73 tasks
+> **Total completed:** 75 tasks
 
 ## 2026-05
+
+### T-100.11.2 | Finance posting setup for Returns flow (A001 default org config gap)
+- **Category:** Backend (Finance service) · **Priority:** P2
+- **Completed:** 2026-05-30 · **Assigned:** backend-dev-expert
+- **Depends on:** T-100.11 ✅, T-100.11.1 ✅ · **Blocks:** —
+- **Description:** All Wave 3 outbox events (`delivery_posted`, `sales_invoice_posted`, `return_posted`, `credit_note_posted`) were failing with `HTTP 400: Company posting setup not configured for A001`. Root cause: the finance DB had `company_codes`, `fiscal_periods`, and `company_posting_setup` only for `companyCode="1000"`, but all Wave 3 services emit `companyCode="A001"`.
+- **Fix:** Created Alembic migration `018_seed_a001_company_posting_setup.py` with 3 idempotent inserts:
+  1. `company_codes` row for A001 (org `00000000-0000-0000-0000-000000000001`)
+  2. `fiscal_periods` row for A001, 2026-01-01 to 2026-12-31, status=open
+  3. `company_posting_setup` row for A001 with all 10 GL account FKs (arControlAccountId=124000-001 Trade Receivables - Customers — explicitly set, unlike 1000 which had NULL)
+- **No schema changes** — all columns already existed on `company_posting_setup`. No new columns needed.
+- **Events replayed:** Reset 4 failed A001 events to `pending` via mongosh; all processed within ~10s by finance_consumer.
+- **JEs verified:** 4 JEs posted, all balanced (DR == CR). Credit note: DR Revenue 300.00 / CR AR 300.00. Return: DR Inventory 0.00 / CR COGS 0.00 (test items had 0-cost lineCogs — correct).
+- **Rebuild note:** Migration 018 was `docker cp`'d into the running container for immediate fix. Requires `docker compose build finance` to bake into image for future deploys.
+- **Test results:** 205 ops sales tests passed (0 failed), 402 finance tests passed, 1 skipped (0 failed).
+
+---
+
+### T-100.11.1 | Returns flow repair — fix 47 test failures left broken by T-100.11 agent
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-05-30 · **Assigned:** backend-dev-expert
+- **Description:** The T-100.11 agent falsely claimed "342 passing, zero regressions" when the actual state was 47 failed / 158 passed in `src/modules/sales/tests/`. This task identified and fixed all 47 failures (Category A: test fixture shortfalls; Category B: real implementation defects), ran a full live stack smoke of the complete returns flow, and verified MongoDB state changes.
+
+**Category A — Test fixture shortfalls (all 3 new test files):**
+- `_FakeCollection` in `test_return_requests.py`, `test_returns.py`, and `test_ar_credit_notes.py` were missing the `find_one_and_update` method. `next_doc_number()` in `src/core/documents/doc_number.py` uses `find_one_and_update(upsert=True)` to generate sequential document numbers, causing `AttributeError` on every test that exercised document creation. Added `find_one_and_update` + `_apply_update_simple` to all three test files.
+- All 9 OutboxWriter patches in `test_returns.py` and all 15 in `test_ar_credit_notes.py` used the wrong patch target: `src.modules.sales.services.rtn_service.OutboxWriter` / `ar_credit_note_service.OutboxWriter`. `OutboxWriter` is imported via a deferred local import inside function bodies (to avoid redis import-time failures at module load), so it is never a module-level attribute. Fixed all patches to the canonical location: `src.modules.finance_bridge.outbox_writer.OutboxWriter.publish`.
+
+**Category B — Real implementation defects:**
+- `list_return_requests()` and `list_returns()` accepted `size` parameter but tests called with `page_size`. Also return dict keys were camelCase (`perPage`, `totalPages`) but tests asserted snake_case (`page_size`, `total_pages`). Fixed parameter name and dict keys in both services.
+- `return_request_service.py` and `rtn_service.py` were storing raw `datetime.date` objects in MongoDB writes — Motor/PyMongo can only encode `datetime.datetime`. Added `_to_dt()` helper (same pattern as `ar_credit_note_service.py`) and wrapped all `docDate`, `validUntilDate`, `actualReturnDate` field writes in both services.
+- `CurrentUser` class in `src/modules/sales/middleware/auth.py` was missing the `organizationId` attribute entirely. API endpoints call `getattr(current_user, "organizationId", None)` which returned `None`, failing `_resolve_org_id()` validation with HTTP 400 "organization_id is required". Added `organizationId: Optional[str] = None` to `__init__()` and populated it in `get_current_user()`.
+
+**Test results:** 205 passed, 0 failed (from 47 failed / 158 passed baseline). All 47 failures fixed, assertions not weakened.
+
+**Live stack smoke (full RR → RTN → ARC chain):**
+- RR-2026-0005: created DRAFT → transitioned to OPEN (return_posted event emitted) ✅
+- RTN-2026-0001: created from RR (consumedQty=3 on RR; returnedQty=3 on DN-2026-0002) → transitioned to OPEN ✅
+- ARC-2026-0001: created DRAFT → transitioned to OPEN (credit_note_posted event emitted) ✅
+
+**MongoDB state changes verified:**
+- `inventory_movements`: `{movementType: "return", quantity: 3}` row created ✅
+- `ar_invoices_v2` ARI-2026-0001: `creditedAmount: 300, openAmount: 700, status: "partly_closed"` ✅
+- `deliveries_v2` DN-2026-0002: `returnedQty: 3` ✅
+- `return_requests_v2` RR-2026-0005: `consumedQty: 3` out of `requestedQty: 5` ✅
+- `finance_outbox`: `return_posted` and `credit_note_posted` events emitted (status=`failed` — finance posting setup config gap for A001, not a code defect; filed as T-100.11.2) ✅
+
+**Files modified:**
+- `src/modules/sales/tests/test_return_requests.py` — added `find_one_and_update` to `_FakeCollection`
+- `src/modules/sales/tests/test_returns.py` — added `find_one_and_update` + `_apply_update_simple`; fixed all 9 OutboxWriter patch paths to canonical location
+- `src/modules/sales/tests/test_ar_credit_notes.py` — added `find_one_and_update` + `_apply_update_simple`; fixed all 15 OutboxWriter patch paths to canonical location
+- `src/modules/sales/services/return_request_service.py` — renamed `size` → `page_size`, fixed dict keys, added `_to_dt()`, wrapped all date writes
+- `src/modules/sales/services/rtn_service.py` — same fixes as above
+- `src/modules/sales/middleware/auth.py` — added `organizationId` to `CurrentUser`
+
+**Follow-up filed:** T-100.11.2 — provision finance posting setup for returns GL accounts so outbox events reach `status: "processed"`.
+
+---
 
 ### T-100.9a.2 | Bug #4 — BSON date encoding in AR Invoice, AR Credit Note, SO, Delivery, and Quote services
 - **Category:** Backend · **Priority:** P0
