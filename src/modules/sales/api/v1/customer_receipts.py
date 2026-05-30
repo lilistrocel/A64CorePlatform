@@ -108,6 +108,7 @@ def _resolve_org_id(
 @router.get(
     "",
     response_model=PaginatedResponse[CustomerReceiptListItem],
+    response_model_by_alias=True,
     summary="List Customer Receipts",
     description=(
         "Return a paginated list of Customer Receipts for the given organisation. "
@@ -174,6 +175,7 @@ async def list_customer_receipts_endpoint(
 @router.get(
     "/{doc_entry}",
     response_model=SuccessResponse[CustomerReceiptResponse],
+    response_model_by_alias=True,
     summary="Get Customer Receipt detail",
 )
 async def get_customer_receipt_endpoint(
@@ -216,6 +218,7 @@ async def get_customer_receipt_endpoint(
 @router.post(
     "",
     response_model=SuccessResponse[CustomerReceiptResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Customer Receipt (manual allocations)",
 )
@@ -275,6 +278,7 @@ async def create_customer_receipt_endpoint(
 @router.post(
     "/from-invoice/{ar_invoice_doc_entry}",
     response_model=SuccessResponse[CustomerReceiptResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create Customer Receipt from a single AR Invoice",
 )
@@ -339,6 +343,7 @@ async def create_customer_receipt_from_invoice_endpoint(
 @router.patch(
     "/{doc_entry}",
     response_model=SuccessResponse[CustomerReceiptResponse],
+    response_model_by_alias=True,
     summary="Update draft Customer Receipt",
 )
 async def update_customer_receipt_endpoint(
@@ -454,6 +459,7 @@ async def delete_customer_receipt_endpoint(
 @router.post(
     "/{doc_entry}/transition",
     response_model=SuccessResponse[CustomerReceiptResponse],
+    response_model_by_alias=True,
     summary="Transition Customer Receipt status",
 )
 async def transition_customer_receipt_status(

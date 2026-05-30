@@ -87,6 +87,15 @@ const ARInvoiceDetailPage = lazy(() =>
 const ARInvoiceFormPage = lazy(() =>
   import('./pages/sales/ARInvoiceFormPage').then(m => ({ default: m.ARInvoiceFormPage }))
 );
+const CustomerReceiptsPage = lazy(() =>
+  import('./pages/sales/CustomerReceiptsPage').then(m => ({ default: m.CustomerReceiptsPage }))
+);
+const CustomerReceiptDetailPage = lazy(() =>
+  import('./pages/sales/CustomerReceiptDetailPage').then(m => ({ default: m.CustomerReceiptDetailPage }))
+);
+const CustomerReceiptFormPage = lazy(() =>
+  import('./pages/sales/CustomerReceiptFormPage').then(m => ({ default: m.CustomerReceiptFormPage }))
+);
 
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
@@ -287,6 +296,11 @@ function App() {
                 <Route path="/sales/ar-invoices/from-delivery/:deliveryDocId" element={<ARInvoiceFormPage />} />
                 <Route path="/sales/ar-invoices/:docId/edit" element={<ARInvoiceFormPage />} />
                 <Route path="/sales/ar-invoices/:docId" element={<ARInvoiceDetailPage />} />
+                <Route path="/sales/customer-receipts" element={<CustomerReceiptsPage />} />
+                <Route path="/sales/customer-receipts/new" element={<CustomerReceiptFormPage />} />
+                <Route path="/sales/customer-receipts/from-invoice/:ariDocEntry" element={<CustomerReceiptFormPage />} />
+                <Route path="/sales/customer-receipts/:docId/edit" element={<CustomerReceiptFormPage />} />
+                <Route path="/sales/customer-receipts/:docId" element={<CustomerReceiptDetailPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />

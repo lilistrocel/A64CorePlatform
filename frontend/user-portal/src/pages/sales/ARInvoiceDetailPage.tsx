@@ -413,7 +413,7 @@ function docTypeLabel(docType: string): string {
 function docTypeRoute(docType: string, docEntry: string): string {
   switch (docType) {
     case 'DELIVERY': return `/sales/deliveries/${docEntry}`;
-    case 'CUSTOMER_RECEIPT': return `/sales/receipts/${docEntry}`;
+    case 'CUSTOMER_RECEIPT': return `/sales/customer-receipts/${docEntry}`;
     case 'AR_CREDIT_NOTE': return `/sales/credit-notes/${docEntry}`;
     default: return `/sales/${docType.toLowerCase()}/${docEntry}`;
   }
@@ -552,6 +552,16 @@ export function ARInvoiceDetailPage() {
                 Delete
               </DangerButton>
             </>
+          )}
+          {isOpen && (
+            <PrimaryButton
+              onClick={() =>
+                navigate(`/sales/customer-receipts/from-invoice/${invoice.docEntry}`)
+              }
+              aria-label="Receive payment for this AR Invoice"
+            >
+              Receive Payment
+            </PrimaryButton>
           )}
           {isOpen && isSuperAdmin && (
             <DangerButton

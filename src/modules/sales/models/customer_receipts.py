@@ -25,10 +25,25 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic.alias_generators import to_camel
 
 from src.core.documents.document_links import DocumentLinkRef
 from src.core.documents.document_status import DocumentStatus
+
+# ---------------------------------------------------------------------------
+# Response model config — camelCase output, snake_case input accepted
+# ---------------------------------------------------------------------------
+# Applied to every response model so routes can set response_model_by_alias=True
+# and the frontend receives camelCase keys (e.g. docEntry not doc_entry).
+# populate_by_name=True means the backend service may still assign by snake_case.
+# Mirrors the pattern used in ar_invoices.py.
+
+_RESPONSE_CONFIG = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    from_attributes=True,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +90,8 @@ class ReceiptAllocationResponse(BaseModel):
         currency_applied:       Currency.
         notes:                  Optional per-allocation notes.
     """
+
+    model_config = _RESPONSE_CONFIG
 
     allocation_line_number: int = Field(..., description="1-indexed position")
     ar_invoice_doc_entry: str
@@ -257,6 +274,8 @@ class CustomerReceiptResponse(BaseModel):
     Full representation of a Customer Receipt header returned by the API.
     """
 
+    model_config = _RESPONSE_CONFIG
+
     doc_entry: str = Field(..., description="UUID — stable cross-service reference")
     doc_number: str = Field(..., description="Human-readable e.g. 'IPAY-2026-0001'")
     doc_type: str = Field("IPAY", description="Constant — always 'IPAY'")
@@ -301,9 +320,6 @@ class CustomerReceiptResponse(BaseModel):
     updated_at: datetime
     updated_by: str
 
-    class Config:
-        from_attributes = True
-
 
 class CustomerReceiptListItem(BaseModel):
     """
@@ -311,6 +327,8 @@ class CustomerReceiptListItem(BaseModel):
 
     Excludes allocations array to keep list payloads lean.
     """
+
+    model_config = _RESPONSE_CONFIG
 
     doc_entry: str
     doc_number: str
@@ -324,9 +342,6 @@ class CustomerReceiptListItem(BaseModel):
     unallocated_amount: Decimal
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------

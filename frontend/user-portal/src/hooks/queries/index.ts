@@ -232,3 +232,15 @@ export {
   useTransitionArInvoice,
   ariQueryKeys,
 } from './useArInvoices';
+
+// Sales Wave 3 — Customer Receipt hooks (T-200.1)
+export {
+  useCustomerReceipts,
+  useCustomerReceipt,
+  useCreateCustomerReceipt,
+  useCreateCustomerReceiptFromInvoice,
+  useUpdateCustomerReceipt,
+  useDeleteCustomerReceipt,
+  useTransitionCustomerReceipt,
+  crQueryKeys,
+} from './useCustomerReceipts';

@@ -85,6 +85,27 @@ def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
+def _to_dt(d: date) -> datetime:
+    """
+    Convert a ``datetime.date`` to a timezone-aware ``datetime.datetime``.
+
+    PyMongo / Motor cannot encode bare ``datetime.date`` objects — only
+    ``datetime.datetime``.  All date fields stored in MongoDB must pass through
+    this helper before being written to the database.
+
+    Mirrors the same helper in ar_invoice_service.py.
+
+    Args:
+        d: A date or datetime value.
+
+    Returns:
+        A UTC midnight datetime.
+    """
+    if isinstance(d, datetime):
+        return d if d.tzinfo is not None else d.replace(tzinfo=timezone.utc)
+    return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+
+
 def _norm_ref(ref: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """Normalise camelCase MongoDB ref dict to snake_case for Pydantic."""
     if ref is None:
@@ -558,7 +579,7 @@ async def create_customer_receipt(
         "customerId": payload.customer_id,
         "customerName": payload.customer_name,
         "bpRefNo": payload.bp_ref_no,
-        "docDate": payload.doc_date,
+        "docDate": _to_dt(payload.doc_date),
         "paymentMethod": payload.payment_method,
         "paymentRef": payload.payment_ref,
         "bankAccountId": payload.bank_account_id,
@@ -822,7 +843,7 @@ async def update_customer_receipt(
 
     field_map = {
         "bpRefNo": payload.bp_ref_no,
-        "docDate": payload.doc_date,
+        "docDate": _to_dt(payload.doc_date) if payload.doc_date is not None else None,
         "paymentMethod": payload.payment_method,
         "paymentRef": payload.payment_ref,
         "bankAccountId": payload.bank_account_id,

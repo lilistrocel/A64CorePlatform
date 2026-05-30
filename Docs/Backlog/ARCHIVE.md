@@ -1,8 +1,36 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 76 tasks
+> **Total completed:** 77 tasks
 
 ## 2026-05
+
+### T-200.1 | Customer Receipt UI (list + form + detail + from-invoice flow) — Wave 3
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert
+- **Depends on:** T-100.10 ✅ (Customer Receipt backend — IPAY doc lifecycle)
+- **Blocks:** T-200.x (CUSTOMER_RECEIPT attachment backend)
+- **Description:** Full Customer Receipt (IPAY) UI: list page with status filter chips + search + pagination; form page (3 modes: new/from-invoice/edit) with CustomerCombobox, AccountCombobox, useFieldArray allocations + sum-validation; detail page with 4-col InfoGrid, clickable allocations table (links to ARI detail), AttachmentList, action bar (DRAFT → Post/Edit/Delete; OPEN → Cancel super_admin only). Rule 2 backend patch (camelCase serialization). Fixed pre-existing date serialization bug in customer_receipt_service.py (_to_dt() helper). "Receive Payment" button on ARInvoiceDetailPage when status=open.
+- **Files created:**
+  - `frontend/user-portal/src/hooks/queries/useCustomerReceipts.ts`
+  - `frontend/user-portal/src/pages/sales/CustomerReceiptsPage.tsx`
+  - `frontend/user-portal/src/pages/sales/CustomerReceiptFormPage.tsx`
+  - `frontend/user-portal/src/pages/sales/CustomerReceiptDetailPage.tsx`
+  - `Docs/3-DevLog/2026-05-30_T-200.1-customer-receipt-ui.md`
+- **Files modified:**
+  - `src/modules/sales/models/customer_receipts.py` — _RESPONSE_CONFIG on 3 response models
+  - `src/modules/sales/api/v1/customer_receipts.py` — response_model_by_alias=True on 6 routes
+  - `src/modules/sales/services/customer_receipt_service.py` — _to_dt() helper + applied on insert/update
+  - `frontend/user-portal/src/services/salesApi.ts` — full CustomerReceipt types + 7 API functions
+  - `frontend/user-portal/src/services/attachmentsService.ts` — AttachmentDocType += 'CUSTOMER_RECEIPT'
+  - `frontend/user-portal/src/hooks/queries/index.ts` — CR exports block
+  - `frontend/user-portal/src/App.tsx` — 3 lazy imports + 5 routes
+  - `frontend/user-portal/src/components/layout/MainLayout.tsx` — sidebar route: /sales/receipts → /sales/customer-receipts
+  - `frontend/user-portal/src/pages/sales/ARInvoiceDetailPage.tsx` — "Receive Payment" button + docTypeRoute fix
+- **Verification:** TS zero errors. ESLint zero errors on new/modified files. Backend smoke: POST /api/v1/sales/customer-receipts → HTTP 201, all keys camelCase confirmed.
+- **Hot reload:** Yes for frontend. Backend: standard uvicorn reload (no migrations, no Docker rebuild required).
+- **Backend gap:** CUSTOMER_RECEIPT attachment upload not yet whitelisted on backend → tracked as T-200.x.
+
+---
 
 ### T-200.0 | Sales UI foundation + AR Invoice (list + form + detail)
 - **Category:** Frontend · **Priority:** P1
