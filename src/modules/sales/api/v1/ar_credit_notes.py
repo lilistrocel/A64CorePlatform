@@ -1,0 +1,462 @@
+"""
+Sales Module — AR Credit Note (ARC) API Routes (T-100.11)
+
+Endpoints for the AR Credit Note document lifecycle.
+
+An AR Credit Note is the financial reversal of an AR Invoice.  On
+DRAFT → OPEN transition it:
+  - Increments credited_amount on each target AR Invoice.
+  - Recomputes AR Invoice open_amount.
+  - Auto-transitions AR Invoices to CLOSED or PARTLY_CLOSED as appropriate.
+  - Increments consumedQty on Return lines (if return-driven).
+  - Emits a `credit_note_posted` event so the finance service can post:
+      DR Revenue    (per line.lineNet, per revenueAccountId)
+      DR Output VAT (per line.lineTax)
+      CR AR Control (totals.gross via AR control account from customer_finance_ext)
+
+Permissions:
+    - Read:   any authenticated active user
+    - Write:  sales.create / sales.edit roles
+    - Delete: sales.delete role
+
+Endpoint set:
+    GET    /ar-credit-notes                        — paginated list with filters
+    GET    /ar-credit-notes/{doc_entry}            — single ARC with all lines + allocations
+    POST   /ar-credit-notes                        — create (status = DRAFT)
+    PATCH  /ar-credit-notes/{doc_entry}            — update header/lines/allocations (DRAFT only)
+    DELETE /ar-credit-notes/{doc_entry}            — hard delete (DRAFT only)
+    POST   /ar-credit-notes/{doc_entry}/transition — status transition
+
+Prefix: /ar-credit-notes (registered in api/v1/__init__.py)
+Full prefix after module registration: /api/v1/sales/ar-credit-notes
+
+All endpoints require organisation_id, resolved from query param or JWT.
+"""
+
+import logging
+from datetime import date
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from ...middleware.auth import (
+    CurrentUser,
+    get_current_active_user,
+    require_permission,
+)
+from ...models.ar_credit_notes import (
+    ARCreditNoteCreate,
+    ARCreditNoteListItem,
+    ARCreditNoteResponse,
+    ARCreditNoteStatusTransitionRequest,
+    ARCreditNoteUpdate,
+)
+from ...services.ar_credit_note_service import (
+    create_ar_credit_note,
+    delete_ar_credit_note,
+    get_ar_credit_note,
+    list_ar_credit_notes,
+    transition_status,
+    update_ar_credit_note,
+)
+from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
+from src.modules.sales.services.database import sales_db
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(tags=["Sales — AR Credit Notes"])
+
+
+def _get_db():
+    """Dependency: return the shared ops MongoDB database instance."""
+    return sales_db.get_database()
+
+
+def _resolve_org_id(
+    organization_id: Optional[str],
+    current_user: CurrentUser,
+) -> str:
+    """
+    Resolve organisation ID from query param or JWT claim.
+
+    Args:
+        organization_id: Optional explicit override from query param.
+        current_user:    Authenticated user from JWT.
+
+    Returns:
+        Organisation UUID string.
+
+    Raises:
+        HTTPException 400: If org ID cannot be resolved from either source.
+    """
+    org_id = organization_id or getattr(current_user, "organizationId", None)
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="organization_id is required",
+        )
+    return org_id
+
+
+# ---------------------------------------------------------------------------
+# List
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "",
+    response_model=PaginatedResponse[ARCreditNoteListItem],
+    summary="List AR Credit Notes",
+    description=(
+        "Return a paginated list of AR Credit Notes for the given organisation. "
+        "Supports filtering by status, customer_id, and date range."
+    ),
+)
+async def list_ar_credit_notes_endpoint(
+    organization_id: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None, alias="status"),
+    customer_id: Optional[str] = Query(None),
+    date_from: Optional[date] = Query(None, description="Inclusive lower bound on doc_date"),
+    date_to: Optional[date] = Query(None, description="Inclusive upper bound on doc_date"),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=200),
+    current_user: CurrentUser = Depends(get_current_active_user),
+    db=Depends(_get_db),
+) -> PaginatedResponse[ARCreditNoteListItem]:
+    """
+    Paginated list of AR Credit Notes for an organisation.
+
+    Args:
+        organization_id: Organisation UUID (defaults to JWT claim).
+        status_filter:   Filter by status value (draft, open, closed, cancelled).
+        customer_id:     Filter by customer FK.
+        date_from:       Inclusive lower bound on docDate.
+        date_to:         Inclusive upper bound on docDate.
+        page:            1-based page number.
+        size:            Items per page (max 200).
+        current_user:    Authenticated user.
+        db:              Motor database dependency.
+
+    Returns:
+        PaginatedResponse containing ARCreditNoteListItem objects.
+    """
+    org_id = _resolve_org_id(organization_id, current_user)
+
+    result = await list_ar_credit_notes(
+        db,
+        org_id=org_id,
+        customer_id=customer_id,
+        status=status_filter,
+        date_from=date_from,
+        date_to=date_to,
+        page=page,
+        page_size=size,
+    )
+
+    return PaginatedResponse(
+        data=result["items"],
+        meta=PaginationMeta(
+            total=result["total"],
+            page=result["page"],
+            perPage=result["page_size"],
+            totalPages=result["total_pages"],
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Get
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{doc_entry}",
+    response_model=SuccessResponse[ARCreditNoteResponse],
+    summary="Get AR Credit Note detail",
+)
+async def get_ar_credit_note_endpoint(
+    doc_entry: str,
+    organization_id: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(get_current_active_user),
+    db=Depends(_get_db),
+) -> SuccessResponse[ARCreditNoteResponse]:
+    """
+    Retrieve a single AR Credit Note with all embedded lines and allocations.
+
+    Args:
+        doc_entry:       UUID of the AR Credit Note.
+        organization_id: Organisation UUID for scoping (defaults to JWT claim).
+        current_user:    Authenticated user.
+        db:              Motor database dependency.
+
+    Returns:
+        SuccessResponse wrapping ARCreditNoteResponse.
+
+    Raises:
+        HTTPException 404: If the AR Credit Note is not found.
+    """
+    org_id = _resolve_org_id(organization_id, current_user)
+
+    arc = await get_ar_credit_note(db, doc_entry=doc_entry, org_id=org_id)
+    if arc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AR Credit Note '{doc_entry}' not found",
+        )
+    return SuccessResponse(data=arc)
+
+
+# ---------------------------------------------------------------------------
+# Create
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "",
+    response_model=SuccessResponse[ARCreditNoteResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Create AR Credit Note",
+    description=(
+        "Create a new AR Credit Note in DRAFT status. "
+        "Can be return-driven (base_return_doc_ref set) or standalone "
+        "(price adjustment, goodwill, overbilling). "
+        "All allocations must reference existing AR Invoices in creditable status "
+        "(open, partly_closed, or closed). "
+        "The sum of allocation amounts must equal the credit note gross total "
+        "(validated at DRAFT → OPEN transition)."
+    ),
+)
+async def create_ar_credit_note_endpoint(
+    body: ARCreditNoteCreate,
+    organization_id: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(require_permission("sales.create")),
+    db=Depends(_get_db),
+) -> SuccessResponse[ARCreditNoteResponse]:
+    """
+    Create a new AR Credit Note in DRAFT status.
+
+    The doc_number is generated automatically (prefix "ARC" → "ARC-YYYY-NNNN").
+    No AR Invoice credited_amount updates happen at DRAFT creation —
+    those happen at DRAFT → OPEN transition.
+
+    Args:
+        body:            Validated ARCreditNoteCreate payload.
+        organization_id: Organisation UUID for scoping.
+        current_user:    Authenticated user (must hold sales.create permission).
+        db:              Motor database dependency.
+
+    Returns:
+        SuccessResponse wrapping the newly created ARCreditNoteResponse (HTTP 201).
+
+    Raises:
+        HTTPException 422: If payload validation fails (invalid allocation targets).
+    """
+    org_id = _resolve_org_id(organization_id, current_user)
+
+    try:
+        arc = await create_ar_credit_note(
+            db,
+            payload=body,
+            org_id=org_id,
+            user_id=current_user.userId,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+
+    return SuccessResponse(data=arc, message="AR Credit Note created successfully")
+
+
+# ---------------------------------------------------------------------------
+# Update
+# ---------------------------------------------------------------------------
+
+
+@router.patch(
+    "/{doc_entry}",
+    response_model=SuccessResponse[ARCreditNoteResponse],
+    summary="Update draft AR Credit Note",
+)
+async def update_ar_credit_note_endpoint(
+    doc_entry: str,
+    body: ARCreditNoteUpdate,
+    organization_id: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(require_permission("sales.edit")),
+    db=Depends(_get_db),
+) -> SuccessResponse[ARCreditNoteResponse]:
+    """
+    Partially update a DRAFT AR Credit Note.
+
+    If ``lines`` is provided, the existing line set is replaced wholesale and
+    totals are recomputed.  If ``allocations`` is provided, the allocation set
+    is replaced wholesale.  Only DRAFT Credit Notes may be updated.
+
+    Args:
+        doc_entry:       UUID of the AR Credit Note.
+        body:            Partial update payload.
+        organization_id: Organisation UUID for scoping.
+        current_user:    Authenticated user (must hold sales.edit permission).
+        db:              Motor database dependency.
+
+    Returns:
+        SuccessResponse wrapping the updated ARCreditNoteResponse.
+
+    Raises:
+        HTTPException 404: If the AR Credit Note is not found.
+        HTTPException 409: If the AR Credit Note is not in DRAFT status.
+    """
+    org_id = _resolve_org_id(organization_id, current_user)
+
+    try:
+        arc = await update_ar_credit_note(
+            db,
+            doc_entry=doc_entry,
+            payload=body,
+            org_id=org_id,
+            user_id=current_user.userId,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
+
+    if arc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AR Credit Note '{doc_entry}' not found",
+        )
+    return SuccessResponse(data=arc, message="AR Credit Note updated successfully")
+
+
+# ---------------------------------------------------------------------------
+# Delete
+# ---------------------------------------------------------------------------
+
+
+@router.delete(
+    "/{doc_entry}",
+    response_model=SuccessResponse[None],
+    summary="Delete draft AR Credit Note",
+)
+async def delete_ar_credit_note_endpoint(
+    doc_entry: str,
+    organization_id: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(require_permission("sales.delete")),
+    db=Depends(_get_db),
+) -> SuccessResponse[None]:
+    """
+    Hard-delete a DRAFT AR Credit Note.
+
+    Only DRAFT Credit Notes may be deleted. No AR Invoice side-effects are
+    needed because DRAFT Credit Notes have not yet modified credited_amount.
+
+    Args:
+        doc_entry:       UUID of the AR Credit Note.
+        organization_id: Organisation UUID for scoping.
+        current_user:    Authenticated user (must hold sales.delete permission).
+        db:              Motor database dependency.
+
+    Returns:
+        SuccessResponse with None data on success.
+
+    Raises:
+        HTTPException 404: If the AR Credit Note is not found.
+        HTTPException 409: If the AR Credit Note is not in DRAFT status.
+    """
+    org_id = _resolve_org_id(organization_id, current_user)
+
+    try:
+        deleted = await delete_ar_credit_note(
+            db,
+            doc_entry=doc_entry,
+            org_id=org_id,
+            user_id=current_user.userId,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AR Credit Note '{doc_entry}' not found",
+        )
+    return SuccessResponse(data=None, message="AR Credit Note deleted successfully")
+
+
+# ---------------------------------------------------------------------------
+# Status Transition
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{doc_entry}/transition",
+    response_model=SuccessResponse[ARCreditNoteResponse],
+    summary="Transition AR Credit Note status",
+)
+async def transition_ar_credit_note_endpoint(
+    doc_entry: str,
+    body: ARCreditNoteStatusTransitionRequest,
+    organization_id: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(require_permission("sales.edit")),
+    db=Depends(_get_db),
+) -> SuccessResponse[ARCreditNoteResponse]:
+    """
+    Transition an AR Credit Note to a new status.
+
+    Valid transitions:
+        DRAFT → OPEN       Primary event: updates AR Invoice credited_amount,
+                           recomputes open_amount, auto-closes fully credited
+                           invoices, increments Return line consumedQty,
+                           emits credit_note_posted finance event.
+        DRAFT → CANCELLED  Draft abandoned (no side-effects).
+        OPEN  → CLOSED     Terminal close.
+        OPEN  → CANCELLED  Financial reversal (super_admin): reverses
+                           credited_amount on AR Invoices, emits
+                           credit_note_cancelled event.
+
+    Args:
+        doc_entry:       UUID of the AR Credit Note.
+        body:            Transition request with new_status and optional reason.
+        organization_id: Organisation UUID for scoping.
+        current_user:    Authenticated user (must hold sales.edit permission).
+        db:              Motor database dependency.
+
+    Returns:
+        SuccessResponse wrapping the updated ARCreditNoteResponse.
+
+    Raises:
+        HTTPException 404: If the AR Credit Note is not found.
+        HTTPException 409: If the transition is illegal or validation fails
+                           (allocation sum mismatch, AR Invoice over-credited, etc.).
+    """
+    org_id = _resolve_org_id(organization_id, current_user)
+
+    try:
+        arc = await transition_status(
+            db,
+            doc_entry=doc_entry,
+            request_body=body,
+            org_id=org_id,
+            user_id=current_user.userId,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
+
+    if arc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AR Credit Note '{doc_entry}' not found",
+        )
+    return SuccessResponse(
+        data=arc,
+        message=f"AR Credit Note transitioned to '{body.new_status.value}'",
+    )
