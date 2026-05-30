@@ -1,6 +1,6 @@
 # Frontend Map
 
-> Generated: 2026-05-18 11:32 UTC  
+> Generated: 2026-05-30 06:35 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=component|hook|store|type, layer=frontend)
 
 ## Overview
@@ -10,272 +10,400 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 
 **Related Maps:** [api-map.md](api-map.md) | [module-map.md](module-map.md)
 
-## React Components (105)
+## React Components (221)
 
 | Component | File | Description |
 |-----------|------|-------------|
-| `AIAnalytics` | `frontend/user-portal/src/pages/ai/AIAnalytics.tsx:1` | AI Analytics page rendering AIAnalyticsChat component | AIAnalytics |
-| `AIAnalyticsChat` | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx:1` | AI analytics chat component using useAIAnalytics hook for conversational data exploration | AIAnalyticsChat |
-| `AIAnalyticsChat` | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx` | AI analytics chat. Dark-mode pass in v1.11.0. | AIAnalyticsChat |
-| `AIHubChat` | `frontend/user-portal/src/components/ai/AIHubChat.tsx` | AI Hub chat interface. Dark-mode pass in v1.11.0. | AIHubChat |
-| `AddPlantDataModal` | `frontend/user-portal/src/components/farm/AddPlantDataModal.tsx:1` | Modal for adding new plant data entries | AddPlantDataModal |
-| `AddVirtualCropModal` | `frontend/user-portal/src/components/farm/AddVirtualCropModal.tsx:1` | Modal for adding virtual crops to blocks | AddVirtualCropModal |
-| `AddWidgetModal` | `frontend/user-portal/src/components/dashboard/AddWidgetModal.tsx:1` | Modal for adding widgets to the main dashboard | AddWidgetModal |
-| `App` | `frontend/user-portal/src/App.tsx` | Top-level React Router configuration. v1.11.0: adds /crm/customers/:customerId/edit route so edit mode is URL-addressable (shareable link). | App |
-| `BackupCodesModal` | `frontend/user-portal/src/components/auth/BackupCodesModal.tsx:1` | Modal displaying MFA backup codes | BackupCodesModal |
-| `BlockAlertsTab` | `frontend/user-portal/src/components/farm/BlockAlertsTab.tsx:1` | Block detail tab displaying alerts list for a block | BlockAlertsTab |
-| `BlockAnalyticsModal` | `frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx:1` | Block analytics modal with tabs: overview, yield, timeline, tasks, alerts. Uses useBlockAnalytics hook and recharts | BlockAnalyticsModal |
-| `BlockArchivesTab` | `frontend/user-portal/src/components/farm/BlockArchivesTab.tsx:1` | Block detail tab showing archived planting data | BlockArchivesTab |
-| `BlockAutomationTab` | `frontend/user-portal/src/components/farm/BlockAutomationTab.tsx:1` | Block detail tab for automation/IoT integration | BlockAutomationTab |
-| `BlockCard` | `frontend/user-portal/src/components/farm/BlockCard.tsx:1` | Block card with state colors, renders PlantAssignmentModal, PendingTasksWarningModal, BlockAnalyticsModal | BlockCard |
-| `BlockDetail` | `frontend/user-portal/src/components/farm/BlockDetail.tsx:1` | Block detail page with tabs for alerts, automation, harvests, archives. Uses farmApi service | BlockDetail |
-| `BlockDetail` | `frontend/user-portal/src/components/farm/BlockDetail.tsx` | Block detail view with tabs (alerts, archives, automation, harvests, history). Dark-mode styling pass applied in v1.11.0. | BlockDetail |
-| `BlockDetailsModal` | `frontend/user-portal/src/components/farm/BlockDetailsModal.tsx:1` | Comprehensive modal: block header, planting details, harvest history, growth timeline. Uses farmApi | BlockDetailsModal |
-| `BlockGrid` | `frontend/user-portal/src/components/farm/BlockGrid.tsx:1` | Grid layout of BlockCard components with state filter tabs | BlockGrid |
-| `BlockGrid (dashboard)` | `frontend/user-portal/src/components/farm/dashboard/BlockGrid.tsx:1` | Dashboard block grid rendering CompactBlockCard components | BlockGrid |
-| `BlockHarvestEntryModal` | `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx:1` | Modal for entering harvest data for a block | BlockHarvestEntryModal |
-| `BlockHarvestEntryModal` | `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx:50` | Modal for logging a harvest entry from inside a block detail view. v1.11.0: adds structured context card (block code, crop name, KPI chips) plus prior-harvest progress chips (N harvests / Y kg) sourced from DashboardBlock. Uses positiveNumberInputProps on quantity input. | BlockHarvestEntryModal |
-| `BlockHarvestsTab` | `frontend/user-portal/src/components/farm/BlockHarvestsTab.tsx:1` | Block detail tab showing harvest records | BlockHarvestsTab |
-| `BlockTaskList` | `frontend/user-portal/src/pages/operations/BlockTaskList.tsx:1` | Task list for a specific block in operations module | BlockTaskList |
-| `BudgetManagementPage` | `frontend/user-portal/src/pages/marketing/BudgetManagementPage.tsx:1` | Marketing budget management page | BudgetManagementPage |
-| `CRMPage` | `frontend/user-portal/src/pages/crm/CRMPage.tsx:1` | CRM customers list page | CRMPage |
-| `CRMPage` | `frontend/user-portal/src/pages/crm/CRMPage.tsx` | CRM customers listing page. Dark-mode pass applied in v1.11.0. | CRMPage |
-| `CampaignManagementPage` | `frontend/user-portal/src/pages/marketing/CampaignManagementPage.tsx:1` | Campaign management page | CampaignManagementPage |
-| `ChannelManagementPage` | `frontend/user-portal/src/pages/marketing/ChannelManagementPage.tsx:1` | Marketing channel management page | ChannelManagementPage |
-| `ClearCache` | `frontend/user-portal/src/pages/debug/ClearCache.tsx:1` | Debug page for clearing browser cache and storage | ClearCache |
-| `CompactBlockCard` | `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx:1` | Compact block card for dashboard with state-specific layouts. Uses useBlockActions, renders QuickPlanModal, ResolveAlertModal, BlockDetailsModal, BlockHarvestEntryModal, BlockAnalyticsModal | CompactBlockCard |
-| `CompactBlockCard` | `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx` | Dashboard compact block tile. v1.11.0: QuickActions overlay now theme-aware (surface color + 95% alpha) instead of hard-coded white. | CompactBlockCard |
-| `CreateBlockModal` | `frontend/user-portal/src/components/farm/CreateBlockModal.tsx:1` | Block creation modal with map boundary drawing. Uses useMapDrawing hook | CreateBlockModal |
-| `CreateFarmModal` | `frontend/user-portal/src/components/farm/CreateFarmModal.tsx:1` | Farm creation modal with form, map boundary drawing. Uses farmApi, useMapDrawing, useUnsavedChanges, toast.store | CreateFarmModal |
-| `CustomerDetailPage` | `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx:1` | Customer detail view page | CustomerDetailPage |
-| `CustomerDetailPage` | `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx` | CRM customer detail view. v1.11.0: derives edit mode from URL path (/edit suffix) instead of component state — route serves both view and edit modes. | CustomerDetailPage |
-| `Dashboard` | `frontend/user-portal/src/pages/dashboard/Dashboard.tsx:1` | Main dashboard page with draggable widget grid (react-grid-layout). Uses useDashboardStore | Dashboard |
-| `DashboardFilters` | `frontend/user-portal/src/components/farm/dashboard/DashboardFilters.tsx:1` | Filter controls for farm dashboard: state, search, performance, sort. Uses types from useDashboardFilters | DashboardFilters |
-| `DashboardHeader` | `frontend/user-portal/src/components/farm/dashboard/DashboardHeader.tsx:1` | Dashboard header showing farm info and summary metrics | DashboardHeader |
-| `DashboardSettings` | `frontend/user-portal/src/components/farm/dashboard/DashboardSettings.tsx:1` | Dashboard configuration panel for color/icon/layout settings | DashboardSettings |
-| `EditBlockModal` | `frontend/user-portal/src/components/farm/EditBlockModal.tsx:1` | Block edit modal for updating block details | EditBlockModal |
-| `EditFarmBoundaryModal` | `frontend/user-portal/src/components/farm/EditFarmBoundaryModal.tsx:1` | Modal for editing farm GeoJSON boundary on map | EditFarmBoundaryModal |
-| `EditFarmModal` | `frontend/user-portal/src/components/farm/EditFarmModal.tsx:1` | Farm edit modal for updating farm details | EditFarmModal |
-| `EditPlantDataModal` | `frontend/user-portal/src/components/farm/EditPlantDataModal.tsx:1` | Modal for editing existing plant data entries | EditPlantDataModal |
-| `EmployeeDetailPage` | `frontend/user-portal/src/pages/hr/EmployeeDetailPage.tsx:1` | Employee detail page with contract, visa, insurance, performance tabs | EmployeeDetailPage |
-| `EmployeeListPage` | `frontend/user-portal/src/pages/hr/EmployeeListPage.tsx:1` | Employee list page | EmployeeListPage |
-| `EmptyVirtualBlockModal` | `frontend/user-portal/src/components/farm/EmptyVirtualBlockModal.tsx:1` | Modal for emptying virtual block crops | EmptyVirtualBlockModal |
-| `EventManagementPage` | `frontend/user-portal/src/pages/marketing/EventManagementPage.tsx:1` | Marketing event management page | EventManagementPage |
-| `FarmAIChat` | `frontend/user-portal/src/components/farm/FarmAIChat.tsx:1` | Floating AI chat widget for farm assistant. Uses useFarmAIChat hook for natural language queries and action confirmation | FarmAIChat |
-| `FarmAnalyticsModal` | `frontend/user-portal/src/components/farm/FarmAnalyticsModal.tsx:1` | Farm-level analytics modal with tabs: overview, block comparison, historical trends, state details. Uses useFarmAnalytics and recharts | FarmAnalyticsModal, FarmAnalyticsModalProps |
-| `FarmBlocksView` | `frontend/user-portal/src/pages/operations/FarmBlocksView.tsx:1` | Operations view of blocks within a farm | FarmBlocksView |
-| `FarmCard` | `frontend/user-portal/src/components/farm/FarmCard.tsx:1` | Farm summary card displaying farm info, navigates to farm detail on click | FarmCard |
+| `AIAnalyticsChat` | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx:1` | Conversational AI panel for farm analytics. Uses useAIAnalytics | AIAnalyticsChat |
+| `AIAssistantFAB` | `frontend/user-portal/src/components/ai-assistant/AIAssistantFAB.tsx:1` | Floating action button that toggles the AI assistant panel | AIAssistantFAB |
+| `AIAssistantPanel` | `frontend/user-portal/src/components/ai-assistant/AIAssistantPanel.tsx:1` | Slide-over AI assistant panel — renders MessageList, InputBox, ConversationList | AIAssistantPanel |
+| `AIHub` | `frontend/user-portal/src/pages/ai/AIHub.tsx:1` | Page: AI Hub. Renders AIHubTabBar + AIHubChat | default |
+| `AIHubChat` | `frontend/user-portal/src/components/ai/AIHubChat.tsx:1` | AI Hub chat surface — primary conversational UI | AIHubChat |
+| `AIHubTabBar` | `frontend/user-portal/src/components/ai/AIHubTabBar.tsx:1` | Tab bar for the AI Hub page (sessions / tools / settings) | AIHubTabBar |
+| `APAgingPage` | `frontend/user-portal/src/pages/finance/APAgingPage.tsx:1` | Page: AP aging report. Uses apInvoicesService + financeReportsService | default |
+| `APInvoiceDetailPage` | `frontend/user-portal/src/pages/purchasing/APInvoiceDetailPage.tsx:1` | Page: AP invoice detail | default |
+| `APInvoiceFormPage` | `frontend/user-portal/src/pages/purchasing/APInvoiceFormPage.tsx:1` | Page: AP invoice form. Renders FinanceUnreachableBanner. Uses taxCodesService + apInvoicesService | default |
+| `APInvoicesPage` | `frontend/user-portal/src/pages/purchasing/APInvoicesPage.tsx:1` | Page: AP invoices list. Uses apInvoicesService | default |
+| `AccountCombobox` | `frontend/user-portal/src/components/finance/AccountCombobox.tsx:1` | Combobox picker for finance GL accounts. Uses financeAccountsService types + useFinanceAccounts | AccountCombobox |
+| `AddOrderItemModal` | `frontend/user-portal/src/components/sales/AddOrderItemModal.tsx:1` | Modal to add a line item to a sales order | AddOrderItemModal |
+| `AddVirtualCropModal` | `frontend/user-portal/src/components/farm/AddVirtualCropModal.tsx:1` | Modal to add a virtual crop to a block. Uses farmApi + plantDataEnhancedApi | AddVirtualCropModal |
+| `AddWidgetModal` | `frontend/user-portal/src/components/dashboard/AddWidgetModal.tsx:1` | Modal for adding configurable widgets to the dashboard | AddWidgetModal |
+| `AgriDataTab` | `frontend/user-portal/src/components/farm/weather/AgriDataTab.tsx:1` | Weather widget — agronomic indices tab | AgriDataTab |
+| `AirQualityCard` | `frontend/user-portal/src/components/farm/weather/AirQualityCard.tsx:1` | Weather widget — air quality card | AirQualityCard |
+| `ApprovalInboxPage` | `frontend/user-portal/src/pages/purchasing/ApprovalInboxPage.tsx:1` | Page: pending approval inbox. Uses purchasingApi | default |
+| `ApprovalRulesPage` | `frontend/user-portal/src/pages/finance/ApprovalRulesPage.tsx:1` | Page: finance approval rules editor. Uses approvalRulesService + financeCompaniesService | default |
+| `AssetInventoryList` | `frontend/user-portal/src/pages/inventory/AssetInventoryList.tsx:1` | Page: asset inventory list. Uses inventoryApi + farmApi | default |
+| `AttachmentList` | `frontend/user-portal/src/components/attachments/AttachmentList.tsx:1` | Reusable list of document attachments with download links. Uses attachmentsService | AttachmentList |
+| `AuditHistoryModal` | `frontend/user-portal/src/components/finance/AuditHistoryModal/AuditHistoryModal.tsx:1` | Modal showing per-document audit log with actor name resolution. T-064: uses useAdminUsers gated by viewerRole prop (only admin/super_admin call GET /v1/users) | AuditHistoryModal, AuditHistoryModalProps |
+| `BackupCodesModal` | `frontend/user-portal/src/components/auth/BackupCodesModal.tsx:1` | Modal that displays one-time MFA backup recovery codes after setup | BackupCodesModal |
+| `BalanceSheetPage` | `frontend/user-portal/src/pages/finance/BalanceSheetPage.tsx:1` | Page (T-060.8): Balance Sheet report. Uses FinanceReportPage shell, useBalanceSheet + useJournalEntries for drill-down. Two parallel queries for comparative dates | default |
+| `BiologicalEfficiencyGauge` | `frontend/user-portal/src/components/mushroom/BiologicalEfficiencyGauge.tsx:1` | Gauge widget for mushroom BE % indicator | BiologicalEfficiencyGauge |
+| `BlockAlertsTab` | `frontend/user-portal/src/components/farm/BlockAlertsTab.tsx:1` | Block-details Alerts tab | BlockAlertsTab |
+| `BlockAnalyticsModal` | `frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx:1` | Block analytics modal. Uses useBlockAnalytics | BlockAnalyticsModal |
+| `BlockArchivesTab` | `frontend/user-portal/src/components/farm/BlockArchivesTab.tsx:1` | Block-details Archives tab (closed plantings) | BlockArchivesTab |
+| `BlockAutomationTab` | `frontend/user-portal/src/components/farm/BlockAutomationTab.tsx:1` | Block-details Automation tab (fertigation schedules) | BlockAutomationTab |
+| `BlockCard` | `frontend/user-portal/src/components/farm/BlockCard.tsx:1` | Block card with quick actions. Renders PlantAssignmentModal, BlockAnalyticsModal. Calls farmApi | BlockCard |
+| `BlockDetail` | `frontend/user-portal/src/components/farm/BlockDetail.tsx:1` | Block detail panel rendering tabs (alerts, automation, harvests, archives) | BlockDetail |
+| `BlockDetailsModal` | `frontend/user-portal/src/components/farm/BlockDetailsModal.tsx:1` | Modal hosting BlockDetail tabs | BlockDetailsModal |
+| `BlockGrid` | `frontend/user-portal/src/components/farm/BlockGrid.tsx:1` | Grid of block cards for a farm | BlockGrid |
+| `BlockGrid` | `frontend/user-portal/src/components/farm/dashboard/BlockGrid.tsx:1` | Dashboard variant of block grid (compact) | BlockGrid |
+| `BlockHarvestEntryModal` | `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx:1` | Modal for recording a block harvest entry | BlockHarvestEntryModal |
+| `BlockHarvestsTab` | `frontend/user-portal/src/components/farm/BlockHarvestsTab.tsx:1` | Block-details Harvests tab | BlockHarvestsTab |
+| `BlockMonitorHero` | `frontend/user-portal/src/components/farm/BlockMonitorHero.tsx:1` | Hero block of the block monitor dashboard | BlockMonitorHero |
+| `BlockTaskList` | `frontend/user-portal/src/pages/operations/BlockTaskList.tsx:1` | Page: block task list. Uses farmApi getBlock + tasksApi getBlockTasks | default |
+| `BlockViewToggle` | `frontend/user-portal/src/components/farm/BlockViewToggle.tsx:1` | Toggle between virtual / physical block views | BlockViewToggle |
+| `BudgetForm` | `frontend/user-portal/src/components/marketing/BudgetForm.tsx:1` | Create/edit marketing budget form. Uses marketingService | BudgetForm |
+| `BudgetManagementPage` | `frontend/user-portal/src/pages/marketing/BudgetManagementPage.tsx:1` | Page: marketing budget management. Uses marketingService | default |
+| `BudgetTable` | `frontend/user-portal/src/components/marketing/BudgetTable.tsx:1` | Paginated marketing budget table | BudgetTable |
+| `CRMPage` | `frontend/user-portal/src/pages/crm/CRMPage.tsx:1` | Page: CRM customers list. Uses crmService | default |
+| `CampaignCard` | `frontend/user-portal/src/components/marketing/CampaignCard.tsx:1` | Campaign summary card. Uses marketingService | CampaignCard |
+| `CampaignForm` | `frontend/user-portal/src/components/marketing/CampaignForm.tsx:1` | Create/edit campaign form | CampaignForm |
+| `CampaignManagementPage` | `frontend/user-portal/src/pages/marketing/CampaignManagementPage.tsx:1` | Page: marketing campaign management. Uses marketingService | default |
+| `CampaignTable` | `frontend/user-portal/src/components/marketing/CampaignTable.tsx:1` | Paginated campaign table | CampaignTable |
+| `CashFlowStatementPage` | `frontend/user-portal/src/pages/finance/CashFlowStatementPage.tsx:1` | Page (T-060.10): Cash Flow Statement (indirect method). Uses FinanceReportPage shell, useCashFlow. Renders reconciliation warning banner | default |
+| `ChannelForm` | `frontend/user-portal/src/components/marketing/ChannelForm.tsx:1` | Create/edit marketing channel form | ChannelForm |
+| `ChannelManagementPage` | `frontend/user-portal/src/pages/marketing/ChannelManagementPage.tsx:1` | Page: marketing channel management. Uses marketingService | default |
+| `ChannelTable` | `frontend/user-portal/src/components/marketing/ChannelTable.tsx:1` | Paginated channel table | ChannelTable |
+| `ChartOfAccountsPage` | `frontend/user-portal/src/pages/finance/ChartOfAccountsPage.tsx:1` | Page: chart of accounts editor. Uses financeAccountsService | default |
+| `ChemicalsCatalog` | `frontend/user-portal/src/pages/tools/ChemicalsCatalog.tsx:1` | Page: chemicals catalogue tool | default |
+| `ClearCache` | `frontend/user-portal/src/pages/debug/ClearCache.tsx:1` | Page: dev tool to clear local caches | default |
+| `CompactBlockCard` | `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx:1` | Compact block card variant for the dashboard | CompactBlockCard |
+| `ConfirmationCard` | `frontend/user-portal/src/components/ai/ConfirmationCard.tsx:1` | Inline confirmation card rendered inside AI chat for tool-call approvals | ConfirmationCard |
+| `ContractTab` | `frontend/user-portal/src/components/hr/ContractTab.tsx:1` | Employee detail Contract tab. Uses hrService | ContractTab |
+| `ConversationList` | `frontend/user-portal/src/components/ai-assistant/ConversationList.tsx:1` | List of AI assistant conversation threads | ConversationList |
+| `CostCenterCombobox` | `frontend/user-portal/src/components/finance/CostCenterCombobox/CostCenterCombobox.tsx:1` | Combobox picker for finance cost centres. Uses costCentersService types + useCostCenters | CostCenterCombobox, CostCenterComboboxProps |
+| `CreateBlockModal` | `frontend/user-portal/src/components/farm/CreateBlockModal.tsx:1` | Modal to create a block | CreateBlockModal |
+| `CreateFarmModal` | `frontend/user-portal/src/components/farm/CreateFarmModal.tsx:1` | Modal to create a farm. Uses farmApi | CreateFarmModal |
+| `CurrentWeatherCard` | `frontend/user-portal/src/components/farm/weather/CurrentWeatherCard.tsx:1` | Weather widget — current conditions card | CurrentWeatherCard |
+| `CustomerCard` | `frontend/user-portal/src/components/crm/CustomerCard.tsx:1` | CRM customer summary card. Uses crmService helpers | CustomerCard |
+| `CustomerCombobox` | `frontend/user-portal/src/components/sales/CustomerCombobox.tsx:1` | Combobox to pick a customer. Uses crmService | CustomerCombobox |
+| `CustomerDetailPage` | `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx:1` | Page: single customer detail. Uses crmService | default |
+| `CustomerForm` | `frontend/user-portal/src/components/crm/CustomerForm.tsx:1` | Create/edit customer form. Uses crmService | CustomerForm |
+| `CustomerTable` | `frontend/user-portal/src/components/crm/CustomerTable.tsx:1` | Paginated customer table. Uses crmService helpers | CustomerTable |
+| `Dashboard` | `frontend/user-portal/src/pages/dashboard/Dashboard.tsx:1` | Page: main dashboard. Uses apiClient + farmApi | default |
+| `DashboardFilters` | `frontend/user-portal/src/components/farm/dashboard/DashboardFilters.tsx:1` | Farm dashboard filters bar | DashboardFilters |
+| `DashboardSettings` | `frontend/user-portal/src/components/farm/dashboard/DashboardSettings.tsx:1` | Farm dashboard settings panel | DashboardSettings |
+| `DeleteOrderConfirmModal` | `frontend/user-portal/src/components/sales/DeleteOrderConfirmModal.tsx:1` | Confirm modal for deleting a sales order with allocation preview. Uses salesService | DeleteOrderConfirmModal |
+| `DivisionSelector` | `frontend/user-portal/src/pages/division/DivisionSelector.tsx:1` | Page: organization-division selector (post-login) | default |
+| `DivisionSwitcher` | `frontend/user-portal/src/components/layout/DivisionSwitcher.tsx:1` | Header switcher for active organization division/branch | DivisionSwitcher |
+| `DrawingControls` | `frontend/user-portal/src/components/map/DrawingControls.tsx:1` | MapLibre drawing controls (draw polygon, edit, delete) | DrawingControls |
+| `EditBlockModal` | `frontend/user-portal/src/components/farm/EditBlockModal.tsx:1` | Modal to edit a block | EditBlockModal |
+| `EditFarmBoundaryModal` | `frontend/user-portal/src/components/farm/EditFarmBoundaryModal.tsx:1` | Modal for editing farm geo-boundary polygon | EditFarmBoundaryModal |
+| `EditFarmModal` | `frontend/user-portal/src/components/farm/EditFarmModal.tsx:1` | Modal to edit a farm. Uses farmApi | EditFarmModal |
+| `EmployeeCard` | `frontend/user-portal/src/components/hr/EmployeeCard.tsx:1` | Employee summary card. Uses hrService helpers | EmployeeCard |
+| `EmployeeDetailPage` | `frontend/user-portal/src/pages/hr/EmployeeDetailPage.tsx:1` | Page: employee detail with tabs (Contract, Insurance, Performance, Visa). Uses hrService | default |
+| `EmployeeForm` | `frontend/user-portal/src/components/hr/EmployeeForm.tsx:1` | Create/edit employee form | EmployeeForm |
+| `EmployeeListPage` | `frontend/user-portal/src/pages/hr/EmployeeListPage.tsx:1` | Page: employee list. Uses hrService | default |
+| `EmployeeTable` | `frontend/user-portal/src/components/hr/EmployeeTable.tsx:1` | Paginated employee table | EmployeeTable |
+| `EmptyVirtualBlockModal` | `frontend/user-portal/src/components/farm/EmptyVirtualBlockModal.tsx:1` | Modal shown when a virtual block has no plantings | EmptyVirtualBlockModal |
+| `EventForm` | `frontend/user-portal/src/components/marketing/EventForm.tsx:1` | Create/edit marketing event form | EventForm |
+| `EventManagementPage` | `frontend/user-portal/src/pages/marketing/EventManagementPage.tsx:1` | Page: marketing event management. Uses marketingService | default |
+| `EventTable` | `frontend/user-portal/src/components/marketing/EventTable.tsx:1` | Paginated event table | EventTable |
+| `FacilityCard` | `frontend/user-portal/src/components/mushroom/FacilityCard.tsx:1` | Mushroom facility summary card | FacilityCard |
+| `FarmAIChat` | `frontend/user-portal/src/components/farm/FarmAIChat.tsx:1` | Farm-context AI chat surface | FarmAIChat |
+| `FarmAnalyticsModal` | `frontend/user-portal/src/components/farm/FarmAnalyticsModal.tsx:1` | Farm-level analytics modal | FarmAnalyticsModal |
+| `FarmBlocksView` | `frontend/user-portal/src/pages/operations/FarmBlocksView.tsx:1` | Page: farm blocks view. Uses farmApi + tasksApi | default |
+| `FarmCard` | `frontend/user-portal/src/components/farm/FarmCard.tsx:1` | Farm summary card used in FarmList grid | FarmCard |
 | `FarmDashboard` | `frontend/user-portal/src/components/farm/FarmDashboard.tsx:1` | Main farm module dashboard showing key metrics and quick actions. Uses farmApi and renders GlobalFarmAnalyticsModal | FarmDashboard |
-| `FarmDashboard` | `frontend/user-portal/src/components/farm/FarmDashboard.tsx` | Farm dashboard with filters, farm selector, block grid. Dark-mode pass in v1.11.0. | FarmDashboard |
-| `FarmDashboardPage` | `frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx:23` | Block monitor dashboard page. Uses useDashboardData, useDashboardConfig, useDashboardFilters hooks | FarmDashboardPage |
-| `FarmDashboardPage` | `frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx` | Route page wrapper for the farm dashboard. Dark-mode pass in v1.11.0. | FarmDashboardPage |
-| `FarmDetail` | `frontend/user-portal/src/components/farm/FarmDetail.tsx:1` | Farm detail page with tabs (blocks, map, history, weather). Uses useFarm, useFarmBlocks, useAvailableFarmingYears hooks | FarmDetail |
-| `FarmHistoryTab` | `frontend/user-portal/src/components/farm/FarmHistoryTab.tsx:1` | Farm detail tab showing historical farm activity | FarmHistoryTab |
+| `FarmDetail` | `frontend/user-portal/src/components/farm/FarmDetail.tsx:1` | Single farm detail view with tabs (history, virtual blocks, physical blocks) | FarmDetail |
+| `FarmHistoryTab` | `frontend/user-portal/src/components/farm/FarmHistoryTab.tsx:1` | Farm-detail History tab. Uses farmApi | FarmHistoryTab |
 | `FarmList` | `frontend/user-portal/src/components/farm/FarmList.tsx:1` | Paginated farm card grid with search/filter. Renders FarmCard, CreateFarmModal, EditFarmModal, FarmAnalyticsModal | FarmList, FarmListProps |
-| `FarmManager` | `frontend/user-portal/src/pages/farm/FarmManager.tsx:16` | Farm module router: sub-routes for dashboard, block-monitor, farms, farm detail, block detail, plants | FarmManager |
-| `FarmMapView` | `frontend/user-portal/src/components/farm/FarmMapView.tsx:1` | MapLibre GL map view showing farm and block boundaries with state colors. Uses mapConfig | FarmMapView |
-| `FarmSelector` | `frontend/user-portal/src/components/farm/dashboard/FarmSelector.tsx:1` | Dropdown to select active farm. Calls getFarms from farmApi | FarmSelector |
-| `FarmingYearSelector` | `frontend/user-portal/src/components/farm/FarmingYearSelector.tsx:1` | Dropdown selector for farming year filter | FarmingYearSelector |
-| `GlobalFarmAnalyticsModal` | `frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx:1` | System-wide analytics modal: farm comparison, production timeline, performance insights. Uses useGlobalAnalytics and recharts | GlobalFarmAnalyticsModal, GlobalFarmAnalyticsModalProps |
-| `HRDashboardPage` | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx:1` | HR module dashboard page | HRDashboardPage |
-| `HRDashboardPage` | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx` | HR dashboard landing page. Dark-mode pass in v1.11.0. | HRDashboardPage |
-| `HarvestEntryModal (mushroom)` | `frontend/user-portal/src/components/mushroom/HarvestEntryModal.tsx` | Mushroom-room-specific harvest entry modal. Dark-mode pass in v1.11.0; quantity input uses positiveNumberInputProps. | HarvestEntryModal |
-| `HarvestEntryModal (operations)` | `frontend/user-portal/src/components/operations/HarvestEntryModal.tsx` | Modal opened from the Operations task list. v1.11.0: structured context card (block, crop, KPI chips, task title) sourced from enriched TaskWithDetails fields (blockCode/blockName/targetCropName/actualPlantCount/expectedYieldKg) with metadata fallback. | HarvestEntryModal |
-| `InventoryDashboard` | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx:1` | Inventory management dashboard | InventoryDashboard |
-| `InventoryDashboard` | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx` | Inventory dashboard with sub-routes. Dark-mode pass in v1.11.0. | InventoryDashboard |
-| `InventoryPage` | `frontend/user-portal/src/pages/sales/InventoryPage.tsx:1` | Sales inventory page | InventoryPage |
-| `Login` | `frontend/user-portal/src/pages/auth/Login.tsx:1` | Login page with form validation (react-hook-form + zod). Uses useAuthStore and usePageVisibility | Login |
-| `LogisticsDashboardPage` | `frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx:1` | Logistics module dashboard page | LogisticsDashboardPage |
+| `FarmManager` | `frontend/user-portal/src/pages/farm/FarmManager.tsx:1` | Page: farm management. Renders FarmList / FarmDetail / BlockDetail flow | default |
+| `FarmMapView` | `frontend/user-portal/src/components/farm/FarmMapView.tsx:1` | MapLibre-based farm map view. Renders MapContainer + DrawingControls | FarmMapView |
+| `FarmQuickSwitcher` | `frontend/user-portal/src/components/farm/FarmQuickSwitcher.tsx:1` | Quick switcher dropdown for active farm context | FarmQuickSwitcher |
+| `FarmingYearSelector` | `frontend/user-portal/src/components/farm/FarmingYearSelector.tsx:1` | Year selector for farming-year scoped views. Uses farmApi types | FarmingYearSelector |
+| `FertigationScheduleEditorModal` | `frontend/user-portal/src/components/farm/FertigationScheduleEditorModal.tsx:1` | Modal to edit a fertigation schedule | FertigationScheduleEditorModal |
+| `FertilizerCostCalculator` | `frontend/user-portal/src/pages/tools/FertilizerCostCalculator.tsx:1` | Page: fertiliser cost calculator. Uses apiClient + plantDataEnhancedApi | default |
+| `FinanceGate` | `frontend/user-portal/src/components/finance/FinanceGate.tsx:1` | Route gate that hides finance routes when tenant.modules.financeEnabled is false | FinanceGate |
+| `FinanceReportPage` | `frontend/user-portal/src/components/finance/FinanceReportPage/FinanceReportPage.tsx:1` | Shared finance report shell (filters bar, display options, drill-down) used by Balance Sheet, Income Statement, Cash Flow pages. Uses apiClient for drill-down | FinanceReportPage |
+| `FinanceUnreachableBanner` | `frontend/user-portal/src/components/finance/FinanceUnreachableBanner.tsx:1` | Banner shown on purchasing forms when finance service is unreachable (Wave 0 ops-only mode signal) | FinanceUnreachableBanner |
+| `ForecastCard` | `frontend/user-portal/src/components/farm/weather/ForecastCard.tsx:1` | Weather widget — forecast card | ForecastCard |
+| `GlobalFarmAnalyticsModal` | `frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx:1` | Cross-farm analytics modal opened from FarmDashboard | GlobalFarmAnalyticsModal |
+| `GoodsReceiptDetailPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptDetailPage.tsx:1` | Page: goods receipt detail | default |
+| `GoodsReceiptFormPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptFormPage.tsx:1` | Page: goods receipt form. Renders FinanceUnreachableBanner. Uses goodsReceiptsService | default |
+| `GoodsReceiptsPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptsPage.tsx:1` | Page: goods receipts list. Uses goodsReceiptsService | default |
+| `GrowingRoomCard` | `frontend/user-portal/src/components/mushroom/GrowingRoomCard.tsx:1` | Growing room summary card | GrowingRoomCard |
+| `GrowingRoomGrid` | `frontend/user-portal/src/components/mushroom/GrowingRoomGrid.tsx:1` | Grid of growing-room cards | GrowingRoomGrid |
+| `HRDashboardPage` | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx:1` | Page: HR dashboard. Uses hrService | default |
+| `HarvestEntryModal` | `frontend/user-portal/src/components/mushroom/HarvestEntryModal.tsx:1` | Mushroom harvest entry modal | HarvestEntryModal |
+| `HarvestEntryModal` | `frontend/user-portal/src/components/operations/HarvestEntryModal.tsx:1` | Operations module harvest entry modal. Uses tasksApi addHarvestEntry | HarvestEntryModal |
+| `HarvestInventoryList` | `frontend/user-portal/src/pages/inventory/HarvestInventoryList.tsx:1` | Page: harvest inventory list. Uses inventoryApi + farmApi + plantDataEnhancedApi | default |
+| `IncomeStatementPage` | `frontend/user-portal/src/pages/finance/IncomeStatementPage.tsx:1` | Page (T-060.9): Income Statement report. Uses FinanceReportPage shell, useIncomeStatement (single-call primary + comparison) | default |
+| `IncomingPreviewPage` | `frontend/user-portal/src/pages/finance/IncomingPreviewPage.tsx:1` | Page: preview incoming documents from purchasing. Uses purchasingApi | default |
+| `InputBox` | `frontend/user-portal/src/components/ai-assistant/InputBox.tsx:1` | Multiline text input + send button for the AI assistant | InputBox |
+| `InputInventoryList` | `frontend/user-portal/src/pages/inventory/InputInventoryList.tsx:1` | Page: input (fertilisers/chemicals) inventory list. Uses inventoryApi + farmApi | default |
+| `InsightsCard` | `frontend/user-portal/src/components/farm/weather/InsightsCard.tsx:1` | Weather widget — AI insights card | InsightsCard |
+| `InsuranceTab` | `frontend/user-portal/src/components/hr/InsuranceTab.tsx:1` | Employee detail Insurance tab. Uses hrService | InsuranceTab |
+| `InventoryDashboard` | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx:1` | Page: inventory dashboard. Uses inventoryApi getInventorySummary | default |
+| `ItemMappingPage` | `frontend/user-portal/src/pages/finance/ItemMappingPage.tsx:1` | Page: item-to-GL-account mapping editor. Uses itemMappingService + taxCodesService + financeAccountsService | default |
+| `JournalEntriesPage` | `frontend/user-portal/src/pages/finance/JournalEntriesPage.tsx:1` | Page: journal entries list. Uses journalEntriesService types | default |
+| `Login` | `frontend/user-portal/src/pages/auth/Login.tsx:1` | Page: login form | default |
+| `LogisticsDashboardPage` | `frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx:1` | Page: logistics dashboard. Uses logisticsService | default |
 | `MFARouteGuards` | `frontend/user-portal/src/components/common/MFARouteGuards.tsx:1` | MFA route guards: MFAVerifyGuard requires MFA pending token, MFASetupGuard blocks if MFA already enabled | MFAVerifyGuard, MFASetupGuard |
-| `MFASetupPage` | `frontend/user-portal/src/pages/auth/MFASetupPage.tsx:1` | MFA TOTP setup page with QR code and backup codes | MFASetupPage |
-| `MFAVerifyPage` | `frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx:1` | MFA verification page for TOTP code entry | MFAVerifyPage |
-| `MainLayout` | `frontend/user-portal/src/components/layout/MainLayout.tsx:1` | Main app layout with sidebar navigation, header, and Outlet for nested routes. Uses useAuthStore and tasksApi | MainLayout |
-| `MarketingDashboardPage` | `frontend/user-portal/src/pages/marketing/MarketingDashboardPage.tsx:1` | Marketing module dashboard page | MarketingDashboardPage |
-| `MushroomFacilityManager` | `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx` | Mushroom growing room / strain management page. Dark-mode pass in v1.11.0. | MushroomFacilityManager |
-| `NotFound` | `frontend/user-portal/src/pages/NotFound.tsx:1` | 404 Not Found page | NotFound |
-| `OperationsDashboard` | `frontend/user-portal/src/pages/operations/OperationsDashboard.tsx:1` | Operations module dashboard page | OperationsDashboard |
-| `PendingTasksWarningModal` | `frontend/user-portal/src/components/farm/PendingTasksWarningModal.tsx:1` | Warning modal shown when block has pending tasks before state transition | PendingTasksWarningModal |
-| `PhysicalBlockCard` | `frontend/user-portal/src/components/farm/PhysicalBlockCard.tsx:1` | Physical block card showing block in spatial layout view | PhysicalBlockCard |
-| `PhysicalBlockGrid` | `frontend/user-portal/src/components/farm/PhysicalBlockGrid.tsx:1` | Physical layout grid rendering PhysicalBlockCard components | PhysicalBlockGrid |
-| `PlantAssignmentModal` | `frontend/user-portal/src/components/farm/PlantAssignmentModal.tsx:1` | Modal for assigning plants to blocks | PlantAssignmentModal |
-| `PlantDataCard` | `frontend/user-portal/src/components/farm/PlantDataCard.tsx:1` | Card displaying plant data summary. Uses plantDataEnhancedApi for formatting | PlantDataCard |
-| `PlantDataDetail` | `frontend/user-portal/src/components/farm/PlantDataDetail.tsx:1` | Detailed view of a plant data entry | PlantDataDetail |
-| `PlantDataLibrary` | `frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx:1` | Plant data library page with card grid, detail view, add/edit modals, CSV import/export. Uses plantDataEnhancedApi | PlantDataLibrary |
-| `Profile` | `frontend/user-portal/src/pages/profile/Profile.tsx:1` | User profile page | Profile |
+| `MFASetupPage` | `frontend/user-portal/src/pages/auth/MFASetupPage.tsx:1` | Page: MFA TOTP setup. Renders BackupCodesModal on success | default |
+| `MFAVerifyPage` | `frontend/user-portal/src/pages/auth/MFAVerifyPage.tsx:1` | Page: MFA code verification. Uses authService | default |
+| `MainLayout` | `frontend/user-portal/src/components/layout/MainLayout.tsx:1` | Main app layout with sidebar navigation, header, FinanceGate-aware menu and Outlet for nested routes. Uses useAuthStore and tasksApi | MainLayout |
+| `ManualJournalEntryPage` | `frontend/user-portal/src/pages/finance/ManualJournalEntryPage.tsx:1` | Page: finance-admin manual JE form (RHF + Zod). Renders AccountCombobox + CostCenterCombobox. Uses useFinanceAccounts, useCostCenters, useFinanceCompanies, useFiscalPeriods, useCreateManualJournalEntry | default |
+| `MapContainer` | `frontend/user-portal/src/components/map/MapContainer.tsx:1` | MapLibre GL container wrapper | MapContainer |
+| `MapSearchBar` | `frontend/user-portal/src/components/map/MapSearchBar.tsx:1` | Map geocoder search bar | MapSearchBar |
+| `MarketingDashboardPage` | `frontend/user-portal/src/pages/marketing/MarketingDashboardPage.tsx:1` | Page: marketing dashboard. Uses marketingService | default |
+| `MessageBubble` | `frontend/user-portal/src/components/ai-assistant/MessageBubble.tsx:1` | Rendered chat message bubble (user/assistant) with markdown + tool-call children | MessageBubble |
+| `MessageList` | `frontend/user-portal/src/components/ai-assistant/MessageList.tsx:1` | Scrollable list of MessageBubble entries for the AI assistant | MessageList |
+| `ModulesSettingsCard` | `frontend/user-portal/src/components/settings/ModulesSettingsCard.tsx:1` | Settings card for toggling tenant modules (financeEnabled flag — Wave 0) | ModulesSettingsCard |
+| `MushroomDashboardPage` | `frontend/user-portal/src/pages/mushroom/MushroomDashboardPage.tsx:1` | Page: mushroom dashboard | default |
+| `MushroomFacilityManager` | `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx:1` | Page: mushroom facility manager | default |
+| `MushroomRoomMonitor` | `frontend/user-portal/src/pages/mushroom/MushroomRoomMonitor.tsx:1` | Page: mushroom room monitor. Uses apiClient | default |
+| `MushroomStrainLibrary` | `frontend/user-portal/src/pages/mushroom/MushroomStrainLibrary.tsx:1` | Page: mushroom strain library | default |
+| `NotFound` | `frontend/user-portal/src/pages/NotFound.tsx:1` | Page: 404 not-found | default |
+| `OperationsDashboard` | `frontend/user-portal/src/pages/operations/OperationsDashboard.tsx:1` | Page: operations dashboard. Uses farmApi + tasksApi | default |
+| `OrderCard` | `frontend/user-portal/src/components/sales/OrderCard.tsx:1` | Sales order summary card | OrderCard |
+| `OrderForm` | `frontend/user-portal/src/components/sales/OrderForm.tsx:1` | Create/edit sales order form | OrderForm |
+| `OrderTable` | `frontend/user-portal/src/components/sales/OrderTable.tsx:1` | Paginated sales order table | OrderTable |
+| `PaymentDetailPage` | `frontend/user-portal/src/pages/finance/PaymentDetailPage.tsx:1` | Page: AP payment detail. Uses paymentsService types | default |
+| `PaymentTermsPage` | `frontend/user-portal/src/pages/purchasing/PaymentTermsPage.tsx:1` | Page: payment terms editor. Uses purchasingApi | default |
+| `PaymentsPage` | `frontend/user-portal/src/pages/finance/PaymentsPage.tsx:1` | Page: AP payments list. Uses paymentsService | default |
+| `PendingTasksWarningModal` | `frontend/user-portal/src/components/farm/PendingTasksWarningModal.tsx:1` | Warning modal listing pending farm tasks before destructive actions | PendingTasksWarningModal |
+| `PerformanceTab` | `frontend/user-portal/src/components/hr/PerformanceTab.tsx:1` | Employee detail Performance tab | PerformanceTab |
+| `PeriodsPage` | `frontend/user-portal/src/pages/finance/PeriodsPage.tsx:1` | Page: fiscal periods management. T-060.11: renders AuditHistoryModal with viewerRole prop. Close modal uses dry-run ClosingJePreviewPanel. Uses fiscalPeriodsService + useFinanceCompanies | default |
+| `PhysicalBlockCard` | `frontend/user-portal/src/components/farm/PhysicalBlockCard.tsx:1` | Physical block card summarising plantings | PhysicalBlockCard |
+| `PhysicalBlockGrid` | `frontend/user-portal/src/components/farm/PhysicalBlockGrid.tsx:1` | Physical-block-only grid variant | PhysicalBlockGrid |
+| `PhysicalBlockPlantingsModal` | `frontend/user-portal/src/components/farm/PhysicalBlockPlantingsModal.tsx:1` | Modal listing current plantings for a physical block | PhysicalBlockPlantingsModal |
+| `PlantAssignmentModal` | `frontend/user-portal/src/components/farm/PlantAssignmentModal.tsx:1` | Modal to assign a plant to a block | PlantAssignmentModal |
+| `PlantDataCard` | `frontend/user-portal/src/components/farm/PlantDataCard.tsx:1` | Plant data summary card | PlantDataCard |
+| `PlantDataDetail` | `frontend/user-portal/src/components/farm/PlantDataDetail.tsx:1` | Plant data detail panel | PlantDataDetail |
+| `PlantDataFormModal` | `frontend/user-portal/src/components/farm/PlantDataFormModal.tsx:1` | Create/edit plant data modal | PlantDataFormModal |
+| `PlantDataLibrary` | `frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx:1` | Page: plant data library with CSV import. Uses plantDataEnhancedApi | default |
+| `PnLPage` | `frontend/user-portal/src/pages/pnl/PnLPage.tsx:1` | Page: P&L. Renders Pnl* widget components. Uses farmApi | default |
+| `PnlArAging` | `frontend/user-portal/src/components/pnl/PnlArAging.tsx:1` | P&L AR aging table | PnlArAging |
+| `PnlBreakdownCharts` | `frontend/user-portal/src/components/pnl/PnlBreakdownCharts.tsx:1` | P&L breakdown charts (revenue / costs) | PnlBreakdownCharts |
+| `PnlFiltersBar` | `frontend/user-portal/src/components/pnl/PnlFiltersBar.tsx:1` | P&L filters bar (period, farm) | PnlFiltersBar |
+| `PnlKpiCards` | `frontend/user-portal/src/components/pnl/PnlKpiCards.tsx:1` | P&L KPI cards (Revenue, GP, EBIT, NI) | PnlKpiCards |
+| `PnlRevenueConfidence` | `frontend/user-portal/src/components/pnl/PnlRevenueConfidence.tsx:1` | Revenue confidence indicator widget | PnlRevenueConfidence |
+| `PnlRevenueTrendChart` | `frontend/user-portal/src/components/pnl/PnlRevenueTrendChart.tsx:1` | Revenue trend chart | PnlRevenueTrendChart |
+| `PnlStatementTable` | `frontend/user-portal/src/components/pnl/PnlStatementTable.tsx:1` | P&L statement-style table | PnlStatementTable |
+| `PostingSetupPage` | `frontend/user-portal/src/pages/finance/PostingSetupPage.tsx:1` | Page: company posting-setup editor. Renders AccountCombobox. Uses postingSetupService + financeAccountsService + financeCompaniesService | default |
+| `Profile` | `frontend/user-portal/src/pages/profile/Profile.tsx:1` | Page: user profile + MFA management. Uses authService | default |
 | `ProtectedRoute` | `frontend/user-portal/src/components/common/ProtectedRoute.tsx:1` | Auth guard component that checks useAuthStore and redirects unauthenticated users to /login | ProtectedRoute |
-| `PurchaseOrdersPage` | `frontend/user-portal/src/pages/sales/PurchaseOrdersPage.tsx:1` | Purchase orders page | PurchaseOrdersPage |
-| `QuickPlanModal` | `frontend/user-portal/src/components/farm/dashboard/QuickPlanModal.tsx:1` | Quick planning modal for block state transitions | QuickPlanModal |
-| `Register` | `frontend/user-portal/src/pages/auth/Register.tsx:1` | User registration page | Register |
-| `ResolveAlertModal` | `frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx:1` | Modal for resolving block alerts | ResolveAlertModal |
-| `ReturnsPage` | `frontend/user-portal/src/pages/sales/ReturnsPage.tsx:1` | Returns management page | ReturnsPage |
-| `RouteManagementPage` | `frontend/user-portal/src/pages/logistics/RouteManagementPage.tsx:1` | Route management page | RouteManagementPage |
-| `SalesDashboardPage` | `frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx:1` | Sales module dashboard page | SalesDashboardPage |
-| `SalesDashboardPage` | `frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx` | Sales dashboard. Dark-mode pass in v1.11.0. | SalesDashboardPage |
-| `SalesOrdersPage` | `frontend/user-portal/src/pages/sales/SalesOrdersPage.tsx:1` | Sales orders list page | SalesOrdersPage |
-| `Settings` | `frontend/user-portal/src/pages/settings/Settings.tsx:1` | User settings page | Settings |
-| `ShipmentTrackingPage` | `frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx:1` | Shipment tracking page | ShipmentTrackingPage |
+| `PurchaseItemsPage` | `frontend/user-portal/src/pages/purchasing/PurchaseItemsPage.tsx:1` | Page: purchase items catalogue. Uses purchasingApi | default |
+| `PurchaseOrderDetailPage` | `frontend/user-portal/src/pages/purchasing/PurchaseOrderDetailPage.tsx:1` | Page: purchase order detail | default |
+| `PurchaseOrderFormPage` | `frontend/user-portal/src/pages/purchasing/PurchaseOrderFormPage.tsx:1` | Page: purchase order form. Renders FinanceUnreachableBanner. Uses taxCodesService + purchasingApi | default |
+| `PurchaseOrdersPage` | `frontend/user-portal/src/pages/purchasing/PurchaseOrdersPage.tsx:1` | Page: purchase orders list. Uses purchasingApi | default |
+| `PurchaseRequestDetailPage` | `frontend/user-portal/src/pages/purchasing/PurchaseRequestDetailPage.tsx:1` | Page: purchase request detail | default |
+| `PurchaseRequestFormPage` | `frontend/user-portal/src/pages/purchasing/PurchaseRequestFormPage.tsx:1` | Page: purchase request form. Renders FinanceUnreachableBanner. Uses taxCodesService + purchasingApi | default |
+| `PurchaseRequestsPage` | `frontend/user-portal/src/pages/purchasing/PurchaseRequestsPage.tsx:1` | Page: purchase requests list. Uses purchasingApi | default |
+| `QuickPlanModal` | `frontend/user-portal/src/components/farm/dashboard/QuickPlanModal.tsx:1` | Quick crop-plan creation modal | QuickPlanModal |
+| `RecordPaymentPage` | `frontend/user-portal/src/pages/finance/RecordPaymentPage.tsx:1` | Page: record AP payment. Renders AccountCombobox. Uses paymentsService + apInvoicesService + financeReportsService | default |
+| `Register` | `frontend/user-portal/src/pages/auth/Register.tsx:1` | Page: user registration form | default |
+| `ReportAlertModal` | `frontend/user-portal/src/components/operations/ReportAlertModal.tsx:1` | Modal for reporting a farm/block alert | ReportAlertModal |
+| `ReportReturnModal` | `frontend/user-portal/src/components/sales/ReportReturnModal.tsx:1` | Modal to report a sales return | ReportReturnModal |
+| `ResolveAlertModal` | `frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx:1` | Modal to resolve a farm alert | ResolveAlertModal |
+| `ReturnedInventoryList` | `frontend/user-portal/src/pages/inventory/ReturnedInventoryList.tsx:1` | Page: returned-from-customer inventory list. Uses inventoryApi | default |
+| `ReturnsPage` | `frontend/user-portal/src/pages/sales/ReturnsPage.tsx:1` | Page: sales returns list. Uses salesService | default |
+| `RoomDetailsModal` | `frontend/user-portal/src/components/mushroom/RoomDetailsModal.tsx:1` | Growing room details modal | RoomDetailsModal |
+| `RouteForm` | `frontend/user-portal/src/components/logistics/RouteForm.tsx:1` | Create/edit route form | RouteForm |
+| `RouteManagementPage` | `frontend/user-portal/src/pages/logistics/RouteManagementPage.tsx:1` | Page: route management. Renders RouteTable + RouteForm. Uses logisticsService | default |
+| `RouteTable` | `frontend/user-portal/src/components/logistics/RouteTable.tsx:1` | Paginated route table | RouteTable |
+| `SalesActionTiles` | `frontend/user-portal/src/components/sales/SalesActionTiles.tsx:1` | Cross-sub-navigation tile bar for the Sales module. T-070.0: now renders 2 tiles (Orders, Stock) — PurchaseOrders tile removed | SalesActionTiles, SalesActionKey, SalesActionTilesProps |
+| `SalesDashboardPage` | `frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx:1` | Page: sales dashboard. Renders SalesActionTiles. Uses salesService | default |
+| `SalesOrdersPage` | `frontend/user-portal/src/pages/sales/SalesOrdersPage.tsx:1` | Page: sales orders list. Renders SalesActionTiles. Uses salesService | default |
+| `SensorFusionTab` | `frontend/user-portal/src/components/farm/weather/SensorFusionTab.tsx:1` | Weather widget — sensor-fusion tab | SensorFusionTab |
+| `Settings` | `frontend/user-portal/src/pages/settings/Settings.tsx:1` | Page: settings (spacing standards, farming year, MFA, modules). Renders ModulesSettingsCard + TelegramBotSettings. Uses farmApi + authService | default |
+| `ShipmentCard` | `frontend/user-portal/src/components/logistics/ShipmentCard.tsx:1` | Shipment summary card | ShipmentCard |
+| `ShipmentForm` | `frontend/user-portal/src/components/logistics/ShipmentForm.tsx:1` | Create/edit shipment form | ShipmentForm |
+| `ShipmentTable` | `frontend/user-portal/src/components/logistics/ShipmentTable.tsx:1` | Paginated shipment table. Uses logisticsService helpers | ShipmentTable |
+| `ShipmentTrackingPage` | `frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx:1` | Page: shipment tracking. Uses logisticsService | default |
+| `SoilConditionsCard` | `frontend/user-portal/src/components/farm/weather/SoilConditionsCard.tsx:1` | Weather widget — soil conditions card. Uses weatherApi helpers | SoilConditionsCard |
+| `SolarLightCard` | `frontend/user-portal/src/components/farm/weather/SolarLightCard.tsx:1` | Weather widget — solar / light card | SolarLightCard |
+| `StockPage` | `frontend/user-portal/src/pages/sales/StockPage.tsx:1` | Page (T-070.0): sales stock view (sellable harvest + waste). Renders SalesActionTiles | default |
+| `StrainCard` | `frontend/user-portal/src/components/mushroom/StrainCard.tsx:1` | Mushroom strain summary card | StrainCard |
+| `TaskCompletionModal` | `frontend/user-portal/src/components/operations/TaskCompletionModal.tsx:1` | Modal for completing a task with notes/photos. Uses tasksApi completeTask | TaskCompletionModal |
+| `TelegramBotSettings` | `frontend/user-portal/src/components/settings/TelegramBotSettings.tsx:1` | Settings card for Telegram bot integration | TelegramBotSettings |
+| `TenantSetupWizardPage` | `frontend/user-portal/src/pages/admin/TenantSetupWizardPage.tsx:1` | Page: super_admin tenant bootstrap wizard. Uses tenantBootstrapService + financeCompaniesService | default |
 | `ToastContainer` | `frontend/user-portal/src/components/common/ToastContainer.tsx:1` | Global toast notification container consuming useToastStore | ToastContainer |
+| `ToolCallCard` | `frontend/user-portal/src/components/ai-assistant/ToolCallCard.tsx:1` | Inline card showing an AI tool call invocation + result | ToolCallCard |
+| `TrialBalancePage` | `frontend/user-portal/src/pages/finance/TrialBalancePage.tsx:1` | Page: trial balance report. Uses trialBalanceService | default |
 | `UnsavedChangesDialog` | `frontend/user-portal/src/components/common/UnsavedChangesDialog.tsx:1` | Dialog prompting user to save or discard unsaved changes before navigation | UnsavedChangesDialog |
-| `UserManagementPage` | `frontend/user-portal/src/pages/admin/UserManagementPage.tsx:1` | Admin user management page | UserManagementPage |
-| `VehicleManagementPage` | `frontend/user-portal/src/pages/logistics/VehicleManagementPage.tsx:1` | Vehicle management page | VehicleManagementPage |
-| `WasteInventoryList` | `frontend/user-portal/src/pages/inventory/WasteInventoryList.tsx:1` | Waste inventory list page | default: WasteInventoryList |
+| `UserManagementPage` | `frontend/user-portal/src/pages/admin/UserManagementPage.tsx:1` | Page: admin user management (list, create, update roles). Uses apiClient | default |
+| `VehicleCard` | `frontend/user-portal/src/components/logistics/VehicleCard.tsx:1` | Vehicle summary card | VehicleCard |
+| `VehicleForm` | `frontend/user-portal/src/components/logistics/VehicleForm.tsx:1` | Create/edit vehicle form | VehicleForm |
+| `VehicleManagementPage` | `frontend/user-portal/src/pages/logistics/VehicleManagementPage.tsx:1` | Page: vehicle management. Uses logisticsService | default |
+| `VehicleTable` | `frontend/user-portal/src/components/logistics/VehicleTable.tsx:1` | Paginated vehicle table. Uses logisticsService helpers | VehicleTable |
+| `VendorSubLedgerPage` | `frontend/user-portal/src/pages/finance/VendorSubLedgerPage.tsx:1` | Page: vendor sub-ledger report | default |
+| `VendorsPage` | `frontend/user-portal/src/pages/purchasing/VendorsPage.tsx:1` | Page: vendors list/editor. Uses purchasingApi | default |
+| `VirtualBlockItem` | `frontend/user-portal/src/components/farm/VirtualBlockItem.tsx:1` | Virtual block list item | VirtualBlockItem |
+| `VirtualBlocksView` | `frontend/user-portal/src/components/farm/VirtualBlocksView.tsx:1` | Virtual blocks view container | VirtualBlocksView |
+| `VisaTab` | `frontend/user-portal/src/components/hr/VisaTab.tsx:1` | Employee detail Visa tab. Uses hrService | VisaTab |
+| `VoiceControls` | `frontend/user-portal/src/components/ai/VoiceControls.tsx:1` | Voice input controls (record/stop) for the AI chat surface | VoiceControls |
+| `WasteInventoryList` | `frontend/user-portal/src/pages/inventory/WasteInventoryList.tsx:1` | Page: waste inventory list. Uses api client | default |
 
-## Custom Hooks (18)
+## Custom Hooks (54)
 
 | Hook | File | Description |
 |------|------|-------------|
-| `useAIAnalytics` | `frontend/user-portal/src/hooks/farm/useAIAnalytics.ts:1` | Sends AI analytics queries to /v1/ai/chat via apiClient. Manages conversation history | useAIAnalytics |
-| `useBlockActions` | `frontend/user-portal/src/hooks/farm/useBlockActions.ts:1` | Quick transition and harvest actions via apiClient. PATCH quick-transition, POST quick-harvest | useBlockActions |
-| `useBlockAnalytics` | `frontend/user-portal/src/hooks/farm/useBlockAnalytics.ts:1` | Fetches block analytics from /v1/farm/farms/{farmId}/blocks/{blockId}/analytics via apiClient | useBlockAnalytics |
-| `useDashboard` | `frontend/user-portal/src/hooks/queries/useDashboard.ts:1` | React Query hooks for dashboard data. Uses dashboardDataService and queryKeys | useDashboardSummary, useFarmStats, useSalesStats, useOrdersByStatus, useBlocksBy |
-| `useDashboardConfig` | `frontend/user-portal/src/hooks/farm/useDashboardConfig.ts:1` | LocalStorage-persisted dashboard color/icon/layout configuration. No API calls | useDashboardConfig, DashboardConfig |
-| `useDashboardData` | `frontend/user-portal/src/hooks/farm/useDashboardData.ts:1` | Fetches dashboard data from /v1/farm/dashboard/farms/{farmId} via apiClient with auto-refresh | useDashboardData |
-| `useDashboardFilters` | `frontend/user-portal/src/hooks/farm/useDashboardFilters.ts:130` | Client-side filtering/sorting for DashboardBlock[]. Supports state, search, performance, delay, alerts, farming year filters with sessionStorage persistence | useDashboardFilters, SortOption, SortDirection, FilterState, UseDashboardFilters |
-| `useFarmAIChat` | `frontend/user-portal/src/hooks/farm/useFarmAIChat.ts:26` | Manages Farm AI chat state, message sending via sendFarmAIChat/confirmFarmAIAction from farmApi | useFarmAIChat |
-| `useFarmAnalytics` | `frontend/user-portal/src/hooks/farm/useFarmAnalytics.ts:1` | Fetches farm analytics from /v1/farm/farms/{farmId}/analytics via apiClient | useFarmAnalytics |
-| `useFarmingYears` | `frontend/user-portal/src/hooks/queries/useFarmingYears.ts:1` | React Query hooks for farming year configuration. Uses farmApi and queryKeys | useAvailableFarmingYears, useCurrentFarmingYear, useFarmingYearsList, useFarming |
-| `useFarms` | `frontend/user-portal/src/hooks/queries/useFarms.ts:1` | React Query hooks for farm CRUD. Uses farmApi service and queryKeys config | useFarms, useFarm, useFarmSummary, useFarmBlocks, useFarmHarvests, useCreateFarm |
-| `useGlobalAnalytics` | `frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts:1` | Fetches global farm analytics from /v1/farm/farms/analytics/global via apiClient | useGlobalAnalytics |
-| `useMFA` | `frontend/user-portal/src/hooks/queries/useMFA.ts:1` | React Query hooks for MFA setup/enable/status. Uses apiClient with sessionStorage caching | useMFASetup, useEnableMFA, useMFAStatus, getCachedVerifyState |
-| `useMapDrawing` | `frontend/user-portal/src/hooks/map/useMapDrawing.ts:1` | Polygon drawing state management with turf.js area calculations for map boundary editing | useMapDrawing |
-| `usePageVisibility` | `frontend/user-portal/src/hooks/usePageVisibility.ts:1` | Page Visibility API hooks for detecting tab focus and mobile device | usePageVisibility, useIsMobile, useIsPageVisible |
-| `useSales` | `frontend/user-portal/src/hooks/queries/useSales.ts:1` | React Query hooks for sales operations. Uses salesApi and queryKeys | useSalesDashboard, useSalesOrders, useSalesOrder, useInventory, useAvailableInve |
-| `useUnsavedChanges` | `frontend/user-portal/src/hooks/useUnsavedChanges.ts:1` | beforeunload handler and UnsavedChangesContext integration for form dirty state tracking | useUnsavedChanges |
-| `useWeatherData` | `frontend/user-portal/src/hooks/farm/useWeatherData.ts:1` | Fetches weather data via weatherApi.getAgriData with auto-refresh | useWeatherData, useHasWeatherCapability |
+| `useAIAssistant` | `frontend/user-portal/src/hooks/queries/useAIAssistant.ts:1` | Wires Zustand AI store + auth store + aiAssistantApi SSE streaming + conversation list/delete. | useAIAssistant, AI_ASSISTANT_QUERY_KEYS |
+| `useAIHub` | `frontend/user-portal/src/hooks/ai/useAIHub.ts:1` | AI Hub per-section conversational state + pending-action confirmation flow. | useAIHub |
+| `useAPInvoices` | `frontend/user-portal/src/hooks/queries/useAPInvoices.ts:1` | AP Invoice list/detail + mutations (create-from-GR, submit, approve, reject, delete). Approve/reject also invalidate the shared purchasing approvals.pending() key. | useAPInvoices, useAPInvoice, usePostedGRsForAP, useCreateAPFromGR, useUpdateAPIn |
+| `useAdminUsers` | `frontend/user-portal/src/hooks/queries/useAdminUsers.ts:1` | T-064: fetches GET /v1/users?perPage=100 and exposes a userId to displayName Map for AuditHistoryModal. Gated by admin role. | useAdminUsers, adminUsersQueryKeys, UserDisplayMap |
+| `useApprovalRules` | `frontend/user-portal/src/hooks/queries/useApprovalRules.ts:1` | Approval-rule CRUD + dry-run resolver hook. | useApprovalRules, useResolveApprovalRule, useCreateApprovalRule, useUpdateApprov |
+| `useAttachments` | `frontend/user-portal/src/hooks/queries/useAttachments.ts:1` | List + upload + delete attachments for any PR/PO/GR/AP/PAYMENT doc. | useAttachments, useUploadAttachment, useDeleteAttachment, attachmentsQueryKeys |
+| `useAuditLog` | `frontend/user-portal/src/hooks/queries/useAuditLog.ts:1` | Paginated audit log listing. | useAuditLog, auditLogKeys |
+| `useBlockActions` | `frontend/user-portal/src/hooks/farm/useBlockActions.ts:1` | Imperative block-action wrapper (state transitions + helpers). | useBlockActions |
+| `useBlockAnalytics` | `frontend/user-portal/src/hooks/farm/useBlockAnalytics.ts:1` | Block-level analytics for a given time period. | useBlockAnalytics |
+| `useBlockViewMode` | `frontend/user-portal/src/hooks/farm/useBlockViewMode.ts:1` | Local 'physical' | 'virtual' block view-mode toggle (no network). | useBlockViewMode |
+| `useCapabilities` | `frontend/user-portal/src/hooks/useCapabilities.ts:1` | Tenant capabilities query (drives Wave-0 finance module toggle + nav gating). | useCapabilities, useFinanceEnabled, useFinanceUnreachable, CAPABILITIES_QUERY_KE |
+| `useContamination` | `frontend/user-portal/src/hooks/mushroom/useContamination.ts:1` | Mushroom-room contamination list + report + resolve. | useRoomContaminations, useReportContamination, useResolveContamination |
+| `useCostCenters` | `frontend/user-portal/src/hooks/queries/useCostCenters.ts:1` | Org cost-center list. | useCostCenters |
+| `useDashboard` | `frontend/user-portal/src/hooks/queries/useDashboard.ts:1` | Dashboard summary slices: farm stats, sales stats, orders by status, blocks by farm. | useDashboardSummary, useFarmStats, useSalesStats, useOrdersByStatus, useBlocksBy |
+| `useDashboardConfig` | `frontend/user-portal/src/hooks/farm/useDashboardConfig.ts:1` | Persisted farm-dashboard config (localStorage). | useDashboardConfig |
+| `useDashboardData` | `frontend/user-portal/src/hooks/farm/useDashboardData.ts:1` | Imperative farm-dashboard data loader (legacy non-RQ). | useDashboardData |
+| `useDashboardFilters` | `frontend/user-portal/src/hooks/farm/useDashboardFilters.ts:1` | Client-side filter/sort state for the farm dashboard block grid. | useDashboardFilters |
+| `useFacilityData` | `frontend/user-portal/src/hooks/mushroom/useFacilityData.ts:1` | Mushroom-facility CRUD. | useFacilities, useFacility, useCreateFacility, useUpdateFacility |
+| `useFarmAIChat` | `frontend/user-portal/src/hooks/farm/useFarmAIChat.ts:1` | Block-scoped AI chat + pending-action confirmation. | useFarmAIChat |
+| `useFarmAnalytics` | `frontend/user-portal/src/hooks/farm/useFarmAnalytics.ts:1` | Farm-level analytics across blocks. | useFarmAnalytics |
+| `useFarmingYears` | `frontend/user-portal/src/hooks/queries/useFarmingYears.ts:1` | Available farming-year lookups for filters and pickers. | useAvailableFarmingYears, useCurrentFarmingYear, useFarmingYearsList, useFarming |
+| `useFarms` | `frontend/user-portal/src/hooks/queries/useFarms.ts:1` | Farm list/detail/summary/blocks/harvests + CRUD mutations. | useFarms, useFarm, useFarmSummary, useFarmBlocks, useFarmHarvests, useCreateFarm |
+| `useFinanceAccounts` | `frontend/user-portal/src/hooks/queries/useFinanceAccounts.ts:1` | GL account list/detail + CRUD + cash-flow-category updater. | useFinanceAccounts, useFinanceAccount, useCreateFinanceAccount, useUpdateFinance |
+| `useFinanceCompanies` | `frontend/user-portal/src/hooks/queries/useFinanceCompanies.ts:1` | Finance companies list + create. | useFinanceCompanies, useCreateCompany |
+| `useFinancePnl` | `frontend/user-portal/src/hooks/useFinancePnl.ts:1` | Aggregated farm-P&L slices (summary / by-month / by-farm / by-crop) + AR aging + revenue sources. | useFinancePnlSummary, useFinancePnlByMonth, useFinancePnlByFarm, useFinancePnlBy |
+| `useFinanceReports` | `frontend/user-portal/src/hooks/queries/useFinanceReports.ts:1` | Finance reports: AP aging, Balance Sheet, Income Statement, Cash Flow (T-060.5 indirect), vendor sub-ledger. | useApAging, useBalanceSheet, useIncomeStatement, useCashFlow, useVendorSubLedger |
+| `useFiscalPeriods` | `frontend/user-portal/src/hooks/queries/useFiscalPeriods.ts:1` | Fiscal period CRUD + close/reopen + closing-JE preview. | useFiscalPeriods, useCreatePeriod, useClosePeriod, useReopenPeriod, useClosePeri |
+| `useGlobalAnalytics` | `frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts:1` | Global cross-farm analytics. | useGlobalAnalytics |
+| `useGoodsReceipts` | `frontend/user-portal/src/hooks/queries/useGoodsReceipts.ts:1` | GR list/detail + create-from-PO + update/post/delete mutations. | useGoodsReceipts, useGoodsReceipt, useCreateGRFromPO, useUpdateGoodsReceipt, use |
+| `useIncomingDocs` | `frontend/user-portal/src/hooks/queries/useIncomingDocs.ts:1` | Inbound PR/PO list + detail queries (cross-org incoming documents view). | useIncomingPRs, useIncomingPOs, useIncomingPRDetail, useIncomingPODetail, incomi |
+| `useItemMappings` | `frontend/user-portal/src/hooks/queries/useItemMappings.ts:1` | Purchase-item to GL-account mapping list/detail + update. | useItemMappings, useItemMapping, useUpdateItemMapping, itemMappingQueryKeys |
+| `useItemMappingsMap` | `frontend/user-portal/src/hooks/queries/useItemMappingsMap.ts:1` | Memoised itemId to PurchaseItemFinanceExt Map built on top of useItemMappings. | useItemMappingsMap |
+| `useJournalEntries` | `frontend/user-portal/src/hooks/queries/useJournalEntries.ts:1` | JE list/detail + manual create + reversal. | useJournalEntries, useJournalEntry, useCreateManualJournalEntry, useReverseJourn |
+| `useMFA` | `frontend/user-portal/src/hooks/queries/useMFA.ts:1` | MFA setup/enable/status hooks + setup-cache and verify-session helpers. | useMFASetup, useEnableMFA, useMFAStatus, useClearMFACache, clearMFASetupCache, g |
+| `useMapDrawing` | `frontend/user-portal/src/hooks/map/useMapDrawing.ts:1` | Polygon drawing state for MapLibre + Turf intersection checks. No backend. | useMapDrawing |
+| `useMultiLevelAIChat` | `frontend/user-portal/src/hooks/farm/useMultiLevelAIChat.ts:1` | Hierarchical AI-chat scope manager (global / farm / block). Imports no service directly — scope-aware caller wiring. | useMultiLevelAIChat |
+| `useMushroomDashboard` | `frontend/user-portal/src/hooks/mushroom/useMushroomDashboard.ts:1` | Mushroom dashboard + per-facility analytics. | useMushroomDashboard, useFacilityAnalytics |
+| `useMushroomHarvests` | `frontend/user-portal/src/hooks/mushroom/useMushroomHarvests.ts:1` | Mushroom harvest list + create. | useRoomHarvests, useFacilityHarvests, useCreateHarvest |
+| `useMushroomStrains` | `frontend/user-portal/src/hooks/mushroom/useMushroomStrains.ts:1` | Mushroom strain CRUD. | useMushroomStrains, useMushroomStrain, useCreateStrain, useUpdateStrain |
+| `useOrganizations` | `frontend/user-portal/src/hooks/queries/useOrganizations.ts:1` | Tenant org list + create + user-assignment mutation. | useOrganizations, useCreateOrganization, useAssignUserOrg, organizationsQueryKey |
+| `usePageVisibility` | `frontend/user-portal/src/hooks/usePageVisibility.ts:1` | Page-visibility callbacks + isMobile + isPageVisible utility hooks (no network). | usePageVisibility, useIsMobile, useIsPageVisible |
+| `usePayments` | `frontend/user-portal/src/hooks/queries/usePayments.ts:1` | AP payment list/detail + create (with JE summary). | usePayments, usePayment, useCreatePayment, paymentsQueryKeys |
+| `usePostingSetup` | `frontend/user-portal/src/hooks/queries/usePostingSetup.ts:1` | Per-company posting setup get + upsert. | usePostingSetup, useUpsertPostingSetup, postingSetupQueryKeys |
+| `usePurchasing` | `frontend/user-portal/src/hooks/queries/usePurchasing.ts:1` | Mega-hook covering vendors, items, payment terms, PR/PO CRUD + lifecycle transitions + approvals inbox/history. The canonical purchasing surface. | useVendors, useVendor, useCreateVendor, useUpdateVendor, useDeleteVendor, usePur |
+| `useRoomData` | `frontend/user-portal/src/hooks/mushroom/useRoomData.ts:1` | Mushroom room CRUD + phase advancement. | useFacilityRooms, useRoom, useCreateRoom, useUpdateRoom, useAdvancePhase |
+| `useRoomEnvironment` | `frontend/user-portal/src/hooks/mushroom/useRoomEnvironment.ts:1` | Mushroom room environment readings (history + latest + log). | useRoomEnvironmentHistory, useLatestEnvironmentReading, useLogEnvironmentReading |
+| `useSales` | `frontend/user-portal/src/hooks/queries/useSales.ts:1` | Sales dashboard + orders list/detail. PurchaseOrder helpers no longer here (moved to usePurchasing/purchasingApi in T-070.0). | useSalesDashboard, useSalesOrders, useSalesOrder |
+| `useSubstrateBatches` | `frontend/user-portal/src/hooks/mushroom/useSubstrateBatches.ts:1` | Mushroom substrate batch CRUD. | useFacilitySubstrates, useSubstrateBatch, useCreateSubstrate, useUpdateSubstrate |
+| `useTaxCodes` | `frontend/user-portal/src/hooks/queries/useTaxCodes.ts:1` | Tax-code list with hard-coded fallback when finance disabled. | useTaxCodes |
+| `useTools` | `frontend/user-portal/src/hooks/queries/useTools.ts:1` | Fertilizer chemicals + prices + cost calculator + saved-list CRUD hooks. | useChemicals, useCreateChemical, useUpdateChemical, useArchiveChemical, useDisco |
+| `useTrialBalance` | `frontend/user-portal/src/hooks/queries/useTrialBalance.ts:1` | Trial balance report + open-periods picker. | useTrialBalance, useFinancePeriods, trialBalanceQueryKeys |
+| `useUnsavedChanges` | `frontend/user-portal/src/hooks/useUnsavedChanges.ts:1` | Subscribes to UnsavedChangesContext and warns on navigation/unload when isDirty. | useUnsavedChanges |
+| `useVoice` | `frontend/user-portal/src/hooks/ai/useVoice.ts:1` | MediaRecorder voice-input + TTS playback wrapper. | useVoice |
+| `useWeatherData` | `frontend/user-portal/src/hooks/farm/useWeatherData.ts:1` | Current weather + agri-data with capability gating. | useWeatherData, useHasWeatherCapability |
 
-## Zustand Stores (3)
+## Zustand Stores (7)
 
 | Store | File | Description |
 |-------|------|-------------|
-| `useAuthStore` | `frontend/user-portal/src/stores/auth.store.ts:1` | Zustand store with persist: user, isAuthenticated, isLoading, mfaRequired. Actions: login, register, logout, loadUser, verifyMfa. Uses authService | useAuthStore |
-| `useDashboardStore` | `frontend/user-portal/src/stores/dashboard.store.ts:1` | Zustand store with persist: widgets, widgetData, layout. Uses dashboardDataService and queryClient | useDashboardStore, waitForHydration, WIDGET_CATALOG |
-| `useToastStore` | `frontend/user-portal/src/stores/toast.store.ts:1` | Zustand toast notification store with convenience functions for success, error, warning, info toasts | useToastStore, showToast, showErrorToast, showSuccessToast, showWarningToast, sh |
+| `useAIAssistantStore` | `frontend/user-portal/src/stores/aiAssistant.store.ts:1` | Zustand store for AI assistant panel: messages, conversations, streaming state, draft, panel open/closed. | useAIAssistantStore, genId, ChatMessage, ConversationSummary, ToolCallEntry, Mes |
+| `useAuthStore` | `frontend/user-portal/src/stores/auth.store.ts:1` | Persisted Zustand auth store: user, isAuthenticated, isLoading, mfaRequired. Actions: login/register/logout/loadUser/verifyMfa. Resets division store on logout. | useAuthStore |
+| `useDashboardStore` | `frontend/user-portal/src/stores/dashboard.store.ts:1` | Persisted dashboard widget layout + catalog + react-grid-layout state. | useDashboardStore, WIDGET_CATALOG, waitForHydration |
+| `useDivisionStore` | `frontend/user-portal/src/stores/division.store.ts:1` | Persisted current-division selector + division list loader. | useDivisionStore |
+| `useFarmingYearStore` | `frontend/user-portal/src/stores/farmingYear.store.ts:1` | Persisted current-farming-year selector for cross-page filtering. | useFarmingYearStore |
+| `useThemeStore` | `frontend/user-portal/src/stores/theme.store.ts:1` | Persisted light/dark theme toggle. | useThemeStore |
+| `useToastStore` | `frontend/user-portal/src/stores/toast.store.ts:1` | Global toast notification store + helper triggers used by mutations. | useToastStore, showToast, showErrorToast, showSuccessToast, showWarningToast, sh |
 
-## TypeScript Types (22)
+## TypeScript Types (23)
 
 | Type | File | Description |
 |------|------|-------------|
-| `HarvestEntry` | `frontend/user-portal/src/types/tasks.ts:81` | Single harvest entry record. | HarvestEntry |
-| `HarvestGrade` | `frontend/user-portal/src/types/tasks.ts:23` | Grades A/B/C/D/Waste. | HarvestGrade |
-| `HarvestSummary` | `frontend/user-portal/src/types/tasks.ts:95` | Aggregated harvest summary (totals, grade breakdown, first/last entry). | HarvestSummary |
-| `PaginatedTasksResponse` | `frontend/user-portal/src/types/tasks.ts:183` | Paginated list response — items is TaskWithDetails[] so list consumers get enriched data automatically. | PaginatedTasksResponse |
-| `Task` | `frontend/user-portal/src/types/tasks.ts:29` | Core Task interface matching backend FarmTask. Includes metadata (plantingId, targetCrop, targetCropName, plantCount, expectedYieldKg) and triggerStateChange for Phase 2 transitions. | Task |
-| `TaskStatus` | `frontend/user-portal/src/types/tasks.ts:21` | String-literal union for task status. | TaskStatus |
-| `TaskType` | `frontend/user-portal/src/types/tasks.ts:12` | String-literal union mirroring backend TaskType enum. | TaskType |
-| `TaskWithDetails` | `frontend/user-portal/src/types/tasks.ts:63` | v1.11.0 extension: Task + farmName/farmCode/blockCode/blockName, plus targetCrop/targetCropName/actualPlantCount/expectedYieldKg joined by the backend _enrich_tasks_with_block_farm helper so harvest modals render context without follow-up fetches. | TaskWithDetails |
-| `alert types` | `frontend/user-portal/src/types/alerts.ts:1` | Alert type definitions: severity, status, type enums and request/response interfaces | AlertSeverity, AlertStatus, AlertType, Alert, CreateAlertRequest, ResolveAlertRe |
-| `analytics types` | `frontend/user-portal/src/types/analytics.ts:1` | Block analytics and AI analytics types: yield, timeline, task, performance, alert analytics and chat interfaces | BlockInfo, YieldAnalytics, TimelineAnalytics, TaskAnalytics, PerformanceMetrics, |
-| `crm types` | `frontend/user-portal/src/types/crm.ts:1` | CRM type definitions: customer type/status enums, customer and address interfaces | CustomerType, CustomerStatus, Customer, CustomerAddress |
-| `farm types` | `frontend/user-portal/src/types/farm.ts:1` | Core farm type definitions: Farm, Block, PlantData, DashboardBlock, enums, constants for block states/colors | BlockState, PlantingStatus, GeoJSONPolygon, FarmBoundary, Farm, Block, PlantData |
-| `farm-analytics types` | `frontend/user-portal/src/types/farm-analytics.ts:1` | Farm-level analytics types: aggregated metrics, state breakdown, block comparison, historical trends | TimePeriod, AggregatedMetrics, StateBreakdown, BlockComparisonItem, HistoricalTr |
-| `farmAI types` | `frontend/user-portal/src/types/farmAI.ts:1` | Farm AI chat types: chat messages, pending actions, growth stage info, confirm action request/response | ChatMessage, FarmAIChatRequest, PendingAction, GrowthStageInfo, FarmAIChatRespon |
-| `global-analytics types` | `frontend/user-portal/src/types/global-analytics.ts:1` | Global analytics types: system-wide aggregated metrics, farm summaries, performance insights | TimePeriod, GlobalAggregatedMetrics, GlobalStateBreakdown, FarmSummary, GlobalAn |
-| `hr types` | `frontend/user-portal/src/types/hr.ts:1` | HR type definitions: employee status enum, employee and contract type interfaces | EmployeeStatus, Employee, ContractType |
-| `inventory types` | `frontend/user-portal/src/types/inventory.ts:1` | Inventory type definitions: harvest, input, asset inventory interfaces with category enums | InventoryType, InputCategory, AssetCategory, AssetStatus, QualityGrade, HarvestI |
-| `logistics types` | `frontend/user-portal/src/types/logistics.ts:1` | Logistics type definitions: vehicle type/status enums and vehicle interface | VehicleType, VehicleStatus, Vehicle |
-| `marketing types` | `frontend/user-portal/src/types/marketing.ts:1` | Marketing type definitions: campaign status enum, campaign and metrics interfaces | CampaignStatus, MarketingCampaign, CampaignMetrics |
-| `returns types` | `frontend/user-portal/src/types/returns.ts:1` | Re-exports return-related types from sales.ts | re-exports from sales.ts |
-| `sales types` | `frontend/user-portal/src/types/sales.ts:1` | Sales type definitions: order status/payment status enums, sales order and order item interfaces | OrderStatus, PaymentStatus, SalesOrder, OrderItem |
-| `task types` | `frontend/user-portal/src/types/tasks.ts:1` | Task type definitions: task type/status enums, harvest grade, task and harvest entry interfaces | TaskType, TaskStatus, HarvestGrade, Task, TaskWithDetails, CreateTaskRequest, Ha |
+| `aiDashboard types` | `frontend/user-portal/src/types/aiDashboard.ts:1` | AI Dashboard data types: farm census, yield assessments, growth timelines, lab analysis, equipment health, sense hub alerts, automation audits, AI summaries, dashboard reports. | FarmCensus, YieldFarmEntry, YieldAssessment, GrowthTimeline, SenseHubAlerts, Equ |
+| `aiHub types` | `frontend/user-portal/src/types/aiHub.ts:1` | AI Hub chat types: sections (control/monitor/report/advise), chat request/response, history items. Re-exports PendingAction/ConfirmActionRequest/ConfirmActionResponse from farmAI. | AIHubSection, AIHubChatRequest, AIHubChatResponse, AIHubHistoryItem, PendingActi |
+| `alerts types` | `frontend/user-portal/src/types/alerts.ts:1` | Alert type definitions: severity, status, type enums, Alert interface, request/response interfaces, paginated lists, severity/status config maps. | AlertSeverity, AlertStatus, AlertType, Alert, CreateAlertRequest, ResolveAlertRe |
+| `analytics types` | `frontend/user-portal/src/types/analytics.ts:1` | Block analytics and AI analytics: block info, yield/timeline/task/performance/alert analytics, time-period options, conversation messages, AI chat request/response. | BlockInfo, YieldByQuality, YieldTrendPoint, YieldAnalytics, StateTransition, Tim |
+| `capabilities types` | `frontend/user-portal/src/types/capabilities.ts:1` | Tenant capabilities surface: finance module capability flags (financeEnabled), aggregated module capabilities, top-level Capabilities envelope returned by /capabilities endpoint. | FinanceModuleCapability, ModuleCapabilities, Capabilities |
+| `crm types` | `frontend/user-portal/src/types/crm.ts:1` | Customer relationship management types: customer type/status enums, addresses, Customer entity, create/update payloads, search params, paginated customers. | CustomerType, CustomerStatus, CustomerAddress, Customer, CustomerCreate, Custome |
+| `farm types` | `frontend/user-portal/src/types/farm.ts:1` | Core farm domain types: BlockState, PlantingStatus enums; GeoJSON polygons, FarmBoundary, BlockBoundary, FarmLocation; Farm/Block CRUD payloads and summaries; state transitions; virtual crops; alerts; harvests/quality grades; plant data (basic + enhanced); plant taxonomy enums. | BlockState, PlantingStatus, GeoJSONPolygon, FarmBoundary, BlockBoundary, FarmLoc |
+| `farm-analytics types` | `frontend/user-portal/src/types/farm-analytics.ts:1` | Farm analytics (kebab-case variant) used by newer pages: time period options, aggregated metrics, state breakdown, block comparison, yield/state transition timelines, historical trends, FarmAnalyticsData root. | TimePeriod, TimePeriodOption, TIME_PERIOD_OPTIONS, AggregatedMetrics, StateBreak |
+| `farmAI types` | `frontend/user-portal/src/types/farmAI.ts:1` | Farm-scoped AI chat types: chat messages, request/response, pending actions, growth stage info, confirm-action flow, AI scope, farm/global response variants. | ChatMessage, FarmAIChatRequest, PendingAction, GrowthStageInfo, FarmAIChatRespon |
+| `farmAnalytics types` | `frontend/user-portal/src/types/farmAnalytics.ts:1` | Farm-level analytics (camelCase variant): FarmAnalytics root, aggregated metrics, state breakdown, block comparison, historical trends, yield timeline, state transitions. | FarmAnalytics, AggregatedMetrics, StateBreakdown, StateInfo, BlockState, BlockCo |
+| `finance types` | `frontend/user-portal/src/types/finance.ts:1` | Finance P&L and AR aging types: filter params, P&L periods/breakdowns (revenue/COGS/Opex/order-counts), summary, monthly/farm/crop dimensions, AR aging buckets, revenue sources. | PnlFilterParams, PnlPeriod, PnlRevenueBreakdown, PnlCOGSBreakdown, PnlOpexBreakd |
+| `global-analytics types` | `frontend/user-portal/src/types/global-analytics.ts:1` | Cross-farm (global) analytics types: time period options, global aggregated metrics, state breakdown, farm summary, yield timeline, performance trend/insights, GlobalAnalyticsData root. | TimePeriod, TimePeriodOption, TIME_PERIOD_OPTIONS, GlobalAggregatedMetrics, Glob |
+| `hr types` | `frontend/user-portal/src/types/hr.ts:1` | HR domain types: employee status, emergency contact, Employee entity; contract type/status, Contract; visa status/Visa; insurance type/Insurance; performance reviews; CRUD payloads; search params; dashboard stats and department distribution. | EmployeeStatus, EmergencyContact, Employee, ContractType, ContractStatus, Contra |
+| `inventory types` | `frontend/user-portal/src/types/inventory.ts:1` | Inventory domain types: inventory/product/input/asset categories and statuses, quality grades, movement types, base/display units; harvest/input/asset inventory CRUD; movements; summary; pagination; farming-year config; returned inventory; unit options and label/color maps. | InventoryType, HarvestProductType, InputCategory, AssetCategory, AssetStatus, Qu |
+| `logistics types` | `frontend/user-portal/src/types/logistics.ts:1` | Logistics domain types: vehicle type/ownership/status, VehicleCapacity, Vehicle CRUD + pagination; locations and Route CRUD + pagination; shipment status/cargo, Shipment CRUD + status updates + pagination; logistics dashboard stats with farming-year context. | VehicleType, VehicleOwnership, VehicleStatus, VehicleCapacity, Vehicle, VehicleC |
+| `marketing types` | `frontend/user-portal/src/types/marketing.ts:1` | Marketing domain types: campaigns (status, metrics, CRUD, pagination); budgets (status, CRUD, pagination); channels (type, CRUD, pagination); events (type/status, CRUD, pagination); marketing dashboard stats. | CampaignStatus, CampaignMetrics, MarketingCampaign, MarketingCampaignCreate, Mar |
+| `mushroom types` | `frontend/user-portal/src/types/mushroom.ts:1` | Mushroom cultivation types: room phase, facility type/status, difficulty levels, substrate type/status, harvest quality grade, contamination type/status/severity; facilities, growing rooms, strains, substrate batches, harvests, environment readings, contamination reports; payloads for create/update/advance/resolve; dashboard and analytics data; phase/quality/difficulty color and label maps. | RoomPhase, FacilityType, FacilityStatus, MushroomDifficulty, SubstrateType, Subs |
+| `returns types` | `frontend/user-portal/src/types/returns.ts:1` | Return order convenience re-exports from sales.ts: ReturnReason, ReturnCondition, ReturnStatus enums and ReturnItem/ReturnOrder/ReturnOrderCreate/PaginatedReturns interfaces. | ReturnReason, ReturnCondition, ReturnStatus, ReturnItem, ReturnOrder, ReturnOrde |
+| `sales types` | `frontend/user-portal/src/types/sales.ts:1` | Sales domain types: order/payment status, OrderItemAllocation, OrderItem, ShippingAddress, SalesOrder + CRUD payloads, search/pagination, sales dashboard stats (with purchase-order counters), return orders (reason/condition/status, ReturnItem/ReturnOrder, CRUD, pagination), waste inventory (source/disposal enums, CRUD, summary, pagination), farming-year context. NOTE: PurchaseOrder/PurchaseOrderItem interfaces were removed in T-070.0 and migrated to the purchasing service; SalesDashboardStats still exposes PO counters. | OrderStatus, PaymentStatus, OrderItemAllocation, OrderItem, ShippingAddress, Sal |
+| `shared types barrel` | `frontend/shared/src/types/index.ts:1` | Barrel re-export of shared widget types so consumers can import from @a64/shared/types. | CCMWidget, WidgetType, WidgetSize, WidgetDataSource, ModuleDataSource, SystemDat |
+| `shared widget types` | `frontend/shared/src/types/widget.types.ts:1` | Cross-portal dashboard widget contracts (CCM): CCMWidget definition, widget type/size enums, widget data sources (module/system/external API), widget props, stat/chart widget data. | CCMWidget, WidgetType, WidgetSize, WidgetDataSource, ModuleDataSource, SystemDat |
+| `task types` | `frontend/user-portal/src/types/tasks.ts:1` | Task domain types: TaskType, TaskStatus, HarvestGrade enums; Task entity with details; harvest entries and summary; CRUD/complete/cancel/end-harvest requests; pagination; list params (task/farm/block); filters; counts; form data; color/label/icon maps. | TaskType, TaskStatus, HarvestGrade, Task, TaskWithDetails, HarvestEntry, Harvest |
+| `tools types` | `frontend/user-portal/src/types/tools.ts:1` | Fertilizer calculator and chemical tooling types: chemical unit, FertilizerChemical CRUD, dependents error, price source/override/inventory, price entries, calculate request/response, ingredient lines and crop calculation results, import responses, saved lists CRUD and pagination, crop options/rows, crop input mode. | ChemicalUnit, FertilizerChemical, CreateChemicalRequest, UpdateChemicalRequest,  |
 
 ## Component Render Tree (sample)
 
 | Parent | Renders | Child |
 |--------|---------|-------|
-| `file::App` | renders | `component::ProtectedRoute` |
-| `file::App` | renders | `component::MFARouteGuards` |
-| `file::App` | renders | `component::MainLayout` |
-| `file::App` | renders | `component::ToastContainer` |
-| `file::App` | renders | `component::UnsavedChangesDialog` |
 | `file::App` | renders | `page::FarmManager` |
 | `file::App` | renders | `page::Dashboard` |
 | `file::App` | renders | `page::Login` |
 | `file::App` | renders | `page::AIAnalytics` |
-| `page::FarmManager` | renders | `component::FarmDashboard` |
 | `page::FarmManager` | renders | `page::FarmDashboardPage` |
-| `page::FarmManager` | renders | `component::FarmList` |
-| `page::FarmManager` | renders | `component::FarmDetail` |
-| `page::FarmManager` | renders | `component::BlockDetail` |
 | `page::FarmManager` | renders | `page::PlantDataLibrary` |
-| `page::FarmDashboardPage` | renders | `component::FarmSelector` |
-| `page::FarmDashboardPage` | renders | `component::DashboardBlockGrid` |
-| `page::FarmDashboardPage` | renders | `component::DashboardFilters` |
-| `page::FarmDashboardPage` | renders | `component::FarmAnalyticsModal` |
+| `frontend.App` | renders | `frontend.pages.crm.CustomerDetailPage` |
+| `frontend.App` | renders | `frontend.pages.crm.CRMPage` |
+| `file::App` | renders | `component::ProtectedRoute` |
+| `file::App` | renders | `component::FinanceGate` |
+| `file::App` | renders | `component::MFARouteGuards` |
+| `file::App` | renders | `component::MainLayout` |
+| `component::AIAssistantPanel` | renders | `component::MessageList` |
+| `component::AIAssistantPanel` | renders | `component::InputBox` |
+| `component::AIAssistantPanel` | renders | `component::ConversationList` |
+| `component::MessageList` | renders | `component::MessageBubble` |
+| `component::MessageBubble` | renders | `component::ToolCallCard` |
+| `component::AIHubPage` | renders | `component::AIHubTabBar` |
+| `component::AIHubPage` | renders | `component::AIHubChat` |
 | `component::FarmDashboard` | renders | `component::GlobalFarmAnalyticsModal` |
 | `component::FarmList` | renders | `component::FarmCard` |
 | `component::FarmList` | renders | `component::CreateFarmModal` |
+| `component::FarmList` | renders | `component::EditFarmModal` |
 | `component::FarmList` | renders | `component::FarmAnalyticsModal` |
-| `component::FarmDetail` | renders | `component::BlockGrid` |
+| `component::FarmDetail` | renders | `component::FarmHistoryTab` |
+| `component::FarmDetail` | renders | `component::VirtualBlocksView` |
 | `component::FarmDetail` | renders | `component::PhysicalBlockGrid` |
-| `component::FarmDetail` | renders | `component::FarmMapView` |
-| `component::FarmDetail` | renders | `component::CreateBlockModal` |
 | `component::BlockDetail` | renders | `component::BlockAlertsTab` |
-| `component::BlockDetail` | renders | `component::BlockHarvestsTab` |
 | `component::BlockDetail` | renders | `component::BlockAutomationTab` |
+| `component::BlockDetail` | renders | `component::BlockHarvestsTab` |
 | `component::BlockDetail` | renders | `component::BlockArchivesTab` |
-| `component::BlockGrid` | renders | `component::BlockCard` |
 | `component::BlockCard` | renders | `component::PlantAssignmentModal` |
 | `component::BlockCard` | renders | `component::BlockAnalyticsModal` |
-| `component::DashboardBlockGrid` | renders | `component::CompactBlockCard` |
-| `component::CompactBlockCard` | renders | `component::BlockDetailsModal` |
-| `component::CompactBlockCard` | renders | `component::BlockAnalyticsModal` |
-| `page::AIAnalytics` | renders | `component::AIAnalyticsChat` |
-| `page::PlantDataLibrary` | renders | `component::PlantDataCard` |
-| `page::Dashboard` | renders | `component::AddWidgetModal` |
-| `component::PhysicalBlockGrid` | renders | `component::PhysicalBlockCard` |
-| `frontend.App` | renders | `frontend.pages.crm.CustomerDetailPage` |
-| `frontend.App` | renders | `frontend.pages.crm.CRMPage` |
-
----
-
-## Wave 0 Addendum — 2026-05-24 (T-059)
-
-### New components
-
-| Type | Name | File |
-|------|------|------|
-| component | `FinanceGate` | `frontend/user-portal/src/components/finance/FinanceGate.tsx` — wraps every `/finance/*` route; `<Navigate to="/dashboard">` when `modules.finance.enabled=false`. |
-| component | `FinanceUnreachableBanner` | `frontend/user-portal/src/components/finance/FinanceUnreachableBanner.tsx` — amber banner shown only when `enabled && !reachable`; mounted at top of all four purchasing form pages. |
-| component | `ModulesSettingsCard` | `frontend/user-portal/src/components/settings/ModulesSettingsCard.tsx` — Tenant Settings → Modules toggle. super_admin only, confirmation modal on disable, modal does NOT close on overlay click. |
-
-### New hook + derivatives
-
-| Type | Name | File |
-|------|------|------|
-| hook | `useCapabilities` | `frontend/user-portal/src/hooks/useCapabilities.ts` — TanStack Query, key `['system','capabilities']`, 60s staleTime, placeholderData preserves prior value through refetch. |
-| hook | `useFinanceEnabled` | same file — sugar over `useCapabilities` for the on/off bit. |
-| hook | `useFinanceUnreachable` | same file — true only when `enabled && !reachable`. |
-
-### New service + types
-
-| Type | Name | File |
-|------|------|------|
-| function | `getCapabilities` | `frontend/user-portal/src/services/systemService.ts` — silently degrades to safe default on 404 so stale backends don't toast. |
-| function | `updateOrganizationModules` | same file — PATCH `/v1/organizations/{orgId}/modules`. |
-| type | `Capabilities` | `frontend/user-portal/src/types/capabilities.ts` |
-| type | `ModuleCapabilities` | same file |
-| type | `FinanceModuleCapability` | same file |
-
-### Modified pages / layout
-
-| File | Wave 0 change |
-|------|---------------|
-| `App.tsx` | All 11 `/finance/*` routes wrapped in `<FinanceGate>`. |
-| `components/layout/MainLayout.tsx` | Finance sidebar group hidden when `useFinanceEnabled()===false`. |
-| `pages/purchasing/PurchaseRequestFormPage.tsx` | taxCode + costCenterId columns swap `<Select>` for `<Input>` when off; banner at top. |
-| `pages/purchasing/PurchaseOrderFormPage.tsx` | Same. |
-| `pages/purchasing/GoodsReceiptFormPage.tsx` | Cost Center column hidden when off; banner at top. |
-| `pages/purchasing/APInvoiceFormPage.tsx` | taxCode degrades to free-text; Cost Center column hidden; banner at top. |
-| `pages/settings/Settings.tsx` | Mounts `<ModulesSettingsCard />` (self-gates on super_admin). |
-
-### Wave 0 render edges
-
-| Source | Edge | Target |
-|--------|------|--------|
-| `frontend.App` | gates | `page::ChartOfAccountsPage` (via FinanceGate) |
-| `frontend.App` | gates | `page::JournalEntriesPage` (via FinanceGate) |
-| `frontend.App` | gates | `page::TrialBalancePage` (+ 8 other finance pages) |
-| `component::MainLayout` | conditionally_renders | `FINANCE_NAV_GROUP` (based on `useFinanceEnabled`) |
-| `page::Settings` | renders | `component::ModulesSettingsCard` |
-| `component::ModulesSettingsCard` | calls | `function::updateOrganizationModules` |
-| `component::FinanceUnreachableBanner` | reads | `hook::useFinanceUnreachable` |
+| `component::FarmMapView` | renders | `component::MapContainer` |
+| `component::FarmMapView` | renders | `component::DrawingControls` |
+| `component::MFASetupPage` | renders | `component::BackupCodesModal` |
+| `component::FarmManagerPage` | renders | `component::FarmList` |
+| `component::FarmManagerPage` | renders | `component::FarmDetail` |
+| `component::FarmManagerPage` | renders | `component::BlockDetail` |
+| `component::BalanceSheetPage` | renders | `component::FinanceReportPage` |
+| `component::IncomeStatementPage` | renders | `component::FinanceReportPage` |
+| `component::CashFlowStatementPage` | renders | `component::FinanceReportPage` |
+| `component::ItemMappingPage` | renders | `component::AccountCombobox` |
+| `component::ManualJournalEntryPage` | renders | `component::AccountCombobox` |
+| `component::ManualJournalEntryPage` | renders | `component::CostCenterCombobox` |
+| `component::PeriodsPage` | renders | `component::AuditHistoryModal` |
+| `component::PostingSetupPage` | renders | `component::AccountCombobox` |
+| `component::RecordPaymentPage` | renders | `component::AccountCombobox` |
+| `component::EmployeeDetailPage` | renders | `component::ContractTab` |
+| `component::EmployeeDetailPage` | renders | `component::InsuranceTab` |
+| `component::EmployeeDetailPage` | renders | `component::PerformanceTab` |
+| `component::EmployeeDetailPage` | renders | `component::VisaTab` |
+| `component::PnLPage` | renders | `component::PnlKpiCards` |
+| `component::PnLPage` | renders | `component::PnlFiltersBar` |
+| `component::PnLPage` | renders | `component::PnlStatementTable` |
+| `component::PnLPage` | renders | `component::PnlBreakdownCharts` |
+| `component::PnLPage` | renders | `component::PnlRevenueTrendChart` |
+| `component::PnLPage` | renders | `component::PnlRevenueConfidence` |
+| `component::PnLPage` | renders | `component::PnlArAging` |
+| `component::APInvoiceFormPage` | renders | `component::FinanceUnreachableBanner` |
+| `component::GoodsReceiptFormPage` | renders | `component::FinanceUnreachableBanner` |
+| `component::PurchaseOrderFormPage` | renders | `component::FinanceUnreachableBanner` |
+| `component::PurchaseRequestFormPage` | renders | `component::FinanceUnreachableBanner` |
+| `component::SalesDashboardPage` | renders | `component::SalesActionTiles` |
+| `component::SalesOrdersPage` | renders | `component::SalesActionTiles` |
+| `component::StockPage` | renders | `component::SalesActionTiles` |
+| `component::SettingsPage` | renders | `component::ModulesSettingsCard` |
+| `component::SettingsPage` | renders | `component::TelegramBotSettings` |

@@ -1,6 +1,6 @@
 # Database Map
 
-> Generated: 2026-05-18 11:32 UTC  
+> Generated: 2026-05-30 06:35 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=db_model, layer=model)
 
 ## Overview
@@ -10,7 +10,7 @@ This map covers all collections, document schemas, and inter-collection relation
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md)
 
-## Collections by Module (64 models)
+## Collections by Module (50 models)
 
 ### Module: `ai_analytics`
 
@@ -18,24 +18,6 @@ This map covers all collections, document schemas, and inter-collection relation
 |------------------|------|-------------|
 | `ChatQueryResponse` | `src/modules/ai_analytics/models/chat.py:110` | AI chat request/response models with query info, visualization suggestions, cost info. | ChatQueryRequest, ChatQueryResponse, SchemaResponse |
 | `ai_query_log` | `src/services/database.py` | MongoDB collection: ai_query_log - tracks AI query usage and costs (Vertex AI) |
-
-### Module: `core`
-
-| Collection/Model | File | Description |
-|------------------|------|-------------|
-| `DashboardConfig` | `src/models/dashboard.py:144` | Core dashboard widget models for configurable dashboard layouts. | ChartWidgetData, StatWidgetData, DashboardConfig, CCMWidget |
-| `ModuleConfig` | `src/models/module.py:46` | Module management models: config, status, health, audit log. | ModuleStatus, ModuleHealth, ModuleConfig, ModuleInDB |
-| `UserRole` | `src/models/user.py:15` | Core user models: role enum, registration, authentication tokens, MFA. | UserRole, UserBase, UserCreate, UserResponse, TokenPayload, UserInDB |
-| `admin_audit_log` | `src/services/database.py` | MongoDB collection: admin_audit_log - audit trail for admin actions (role changes, status updates) |
-| `installed_modules` | `src/services/database.py` | MongoDB collection: installed_modules - tracks installed platform modules |
-| `mfa_audit_log` | `src/services/database.py` | MongoDB collection: mfa_audit_log - audit trail for MFA enable/disable/verify actions |
-| `mfa_backup_codes` | `src/services/database.py` | MongoDB collection: mfa_backup_codes - stores hashed MFA backup codes |
-| `mfa_pending_tokens` | `src/services/auth_service.py` | MongoDB collection: mfa_pending_tokens - temporary tokens during MFA login flow |
-| `module_audit_log` | `src/services/database.py` | MongoDB collection: module_audit_log - audit trail for module install/uninstall operations |
-| `refresh_tokens` | `src/services/database.py` | MongoDB collection: refresh_tokens - stores JWT refresh tokens with rotation |
-| `user_mfa` | `src/services/database.py` | MongoDB collection: user_mfa - stores MFA secrets and TOTP configuration |
-| `users` | `src/services/database.py` | MongoDB collection: users - stores user accounts, auth info, MFA settings |
-| `verification_tokens` | `src/services/database.py` | MongoDB collection: verification_tokens - stores email verification and password reset tokens |
 
 ### Module: `crm`
 
@@ -133,12 +115,17 @@ This map covers all collections, document schemas, and inter-collection relation
 
 | Collection/Model | File | Description |
 |------------------|------|-------------|
-| `ReturnOrder` | `src/modules/sales/models/return_order.py:122` | Return order model with reason, condition, restocking support. | ReturnOrder, ReturnOrderCreate, ReturnReason, ReturnCondition |
-| `SalesOrder` | `src/modules/sales/models/sales_order.py:102` | Sales order model with line items, shipping address, payment status. | SalesOrder, SalesOrderCreate, SalesOrderStatus, PaymentStatus |
-| `harvest_inventory` | `src/modules/sales/services/sales/inventory_repository.py` | MongoDB collection: harvest_inventory - sales module harvest inventory with quality grades |
-| `purchase_orders` | `src/modules/sales/services/sales/purchase_order_repository.py` | MongoDB collection: purchase_orders - purchase order records from suppliers |
-| `return_orders` | `src/modules/sales/services/sales/return_service.py` | MongoDB collection: return_orders - customer return/refund order records |
-| `sales_orders` | `src/modules/sales/services/sales/order_repository.py` | MongoDB collection: sales_orders - sales order records with items and payment status |
+| `AR Credit Note models` | `src/modules/sales/models/ar_credit_notes.py:1` | Pydantic schemas for AR Credit Note + allocations (T-100.11). | ARCreditNoteCreate, ARCreditNoteUpdate, ARCreditNoteResponse, ARCreditNoteListIt |
+| `AR Invoice models` | `src/modules/sales/models/ar_invoices.py:1` | Pydantic schemas for AR Invoice document, lines, totals, transitions (T-100.9a). | ARInvoiceCreate, ARInvoiceUpdate, ARInvoiceResponse, ARInvoiceListItem, ARInvoic |
+| `Customer Receipt models` | `src/modules/sales/models/customer_receipts.py:1` | Pydantic schemas for Customer Receipt + allocation entries (T-100.10). | CustomerReceiptCreate, CustomerReceiptUpdate, CustomerReceiptResponse, CustomerR |
+| `Delivery Note models` | `src/modules/sales/models/deliveries.py:1` | Pydantic schemas for Delivery Note document and lines (T-100.8). | DeliveryCreate, DeliveryUpdate, DeliveryResponse, DeliveryListItem, DeliveryLine |
+| `Purchase Order (legacy stub)` | `src/modules/sales/models/purchase_order.py:1` | Legacy PO schemas retained for dashboard. Sales-side PO routes were removed in T-070.0; current POs are in purchasing module. | PurchaseOrder, PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderStatus, Pu |
+| `Quote models` | `src/modules/sales/models/quotes.py:1` | Pydantic schemas for Sales Quote document, lines, totals, transitions (T-100.6). | QuoteCreate, QuoteUpdate, QuoteResponse, QuoteListItem, QuoteLineCreate, QuoteLi |
+| `Return Note v2 models` | `src/modules/sales/models/returns.py:1` | Pydantic schemas for Return Note (RTN) v2 document and lines (T-100.11). | ReturnCreate, ReturnUpdate, ReturnResponse, ReturnListItem, ReturnLineCreate, Re |
+| `Return Order (legacy) models` | `src/modules/sales/models/return_order.py:1` | Legacy return-order schemas with reason/condition enums and process-return payloads. | ReturnOrder, ReturnOrderCreate, ReturnOrderUpdate, ReturnStatus, ReturnReason, R |
+| `Return Request models` | `src/modules/sales/models/return_requests.py:1` | Pydantic schemas for Return Request (RMA) document and lines (T-100.11). | ReturnRequestCreate, ReturnRequestUpdate, ReturnRequestResponse, ReturnRequestLi |
+| `Sales Order (legacy) models` | `src/modules/sales/models/sales_order.py:1` | Legacy Pydantic schemas for sales_orders collection. Status enum, allocation, delete preview, report-return flows. | SalesOrder, SalesOrderCreate, SalesOrderUpdate, SalesOrderStatus, PaymentStatus, |
+| `Sales Order v2 models` | `src/modules/sales/models/sales_orders.py:1` | Pydantic schemas for Sales Order v2 (T-100.7) including credit-check snapshot and from-quote request. | SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse, SalesOrderListItem, Sale |
 
 ## Service → Collection Access
 
@@ -147,8 +134,6 @@ This map covers all collections, document schemas, and inter-collection relation
 | `farm_manager.service.FarmAnalyticsService` | reads_from | `farm_manager.service.BlockRepository` | FarmAnalyticsService reads block data for analytics calculations. |
 | `farm_manager.service.FarmAnalyticsService` | reads_from | `farm_manager.service.HarvestRepository` | FarmAnalyticsService reads harvest data for yield analytics. |
 | `farm_manager.service.GlobalAnalyticsService` | reads_from | `farm_manager.service.FarmRepository` | GlobalAnalyticsService reads farm list to iterate across all farms. |
-| `farm_manager.service.FarmAIChatService` | reads_from | `core.config.Settings` | FarmAIChatService reads GOOGLE_CLOUD_PROJECT, VERTEX_AI_MODEL, etc. from setting |
-| `ai_analytics.service.GeminiService` | reads_from | `core.config.Settings` | GeminiService reads VERTEX_AI_MODEL and GOOGLE_CLOUD_PROJECT from settings. |
 | `FarmRepository` | reads_from | `collection_farms` | self.collection_name = 'farms' |
 | `BlockRepository` | reads_from | `collection_blocks` | db.blocks.find/insert/update |
 | `PlantDataRepository` | reads_from | `collection_plant_data` | db.plant_data.find/insert/update |
@@ -192,36 +177,9 @@ This map covers all collections, document schemas, and inter-collection relation
 | `farm_manager.service.TaskRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | TaskRepository reads/writes 'farm_tasks' collection via farm_db. |
 | `hr.service.EmployeeRepository` | stores_in | `hr.service.HRDatabaseManager` | EmployeeRepository reads/writes 'employees' collection via hr_db. |
 | `crm.service.CustomerRepository` | stores_in | `crm.service.CRMDatabaseManager` | CustomerRepository reads/writes 'customers' collection via crm_db. |
-| `sales.service.OrderRepository` | stores_in | `sales.service.SalesDatabaseManager` | OrderRepository reads/writes 'sales_orders' collection via sales_db. |
 | `logistics.service.ShipmentRepository` | stores_in | `logistics.service.LogisticsDatabaseManager` | ShipmentRepository reads/writes 'shipments' collection via logistics_db. |
-
----
-
-## Wave 0 Addendum — 2026-05-24 (T-059)
-
-### `organizations` — schema additions
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `modules` | object | `{financeEnabled: true}` | Per-tenant module toggle subdocument. |
-| `modules.financeEnabled` | bool | `true` | Hides finance UI + gates outbox writer when false. Hydrated by `OrganizationModules` Pydantic model in `src/models/organization.py`. |
-
-### New audit collection writes
-
-| Collection | Writer | When |
-|------------|--------|------|
-| `admin_audit_log` | `PATCH /api/v1/organizations/{org_id}/modules` (`src/api/v1/organizations.py`) | Each tenant module toggle. Document shape: `{action:"organization.modules.updated", targetOrganizationId, performedBy, performedByEmail, performedByRole, timestamp, details:{before, after, patch}}`. |
-
-### Per-tenant gate on `finance_outbox`
-
-`OutboxWriter.publish()` (`src/modules/finance_bridge/outbox_writer.py`)
-now consults `organizations.modules.financeEnabled` for the calling
-tenant; events are NOT inserted into `finance_outbox` when the flag
-is false. Cached lookup via Redis key
-`org:{organization_id}:financeEnabled` (60s TTL).
-
-### Migration
-
-| Script | Idempotent | Purpose |
-|--------|------------|---------|
-| `scripts/migrations/wave0_add_finance_flag.py` | yes | Sets `modules.financeEnabled=true` on every org missing the field. |
+| `sales.service.delivery_service` | stores_in | `finance_bridge.outbox_writer` | On DRAFT->OPEN transition, publishes delivery_posted event via OutboxWriter to f |
+| `sales.service.ar_invoice_service` | stores_in | `finance_bridge.outbox_writer` | On DRAFT->OPEN transition, publishes sales_invoice_posted event via OutboxWriter |
+| `sales.service.customer_receipt_service` | stores_in | `finance_bridge.outbox_writer` | On DRAFT->OPEN transition, publishes customer_payment_received event via OutboxW |
+| `sales.service.rtn_service` | stores_in | `finance_bridge.outbox_writer` | On DRAFT->OPEN transition, publishes return_posted event via OutboxWriter (DR In |
+| `sales.service.ar_credit_note_service` | stores_in | `finance_bridge.outbox_writer` | On DRAFT->OPEN transition, publishes credit_note_posted event via OutboxWriter ( |

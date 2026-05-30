@@ -1,6 +1,6 @@
 # API Map
 
-> Generated: 2026-05-18 11:32 UTC  
+> Generated: 2026-05-30 06:35 UTC  
 > Source: MongoDB `mapper_nodes` (layer=api, node_type=api_endpoint)
 
 ## Quick Reference
@@ -10,7 +10,7 @@ and their connections to frontend service calls.
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md) | [frontend-map.md](frontend-map.md)
 
-## API Endpoints (94 total)
+## API Endpoints (79 total)
 
 ### Module: `ai_analytics`
 
@@ -25,33 +25,6 @@ and their connections to frontend service calls.
 | `admin router` | `src/api/v1/admin.py:30` | Admin-only endpoints: list/get/update users, change role/status, delete user, reset MFA. | router |
 | `auth router` | `src/api/v1/auth.py:38` | Authentication endpoints: /register, /login, /logout, /refresh, /me, email verification, password reset, MFA (verify/setup/enable/disable/backup-codes). | router |
 | `users router` | `src/api/v1/users.py` | User profile management endpoints under /users. | router |
-
-### Module: `core`
-
-| Endpoint | File | Description |
-|----------|------|-------------|
-| `DELETE /api/v1/admin/users/{user_id}` | `src/api/v1/admin.py:362` | Admin: soft-delete user (sets deletedAt, retains data 90 days) |
-| `DELETE /api/v1/modules/{module_name}` | `src/api/v1/modules.py:295` | Uninstall Docker module: stop container, remove routes (super_admin only) |
-| `GET /api/health` | `src/api/health.py:18` | Health check: returns MongoDB and Redis connectivity status |
-| `GET /api/metrics` | `src/api/health.py:107` | Response time metrics (total, avg, p50/p95/p99) for API monitoring |
-| `GET /api/ready` | `src/api/health.py:76` | Readiness check: service ready if MongoDB is healthy |
-| `GET /api/v1/admin/users` | `src/api/v1/admin.py:33` | Admin: paginated user list with role/status/search filters (admin+ only) |
-| `GET /api/v1/auth/me` | `src/api/v1/auth.py:200` | Return current authenticated user profile (auth required) |
-| `GET /api/v1/dashboard/summary` | `src/api/v1/dashboard.py:56` | Aggregated counts from all modules concurrently (farms, blocks, employees, etc.) |
-| `GET /api/v1/dashboard/widgets/{widget_id}/data` | `src/api/v1/dashboard.py:226` | Fetch data for a specific dashboard widget by ID |
-| `PATCH /api/v1/admin/users/{user_id}/role` | `src/api/v1/admin.py:179` | Admin: update user role with hierarchy restrictions |
-| `POST /api/v1/auth/login` | `src/api/v1/auth.py:88` | Login user; returns TokenResponse or MFALoginResponse if MFA enabled |
-| `POST /api/v1/auth/logout` | `src/api/v1/auth.py:144` | Logout: revoke specific or all refresh tokens (auth required) |
-| `POST /api/v1/auth/mfa/verify` | `src/api/v1/auth.py:362` | Complete MFA second-factor login with TOTP code or backup code |
-| `POST /api/v1/auth/refresh` | `src/api/v1/auth.py:173` | Rotate refresh token and return new access + refresh tokens |
-| `POST /api/v1/auth/register` | `src/api/v1/auth.py:41` | Register new user, auto-login with JWT tokens, sends verification email |
-| `POST /api/v1/modules/install` | `src/api/v1/modules.py:47` | Install Docker module: validate license, pull image, create container (super_admin only) |
-| `PUT /api/v1/admin/users/{user_id}/mfa/reset` | `src/api/v1/admin.py:433` | Admin: reset MFA for locked-out user, logs to admin_audit_log |
-| `divisions router` | `src/api/v1/divisions.py:16` | Division (tenant) selection and management endpoints. | router |
-| `health router` | `src/api/health.py` | Health-check endpoints mounted at /api/health. | router |
-| `industries router` | `src/api/v1/industries.py:18` | Industry enumeration and industry-to-module lookup. | router |
-| `modules router` | `src/api/v1/modules.py:40` | Module plugin install/enable/disable endpoints. | router |
-| `organizations router` | `src/api/v1/organizations.py` | Organization (top-tenant) management endpoints. | router |
 
 ### Module: `crm`
 
@@ -150,13 +123,20 @@ and their connections to frontend service calls.
 
 | Endpoint | File | Description |
 |----------|------|-------------|
-| `CRUD /sales/inventory` | `src/modules/sales/api/v1/inventory.py:1` | Sales harvest inventory management. | router |
-| `CRUD /sales/orders` | `src/modules/sales/api/v1/orders.py:1` | Sales order CRUD with customer integration and status tracking. | router |
-| `CRUD /sales/purchase-orders` | `src/modules/sales/api/v1/purchase_orders.py:1` | Purchase order management for procurement. | router |
-| `CRUD /sales/returns` | `src/modules/sales/api/v1/returns.py:1` | Sales returns processing and restocking. | router |
-| `GET /sales/dashboard` | `src/modules/sales/api/v1/dashboard.py:1` | Sales dashboard statistics and summaries. | router |
+| `CRUD /sales (config)` | `src/modules/sales/api/v1/config.py:1` | Sales config endpoints (farming-years dropdown). Proxies farm_manager farming-year service. | router |
+| `CRUD /sales/ar-credit-notes` | `src/modules/sales/api/v1/ar_credit_notes.py:1` | T-100.11 AR Credit Note (ARC) CRUD + status transitions. Financial reversal of AR Invoice. Emits credit_note_posted to finance outbox. | router |
+| `CRUD /sales/ar-invoices` | `src/modules/sales/api/v1/ar_invoices.py:1` | T-100.9a AR Invoice (ARI) CRUD + from-delivery copy + status transitions. Emits sales_invoice_posted to finance outbox. | router |
+| `CRUD /sales/customer-receipts` | `src/modules/sales/api/v1/customer_receipts.py:1` | T-100.10 Customer Receipt (IPAY) CRUD + from-invoice flow + status transitions. Emits customer_payment_received to finance outbox. | router |
+| `CRUD /sales/dashboard` | `src/modules/sales/api/v1/dashboard.py:1` | Sales dashboard stats (legacy orders + harvest inventory). Redis-cached. | router |
+| `CRUD /sales/deliveries` | `src/modules/sales/api/v1/deliveries.py:1` | T-100.8 Delivery Note (DN) CRUD + from-SO copy + status transitions. Emits delivery_posted to finance outbox. | router |
+| `CRUD /sales/orders (legacy)` | `src/modules/sales/api/v1/orders.py:1` | Legacy Sales Order CRUD (sales_orders collection). Confirm/delete-preview/report-return flows. | router |
+| `CRUD /sales/orders-v2` | `src/modules/sales/api/v1/sales_orders.py:1` | T-100.7 Sales Order (SO) v2 CRUD + from-quote copy + status transitions. Credit-limit check on DRAFT->OPEN. | router |
+| `CRUD /sales/quotes` | `src/modules/sales/api/v1/quotes.py:1` | T-100.6 Sales Quote (SQ) CRUD + status transitions. First doc in Wave 3 quote-to-cash chain. No GL impact. | router |
+| `CRUD /sales/return-requests` | `src/modules/sales/api/v1/return_requests.py:1` | T-100.11 Return Request (RR) CRUD + status transitions. RMA authorisation, no GL impact. | router |
+| `CRUD /sales/returns (legacy)` | `src/modules/sales/api/v1/returns.py:1` | Legacy Return Order CRUD with inventory restoration on process. | router |
+| `CRUD /sales/returns-v2` | `src/modules/sales/api/v1/returns_v2.py:1` | T-100.11 Return Note (RTN) CRUD + from-request copy + status transitions. Physical goods return. Emits return_posted to finance outbox. | router |
 
-## API Router Files (104 total)
+## API Router Files (79 total)
 
 | Name | File | Description |
 |------|------|-------------|
@@ -164,38 +144,6 @@ and their connections to frontend service calls.
 | `admin router` | `src/api/v1/admin.py:30` | Admin-only endpoints: list/get/update users, change role/status, delete user, reset MFA. | router |
 | `auth router` | `src/api/v1/auth.py:38` | Authentication endpoints: /register, /login, /logout, /refresh, /me, email verification, password reset, MFA (verify/setup/enable/disable/backup-codes). | router |
 | `users router` | `src/api/v1/users.py` | User profile management endpoints under /users. | router |
-| `DELETE /api/v1/admin/users/{user_id}` | `src/api/v1/admin.py:362` | Admin: soft-delete user (sets deletedAt, retains data 90 days) |
-| `DELETE /api/v1/modules/{module_name}` | `src/api/v1/modules.py:295` | Uninstall Docker module: stop container, remove routes (super_admin only) |
-| `FastAPI app` | `src/main.py:37` | Top-level FastAPI application. Mounts /api (health) and /api/v1 (api_router), CORS, rate limiting, timing, and division-context middleware. | app |
-| `GET /api/health` | `src/api/health.py:18` | Health check: returns MongoDB and Redis connectivity status |
-| `GET /api/metrics` | `src/api/health.py:107` | Response time metrics (total, avg, p50/p95/p99) for API monitoring |
-| `GET /api/ready` | `src/api/health.py:76` | Readiness check: service ready if MongoDB is healthy |
-| `GET /api/v1/admin/users` | `src/api/v1/admin.py:33` | Admin: paginated user list with role/status/search filters (admin+ only) |
-| `GET /api/v1/auth/me` | `src/api/v1/auth.py:200` | Return current authenticated user profile (auth required) |
-| `GET /api/v1/dashboard/summary` | `src/api/v1/dashboard.py:56` | Aggregated counts from all modules concurrently (farms, blocks, employees, etc.) |
-| `GET /api/v1/dashboard/widgets/{widget_id}/data` | `src/api/v1/dashboard.py:226` | Fetch data for a specific dashboard widget by ID |
-| `PATCH /api/v1/admin/users/{user_id}/role` | `src/api/v1/admin.py:179` | Admin: update user role with hierarchy restrictions |
-| `POST /api/v1/auth/login` | `src/api/v1/auth.py:88` | Login user; returns TokenResponse or MFALoginResponse if MFA enabled |
-| `POST /api/v1/auth/logout` | `src/api/v1/auth.py:144` | Logout: revoke specific or all refresh tokens (auth required) |
-| `POST /api/v1/auth/mfa/verify` | `src/api/v1/auth.py:362` | Complete MFA second-factor login with TOTP code or backup code |
-| `POST /api/v1/auth/refresh` | `src/api/v1/auth.py:173` | Rotate refresh token and return new access + refresh tokens |
-| `POST /api/v1/auth/register` | `src/api/v1/auth.py:41` | Register new user, auto-login with JWT tokens, sends verification email |
-| `POST /api/v1/modules/install` | `src/api/v1/modules.py:47` | Install Docker module: validate license, pull image, create container (super_admin only) |
-| `PUT /api/v1/admin/users/{user_id}/mfa/reset` | `src/api/v1/admin.py:433` | Admin: reset MFA for locked-out user, logs to admin_audit_log |
-| `api/health.py` | `src/api/health.py:1` | Health, readiness, and metrics endpoints for the API hub | router, health_check, readiness_check, get_metrics, get_slow_requests, get_endpo |
-| `api/routes.py` | `src/api/routes.py:1` | Consolidates all v1 API routers (auth, users, admin, modules, dashboard, AI) | api_router |
-| `api/v1/admin.py` | `src/api/v1/admin.py:1` | Admin-only endpoints for user management (role/status updates, soft delete, MFA reset) | router, list_users, get_user_by_id, update_user_role, update_user_status, delete |
-| `api/v1/auth.py` | `src/api/v1/auth.py:1` | Auth endpoints: register, login (MFA-aware), logout, token refresh, email verify, password reset, MFA CRUD | router, register, login, logout, refresh_token, get_current_user_info, update_cu |
-| `api/v1/dashboard.py` | `src/api/v1/dashboard.py:1` | Dashboard endpoints: aggregated summary across all modules, widget data fetch/refresh/bulk | router, get_dashboard_summary, get_widget_data, refresh_widget_data, get_bulk_wi |
-| `api/v1/modules.py` | `src/api/v1/modules.py:1` | Module management API (super_admin only): install/uninstall Docker modules, audit log | router, install_module, list_installed_modules, get_module_status, uninstall_mod |
-| `api/v1/users.py` | `src/api/v1/users.py:1` | User CRUD endpoints with RBAC; users can manage themselves, admins manage all | router, list_users, get_user, update_user, delete_user, change_user_role, activa |
-| `api_router` | `src/api/routes.py:15` | Aggregates /api/v1 sub-routers: auth, users, admin, modules, dashboard, organizations, divisions, industries, and ai_analytics chat. | api_router |
-| `divisions router` | `src/api/v1/divisions.py:16` | Division (tenant) selection and management endpoints. | router |
-| `health router` | `src/api/health.py` | Health-check endpoints mounted at /api/health. | router |
-| `industries router` | `src/api/v1/industries.py:18` | Industry enumeration and industry-to-module lookup. | router |
-| `main.py` | `src/main.py:1` | FastAPI app entry point: initializes middleware, routes, startup/shutdown events | app, startup_event, shutdown_event, root, global_exception_handler |
-| `modules router` | `src/api/v1/modules.py:40` | Module plugin install/enable/disable endpoints. | router |
-| `organizations router` | `src/api/v1/organizations.py` | Organization (top-tenant) management endpoints. | router |
 | `CRUD /crm/customers` | `src/modules/crm/api/v1/customers.py:1` | Customer CRUD with address management and type/status filtering. | router |
 | `dashboard router` | `src/api/v1/dashboard.py:22` | Dashboard summary, widget data, bulk widget, refresh, and health endpoints. | router |
 | `CRUD /config` | `src/modules/farm_manager/api/v1/config.py:1` | Spacing standards CRUD, plant calculator, farming year configuration. | router |
@@ -259,11 +207,18 @@ and their connections to frontend service calls.
 | `CRUD /marketing/channels` | `src/modules/marketing/api/v1/channels.py:1` | Marketing channel management with metrics tracking. | router |
 | `CRUD /marketing/events` | `src/modules/marketing/api/v1/events.py:1` | Marketing event planning and management. | router |
 | `GET /marketing/dashboard` | `src/modules/marketing/api/v1/dashboard.py:1` | Marketing dashboard statistics and campaign performance. | router |
-| `CRUD /sales/inventory` | `src/modules/sales/api/v1/inventory.py:1` | Sales harvest inventory management. | router |
-| `CRUD /sales/orders` | `src/modules/sales/api/v1/orders.py:1` | Sales order CRUD with customer integration and status tracking. | router |
-| `CRUD /sales/purchase-orders` | `src/modules/sales/api/v1/purchase_orders.py:1` | Purchase order management for procurement. | router |
-| `CRUD /sales/returns` | `src/modules/sales/api/v1/returns.py:1` | Sales returns processing and restocking. | router |
-| `GET /sales/dashboard` | `src/modules/sales/api/v1/dashboard.py:1` | Sales dashboard statistics and summaries. | router |
+| `CRUD /sales (config)` | `src/modules/sales/api/v1/config.py:1` | Sales config endpoints (farming-years dropdown). Proxies farm_manager farming-year service. | router |
+| `CRUD /sales/ar-credit-notes` | `src/modules/sales/api/v1/ar_credit_notes.py:1` | T-100.11 AR Credit Note (ARC) CRUD + status transitions. Financial reversal of AR Invoice. Emits credit_note_posted to finance outbox. | router |
+| `CRUD /sales/ar-invoices` | `src/modules/sales/api/v1/ar_invoices.py:1` | T-100.9a AR Invoice (ARI) CRUD + from-delivery copy + status transitions. Emits sales_invoice_posted to finance outbox. | router |
+| `CRUD /sales/customer-receipts` | `src/modules/sales/api/v1/customer_receipts.py:1` | T-100.10 Customer Receipt (IPAY) CRUD + from-invoice flow + status transitions. Emits customer_payment_received to finance outbox. | router |
+| `CRUD /sales/dashboard` | `src/modules/sales/api/v1/dashboard.py:1` | Sales dashboard stats (legacy orders + harvest inventory). Redis-cached. | router |
+| `CRUD /sales/deliveries` | `src/modules/sales/api/v1/deliveries.py:1` | T-100.8 Delivery Note (DN) CRUD + from-SO copy + status transitions. Emits delivery_posted to finance outbox. | router |
+| `CRUD /sales/orders (legacy)` | `src/modules/sales/api/v1/orders.py:1` | Legacy Sales Order CRUD (sales_orders collection). Confirm/delete-preview/report-return flows. | router |
+| `CRUD /sales/orders-v2` | `src/modules/sales/api/v1/sales_orders.py:1` | T-100.7 Sales Order (SO) v2 CRUD + from-quote copy + status transitions. Credit-limit check on DRAFT->OPEN. | router |
+| `CRUD /sales/quotes` | `src/modules/sales/api/v1/quotes.py:1` | T-100.6 Sales Quote (SQ) CRUD + status transitions. First doc in Wave 3 quote-to-cash chain. No GL impact. | router |
+| `CRUD /sales/return-requests` | `src/modules/sales/api/v1/return_requests.py:1` | T-100.11 Return Request (RR) CRUD + status transitions. RMA authorisation, no GL impact. | router |
+| `CRUD /sales/returns (legacy)` | `src/modules/sales/api/v1/returns.py:1` | Legacy Return Order CRUD with inventory restoration on process. | router |
+| `CRUD /sales/returns-v2` | `src/modules/sales/api/v1/returns_v2.py:1` | T-100.11 Return Note (RTN) CRUD + from-request copy + status transitions. Physical goods return. Emits return_posted to finance outbox. | router |
 
 ## API → Service Dependencies
 
@@ -300,7 +255,6 @@ and their connections to frontend service calls.
 | `hr.api.insurance` | calls | `hr.service.InsuranceService` | Insurance API delegates to InsuranceService. |
 | `hr.api.performance` | calls | `hr.service.PerformanceService` | Performance API delegates to PerformanceService. |
 | `crm.api.customers` | calls | `crm.service.CustomerService` | Customer API delegates to CustomerService. |
-| `sales.api.orders` | calls | `sales.service.OrderService` | Order API delegates to OrderService. |
 | `logistics.api.shipments` | calls | `logistics.service.ShipmentService` | Shipment API delegates to ShipmentService. |
 | `marketing.api.campaigns` | calls | `marketing.service.CampaignService` | Campaign API delegates to CampaignService. |
 | `ai_analytics.api.chat` | calls | `ai_analytics.service.QueryEngine` | AI chat API delegates to QueryEngine for NL-to-MongoDB pipeline. |
@@ -308,32 +262,6 @@ and their connections to frontend service calls.
 | `ai_analytics.service.QueryEngine` | calls | `ai_analytics.service.SchemaService` | QueryEngine uses SchemaService to discover MongoDB schemas. |
 | `ai_analytics.service.QueryEngine` | calls | `ai_analytics.util.QueryValidator` | QueryEngine validates generated queries via QueryValidator. |
 | `ai_analytics.service.QueryEngine` | calls | `ai_analytics.service.CostTrackingService` | QueryEngine logs query costs via CostTrackingService. |
-| `page::FarmDashboardPage` | calls | `service::farmApi` | FarmDashboardPage calls getAvailableFarmingYears from farmApi |
-| `component::FarmDashboard` | calls | `service::farmApi` | FarmDashboard calls farmApi for dashboard metrics |
-| `component::FarmList` | calls | `service::farmApi` | FarmList calls farmApi to fetch farms |
-| `component::BlockDetail` | calls | `service::farmApi` | BlockDetail calls farmApi for block data |
-| `component::BlockCard` | calls | `service::farmApi` | BlockCard calls farmApi for block summary |
-| `component::FarmSelector` | calls | `service::farmApi` | FarmSelector calls getFarms from farmApi |
-| `component::BlockDetailsModal` | calls | `service::farmApi` | BlockDetailsModal calls getBlockHarvestSummary from farmApi |
-| `component::CreateFarmModal` | calls | `service::farmApi` | CreateFarmModal calls farmApi to create farms |
-| `component::PlantDataCard` | calls | `service::plantDataEnhancedApi` | PlantDataCard calls formatFarmType from plantDataEnhancedApi |
-| `page::PlantDataLibrary` | calls | `service::plantDataEnhancedApi` | PlantDataLibrary calls plantDataEnhancedApi for CRUD |
-| `component::MainLayout` | calls | `service::tasksApi` | MainLayout calls getPendingTaskCount from tasksApi |
-| `hook::useFarmAIChat` | calls | `service::farmApi` | useFarmAIChat calls sendFarmAIChat and confirmFarmAIAction |
-| `hook::useFarmAnalytics` | calls | `service::api` | useFarmAnalytics calls apiClient.get |
-| `hook::useBlockAnalytics` | calls | `service::api` | useBlockAnalytics calls apiClient.get |
-| `hook::useGlobalAnalytics` | calls | `service::api` | useGlobalAnalytics calls apiClient.get |
-| `hook::useAIAnalytics` | calls | `service::api` | useAIAnalytics calls apiClient.post |
-| `hook::useDashboardData` | calls | `service::api` | useDashboardData calls apiClient.get |
-| `hook::useBlockActions` | calls | `service::api` | useBlockActions calls apiClient |
-| `hook::useWeatherData` | calls | `service::weatherApi` | useWeatherData calls weatherApi.getAgriData |
-| `hook::useFarms` | calls | `service::farmApi` | useFarms hooks call farmApi via React Query |
-| `hook::useDashboard` | calls | `service::dashboardDataService` | useDashboard hooks call dashboardDataService |
-| `hook::useSales` | calls | `service::salesService` | useSales hooks call salesApi |
-| `hook::useMFA` | calls | `service::api` | useMFA hooks call apiClient |
-| `hook::useFarmingYears` | calls | `service::farmApi` | useFarmingYears hooks call farmApi |
-| `store::useAuthStore` | calls | `service::authService` | useAuthStore calls authService for auth operations |
-| `store::useDashboardStore` | calls | `service::dashboardDataService` | useDashboardStore calls dashboardDataService |
 | `authService` | calls | `endpoint_POST_auth_login` | axios.post('/v1/auth/login') |
 | `authService` | calls | `endpoint_POST_auth_register` | axios.post('/v1/auth/register') |
 | `authService` | calls | `endpoint_POST_auth_logout` | apiClient.post('/v1/auth/logout') |
@@ -369,32 +297,30 @@ and their connections to frontend service calls.
 | `alertsApi` | calls | `endpoint_POST_farm_farms_farmId_blocks_blockId_alerts` | apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/alerts') |
 | `alertsApi` | calls | `endpoint_POST_farm_farms_farmId_blocks_blockId_alerts_id_resolve` | apiClient.post('/v1/farm/farms/${farmId}/blocks/${blockId}/alerts/${alertId}/res |
 | `weatherApi` | calls | `endpoint_GET_farm_farms_farmId_weather_current` | apiClient.get('/v1/farm/farms/${farmId}/weather/current') |
-
----
-
-## Wave 0 Addendum — 2026-05-24 (T-059)
-
-### Module: `system` (new — ops backend)
-
-| Endpoint | File | Description |
-|----------|------|-------------|
-| `GET /api/v1/system/capabilities` | `src/api/v1/system.py` | Returns per-tenant `{tenantId, modules:{finance:{enabled,reachable,version}}, checkedAt}`. Auth required (any role). Built via `build_capabilities_response()` — same helper folds the payload into `GET /api/v1/auth/me`. |
-
-### Module: `core` — additions
-
-| Endpoint | File | Description |
-|----------|------|-------------|
-| `PATCH /api/v1/organizations/{org_id}/modules` | `src/api/v1/organizations.py` | Super_admin only. Body: `{financeEnabled: bool}`. Toggles tenant module flag, writes `admin_audit_log`, invalidates per-tenant Redis cache so the change propagates within ms. |
-
-### Module: `finance_service` — additions
-
-| Endpoint | File | Description |
-|----------|------|-------------|
-| `GET /api/v1/system/health` | `services/finance/src/finance/api/v1/health.py` | Wave 0 capability probe. Returns `{status, service, version}`. Pinged by ops backend with 1s timeout; result cached 60s in Redis under `system:finance:reachable`. |
-
-### Auth/Me response extension
-
-`GET /api/v1/auth/me` response now extends `UserResponse` with a
-`capabilities` field of the same shape as `/system/capabilities`.
-Frontend uses this for first-paint gating without a second
-round-trip.
+| `weatherApi` | calls | `endpoint_GET_farm_farms_farmId_weather_forecast` | apiClient.get('/v1/farm/farms/${farmId}/weather/forecast') |
+| `weatherApi` | calls | `endpoint_GET_farm_farms_farmId_weather_agri_data` | apiClient.get('/v1/farm/farms/${farmId}/weather/agri-data') |
+| `tasksApi` | calls | `endpoint_GET_farm_tasks_pending_count` | apiClient.get('/v1/farm/tasks/pending-count') |
+| `tasksApi` | calls | `endpoint_GET_farm_tasks_my_tasks` | apiClient.get('/v1/farm/tasks/my-tasks') |
+| `tasksApi` | calls | `endpoint_POST_farm_tasks` | apiClient.post('/v1/farm/tasks') |
+| `tasksApi` | calls | `endpoint_POST_farm_tasks_id_complete` | apiClient.post('/v1/farm/tasks/${taskId}/complete') |
+| `inventoryApi` | calls | `endpoint_GET_farm_inventory_summary` | apiClient.get('/v1/farm/inventory/summary') |
+| `inventoryApi` | calls | `endpoint_GET_farm_inventory_harvest` | apiClient.get('/v1/farm/inventory/harvest') |
+| `inventoryApi` | calls | `endpoint_GET_farm_inventory_input` | apiClient.get('/v1/farm/inventory/input') |
+| `inventoryApi` | calls | `endpoint_GET_farm_inventory_asset` | apiClient.get('/v1/farm/inventory/asset') |
+| `inventoryApi` | calls | `endpoint_GET_farm_inventory_movements` | apiClient.get('/v1/farm/inventory/movements') |
+| `dashboardDataService` | calls | `endpoint_GET_farm_dashboard_summary` | apiClient.get('/v1/farm/dashboard/summary') |
+| `dashboardDataService` | calls | `endpoint_GET_sales_dashboard` | apiClient.get('/v1/sales/dashboard') |
+| `dashboardService` | calls | `endpoint_GET_dashboard_layout` | apiClient.get('/v1/dashboard/layout') |
+| `dashboardService` | calls | `endpoint_PUT_dashboard_layout` | apiClient.put('/v1/dashboard/layout') |
+| `hrService` | calls | `endpoint_GET_hr_employees` | apiClient.get('/v1/hr/employees') |
+| `hrService` | calls | `endpoint_POST_hr_employees` | apiClient.post('/v1/hr/employees') |
+| `hrService` | calls | `endpoint_GET_hr_dashboard` | apiClient.get('/v1/hr/dashboard') |
+| `crmService` | calls | `endpoint_GET_crm_customers` | apiClient.get('/v1/crm/customers') |
+| `crmService` | calls | `endpoint_POST_crm_customers` | apiClient.post('/v1/crm/customers') |
+| `salesService` | calls | `endpoint_GET_sales_orders` | apiClient.get('/v1/sales/orders') |
+| `salesService` | calls | `endpoint_POST_sales_orders` | apiClient.post('/v1/sales/orders') |
+| `salesService` | calls | `endpoint_GET_sales_inventory` | apiClient.get('/v1/sales/inventory') |
+| `salesService` | calls | `endpoint_GET_sales_purchase_orders` | apiClient.get('/v1/sales/purchase-orders') |
+| `salesService` | calls | `endpoint_GET_sales_returns` | apiClient.get('/v1/sales/returns') |
+| `salesService` | calls | `endpoint_GET_sales_dashboard` | apiClient.get('/v1/sales/dashboard') |
+| `logisticsService` | calls | `endpoint_GET_logistics_vehicles` | apiClient.get('/v1/logistics/vehicles') |

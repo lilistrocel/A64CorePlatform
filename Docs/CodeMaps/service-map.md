@@ -1,6 +1,6 @@
 # Service Map
 
-> Generated: 2026-05-18 11:32 UTC  
+> Generated: 2026-05-30 06:35 UTC  
 > Source: MongoDB `mapper_nodes` (layer=service)
 
 ## Overview
@@ -10,7 +10,7 @@ Services are injected into API endpoints via FastAPI dependency injection.
 
 **Related Maps:** [api-map.md](api-map.md) | [database-map.md](database-map.md) | [module-map.md](module-map.md)
 
-## Services by Module (60 total)
+## Services by Module (62 total)
 
 ### `ai_analytics`
 
@@ -21,19 +21,6 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `QueryEngine` | `src/modules/ai_analytics/services/query_engine.py:27` | QueryEngine | Full NL-to-MongoDB pipeline: schema discovery, Gemini query gen, execution, formatting. |
 | `QueryValidator` | `src/modules/ai_analytics/utils/validators.py:20` | QueryValidator | Validates generated MongoDB queries for safety (blocks destructive operations). |
 | `SchemaService` | `src/modules/ai_analytics/services/schema_service.py:17` | SchemaService | Auto-discovers MongoDB collection schemas by sampling documents. |
-
-### `core`
-
-| Service | File | Exports | Description |
-|---------|------|---------|-------------|
-| `AuthService` | `src/services/auth_service.py:47` | register_user, register_user_with_tokens, login_user, refres | Auth business logic: registration, login, token management, email verify, password reset, MFA |
-| `DashboardService` | `src/services/dashboard_service.py:20` | generate_sales_trend_data, generate_revenue_breakdown_data,  | Widget data service generating mock/live data for dashboard charts and stat widgets |
-| `MFAService` | `src/services/mfa_service.py:127` | generate_totp_secret, generate_totp_uri, generate_qr_code_ba | TOTP-based MFA service with Fernet-encrypted secrets and SHA-256 hashed backup codes |
-| `ModuleManager` | `src/services/module_manager.py:127` | install_module, _create_container, uninstall_module, get_ins | Docker-based module lifecycle manager: install/uninstall containers, audit logging, NGINX routing |
-| `MongoDBManager` | `src/services/database.py:18` | connect, disconnect, get_database, health_check | Async MongoDB manager using Motor; handles connection pooling and index creation on startup |
-| `PortManager` | `src/services/port_manager.py:25` | allocate_ports, release_ports, get_module_ports, is_port_ava | Auto port allocation in range 9000-19999 using MongoDB registry; prevents conflicts |
-| `ProxyManager` | `src/services/proxy_manager.py:25` | generate_module_config, add_module_route, remove_module_rout | Generates and manages NGINX location block configs for dynamically installed modules |
-| `UserService` | `src/services/user_service.py:20` | get_user_by_id, get_user_by_email, list_users, update_user,  | User CRUD business logic with pagination, filtering, and soft-delete support |
 
 ### `crm`
 
@@ -107,10 +94,20 @@ Services are injected into API endpoints via FastAPI dependency injection.
 
 | Service | File | Exports | Description |
 |---------|------|---------|-------------|
-| `InventoryService` | `src/modules/sales/services/sales/inventory_service.py:19` | InventoryService | Sales harvest inventory CRUD with InventoryRepository. |
-| `OrderService` | `src/modules/sales/services/sales/order_service.py:26` | OrderService | Sales order orchestration integrating with CRM customers and farm inventory. |
-| `PurchaseOrderService` | `src/modules/sales/services/sales/purchase_order_service.py:19` | PurchaseOrderService | Purchase order CRUD with PurchaseOrderRepository. |
-| `ReturnService` | `src/modules/sales/services/sales/return_service.py:28` | ReturnService | Sales returns processing with restocking to inventory. |
+| `ARCreditNoteService` | `src/modules/sales/services/ar_credit_note_service.py:1` | create_ar_credit_note, get_ar_credit_note, list_ar_credit_no | T-100.11 AR Credit Note (ARC) business logic. Allocates against AR Invoices, updates invoice statuses, outbox event on DRAFT->OPEN (credit_note_posted). |
+| `ARInvoiceService` | `src/modules/sales/services/ar_invoice_service.py:1` | create_ar_invoice, create_ar_invoice_from_delivery, get_ar_i | T-100.9a AR Invoice business logic. Calls finance for customer/item/tax/revenue-account/payment-terms via httpx. Outbox event on DRAFT->OPEN (sales_invoice_posted). |
+| `CustomerReceiptService` | `src/modules/sales/services/customer_receipt_service.py:1` | create_customer_receipt, create_customer_receipt_from_invoic | T-100.10 Customer Receipt business logic. Allocates to AR Invoices, updates invoice statuses (paid/partly_paid), outbox event on DRAFT->OPEN (customer_payment_received). |
+| `DeliveryService` | `src/modules/sales/services/delivery_service.py:1` | create_delivery_from_so, get_delivery, list_deliveries, upda | T-100.8 Delivery Note business logic. Moving-avg cost lookup, SO line consumption, outbox event on DRAFT->OPEN (delivery_posted). |
+| `OrderRepository (legacy)` | `src/modules/sales/services/sales/order_repository.py:26` | OrderRepository | Legacy MongoDB repository for sales_orders collection. CRUD + filter helpers. |
+| `OrderService (legacy)` | `src/modules/sales/services/sales/order_service.py:151` | OrderService | Legacy sales_orders service. Inventory allocation, confirm, delete-preview, report-return flows. |
+| `PurchaseOrderRepository (legacy stub)` | `src/modules/sales/services/sales/purchase_order_repository.py:19` | PurchaseOrderRepository | Legacy PO repository stub. Kept for dashboard counts; PO writes happen in purchasing module. |
+| `PurchaseOrderService (legacy stub)` | `src/modules/sales/services/sales/purchase_order_service.py:19` | PurchaseOrderService | Legacy PO service stub retained for import compatibility. Sales-side POs were removed in T-070.0; real POs live in src/modules/purchasing/. |
+| `QuoteService` | `src/modules/sales/services/quote_service.py:1` | create_quote, get_quote, list_quotes, update_quote, delete_q | T-100.6 Sales Quote business logic. Doc-number generation, line math, status transitions, audit trail. No outbox/finance dependency. |
+| `RTNService` | `src/modules/sales/services/rtn_service.py:1` | create_return_from_request, create_return_direct, get_return | T-100.11 Return Note (RTN) business logic. Moving-avg cost, RR line consumption, outbox event on DRAFT->OPEN (return_posted). |
+| `ReturnRequestService` | `src/modules/sales/services/return_request_service.py:1` | create_return_request, get_return_request, list_return_reque | T-100.11 Return Request (RR) business logic. RMA authorisation, line totals, status transitions. No outbox/finance dependency. |
+| `ReturnService (legacy)` | `src/modules/sales/services/sales/return_service.py:28` | ReturnService | Legacy return-order service. Processes returns and restores farm inventory. |
+| `SalesDatabaseManager` | `src/modules/sales/services/database.py:16` | SalesDatabaseManager, sales_db | Motor-based MongoDB connection manager for the sales module. Exposes shared sales_db singleton. |
+| `SalesOrderService` | `src/modules/sales/services/sales_order_service.py:1` | create_sales_order, create_sales_order_from_quote, get_sales | T-100.7 Sales Order business logic. Credit-limit check via finance httpx, quote consumption, status transitions, audit trail. |
 
 ## Dependency Injection Graph
 
@@ -133,37 +130,73 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `farm_manager.service.CascadeDeletionService` | uses | `farm_manager.service.FarmDatabaseManager` | CascadeDeletionService accesses deleted_* collections via fa |
 | `hr.service.EmployeeService` | uses | `hr.service.EmployeeRepository` | EmployeeService delegates DB operations to EmployeeRepositor |
 | `crm.service.CustomerService` | uses | `crm.service.CustomerRepository` | CustomerService delegates DB operations to CustomerRepositor |
-| `sales.service.OrderService` | uses | `sales.service.OrderRepository` | OrderService delegates DB operations to OrderRepository. |
 | `logistics.service.ShipmentService` | uses | `logistics.service.ShipmentRepository` | ShipmentService delegates DB operations to ShipmentRepositor |
 | `marketing.service.CampaignService` | uses | `marketing.service.BudgetService` | CampaignService uses BudgetService for budget allocation. |
-| `page::FarmDashboardPage` | uses | `hook::useDashboardData` | FarmDashboardPage uses useDashboardData hook to fetch block  |
-| `page::FarmDashboardPage` | uses | `hook::useDashboardConfig` | FarmDashboardPage uses useDashboardConfig for dashboard sett |
-| `page::FarmDashboardPage` | uses | `hook::useDashboardFilters` | FarmDashboardPage uses useDashboardFilters for block filteri |
-| `component::FarmList` | uses | `hook::useFarms` | FarmList uses useDeleteFarm mutation hook |
-| `component::FarmDetail` | uses | `hook::useFarms` | FarmDetail uses useFarm, useFarmSummary, useFarmBlocks hooks |
-| `component::CompactBlockCard` | uses | `hook::useBlockActions` | CompactBlockCard uses useBlockActions for quick transitions |
-| `component::FarmAnalyticsModal` | uses | `hook::useFarmAnalytics` | FarmAnalyticsModal uses useFarmAnalytics hook |
-| `component::BlockAnalyticsModal` | uses | `hook::useBlockAnalytics` | BlockAnalyticsModal uses useBlockAnalytics hook |
-| `component::GlobalFarmAnalyticsModal` | uses | `hook::useGlobalAnalytics` | GlobalFarmAnalyticsModal uses useGlobalAnalytics hook |
-| `component::FarmAIChat` | uses | `hook::useFarmAIChat` | FarmAIChat uses useFarmAIChat hook |
-| `component::AIAnalyticsChat` | uses | `hook::useAIAnalytics` | AIAnalyticsChat uses useAIAnalytics hook |
-| `component::CreateFarmModal` | uses | `hook::useMapDrawing` | CreateFarmModal uses useMapDrawing for boundary drawing |
-| `component::CreateFarmModal` | uses | `hook::useUnsavedChanges` | CreateFarmModal uses useUnsavedChanges for form dirty state |
-| `component::CreateBlockModal` | uses | `hook::useMapDrawing` | CreateBlockModal uses useMapDrawing for boundary drawing |
-| `page::PlantDataLibrary` | uses | `store::useAuthStore` | PlantDataLibrary uses useAuthStore |
-| `page::Login` | uses | `store::useAuthStore` | Login uses useAuthStore for login action |
-| `page::Login` | uses | `hook::usePageVisibility` | Login uses usePageVisibility |
-| `page::Dashboard` | uses | `store::useDashboardStore` | Dashboard uses useDashboardStore |
-| `component::ProtectedRoute` | uses | `store::useAuthStore` | ProtectedRoute uses useAuthStore to check auth |
-| `component::MFARouteGuards` | uses | `store::useAuthStore` | MFARouteGuards uses useAuthStore to check MFA state |
-| `component::MFARouteGuards` | uses | `hook::useMFA` | MFARouteGuards imports getCachedVerifyState from useMFA |
-| `component::ToastContainer` | uses | `store::useToastStore` | ToastContainer uses useToastStore |
-| `component::MainLayout` | uses | `store::useAuthStore` | MainLayout uses useAuthStore for user info |
 | `farm_manager.api.v1.tasks.router` | uses | `farm_manager.models.farm_task.FarmTaskWithDetails` | line 12: imports FarmTaskWithDetails as response model for l |
 | `farm_manager.services.task.task_repository._enrich_tasks_with_block_farm` | uses | `farm_manager.models.farm_task.FarmTaskWithDetails` | line 60: FarmTaskWithDetails(**task.model_dump(), blockCode= |
 | `farm_manager.models.farm_task.FarmTask` | uses | `farm_manager.models.farm_task.TaskData` | taskData: TaskData field |
 | `farm_manager.models.farm_task.TaskData` | uses | `farm_manager.models.farm_task.HarvestEntry` | harvestEntries: List[HarvestEntry] |
 | `farm_manager.models.farm_task.TaskData` | uses | `farm_manager.models.farm_task.HarvestTotal` | totalHarvest: Optional[HarvestTotal] |
-| `frontend.components.operations.HarvestEntryModal` | uses | `frontend.types.tasks.TaskWithDetails` | reads blockCode/blockName/targetCropName/actualPlantCount/ex |
 | `frontend.components.operations.HarvestEntryModal` | uses | `frontend.utils.inputGuards.positiveNumberInputProps` | spreads positiveNumberInputProps onto harvest quantity input |
 | `frontend.components.farm.BlockHarvestEntryModal` | uses | `frontend.utils.inputGuards.positiveNumberInputProps` | spreads positiveNumberInputProps onto harvest quantity input |
+| `core.documents.doc_number` | uses | `core.documents.document_status` | DOC_TYPE_PREFIXES in doc_number mirrors the doc_type keys us |
+| `core.documents.journal_memo` | uses | `core.documents.bp_ref` | format_journal_memo consumes the bp_ref_no field defined by  |
+| `core.documents.open_quantity` | uses | `core.documents.document_links` | Open-quantity decrements happen on the upstream line identif |
+| `sales.api.quotes` | uses | `core.documents.document_status` | Quotes router imports DocumentStatus for status filter/query |
+| `purchasing.service.document_service` | uses | `core.documents.doc_number` | Purchasing document_service mirrors the same {PREFIX}-{YYYY} |
+| `sales.api.quotes` | uses | `sales.middleware.auth` | Quote routes guard endpoints via get_current_active_user / r |
+| `sales.api.sales_orders` | uses | `sales.middleware.auth` | Sales Order v2 routes guard endpoints via auth middleware. |
+| `sales.api.deliveries` | uses | `sales.middleware.auth` | Delivery routes guard endpoints via auth middleware. |
+| `sales.api.ar_invoices` | uses | `sales.middleware.auth` | AR Invoice routes guard endpoints via auth middleware. |
+| `sales.api.customer_receipts` | uses | `sales.middleware.auth` | Customer Receipt routes guard endpoints via auth middleware. |
+| `sales.api.return_requests` | uses | `sales.middleware.auth` | Return Request routes guard endpoints via auth middleware. |
+| `sales.api.returns_v2` | uses | `sales.middleware.auth` | Return Note v2 routes guard endpoints via auth middleware. |
+| `sales.api.ar_credit_notes` | uses | `sales.middleware.auth` | AR Credit Note routes guard endpoints via auth middleware. |
+| `sales.service.quote_service` | uses | `sales.model.quotes` | quote_service serialises payloads via Quote* Pydantic models |
+| `sales.service.sales_order_service` | uses | `sales.model.sales_orders` | sales_order_service serialises payloads via SalesOrder* Pyda |
+| `sales.service.delivery_service` | uses | `sales.model.deliveries` | delivery_service serialises payloads via Delivery* Pydantic  |
+| `sales.service.ar_invoice_service` | uses | `sales.model.ar_invoices` | ar_invoice_service serialises payloads via ARInvoice* Pydant |
+| `sales.service.customer_receipt_service` | uses | `sales.model.customer_receipts` | customer_receipt_service serialises payloads via CustomerRec |
+| `sales.service.return_request_service` | uses | `sales.model.return_requests` | return_request_service serialises payloads via ReturnRequest |
+| `sales.service.rtn_service` | uses | `sales.model.returns` | rtn_service serialises payloads via Return* Pydantic models. |
+| `sales.service.ar_credit_note_service` | uses | `sales.model.ar_credit_notes` | ar_credit_note_service serialises payloads via ARCreditNote* |
+| `sales.service.quote_service` | uses | `core.documents.doc_number` | Calls next_doc_number('QUOTE'/'SQ') for sequential doc_numbe |
+| `sales.service.sales_order_service` | uses | `core.documents.doc_number` | Calls next_doc_number for SO numbering and assert_legal_tran |
+| `sales.service.delivery_service` | uses | `core.documents.doc_number` | Calls next_doc_number for DN numbering and assert_legal_tran |
+| `sales.service.ar_invoice_service` | uses | `core.documents.doc_number` | Calls next_doc_number for ARI numbering and assert_legal_tra |
+| `sales.service.customer_receipt_service` | uses | `core.documents.doc_number` | Calls next_doc_number for IPAY numbering and assert_legal_tr |
+| `sales.service.return_request_service` | uses | `core.documents.doc_number` | Calls next_doc_number for RR numbering and assert_legal_tran |
+| `sales.service.rtn_service` | uses | `core.documents.doc_number` | Calls next_doc_number for RTN numbering and assert_legal_tra |
+| `sales.service.ar_credit_note_service` | uses | `core.documents.doc_number` | Calls next_doc_number for ARC numbering and assert_legal_tra |
+| `sales.service.sales_order_service` | uses | `core.documents.document_links` | Uses DocumentLinkRef helper to normalise quote/SO/DN cross-d |
+| `sales.service.quote_service` | uses | `sales.service.database` | Reads/writes sales.quotes via sales_db Motor handle. |
+| `sales.service.sales_order_service` | uses | `sales.service.database` | Reads/writes sales.sales_orders_v2 via sales_db. |
+| `sales.service.delivery_service` | uses | `sales.service.database` | Reads/writes sales.deliveries via sales_db. |
+| `sales.service.ar_invoice_service` | uses | `sales.service.database` | Reads/writes sales.ar_invoices via sales_db. |
+| `sales.service.customer_receipt_service` | uses | `sales.service.database` | Reads/writes sales.customer_receipts via sales_db. |
+| `sales.service.return_request_service` | uses | `sales.service.database` | Reads/writes sales.return_requests via sales_db. |
+| `sales.service.rtn_service` | uses | `sales.service.database` | Reads/writes sales.returns_v2 via sales_db. |
+| `sales.service.ar_credit_note_service` | uses | `sales.service.database` | Reads/writes sales.ar_credit_notes via sales_db. |
+| `sales.service.legacy.order_service` | uses | `sales.service.legacy.order_repository` | OrderService delegates persistence to OrderRepository. |
+| `sales.service.legacy.purchase_order_service` | uses | `sales.service.legacy.purchase_order_repository` | Legacy PurchaseOrderService stub delegates to PurchaseOrderR |
+| `sales.service.legacy.order_service` | uses | `sales.model.legacy.sales_order` | Legacy OrderService uses SalesOrder* Pydantic models. |
+| `sales.service.legacy.return_service` | uses | `sales.model.legacy.return_order` | Legacy ReturnService uses ReturnOrder* Pydantic models. |
+| `sales.middleware.auth` | uses | `core.config.settings` | Verifies JWT against core SECRET_KEY (core_settings) to shar |
+| `component::AIAnalyticsChat` | uses | `hook::useAIAnalytics` | AIAnalyticsChat uses useAIAnalytics hook |
+| `component::BlockAnalyticsModal` | uses | `hook::useBlockAnalytics` | BlockAnalyticsModal uses useBlockAnalytics |
+| `component::AccountCombobox` | uses | `hook::useFinanceAccounts` | AccountCombobox uses useFinanceAccounts |
+| `component::CostCenterCombobox` | uses | `hook::useCostCenters` | CostCenterCombobox uses useCostCenters |
+| `component::AuditHistoryModal` | uses | `hook::useAuditLog` | AuditHistoryModal uses useAuditLog |
+| `component::AuditHistoryModal` | uses | `hook::useAdminUsers` | T-064: AuditHistoryModal uses useAdminUsers gated by viewerR |
+| `component::AuditHistoryModal` | uses | `store::toast.store` | AuditHistoryModal uses toast store for error surfacing |
+| `component::BalanceSheetPage` | uses | `hook::useBalanceSheet` | BalanceSheetPage uses useBalanceSheet hook |
+| `component::BalanceSheetPage` | uses | `hook::useJournalEntries` | BalanceSheetPage uses useJournalEntries for drill-down |
+| `component::IncomeStatementPage` | uses | `hook::useIncomeStatement` | IncomeStatementPage uses useIncomeStatement hook |
+| `component::IncomeStatementPage` | uses | `hook::useJournalEntries` | IncomeStatementPage uses useJournalEntries for drill-down |
+| `component::CashFlowStatementPage` | uses | `hook::useCashFlow` | CashFlowStatementPage uses useCashFlow hook (two parallel qu |
+| `component::ManualJournalEntryPage` | uses | `hook::useFinanceAccounts` | ManualJournalEntryPage uses useFinanceAccounts |
+| `component::ManualJournalEntryPage` | uses | `hook::useCostCenters` | ManualJournalEntryPage uses useCostCenters |
+| `component::ManualJournalEntryPage` | uses | `hook::useFinanceCompanies` | ManualJournalEntryPage uses useFinanceCompanies |
+| `component::ManualJournalEntryPage` | uses | `hook::useFiscalPeriods` | ManualJournalEntryPage uses useFiscalPeriods |
+| `component::ManualJournalEntryPage` | uses | `hook::useCreateManualJournalEntry` | ManualJournalEntryPage uses useCreateManualJournalEntry muta |
+| `component::PeriodsPage` | uses | `hook::useFinanceCompanies` | PeriodsPage uses useFinanceCompanies |

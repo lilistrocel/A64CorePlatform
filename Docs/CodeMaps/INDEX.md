@@ -1,9 +1,8 @@
 # A64 Core Platform — Codebase Knowledge Graph
 
-> **Generated:** 2026-05-18 11:32 UTC  
-> **Graph:** 520 nodes · 316 edges  
-> **Tasks:** 13/26 mapping tasks completed  
-> **Manual addendum:** 2026-05-24 — Wave 0 (T-059) additions (see bottom of each map for the new nodes; full regeneration deferred)
+> **Generated:** 2026-05-30 06:35 UTC  
+> **Graph:** 610 nodes · 590 edges  
+> **Tasks:** 16/26 mapping tasks completed
 
 ## What Is This?
 
@@ -93,134 +92,6 @@ python scripts/codebase_mapper/map_generator.py all
 # Check mapping progress:
 python scripts/codebase_mapper/task_manager.py stats
 ```
-
----
-
-## Wave 0 Manual Addendum — 2026-05-24
-
-Full regeneration was blocked in this environment (mapper script
-hard-codes `mongodb://localhost:27017` and the mapping-agent flow
-requires sub-agent dispatch). The following Wave 0 (T-059) additions
-have been manually recorded in the relevant map files — search each
-file for **"Wave 0"** to find the new entries:
-
-**Backend additions**
-- New endpoint `GET /api/v1/system/capabilities`
-  (`src/api/v1/system.py`) — per-tenant module capability discovery.
-- New endpoint `PATCH /api/v1/organizations/{org_id}/modules`
-  (`src/api/v1/organizations.py`) — super_admin toggle for
-  `modules.financeEnabled`.
-- New module `finance_bridge.reachability` — Redis-cached health-ping
-  against finance service.
-- New module `finance_bridge.tenant_flag` — Redis-cached per-tenant
-  `modules.financeEnabled` lookup.
-- Updated `finance_bridge.outbox_writer` — per-tenant gate skips
-  events when tenant has finance disabled.
-- New `GET /api/v1/system/health` on finance service
-  (`services/finance/src/finance/api/v1/health.py`).
-
-**Database additions**
-- `organizations.modules.financeEnabled` (bool, default `true`) —
-  see `database-map.md`.
-- One-shot migration `scripts/migrations/wave0_add_finance_flag.py`.
-
-**Frontend additions** (see `frontend-map.md`)
-- Hook `useCapabilities` (+ derivatives `useFinanceEnabled`,
-  `useFinanceUnreachable`).
-- Service `systemService` (`getCapabilities`,
-  `updateOrganizationModules`).
-- Types `Capabilities`, `ModuleCapabilities`,
-  `FinanceModuleCapability`.
-- Components `FinanceGate`, `FinanceUnreachableBanner`,
-  `ModulesSettingsCard`.
-- Modified pages: `App.tsx` (route gating), `MainLayout.tsx`
-  (sidebar gating), `PurchaseRequestFormPage`,
-  `PurchaseOrderFormPage`, `GoodsReceiptFormPage`,
-  `APInvoiceFormPage`, `Settings.tsx`.
-
-**Approx delta:** +3 endpoints, +2 backend modules, +6 frontend
-files, +1 schema field. Run the mapper rerun after the mongo-URL
-configuration is fixed for a full graph refresh.
-
----
-
-## Wave 2 Manual Addendum — 2026-05-24 (REGEN OWED)
-
-Full regeneration deferred (same MongoDB-URL blocker as Wave 0).
-The following Wave 2 additions from the 2026-05-24 session have NOT yet
-been reflected in the map files and require a regen run
-(`bash scripts/codebase_mapper/rerun.sh`) from an environment with
-`mongodb://localhost:27017` accessible:
-
-**New backend endpoints (finance service)**
-- `POST /api/v1/finance/journal-entries` — manual JE creation
-  (`services/finance/src/finance/api/v1/journal_entries.py`).
-  Roles: `finance_admin`, `super_admin`. New schemas:
-  `ManualJECreateRequest`, `ManualJELineRequest`, `ManualJECreateResponse`,
-  `ManualJEMeta`.
-- `GET /api/v1/finance/reports/export/{statement}` — report export
-  (PDF + Excel streaming download)
-  (`services/finance/src/finance/api/v1/export.py`; Jinja2 templates
-  under `src/finance/api/v1/templates/`). New system deps: Pango/Cairo
-  (~100 MB image delta). New pyproject deps: openpyxl, weasyprint, jinja2.
-
-**Modified backend endpoints (finance service)**
-- `GET /api/v1/finance/reports/balance-sheet`,
-  `GET /api/v1/finance/reports/income-statement`,
-  `GET /api/v1/finance/reports/cash-flow` — `cost_center_id` param
-  changed from `Optional[str]` to `Optional[List[str]]` (multi-CC filter
-  via `.in_()`). Backward-compatible for single-value callers.
-- `PUT /api/v1/finance/companies/{company_code}/posting-setup` — new
-  balance guard (HTTP 409 if old clearing account has non-zero posted
-  balance) and semantic type guard (HTTP 422 if account drawer/type
-  does not match field requirements). Both guards cover all 10
-  clearing-account fields.
-
-**New frontend route**
-- `/finance/balance-sheet` — `<BalanceSheetPage>` behind `<FinanceGate>`
-  (`frontend/user-portal/src/pages/finance/BalanceSheetPage.tsx`).
-  Service: `getBalanceSheet` in `financeReportsService.ts`.
-  Hook: `useBalanceSheet` in `useFinanceReports.ts`.
-  Sidebar entry added to `MainLayout.tsx`.
-  Route added to `App.tsx`.
-
-**New frontend component**
-- `<FinanceReportPage>` shell under
-  `frontend/user-portal/src/components/finance/FinanceReportPage/`
-  (`FinanceReportPage.tsx`, `types.ts`, `index.ts`). Render-prop API
-  `{ filters, display, openDrillDown }`. Multi-select cost centres;
-  Compare-to dropdown (None / Previous / YoY / Custom).
-
----
-
-## Wave 2 close — 2026-05-29 (REGEN OWED)
-
-Manual addendum. Full CodeMap regeneration is owed after these structural changes.
-Run `bash scripts/codebase_mapper/rerun.sh` to update all maps.
-
-**New backend endpoints (finance service)**
-- `GET /api/v1/finance/audit-log` — paginated audit events for a fiscal entity.
-  Entity-type allowlist: FiscalPeriod, JournalEntry. Cross-org isolation enforced.
-  Module: `services/finance/src/finance/api/v1/audit_log.py`.
-- `POST /api/v1/finance/journal-entries` — create a manual (correcting / adjusting)
-  journal entry. Roles: finance_admin, super_admin. Returns ManualJECreateResponse
-  with meta.warnings[] for inactive-account hits.
-- `PATCH /api/v1/finance/periods/{id}/close?dry_run=true` — dry-run close preview.
-  Returns ClosingJePreview (proposed closing JE lines, totals, target account) without
-  writing. Same computation path as the real close.
-
-**New frontend routes**
-- `/finance/cash-flow` — `<CashFlowStatementPage>` behind `<FinanceGate>`.
-  Service: `getCashFlow` in `financeReportsService.ts`.
-  Hook: `useCashFlow` in `useFinanceReports.ts`.
-- `/finance/journal-entries/new` — `<ManualJournalEntryPage>` behind `<FinanceGate>`.
-  Service: `createManualJournalEntry` in `journalEntriesService.ts`.
-  Hook: `useCreateManualJournalEntry` in `useJournalEntries.ts`.
-
-**New frontend components**
-- `<AuditHistoryModal>` at `frontend/user-portal/src/components/finance/AuditHistoryModal/`
-  Hook: `useAuditLog` in `useAuditLog.ts` / `auditLogService.ts`.
-- `<CostCenterCombobox>` at `frontend/user-portal/src/components/finance/CostCenterCombobox/`
 
 ---
 *Maps generated by the Codebase Mapper pipeline. Do not edit manually.*

@@ -1,6 +1,6 @@
 # Module Map
 
-> Generated: 2026-05-18 11:32 UTC  
+> Generated: 2026-05-30 06:35 UTC  
 > Source: MongoDB `mapper_nodes` (grouped by module)
 
 ## Backend Module Architecture
@@ -14,21 +14,71 @@ Each module contains API, service, and model layers.
 
 | Module | Nodes | Layers Present |
 |--------|-------|----------------|
+| `admin` | 3 | frontend |
+| `ai` | 21 | frontend |
 | `ai_analytics` | 8 | api, model, service |
+| `analytics` | 5 | frontend |
 | `auth` | 12 | api, frontend |
-| `core` | 127 | api, config, core, middleware, model, service |
-| `crm` | 10 | api, frontend, infrastructure, model, repository, service |
+| `core` | 21 | core, frontend, infrastructure |
+| `crm` | 13 | api, frontend, infrastructure, model, repository, service |
 | `dashboard` | 7 | api, frontend |
+| `debug` | 1 | frontend |
 | `farm` | 81 | frontend |
 | `farm_manager` | 137 | api, config, infrastructure, model, repository, service |
-| `frontend` | 31 | config, frontend |
-| `hr` | 25 | api, frontend, infrastructure, model, repository, service |
-| `logistics` | 19 | api, frontend, infrastructure, model, repository, service |
-| `marketing` | 22 | api, frontend, infrastructure, model, service |
-| `sales` | 26 | api, frontend, infrastructure, model, repository, service |
-| `shared` | 15 | frontend |
+| `finance` | 51 | frontend |
+| `frontend` | 7 | config, frontend |
+| `hr` | 32 | api, frontend, infrastructure, model, repository, service |
+| `inventory` | 7 | frontend |
+| `logistics` | 27 | api, frontend, infrastructure, model, repository, service |
+| `map` | 1 | frontend |
+| `marketing` | 31 | api, frontend, infrastructure, model, service |
+| `mushroom` | 20 | frontend |
+| `operations` | 6 | frontend |
+| `platform` | 1 | frontend |
+| `pnl` | 8 | frontend |
+| `purchasing` | 25 | frontend |
+| `sales` | 54 | api, frontend, middleware, model, service |
+| `settings` | 3 | frontend |
+| `shared` | 16 | frontend |
+| `system` | 4 | frontend |
+| `tenant` | 3 | frontend |
+| `tools` | 5 | frontend |
 
 ## Module Details
+
+### `admin` (3 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `TenantSetupWizardPage` | frontend | `frontend/user-portal/src/pages/admin/TenantSetupWizardPage.tsx` |
+| component | `UserManagementPage` | frontend | `frontend/user-portal/src/pages/admin/UserManagementPage.tsx` |
+| hook | `useAdminUsers` | frontend | `frontend/user-portal/src/hooks/queries/useAdminUsers.ts` |
+
+### `ai` (21 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `AIAnalyticsChat` | frontend | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx` |
+| component | `AIAssistantFAB` | frontend | `frontend/user-portal/src/components/ai-assistant/AIAssistantFAB.tsx` |
+| component | `AIAssistantPanel` | frontend | `frontend/user-portal/src/components/ai-assistant/AIAssistantPanel.tsx` |
+| component | `AIHub` | frontend | `frontend/user-portal/src/pages/ai/AIHub.tsx` |
+| component | `AIHubChat` | frontend | `frontend/user-portal/src/components/ai/AIHubChat.tsx` |
+| component | `AIHubTabBar` | frontend | `frontend/user-portal/src/components/ai/AIHubTabBar.tsx` |
+| component | `ConfirmationCard` | frontend | `frontend/user-portal/src/components/ai/ConfirmationCard.tsx` |
+| component | `ConversationList` | frontend | `frontend/user-portal/src/components/ai-assistant/ConversationList.tsx` |
+| component | `InputBox` | frontend | `frontend/user-portal/src/components/ai-assistant/InputBox.tsx` |
+| component | `MessageBubble` | frontend | `frontend/user-portal/src/components/ai-assistant/MessageBubble.tsx` |
+| component | `MessageList` | frontend | `frontend/user-portal/src/components/ai-assistant/MessageList.tsx` |
+| component | `ToolCallCard` | frontend | `frontend/user-portal/src/components/ai-assistant/ToolCallCard.tsx` |
+| component | `VoiceControls` | frontend | `frontend/user-portal/src/components/ai/VoiceControls.tsx` |
+| function | `aiAssistantApi` | frontend | `frontend/user-portal/src/services/aiAssistantApi.ts` |
+| type | `aiHub types` | frontend | `frontend/user-portal/src/types/aiHub.ts` |
+| function | `aiHubApi` | frontend | `frontend/user-portal/src/services/aiHubApi.ts` |
+| type | `farmAI types` | frontend | `frontend/user-portal/src/types/farmAI.ts` |
+| hook | `useAIAssistant` | frontend | `frontend/user-portal/src/hooks/queries/useAIAssistant.ts` |
+| store | `useAIAssistantStore` | frontend | `frontend/user-portal/src/stores/aiAssistant.store.ts` |
+| hook | `useAIHub` | frontend | `frontend/user-portal/src/hooks/ai/useAIHub.ts` |
+| hook | `useVoice` | frontend | `frontend/user-portal/src/hooks/ai/useVoice.ts` |
 
 ### `ai_analytics` (8 nodes)
 
@@ -42,6 +92,16 @@ Each module contains API, service, and model layers.
 | class | `QueryEngine` | service | `src/modules/ai_analytics/services/query_engine.py` |
 | class | `QueryValidator` | service | `src/modules/ai_analytics/utils/validators.py` |
 | class | `SchemaService` | service | `src/modules/ai_analytics/services/schema_service.py` |
+
+### `analytics` (5 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| type | `aiDashboard types` | frontend | `frontend/user-portal/src/types/aiDashboard.ts` |
+| type | `analytics types` | frontend | `frontend/user-portal/src/types/analytics.ts` |
+| type | `farm-analytics types` | frontend | `frontend/user-portal/src/types/farm-analytics.ts` |
+| type | `farmAnalytics types` | frontend | `frontend/user-portal/src/types/farmAnalytics.ts` |
+| type | `global-analytics types` | frontend | `frontend/user-portal/src/types/global-analytics.ts` |
 
 ### `auth` (12 nodes)
 
@@ -60,145 +120,42 @@ Each module contains API, service, and model layers.
 | store | `useAuthStore` | frontend | `frontend/user-portal/src/stores/auth.store.ts` |
 | hook | `useMFA` | frontend | `frontend/user-portal/src/hooks/queries/useMFA.ts` |
 
-### `core` (127 nodes)
+### `core` (21 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
-| api_endpoint | `DELETE /api/v1/admin/users/{user_id}` | api | `src/api/v1/admin.py` |
-| api_endpoint | `DELETE /api/v1/modules/{module_name}` | api | `src/api/v1/modules.py` |
-| config | `FastAPI app` | api | `src/main.py` |
-| api_endpoint | `GET /api/health` | api | `src/api/health.py` |
-| api_endpoint | `GET /api/metrics` | api | `src/api/health.py` |
-| api_endpoint | `GET /api/ready` | api | `src/api/health.py` |
-| api_endpoint | `GET /api/v1/admin/users` | api | `src/api/v1/admin.py` |
-| api_endpoint | `GET /api/v1/auth/me` | api | `src/api/v1/auth.py` |
-| api_endpoint | `GET /api/v1/dashboard/summary` | api | `src/api/v1/dashboard.py` |
-| api_endpoint | `GET /api/v1/dashboard/widgets/{widget_id}/data` | api | `src/api/v1/dashboard.py` |
-| api_endpoint | `PATCH /api/v1/admin/users/{user_id}/role` | api | `src/api/v1/admin.py` |
-| api_endpoint | `POST /api/v1/auth/login` | api | `src/api/v1/auth.py` |
-| api_endpoint | `POST /api/v1/auth/logout` | api | `src/api/v1/auth.py` |
-| api_endpoint | `POST /api/v1/auth/mfa/verify` | api | `src/api/v1/auth.py` |
-| api_endpoint | `POST /api/v1/auth/refresh` | api | `src/api/v1/auth.py` |
-| api_endpoint | `POST /api/v1/auth/register` | api | `src/api/v1/auth.py` |
-| api_endpoint | `POST /api/v1/modules/install` | api | `src/api/v1/modules.py` |
-| api_endpoint | `PUT /api/v1/admin/users/{user_id}/mfa/reset` | api | `src/api/v1/admin.py` |
-| file | `api/health.py` | api | `src/api/health.py` |
-| file | `api/routes.py` | api | `src/api/routes.py` |
-| file | `api/v1/admin.py` | api | `src/api/v1/admin.py` |
-| file | `api/v1/auth.py` | api | `src/api/v1/auth.py` |
-| file | `api/v1/dashboard.py` | api | `src/api/v1/dashboard.py` |
-| file | `api/v1/modules.py` | api | `src/api/v1/modules.py` |
-| file | `api/v1/users.py` | api | `src/api/v1/users.py` |
-| config | `api_router` | api | `src/api/routes.py` |
-| api_endpoint | `divisions router` | api | `src/api/v1/divisions.py` |
-| api_endpoint | `health router` | api | `src/api/health.py` |
-| api_endpoint | `industries router` | api | `src/api/v1/industries.py` |
-| file | `main.py` | api | `src/main.py` |
-| api_endpoint | `modules router` | api | `src/api/v1/modules.py` |
-| api_endpoint | `organizations router` | api | `src/api/v1/organizations.py` |
-| config | `ADMIN_EMAIL` | config | `.env.example` |
-| config | `ADMIN_PASSWORD` | config | `.env.example` |
-| config | `ALLOWED_ORIGINS` | config | `src/config/settings.py` |
-| config | `ANTHROPIC_API_KEY` | config | `.env.example` |
-| config | `ANTHROPIC_MODEL` | config | `.env.example` |
-| config | `API_KEY_PREFIX` | config | `src/config/settings.py` |
-| config | `APP_NAME` | config | `src/config/settings.py` |
-| config | `BACKUP_ENCRYPTION_KEY` | config | `docker-compose.yml` |
-| config | `BACKUP_RETENTION_DAILY` | config | `docker-compose.yml` |
-| config | `BACKUP_RETENTION_MONTHLY` | config | `docker-compose.yml` |
-| config | `BACKUP_RETENTION_WEEKLY` | config | `docker-compose.yml` |
-| config | `DEBUG` | config | `src/config/settings.py` |
-| config | `DOCKER_REGISTRY_PASSWORD` | config | `.env.example` |
-| config | `DOCKER_REGISTRY_URL` | config | `.env.example` |
-| config | `DOCKER_REGISTRY_USERNAME` | config | `.env.example` |
-| config | `ENCRYPT_BACKUPS` | config | `docker-compose.yml` |
-| config | `ENVIRONMENT` | config | `src/config/settings.py` |
-| config | `FARM_AI_DAILY_LIMIT` | config | `src/config/settings.py` |
-| config | `FARM_AI_MAX_TOKENS` | config | `src/config/settings.py` |
-| config | `FROM_EMAIL` | config | `src/config/settings.py` |
-| config | `FRONTEND_URL` | config | `src/config/settings.py` |
-| config | `GOOGLE_APPLICATION_CREDENTIALS` | config | `docker-compose.yml` |
-| config | `GOOGLE_CLOUD_PROJECT` | config | `src/config/settings.py` |
-| config | `HOST` | config | `src/config/settings.py` |
-| config | `LICENSE_ENCRYPTION_KEY` | config | `.env.example` |
-| config | `LICENSE_VALIDATION_MODE` | config | `.env.example` |
-| config | `LOG_LEVEL` | config | `src/config/settings.py` |
-| config | `MAX_MODULES` | config | `.env.example` |
-| config | `MAX_MODULES_PER_USER` | config | `.env.example` |
-| config | `MODULE_INSTALL_TIMEOUT` | config | `.env.example` |
-| config | `MODULE_REGISTRY_PATH` | config | `.env.example` |
-| config | `MONGODB_DB_NAME` | config | `src/config/settings.py` |
-| config | `MONGODB_URL` | config | `src/config/settings.py` |
-| config | `MONGO_APP_PASSWORD` | config | `.env.example` |
-| config | `MONGO_APP_USER` | config | `.env.example` |
-| config | `MONGO_INITDB_DATABASE` | config | `docker-compose.yml` |
-| config | `MONGO_ROOT_PASSWORD` | config | `.env.example` |
-| config | `MONGO_ROOT_USERNAME` | config | `.env.example` |
-| config | `MYSQL_DB_NAME` | config | `.env.example` |
-| config | `MYSQL_HOST` | config | `.env.example` |
-| config | `MYSQL_PASSWORD` | config | `.env.example` |
-| config | `MYSQL_PORT` | config | `.env.example` |
-| config | `MYSQL_USER` | config | `.env.example` |
-| config | `PORT` | config | `src/config/settings.py` |
-| config | `PYTHONPATH` | config | `docker-compose.yml` |
-| config | `RATE_LIMIT_ADMIN` | config | `src/config/settings.py` |
-| config | `RATE_LIMIT_GUEST` | config | `src/config/settings.py` |
-| config | `RATE_LIMIT_MODERATOR` | config | `src/config/settings.py` |
-| config | `RATE_LIMIT_SUPER_ADMIN` | config | `src/config/settings.py` |
-| config | `RATE_LIMIT_USER` | config | `src/config/settings.py` |
-| config | `REDIS_PASSWORD` | config | `.env.example` |
-| config | `REDIS_URL` | config | `.env.example` |
-| config | `SECRET_KEY` | config | `src/config/settings.py` |
-| class | `Settings` | config | `src/config/settings.py` |
-| config | `TRUSTED_REGISTRIES` | config | `.env.example` |
-| config | `UVICORN_WORKERS` | config | `docker-compose.yml` |
-| config | `VERTEX_AI_LOCATION` | config | `src/config/settings.py` |
-| config | `VERTEX_AI_MAX_OUTPUT_TOKENS` | config | `src/config/settings.py` |
-| config | `VERTEX_AI_MODEL` | config | `src/config/settings.py` |
-| config | `VERTEX_AI_TEMPERATURE` | config | `src/config/settings.py` |
-| class | `JSONFormatter` | core | `src/core/logging_config.py` |
-| class | `ModuleManifest` | core | `src/core/plugin_system/plugin_manager.py` |
-| class | `PluginManager` | core | `src/core/plugin_system/plugin_manager.py` |
-| class | `RedisCache` | core | `src/core/cache/redis_cache.py` |
-| function | `cache_response` | core | `src/core/cache/decorators.py` |
-| class | `LoginRateLimiter` | middleware | `src/middleware/rate_limit.py` |
-| class | `MFARateLimiter` | middleware | `src/middleware/rate_limit.py` |
-| middleware | `RateLimitMiddleware` | middleware | `src/middleware/rate_limit.py` |
-| class | `RateLimiter` | middleware | `src/middleware/rate_limit.py` |
-| class | `RateLimiter` | middleware | `src/middleware/rate_limit.py` |
-| class | `RoleChecker` | middleware | `src/middleware/permissions.py` |
-| class | `TimingMiddleware` | middleware | `src/middleware/timing.py` |
-| function | `get_current_active_user` | middleware | `src/middleware/auth.py` |
-| function | `rate_limit_dependency` | middleware | `src/middleware/rate_limit.py` |
-| pydantic_model | `DashboardConfig` | model | `src/models/dashboard.py` |
-| pydantic_model | `ModuleConfig` | model | `src/models/module.py` |
-| pydantic_model | `UserRole` | model | `src/models/user.py` |
-| db_model | `admin_audit_log` | model | `src/services/database.py` |
-| db_model | `installed_modules` | model | `src/services/database.py` |
-| db_model | `mfa_audit_log` | model | `src/services/database.py` |
-| db_model | `mfa_backup_codes` | model | `src/services/database.py` |
-| db_model | `mfa_pending_tokens` | model | `src/services/auth_service.py` |
-| db_model | `module_audit_log` | model | `src/services/database.py` |
-| db_model | `refresh_tokens` | model | `src/services/database.py` |
-| db_model | `user_mfa` | model | `src/services/database.py` |
-| db_model | `users` | model | `src/services/database.py` |
-| db_model | `verification_tokens` | model | `src/services/database.py` |
-| class | `AuthService` | service | `src/services/auth_service.py` |
-| class | `DashboardService` | service | `src/services/dashboard_service.py` |
-| class | `MFAService` | service | `src/services/mfa_service.py` |
-| class | `ModuleManager` | service | `src/services/module_manager.py` |
-| class | `MongoDBManager` | service | `src/services/database.py` |
-| class | `PortManager` | service | `src/services/port_manager.py` |
-| class | `ProxyManager` | service | `src/services/proxy_manager.py` |
-| class | `UserService` | service | `src/services/user_service.py` |
+| pydantic_model | `BPReferenceMixin` | core | `src/core/documents/bp_ref.py` |
+| class | `DivisionContextMiddleware` | core | `src/middleware/division_context.py` |
+| class | `DivisionScopedRepository` | core | `src/core/repository_base.py` |
+| pydantic_model | `DocumentLinkRef / DocumentLineLinkMixin` | core | `src/core/documents/document_links.py` |
+| class | `DocumentStatus` | core | `src/core/documents/document_status.py` |
+| pydantic_model | `JournalMemoMixin / format_journal_memo` | core | `src/core/documents/journal_memo.py` |
+| pydantic_model | `LineQuantityState` | core | `src/core/documents/open_quantity.py` |
+| class | `PluginManager / ModuleManifest` | core | `src/core/plugin_system/plugin_manager.py` |
+| class | `RateLimiter / RateLimitMiddleware / LoginRateLimiter / MFARateLimiter` | core | `src/middleware/rate_limit.py` |
+| class | `RoleChecker / require_super_admin / require_admin` | core | `src/middleware/permissions.py` |
+| class | `TimingMiddleware / ResponseTimeCollector` | core | `src/middleware/timing.py` |
+| function | `get_current_user / get_current_active_user / require_mfa_setup_complete` | core | `src/middleware/auth.py` |
+| function | `next_doc_number` | core | `src/core/documents/doc_number.py` |
+| function | `apiClient` | frontend | `frontend/user-portal/src/services/api.ts` |
+| hook | `usePageVisibility` | frontend | `frontend/user-portal/src/hooks/usePageVisibility.ts` |
+| store | `useThemeStore` | frontend | `frontend/user-portal/src/stores/theme.store.ts` |
+| store | `useToastStore` | frontend | `frontend/user-portal/src/stores/toast.store.ts` |
+| hook | `useUnsavedChanges` | frontend | `frontend/user-portal/src/hooks/useUnsavedChanges.ts` |
+| class | `RedisCache` | infrastructure | `src/core/cache/redis_cache.py` |
+| function | `cache_response / invalidate_cache_pattern` | infrastructure | `src/core/cache/decorators.py` |
+| config | `setup_logging / JSONFormatter` | infrastructure | `src/core/logging_config.py` |
 
-### `crm` (10 nodes)
+### `crm` (13 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
 | api_endpoint | `CRUD /crm/customers` | api | `src/modules/crm/api/v1/customers.py` |
 | component | `CRMPage` | frontend | `frontend/user-portal/src/pages/crm/CRMPage.tsx` |
+| component | `CustomerCard` | frontend | `frontend/user-portal/src/components/crm/CustomerCard.tsx` |
 | component | `CustomerDetailPage` | frontend | `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx` |
+| component | `CustomerForm` | frontend | `frontend/user-portal/src/components/crm/CustomerForm.tsx` |
+| component | `CustomerTable` | frontend | `frontend/user-portal/src/components/crm/CustomerTable.tsx` |
 | type | `crm types` | frontend | `frontend/user-portal/src/types/crm.ts` |
 | function | `crmService` | frontend | `frontend/user-portal/src/services/crmService.ts` |
 | class | `CRMDatabaseManager` | infrastructure | `src/modules/crm/services/database.py` |
@@ -219,14 +176,19 @@ Each module contains API, service, and model layers.
 | hook | `useDashboard` | frontend | `frontend/user-portal/src/hooks/queries/useDashboard.ts` |
 | store | `useDashboardStore` | frontend | `frontend/user-portal/src/stores/dashboard.store.ts` |
 
+### `debug` (1 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `ClearCache` | frontend | `frontend/user-portal/src/pages/debug/ClearCache.tsx` |
+
 ### `farm` (81 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
-| component | `AIAnalytics` | frontend | `frontend/user-portal/src/pages/ai/AIAnalytics.tsx` |
-| component | `AIAnalyticsChat` | frontend | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx` |
-| component | `AddPlantDataModal` | frontend | `frontend/user-portal/src/components/farm/AddPlantDataModal.tsx` |
 | component | `AddVirtualCropModal` | frontend | `frontend/user-portal/src/components/farm/AddVirtualCropModal.tsx` |
+| component | `AgriDataTab` | frontend | `frontend/user-portal/src/components/farm/weather/AgriDataTab.tsx` |
+| component | `AirQualityCard` | frontend | `frontend/user-portal/src/components/farm/weather/AirQualityCard.tsx` |
 | component | `BlockAlertsTab` | frontend | `frontend/user-portal/src/components/farm/BlockAlertsTab.tsx` |
 | component | `BlockAnalyticsModal` | frontend | `frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx` |
 | component | `BlockArchivesTab` | frontend | `frontend/user-portal/src/components/farm/BlockArchivesTab.tsx` |
@@ -235,73 +197,74 @@ Each module contains API, service, and model layers.
 | component | `BlockDetail` | frontend | `frontend/user-portal/src/components/farm/BlockDetail.tsx` |
 | component | `BlockDetailsModal` | frontend | `frontend/user-portal/src/components/farm/BlockDetailsModal.tsx` |
 | component | `BlockGrid` | frontend | `frontend/user-portal/src/components/farm/BlockGrid.tsx` |
-| component | `BlockGrid (dashboard)` | frontend | `frontend/user-portal/src/components/farm/dashboard/BlockGrid.tsx` |
+| component | `BlockGrid` | frontend | `frontend/user-portal/src/components/farm/dashboard/BlockGrid.tsx` |
 | component | `BlockHarvestEntryModal` | frontend | `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx` |
 | component | `BlockHarvestsTab` | frontend | `frontend/user-portal/src/components/farm/BlockHarvestsTab.tsx` |
-| component | `BlockTaskList` | frontend | `frontend/user-portal/src/pages/operations/BlockTaskList.tsx` |
+| component | `BlockMonitorHero` | frontend | `frontend/user-portal/src/components/farm/BlockMonitorHero.tsx` |
+| component | `BlockViewToggle` | frontend | `frontend/user-portal/src/components/farm/BlockViewToggle.tsx` |
 | component | `CompactBlockCard` | frontend | `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx` |
 | component | `CreateBlockModal` | frontend | `frontend/user-portal/src/components/farm/CreateBlockModal.tsx` |
 | component | `CreateFarmModal` | frontend | `frontend/user-portal/src/components/farm/CreateFarmModal.tsx` |
+| component | `CurrentWeatherCard` | frontend | `frontend/user-portal/src/components/farm/weather/CurrentWeatherCard.tsx` |
 | component | `DashboardFilters` | frontend | `frontend/user-portal/src/components/farm/dashboard/DashboardFilters.tsx` |
-| component | `DashboardHeader` | frontend | `frontend/user-portal/src/components/farm/dashboard/DashboardHeader.tsx` |
 | component | `DashboardSettings` | frontend | `frontend/user-portal/src/components/farm/dashboard/DashboardSettings.tsx` |
 | component | `EditBlockModal` | frontend | `frontend/user-portal/src/components/farm/EditBlockModal.tsx` |
 | component | `EditFarmBoundaryModal` | frontend | `frontend/user-portal/src/components/farm/EditFarmBoundaryModal.tsx` |
 | component | `EditFarmModal` | frontend | `frontend/user-portal/src/components/farm/EditFarmModal.tsx` |
-| component | `EditPlantDataModal` | frontend | `frontend/user-portal/src/components/farm/EditPlantDataModal.tsx` |
 | component | `EmptyVirtualBlockModal` | frontend | `frontend/user-portal/src/components/farm/EmptyVirtualBlockModal.tsx` |
 | component | `FarmAIChat` | frontend | `frontend/user-portal/src/components/farm/FarmAIChat.tsx` |
 | component | `FarmAnalyticsModal` | frontend | `frontend/user-portal/src/components/farm/FarmAnalyticsModal.tsx` |
-| component | `FarmBlocksView` | frontend | `frontend/user-portal/src/pages/operations/FarmBlocksView.tsx` |
 | component | `FarmCard` | frontend | `frontend/user-portal/src/components/farm/FarmCard.tsx` |
 | component | `FarmDashboard` | frontend | `frontend/user-portal/src/components/farm/FarmDashboard.tsx` |
-| component | `FarmDashboardPage` | frontend | `frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx` |
 | component | `FarmDetail` | frontend | `frontend/user-portal/src/components/farm/FarmDetail.tsx` |
 | component | `FarmHistoryTab` | frontend | `frontend/user-portal/src/components/farm/FarmHistoryTab.tsx` |
 | component | `FarmList` | frontend | `frontend/user-portal/src/components/farm/FarmList.tsx` |
 | component | `FarmManager` | frontend | `frontend/user-portal/src/pages/farm/FarmManager.tsx` |
 | component | `FarmMapView` | frontend | `frontend/user-portal/src/components/farm/FarmMapView.tsx` |
-| component | `FarmSelector` | frontend | `frontend/user-portal/src/components/farm/dashboard/FarmSelector.tsx` |
+| component | `FarmQuickSwitcher` | frontend | `frontend/user-portal/src/components/farm/FarmQuickSwitcher.tsx` |
 | component | `FarmingYearSelector` | frontend | `frontend/user-portal/src/components/farm/FarmingYearSelector.tsx` |
+| component | `FertigationScheduleEditorModal` | frontend | `frontend/user-portal/src/components/farm/FertigationScheduleEditorModal.tsx` |
+| component | `ForecastCard` | frontend | `frontend/user-portal/src/components/farm/weather/ForecastCard.tsx` |
 | component | `GlobalFarmAnalyticsModal` | frontend | `frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx` |
-| component | `InventoryDashboard` | frontend | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx` |
-| component | `OperationsDashboard` | frontend | `frontend/user-portal/src/pages/operations/OperationsDashboard.tsx` |
+| component | `InsightsCard` | frontend | `frontend/user-portal/src/components/farm/weather/InsightsCard.tsx` |
 | component | `PendingTasksWarningModal` | frontend | `frontend/user-portal/src/components/farm/PendingTasksWarningModal.tsx` |
 | component | `PhysicalBlockCard` | frontend | `frontend/user-portal/src/components/farm/PhysicalBlockCard.tsx` |
 | component | `PhysicalBlockGrid` | frontend | `frontend/user-portal/src/components/farm/PhysicalBlockGrid.tsx` |
+| component | `PhysicalBlockPlantingsModal` | frontend | `frontend/user-portal/src/components/farm/PhysicalBlockPlantingsModal.tsx` |
 | component | `PlantAssignmentModal` | frontend | `frontend/user-portal/src/components/farm/PlantAssignmentModal.tsx` |
 | component | `PlantDataCard` | frontend | `frontend/user-portal/src/components/farm/PlantDataCard.tsx` |
 | component | `PlantDataDetail` | frontend | `frontend/user-portal/src/components/farm/PlantDataDetail.tsx` |
+| component | `PlantDataFormModal` | frontend | `frontend/user-portal/src/components/farm/PlantDataFormModal.tsx` |
 | component | `PlantDataLibrary` | frontend | `frontend/user-portal/src/pages/farm/PlantDataLibrary.tsx` |
 | component | `QuickPlanModal` | frontend | `frontend/user-portal/src/components/farm/dashboard/QuickPlanModal.tsx` |
 | component | `ResolveAlertModal` | frontend | `frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx` |
-| component | `WasteInventoryList` | frontend | `frontend/user-portal/src/pages/inventory/WasteInventoryList.tsx` |
-| type | `alert types` | frontend | `frontend/user-portal/src/types/alerts.ts` |
+| component | `SensorFusionTab` | frontend | `frontend/user-portal/src/components/farm/weather/SensorFusionTab.tsx` |
+| component | `SoilConditionsCard` | frontend | `frontend/user-portal/src/components/farm/weather/SoilConditionsCard.tsx` |
+| component | `SolarLightCard` | frontend | `frontend/user-portal/src/components/farm/weather/SolarLightCard.tsx` |
+| component | `VirtualBlockItem` | frontend | `frontend/user-portal/src/components/farm/VirtualBlockItem.tsx` |
+| component | `VirtualBlocksView` | frontend | `frontend/user-portal/src/components/farm/VirtualBlocksView.tsx` |
+| type | `alerts types` | frontend | `frontend/user-portal/src/types/alerts.ts` |
 | function | `alertsApi` | frontend | `frontend/user-portal/src/services/alertsApi.ts` |
-| type | `analytics types` | frontend | `frontend/user-portal/src/types/analytics.ts` |
 | type | `farm types` | frontend | `frontend/user-portal/src/types/farm.ts` |
-| type | `farm-analytics types` | frontend | `frontend/user-portal/src/types/farm-analytics.ts` |
-| type | `farmAI types` | frontend | `frontend/user-portal/src/types/farmAI.ts` |
 | function | `farmApi` | frontend | `frontend/user-portal/src/services/farmApi.ts` |
-| type | `global-analytics types` | frontend | `frontend/user-portal/src/types/global-analytics.ts` |
-| type | `inventory types` | frontend | `frontend/user-portal/src/types/inventory.ts` |
 | function | `inventoryApi` | frontend | `frontend/user-portal/src/services/inventoryApi.ts` |
 | file | `mapConfig` | frontend | `frontend/user-portal/src/config/mapConfig.ts` |
 | function | `plantDataEnhancedApi` | frontend | `frontend/user-portal/src/services/plantDataEnhancedApi.ts` |
 | type | `task types` | frontend | `frontend/user-portal/src/types/tasks.ts` |
 | function | `tasksApi` | frontend | `frontend/user-portal/src/services/tasksApi.ts` |
-| hook | `useAIAnalytics` | frontend | `frontend/user-portal/src/hooks/farm/useAIAnalytics.ts` |
 | hook | `useBlockActions` | frontend | `frontend/user-portal/src/hooks/farm/useBlockActions.ts` |
 | hook | `useBlockAnalytics` | frontend | `frontend/user-portal/src/hooks/farm/useBlockAnalytics.ts` |
+| hook | `useBlockViewMode` | frontend | `frontend/user-portal/src/hooks/farm/useBlockViewMode.ts` |
 | hook | `useDashboardConfig` | frontend | `frontend/user-portal/src/hooks/farm/useDashboardConfig.ts` |
 | hook | `useDashboardData` | frontend | `frontend/user-portal/src/hooks/farm/useDashboardData.ts` |
 | hook | `useDashboardFilters` | frontend | `frontend/user-portal/src/hooks/farm/useDashboardFilters.ts` |
 | hook | `useFarmAIChat` | frontend | `frontend/user-portal/src/hooks/farm/useFarmAIChat.ts` |
 | hook | `useFarmAnalytics` | frontend | `frontend/user-portal/src/hooks/farm/useFarmAnalytics.ts` |
+| store | `useFarmingYearStore` | frontend | `frontend/user-portal/src/stores/farmingYear.store.ts` |
 | hook | `useFarmingYears` | frontend | `frontend/user-portal/src/hooks/queries/useFarmingYears.ts` |
 | hook | `useFarms` | frontend | `frontend/user-portal/src/hooks/queries/useFarms.ts` |
 | hook | `useGlobalAnalytics` | frontend | `frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts` |
-| hook | `useMapDrawing` | frontend | `frontend/user-portal/src/hooks/map/useMapDrawing.ts` |
+| hook | `useMultiLevelAIChat` | frontend | `frontend/user-portal/src/hooks/farm/useMultiLevelAIChat.ts` |
 | hook | `useWeatherData` | frontend | `frontend/user-portal/src/hooks/farm/useWeatherData.ts` |
 | function | `weatherApi` | frontend | `frontend/user-portal/src/services/weatherApi.ts` |
 
@@ -447,43 +410,75 @@ Each module contains API, service, and model layers.
 | class | `WeatherService` | service | `src/modules/farm_manager/services/weather/weather_service.py` |
 | function | `_enrich_tasks_with_block_farm` | service | `src/modules/farm_manager/services/task/task_repository.py` |
 
-### `frontend` (31 nodes)
+### `finance` (51 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `APAgingPage` | frontend | `frontend/user-portal/src/pages/finance/APAgingPage.tsx` |
+| component | `AccountCombobox` | frontend | `frontend/user-portal/src/components/finance/AccountCombobox.tsx` |
+| component | `ApprovalRulesPage` | frontend | `frontend/user-portal/src/pages/finance/ApprovalRulesPage.tsx` |
+| component | `AuditHistoryModal` | frontend | `frontend/user-portal/src/components/finance/AuditHistoryModal/AuditHistoryModal.tsx` |
+| component | `BalanceSheetPage` | frontend | `frontend/user-portal/src/pages/finance/BalanceSheetPage.tsx` |
+| component | `CashFlowStatementPage` | frontend | `frontend/user-portal/src/pages/finance/CashFlowStatementPage.tsx` |
+| component | `ChartOfAccountsPage` | frontend | `frontend/user-portal/src/pages/finance/ChartOfAccountsPage.tsx` |
+| component | `CostCenterCombobox` | frontend | `frontend/user-portal/src/components/finance/CostCenterCombobox/CostCenterCombobox.tsx` |
+| component | `FinanceGate` | frontend | `frontend/user-portal/src/components/finance/FinanceGate.tsx` |
+| component | `FinanceReportPage` | frontend | `frontend/user-portal/src/components/finance/FinanceReportPage/FinanceReportPage.tsx` |
+| component | `FinanceUnreachableBanner` | frontend | `frontend/user-portal/src/components/finance/FinanceUnreachableBanner.tsx` |
+| component | `IncomeStatementPage` | frontend | `frontend/user-portal/src/pages/finance/IncomeStatementPage.tsx` |
+| component | `IncomingPreviewPage` | frontend | `frontend/user-portal/src/pages/finance/IncomingPreviewPage.tsx` |
+| component | `ItemMappingPage` | frontend | `frontend/user-portal/src/pages/finance/ItemMappingPage.tsx` |
+| component | `JournalEntriesPage` | frontend | `frontend/user-portal/src/pages/finance/JournalEntriesPage.tsx` |
+| component | `ManualJournalEntryPage` | frontend | `frontend/user-portal/src/pages/finance/ManualJournalEntryPage.tsx` |
+| component | `PaymentDetailPage` | frontend | `frontend/user-portal/src/pages/finance/PaymentDetailPage.tsx` |
+| component | `PaymentsPage` | frontend | `frontend/user-portal/src/pages/finance/PaymentsPage.tsx` |
+| component | `PeriodsPage` | frontend | `frontend/user-portal/src/pages/finance/PeriodsPage.tsx` |
+| component | `PostingSetupPage` | frontend | `frontend/user-portal/src/pages/finance/PostingSetupPage.tsx` |
+| component | `RecordPaymentPage` | frontend | `frontend/user-portal/src/pages/finance/RecordPaymentPage.tsx` |
+| component | `TrialBalancePage` | frontend | `frontend/user-portal/src/pages/finance/TrialBalancePage.tsx` |
+| component | `VendorSubLedgerPage` | frontend | `frontend/user-portal/src/pages/finance/VendorSubLedgerPage.tsx` |
+| function | `approvalRulesService` | frontend | `frontend/user-portal/src/services/approvalRulesService.ts` |
+| function | `costCentersService` | frontend | `frontend/user-portal/src/services/costCentersService.ts` |
+| type | `finance types` | frontend | `frontend/user-portal/src/types/finance.ts` |
+| function | `financeAccountsService` | frontend | `frontend/user-portal/src/services/financeAccountsService.ts` |
+| function | `financeCompaniesService` | frontend | `frontend/user-portal/src/services/financeCompaniesService.ts` |
+| function | `financeReportsService` | frontend | `frontend/user-portal/src/services/financeReportsService.ts` |
+| function | `financeService` | frontend | `frontend/user-portal/src/services/financeService.ts` |
+| function | `fiscalPeriodsService` | frontend | `frontend/user-portal/src/services/fiscalPeriodsService.ts` |
+| function | `itemMappingService` | frontend | `frontend/user-portal/src/services/itemMappingService.ts` |
+| function | `journalEntriesService` | frontend | `frontend/user-portal/src/services/journalEntriesService.ts` |
+| function | `paymentsService` | frontend | `frontend/user-portal/src/services/paymentsService.ts` |
+| function | `postingSetupService` | frontend | `frontend/user-portal/src/services/postingSetupService.ts` |
+| function | `taxCodesService` | frontend | `frontend/user-portal/src/services/taxCodesService.ts` |
+| function | `trialBalanceService` | frontend | `frontend/user-portal/src/services/trialBalanceService.ts` |
+| hook | `useApprovalRules` | frontend | `frontend/user-portal/src/hooks/queries/useApprovalRules.ts` |
+| hook | `useCostCenters` | frontend | `frontend/user-portal/src/hooks/queries/useCostCenters.ts` |
+| hook | `useFinanceAccounts` | frontend | `frontend/user-portal/src/hooks/queries/useFinanceAccounts.ts` |
+| hook | `useFinanceCompanies` | frontend | `frontend/user-portal/src/hooks/queries/useFinanceCompanies.ts` |
+| hook | `useFinancePnl` | frontend | `frontend/user-portal/src/hooks/useFinancePnl.ts` |
+| hook | `useFinanceReports` | frontend | `frontend/user-portal/src/hooks/queries/useFinanceReports.ts` |
+| hook | `useFiscalPeriods` | frontend | `frontend/user-portal/src/hooks/queries/useFiscalPeriods.ts` |
+| hook | `useItemMappings` | frontend | `frontend/user-portal/src/hooks/queries/useItemMappings.ts` |
+| hook | `useItemMappingsMap` | frontend | `frontend/user-portal/src/hooks/queries/useItemMappingsMap.ts` |
+| hook | `useJournalEntries` | frontend | `frontend/user-portal/src/hooks/queries/useJournalEntries.ts` |
+| hook | `usePayments` | frontend | `frontend/user-portal/src/hooks/queries/usePayments.ts` |
+| hook | `usePostingSetup` | frontend | `frontend/user-portal/src/hooks/queries/usePostingSetup.ts` |
+| hook | `useTaxCodes` | frontend | `frontend/user-portal/src/hooks/queries/useTaxCodes.ts` |
+| hook | `useTrialBalance` | frontend | `frontend/user-portal/src/hooks/queries/useTrialBalance.ts` |
+
+### `frontend` (7 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
 | config | `NODE_ENV` | config | `docker-compose.yml` |
 | config | `VITE_API_TARGET` | config | `docker-compose.yml` |
 | config | `VITE_API_URL` | config | `docker-compose.yml` |
-| component | `AIAnalyticsChat` | frontend | `frontend/user-portal/src/components/ai/AIAnalyticsChat.tsx` |
-| component | `AIHubChat` | frontend | `frontend/user-portal/src/components/ai/AIHubChat.tsx` |
-| component | `App` | frontend | `frontend/user-portal/src/App.tsx` |
-| component | `BlockDetail` | frontend | `frontend/user-portal/src/components/farm/BlockDetail.tsx` |
-| component | `BlockHarvestEntryModal` | frontend | `frontend/user-portal/src/components/farm/BlockHarvestEntryModal.tsx` |
-| component | `CRMPage` | frontend | `frontend/user-portal/src/pages/crm/CRMPage.tsx` |
-| component | `CompactBlockCard` | frontend | `frontend/user-portal/src/components/farm/dashboard/CompactBlockCard.tsx` |
-| component | `CustomerDetailPage` | frontend | `frontend/user-portal/src/pages/crm/CustomerDetailPage.tsx` |
-| component | `FarmDashboard` | frontend | `frontend/user-portal/src/components/farm/FarmDashboard.tsx` |
-| component | `FarmDashboardPage` | frontend | `frontend/user-portal/src/pages/farm/FarmDashboardPage.tsx` |
-| component | `HRDashboardPage` | frontend | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx` |
-| type | `HarvestEntry` | frontend | `frontend/user-portal/src/types/tasks.ts` |
-| component | `HarvestEntryModal (mushroom)` | frontend | `frontend/user-portal/src/components/mushroom/HarvestEntryModal.tsx` |
-| component | `HarvestEntryModal (operations)` | frontend | `frontend/user-portal/src/components/operations/HarvestEntryModal.tsx` |
-| type | `HarvestGrade` | frontend | `frontend/user-portal/src/types/tasks.ts` |
-| type | `HarvestSummary` | frontend | `frontend/user-portal/src/types/tasks.ts` |
-| component | `InventoryDashboard` | frontend | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx` |
-| component | `MushroomFacilityManager` | frontend | `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx` |
-| type | `PaginatedTasksResponse` | frontend | `frontend/user-portal/src/types/tasks.ts` |
-| component | `SalesDashboardPage` | frontend | `frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx` |
-| type | `Task` | frontend | `frontend/user-portal/src/types/tasks.ts` |
-| type | `TaskStatus` | frontend | `frontend/user-portal/src/types/tasks.ts` |
-| type | `TaskType` | frontend | `frontend/user-portal/src/types/tasks.ts` |
-| type | `TaskWithDetails` | frontend | `frontend/user-portal/src/types/tasks.ts` |
 | function | `positiveIntegerInputProps` | frontend | `frontend/user-portal/src/utils/inputGuards.ts` |
 | function | `positiveNumberInputProps` | frontend | `frontend/user-portal/src/utils/inputGuards.ts` |
 | config | `theme` | frontend | `frontend/shared/src/theme/theme.ts` |
 | file | `utils/index` | frontend | `frontend/user-portal/src/utils/index.ts` |
 
-### `hr` (25 nodes)
+### `hr` (32 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
@@ -493,9 +488,16 @@ Each module contains API, service, and model layers.
 | api_endpoint | `CRUD /hr/performance` | api | `src/modules/hr/api/v1/performance.py` |
 | api_endpoint | `CRUD /hr/visas` | api | `src/modules/hr/api/v1/visas.py` |
 | api_endpoint | `GET /hr/dashboard` | api | `src/modules/hr/api/v1/dashboard.py` |
+| component | `ContractTab` | frontend | `frontend/user-portal/src/components/hr/ContractTab.tsx` |
+| component | `EmployeeCard` | frontend | `frontend/user-portal/src/components/hr/EmployeeCard.tsx` |
 | component | `EmployeeDetailPage` | frontend | `frontend/user-portal/src/pages/hr/EmployeeDetailPage.tsx` |
+| component | `EmployeeForm` | frontend | `frontend/user-portal/src/components/hr/EmployeeForm.tsx` |
 | component | `EmployeeListPage` | frontend | `frontend/user-portal/src/pages/hr/EmployeeListPage.tsx` |
+| component | `EmployeeTable` | frontend | `frontend/user-portal/src/components/hr/EmployeeTable.tsx` |
 | component | `HRDashboardPage` | frontend | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx` |
+| component | `InsuranceTab` | frontend | `frontend/user-portal/src/components/hr/InsuranceTab.tsx` |
+| component | `PerformanceTab` | frontend | `frontend/user-portal/src/components/hr/PerformanceTab.tsx` |
+| component | `VisaTab` | frontend | `frontend/user-portal/src/components/hr/VisaTab.tsx` |
 | type | `hr types` | frontend | `frontend/user-portal/src/types/hr.ts` |
 | function | `hrService` | frontend | `frontend/user-portal/src/services/hrService.ts` |
 | class | `HRDatabaseManager` | infrastructure | `src/modules/hr/services/database.py` |
@@ -513,7 +515,19 @@ Each module contains API, service, and model layers.
 | class | `PerformanceService` | service | `src/modules/hr/services/employee/performance_service.py` |
 | class | `VisaService` | service | `src/modules/hr/services/employee/visa_service.py` |
 
-### `logistics` (19 nodes)
+### `inventory` (7 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `AssetInventoryList` | frontend | `frontend/user-portal/src/pages/inventory/AssetInventoryList.tsx` |
+| component | `HarvestInventoryList` | frontend | `frontend/user-portal/src/pages/inventory/HarvestInventoryList.tsx` |
+| component | `InputInventoryList` | frontend | `frontend/user-portal/src/pages/inventory/InputInventoryList.tsx` |
+| component | `InventoryDashboard` | frontend | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx` |
+| component | `ReturnedInventoryList` | frontend | `frontend/user-portal/src/pages/inventory/ReturnedInventoryList.tsx` |
+| component | `WasteInventoryList` | frontend | `frontend/user-portal/src/pages/inventory/WasteInventoryList.tsx` |
+| type | `inventory types` | frontend | `frontend/user-portal/src/types/inventory.ts` |
+
+### `logistics` (27 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
@@ -522,9 +536,17 @@ Each module contains API, service, and model layers.
 | api_endpoint | `CRUD /logistics/vehicles` | api | `src/modules/logistics/api/v1/vehicles.py` |
 | api_endpoint | `GET /logistics/dashboard` | api | `src/modules/logistics/api/v1/dashboard.py` |
 | component | `LogisticsDashboardPage` | frontend | `frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx` |
+| component | `RouteForm` | frontend | `frontend/user-portal/src/components/logistics/RouteForm.tsx` |
 | component | `RouteManagementPage` | frontend | `frontend/user-portal/src/pages/logistics/RouteManagementPage.tsx` |
+| component | `RouteTable` | frontend | `frontend/user-portal/src/components/logistics/RouteTable.tsx` |
+| component | `ShipmentCard` | frontend | `frontend/user-portal/src/components/logistics/ShipmentCard.tsx` |
+| component | `ShipmentForm` | frontend | `frontend/user-portal/src/components/logistics/ShipmentForm.tsx` |
+| component | `ShipmentTable` | frontend | `frontend/user-portal/src/components/logistics/ShipmentTable.tsx` |
 | component | `ShipmentTrackingPage` | frontend | `frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx` |
+| component | `VehicleCard` | frontend | `frontend/user-portal/src/components/logistics/VehicleCard.tsx` |
+| component | `VehicleForm` | frontend | `frontend/user-portal/src/components/logistics/VehicleForm.tsx` |
 | component | `VehicleManagementPage` | frontend | `frontend/user-portal/src/pages/logistics/VehicleManagementPage.tsx` |
+| component | `VehicleTable` | frontend | `frontend/user-portal/src/components/logistics/VehicleTable.tsx` |
 | type | `logistics types` | frontend | `frontend/user-portal/src/types/logistics.ts` |
 | function | `logisticsService` | frontend | `frontend/user-portal/src/services/logisticsService.ts` |
 | class | `LogisticsDatabaseManager` | infrastructure | `src/modules/logistics/services/database.py` |
@@ -537,7 +559,13 @@ Each module contains API, service, and model layers.
 | class | `ShipmentService` | service | `src/modules/logistics/services/logistics/shipment_service.py` |
 | class | `VehicleService` | service | `src/modules/logistics/services/logistics/vehicle_service.py` |
 
-### `marketing` (22 nodes)
+### `map` (1 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| hook | `useMapDrawing` | frontend | `frontend/user-portal/src/hooks/map/useMapDrawing.ts` |
+
+### `marketing` (31 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
@@ -546,10 +574,19 @@ Each module contains API, service, and model layers.
 | api_endpoint | `CRUD /marketing/channels` | api | `src/modules/marketing/api/v1/channels.py` |
 | api_endpoint | `CRUD /marketing/events` | api | `src/modules/marketing/api/v1/events.py` |
 | api_endpoint | `GET /marketing/dashboard` | api | `src/modules/marketing/api/v1/dashboard.py` |
+| component | `BudgetForm` | frontend | `frontend/user-portal/src/components/marketing/BudgetForm.tsx` |
 | component | `BudgetManagementPage` | frontend | `frontend/user-portal/src/pages/marketing/BudgetManagementPage.tsx` |
+| component | `BudgetTable` | frontend | `frontend/user-portal/src/components/marketing/BudgetTable.tsx` |
+| component | `CampaignCard` | frontend | `frontend/user-portal/src/components/marketing/CampaignCard.tsx` |
+| component | `CampaignForm` | frontend | `frontend/user-portal/src/components/marketing/CampaignForm.tsx` |
 | component | `CampaignManagementPage` | frontend | `frontend/user-portal/src/pages/marketing/CampaignManagementPage.tsx` |
+| component | `CampaignTable` | frontend | `frontend/user-portal/src/components/marketing/CampaignTable.tsx` |
+| component | `ChannelForm` | frontend | `frontend/user-portal/src/components/marketing/ChannelForm.tsx` |
 | component | `ChannelManagementPage` | frontend | `frontend/user-portal/src/pages/marketing/ChannelManagementPage.tsx` |
+| component | `ChannelTable` | frontend | `frontend/user-portal/src/components/marketing/ChannelTable.tsx` |
+| component | `EventForm` | frontend | `frontend/user-portal/src/components/marketing/EventForm.tsx` |
 | component | `EventManagementPage` | frontend | `frontend/user-portal/src/pages/marketing/EventManagementPage.tsx` |
+| component | `EventTable` | frontend | `frontend/user-portal/src/components/marketing/EventTable.tsx` |
 | component | `MarketingDashboardPage` | frontend | `frontend/user-portal/src/pages/marketing/MarketingDashboardPage.tsx` |
 | type | `marketing types` | frontend | `frontend/user-portal/src/types/marketing.ts` |
 | function | `marketingService` | frontend | `frontend/user-portal/src/services/marketingService.ts` |
@@ -564,112 +601,216 @@ Each module contains API, service, and model layers.
 | class | `ChannelService` | service | `src/modules/marketing/services/marketing/channel_service.py` |
 | class | `EventService` | service | `src/modules/marketing/services/marketing/event_service.py` |
 
-### `sales` (26 nodes)
+### `mushroom` (20 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
-| api_endpoint | `CRUD /sales/inventory` | api | `src/modules/sales/api/v1/inventory.py` |
-| api_endpoint | `CRUD /sales/orders` | api | `src/modules/sales/api/v1/orders.py` |
-| api_endpoint | `CRUD /sales/purchase-orders` | api | `src/modules/sales/api/v1/purchase_orders.py` |
-| api_endpoint | `CRUD /sales/returns` | api | `src/modules/sales/api/v1/returns.py` |
-| api_endpoint | `GET /sales/dashboard` | api | `src/modules/sales/api/v1/dashboard.py` |
-| component | `InventoryPage` | frontend | `frontend/user-portal/src/pages/sales/InventoryPage.tsx` |
-| component | `PurchaseOrdersPage` | frontend | `frontend/user-portal/src/pages/sales/PurchaseOrdersPage.tsx` |
+| component | `BiologicalEfficiencyGauge` | frontend | `frontend/user-portal/src/components/mushroom/BiologicalEfficiencyGauge.tsx` |
+| component | `FacilityCard` | frontend | `frontend/user-portal/src/components/mushroom/FacilityCard.tsx` |
+| component | `GrowingRoomCard` | frontend | `frontend/user-portal/src/components/mushroom/GrowingRoomCard.tsx` |
+| component | `GrowingRoomGrid` | frontend | `frontend/user-portal/src/components/mushroom/GrowingRoomGrid.tsx` |
+| component | `HarvestEntryModal` | frontend | `frontend/user-portal/src/components/mushroom/HarvestEntryModal.tsx` |
+| component | `MushroomDashboardPage` | frontend | `frontend/user-portal/src/pages/mushroom/MushroomDashboardPage.tsx` |
+| component | `MushroomFacilityManager` | frontend | `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx` |
+| component | `MushroomRoomMonitor` | frontend | `frontend/user-portal/src/pages/mushroom/MushroomRoomMonitor.tsx` |
+| component | `MushroomStrainLibrary` | frontend | `frontend/user-portal/src/pages/mushroom/MushroomStrainLibrary.tsx` |
+| component | `RoomDetailsModal` | frontend | `frontend/user-portal/src/components/mushroom/RoomDetailsModal.tsx` |
+| component | `StrainCard` | frontend | `frontend/user-portal/src/components/mushroom/StrainCard.tsx` |
+| type | `mushroom types` | frontend | `frontend/user-portal/src/types/mushroom.ts` |
+| hook | `useContamination` | frontend | `frontend/user-portal/src/hooks/mushroom/useContamination.ts` |
+| hook | `useFacilityData` | frontend | `frontend/user-portal/src/hooks/mushroom/useFacilityData.ts` |
+| hook | `useMushroomDashboard` | frontend | `frontend/user-portal/src/hooks/mushroom/useMushroomDashboard.ts` |
+| hook | `useMushroomHarvests` | frontend | `frontend/user-portal/src/hooks/mushroom/useMushroomHarvests.ts` |
+| hook | `useMushroomStrains` | frontend | `frontend/user-portal/src/hooks/mushroom/useMushroomStrains.ts` |
+| hook | `useRoomData` | frontend | `frontend/user-portal/src/hooks/mushroom/useRoomData.ts` |
+| hook | `useRoomEnvironment` | frontend | `frontend/user-portal/src/hooks/mushroom/useRoomEnvironment.ts` |
+| hook | `useSubstrateBatches` | frontend | `frontend/user-portal/src/hooks/mushroom/useSubstrateBatches.ts` |
+
+### `operations` (6 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `BlockTaskList` | frontend | `frontend/user-portal/src/pages/operations/BlockTaskList.tsx` |
+| component | `FarmBlocksView` | frontend | `frontend/user-portal/src/pages/operations/FarmBlocksView.tsx` |
+| component | `HarvestEntryModal` | frontend | `frontend/user-portal/src/components/operations/HarvestEntryModal.tsx` |
+| component | `OperationsDashboard` | frontend | `frontend/user-portal/src/pages/operations/OperationsDashboard.tsx` |
+| component | `ReportAlertModal` | frontend | `frontend/user-portal/src/components/operations/ReportAlertModal.tsx` |
+| component | `TaskCompletionModal` | frontend | `frontend/user-portal/src/components/operations/TaskCompletionModal.tsx` |
+
+### `platform` (1 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| type | `capabilities types` | frontend | `frontend/user-portal/src/types/capabilities.ts` |
+
+### `pnl` (8 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `PnLPage` | frontend | `frontend/user-portal/src/pages/pnl/PnLPage.tsx` |
+| component | `PnlArAging` | frontend | `frontend/user-portal/src/components/pnl/PnlArAging.tsx` |
+| component | `PnlBreakdownCharts` | frontend | `frontend/user-portal/src/components/pnl/PnlBreakdownCharts.tsx` |
+| component | `PnlFiltersBar` | frontend | `frontend/user-portal/src/components/pnl/PnlFiltersBar.tsx` |
+| component | `PnlKpiCards` | frontend | `frontend/user-portal/src/components/pnl/PnlKpiCards.tsx` |
+| component | `PnlRevenueConfidence` | frontend | `frontend/user-portal/src/components/pnl/PnlRevenueConfidence.tsx` |
+| component | `PnlRevenueTrendChart` | frontend | `frontend/user-portal/src/components/pnl/PnlRevenueTrendChart.tsx` |
+| component | `PnlStatementTable` | frontend | `frontend/user-portal/src/components/pnl/PnlStatementTable.tsx` |
+
+### `purchasing` (25 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `APInvoiceDetailPage` | frontend | `frontend/user-portal/src/pages/purchasing/APInvoiceDetailPage.tsx` |
+| component | `APInvoiceFormPage` | frontend | `frontend/user-portal/src/pages/purchasing/APInvoiceFormPage.tsx` |
+| component | `APInvoicesPage` | frontend | `frontend/user-portal/src/pages/purchasing/APInvoicesPage.tsx` |
+| component | `ApprovalInboxPage` | frontend | `frontend/user-portal/src/pages/purchasing/ApprovalInboxPage.tsx` |
+| component | `GoodsReceiptDetailPage` | frontend | `frontend/user-portal/src/pages/purchasing/GoodsReceiptDetailPage.tsx` |
+| component | `GoodsReceiptFormPage` | frontend | `frontend/user-portal/src/pages/purchasing/GoodsReceiptFormPage.tsx` |
+| component | `GoodsReceiptsPage` | frontend | `frontend/user-portal/src/pages/purchasing/GoodsReceiptsPage.tsx` |
+| component | `PaymentTermsPage` | frontend | `frontend/user-portal/src/pages/purchasing/PaymentTermsPage.tsx` |
+| component | `PurchaseItemsPage` | frontend | `frontend/user-portal/src/pages/purchasing/PurchaseItemsPage.tsx` |
+| component | `PurchaseOrderDetailPage` | frontend | `frontend/user-portal/src/pages/purchasing/PurchaseOrderDetailPage.tsx` |
+| component | `PurchaseOrderFormPage` | frontend | `frontend/user-portal/src/pages/purchasing/PurchaseOrderFormPage.tsx` |
+| component | `PurchaseOrdersPage` | frontend | `frontend/user-portal/src/pages/purchasing/PurchaseOrdersPage.tsx` |
+| component | `PurchaseRequestDetailPage` | frontend | `frontend/user-portal/src/pages/purchasing/PurchaseRequestDetailPage.tsx` |
+| component | `PurchaseRequestFormPage` | frontend | `frontend/user-portal/src/pages/purchasing/PurchaseRequestFormPage.tsx` |
+| component | `PurchaseRequestsPage` | frontend | `frontend/user-portal/src/pages/purchasing/PurchaseRequestsPage.tsx` |
+| component | `VendorsPage` | frontend | `frontend/user-portal/src/pages/purchasing/VendorsPage.tsx` |
+| function | `apInvoicesService` | frontend | `frontend/user-portal/src/services/apInvoicesService.ts` |
+| function | `attachmentsService` | frontend | `frontend/user-portal/src/services/attachmentsService.ts` |
+| function | `goodsReceiptsService` | frontend | `frontend/user-portal/src/services/goodsReceiptsService.ts` |
+| function | `purchasingApi` | frontend | `frontend/user-portal/src/services/purchasingApi.ts` |
+| hook | `useAPInvoices` | frontend | `frontend/user-portal/src/hooks/queries/useAPInvoices.ts` |
+| hook | `useAttachments` | frontend | `frontend/user-portal/src/hooks/queries/useAttachments.ts` |
+| hook | `useGoodsReceipts` | frontend | `frontend/user-portal/src/hooks/queries/useGoodsReceipts.ts` |
+| hook | `useIncomingDocs` | frontend | `frontend/user-portal/src/hooks/queries/useIncomingDocs.ts` |
+| hook | `usePurchasing` | frontend | `frontend/user-portal/src/hooks/queries/usePurchasing.ts` |
+
+### `sales` (54 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| api_endpoint | `CRUD /sales (config)` | api | `src/modules/sales/api/v1/config.py` |
+| api_endpoint | `CRUD /sales/ar-credit-notes` | api | `src/modules/sales/api/v1/ar_credit_notes.py` |
+| api_endpoint | `CRUD /sales/ar-invoices` | api | `src/modules/sales/api/v1/ar_invoices.py` |
+| api_endpoint | `CRUD /sales/customer-receipts` | api | `src/modules/sales/api/v1/customer_receipts.py` |
+| api_endpoint | `CRUD /sales/dashboard` | api | `src/modules/sales/api/v1/dashboard.py` |
+| api_endpoint | `CRUD /sales/deliveries` | api | `src/modules/sales/api/v1/deliveries.py` |
+| api_endpoint | `CRUD /sales/orders (legacy)` | api | `src/modules/sales/api/v1/orders.py` |
+| api_endpoint | `CRUD /sales/orders-v2` | api | `src/modules/sales/api/v1/sales_orders.py` |
+| api_endpoint | `CRUD /sales/quotes` | api | `src/modules/sales/api/v1/quotes.py` |
+| api_endpoint | `CRUD /sales/return-requests` | api | `src/modules/sales/api/v1/return_requests.py` |
+| api_endpoint | `CRUD /sales/returns (legacy)` | api | `src/modules/sales/api/v1/returns.py` |
+| api_endpoint | `CRUD /sales/returns-v2` | api | `src/modules/sales/api/v1/returns_v2.py` |
+| component | `AddOrderItemModal` | frontend | `frontend/user-portal/src/components/sales/AddOrderItemModal.tsx` |
+| component | `CustomerCombobox` | frontend | `frontend/user-portal/src/components/sales/CustomerCombobox.tsx` |
+| component | `DeleteOrderConfirmModal` | frontend | `frontend/user-portal/src/components/sales/DeleteOrderConfirmModal.tsx` |
+| component | `OrderCard` | frontend | `frontend/user-portal/src/components/sales/OrderCard.tsx` |
+| component | `OrderForm` | frontend | `frontend/user-portal/src/components/sales/OrderForm.tsx` |
+| component | `OrderTable` | frontend | `frontend/user-portal/src/components/sales/OrderTable.tsx` |
+| component | `ReportReturnModal` | frontend | `frontend/user-portal/src/components/sales/ReportReturnModal.tsx` |
 | component | `ReturnsPage` | frontend | `frontend/user-portal/src/pages/sales/ReturnsPage.tsx` |
+| component | `SalesActionTiles` | frontend | `frontend/user-portal/src/components/sales/SalesActionTiles.tsx` |
 | component | `SalesDashboardPage` | frontend | `frontend/user-portal/src/pages/sales/SalesDashboardPage.tsx` |
 | component | `SalesOrdersPage` | frontend | `frontend/user-portal/src/pages/sales/SalesOrdersPage.tsx` |
+| component | `StockPage` | frontend | `frontend/user-portal/src/pages/sales/StockPage.tsx` |
 | type | `returns types` | frontend | `frontend/user-portal/src/types/returns.ts` |
 | type | `sales types` | frontend | `frontend/user-portal/src/types/sales.ts` |
 | function | `salesService` | frontend | `frontend/user-portal/src/services/salesService.ts` |
 | hook | `useSales` | frontend | `frontend/user-portal/src/hooks/queries/useSales.ts` |
-| class | `SalesDatabaseManager` | infrastructure | `src/modules/sales/services/database.py` |
-| pydantic_model | `ReturnOrder` | model | `src/modules/sales/models/return_order.py` |
-| pydantic_model | `SalesOrder` | model | `src/modules/sales/models/sales_order.py` |
-| db_model | `harvest_inventory` | model | `src/modules/sales/services/sales/inventory_repository.py` |
-| db_model | `purchase_orders` | model | `src/modules/sales/services/sales/purchase_order_repository.py` |
-| db_model | `return_orders` | model | `src/modules/sales/services/sales/return_service.py` |
-| db_model | `sales_orders` | model | `src/modules/sales/services/sales/order_repository.py` |
-| class | `OrderRepository` | repository | `src/modules/sales/services/sales/order_repository.py` |
-| class | `InventoryService` | service | `src/modules/sales/services/sales/inventory_service.py` |
-| class | `OrderService` | service | `src/modules/sales/services/sales/order_service.py` |
-| class | `PurchaseOrderService` | service | `src/modules/sales/services/sales/purchase_order_service.py` |
-| class | `ReturnService` | service | `src/modules/sales/services/sales/return_service.py` |
+| class | `CurrentUser + JWT deps` | middleware | `src/modules/sales/middleware/auth.py` |
+| pydantic_model | `AR Credit Note models` | model | `src/modules/sales/models/ar_credit_notes.py` |
+| pydantic_model | `AR Invoice models` | model | `src/modules/sales/models/ar_invoices.py` |
+| pydantic_model | `Customer Receipt models` | model | `src/modules/sales/models/customer_receipts.py` |
+| pydantic_model | `Delivery Note models` | model | `src/modules/sales/models/deliveries.py` |
+| pydantic_model | `Purchase Order (legacy stub)` | model | `src/modules/sales/models/purchase_order.py` |
+| pydantic_model | `Quote models` | model | `src/modules/sales/models/quotes.py` |
+| pydantic_model | `Return Note v2 models` | model | `src/modules/sales/models/returns.py` |
+| pydantic_model | `Return Order (legacy) models` | model | `src/modules/sales/models/return_order.py` |
+| pydantic_model | `Return Request models` | model | `src/modules/sales/models/return_requests.py` |
+| pydantic_model | `Sales Order (legacy) models` | model | `src/modules/sales/models/sales_order.py` |
+| pydantic_model | `Sales Order v2 models` | model | `src/modules/sales/models/sales_orders.py` |
+| class | `ARCreditNoteService` | service | `src/modules/sales/services/ar_credit_note_service.py` |
+| class | `ARInvoiceService` | service | `src/modules/sales/services/ar_invoice_service.py` |
+| class | `CustomerReceiptService` | service | `src/modules/sales/services/customer_receipt_service.py` |
+| class | `DeliveryService` | service | `src/modules/sales/services/delivery_service.py` |
+| class | `OrderRepository (legacy)` | service | `src/modules/sales/services/sales/order_repository.py` |
+| class | `OrderService (legacy)` | service | `src/modules/sales/services/sales/order_service.py` |
+| class | `PurchaseOrderRepository (legacy stub)` | service | `src/modules/sales/services/sales/purchase_order_repository.py` |
+| class | `PurchaseOrderService (legacy stub)` | service | `src/modules/sales/services/sales/purchase_order_service.py` |
+| class | `QuoteService` | service | `src/modules/sales/services/quote_service.py` |
+| class | `RTNService` | service | `src/modules/sales/services/rtn_service.py` |
+| class | `ReturnRequestService` | service | `src/modules/sales/services/return_request_service.py` |
+| class | `ReturnService (legacy)` | service | `src/modules/sales/services/sales/return_service.py` |
+| class | `SalesDatabaseManager` | service | `src/modules/sales/services/database.py` |
+| class | `SalesOrderService` | service | `src/modules/sales/services/sales_order_service.py` |
 
-### `shared` (15 nodes)
+### `settings` (3 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `ModulesSettingsCard` | frontend | `frontend/user-portal/src/components/settings/ModulesSettingsCard.tsx` |
+| component | `Settings` | frontend | `frontend/user-portal/src/pages/settings/Settings.tsx` |
+| component | `TelegramBotSettings` | frontend | `frontend/user-portal/src/components/settings/TelegramBotSettings.tsx` |
+
+### `shared` (16 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
 | file | `App` | frontend | `frontend/user-portal/src/App.tsx` |
-| component | `ClearCache` | frontend | `frontend/user-portal/src/pages/debug/ClearCache.tsx` |
+| component | `AttachmentList` | frontend | `frontend/user-portal/src/components/attachments/AttachmentList.tsx` |
+| component | `DivisionSelector` | frontend | `frontend/user-portal/src/pages/division/DivisionSelector.tsx` |
+| component | `DivisionSwitcher` | frontend | `frontend/user-portal/src/components/layout/DivisionSwitcher.tsx` |
+| component | `DrawingControls` | frontend | `frontend/user-portal/src/components/map/DrawingControls.tsx` |
 | component | `MainLayout` | frontend | `frontend/user-portal/src/components/layout/MainLayout.tsx` |
+| component | `MapContainer` | frontend | `frontend/user-portal/src/components/map/MapContainer.tsx` |
+| component | `MapSearchBar` | frontend | `frontend/user-portal/src/components/map/MapSearchBar.tsx` |
 | component | `NotFound` | frontend | `frontend/user-portal/src/pages/NotFound.tsx` |
 | component | `Profile` | frontend | `frontend/user-portal/src/pages/profile/Profile.tsx` |
 | component | `ProtectedRoute` | frontend | `frontend/user-portal/src/components/common/ProtectedRoute.tsx` |
-| component | `Settings` | frontend | `frontend/user-portal/src/pages/settings/Settings.tsx` |
 | component | `ToastContainer` | frontend | `frontend/user-portal/src/components/common/ToastContainer.tsx` |
 | component | `UnsavedChangesDialog` | frontend | `frontend/user-portal/src/components/common/UnsavedChangesDialog.tsx` |
-| component | `UserManagementPage` | frontend | `frontend/user-portal/src/pages/admin/UserManagementPage.tsx` |
-| function | `apiClient` | frontend | `frontend/user-portal/src/services/api.ts` |
 | file | `react-query.config` | frontend | `frontend/user-portal/src/config/react-query.config.ts` |
-| hook | `usePageVisibility` | frontend | `frontend/user-portal/src/hooks/usePageVisibility.ts` |
-| store | `useToastStore` | frontend | `frontend/user-portal/src/stores/toast.store.ts` |
-| hook | `useUnsavedChanges` | frontend | `frontend/user-portal/src/hooks/useUnsavedChanges.ts` |
+| type | `shared types barrel` | frontend | `frontend/shared/src/types/index.ts` |
+| type | `shared widget types` | frontend | `frontend/shared/src/types/widget.types.ts` |
+
+### `system` (4 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| function | `auditLogService` | frontend | `frontend/user-portal/src/services/auditLogService.ts` |
+| function | `systemService` | frontend | `frontend/user-portal/src/services/systemService.ts` |
+| hook | `useAuditLog` | frontend | `frontend/user-portal/src/hooks/queries/useAuditLog.ts` |
+| hook | `useCapabilities` | frontend | `frontend/user-portal/src/hooks/useCapabilities.ts` |
+
+### `tenant` (3 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| function | `tenantBootstrapService` | frontend | `frontend/user-portal/src/services/tenantBootstrapService.ts` |
+| store | `useDivisionStore` | frontend | `frontend/user-portal/src/stores/division.store.ts` |
+| hook | `useOrganizations` | frontend | `frontend/user-portal/src/hooks/queries/useOrganizations.ts` |
+
+### `tools` (5 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| component | `ChemicalsCatalog` | frontend | `frontend/user-portal/src/pages/tools/ChemicalsCatalog.tsx` |
+| component | `FertilizerCostCalculator` | frontend | `frontend/user-portal/src/pages/tools/FertilizerCostCalculator.tsx` |
+| type | `tools types` | frontend | `frontend/user-portal/src/types/tools.ts` |
+| function | `toolsApi` | frontend | `frontend/user-portal/src/services/toolsApi.ts` |
+| hook | `useTools` | frontend | `frontend/user-portal/src/hooks/queries/useTools.ts` |
 
 ## Cross-Module Dependencies
 
 | Source Module | Edge | Target Module |
 |---------------|------|---------------|
-| `farm_manager.api.farms.create_farm` | depends_on | `core.middleware.auth` |
-| `sales.service.OrderService` | depends_on | `crm.service.CustomerRepository` |
-| `sales.service.OrderService` | depends_on | `farm_manager.service.FarmDatabaseManager` |
-| `logistics.service.ShipmentService` | depends_on | `sales.service.OrderService` |
-
----
-
-## Wave 0 Addendum — 2026-05-24 (T-059)
-
-### `finance_bridge` — additions
-
-Existing module (`outbox_writer`, `feature_flag`) gains two helpers
-plus a per-tenant gate inside the writer.
-
-| Type | Name | Layer | File |
-|------|------|-------|------|
-| function | `get_finance_reachability` | service | `src/modules/finance_bridge/reachability.py` |
-| function | `invalidate_reachability_cache` | service | `src/modules/finance_bridge/reachability.py` |
-| function | `is_finance_enabled_for_org` | service | `src/modules/finance_bridge/tenant_flag.py` |
-| function | `invalidate_tenant_flag_cache` | service | `src/modules/finance_bridge/tenant_flag.py` |
-| class (modified) | `OutboxWriter.publish` | service | `src/modules/finance_bridge/outbox_writer.py` — now consults `is_finance_enabled_for_org` after the global env flag |
-
-### `core` — additions
-
-| Type | Name | Layer | File |
-|------|------|-------|------|
-| api_endpoint | `GET /api/v1/system/capabilities` | api | `src/api/v1/system.py` |
-| pydantic_model | `CapabilitiesResponse` | model | `src/api/v1/system.py` |
-| pydantic_model | `ModuleCapabilities` | model | `src/api/v1/system.py` |
-| pydantic_model | `FinanceModuleCapability` | model | `src/api/v1/system.py` |
-| function | `build_capabilities_response` | service | `src/api/v1/system.py` |
-| api_endpoint | `PATCH /api/v1/organizations/{org_id}/modules` | api | `src/api/v1/organizations.py` |
-| pydantic_model | `OrganizationModules` | model | `src/models/organization.py` |
-| pydantic_model | `OrganizationModulesUpdate` | model | `src/models/organization.py` |
-| function | `organization_service.update_modules` | service | `src/services/organization_service.py` |
-| config | `FINANCE_SERVICE_URL` | config | `src/config/settings.py` |
-| config | `FINANCE_CAPABILITY_CACHE_TTL_S` | config | `src/config/settings.py` |
-| migration | `wave0_add_finance_flag` | script | `scripts/migrations/wave0_add_finance_flag.py` |
-
-### `finance_service` — additions
-
-| Type | Name | Layer | File |
-|------|------|-------|------|
-| api_endpoint | `GET /api/v1/system/health` | api | `services/finance/src/finance/api/v1/health.py` (`system_router`) |
-
-### Wave 0 dependency edges
-
-| Source | Edge | Target | Note |
-|--------|------|--------|------|
-| `core.system.build_capabilities_response` | depends_on | `finance_bridge.reachability.get_finance_reachability` | Reads cached finance health. |
-| `core.system.build_capabilities_response` | depends_on | `finance_bridge.tenant_flag.is_finance_enabled_for_org` | Reads per-tenant flag. |
-| `core.auth.get_current_user_info` | depends_on | `core.system.build_capabilities_response` | `/auth/me` folds in capabilities. |
-| `finance_bridge.outbox_writer.publish` | depends_on | `finance_bridge.tenant_flag.is_finance_enabled_for_org` | Per-tenant gate. |
-| `core.organizations.update_organization_modules` | depends_on | `finance_bridge.tenant_flag.invalidate_tenant_flag_cache` | Cache bust on toggle. |
+| `core.middleware.permissions` | depends_on | `core.middleware.auth` |
+| `core.middleware.rate_limit` | depends_on | `core.config.Settings` |
+| `sales.service.sales_order_service` | depends_on | `finance.api.customer_ext` |
+| `sales.service.ar_invoice_service` | depends_on | `finance.api.customer_ext` |
+| `sales.service.ar_invoice_service` | depends_on | `finance.api.item_ext` |
+| `sales.service.legacy.order_service` | depends_on | `farm_manager.service.database` |
+| `sales.service.legacy.return_service` | depends_on | `farm_manager.service.database` |
+| `sales.api.config` | depends_on | `farm_manager.service.farming_year_service` |
+| `sales.api.dashboard` | depends_on | `farm_manager.service.database` |
