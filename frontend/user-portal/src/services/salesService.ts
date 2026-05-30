@@ -1,8 +1,12 @@
 /**
  * Sales API Service
  *
- * This service provides all API calls for the Sales module (Orders, Inventory, and Purchase Orders).
+ * This service provides all API calls for the Sales module (Orders, Inventory, Returns).
  * All endpoints use the /api/v1/sales base URL.
+ *
+ * Note: Purchase Orders were removed from this module in T-070.0 (Wave 3 cleanup).
+ * The dedicated purchasing module at `src/modules/purchasing/` owns POs now —
+ * see `purchasingApi.ts` for the modern PO client.
  */
 
 import { apiClient } from './api';
@@ -12,11 +16,6 @@ import type {
   SalesOrderUpdate,
   SalesOrderSearchParams,
   PaginatedSalesOrders,
-  PurchaseOrder,
-  PurchaseOrderCreate,
-  PurchaseOrderUpdate,
-  PurchaseOrderSearchParams,
-  PaginatedPurchaseOrders,
   SalesDashboardStats,
   ReturnOrder,
   ReturnOrderCreate,
@@ -98,72 +97,6 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
  */
 export async function deleteSalesOrder(orderId: string): Promise<{ message: string }> {
   const response = await apiClient.delete<{ message: string }>(`/v1/sales/orders/${orderId}`);
-  return response.data;
-}
-
-// ============================================================================
-// PURCHASE ORDER ENDPOINTS
-// ============================================================================
-
-/**
- * Get all purchase orders with search and pagination
- */
-export async function getPurchaseOrders(params?: PurchaseOrderSearchParams): Promise<PaginatedPurchaseOrders> {
-  const response = await apiClient.get<any>('/v1/sales/purchase-orders', {
-    params: {
-      page: params?.page || 1,
-      perPage: params?.perPage || 20,
-      search: params?.search,
-      status: params?.status,
-    },
-  });
-
-  return {
-    items: response.data.data || [],
-    total: response.data.meta?.total || 0,
-    page: response.data.meta?.page || 1,
-    perPage: response.data.meta?.perPage || 20,
-    totalPages: response.data.meta?.totalPages || 1,
-  };
-}
-
-/**
- * Get a single purchase order by ID
- */
-export async function getPurchaseOrder(poId: string): Promise<PurchaseOrder> {
-  const response = await apiClient.get<{ data: PurchaseOrder }>(`/v1/sales/purchase-orders/${poId}`);
-  return response.data.data;
-}
-
-/**
- * Create new purchase order
- */
-export async function createPurchaseOrder(data: PurchaseOrderCreate): Promise<PurchaseOrder> {
-  const response = await apiClient.post<{ data: PurchaseOrder }>('/v1/sales/purchase-orders', data);
-  return response.data.data;
-}
-
-/**
- * Update existing purchase order
- */
-export async function updatePurchaseOrder(poId: string, data: PurchaseOrderUpdate): Promise<PurchaseOrder> {
-  const response = await apiClient.patch<{ data: PurchaseOrder }>(`/v1/sales/purchase-orders/${poId}`, data);
-  return response.data.data;
-}
-
-/**
- * Update purchase order status
- */
-export async function updatePurchaseOrderStatus(poId: string, status: string): Promise<PurchaseOrder> {
-  const response = await apiClient.patch<{ data: PurchaseOrder }>(`/v1/sales/purchase-orders/${poId}/status`, { status });
-  return response.data.data;
-}
-
-/**
- * Delete purchase order
- */
-export async function deletePurchaseOrder(poId: string): Promise<{ message: string }> {
-  const response = await apiClient.delete<{ message: string }>(`/v1/sales/purchase-orders/${poId}`);
   return response.data;
 }
 
@@ -434,26 +367,6 @@ export function getInventoryStatusColor(status: string): string {
 }
 
 /**
- * Get purchase order status color
- */
-export function getPurchaseOrderStatusColor(status: string): string {
-  switch (status) {
-    case 'draft':
-      return '#6B7280'; // gray
-    case 'sent':
-      return '#3B82F6'; // blue
-    case 'confirmed':
-      return '#8B5CF6'; // purple
-    case 'received':
-      return '#10B981'; // green
-    case 'cancelled':
-      return '#EF4444'; // red
-    default:
-      return '#6B7280';
-  }
-}
-
-/**
  * Format currency for display
  */
 export function formatCurrency(amount: number, currency: string = 'AED'): string {
@@ -515,14 +428,6 @@ export const salesApi = {
   deleteOrderConfirm,
   reportOrderReturn,
 
-  // Purchase Orders
-  getPurchaseOrders,
-  getPurchaseOrder,
-  createPurchaseOrder,
-  updatePurchaseOrder,
-  updatePurchaseOrderStatus,
-  deletePurchaseOrder,
-
   // Return Orders
   createReturnOrder,
   getReturns,
@@ -541,7 +446,6 @@ export const salesApi = {
   getOrderStatusColor,
   getPaymentStatusColor,
   getInventoryStatusColor,
-  getPurchaseOrderStatusColor,
   formatCurrency,
   formatDate,
   getQualityGradeLabel,

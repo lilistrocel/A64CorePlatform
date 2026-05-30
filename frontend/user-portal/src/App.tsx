@@ -73,7 +73,6 @@ const ShipmentTrackingPage = lazy(() => import('./pages/logistics/ShipmentTracki
 const SalesDashboardPage = lazy(() => import('./pages/sales/SalesDashboardPage').then(m => ({ default: m.SalesDashboardPage })));
 const SalesOrdersPage = lazy(() => import('./pages/sales/SalesOrdersPage').then(m => ({ default: m.SalesOrdersPage })));
 const StockPage = lazy(() => import('./pages/sales/StockPage').then(m => ({ default: m.StockPage })));
-const PurchaseOrdersPage = lazy(() => import('./pages/sales/PurchaseOrdersPage').then(m => ({ default: m.PurchaseOrdersPage })));
 const ReturnsPage = lazy(() => import('./pages/sales/ReturnsPage').then(m => ({ default: m.ReturnsPage })));
 
 // Marketing module
@@ -132,13 +131,13 @@ const PurchaseItemsPage = lazy(() => import('./pages/purchasing/PurchaseItemsPag
 const PaymentTermsPage = lazy(() => import('./pages/purchasing/PaymentTermsPage').then(m => ({ default: m.PaymentTermsPage })));
 
 // Purchasing module pages (Phase 1B PR + PO + approvals)
-// Reason: `PurchaseOrdersPage` (line 75) already exists from the sales module, so the
-// purchasing version is aliased to `PurchasingPurchaseOrdersPage` to prevent the
-// duplicate-identifier Babel crash that caused the v1.15.0+1 frontend outage.
+// Note: the sales-side PurchaseOrdersPage was removed in T-070.0; the alias
+// `PurchasingPurchaseOrdersPage` is no longer needed and the import is now
+// using the natural name `PurchaseOrdersPage`.
 const PurchaseRequestsPage = lazy(() => import('./pages/purchasing/PurchaseRequestsPage').then(m => ({ default: m.PurchaseRequestsPage })));
 const PurchaseRequestFormPage = lazy(() => import('./pages/purchasing/PurchaseRequestFormPage').then(m => ({ default: m.PurchaseRequestFormPage })));
 const PurchaseRequestDetailPage = lazy(() => import('./pages/purchasing/PurchaseRequestDetailPage').then(m => ({ default: m.PurchaseRequestDetailPage })));
-const PurchasingPurchaseOrdersPage = lazy(() => import('./pages/purchasing/PurchaseOrdersPage').then(m => ({ default: m.PurchaseOrdersPage })));
+const PurchaseOrdersPage = lazy(() => import('./pages/purchasing/PurchaseOrdersPage').then(m => ({ default: m.PurchaseOrdersPage })));
 const PurchaseOrderFormPage = lazy(() => import('./pages/purchasing/PurchaseOrderFormPage').then(m => ({ default: m.PurchaseOrderFormPage })));
 const PurchaseOrderDetailPage = lazy(() => import('./pages/purchasing/PurchaseOrderDetailPage').then(m => ({ default: m.PurchaseOrderDetailPage })));
 const ApprovalInboxPage = lazy(() => import('./pages/purchasing/ApprovalInboxPage').then(m => ({ default: m.ApprovalInboxPage })));
@@ -263,7 +262,8 @@ function App() {
                 <Route path="/sales/stock" element={<StockPage />} />
                 {/* Back-compat redirect: old /sales/inventory → new /sales/stock */}
                 <Route path="/sales/inventory" element={<Navigate to="/sales/stock" replace />} />
-                <Route path="/sales/purchase-orders" element={<PurchaseOrdersPage />} />
+                {/* Back-compat redirect: old /sales/purchase-orders → /purchasing/po (T-070.0) */}
+                <Route path="/sales/purchase-orders" element={<Navigate to="/purchasing/po" replace />} />
                 <Route path="/sales/returns" element={<ReturnsPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
@@ -307,7 +307,7 @@ function App() {
                 <Route path="/purchasing/pr/new" element={<PurchaseRequestFormPage />} />
                 <Route path="/purchasing/pr/:docId" element={<PurchaseRequestDetailPage />} />
                 <Route path="/purchasing/pr/:docId/edit" element={<PurchaseRequestFormPage />} />
-                <Route path="/purchasing/po" element={<PurchasingPurchaseOrdersPage />} />
+                <Route path="/purchasing/po" element={<PurchaseOrdersPage />} />
                 <Route path="/purchasing/po/new" element={<PurchaseOrderFormPage />} />
                 <Route path="/purchasing/po/from-pr/:prDocId" element={<PurchaseOrderFormPage />} />
                 <Route path="/purchasing/po/:docId" element={<PurchaseOrderDetailPage />} />

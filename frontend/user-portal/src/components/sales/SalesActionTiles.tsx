@@ -8,13 +8,13 @@
 
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { Receipt, Package, ShoppingCart } from 'lucide-react';
+import { Receipt, Package } from 'lucide-react';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type SalesActionKey = 'orders' | 'stock' | 'purchase-orders';
+export type SalesActionKey = 'orders' | 'stock';
 
 export interface SalesActionTilesProps {
   activeKey?: SalesActionKey;
@@ -52,15 +52,6 @@ const TILES: TileConfig[] = [
     accent: '#F59E0B',
     accentHover: '#D97706',
     route: '/sales/stock',
-  },
-  {
-    key: 'purchase-orders',
-    label: 'Purchase Orders',
-    subtitle: 'Procurement & supplier orders',
-    icon: ShoppingCart,
-    accent: '#6366F1',
-    accentHover: '#4F46E5',
-    route: '/sales/purchase-orders',
   },
 ];
 

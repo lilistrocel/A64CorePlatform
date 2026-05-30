@@ -139,73 +139,10 @@ export interface PaginatedSalesOrders {
   totalPages: number;
 }
 
-// ============================================================================
-// PURCHASE ORDER TYPES
-// ============================================================================
-
-export type PurchaseOrderStatus = 'draft' | 'sent' | 'confirmed' | 'received' | 'cancelled';
-
-export interface POItem {
-  description: string;
-  quantity: number;
-  unitPrice?: number;
-  totalPrice?: number;
-}
-
-export interface PurchaseOrder {
-  purchaseOrderId: string;
-  poCode: string;
-  supplierId?: string;
-  supplierName?: string;
-  status: PurchaseOrderStatus;
-  orderDate: string;
-  expectedDeliveryDate?: string;
-  items: POItem[];
-  total?: number;
-  paymentTerms?: string;
-  notes?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PurchaseOrderCreate {
-  supplierId?: string;
-  supplierName?: string;
-  orderDate: string;
-  expectedDeliveryDate?: string;
-  items: POItem[];
-  total?: number;
-  paymentTerms?: string;
-  notes?: string;
-}
-
-export interface PurchaseOrderUpdate {
-  supplierId?: string;
-  supplierName?: string;
-  status?: PurchaseOrderStatus;
-  orderDate?: string;
-  expectedDeliveryDate?: string;
-  items?: POItem[];
-  total?: number;
-  paymentTerms?: string;
-  notes?: string;
-}
-
-export interface PurchaseOrderSearchParams {
-  page?: number;
-  perPage?: number;
-  search?: string;
-  status?: PurchaseOrderStatus;
-}
-
-export interface PaginatedPurchaseOrders {
-  items: PurchaseOrder[];
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-}
+// Sales-side Purchase Order types removed in T-070.0 (Wave 3 cleanup).
+// PO types for the dedicated purchasing module live in `types/purchasing.ts`
+// — they have a richer shape (line items reference purchase_items master data,
+// approval workflow, GR linkage, etc.).
 
 // ============================================================================
 // DASHBOARD TYPES
