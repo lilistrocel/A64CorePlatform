@@ -422,6 +422,11 @@ function App() {
                 <Route path="/sales/ar-credit-notes/:docId" element={<ArCreditNoteDetailPage />} />
                 {/* T-200.9: Sales Items admin page (per-item finance config) */}
                 <Route path="/sales/items" element={<SalesItemsPage />} />
+                {/* T-200.10: Posting Setup is module-agnostic finance config
+                    (chart-of-accounts role → GL account mapping). It lives under
+                    /finance/posting-setup only. Redirect the old /sales/posting-setup
+                    alias to the canonical location so any bookmarks still work. */}
+                <Route path="/sales/posting-setup" element={<Navigate to="/finance/posting-setup" replace />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />

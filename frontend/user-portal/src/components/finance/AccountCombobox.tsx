@@ -46,6 +46,7 @@ import {
 import ReactDOM from 'react-dom';
 import styled from 'styled-components';
 import type { GLAccount } from '../../services/financeAccountsService';
+import { DRAWER_LABELS, ACCOUNT_TYPE_LABELS } from '../../services/financeAccountsService';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -282,6 +283,23 @@ const TruncationFooter = styled.li`
   margin-top: 2px;
 `;
 
+/**
+ * Drawer + account-type hint pill shown in the dropdown.
+ * Format: "Assets · asset" — helps users quickly confirm they are picking
+ * the correct type of account (e.g. AR control must be ASSETS/asset).
+ */
+const DrawerTypeBadge = styled.span`
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: ${({ theme }) => theme.colors.neutral[100]};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+`;
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AccountCombobox({
@@ -515,6 +533,10 @@ export function AccountCombobox({
             takenIds?.has(account.accountId) && account.accountId !== valueAccountId;
           const isHighlighted = index === highlightedIndex;
           const label = `${account.accountNumber} — ${account.accountName}`;
+          // Drawer + type hint: "Assets · asset" — helps confirm correct account kind.
+          const drawerLabel = DRAWER_LABELS[account.drawer] ?? account.drawer;
+          const typeLabel = ACCOUNT_TYPE_LABELS[account.accountType] ?? account.accountType;
+          const drawerTypeHint = `${drawerLabel} · ${typeLabel}`;
 
           return (
             <DropdownItem
@@ -535,9 +557,14 @@ export function AccountCombobox({
               onMouseEnter={() => {
                 if (!isTaken) setHighlightedIndex(index);
               }}
-              title={isTaken ? 'Already assigned to another field' : label}
+              title={isTaken ? 'Already assigned to another field' : `${label} (${drawerTypeHint})`}
             >
               <OptionText $taken={isTaken}>{label}</OptionText>
+              {/* Drawer + account type hint — critical UX for posting setup so users
+                  can quickly confirm they are picking the right category of account. */}
+              <DrawerTypeBadge aria-label={`Account type: ${drawerTypeHint}`}>
+                {drawerTypeHint}
+              </DrawerTypeBadge>
               {account.isControlAccount && (
                 <ControlBadge aria-label="Control account">Control</ControlBadge>
               )}

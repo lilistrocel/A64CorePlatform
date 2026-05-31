@@ -1,8 +1,52 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 84 tasks
+> **Total completed:** 85 tasks
 
 ## 2026-05
+
+### T-200.10 | Company Posting Setup admin UI — Sales nav entry + AR/Output VAT required fields
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-05-31 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-100.9b ✅ (posting setup backend), T-200.9 ✅ (Sales nav group established)
+- **Blocks:** T-200.11 (cutover — final Wave 3 task)
+- **Description:** Final admin surface before Wave 3 cutover. Adds the Company Posting Setup
+  page to the Sales nav group (`/sales/posting-setup`) so sales admins can configure GL account
+  mappings without navigating to the Finance group. Also:
+  (A) Extends `AccountCombobox` to show drawer + accountType hint in every dropdown option
+      (e.g. "Assets · asset") so users can quickly confirm they are picking the correct kind
+      of account.
+  (B) Adds AR Control and Output VAT as required fields (with `*` markers and client-side
+      pre-save validation) — both are gating for the AR Invoice posting flow.
+  (C) Adds brief explanatory hints below each account combobox describing what the account
+      is used for (e.g. "Trade Receivables — AR Invoice posts Dr against this account").
+  Backend was already complete; zero backend changes needed. Backend smoke confirmed all
+  camelCase keys, A001 row populated with all 10 fields.
+- **Files modified:**
+  - `frontend/user-portal/src/components/finance/AccountCombobox.tsx` — import
+    `DRAWER_LABELS` + `ACCOUNT_TYPE_LABELS`; add `DrawerTypeBadge` styled component;
+    render "Drawer · type" hint pill in every dropdown option
+  - `frontend/user-portal/src/pages/finance/PostingSetupPage.tsx` — mark `arControlAccountId`
+    and `outputVatAccountId` as required (`*`); update `isFormComplete` check to include both;
+    add client-side pre-save validation for all 7 required fields; add `hint` prop to
+    `AccountSelect` sub-component; populate hints for all 10 fields; fix unused eslint-disable
+    directives
+  - `frontend/user-portal/src/App.tsx` — route `/sales/posting-setup` (alias to existing
+    `PostingSetupPage` behind `FinanceGate`)
+  - `frontend/user-portal/src/components/layout/MainLayout.tsx` — sidebar entry in
+    `SALES_NAV_GROUP` after Sales Items Config
+- **Test results:**
+  - TypeScript: 0 errors (`npx tsc --noEmit`)
+  - ESLint: 0 errors/warnings on all modified files (pre-existing MainLayout issues unchanged)
+  - Backend smoke: GET `/api/v1/finance/companies/A001/posting-setup` → 200, all camelCase
+    keys, no snake_case, A001 row populated with all 10 GL account IDs
+- **Four hardening rules:**
+  1. Path: `/v1/finance/companies/{code}/posting-setup` (correct prefix in postingSetupService.ts)
+  2. camelCase: backend returns 100% camelCase — verified by smoke
+  3. Status: N/A (settings page, no status flow)
+  4. No Audit History button: confirmed absent (this is a settings page, not a document)
+- **Hot reload:** Frontend HMR picks up all changes automatically — no restart needed.
+
+---
 
 ### T-200.9 | Sales Items master UI + sale_item_finance_ext seed for test items
 - **Category:** Frontend + Backend · **Priority:** P1

@@ -422,6 +422,8 @@ const HintText = styled.p`
 interface AccountSelectProps {
   id: string;
   label: string;
+  /** Brief description of what this account is used for — shown below the combobox. */
+  hint?: string;
   required?: boolean;
   value: string;
   onChange: (value: string) => void;
@@ -436,6 +438,7 @@ interface AccountSelectProps {
 function AccountSelect({
   id,
   label,
+  hint,
   required,
   value,
   onChange,
@@ -457,6 +460,10 @@ function AccountSelect({
     onChange(accountId ?? '');
   };
 
+  const descId = hint ? `${id}-hint` : undefined;
+  const errId = errorMessage ? `${id}-err` : undefined;
+  const describedByIds = [descId, errId].filter(Boolean).join(' ') || undefined;
+
   return (
     <Field>
       <FormLabel htmlFor={id}>
@@ -472,10 +479,15 @@ function AccountSelect({
         placeholder="— Not set —"
         hasError={hasError}
         disabled={disabled}
-        describedBy={errorMessage ? `${id}-err` : undefined}
+        describedBy={describedByIds}
       />
+      {hint && (
+        <HintText id={descId} style={{ marginTop: 4 }}>
+          {hint}
+        </HintText>
+      )}
       {errorMessage && (
-        <FieldError id={`${id}-err`} role="alert">
+        <FieldError id={errId} role="alert">
           {errorMessage}
         </FieldError>
       )}
@@ -639,7 +651,6 @@ export function PostingSetupPage() {
       if (v) ids.add(v);
     }
     return ids;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   /**
@@ -649,7 +660,6 @@ export function PostingSetupPage() {
   const hasDuplicateAssignment: boolean = useMemo(() => {
     const values = ACCOUNT_FIELDS.map((k) => form[k] as string).filter(Boolean);
     return values.length !== new Set(values).size;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   // ── Field change handler ───────────────────────────────────────────────────
@@ -674,6 +684,33 @@ export function PostingSetupPage() {
     setBannerError(null);
     setSaveSuccess(false);
     setFieldErrors({});
+
+    // ── Client-side required-field validation ─────────────────────────────────
+    // Validate before hitting the backend so the user gets immediate feedback.
+    // Required fields cover both the purchasing flow (AP, GR/IR, Input VAT) and
+    // the sales/AR flow (AR, Output VAT) plus shared fields (Bank, Retained Earnings).
+    const clientErrors: Record<string, string> = {};
+    if (!form.apControlAccountId)
+      clientErrors.apControlAccountId = 'AP Control Account is required.';
+    if (!form.arControlAccountId)
+      clientErrors.arControlAccountId = 'AR Control Account is required.';
+    if (!form.bankAccountId)
+      clientErrors.bankAccountId = 'Bank Account is required.';
+    if (!form.grIrClearingAccountId)
+      clientErrors.grIrClearingAccountId = 'GR/IR Clearing Account is required.';
+    if (!form.inputVatAccountId)
+      clientErrors.inputVatAccountId = 'Input VAT Account is required.';
+    if (!form.outputVatAccountId)
+      clientErrors.outputVatAccountId = 'Output VAT Account is required.';
+    if (!form.retainedEarningsAccountId)
+      clientErrors.retainedEarningsAccountId = 'Retained Earnings Account is required.';
+
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      setBannerError('Please fill in all required fields (*) before saving.');
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const payload: CompanyPostingSetupUpdate = {
       apControlAccountId: emptyToNull(form.apControlAccountId),
@@ -762,12 +799,24 @@ export function PostingSetupPage() {
 
   // ── Current completeness (from last saved data or derived from form) ────────
 
-  /** True if all five required fields are set in the current form state. */
+  /**
+   * True if all required fields are set in the current form state.
+   * Required fields cover both the AP/purchasing flow and the AR/sales flow:
+   *   - apControlAccountId    — Trade Payables (AP Invoice posting)
+   *   - arControlAccountId    — Trade Receivables (AR Invoice posting, T-200.10)
+   *   - bankAccountId         — Primary bank (payments posting)
+   *   - grIrClearingAccountId — GR/IR clearing (purchasing GR posting)
+   *   - inputVatAccountId     — Input VAT (purchasing AP flow)
+   *   - outputVatAccountId    — Output VAT (AR Invoice posting, T-200.10)
+   *   - retainedEarningsAccountId — Period-close retained earnings
+   */
   const isFormComplete =
     !!form.apControlAccountId &&
+    !!form.arControlAccountId &&
     !!form.bankAccountId &&
     !!form.grIrClearingAccountId &&
     !!form.inputVatAccountId &&
+    !!form.outputVatAccountId &&
     !!form.retainedEarningsAccountId;
 
   /**
@@ -879,6 +928,7 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-apControl"
             label="AP Control Account"
+            hint="Trade Payables — AP Invoice posts Cr against this account on approval."
             required
             value={form.apControlAccountId}
             onChange={handleFieldChange('apControlAccountId')}
@@ -891,6 +941,7 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-ppVariance"
             label="Purchase Price Variance Account"
+            hint="PO/GR price difference — posted when GR unit cost differs from PO price."
             value={form.purchasePriceVarianceAccountId}
             onChange={handleFieldChange('purchasePriceVarianceAccountId')}
             accounts={postableAccounts}
@@ -902,6 +953,7 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-rounding"
             label="Rounding Account"
+            hint="Absorbs sub-cent rounding differences on JE balancing."
             value={form.roundingAccountId}
             onChange={handleFieldChange('roundingAccountId')}
             accounts={postableAccounts}
@@ -922,6 +974,8 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-arControl"
             label="AR Control Account"
+            hint="Trade Receivables — AR Invoice posts Dr against this account on approval."
+            required
             value={form.arControlAccountId}
             onChange={handleFieldChange('arControlAccountId')}
             accounts={postableAccounts}
@@ -942,6 +996,7 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-bank"
             label="Bank Account"
+            hint="Primary bank — Customer Receipt and Vendor Payment post to this account."
             required
             value={form.bankAccountId}
             onChange={handleFieldChange('bankAccountId')}
@@ -954,6 +1009,7 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-cash"
             label="Cash Account"
+            hint="Petty cash — used when payment method is Cash instead of bank transfer."
             value={form.cashAccountId}
             onChange={handleFieldChange('cashAccountId')}
             accounts={postableAccounts}
@@ -974,6 +1030,7 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-inputVat"
             label="Input VAT Account"
+            hint="Input VAT recoverable — AP Invoice posts Dr here for the tax portion on purchases."
             required
             value={form.inputVatAccountId}
             onChange={handleFieldChange('inputVatAccountId')}
@@ -986,6 +1043,8 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-outputVat"
             label="Output VAT Account"
+            hint="Output VAT payable — AR Invoice posts Cr here for the tax collected on sales."
+            required
             value={form.outputVatAccountId}
             onChange={handleFieldChange('outputVatAccountId')}
             accounts={postableAccounts}
@@ -1006,6 +1065,7 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-grIr"
             label="GR/IR Clearing Account"
+            hint="GR/IR clearing — bridges Goods Receipt (inventory Dr) to AP Invoice (Cr) until invoiced."
             required
             value={form.grIrClearingAccountId}
             onChange={handleFieldChange('grIrClearingAccountId')}
@@ -1076,6 +1136,7 @@ export function PostingSetupPage() {
           <AccountSelect
             id="ps-retainedEarnings"
             label="Retained Earnings Account"
+            hint="Period-close target — net income transfers here when closing a fiscal year."
             required
             value={form.retainedEarningsAccountId}
             onChange={handleFieldChange('retainedEarningsAccountId')}
