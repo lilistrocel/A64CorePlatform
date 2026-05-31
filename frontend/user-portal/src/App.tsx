@@ -69,11 +69,10 @@ const VehicleManagementPage = lazy(() => import('./pages/logistics/VehicleManage
 const RouteManagementPage = lazy(() => import('./pages/logistics/RouteManagementPage').then(m => ({ default: m.RouteManagementPage })));
 const ShipmentTrackingPage = lazy(() => import('./pages/logistics/ShipmentTrackingPage').then(m => ({ default: m.ShipmentTrackingPage })));
 
-// Sales module (legacy)
+// Sales module (active pages)
 const SalesDashboardPage = lazy(() => import('./pages/sales/SalesDashboardPage').then(m => ({ default: m.SalesDashboardPage })));
-const SalesOrdersPage = lazy(() => import('./pages/sales/SalesOrdersPage').then(m => ({ default: m.SalesOrdersPage })));
 const StockPage = lazy(() => import('./pages/sales/StockPage').then(m => ({ default: m.StockPage })));
-const ReturnsPage = lazy(() => import('./pages/sales/ReturnsPage').then(m => ({ default: m.ReturnsPage })));
+// NOTE: SalesOrdersPage and ReturnsPage removed (T-200.11 cutover). Routes below redirect to v2.
 
 // Sales module — Wave 3 (T-200.0)
 // /new MUST be registered before /:docId and from-delivery/:dlvId to prevent
@@ -360,13 +359,15 @@ function App() {
                 <Route path="/logistics/routes" element={<RouteManagementPage />} />
                 <Route path="/logistics/shipments" element={<ShipmentTrackingPage />} />
                 <Route path="/sales" element={<SalesDashboardPage />} />
-                <Route path="/sales/orders" element={<SalesOrdersPage />} />
+                {/* T-200.11: /sales/orders redirects to Wave 3 equivalent */}
+                <Route path="/sales/orders" element={<Navigate to="/sales/orders-v2" replace />} />
                 <Route path="/sales/stock" element={<StockPage />} />
                 {/* Back-compat redirect: old /sales/inventory → new /sales/stock */}
                 <Route path="/sales/inventory" element={<Navigate to="/sales/stock" replace />} />
                 {/* Back-compat redirect: old /sales/purchase-orders → /purchasing/po (T-070.0) */}
                 <Route path="/sales/purchase-orders" element={<Navigate to="/purchasing/po" replace />} />
-                <Route path="/sales/returns" element={<ReturnsPage />} />
+                {/* T-200.11: /sales/returns redirects to Wave 3 equivalent */}
+                <Route path="/sales/returns" element={<Navigate to="/sales/returns-v2" replace />} />
 
                 {/* Sales module — Wave 3 AR Invoices (T-200.0)
                     Route order matters: /new and /from-delivery/:id MUST come before /:docId

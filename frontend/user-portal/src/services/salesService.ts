@@ -1,104 +1,21 @@
 /**
- * Sales API Service
+ * Sales API Service (trimmed — T-200.11 legacy cutover)
  *
- * This service provides all API calls for the Sales module (Orders, Inventory, Returns).
- * All endpoints use the /api/v1/sales base URL.
+ * This file retains only the functions that remain in use after the Wave 3 cutover:
+ *   - getDashboardStats  (SalesDashboardPage)
+ *   - getAvailableFarmingYears  (kept — farming-year selector pattern)
+ *   - Utility helpers   (getOrderStatusColor, formatCurrency, formatDate, etc.)
  *
- * Note: Purchase Orders were removed from this module in T-070.0 (Wave 3 cleanup).
- * The dedicated purchasing module at `src/modules/purchasing/` owns POs now —
- * see `purchasingApi.ts` for the modern PO client.
+ * Legacy order/return CRUD functions (getSalesOrders, createSalesOrder,
+ * getReturns, reportReturn, deleteOrderConfirm, etc.) have been removed.
+ * The Wave 3 equivalents live in salesApi.ts (salesOrdersApi, returnsApi, etc.).
  */
 
 import { apiClient } from './api';
 import type {
-  SalesOrder,
-  SalesOrderCreate,
-  SalesOrderUpdate,
-  SalesOrderSearchParams,
-  PaginatedSalesOrders,
   SalesDashboardStats,
-  ReturnOrder,
-  ReturnOrderCreate,
-  ReturnStatus,
-  PaginatedReturns,
   FarmingYearItem,
 } from '../types/sales';
-
-// ============================================================================
-// SALES ORDER ENDPOINTS
-// ============================================================================
-
-/**
- * Get all sales orders with search and pagination
- * @param params - Search parameters including optional farmingYear filter
- */
-export async function getSalesOrders(params?: SalesOrderSearchParams): Promise<PaginatedSalesOrders> {
-  const queryParams: Record<string, any> = {
-    page: params?.page || 1,
-    perPage: params?.perPage || 20,
-  };
-
-  // Add optional filters only if they have values
-  if (params?.search) queryParams.search = params.search;
-  if (params?.status) queryParams.status = params.status;
-  if (params?.paymentStatus) queryParams.paymentStatus = params.paymentStatus;
-  if (params?.customerId) queryParams.customerId = params.customerId;
-  if (params?.farmingYear !== undefined && params?.farmingYear !== null) {
-    queryParams.farmingYear = params.farmingYear;
-  }
-
-  const response = await apiClient.get<any>('/v1/sales/orders', {
-    params: queryParams,
-  });
-
-  return {
-    items: response.data.data || [],
-    total: response.data.meta?.total || 0,
-    page: response.data.meta?.page || 1,
-    perPage: response.data.meta?.perPage || 20,
-    totalPages: response.data.meta?.totalPages || 1,
-  };
-}
-
-/**
- * Get a single sales order by ID
- */
-export async function getSalesOrder(orderId: string): Promise<SalesOrder> {
-  const response = await apiClient.get<{ data: SalesOrder }>(`/v1/sales/orders/${orderId}`);
-  return response.data.data;
-}
-
-/**
- * Create new sales order
- */
-export async function createSalesOrder(data: SalesOrderCreate): Promise<SalesOrder> {
-  const response = await apiClient.post<{ data: SalesOrder }>('/v1/sales/orders', data);
-  return response.data.data;
-}
-
-/**
- * Update existing sales order
- */
-export async function updateSalesOrder(orderId: string, data: SalesOrderUpdate): Promise<SalesOrder> {
-  const response = await apiClient.patch<{ data: SalesOrder }>(`/v1/sales/orders/${orderId}`, data);
-  return response.data.data;
-}
-
-/**
- * Update sales order status
- */
-export async function updateOrderStatus(orderId: string, status: string): Promise<SalesOrder> {
-  const response = await apiClient.patch<{ data: SalesOrder }>(`/v1/sales/orders/${orderId}/status`, { status });
-  return response.data.data;
-}
-
-/**
- * Delete sales order
- */
-export async function deleteSalesOrder(orderId: string): Promise<{ message: string }> {
-  const response = await apiClient.delete<{ message: string }>(`/v1/sales/orders/${orderId}`);
-  return response.data;
-}
 
 // ============================================================================
 // DASHBOARD ENDPOINT
@@ -109,7 +26,7 @@ export async function deleteSalesOrder(orderId: string): Promise<{ message: stri
  * @param farmingYear - Optional farming year to filter statistics by
  */
 export async function getDashboardStats(farmingYear?: number | null): Promise<SalesDashboardStats> {
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
   if (farmingYear !== undefined && farmingYear !== null) {
     params.farmingYear = farmingYear;
   }
@@ -126,184 +43,13 @@ export async function getDashboardStats(farmingYear?: number | null): Promise<Sa
 
 /**
  * Get available farming years for sales order filtering.
- * NOTE: Previously sourced from /v1/sales/inventory/farming-years (retired).
- * Now sourced from the global farming-year config endpoint, which returns
- * `{ years, count }` directly (no `data` envelope).
+ * Sourced from the global farming-year config endpoint.
  */
 export async function getAvailableFarmingYears(): Promise<{ years: FarmingYearItem[] }> {
   const response = await apiClient.get<{ years: FarmingYearItem[]; count: number }>(
     '/v1/farm/config/farming-years-list'
   );
   return { years: response.data.years };
-}
-
-// ============================================================================
-// RETURN ORDER ENDPOINTS
-// ============================================================================
-
-/**
- * Create a return order
- */
-export async function createReturnOrder(data: ReturnOrderCreate): Promise<ReturnOrder> {
-  const response = await apiClient.post<{ data: ReturnOrder }>('/v1/sales/returns', data);
-  return response.data.data;
-}
-
-/**
- * Get all returns with search and pagination
- */
-export async function getReturns(params?: {
-  page?: number;
-  perPage?: number;
-  status?: ReturnStatus;
-  orderId?: string;
-}): Promise<PaginatedReturns> {
-  const response = await apiClient.get<any>('/v1/sales/returns', {
-    params: {
-      page: params?.page || 1,
-      perPage: params?.perPage || 20,
-      status: params?.status,
-      orderId: params?.orderId,
-    },
-  });
-
-  return {
-    items: response.data.data || [],
-    total: response.data.meta?.total || 0,
-    page: response.data.meta?.page || 1,
-    perPage: response.data.meta?.perPage || 20,
-    totalPages: response.data.meta?.totalPages || 1,
-  };
-}
-
-/**
- * Get return by ID
- */
-export async function getReturnOrder(returnId: string): Promise<ReturnOrder> {
-  const response = await apiClient.get<{ data: ReturnOrder }>(`/v1/sales/returns/${returnId}`);
-  return response.data.data;
-}
-
-/**
- * Get returns for a specific order
- */
-export async function getReturnsForOrder(orderId: string): Promise<ReturnOrder[]> {
-  const response = await apiClient.get<{ data: ReturnOrder[] }>(`/v1/sales/returns/order/${orderId}`);
-  return response.data.data;
-}
-
-/**
- * Process a return order
- */
-export async function processReturnOrder(
-  returnId: string,
-  itemOverrides?: Array<{
-    orderItemId: string;
-    returnToInventory?: boolean;
-    newGrade?: string;
-  }>
-): Promise<any> {
-  const response = await apiClient.post<{ data: any }>(`/v1/sales/returns/${returnId}/process`, {
-    returnId,
-    itemOverrides,
-  });
-  return response.data.data;
-}
-
-/**
- * Delete return order
- */
-export async function deleteReturnOrder(returnId: string): Promise<{ message: string }> {
-  const response = await apiClient.delete<{ message: string }>(`/v1/sales/returns/${returnId}`);
-  return response.data;
-}
-
-// ============================================================================
-// PHASE 4: TWO-STEP DELETE + REPORT RETURN ENDPOINTS
-// ============================================================================
-
-/**
- * A single allocation row returned in the delete preview.
- */
-export interface DeleteOrderAllocationPreview {
-  lineItemIndex: number;
-  inventorySource: 'harvest' | 'returned';
-  inventoryId: string;
-  farmName?: string | null;
-  plantName: string;
-  quantity: number;
-  state: 'active' | 'expired' | 'missing';
-  expiredWasteId?: string | null;
-  expiredOn?: string | null;
-}
-
-/**
- * Full delete preview returned by GET /v1/sales/orders/{id}/delete-preview.
- */
-export interface DeleteOrderPreview {
-  orderId: string;
-  orderCode: string;
-  canDelete: boolean;
-  allocations: DeleteOrderAllocationPreview[];
-}
-
-/**
- * Fetch the two-step delete preview for an order.
- * Tolerates both enveloped ({ data: ... }) and raw response shapes.
- */
-export async function getOrderDeletePreview(orderId: string): Promise<DeleteOrderPreview> {
-  const r = await apiClient.get<{ data: DeleteOrderPreview } | DeleteOrderPreview>(
-    `/v1/sales/orders/${orderId}/delete-preview`,
-  );
-  // Tolerate envelope or raw
-  const payload = (r.data as { data?: DeleteOrderPreview }).data ?? r.data as DeleteOrderPreview;
-  return payload;
-}
-
-/**
- * Decision entry in the confirm-delete body.
- */
-export interface DeleteOrderDecision {
-  lineItemIndex: number;
-  inventoryId: string;
-  action: 'restore' | 'revive' | 'waste';
-  expiryDate?: string;
-}
-
-/**
- * POST /v1/sales/orders/{id}/delete — confirm delete with per-batch decisions.
- */
-export async function deleteOrderConfirm(
-  orderId: string,
-  decisions: DeleteOrderDecision[],
-): Promise<any> {
-  const r = await apiClient.post(`/v1/sales/orders/${orderId}/delete`, { decisions });
-  return r.data;
-}
-
-/**
- * Single item entry in the report-return request body.
- */
-export interface ReportReturnItem {
-  orderItemIndex: number;
-  quantity: number;
-  containerCount?: number;
-  containerSize?: number;
-  condition: 'sellable' | 'spoiled';
-  reason?: string;
-  disposalMethod?: string;
-}
-
-/**
- * POST /v1/sales/orders/{id}/report-return — record a partial or full return.
- */
-export async function reportOrderReturn(
-  orderId: string,
-  items: ReportReturnItem[],
-  notes?: string,
-): Promise<any> {
-  const r = await apiClient.post(`/v1/sales/orders/${orderId}/report-return`, { items, notes });
-  return r.data;
 }
 
 // ============================================================================
@@ -316,17 +62,17 @@ export async function reportOrderReturn(
 export function getOrderStatusColor(status: string): string {
   switch (status) {
     case 'draft':
-      return '#6B7280'; // gray
+      return '#6B7280';
     case 'confirmed':
-      return '#3B82F6'; // blue
+      return '#3B82F6';
     case 'processing':
-      return '#F59E0B'; // amber
+      return '#F59E0B';
     case 'shipped':
-      return '#8B5CF6'; // purple
+      return '#8B5CF6';
     case 'delivered':
-      return '#10B981'; // green
+      return '#10B981';
     case 'cancelled':
-      return '#EF4444'; // red
+      return '#EF4444';
     default:
       return '#6B7280';
   }
@@ -338,11 +84,11 @@ export function getOrderStatusColor(status: string): string {
 export function getPaymentStatusColor(status: string): string {
   switch (status) {
     case 'pending':
-      return '#F59E0B'; // amber
+      return '#F59E0B';
     case 'partial':
-      return '#3B82F6'; // blue
+      return '#3B82F6';
     case 'paid':
-      return '#10B981'; // green
+      return '#10B981';
     default:
       return '#6B7280';
   }
@@ -354,13 +100,13 @@ export function getPaymentStatusColor(status: string): string {
 export function getInventoryStatusColor(status: string): string {
   switch (status) {
     case 'available':
-      return '#10B981'; // green
+      return '#10B981';
     case 'reserved':
-      return '#3B82F6'; // blue
+      return '#3B82F6';
     case 'sold':
-      return '#6B7280'; // gray
+      return '#6B7280';
     case 'expired':
-      return '#EF4444'; // red
+      return '#EF4444';
     default:
       return '#6B7280';
   }
@@ -412,30 +158,8 @@ export function calculateOrderTotal(subtotal: number, tax?: number, discount?: n
   return subtotal + (tax || 0) - (discount || 0);
 }
 
-// Export all functions as a single object for convenience
-// Exported as both salesApi and salesService for compatibility
+// Export as both salesApi and salesService for compatibility with SalesDashboardPage
 export const salesApi = {
-  // Sales Orders
-  getSalesOrders,
-  getSalesOrder,
-  createSalesOrder,
-  updateSalesOrder,
-  updateOrderStatus,
-  deleteSalesOrder,
-
-  // Phase 4: two-step delete + report return
-  getOrderDeletePreview,
-  deleteOrderConfirm,
-  reportOrderReturn,
-
-  // Return Orders
-  createReturnOrder,
-  getReturns,
-  getReturnOrder,
-  getReturnsForOrder,
-  processReturnOrder,
-  deleteReturnOrder,
-
   // Dashboard
   getDashboardStats,
 

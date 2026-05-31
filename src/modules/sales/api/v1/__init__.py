@@ -1,11 +1,15 @@
 """
 Sales Module - API v1 Routes
+
+T-200.11 (2026-05-31): Legacy /orders and /returns routes removed.
+The frontend now redirects /sales/orders → /sales/orders-v2 and
+/sales/returns → /sales/returns-v2. Backend files orders.py and returns.py
+have been removed from this router. They remain on disk in case of rollback
+but are no longer registered. Use /orders-v2 and /returns-v2 exclusively.
 """
 
 from fastapi import APIRouter
-from .orders import router as orders_router
 from .dashboard import router as dashboard_router
-from .returns import router as returns_router
 from .config import router as config_router
 from .quotes import router as quotes_router
 from .sales_orders import router as sales_orders_v2_router
@@ -25,8 +29,6 @@ api_router = APIRouter()
 # purchasing module at src/modules/purchasing/ owns POs now (/api/v1/purchasing/po).
 api_router.include_router(config_router, prefix="", tags=["sales-config"])
 api_router.include_router(dashboard_router, prefix="/dashboard", tags=["sales-dashboard"])
-api_router.include_router(orders_router, prefix="/orders", tags=["sales-orders"])
-api_router.include_router(returns_router, prefix="/returns", tags=["returns"])
 # T-100.6: Sales Quote — Wave 3 Phase 2, first document in quote-to-cash chain
 api_router.include_router(quotes_router, prefix="/quotes", tags=["Sales — Quotes"])
 # T-100.7: Sales Order (SO) — Wave 3 Phase 2, second document in quote-to-cash chain.

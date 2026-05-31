@@ -109,7 +109,7 @@ export const WIDGET_CATALOG: CCMWidget[] = [
     title: 'Total Orders',
     icon: '📦',
     description: 'Sales orders across all customers',
-    dataSource: { type: 'module', moduleName: 'sales', endpoint: '/api/v1/sales/orders' },
+    dataSource: { type: 'module', moduleName: 'sales', endpoint: '/api/v1/sales/orders-v2' },
     type: 'stat',
     size: 'medium',
   },

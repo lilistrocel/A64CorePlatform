@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-05-31
-> **Tasks:** 0 active · 1 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10 completed, moved to ARCHIVE.md)
+> **Tasks:** 0 active · 1 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11 completed, moved to ARCHIVE.md)
 
 ---
 
@@ -93,9 +93,9 @@
 
 ### T-500 | Wave 5 — Production Cost Accounting (bridge farm production to sales inventory)
 - **Category:** Cross-module (farm_manager · finance · sales) · **Priority:** P2
-- **Status:** 🟢 Ready (start after Wave 3 closeout — T-200.10 + T-200.11)
+- **Status:** 🟢 Ready (Wave 3 fully closed — T-200.11 ✅ completed 2026-05-31)
 - **Assigned:** — · **Started:** —
-- **Depends on:** Wave 3 Phase 2 closeout (T-200.10 + T-200.11)
+- **Depends on:** Wave 3 Phase 2 closeout (T-200.10 ✅, T-200.11 ✅)
 - **Blocks:** Realistic COGS amounts on sales of self-produced (harvested) items; block-profitability reporting
 - **Description:** The Wave 3 sales module reads COGS from `inventory_balances.avgCost`,
   which is populated only by purchasing's Goods Receipt. Self-produced (harvested) items

@@ -1,8 +1,24 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 85 tasks
+> **Total completed:** 86 tasks
 
 ## 2026-05
+
+### T-200.11 | Legacy /sales/orders + /sales/returns cutover — Wave 3 closeout
+- **Category:** Frontend + Backend · **Priority:** P1
+- **Completed:** 2026-05-31 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-200.10 ✅
+- **Blocks:** Wave 3 done
+- **Description:** Final Wave 3 task. Deleted legacy `SalesOrdersPage`, `ReturnsPage`,
+  and 6 associated components (OrderTable, OrderForm, AddOrderItemModal, ReportReturnModal,
+  DeleteOrderConfirmModal, OrderCard). Cleaned `salesService.ts` (kept dashboard/utility
+  functions, removed order/return CRUD). Cleaned `types/sales.ts` (removed legacy CRUD types,
+  kept dashboard/waste types). Updated `useSales.ts` and `hooks/queries/index.ts`.
+  Added redirects `/sales/orders` → `/sales/orders-v2` and `/sales/returns` → `/sales/returns-v2`
+  in App.tsx. Removed legacy `orders_router` and `returns_router` from backend
+  `src/modules/sales/api/v1/__init__.py` (files kept on disk for rollback safety).
+  Updated `dashboard.store.ts` metadata string. **Wave 3 Sales Module is complete.**
+- **Verification:** tsc 0 errors · ESLint 0 new errors · pytest 211/211 pass
 
 ### T-200.10 | Company Posting Setup admin UI — Sales nav entry + AR/Output VAT required fields
 - **Category:** Frontend · **Priority:** P1

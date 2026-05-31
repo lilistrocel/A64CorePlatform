@@ -1,20 +1,19 @@
 /**
- * Sales Data Query Hooks
+ * Sales Data Query Hooks (trimmed — T-200.11 legacy cutover)
  *
- * React Query hooks for sales-related data fetching
- * Prevents duplicate API calls through intelligent caching
+ * Only useSalesDashboard remains after the legacy cutover.
+ * Wave 3 sales order hooks live in useSalesOrders.ts.
+ * Wave 3 returns hooks live in useReturns.ts.
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { salesApi } from '../../services/salesService';
 import { queryKeys } from '../../config/react-query.config';
-import type { SalesOrderSearchParams } from '../../types/sales';
 
 /**
  * Get sales dashboard statistics
  *
- * Caches dashboard stats to prevent duplicate calls
- * This is heavily used across the app, so caching is critical
+ * Caches dashboard stats to prevent duplicate calls.
  */
 export function useSalesDashboard() {
   return useQuery({
@@ -22,27 +21,3 @@ export function useSalesDashboard() {
     queryFn: () => salesApi.getDashboardStats(),
   });
 }
-
-/**
- * Get sales orders with filters
- *
- * Caches orders based on filter parameters
- */
-export function useSalesOrders(params?: SalesOrderSearchParams) {
-  return useQuery({
-    queryKey: queryKeys.sales.orders.list(params),
-    queryFn: () => salesApi.getSalesOrders(params),
-  });
-}
-
-/**
- * Get single sales order by ID
- */
-export function useSalesOrder(orderId: string | undefined) {
-  return useQuery({
-    queryKey: [...queryKeys.sales.orders.all(), orderId],
-    queryFn: () => salesApi.getSalesOrder(orderId!),
-    enabled: !!orderId,
-  });
-}
-

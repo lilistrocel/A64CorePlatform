@@ -1,30 +1,45 @@
 /**
- * Sales Module Types
+ * Sales Module Types (trimmed — T-200.11 legacy cutover)
  *
- * Type definitions for the Sales module (Orders, Inventory, and Purchase Orders).
+ * Types removed in T-200.11:
+ *  - SalesOrderCreate, SalesOrderUpdate, SalesOrderSearchParams, PaginatedSalesOrders
+ *    (legacy order CRUD — Wave 3 types live in salesApi.ts)
+ *  - ReturnReason, ReturnCondition, ReturnStatus, ReturnItem, ReturnOrder,
+ *    ReturnOrderCreate, PaginatedReturns (legacy returns — Wave 3 types live in salesApi.ts)
+ *
+ * Types kept:
+ *  - SalesOrder and its shape dependencies (still referenced by SalesDashboardStats.recentOrders)
+ *  - SalesDashboardStats, DashboardStockItem
+ *  - WasteInventory, WasteSummary, WasteSourceType, DisposalMethod, PaginatedWaste
+ *  - FarmingYearItem, FarmingYearContext
  */
 
 // ============================================================================
-// ORDER TYPES
+// ORDER TYPES (minimal shape needed by SalesDashboardStats.recentOrders)
 // ============================================================================
 
-export type OrderStatus = 'draft' | 'confirmed' | 'processing' | 'assigned' | 'in_transit' | 'shipped' | 'delivered' | 'partially_returned' | 'returned' | 'cancelled';
+export type OrderStatus =
+  | 'draft'
+  | 'confirmed'
+  | 'processing'
+  | 'assigned'
+  | 'in_transit'
+  | 'shipped'
+  | 'delivered'
+  | 'partially_returned'
+  | 'returned'
+  | 'cancelled';
+
 export type PaymentStatus = 'pending' | 'partial' | 'paid';
 
 /**
- * Phase 1 inventory-allocation types — mirrors the backend OrderItem Pydantic model
- * (Phase 1 of the sales-order ↔ stock work).
+ * Per-batch allocation traceability on a legacy order item.
  */
 export interface OrderItemAllocation {
-  /** Which inventory collection this batch came from. */
   inventorySource: 'harvest' | 'returned';
-  /** MongoDB _inventoryId_ string for the source row. */
   inventoryId: string;
-  /** Farm the batch originated from (null for returned stock with no farm link). */
   farmId?: string | null;
-  /** Resolved display name for the farm (null for returned stock). */
   farmName?: string | null;
-  /** Kilograms allocated from this specific batch. */
   quantity: number;
 }
 
@@ -34,13 +49,10 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  // Inventory integration fields
   inventoryId?: string;
   qualityGrade?: string;
   sourceType?: 'fresh' | 'returned';
-  // Phase 1: per-batch allocation traceability
   allocations?: OrderItemAllocation[];
-  // Phase 1: container-based quantity expression
   containerCount?: number | null;
   containerSize?: number | null;
 }
@@ -53,10 +65,6 @@ export interface ShippingAddress {
   postalCode?: string;
 }
 
-/**
- * Phase 4: per-item return record embedded in SalesOrder.
- * Aggregated by the Report Return modal to compute previouslyReturned per item.
- */
 export interface SalesOrderReturnRecord {
   orderItemIndex: number;
   quantity: number;
@@ -82,67 +90,11 @@ export interface SalesOrder {
   shippingAddress?: ShippingAddress;
   notes?: string;
   shipmentId?: string;
-  /**
-   * Phase 4: embedded return records. Optional — may be absent on older orders.
-   * Use `order.returns ?? []` when accessing.
-   */
   returns?: SalesOrderReturnRecord[];
   createdBy: string;
   createdAt: string;
   updatedAt: string;
 }
-
-export interface SalesOrderCreate {
-  customerId: string;
-  customerName: string;
-  orderDate: string;
-  items: OrderItem[];
-  subtotal: number;
-  tax?: number;
-  discount?: number;
-  total: number;
-  paymentStatus?: PaymentStatus;
-  shippingAddress?: ShippingAddress;
-  notes?: string;
-}
-
-export interface SalesOrderUpdate {
-  customerId?: string;
-  customerName?: string;
-  status?: OrderStatus;
-  orderDate?: string;
-  items?: OrderItem[];
-  subtotal?: number;
-  tax?: number;
-  discount?: number;
-  total?: number;
-  paymentStatus?: PaymentStatus;
-  shippingAddress?: ShippingAddress;
-  notes?: string;
-}
-
-export interface SalesOrderSearchParams {
-  page?: number;
-  perPage?: number;
-  search?: string;
-  status?: OrderStatus;
-  paymentStatus?: PaymentStatus;
-  customerId?: string;
-  farmingYear?: number;
-}
-
-export interface PaginatedSalesOrders {
-  items: SalesOrder[];
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-}
-
-// Sales-side Purchase Order types removed in T-070.0 (Wave 3 cleanup).
-// PO types for the dedicated purchasing module live in `types/purchasing.ts`
-// — they have a richer shape (line items reference purchase_items master data,
-// approval workflow, GR linkage, etc.).
 
 // ============================================================================
 // DASHBOARD TYPES
@@ -179,81 +131,24 @@ export interface SalesDashboardStats {
 }
 
 // ============================================================================
-// RETURN ORDER TYPES
-// ============================================================================
-
-export type ReturnReason = 'customer_rejected' | 'quality_issue' | 'wrong_item' | 'damaged_in_transit' | 'expired' | 'oversupply' | 'other';
-export type ReturnCondition = 'resellable' | 'damaged' | 'spoiled' | 'contaminated';
-export type ReturnStatus = 'pending' | 'processing' | 'completed' | 'rejected';
-
-export interface ReturnItem {
-  orderItemId: string;
-  originalOrderItemProductId: string;
-  productName: string;
-  orderedQuantity: number;
-  returnedQuantity: number;
-  originalGrade: string;
-  newGrade?: string;
-  reason: ReturnReason;
-  condition: ReturnCondition;
-  inventoryId?: string;
-  returnToInventory: boolean;
-  notes?: string;
-}
-
-export interface ReturnOrder {
-  returnId: string;
-  returnCode: string;
-  orderId: string;
-  shipmentId?: string;
-  orderCode?: string;
-  customerName?: string;
-  status: ReturnStatus;
-  returnDate: string;
-  processedDate?: string;
-  items: ReturnItem[];
-  totalReturnedQuantity: number;
-  totalRefundAmount?: number;
-  notes?: string;
-  processedBy?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ReturnOrderCreate {
-  orderId: string;
-  shipmentId?: string;
-  items: Array<{
-    originalOrderItemProductId: string;
-    productName: string;
-    orderedQuantity: number;
-    returnedQuantity: number;
-    originalGrade: string;
-    newGrade?: string;
-    reason: ReturnReason;
-    condition: ReturnCondition;
-    inventoryId?: string;
-    returnToInventory?: boolean;
-    notes?: string;
-  }>;
-  notes?: string;
-}
-
-export interface PaginatedReturns {
-  items: ReturnOrder[];
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-}
-
-// ============================================================================
 // WASTE INVENTORY TYPES
 // ============================================================================
 
-export type WasteSourceType = 'harvest' | 'return' | 'expired' | 'damaged' | 'quality_reject' | 'other';
-export type DisposalMethod = 'compost' | 'animal_feed' | 'discard' | 'sold_discount' | 'donated' | 'pending';
+export type WasteSourceType =
+  | 'harvest'
+  | 'return'
+  | 'expired'
+  | 'damaged'
+  | 'quality_reject'
+  | 'other';
+
+export type DisposalMethod =
+  | 'compost'
+  | 'animal_feed'
+  | 'discard'
+  | 'sold_discount'
+  | 'donated'
+  | 'pending';
 
 export interface WasteInventory {
   wasteId: string;
