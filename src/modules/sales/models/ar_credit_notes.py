@@ -23,10 +23,24 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.alias_generators import to_camel
 
 from src.core.documents.document_links import DocumentLinkRef
 from src.core.documents.document_status import DocumentStatus
+
+
+# ---------------------------------------------------------------------------
+# Response model config — emits camelCase via alias_generator.
+# Routes must pair this with response_model_by_alias=True.
+# populate_by_name=True allows snake_case input on request bodies too.
+# ---------------------------------------------------------------------------
+
+_RESPONSE_CONFIG = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    from_attributes=True,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +81,8 @@ class CreditNoteAllocationCreate(BaseModel):
 
 class CreditNoteAllocationResponse(BaseModel):
     """Full allocation as returned by the API."""
+
+    model_config = _RESPONSE_CONFIG
 
     allocation_line_number: int
     ar_invoice_doc_entry: str
@@ -123,6 +139,8 @@ class CreditNoteLineCreate(BaseModel):
 class CreditNoteLineResponse(BaseModel):
     """Full AR Credit Note line as returned by the API."""
 
+    model_config = _RESPONSE_CONFIG
+
     line_id: str
     line_number: int
     item_id: str
@@ -152,6 +170,8 @@ class CreditNoteLineResponse(BaseModel):
 
 class CreditNoteTotals(BaseModel):
     """Totals sub-document for an AR Credit Note."""
+
+    model_config = _RESPONSE_CONFIG
 
     net: Decimal
     tax: Decimal
@@ -239,6 +259,8 @@ class ARCreditNoteStatusTransitionRequest(BaseModel):
 class ARCreditNoteResponse(BaseModel):
     """Full AR Credit Note as returned by the API."""
 
+    model_config = _RESPONSE_CONFIG
+
     doc_entry: str
     doc_number: str
     doc_type: str
@@ -274,6 +296,8 @@ class ARCreditNoteResponse(BaseModel):
 
 class ARCreditNoteListItem(BaseModel):
     """Slim AR Credit Note row for paginated list views."""
+
+    model_config = _RESPONSE_CONFIG
 
     doc_entry: str
     doc_number: str

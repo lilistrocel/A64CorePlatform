@@ -1122,8 +1122,192 @@ export interface ReturnNoteListParams {
   size?: number;
 }
 
-/** Stub types for remaining not-yet-implemented Wave 3 documents */
-export interface ARCreditNote { docEntry: string; docNumber: string; status: string; }
+// ============================================================================
+// AR Credit Note types (T-200.8)
+// Backend endpoint: /v1/sales/ar-credit-notes
+// Doc prefix: ARC-YYYY-NNNN
+// Status flow: draft → open → partly_closed → closed → cancelled
+// Two creation paths:
+//   from-RTN:     financial completion of a physical return (POST /ar-credit-notes — body contains baseReturnDocRef)
+//   from-invoice: direct financial reversal without goods movement
+// ============================================================================
+
+export type ARCreditNoteStatus =
+  | 'draft'
+  | 'open'
+  | 'partly_closed'
+  | 'closed'
+  | 'cancelled';
+
+export type CreditReason =
+  | 'return'
+  | 'price_adjustment'
+  | 'discount'
+  | 'goodwill'
+  | 'cancellation'
+  | 'other';
+
+export interface ARCreditNoteTotals {
+  net: number;
+  tax: number;
+  gross: number;
+}
+
+export interface CreditNoteAllocation {
+  allocationLineNumber: number;
+  arInvoiceDocEntry: string;
+  arInvoiceDocNumber: string;
+  amountApplied: number;
+}
+
+export interface ARCreditNoteLine {
+  lineId: string;
+  lineNumber: number;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description: string;
+  creditedQty: number;
+  uom: string;
+  unitPrice: number;
+  discountPercent: number;
+  lineNet: number;
+  taxCodeId: string | null;
+  taxPercent: number;
+  lineTax: number;
+  lineGross: number;
+  revenueAccountId: string;
+  warehouseId: string | null;
+  costCenterId: string | null;
+  baseDocRef: DocumentLinkRef | null;
+  targetDocRefs: DocumentLinkRef[];
+}
+
+export interface ARCreditNote {
+  docEntry: string;
+  docNumber: string;
+  docType: string;
+  organizationId: string;
+  companyCode: string;
+  customerId: string;
+  customerName: string;
+  bpRefNo: string | null;
+  docDate: string;
+  dateOfSupply: string;
+  invoiceDate: string;
+  taxDate: string;
+  currency: string;
+  exchangeRate: number;
+  paymentTermsId: string | null;
+  creditReason: CreditReason;
+  creditReasonText: string | null;
+  status: ARCreditNoteStatus;
+  totals: ARCreditNoteTotals;
+  /** Points to source AR Invoice (always present on a posted ARC). */
+  baseDocRef: DocumentLinkRef | null;
+  /** Points to source RTN if this ARC is the financial completion of a physical return. */
+  baseReturnDocRef: DocumentLinkRef | null;
+  allocations: CreditNoteAllocation[];
+  targetDocRefs: DocumentLinkRef[];
+  outboxEventId: string | null;
+  outboxEventEmittedAt: string | null;
+  journalMemo: string | null;
+  notes: string | null;
+  lines: ARCreditNoteLine[];
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface ARCreditNoteListItem {
+  docEntry: string;
+  docNumber: string;
+  organizationId: string;
+  customerId: string;
+  customerName: string;
+  docDate: string;
+  taxDate: string;
+  status: ARCreditNoteStatus;
+  totals: ARCreditNoteTotals;
+  baseReturnDocRef: DocumentLinkRef | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditNoteAllocationCreate {
+  arInvoiceDocEntry: string;
+  arInvoiceDocNumber: string;
+  amountApplied: number;
+}
+
+export interface ARCreditNoteLineCreate {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  description?: string | null;
+  creditedQty: number;
+  uom: string;
+  unitPrice: number;
+  discountPercent?: number;
+  taxCodeId?: string | null;
+  taxPercent?: number;
+  revenueAccountId: string;
+  warehouseId?: string | null;
+  costCenterId?: string | null;
+  baseDocRef: DocumentLinkRef;
+}
+
+export interface ARCreditNoteCreate {
+  companyCode?: string;
+  customerId: string;
+  customerName: string;
+  bpRefNo?: string | null;
+  docDate: string;
+  dateOfSupply: string;
+  invoiceDate: string;
+  currency?: string;
+  exchangeRate?: number;
+  paymentTermsId?: string | null;
+  creditReason: CreditReason;
+  creditReasonText?: string | null;
+  /** Set when creating from RTN — points to the Return Note. */
+  baseReturnDocRef?: DocumentLinkRef | null;
+  allocations: CreditNoteAllocationCreate[];
+  lines: ARCreditNoteLineCreate[];
+  journalMemo?: string | null;
+  notes?: string | null;
+}
+
+export interface ARCreditNoteUpdate {
+  bpRefNo?: string | null;
+  docDate?: string | null;
+  dateOfSupply?: string | null;
+  invoiceDate?: string | null;
+  currency?: string | null;
+  exchangeRate?: number | null;
+  creditReason?: CreditReason | null;
+  creditReasonText?: string | null;
+  journalMemo?: string | null;
+  notes?: string | null;
+  lines?: ARCreditNoteLineCreate[] | null;
+  allocations?: CreditNoteAllocationCreate[] | null;
+}
+
+export interface ARCreditNoteTransition {
+  newStatus: ARCreditNoteStatus;
+  reason?: string | null;
+}
+
+export interface ARCreditNoteListParams {
+  organizationId?: string;
+  status?: ARCreditNoteStatus | null;
+  customerId?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  page?: number;
+  size?: number;
+}
 
 // ============================================================================
 // AR Invoice API — fully implemented
@@ -1606,11 +1790,6 @@ export async function transitionQuote(
   );
   return response.data.data;
 }
-
-const NOT_IMPLEMENTED = (doc: string) =>
-  Promise.reject(new Error(`${doc}: not implemented — wire up in a follow-up task`));
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
 // ============================================================================
 // Sales Order v2 API — fully implemented (T-200.4)
@@ -2350,8 +2529,161 @@ export async function transitionReturn(
   return response.data.data;
 }
 
-export const listArCreditNotes = () => NOT_IMPLEMENTED('ARCreditNote');
-export const getArCreditNote = (_id: string, _orgId: string) => NOT_IMPLEMENTED('ARCreditNote');
+// ============================================================================
+// AR Credit Note API — T-200.8
+// Base: /v1/sales/ar-credit-notes (path does NOT include /api/ — apiClient adds /api)
+// ============================================================================
+
+const ARC_BASE = '/v1/sales/ar-credit-notes';
+
+/**
+ * List AR Credit Notes with optional filters and pagination.
+ */
+export async function listArCreditNotes(
+  params: ARCreditNoteListParams,
+): Promise<{ data: ARCreditNoteListItem[]; meta: PaginationMeta }> {
+  const queryParams: Record<string, string | number> = {};
+  if (params.organizationId) queryParams['organization_id'] = params.organizationId;
+  if (params.status) queryParams['status'] = params.status;
+  if (params.customerId) queryParams['customer_id'] = params.customerId;
+  if (params.dateFrom) queryParams['date_from'] = params.dateFrom;
+  if (params.dateTo) queryParams['date_to'] = params.dateTo;
+  if (params.page) queryParams['page'] = params.page;
+  if (params.size) queryParams['size'] = params.size;
+
+  const response = await apiClient.get<PaginatedEnvelope<ARCreditNoteListItem>>(
+    ARC_BASE,
+    { params: queryParams },
+  );
+  return response.data;
+}
+
+/**
+ * Fetch a single AR Credit Note with all embedded lines and allocations.
+ */
+export async function getArCreditNote(
+  docEntry: string,
+  orgId: string,
+): Promise<ARCreditNote> {
+  const response = await apiClient.get<SuccessEnvelope<ARCreditNote>>(
+    `${ARC_BASE}/${docEntry}`,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a new AR Credit Note in DRAFT status (generic path — rare; prefer
+ * createArCreditNoteFromRTN or createArCreditNoteFromInvoice).
+ */
+export async function createArCreditNote(
+  payload: ARCreditNoteCreate,
+  orgId: string,
+): Promise<ARCreditNote> {
+  const response = await apiClient.post<SuccessEnvelope<ARCreditNote>>(
+    ARC_BASE,
+    payload,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create an AR Credit Note as the financial completion of a posted Return (RTN).
+ *
+ * The caller populates baseReturnDocRef pointing to the RTN; the service
+ * links back to the AR Invoice from the RTN's chain.
+ * This maps to the same POST /ar-credit-notes endpoint but with
+ * baseReturnDocRef set in the payload.
+ */
+export async function createArCreditNoteFromRTN(
+  payload: ARCreditNoteCreate,
+  orgId: string,
+): Promise<ARCreditNote> {
+  // Same endpoint as create; semantics differentiated server-side via
+  // the presence of baseReturnDocRef in the payload.
+  const response = await apiClient.post<SuccessEnvelope<ARCreditNote>>(
+    ARC_BASE,
+    payload,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create an AR Credit Note as a direct financial reversal against an AR Invoice
+ * (no physical return involved — used for discounts, billing corrections, etc.).
+ *
+ * baseReturnDocRef will be null; baseDocRef points to the source ARI line.
+ */
+export async function createArCreditNoteFromInvoice(
+  payload: ARCreditNoteCreate,
+  orgId: string,
+): Promise<ARCreditNote> {
+  const response = await apiClient.post<SuccessEnvelope<ARCreditNote>>(
+    ARC_BASE,
+    payload,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Partially update a DRAFT AR Credit Note.
+ * If lines or allocations are provided they replace the existing sets wholesale.
+ */
+export async function updateArCreditNote(
+  docEntry: string,
+  payload: ARCreditNoteUpdate,
+  orgId: string,
+): Promise<ARCreditNote> {
+  const response = await apiClient.patch<SuccessEnvelope<ARCreditNote>>(
+    `${ARC_BASE}/${docEntry}`,
+    payload,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Hard-delete a DRAFT AR Credit Note (no side-effects on ARI).
+ */
+export async function deleteArCreditNote(
+  docEntry: string,
+  orgId: string,
+): Promise<void> {
+  await apiClient.delete(`${ARC_BASE}/${docEntry}`, {
+    params: { organization_id: orgId },
+  });
+}
+
+/**
+ * Transition an AR Credit Note status.
+ *
+ * Key transitions:
+ *   DRAFT → OPEN       Posts the credit note; updates ARI creditedAmount/openAmount;
+ *                      emits credit_note_posted event.
+ *   DRAFT → CANCELLED  Draft abandoned.
+ *   OPEN  → CLOSED     Terminal close.
+ *   OPEN  → CANCELLED  Financial reversal (super_admin only).
+ */
+export async function transitionArCreditNote(
+  docEntry: string,
+  transition: ARCreditNoteTransition,
+  orgId: string,
+): Promise<ARCreditNote> {
+  const body = {
+    new_status: transition.newStatus,
+    reason: transition.reason ?? null,
+  };
+
+  const response = await apiClient.post<SuccessEnvelope<ARCreditNote>>(
+    `${ARC_BASE}/${docEntry}/transition`,
+    body,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
 
 // ============================================================================
 // AR Aging Report types + API (T-200.2)
@@ -2420,4 +2752,3 @@ export async function getArAging(params: ARAgingParams): Promise<ARAgingReport> 
   );
   return response.data.data;
 }
-/* eslint-enable @typescript-eslint/no-unused-vars */

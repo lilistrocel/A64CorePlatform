@@ -106,6 +106,7 @@ def _resolve_org_id(
 @router.get(
     "",
     response_model=PaginatedResponse[ARCreditNoteListItem],
+    response_model_by_alias=True,
     summary="List AR Credit Notes",
     description=(
         "Return a paginated list of AR Credit Notes for the given organisation. "
@@ -172,6 +173,7 @@ async def list_ar_credit_notes_endpoint(
 @router.get(
     "/{doc_entry}",
     response_model=SuccessResponse[ARCreditNoteResponse],
+    response_model_by_alias=True,
     summary="Get AR Credit Note detail",
 )
 async def get_ar_credit_note_endpoint(
@@ -214,6 +216,7 @@ async def get_ar_credit_note_endpoint(
 @router.post(
     "",
     response_model=SuccessResponse[ARCreditNoteResponse],
+    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     summary="Create AR Credit Note",
     description=(
@@ -277,6 +280,7 @@ async def create_ar_credit_note_endpoint(
 @router.patch(
     "/{doc_entry}",
     response_model=SuccessResponse[ARCreditNoteResponse],
+    response_model_by_alias=True,
     summary="Update draft AR Credit Note",
 )
 async def update_ar_credit_note_endpoint(
@@ -339,6 +343,7 @@ async def update_ar_credit_note_endpoint(
 @router.delete(
     "/{doc_entry}",
     response_model=SuccessResponse[None],
+    response_model_by_alias=True,
     summary="Delete draft AR Credit Note",
 )
 async def delete_ar_credit_note_endpoint(
@@ -397,6 +402,7 @@ async def delete_ar_credit_note_endpoint(
 @router.post(
     "/{doc_entry}/transition",
     response_model=SuccessResponse[ARCreditNoteResponse],
+    response_model_by_alias=True,
     summary="Transition AR Credit Note status",
 )
 async def transition_ar_credit_note_endpoint(

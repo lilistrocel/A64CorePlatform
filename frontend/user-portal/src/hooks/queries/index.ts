@@ -306,3 +306,16 @@ export {
   useTransitionReturn,
   rtnQueryKeys,
 } from './useReturns';
+
+// Sales Wave 3 — AR Credit Note hooks (T-200.8)
+export {
+  useArCreditNotes,
+  useArCreditNote,
+  useCreateArCreditNoteFromRTN,
+  useCreateArCreditNoteFromInvoice,
+  useCreateArCreditNote,
+  useUpdateArCreditNote,
+  useDeleteArCreditNote,
+  useTransitionArCreditNote,
+  arcQueryKeys,
+} from './useArCreditNotes';

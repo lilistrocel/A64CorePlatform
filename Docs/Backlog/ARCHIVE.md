@@ -1,8 +1,44 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 82 tasks
+> **Total completed:** 83 tasks
 
 ## 2026-05
+
+### T-200.8 | AR Credit Note (ARC) UI — list + form + detail + from-RTN + from-Invoice flows
+- **Category:** Frontend (+ backend pre-flight) · **Priority:** P1
+- **Completed:** 2026-05-30 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-100.11 ✅ (ARC backend), T-200.7 ✅ (RTN UI — unblocked from-rtn route), T-200.0 ✅ (ARI UI — adds Issue Credit Note button)
+- **Blocks:** —
+- **Description:** Three new Wave 3 AR Credit Note pages + backend pre-flight hardening.
+  Backend: Added `_RESPONSE_CONFIG` (camelCase alias_generator, populate_by_name, from_attributes) to
+  `CreditNoteAllocationResponse`, `CreditNoteLineResponse`, `CreditNoteTotals`, `ARCreditNoteResponse`,
+  `ARCreditNoteListItem` in `models/ar_credit_notes.py`; added `response_model_by_alias=True` to all 6
+  routes in `api/v1/ar_credit_notes.py`. Restarted API and smoke-verified camelCase at every level
+  (top-level + totals + lines + allocations) for ARC-2026-0001.
+  Frontend: Full ARC type hierarchy (ARCreditNote, ARCreditNoteListItem, ARCreditNoteLine,
+  CreditNoteAllocation, ARCreditNoteTotals, ARCreditNoteCreate/Update/Transition etc.) + 8 API
+  functions in salesApi.ts (listArCreditNotes, getArCreditNote, createArCreditNote,
+  createArCreditNoteFromRTN, createArCreditNoteFromInvoice, updateArCreditNote, deleteArCreditNote,
+  transitionArCreditNote); useArCreditNotes.ts hook file with 7 hooks + arcQueryKeys; exported in
+  hooks/queries/index.ts. Removed defunct NOT_IMPLEMENTED stub.
+  ArCreditNotesPage: status chips (Draft/Open/Partly Closed/Closed/Cancelled), source-type chips
+  (All Sources/From RTN/From Invoice) derived client-side from baseReturnDocRef presence, search,
+  date range, pagination, docNumber + customerName + source label + gross + status.
+  ArCreditNoteFormPage: 4 modes (new/from-rtn/:rtnDocEntry/from-invoice/:ariDocEntry/edit);
+  from-RTN pre-fills customer+lines from RTN and sets baseReturnDocRef; from-Invoice pre-fills
+  customer+lines from ARI (creditedQty = invoicedQty-creditedQty-cancelledQty) and auto-populates
+  first allocation row; lines+allocations useFieldArray; live totals recalculation; RHF+Zod.
+  ArCreditNoteDetailPage: info grid, read-only lines table with line-level amounts, allocations table
+  (rows clickable → ARI), doc-chain card (baseDocRef ARI + baseReturnDocRef RTN + targetDocRefs),
+  action bar (draft: Edit/Post/Delete; open: Cancel super_admin only; read-only otherwise),
+  X-close-only delete modal, NO Audit History button, AttachmentList with AR_CREDIT_NOTE docType.
+  Added "Issue Credit Note" SecondaryButton on ARInvoiceDetailPage (→ /from-invoice path);
+  fixed stale /sales/credit-notes route in ARInvoiceDetailPage.docTypeRoute to /sales/ar-credit-notes.
+  Fixed sidebar route from /sales/credit-notes → /sales/ar-credit-notes in MainLayout.
+  6 new routes in App.tsx (list/new/from-rtn/from-invoice/edit/detail).
+  TypeScript: zero errors. ESLint: zero errors. Backend tests: 211 pass.
+- **Hot reload:** `docker compose restart api` required (backend model hardening). Frontend HMR only.
+- **DevLog:** `Docs/3-DevLog/2026-05-30_T-200.8-ar-credit-note-ui.md`
 
 ### T-200.7 | Return Note v2 (RTN) UI — list + form + detail + from-RR + from-DN flows
 - **Category:** Frontend (+ backend pre-flight) · **Priority:** P1

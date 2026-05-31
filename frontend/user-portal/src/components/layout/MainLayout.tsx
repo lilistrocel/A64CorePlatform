@@ -94,7 +94,7 @@ const SALES_NAV_GROUP: NavItemDef = {
     { to: '/sales/deliveries', icon: '📦', label: 'Deliveries' },
     { to: '/sales/return-requests', icon: '↩️', label: 'Return Requests' },
     { to: '/sales/returns-v2', icon: '🔄', label: 'Returns' },
-    { to: '/sales/credit-notes', icon: '📝', label: 'AR Credit Notes' },
+    { to: '/sales/ar-credit-notes', icon: '📝', label: 'AR Credit Notes' },
   ],
 };
 

@@ -414,7 +414,7 @@ function docTypeRoute(docType: string, docEntry: string): string {
   switch (docType) {
     case 'DELIVERY': return `/sales/deliveries/${docEntry}`;
     case 'CUSTOMER_RECEIPT': return `/sales/customer-receipts/${docEntry}`;
-    case 'AR_CREDIT_NOTE': return `/sales/credit-notes/${docEntry}`;
+    case 'AR_CREDIT_NOTE': return `/sales/ar-credit-notes/${docEntry}`;
     default: return `/sales/${docType.toLowerCase()}/${docEntry}`;
   }
 }
@@ -562,6 +562,19 @@ export function ARInvoiceDetailPage() {
             >
               Receive Payment
             </PrimaryButton>
+          )}
+          {/* Issue Credit Note — direct financial reversal without physical return.
+              Used for discounts, billing corrections, customer refunds without goods movement.
+              Available when ARI is open (creditedAmount < gross and openAmount > 0). */}
+          {isOpen && (
+            <SecondaryButton
+              onClick={() =>
+                navigate(`/sales/ar-credit-notes/from-invoice/${invoice.docEntry}`)
+              }
+              aria-label="Issue a credit note against this AR Invoice"
+            >
+              Issue Credit Note
+            </SecondaryButton>
           )}
           {isOpen && isSuperAdmin && (
             <DangerButton

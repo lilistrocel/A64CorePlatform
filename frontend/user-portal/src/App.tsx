@@ -158,6 +158,20 @@ const ReturnDetailPage = lazy(() =>
   import('./pages/sales/ReturnDetailPage').then(m => ({ default: m.ReturnDetailPage }))
 );
 
+// T-200.8: AR Credit Note pages
+// Route order matters: /new, /from-rtn/:rtnDocEntry, /from-invoice/:ariDocEntry,
+// /:docId/edit must all be registered BEFORE /:docId to prevent string params
+// like "new" or "from-rtn" being matched as a docId by the detail route.
+const ArCreditNotesPage = lazy(() =>
+  import('./pages/sales/ArCreditNotesPage').then(m => ({ default: m.ArCreditNotesPage }))
+);
+const ArCreditNoteFormPage = lazy(() =>
+  import('./pages/sales/ArCreditNoteFormPage').then(m => ({ default: m.ArCreditNoteFormPage }))
+);
+const ArCreditNoteDetailPage = lazy(() =>
+  import('./pages/sales/ArCreditNoteDetailPage').then(m => ({ default: m.ArCreditNoteDetailPage }))
+);
+
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
 const CampaignManagementPage = lazy(() => import('./pages/marketing/CampaignManagementPage').then(m => ({ default: m.CampaignManagementPage })));
@@ -394,6 +408,13 @@ function App() {
                 <Route path="/sales/returns-v2/from-delivery/:dnDocEntry" element={<ReturnFormPage />} />
                 <Route path="/sales/returns-v2/:docId/edit" element={<ReturnFormPage />} />
                 <Route path="/sales/returns-v2/:docId" element={<ReturnDetailPage />} />
+                {/* T-200.8: AR Credit Notes — /new, /from-rtn, /from-invoice, /:docId/edit before /:docId */}
+                <Route path="/sales/ar-credit-notes" element={<ArCreditNotesPage />} />
+                <Route path="/sales/ar-credit-notes/new" element={<ArCreditNoteFormPage />} />
+                <Route path="/sales/ar-credit-notes/from-rtn/:rtnDocEntry" element={<ArCreditNoteFormPage />} />
+                <Route path="/sales/ar-credit-notes/from-invoice/:ariDocEntry" element={<ArCreditNoteFormPage />} />
+                <Route path="/sales/ar-credit-notes/:docId/edit" element={<ArCreditNoteFormPage />} />
+                <Route path="/sales/ar-credit-notes/:docId" element={<ArCreditNoteDetailPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />
