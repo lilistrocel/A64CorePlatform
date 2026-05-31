@@ -32,6 +32,7 @@ import {
 } from '../../hooks/queries/useCustomerReceipts';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
 import type { CustomerReceiptStatus, CustomerReceiptAllocation } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -133,6 +134,17 @@ const SecondaryButton = styled.button`
   cursor: pointer;
   &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+const GhostButton = styled.button`
+  padding: 10px 16px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
 `;
 
 const DangerButton = styled.button`
@@ -396,6 +408,7 @@ export function CustomerReceiptDetailPage() {
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
   const handlePost = async () => {
@@ -538,8 +551,13 @@ export function CustomerReceiptDetailPage() {
               {transitioning ? 'Cancelling…' : 'Cancel Receipt'}
             </DangerButton>
           )}
-          {/* Audit History button omitted — Rule 4: finance audit_log entity
-              type whitelist is locked to FiscalPeriod + JournalEntry only. */}
+          {/* T-200.x: Audit History — now wired to sales-side endpoint */}
+          <GhostButton
+            onClick={() => setShowAuditModal(true)}
+            aria-label="Open audit history for this Customer Receipt"
+          >
+            Audit History
+          </GhostButton>
         </ActionBar>
       </TitleRow>
 
@@ -735,6 +753,18 @@ export function CustomerReceiptDetailPage() {
             </ModalActions>
           </ModalBox>
         </ModalOverlay>
+      )}
+      {/* T-200.x: Sales-side audit history modal */}
+      {receipt && (
+        <SalesAuditHistoryModal
+          isOpen={showAuditModal}
+          onClose={() => setShowAuditModal(false)}
+          organizationId={orgId}
+          docType="CUSTOMER_RECEIPT"
+          docEntry={receipt.docEntry}
+          docLabel={receipt.docNumber}
+          viewerRole={userRole}
+        />
       )}
     </Container>
   );

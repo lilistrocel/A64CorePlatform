@@ -17,7 +17,7 @@
  * Allocations table: each row navigates to the credited AR Invoice.
  *
  * Delete modal closes via X button only — NOT on overlay click (project rule).
- * NO Audit History button — sales audit endpoint pending T-200.x.
+ * Audit History button (GhostButton) opens SalesAuditHistoryModal — visible on all statuses.
  * Route: /sales/ar-credit-notes/:docId
  */
 
@@ -28,6 +28,7 @@ import { ExternalLink } from 'lucide-react';
 import { useArCreditNote, useTransitionArCreditNote, useDeleteArCreditNote } from '../../hooks/queries/useArCreditNotes';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
 import type {
   ARCreditNoteStatus,
   ARCreditNoteLine,
@@ -147,6 +148,18 @@ const DangerButton = styled.button`
   font-size: 14px;
   cursor: pointer;
   &:hover { background: ${({ theme }) => theme.colors.errorBg || '#fef2f2'}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+const GhostButton = styled.button`
+  padding: 10px 20px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
@@ -435,6 +448,7 @@ export function ArCreditNoteDetailPage() {
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
   const handlePost = async () => {
@@ -553,7 +567,7 @@ export function ArCreditNoteDetailPage() {
               {transitioning ? 'Cancelling…' : 'Cancel Credit Note'}
             </DangerButton>
           )}
-          {/* NO Audit History button — pending T-200.x sales audit endpoint */}
+          <GhostButton onClick={() => setShowAuditModal(true)}>Audit History</GhostButton>
         </ActionBar>
       </TitleRow>
 
@@ -776,6 +790,15 @@ export function ArCreditNoteDetailPage() {
         docType="AR_CREDIT_NOTE"
         docId={arc.docEntry}
         readOnly={isReadOnly || isOpen}
+      />
+
+      <SalesAuditHistoryModal
+        isOpen={showAuditModal}
+        onClose={() => setShowAuditModal(false)}
+        organizationId={orgId}
+        docType="AR_CREDIT_NOTE"
+        docEntry={arc.docEntry}
+        docLabel={arc.docNumber}
       />
 
       {/* ── Delete Confirmation Modal ── */}

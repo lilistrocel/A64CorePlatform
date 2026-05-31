@@ -26,7 +26,7 @@
  *   cancelled → red   (#fef2f2 / #991b1b)
  *
  * Modals (delete confirm) do NOT close on overlay click — X button only.
- * NO Audit History button — sales audit endpoint pending T-200.x.
+ * Audit History button (GhostButton) opens SalesAuditHistoryModal — visible on all statuses.
  *
  * Route: /sales/return-requests/:docId
  */
@@ -42,6 +42,7 @@ import {
 } from '../../hooks/queries/useReturnRequests';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
 import type {
   ReturnRequestStatus,
   ReturnRequestLine,
@@ -163,6 +164,17 @@ const DangerButton = styled.button`
   cursor: pointer;
   &:disabled { opacity: 0.5; cursor: not-allowed; }
   &:hover:not(:disabled) { background: #fef2f2; }
+`;
+
+const GhostButton = styled.button`
+  padding: 9px 18px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
 `;
 
 const Card = styled.div`
@@ -465,6 +477,7 @@ export function ReturnRequestDetailPage() {
   const isSuperAdmin = user?.role === 'super_admin';
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [actionError, setActionError] = useState('');
 
   const { data: rr, isLoading, error } = useReturnRequest(docId, orgId);
@@ -595,6 +608,7 @@ export function ReturnRequestDetailPage() {
               )}
             </>
           )}
+          <GhostButton onClick={() => setShowAuditModal(true)}>Audit History</GhostButton>
         </ActionBar>
       </TitleRow>
 
@@ -858,6 +872,15 @@ export function ReturnRequestDetailPage() {
         <SectionTitle>Attachments</SectionTitle>
         <AttachmentList docId={rr.docEntry} docType="RETURN_REQUEST" />
       </Card>
+
+      <SalesAuditHistoryModal
+        isOpen={showAuditModal}
+        onClose={() => setShowAuditModal(false)}
+        organizationId={orgId}
+        docType="RETURN_REQUEST"
+        docEntry={rr.docEntry}
+        docLabel={rr.docNumber}
+      />
 
       {/* ── Delete confirmation modal (X-only close) ── */}
       {showDeleteModal && (

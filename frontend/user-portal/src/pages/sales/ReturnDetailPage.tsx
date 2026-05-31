@@ -20,7 +20,7 @@
  *   targetDocRefs — AR Credit Notes issued against this RTN
  *
  * Delete modal closes via X button only — NOT on overlay click (project rule).
- * NO Audit History button — sales audit endpoint pending T-200.x.
+ * Audit History button (GhostButton) opens SalesAuditHistoryModal — visible on all statuses.
  *
  * Route: /sales/returns-v2/:docId
  */
@@ -32,6 +32,7 @@ import { ExternalLink } from 'lucide-react';
 import { useReturn, useTransitionReturn, useDeleteReturn } from '../../hooks/queries/useReturns';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
 import type {
   ReturnNoteStatus,
   ReturnNoteLine,
@@ -148,6 +149,18 @@ const DangerButton = styled.button`
   cursor: pointer;
   &:hover { background: #fee2e2; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+const GhostButton = styled.button`
+  padding: 9px 20px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
 `;
 
 const ActionError = styled.div`
@@ -415,6 +428,7 @@ export function ReturnDetailPage() {
 
   const [actionError, setActionError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
 
   const handlePost = async () => {
     if (!rtn) return;
@@ -519,6 +533,7 @@ export function ReturnDetailPage() {
               )}
             </>
           )}
+          <GhostButton onClick={() => setShowAuditModal(true)}>Audit History</GhostButton>
         </ActionBar>
       </TitleRow>
 
@@ -679,6 +694,15 @@ export function ReturnDetailPage() {
         <SectionTitle>Attachments</SectionTitle>
         <AttachmentList docType="RETURN" docId={rtn.docEntry} />
       </Card>
+
+      <SalesAuditHistoryModal
+        isOpen={showAuditModal}
+        onClose={() => setShowAuditModal(false)}
+        organizationId={orgId}
+        docType="RETURN"
+        docEntry={rtn.docEntry}
+        docLabel={rtn.docNumber}
+      />
 
       {/* ─ Delete confirm modal ───────────────────────────────────────────── */}
       {showDeleteModal && (

@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-05-31
-> **Tasks:** 0 active · 1 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11 completed, moved to ARCHIVE.md)
+> **Tasks:** 0 active · 1 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
 
 ---
 
@@ -169,34 +169,6 @@
     phases as priorities allow.
 
 ---
-
-### T-200.x | Sales attachments upload + sales audit endpoint — wire backend for Wave 3 docs
-- **Category:** Backend · **Priority:** P2
-- **Status:** 🟢 Ready
-- **Assigned:** — · **Started:** —
-- **Depends on:** T-200.0 ✅
-- **Blocks:** —
-- **Description:** Two related gaps surfaced during T-200.0 accountant testing:
-  1. **Attachment upload** — `AttachmentDocType` enum now accepts the 8 Wave 3 sales doc types
-     (resolved 2026-05-30) so the LIST endpoint works. But `_verify_document` in
-     `attachment_service.py` still looks up the parent doc in `document_headers` (purchasing's
-     collection). Sales docs live in `ar_invoices_v2`, `customer_receipts_v2`, etc.
-     So upload returns 404 for AR Invoice. Fix: route `_verify_document` by doc_type →
-     collection (purchasing → document_headers; sales → matching v2 collection).
-  2. **Audit history modal** — `AuditHistoryModal` in the AR Invoice detail page was wired
-     to the finance audit_log endpoint, whose `_ALLOWED_ENTITY_TYPES` whitelist is
-     `{FiscalPeriod, JournalEntry}`. Sales docs maintain their own audit collection
-     `ar_invoices_v2_audit` (and equivalents). The button has been temporarily hidden in
-     the frontend. Proper fix: build a sales-side audit endpoint (e.g.,
-     `GET /api/v1/sales/audit?docEntry=...&docType=AR_INVOICE`) that queries the
-     matching v2_audit Mongo collection, then either re-wire `AuditHistoryModal` to dispatch
-     based on entityType or introduce a `SalesAuditHistoryModal`.
-- **Steps:**
-  1. Add `AR_INVOICE` to the `AttachmentDocType` enum / literal in the backend attachments module.
-  2. Add read-lock rule: `AR_INVOICE` attachments are read-only once the invoice is OPEN or
-     CANCELLED (matching the pattern for PAYMENT — fully posted docs are immutable).
-  3. Verify with mongosh that `document_attachments` collection accepts the new docType.
-  4. Update backend attachment tests to cover the AR_INVOICE case.
 
 ### T-100 | Wave 3 — Sales module redesign with full SAP B1-parity depth
 - **Category:** Backend + Frontend + API · **Priority:** P1

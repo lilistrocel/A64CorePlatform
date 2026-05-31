@@ -102,6 +102,8 @@ def _make_mock_db(
     attachment_docs: Optional[List[Dict]] = None,
     insert_result: Any = None,
     update_result: Any = None,
+    sales_v2_doc: Optional[Dict] = None,
+    sales_v2_collection: Optional[str] = None,
 ):
     """
     Build a mock AsyncIOMotorDatabase with configurable return values.
@@ -111,12 +113,23 @@ def _make_mock_db(
         attachment_docs: Documents returned by find on document_attachments.
         insert_result: Mock insert_one result.
         update_result: Mock update_one result.
+        sales_v2_doc: Document returned by find_one on a sales v2 collection
+                      (e.g. ar_invoices_v2, quotes_v2).  Used when testing
+                      upload/delete against Wave 3 sales doc types.
+        sales_v2_collection: The specific v2 collection name to return
+                             sales_v2_doc for.  Other collection names that are
+                             not "document_headers" or the named v2 collection
+                             fall through to the generic attachments_col mock.
     """
     db = MagicMock()
 
     # document_headers collection — find_one returns header_doc
     headers_col = MagicMock()
     headers_col.find_one = AsyncMock(return_value=header_doc)
+
+    # sales v2 collection (when provided)
+    sales_col = MagicMock()
+    sales_col.find_one = AsyncMock(return_value=sales_v2_doc)
 
     # document_attachments collection
     attachments_col = MagicMock()
@@ -146,6 +159,8 @@ def _make_mock_db(
     def _col_selector(name):
         if name == "document_headers":
             return headers_col
+        if sales_v2_collection and name == sales_v2_collection:
+            return sales_col
         return attachments_col
 
     db.__getitem__ = MagicMock(side_effect=_col_selector)
@@ -167,11 +182,34 @@ def _make_service(
     header_doc: Optional[Dict] = None,
     attachment_docs: Optional[List[Dict]] = None,
     read_data: bytes = SMALL_PDF,
+    sales_v2_doc: Optional[Dict] = None,
+    sales_v2_collection: Optional[str] = None,
 ):
     """Convenience: build a service with mocked db and storage."""
-    db = _make_mock_db(header_doc=header_doc, attachment_docs=attachment_docs)
+    db = _make_mock_db(
+        header_doc=header_doc,
+        attachment_docs=attachment_docs,
+        sales_v2_doc=sales_v2_doc,
+        sales_v2_collection=sales_v2_collection,
+    )
     storage = _make_mock_storage(read_data=read_data)
     return AttachmentService(db=db, storage=storage), db, storage
+
+
+def _make_sales_v2_doc(status: str = "draft") -> Dict[str, Any]:
+    """
+    Build a minimal sales v2 MongoDB document (e.g. ar_invoices_v2 row).
+
+    Sales v2 docs use:
+      - docEntry (not docId) as the primary key
+      - organizationId (camelCase)
+      - status as lowercase enum value ("draft", "open", etc.)
+    """
+    return {
+        "docEntry": DOC_ID,
+        "organizationId": ORG_ID,
+        "status": status,
+    }
 
 
 # ===========================================================================
@@ -659,3 +697,382 @@ def test_sanitize_filename_correct_extension_unchanged():
     result = _sanitize_filename("scan.pdf", "application/pdf")
     # Should end with .pdf but not .pdf.pdf
     assert result == "scan.pdf"
+
+
+# ===========================================================================
+# T-200.x — Sales v2 doc type upload routing tests
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# 17. Upload to AR_INVOICE (draft) → routes to ar_invoices_v2, succeeds
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_ar_invoice_draft_succeeds():
+    """
+    Upload to a Draft AR Invoice routes to ar_invoices_v2 (not document_headers)
+    and succeeds.
+    """
+    service, db, storage = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="ar_invoices_v2",
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.AR_INVOICE,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="invoice.pdf",
+        mime_type="application/pdf",
+    )
+
+    # document_headers should NOT be queried for sales doc types
+    db["document_headers"].find_one.assert_not_called()
+    # ar_invoices_v2 should be queried
+    db["ar_invoices_v2"].find_one.assert_called_once()
+    storage.save.assert_called_once()
+    assert result.docType == "AR_INVOICE"
+    assert result.organizationId == ORG_ID
+
+
+# ---------------------------------------------------------------------------
+# 18. Upload to AR_INVOICE (open) → ValueError — document is immutable
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_ar_invoice_open_raises_value_error():
+    """
+    AR Invoice in 'open' status is immutable — upload must raise ValueError.
+    """
+    service, db, _ = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="open"),
+        sales_v2_collection="ar_invoices_v2",
+    )
+
+    with pytest.raises(ValueError, match="add attachments"):
+        await service.upload(
+            organization_id=ORG_ID,
+            doc_type=AttachmentDocType.AR_INVOICE,
+            doc_id=DOC_ID,
+            uploaded_by=USER_ID,
+            file_data=SMALL_PDF,
+            original_filename="invoice.pdf",
+            mime_type="application/pdf",
+        )
+
+    # Still no document_headers lookup
+    db["document_headers"].find_one.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 19. Upload to AR_INVOICE that doesn't exist → LookupError
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_ar_invoice_not_found_raises_lookup_error():
+    """
+    Upload to an AR Invoice that does not exist in ar_invoices_v2 → LookupError.
+    """
+    service, _, _ = _make_service(
+        sales_v2_doc=None,  # find_one returns None
+        sales_v2_collection="ar_invoices_v2",
+    )
+
+    with pytest.raises(LookupError, match="not found"):
+        await service.upload(
+            organization_id=ORG_ID,
+            doc_type=AttachmentDocType.AR_INVOICE,
+            doc_id=DOC_ID,
+            uploaded_by=USER_ID,
+            file_data=SMALL_PDF,
+            original_filename="invoice.pdf",
+            mime_type="application/pdf",
+        )
+
+
+# ---------------------------------------------------------------------------
+# 20. Upload to CUSTOMER_RECEIPT (draft) → routes to customer_receipts_v2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_customer_receipt_draft_succeeds():
+    """
+    Upload to a Draft Customer Receipt routes to customer_receipts_v2.
+    """
+    service, db, storage = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="customer_receipts_v2",
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.CUSTOMER_RECEIPT,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="receipt.pdf",
+        mime_type="application/pdf",
+    )
+
+    db["document_headers"].find_one.assert_not_called()
+    db["customer_receipts_v2"].find_one.assert_called_once()
+    assert result.docType == "CUSTOMER_RECEIPT"
+
+
+# ---------------------------------------------------------------------------
+# 21. Upload to QUOTE (draft) → routes to quotes_v2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_quote_draft_succeeds():
+    """Upload to a Draft Quote routes to quotes_v2."""
+    service, db, _ = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="quotes_v2",
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.QUOTE,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="quote.pdf",
+        mime_type="application/pdf",
+    )
+
+    db["document_headers"].find_one.assert_not_called()
+    db["quotes_v2"].find_one.assert_called_once()
+    assert result.docType == "QUOTE"
+
+
+# ---------------------------------------------------------------------------
+# 22. Upload to SALES_ORDER (draft) → routes to sales_orders_v2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_sales_order_draft_succeeds():
+    """Upload to a Draft Sales Order routes to sales_orders_v2."""
+    service, db, _ = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="sales_orders_v2",
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.SALES_ORDER,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="so.pdf",
+        mime_type="application/pdf",
+    )
+
+    db["document_headers"].find_one.assert_not_called()
+    db["sales_orders_v2"].find_one.assert_called_once()
+    assert result.docType == "SALES_ORDER"
+
+
+# ---------------------------------------------------------------------------
+# 23. Upload to DELIVERY (draft) → routes to deliveries_v2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_delivery_draft_succeeds():
+    """Upload to a Draft Delivery routes to deliveries_v2."""
+    service, db, _ = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="deliveries_v2",
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.DELIVERY,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="delivery.pdf",
+        mime_type="application/pdf",
+    )
+
+    db["document_headers"].find_one.assert_not_called()
+    db["deliveries_v2"].find_one.assert_called_once()
+    assert result.docType == "DELIVERY"
+
+
+# ---------------------------------------------------------------------------
+# 24. Upload to RETURN_REQUEST (draft) → routes to return_requests_v2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_return_request_draft_succeeds():
+    """Upload to a Draft Return Request routes to return_requests_v2."""
+    service, db, _ = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="return_requests_v2",
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.RETURN_REQUEST,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="rr.pdf",
+        mime_type="application/pdf",
+    )
+
+    db["document_headers"].find_one.assert_not_called()
+    db["return_requests_v2"].find_one.assert_called_once()
+    assert result.docType == "RETURN_REQUEST"
+
+
+# ---------------------------------------------------------------------------
+# 25. Upload to RETURN (draft) → routes to returns_v2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_return_draft_succeeds():
+    """Upload to a Draft Return routes to returns_v2."""
+    service, db, _ = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="returns_v2",
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.RETURN,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="return.pdf",
+        mime_type="application/pdf",
+    )
+
+    db["document_headers"].find_one.assert_not_called()
+    db["returns_v2"].find_one.assert_called_once()
+    assert result.docType == "RETURN"
+
+
+# ---------------------------------------------------------------------------
+# 26. Upload to AR_CREDIT_NOTE (draft) → routes to ar_credit_notes_v2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_ar_credit_note_draft_succeeds():
+    """Upload to a Draft AR Credit Note routes to ar_credit_notes_v2."""
+    service, db, _ = _make_service(
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="ar_credit_notes_v2",
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.AR_CREDIT_NOTE,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="credit-note.pdf",
+        mime_type="application/pdf",
+    )
+
+    db["document_headers"].find_one.assert_not_called()
+    db["ar_credit_notes_v2"].find_one.assert_called_once()
+    assert result.docType == "AR_CREDIT_NOTE"
+
+
+# ---------------------------------------------------------------------------
+# 27. Purchasing doc (PO) still routes to document_headers (regression guard)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_po_still_uses_document_headers():
+    """
+    Purchasing docs (PO) must continue to use document_headers, not a v2
+    collection.  Regression guard against the sales routing change.
+    """
+    service, db, storage = _make_service(
+        header_doc=_make_header_doc(status="Draft", doc_type="PO")
+    )
+
+    result = await service.upload(
+        organization_id=ORG_ID,
+        doc_type=AttachmentDocType.PO,
+        doc_id=DOC_ID,
+        uploaded_by=USER_ID,
+        file_data=SMALL_PDF,
+        original_filename="po.pdf",
+        mime_type="application/pdf",
+    )
+
+    # document_headers MUST be queried for purchasing docs
+    db["document_headers"].find_one.assert_called_once()
+    assert result.docType == "PO"
+
+
+# ---------------------------------------------------------------------------
+# 28. Soft delete on Draft AR Invoice → succeeds, uses ar_invoices_v2
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_soft_delete_on_draft_ar_invoice():
+    """
+    Soft delete on Draft AR Invoice → succeeds.
+    Verify the delete path also routes to ar_invoices_v2 (not document_headers).
+    """
+    doc = _make_db_doc(doc_type="AR_INVOICE")
+    service, db, _ = _make_service(
+        attachment_docs=[doc],
+        sales_v2_doc=_make_sales_v2_doc(status="draft"),
+        sales_v2_collection="ar_invoices_v2",
+    )
+
+    await service.soft_delete(
+        organization_id=ORG_ID,
+        file_id=doc["fileId"],
+        deleted_by=USER_ID,
+    )
+
+    db["document_headers"].find_one.assert_not_called()
+    db["ar_invoices_v2"].find_one.assert_called_once()
+    db["document_attachments"].update_one.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# 29. Soft delete on Open AR Invoice → ValueError (immutable)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_soft_delete_on_open_ar_invoice_raises():
+    """
+    Soft delete on Open (posted) AR Invoice → ValueError.
+    Sales docs are immutable once they leave 'draft'.
+    """
+    doc = _make_db_doc(doc_type="AR_INVOICE")
+    service, _, _ = _make_service(
+        attachment_docs=[doc],
+        sales_v2_doc=_make_sales_v2_doc(status="open"),
+        sales_v2_collection="ar_invoices_v2",
+    )
+
+    with pytest.raises(ValueError, match="delete attachments"):
+        await service.soft_delete(
+            organization_id=ORG_ID,
+            file_id=doc["fileId"],
+            deleted_by=USER_ID,
+        )

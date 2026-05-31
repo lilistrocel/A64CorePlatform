@@ -14,8 +14,16 @@ Handles the full lifecycle of document attachments:
 Read-only enforcement
 ----------------------
 When adding or deleting an attachment the service looks up the source
-document in document_headers (for PR/PO/GR/AP) to check its status.
-Documents in any status except "Draft" are immutable.
+document in its owning collection to check its status.
+
+Purchasing docs (PR/PO/GR/AP) live in document_headers and are checked
+against _MUTABLE_STATUSES (currently only "Draft").
+
+Wave 3 sales docs (AR_INVOICE, CUSTOMER_RECEIPT, QUOTE, SALES_ORDER,
+DELIVERY, RETURN_REQUEST, RETURN, AR_CREDIT_NOTE) each live in their
+own v2 collection (ar_invoices_v2, etc.) and use camelCase field names
+(docEntry not docId, organizationId not organization_id). These docs are
+mutable only when status == "draft" (lowercase, matching DocumentStatus enum).
 
 PAYMENT exception:
   Vendor payments (PAYMENT doctype) live in the finance MySQL service
@@ -66,11 +74,33 @@ _COLLECTION = "document_attachments"
 _HEADERS_COL = "document_headers"
 
 # ---------------------------------------------------------------------------
+# Sales v2 collection dispatch (T-200.x)
+# ---------------------------------------------------------------------------
+
+# Map from Wave 3 sales AttachmentDocType values to their owning MongoDB
+# collection names.  These collections use camelCase field names and store
+# the primary key as docEntry (not docId) plus organizationId (camelCase).
+_SALES_V2_COLLECTIONS: dict[str, str] = {
+    AttachmentDocType.QUOTE.value: "quotes_v2",
+    AttachmentDocType.SALES_ORDER.value: "sales_orders_v2",
+    AttachmentDocType.DELIVERY.value: "deliveries_v2",
+    AttachmentDocType.AR_INVOICE.value: "ar_invoices_v2",
+    AttachmentDocType.CUSTOMER_RECEIPT.value: "customer_receipts_v2",
+    AttachmentDocType.RETURN_REQUEST.value: "return_requests_v2",
+    AttachmentDocType.RETURN.value: "returns_v2",
+    AttachmentDocType.AR_CREDIT_NOTE.value: "ar_credit_notes_v2",
+}
+
+# ---------------------------------------------------------------------------
 # Document status check
 # ---------------------------------------------------------------------------
 
-# Statuses that block add/delete for PR/PO/GR/AP (not PAYMENT — see module docstring)
+# Statuses that allow add/delete for PR/PO/GR/AP (not PAYMENT — see module docstring)
+# Wave 3 sales docs use lowercase "draft" (DocumentStatus enum value).
 _MUTABLE_STATUSES = frozenset({"Draft"})
+
+# Sales v2 docs are mutable only when status == "draft" (lowercase).
+_SALES_MUTABLE_STATUS = "draft"
 
 
 class AttachmentService:
@@ -394,18 +424,74 @@ class AttachmentService:
         action: str,
     ) -> None:
         """
-        Verify the source document exists in document_headers and is in Draft.
+        Verify the source document exists in its owning collection and is mutable.
+
+        Dispatches by doc_type:
+          - Purchasing (PR/PO/GR/AP): queries document_headers using docId,
+            organizationId, docType, deletedAt filter. Mutable when status is
+            in _MUTABLE_STATUSES (currently {"Draft"}).
+          - Wave 3 sales docs (AR_INVOICE, CUSTOMER_RECEIPT, QUOTE, etc.):
+            queries the matching v2 collection using docEntry (not docId) and
+            organizationId (camelCase). Mutable when status == "draft"
+            (lowercase, matching DocumentStatus enum). These collections may
+            not have a deletedAt field, so we do not filter on it.
+          - PAYMENT docs never reach this method (caller skips them).
 
         Args:
             organization_id: Expected owner organisation.
-            doc_type: Expected docType value.
-            doc_id: Document UUID to look up.
-            action: Human-readable action for error messages ("add attachments to",
+            doc_type: Expected document type.
+            doc_id: Document UUID to look up (docId for purchasing, docEntry
+                    for sales v2).
+            action: Human-readable verb for error messages ("add attachments to",
                     "delete attachments from").
 
         Raises:
-            LookupError: If the document is not found.
-            ValueError: If the document is not in Draft status.
+            LookupError: If the document is not found in the owning collection.
+            ValueError: If the document exists but is not in a mutable status.
+        """
+        # Reason: dispatch lookup to the correct collection and key schema
+        if doc_type.value in _SALES_V2_COLLECTIONS:
+            await self._assert_sales_v2_document_is_draft(
+                organization_id=organization_id,
+                doc_type=doc_type,
+                doc_id=doc_id,
+                action=action,
+            )
+        else:
+            await self._assert_purchasing_document_is_draft(
+                organization_id=organization_id,
+                doc_type=doc_type,
+                doc_id=doc_id,
+                action=action,
+            )
+
+    async def _assert_purchasing_document_is_draft(
+        self,
+        *,
+        organization_id: str,
+        doc_type: AttachmentDocType,
+        doc_id: str,
+        action: str,
+    ) -> None:
+        """
+        Check a purchasing document in document_headers.
+
+        Purchasing docs (PR/PO/GR/AP) use:
+          - collection: document_headers
+          - key field: docId (snake or camel — the collection uses camelCase)
+          - org field: organizationId
+          - type field: docType
+          - soft-delete field: deletedAt (must be None)
+
+        Args:
+            organization_id: Caller's organisation UUID.
+            doc_type: PR, PO, GR, or AP.
+            doc_id: Document primary key UUID.
+            action: Error message verb.
+
+        Raises:
+            LookupError: Document not found.
+            ValueError: Document not in Draft.
         """
         header = await self._db[_HEADERS_COL].find_one(
             {
@@ -426,6 +512,58 @@ class AttachmentService:
             raise ValueError(
                 f"Cannot {action} a {status} document. "
                 f"Documents become immutable once submitted for approval."
+            )
+
+    async def _assert_sales_v2_document_is_draft(
+        self,
+        *,
+        organization_id: str,
+        doc_type: AttachmentDocType,
+        doc_id: str,
+        action: str,
+    ) -> None:
+        """
+        Check a Wave 3 sales document in the matching v2 collection.
+
+        Sales v2 docs (ar_invoices_v2, quotes_v2, etc.) use:
+          - collection: from _SALES_V2_COLLECTIONS mapping
+          - key field: docEntry (NOT docId — sales v2 uses this name)
+          - org field: organizationId (camelCase)
+          - No deletedAt filter — sales v2 collections may omit this field
+
+        A sales v2 doc is mutable only when status == "draft" (lowercase,
+        matching the DocumentStatus Python enum value).
+
+        Args:
+            organization_id: Caller's organisation UUID.
+            doc_type: One of the 8 Wave 3 sales doc types.
+            doc_id: Document docEntry UUID.
+            action: Error message verb.
+
+        Raises:
+            LookupError: Document not found in the v2 collection.
+            ValueError: Document exists but status is not "draft".
+        """
+        collection_name = _SALES_V2_COLLECTIONS[doc_type.value]
+        # Reason: sales v2 uses docEntry as primary key, organizationId in camelCase.
+        # No deletedAt filter — v2 collections may not have this field.
+        doc = await self._db[collection_name].find_one(
+            {
+                "docEntry": doc_id,
+                "organizationId": organization_id,
+            },
+            projection={"status": 1},
+        )
+        if not doc:
+            raise LookupError(
+                f"{doc_type.value} document {doc_id!r} not found in organisation {organization_id!r}"
+            )
+
+        status = doc.get("status", "unknown")
+        if status != _SALES_MUTABLE_STATUS:
+            raise ValueError(
+                f"Cannot {action} a {status!r} document. "
+                f"Sales documents become immutable once posted (status must be 'draft')."
             )
 
 

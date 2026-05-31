@@ -1,8 +1,26 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 86 tasks
+> **Total completed:** 87 tasks
 
 ## 2026-05
+
+### T-200.x | Sales attachments upload + sales audit endpoint
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Completed:** 2026-05-31 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** T-200.0 ✅
+- **Blocks:** —
+- **Summary:** Fixed two UX gaps surfaced during T-200.0 accountant testing.
+  1. Attachment service `_verify_document` now dispatches by doc_type — Wave 3 sales docs
+     (AR_INVOICE, CUSTOMER_RECEIPT, QUOTE, SALES_ORDER, DELIVERY, RETURN_REQUEST, RETURN,
+     AR_CREDIT_NOTE) query their `*_v2` Mongo collections using `docEntry` key (not `docId`)
+     and `organizationId` (camelCase). Purchasing docs continue using `document_headers`.
+  2. New `GET /api/v1/sales/audit` endpoint dispatches to `*_v2_audit` collections.
+     Requires `sales.view` permission. Returns `{ entries, total }` with camelCase aliases.
+     Frontend: `getSalesAudit()` in salesApi.ts, `useSalesAudit` hook, `SalesAuditHistoryModal`
+     component, Audit History GhostButton on all 8 Wave 3 detail pages (visible on all statuses).
+- **Tests:** 40 attachment tests (was 22) + 17 new audit tests = 268 total, 0 failures.
+- **TypeScript:** 0 errors. ESLint: 0 warnings.
+- **DevLog:** `Docs/3-DevLog/2026-05-31_T-200.x-sales-attachments-audit.md`
 
 ### T-200.11 | Legacy /sales/orders + /sales/returns cutover — Wave 3 closeout
 - **Category:** Frontend + Backend · **Priority:** P1

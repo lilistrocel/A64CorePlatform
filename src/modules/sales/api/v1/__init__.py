@@ -21,6 +21,8 @@ from .returns_v2 import router as returns_v2_router
 from .ar_credit_notes import router as ar_credit_notes_router
 # T-200.2: Sales reports (AR Aging)
 from .reports import router as reports_router
+# T-200.x: Sales audit history endpoint
+from .audit import router as audit_router
 
 api_router = APIRouter()
 
@@ -81,4 +83,11 @@ api_router.include_router(
     reports_router,
     prefix="/reports",
     tags=["Sales — Reports"],
+)
+# T-200.x: Sales Audit History
+# Prefix /audit gives full path GET /api/v1/sales/audit?docType=...&docEntry=...
+api_router.include_router(
+    audit_router,
+    prefix="/audit",
+    tags=["Sales — Audit History"],
 )

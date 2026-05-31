@@ -32,6 +32,7 @@ import {
 } from '../../hooks/queries/useQuotes';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
 import type { QuoteStatus, QuoteLine, DocumentLinkRef } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -130,6 +131,17 @@ const SecondaryButton = styled.button`
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 14px;
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+`;
+
+const GhostButton = styled.button`
+  padding: 10px 16px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 13px;
   cursor: pointer;
   &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
 `;
@@ -427,12 +439,14 @@ export function QuoteDetailPage() {
 
   const user = useAuthStore((s) => s.user);
   const orgId = user?.organizationId ?? '';
+  const userRole = (user as { role?: string } | null)?.role ?? '';
 
   const { data: quote, isLoading, isError } = useQuote(docId, orgId);
   const transitionMutation = useTransitionQuote();
   const deleteMutation = useDeleteQuote();
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function handlePost() {
@@ -551,6 +565,13 @@ export function QuoteDetailPage() {
               </DangerButton>
             </>
           )}
+          {/* T-200.x: Audit History — now wired to sales-side endpoint */}
+          <GhostButton
+            onClick={() => setShowAuditModal(true)}
+            aria-label="Open audit history for this Quote"
+          >
+            Audit History
+          </GhostButton>
         </ActionBar>
       </TitleRow>
 
@@ -773,6 +794,18 @@ export function QuoteDetailPage() {
             </ModalActions>
           </Modal>
         </Overlay>
+      )}
+      {/* T-200.x: Sales-side audit history modal */}
+      {quote && (
+        <SalesAuditHistoryModal
+          isOpen={showAuditModal}
+          onClose={() => setShowAuditModal(false)}
+          organizationId={orgId}
+          docType="QUOTE"
+          docEntry={quote.docEntry}
+          docLabel={quote.docNumber}
+          viewerRole={userRole}
+        />
       )}
     </Container>
   );

@@ -116,3 +116,56 @@ _pkg_stub("src.utils")
 # src.services that ARE needed (none in this test file) would need separate
 # registration.
 _pkg_stub("src.services")
+
+# ---------------------------------------------------------------------------
+# Step 3: Stubs required by the sales API layer (T-200.x and future tests)
+#
+# Tests that import from src.modules.sales.api.v1.* trigger Python to first
+# import src/modules/sales/api/v1/__init__.py (the package initialiser),
+# which in turn imports ALL routers including dashboard.py. dashboard.py
+# imports from middleware/__init__.py → auth.py → sales config/settings.py.
+# settings.py instantiates Settings() which reads pydantic_settings from
+# the environment and fails with "Extra inputs not permitted" when
+# non-declared env vars (ANTHROPIC_API_KEY, FINANCE_OUTBOX_ENABLED, etc.)
+# are present.
+#
+# Strategy: stub the three modules that trigger the settings chain before
+# any test imports the API layer. This prevents Settings() instantiation
+# while keeping the pure data-model code (pydantic models, helpers,
+# constants) importable.
+#
+# The stubs provide the minimal interface that the api/v1/__init__.py chain
+# needs to complete its import without running real auth or DB code.
+# ---------------------------------------------------------------------------
+
+# Stub sales config/settings so Settings() is never instantiated from env
+_sales_settings_module = _pkg_stub("src.modules.sales.config.settings")
+_settings_mock = MagicMock()
+_settings_mock.SECRET_KEY = "test-secret"
+_settings_mock.ALGORITHM = "HS256"
+_settings_mock.MONGODB_URL = "mongodb://localhost:27017"
+_settings_mock.MONGODB_DB_NAME = "test"
+_sales_settings_module.settings = _settings_mock
+
+# Stub sales config package
+_pkg_stub("src.modules.sales.config")
+
+# Stub middleware/auth so require_permission and CurrentUser are importable
+_sales_auth_module = _pkg_stub("src.modules.sales.middleware.auth")
+_sales_auth_module.require_permission = MagicMock(return_value=MagicMock())
+_sales_auth_module.get_current_active_user = MagicMock()
+_sales_auth_module.get_current_user = MagicMock()
+_sales_auth_module.CurrentUser = MagicMock
+
+# Stub middleware package
+_sales_middleware_module = _pkg_stub("src.modules.sales.middleware")
+_sales_middleware_module.require_permission = _sales_auth_module.require_permission
+_sales_middleware_module.get_current_active_user = _sales_auth_module.get_current_active_user
+_sales_middleware_module.get_current_user = _sales_auth_module.get_current_user
+_sales_middleware_module.CurrentUser = _sales_auth_module.CurrentUser
+
+# Stub sales database module so sales_db.get_database() is callable
+_sales_db_module = _pkg_stub("src.modules.sales.services.database")
+_sales_db_mock = MagicMock()
+_sales_db_mock.get_database = MagicMock(return_value=MagicMock())
+_sales_db_module.sales_db = _sales_db_mock

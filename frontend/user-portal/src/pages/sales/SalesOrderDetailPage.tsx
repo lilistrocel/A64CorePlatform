@@ -18,7 +18,7 @@
  * T-200.5 must ship to make that route live — until then it 404s.
  *
  * Attachments via AttachmentList (docType="SALES_ORDER").
- * NO Audit History button — sales audit endpoint pending T-200.x.
+ * Audit History button (GhostButton) opens SalesAuditHistoryModal — visible on all statuses.
  * Delete confirmation modal closes only via X button (project rule).
  *
  * Route: /sales/orders-v2/:docId
@@ -35,6 +35,7 @@ import {
 } from '../../hooks/queries/useSalesOrders';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
 import type { SalesOrderStatus, SalesOrderLine, DocumentLinkRef } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -129,6 +130,17 @@ const PrimaryButton = styled.button`
 `;
 
 const SecondaryButton = styled.button`
+  padding: 10px 16px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
+`;
+
+const GhostButton = styled.button`
   padding: 10px 16px;
   background: transparent;
   color: ${({ theme }) => theme.colors.textSecondary};
@@ -434,6 +446,7 @@ export function SalesOrderDetailPage() {
   const orgId = user?.organizationId ?? '';
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: so, isLoading, isError } = useSalesOrderV2(docId, orgId);
@@ -566,6 +579,7 @@ export function SalesOrderDetailPage() {
               )}
             </>
           )}
+          <GhostButton onClick={() => setShowAuditModal(true)}>Audit History</GhostButton>
         </ActionBar>
       </TitleRow>
 
@@ -752,6 +766,15 @@ export function SalesOrderDetailPage() {
         <SectionTitle>Attachments</SectionTitle>
         {docId && <AttachmentList docType="SALES_ORDER" docId={docId} />}
       </Card>
+
+      <SalesAuditHistoryModal
+        isOpen={showAuditModal}
+        onClose={() => setShowAuditModal(false)}
+        organizationId={orgId}
+        docType="SALES_ORDER"
+        docEntry={so.docEntry}
+        docLabel={so.docNumber}
+      />
 
       {/* Delete confirmation modal — X button only, no overlay close */}
       {showDeleteModal && (

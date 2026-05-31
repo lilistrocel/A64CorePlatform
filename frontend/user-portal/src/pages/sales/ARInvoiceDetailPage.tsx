@@ -25,6 +25,7 @@ import { Link2, ExternalLink } from 'lucide-react';
 import { useArInvoice, useTransitionArInvoice, useDeleteArInvoice } from '../../hooks/queries/useArInvoices';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
 import type { ARInvoiceStatus, ARInvoiceLine } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -435,6 +436,7 @@ export function ARInvoiceDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
 
   const handlePost = async () => {
     if (!invoice) return;
@@ -585,11 +587,15 @@ export function ARInvoiceDetailPage() {
               {transitioning ? 'Cancelling…' : 'Cancel Invoice'}
             </DangerButton>
           )}
-          {/* Audit History button hidden until T-200.x wires a sales-side
-              audit endpoint. The current AuditHistoryModal queries the
-              finance audit_log whose entity_type whitelist is locked to
-              FiscalPeriod + JournalEntry; sales docs maintain their own
-              audit trail in ar_invoices_v2_audit / similar collections. */}
+          {/* T-200.x: Audit History button — now wired to the sales-side
+              audit endpoint via SalesAuditHistoryModal. Visible on ALL
+              statuses (read-only view — does not mutate the document). */}
+          <GhostButton
+            onClick={() => setShowAuditModal(true)}
+            aria-label="Open audit history for this AR Invoice"
+          >
+            Audit History
+          </GhostButton>
         </ActionBar>
       </TitleRow>
 
@@ -866,7 +872,18 @@ export function ARInvoiceDetailPage() {
         </ModalOverlay>
       )}
 
-      {/* Audit history modal mount removed — see T-200.x follow-up. */}
+      {/* T-200.x: Sales-side audit history modal */}
+      {invoice && (
+        <SalesAuditHistoryModal
+          isOpen={showAuditModal}
+          onClose={() => setShowAuditModal(false)}
+          organizationId={orgId}
+          docType="AR_INVOICE"
+          docEntry={invoice.docEntry}
+          docLabel={invoice.docNumber}
+          viewerRole={userRole}
+        />
+      )}
     </Container>
   );
 }

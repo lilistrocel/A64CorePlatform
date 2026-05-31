@@ -2923,3 +2923,75 @@ export async function deleteSaleItemFinanceExt(
     params: { organization_id: organizationId },
   });
 }
+
+// ============================================================================
+// Sales Audit History (T-200.x)
+// ============================================================================
+
+/**
+ * A single audit event for a Wave 3 sales document.
+ *
+ * The backend returns camelCase (alias_generator=to_camel on SalesAuditEntry).
+ * Actor name resolution is handled by the frontend via useAdminUsers (T-064).
+ */
+export interface SalesAuditEntry {
+  /** Mongo _id serialised as a hex string. Unique per row. */
+  entryId: string;
+  /** UUID of the parent sales document (docEntry in the v2 collection). */
+  docEntry: string;
+  /** Action label, e.g. "create_from_delivery", "transition_draft_to_open". */
+  action: string;
+  /** UUID of the user who triggered the action. Frontend resolves name. */
+  actorUserId: string;
+  /** UTC datetime when the event was recorded. */
+  timestamp: string;
+  /** Opaque per-action payload. Null for simple state-transition events. */
+  detail: Record<string, unknown> | null;
+}
+
+/**
+ * Response envelope for GET /v1/sales/audit.
+ */
+export interface SalesAuditResponse {
+  entries: SalesAuditEntry[];
+  total: number;
+}
+
+/**
+ * Valid Wave 3 sales document types for audit queries.
+ * Must match _ALLOWED_DOC_TYPES in src/modules/sales/api/v1/audit.py.
+ */
+export type SalesAuditDocType =
+  | 'AR_INVOICE'
+  | 'CUSTOMER_RECEIPT'
+  | 'QUOTE'
+  | 'SALES_ORDER'
+  | 'DELIVERY'
+  | 'RETURN_REQUEST'
+  | 'RETURN'
+  | 'AR_CREDIT_NOTE';
+
+const SALES_AUDIT_BASE = '/v1/sales/audit';
+
+/**
+ * Fetch audit events for a Wave 3 sales document.
+ *
+ * GET /api/v1/sales/audit?docType=<TYPE>&docEntry=<UUID>&organizationId=<UUID>
+ *
+ * Results are ordered by timestamp descending (most recent first).
+ *
+ * @param docType        - Sales document type (e.g. "AR_INVOICE").
+ * @param docEntry       - UUID of the document (docEntry field in v2 collection).
+ * @param organizationId - Organisation UUID for cross-org isolation.
+ */
+export async function getSalesAudit(
+  docType: SalesAuditDocType,
+  docEntry: string,
+  organizationId: string,
+): Promise<SalesAuditResponse> {
+  const response = await apiClient.get<SalesAuditResponse>(SALES_AUDIT_BASE, {
+    params: { docType, docEntry, organizationId },
+  });
+  // Reason: backend returns the response object directly (not wrapped in data/meta).
+  return response.data;
+}

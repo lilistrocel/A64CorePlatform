@@ -18,7 +18,7 @@
  * Attachments via AttachmentList (docType="DELIVERY").
  *
  * Modals (delete confirm) do NOT close on overlay click — X button only.
- * NO Audit History button — sales audit endpoint pending T-200.x.
+ * Audit History button (GhostButton) opens SalesAuditHistoryModal — visible on all statuses.
  *
  * Route: /sales/deliveries/:docId
  */
@@ -34,6 +34,7 @@ import {
 } from '../../hooks/queries/useDeliveries';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
 import type { DeliveryStatus, DeliveryLine, DocumentLinkRef } from '../../services/salesApi';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -148,6 +149,17 @@ const DangerButton = styled.button`
   cursor: pointer;
   &:disabled { opacity: 0.5; cursor: not-allowed; }
   &:hover:not(:disabled) { background: #fef2f2; }
+`;
+
+const GhostButton = styled.button`
+  padding: 9px 18px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.neutral[100]}; }
 `;
 
 const Card = styled.div`
@@ -358,6 +370,7 @@ export function DeliveryDetailPage() {
   const isSuperAdmin = user?.role === 'super_admin';
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [actionError, setActionError] = useState('');
 
   const { data: dn, isLoading, error } = useDelivery(docId, orgId);
@@ -461,6 +474,7 @@ export function DeliveryDetailPage() {
               )}
             </>
           )}
+          <GhostButton onClick={() => setShowAuditModal(true)}>Audit History</GhostButton>
         </ActionBar>
       </TitleRow>
 
@@ -643,6 +657,15 @@ export function DeliveryDetailPage() {
         <SectionTitle>Attachments</SectionTitle>
         <AttachmentList docId={dn.docEntry} docType="DELIVERY" />
       </Card>
+
+      <SalesAuditHistoryModal
+        isOpen={showAuditModal}
+        onClose={() => setShowAuditModal(false)}
+        organizationId={orgId}
+        docType="DELIVERY"
+        docEntry={dn.docEntry}
+        docLabel={dn.docNumber}
+      />
 
       {/* ── Delete confirmation modal (X-only close) ── */}
       {showDeleteModal && (
