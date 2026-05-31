@@ -172,6 +172,11 @@ const ArCreditNoteDetailPage = lazy(() =>
   import('./pages/sales/ArCreditNoteDetailPage').then(m => ({ default: m.ArCreditNoteDetailPage }))
 );
 
+// T-200.9: Sales Items admin page (per-item finance config)
+const SalesItemsPage = lazy(() =>
+  import('./pages/sales/SalesItemsPage').then(m => ({ default: m.SalesItemsPage }))
+);
+
 // Marketing module
 const MarketingDashboardPage = lazy(() => import('./pages/marketing/MarketingDashboardPage').then(m => ({ default: m.MarketingDashboardPage })));
 const CampaignManagementPage = lazy(() => import('./pages/marketing/CampaignManagementPage').then(m => ({ default: m.CampaignManagementPage })));
@@ -415,6 +420,8 @@ function App() {
                 <Route path="/sales/ar-credit-notes/from-invoice/:ariDocEntry" element={<ArCreditNoteFormPage />} />
                 <Route path="/sales/ar-credit-notes/:docId/edit" element={<ArCreditNoteFormPage />} />
                 <Route path="/sales/ar-credit-notes/:docId" element={<ArCreditNoteDetailPage />} />
+                {/* T-200.9: Sales Items admin page (per-item finance config) */}
+                <Route path="/sales/items" element={<SalesItemsPage />} />
                 {/* Redirects: /inventory/harvest → /sales/stock?tab=sellable, /inventory/waste → /sales/stock?tab=waste */}
                 <Route path="/inventory/harvest" element={<Navigate to="/sales/stock?tab=sellable" replace />} />
                 <Route path="/inventory/waste" element={<Navigate to="/sales/stock?tab=waste" replace />} />

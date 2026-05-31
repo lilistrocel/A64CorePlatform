@@ -1,8 +1,44 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 83 tasks
+> **Total completed:** 84 tasks
 
 ## 2026-05
+
+### T-200.9 | Sales Items master UI + sale_item_finance_ext seed for test items
+- **Category:** Frontend + Backend · **Priority:** P1
+- **Completed:** 2026-05-31 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** T-100.3 ✅ (sale_item_finance_ext table + CRUD endpoints)
+- **Blocks:** —
+- **Description:** Two deliverables: (A) Alembic migration 019 that idempotently seeds
+  `sale_item_finance_ext` rows for existing test items; (B) `SalesItemsPage` at `/sales/items`
+  that displays per-item GL account and tax code config with an edit modal.
+- **Files created:**
+  - `services/finance/alembic/versions/019_seed_sale_item_finance_ext.py` — idempotent migration
+    seeding TOM-SEED (Tomato - Seeds) with Revenue=411000-001, COGS=511000-001, Tax=S
+  - `frontend/user-portal/src/pages/sales/SalesItemsPage.tsx` — settings page (~580 lines);
+    table with edit modal; `AccountCombobox` for REVENUE + COST_OF_SALES picker; modal does NOT
+    close on overlay click (project rule)
+  - `frontend/user-portal/src/hooks/queries/useSaleItemFinanceExt.ts` — 5 TanStack Query hooks
+- **Files modified:**
+  - `frontend/user-portal/src/services/salesApi.ts` — `SaleItemFinanceExt` types + 5 API functions
+  - `frontend/user-portal/src/hooks/queries/index.ts` — exports 5 new hooks
+  - `frontend/user-portal/src/App.tsx` — lazy import + route `/sales/items`
+  - `frontend/user-portal/src/components/layout/MainLayout.tsx` — sidebar entry in SALES_NAV_GROUP
+- **Test results:**
+  - Sales backend: 211 passed (0 regressions)
+  - Finance backend: 402 passed, 1 skipped (0 regressions)
+  - TypeScript: 0 errors (`npx tsc --noEmit`)
+  - ESLint: 0 errors on new/modified files
+- **Migration:** 018 → 019, `alembic current` = `019 (head)`
+- **Smoke:** GET `/api/v1/finance/item-finance-ext` returns 1 seeded row (TOM-SEED) with
+  correct revenue/COGS/tax assignments
+- **Important note:** Closes the "AED 0.00 COGS account on Returns JE" issue at the GL account
+  assignment level. Unit cost is still AED 0.00 on existing history docs (correct — those were
+  created without a GR receipt seeding `inventory_balances`). New deliveries will use the
+  correct COGS account going forward once an `inventory_balances` record exists for the item.
+- **Hot reload:** Frontend hot-reloads automatically (pure .tsx/.ts edits). Finance container
+  needs rebuild for migration 019 to survive teardown:
+  `docker compose -f docker-compose.yml -f docker-compose.finance.yml build finance && up -d finance`
 
 ### T-200.8 | AR Credit Note (ARC) UI — list + form + detail + from-RTN + from-Invoice flows
 - **Category:** Frontend (+ backend pre-flight) · **Priority:** P1

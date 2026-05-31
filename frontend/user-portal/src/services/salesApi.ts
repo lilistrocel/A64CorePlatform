@@ -2752,3 +2752,174 @@ export async function getArAging(params: ARAgingParams): Promise<ARAgingReport> 
   );
   return response.data.data;
 }
+
+// ============================================================================
+// Sale Item Finance Extension types + API (T-200.9)
+// Backend endpoint: /v1/finance/item-finance-ext
+// Provides per-item GL account and tax code config used by the AR Invoice and
+// Delivery JE handlers.  The finance service returns a mix of snake_case
+// (sale_item_finance_ext_id) and camelCase for all other fields.
+// ============================================================================
+
+/** Full response shape from GET /v1/finance/item-finance-ext/{item_id}. */
+export interface SaleItemFinanceExt {
+  sale_item_finance_ext_id: string;   // snake_case — the PK from finance service
+  itemId: string;
+  organizationId: string;
+  itemCode: string | null;
+  itemName: string | null;
+  revenueAccountId: string | null;
+  cogsAccountId: string | null;
+  salesTaxCode: string | null;
+  isSellable: boolean;
+  notes: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Payload for creating a new sale item finance ext record. */
+export interface SaleItemFinanceExtCreate {
+  itemId: string;
+  organizationId: string;
+  itemCode?: string | null;
+  itemName?: string | null;
+  revenueAccountId?: string | null;
+  cogsAccountId?: string | null;
+  salesTaxCode?: string | null;
+  isSellable?: boolean;
+  notes?: string | null;
+}
+
+/** Payload for updating an existing record (all fields optional). */
+export interface SaleItemFinanceExtUpdate {
+  revenueAccountId?: string | null;
+  cogsAccountId?: string | null;
+  salesTaxCode?: string | null;
+  isSellable?: boolean;
+  notes?: string | null;
+}
+
+/** Query params for the list endpoint. */
+export interface SaleItemFinanceExtListParams {
+  organizationId: string;
+  isSellable?: boolean | null;
+  page?: number;
+  size?: number;
+}
+
+/**
+ * Paginated response wrapper from the finance service list endpoint.
+ * The finance service `paginated()` helper emits:
+ *   { items: [...], total, page, size, pages }
+ * (not { data: [...], meta: {...} } like the ops backend).
+ */
+interface SaleItemFinanceExtListResponse {
+  items: SaleItemFinanceExt[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+/** Single-item response wrapper from the finance service. */
+interface SaleItemFinanceExtSingleResponse {
+  data: SaleItemFinanceExt;
+  message?: string;
+}
+
+// Path does NOT include /api/ — apiClient already prepends /api/
+const ITEM_EXT_BASE = '/v1/finance/item-finance-ext';
+
+/**
+ * List all sale item finance extensions for an organisation.
+ * Uses the finance microservice list endpoint (paginated, org-scoped).
+ */
+export async function listSaleItemFinanceExt(
+  params: SaleItemFinanceExtListParams,
+): Promise<{ items: SaleItemFinanceExt[]; total: number }> {
+  const queryParams: Record<string, string | number | boolean> = {
+    organization_id: params.organizationId,
+    page: params.page ?? 1,
+    size: params.size ?? 200,
+  };
+  if (params.isSellable != null) {
+    queryParams['isSellable'] = params.isSellable;
+  }
+  const response = await apiClient.get<SaleItemFinanceExtListResponse>(
+    ITEM_EXT_BASE,
+    { params: queryParams },
+  );
+  return {
+    items: response.data.items,
+    total: response.data.total,
+  };
+}
+
+/**
+ * Fetch the sale finance extension for a specific item.
+ * Returns null (no throw) if the item has no ext record (404).
+ */
+export async function getSaleItemFinanceExtByItem(
+  itemId: string,
+  organizationId: string,
+): Promise<SaleItemFinanceExt | null> {
+  try {
+    const response = await apiClient.get<SaleItemFinanceExtSingleResponse>(
+      `${ITEM_EXT_BASE}/${itemId}`,
+      { params: { organization_id: organizationId } },
+    );
+    return response.data.data;
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'response' in err) {
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr.response?.status === 404) return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Create a new sale item finance extension.
+ * Throws HTTPException 409 if a record for this item already exists.
+ */
+export async function createSaleItemFinanceExt(
+  body: SaleItemFinanceExtCreate,
+): Promise<SaleItemFinanceExt> {
+  const response = await apiClient.post<SaleItemFinanceExtSingleResponse>(
+    ITEM_EXT_BASE,
+    body,
+  );
+  return response.data.data;
+}
+
+/**
+ * Update an existing sale item finance extension.
+ * Lookup is by itemId (not by the PK sale_item_finance_ext_id).
+ */
+export async function updateSaleItemFinanceExt(
+  itemId: string,
+  body: SaleItemFinanceExtUpdate,
+  organizationId: string,
+): Promise<SaleItemFinanceExt> {
+  const response = await apiClient.patch<SaleItemFinanceExtSingleResponse>(
+    `${ITEM_EXT_BASE}/${itemId}`,
+    body,
+    { params: { organization_id: organizationId } },
+  );
+  return response.data.data;
+}
+
+/**
+ * Delete a sale item finance extension.
+ * Returns void on success (HTTP 204).
+ */
+export async function deleteSaleItemFinanceExt(
+  itemId: string,
+  organizationId: string,
+): Promise<void> {
+  await apiClient.delete(`${ITEM_EXT_BASE}/${itemId}`, {
+    params: { organization_id: organizationId },
+  });
+}

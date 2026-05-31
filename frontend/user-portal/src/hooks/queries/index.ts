@@ -319,3 +319,13 @@ export {
   useTransitionArCreditNote,
   arcQueryKeys,
 } from './useArCreditNotes';
+
+// Sales Wave 3 — Sale Item Finance Extension hooks (T-200.9)
+export {
+  useSaleItemFinanceExtList,
+  useSaleItemFinanceExtByItem,
+  useCreateSaleItemFinanceExt,
+  useUpdateSaleItemFinanceExt,
+  useDeleteSaleItemFinanceExt,
+  saleItemFinanceExtKeys,
+} from './useSaleItemFinanceExt';

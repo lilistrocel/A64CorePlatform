@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-05-30
-> **Tasks:** 0 active · 1 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8 completed, moved to ARCHIVE.md)
+> **Updated:** 2026-05-31
+> **Tasks:** 0 active · 1 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9 completed, moved to ARCHIVE.md)
 
 ---
 
@@ -88,6 +88,85 @@
 ---
 
 ## 🔵 Active
+
+---
+
+### T-500 | Wave 5 — Production Cost Accounting (bridge farm production to sales inventory)
+- **Category:** Cross-module (farm_manager · finance · sales) · **Priority:** P2
+- **Status:** 🟢 Ready (start after Wave 3 closeout — T-200.10 + T-200.11)
+- **Assigned:** — · **Started:** —
+- **Depends on:** Wave 3 Phase 2 closeout (T-200.10 + T-200.11)
+- **Blocks:** Realistic COGS amounts on sales of self-produced (harvested) items; block-profitability reporting
+- **Description:** The Wave 3 sales module reads COGS from `inventory_balances.avgCost`,
+  which is populated only by purchasing's Goods Receipt. Self-produced (harvested) items
+  never enter `inventory_balances` because farm_manager's `block_harvests` collection
+  (13,942 rows live) does not bridge to the finance/sales inventory layer. Result:
+  Deliveries of harvested items post Dr COGS 0 / Cr Inventory 0 — mathematically correct
+  for zero input, but does not reflect real production cost. Additionally there is no
+  per-block cost-of-production tracking despite `inventory_input` (171 rows) recording
+  inputs consumed by blocks.
+- **Today's gap (architectural):** Two parallel inventory systems coexist:
+  - Farm side: `blocks`, `block_harvests`, `inventory_input`, `inventory_waste`, `inventory_asset`
+  - Sales/finance side: `inventory_balances` (empty), `inventory_movements` (ledger; unitCost=0 on every harvest-related row)
+  - No bridge; no cost flow Inputs → WIP → Finished Goods → COGS.
+- **Target model:** Standard mid-market ERP process-costing flow:
+  1. Issue inputs to production: Dr WIP(block) / Cr Raw Materials Inventory
+  2. Accumulate per-block WIP balance during growth cycle
+  3. On harvest: allocate WIP to harvested units; Dr Finished Goods Inv / Cr WIP
+  4. Block close: roll-forward or write-off remaining WIP
+  5. Sales chain reads finished-goods avgCost automatically; correct COGS posts on Delivery
+- **Design decisions to settle BEFORE implementation:**
+  1. **Item identity duality** — input items (TOM-SEED you buy) vs harvested output items
+     (Tomatoes Grade A you sell) need separate itemCodes OR a dual-role flag. Recommend
+     separate items linked by a production-routing record.
+  2. **Warehouse/location modelling** — is each block its own warehouse, or do we add a
+     "block_id" axis to inventory_balances? Recommend block-as-location dimension since
+     blocks have lifecycle (planted → harvested → cleared) that warehouses don't.
+  3. **Multi-harvest cost allocation** — for blocks with multiple harvest events per
+     cycle, allocate WIP proportionally per harvest, OR zero WIP at first harvest, OR use
+     standard cost. Recommend proportional allocation.
+  4. **Loss/waste accounting** — `inventory_waste` (1 row today) should post Dr COGS-Waste /
+     Cr Inventory at moving-avg cost. Currently no GL posting.
+  5. **Chart of accounts additions** — new accounts needed: Work-in-Progress (WIP),
+     Finished Goods Inventory (separate from Raw Materials), Production Variance.
+     ~5 new GL accounts.
+  6. **Cost mapping** — every input item must have a costAccountId; every harvested item
+     must have a finishedGoodsAccountId. Extend `sale_item_finance_ext` or create
+     `production_item_finance_ext` for the new fields.
+- **Implementation phases (sequenced):**
+  - **Phase 1 — Bridge harvest → sellable inventory (MVP, mechanical only).** When a
+    `block_harvests` row is recorded, automatically create an `inventory_movements` row
+    (movementType=harvest, quantity=+harvest_qty) AND upsert `inventory_balances` for
+    the harvested item. Initial unitCost = 0 (Phase 2 fills this in). Sales chain
+    mechanically works against harvested items. Estimate: 2-3 task cycles.
+  - **Phase 2 — Per-block WIP tracking.** New collection `block_wip` (or extend
+    `blocks`). Every `inventory_input` row adds its cost to the block's running WIP
+    balance. Block detail page surfaces running cost. Estimate: 2-3 task cycles.
+  - **Phase 3 — Cost transfer on harvest.** On harvest event, allocate
+    `(block_wip_total / harvest_qty)` as the unitCost on the inventory_movements row
+    AND `inventory_balances.avgCost`. Clear WIP proportionally. Sales chain now reads
+    real production cost. Estimate: 2 task cycles.
+  - **Phase 4 — GL postings for production events.** Finance event handlers for
+    `input_issued` (Dr WIP / Cr Raw Materials), `harvest_recorded` (Dr Finished
+    Goods / Cr WIP), `waste_recorded` (Dr COGS-Waste / Cr Inventory). Requires CoA
+    extension. Estimate: 2 task cycles.
+  - **Phase 5 — Sales correctness verification + reports.** End-to-end smoke
+    verifying Quote → SO → DN → ARI now post real COGS amounts for harvested
+    products. New report: block profitability (revenue from sales − accumulated WIP).
+    Estimate: 1-2 task cycles.
+- **Total estimate:** ~10-12 task cycles. Substantial. Worth doing carefully.
+- **Why deferred from Wave 3:** Wave 3 Sales Module is shippable today for credit-sale
+  workflows against externally-purchased items (those have GR history and therefore
+  valid inventory_balances). The harvested-item COGS gap is a real limitation but does
+  not block accountant acceptance testing of the chain itself — the JE structure is
+  correct, only the amount is zero. Wave 5 closes the loop.
+- **Notes:**
+  - User confirmed this scope on 2026-05-31 after a clear walk-through of the gap.
+  - Design doc should be drafted BEFORE Phase 1 implementation begins. The 6 design
+    decisions above all have second-order consequences across modules.
+  - Wave 4 (Purchasing parity upgrade — Blanket Agreement, Quotation, Returns flow,
+    Down Payment, Vendor Refund) is independent and can interleave with Wave 5
+    phases as priorities allow.
 
 ---
 
