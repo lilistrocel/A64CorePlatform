@@ -1031,13 +1031,15 @@ const NavGroupHeader = styled.button<NavGroupHeaderProps>`
     $childActive ? `${theme.colors.primary[500]}0d` : 'transparent'};
   color: ${({ $childActive, theme }) =>
     $childActive ? theme.colors.primary[500] : theme.colors.textSecondary};
-  /* Sub-group headers (depth >= 1) use smaller font and lighter weight */
-  font-size: ${({ $depth, theme }) =>
-    $depth >= 1 ? theme.typography.fontSize.sm : theme.typography.fontSize.base};
+  /* All depths use base font-size to match leaf NavItem siblings. Top-level
+     groups (depth 0) use semibold to stand out as parent containers; sub-
+     groups (depth 1+) use medium so they look identical to their leaf
+     siblings — the caret differentiates them as expandable. */
+  font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: ${({ $depth, theme }) =>
     $depth >= 1
-      ? theme.typography.fontWeight.regular
-      : theme.typography.fontWeight.medium};
+      ? theme.typography.fontWeight.medium
+      : theme.typography.fontWeight.semibold};
   font-family: inherit;
   cursor: pointer;
   text-align: left;
