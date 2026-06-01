@@ -12,7 +12,7 @@ Permissions:
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -32,6 +32,7 @@ from ...models.document import (
 from ...services.document_service import DocumentService
 from src.modules.farm_manager.utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.modules.farm_manager.services.database import farm_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,14 @@ def _get_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +135,7 @@ async def list_pos(
     summary="Create purchase order (manual)",
 )
 async def create_po(
+    request: Request,
     body: POCreate,
     organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(get_current_active_user),
@@ -135,6 +145,7 @@ async def create_po(
     Create a new Purchase Order in Draft status (manual creation).
 
     Args:
+        request: Incoming HTTP request (Bearer token forwarded to finance service).
         body: PO creation payload (vendor required).
         organization_id: Override org.
         current_user: Authenticated user (must have procurement write role).
@@ -144,16 +155,25 @@ async def create_po(
         Created PODetailResponse.
 
     Raises:
+        HTTPException 400: If company code cannot be resolved.
         HTTPException 422: If vendor or item not found.
+        HTTPException 503: If finance service is unreachable.
     """
     require_purchasing_write(current_user)
     org_id = _get_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    company_code = await resolve_company_code(
+        organization_id=org_id,
+        auth_token=_extract_token(request),
+    )
 
     try:
         po = await service.create_po(
             org_id=org_id,
             data=body,
             created_by=current_user.userId,
+            company_code=company_code,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
@@ -168,6 +188,7 @@ async def create_po(
     summary="Create purchase order from approved PR",
 )
 async def create_po_from_pr(
+    request: Request,
     pr_doc_id: str,
     body: POFromPRCreate,
     organization_id: Optional[str] = Query(None),
@@ -178,6 +199,7 @@ async def create_po_from_pr(
     Create a PO from an Approved PR. Lines are copied; PR is auto-closed.
 
     Args:
+        request: Incoming HTTP request (Bearer token forwarded to finance service).
         pr_doc_id: UUID of the Approved PR.
         body: Vendor + optional header overrides.
         organization_id: Override org.
@@ -188,10 +210,18 @@ async def create_po_from_pr(
         Created PODetailResponse.
 
     Raises:
+        HTTPException 400: If company code cannot be resolved.
         HTTPException 422: If PR not found, not Approved, or vendor not found.
+        HTTPException 503: If finance service is unreachable.
     """
     require_purchasing_write(current_user)
     org_id = _get_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    company_code = await resolve_company_code(
+        organization_id=org_id,
+        auth_token=_extract_token(request),
+    )
 
     try:
         po = await service.create_po_from_pr(
@@ -199,6 +229,7 @@ async def create_po_from_pr(
             pr_doc_id=pr_doc_id,
             data=body,
             created_by=current_user.userId,
+            company_code=company_code,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))

@@ -162,7 +162,7 @@ class VendorService:
         self,
         data: VendorCreate,
         created_by: str,
-        company_code: str = "DEFAULT",
+        company_code: Optional[str] = None,
     ) -> VendorResponse:
         """
         Create a new vendor and emit vendor_changed outbox event.
@@ -246,7 +246,7 @@ class VendorService:
         vendor_id: str,
         data: VendorUpdate,
         updated_by: str,
-        company_code: str = "DEFAULT",
+        company_code: Optional[str] = None,
     ) -> Optional[VendorResponse]:
         """
         Partially update a vendor and emit vendor_changed outbox event.
@@ -308,7 +308,7 @@ class VendorService:
         organization_id: str,
         vendor_id: str,
         deleted_by: str,
-        company_code: str = "DEFAULT",
+        company_code: Optional[str] = None,
     ) -> bool:
         """
         Soft-delete a vendor by setting deletedAt and isActive=False.

@@ -220,7 +220,7 @@ class ARInvoiceCreate(BaseModel):
     organization_id: Optional[str] = Field(
         None, alias="organizationId", description="Owning organisation UUID (also accepted from query param)"
     )
-    company_code: str = Field(..., alias="companyCode", max_length=20, description="Finance company code")
+    company_code: Optional[str] = Field(None, alias="companyCode", max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
     customer_id: str = Field(..., alias="customerId", description="FK to customers collection")
     customer_name: str = Field(..., alias="customerName", max_length=200, description="Denormalised customer name")
     bp_ref_no: Optional[str] = Field(
@@ -308,7 +308,7 @@ class ARInvoiceFromDeliveryRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    company_code: str = Field(..., alias="companyCode", max_length=20, description="Finance company code")
+    company_code: Optional[str] = Field(None, alias="companyCode", max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
     bp_ref_no: Optional[str] = Field(None, alias="bpRefNo", max_length=100)
     doc_date: date = Field(..., alias="docDate", description="Accounting date")
     invoice_date: date = Field(..., alias="invoiceDate", description="Date printed on the invoice")

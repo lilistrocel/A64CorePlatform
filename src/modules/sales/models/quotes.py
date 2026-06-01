@@ -225,10 +225,10 @@ class QuoteCreate(BPReferenceMixin, JournalMemoMixin):
     """
 
     organization_id: str = Field(..., description="Owning organisation UUID")
-    company_code: str = Field(
-        ...,
+    company_code: Optional[str] = Field(
+        None,
         max_length=20,
-        description="Finance company code for doc_number scoping (e.g. 'A001')",
+        description="Finance company code — auto-resolved by API layer if omitted",
     )
     customer_id: str = Field(..., description="FK to CRM customers collection")
     customer_name: str = Field(

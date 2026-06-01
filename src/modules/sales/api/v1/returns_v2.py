@@ -35,7 +35,7 @@ import logging
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -61,6 +61,7 @@ from ...services.rtn_service import (
 )
 from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.modules.sales.services.database import sales_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,14 @@ def _resolve_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_auth_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +235,7 @@ async def get_return_endpoint(
     ),
 )
 async def create_return_direct_endpoint(
+    request: Request,
     body: ReturnCreate,
     organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(require_permission("sales.create")),
@@ -238,6 +248,7 @@ async def create_return_direct_endpoint(
     No inventory changes happen at DRAFT creation — those happen at DRAFT → OPEN.
 
     Args:
+        request:         The incoming HTTP request (used to extract Bearer token).
         body:            Validated ReturnCreate payload.
         organization_id: Organisation UUID for scoping.
         current_user:    Authenticated user (must hold sales.create permission).
@@ -250,6 +261,14 @@ async def create_return_direct_endpoint(
         HTTPException 422: If payload validation fails.
     """
     org_id = _resolve_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=_extract_auth_token(request),
+        )
+        body = body.model_copy(update={"company_code": resolved})
 
     try:
         rtn = await create_return_direct(
@@ -286,6 +305,7 @@ async def create_return_direct_endpoint(
     ),
 )
 async def create_return_from_request_endpoint(
+    request: Request,
     rr_doc_entry: str,
     body: ReturnFromRequestRequest,
     organization_id: Optional[str] = Query(None),
@@ -300,6 +320,7 @@ async def create_return_from_request_endpoint(
     the available qty (requestedQty - consumedQty) on the RR line.
 
     Args:
+        request:         The incoming HTTP request (used to extract Bearer token).
         rr_doc_entry:    UUID of the source Return Request.
         body:            Validated ReturnFromRequestRequest payload.
         organization_id: Organisation UUID for scoping.
@@ -314,6 +335,14 @@ async def create_return_from_request_endpoint(
         HTTPException 422: If RR status is wrong or qty constraints are violated.
     """
     org_id = _resolve_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=_extract_auth_token(request),
+        )
+        body = body.model_copy(update={"company_code": resolved})
 
     try:
         rtn = await create_return_from_request(

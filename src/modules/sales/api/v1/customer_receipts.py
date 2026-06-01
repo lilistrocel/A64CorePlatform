@@ -37,7 +37,7 @@ import logging
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -63,6 +63,7 @@ from ...services.customer_receipt_service import (
 )
 from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.modules.sales.services.database import sales_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,14 @@ def _resolve_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_auth_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +232,7 @@ async def get_customer_receipt_endpoint(
     summary="Create Customer Receipt (manual allocations)",
 )
 async def create_customer_receipt_endpoint(
+    request: Request,
     body: CustomerReceiptCreate,
     organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(require_permission("sales.create")),
@@ -235,6 +245,7 @@ async def create_customer_receipt_endpoint(
     No AR Invoice updates happen at create time — those happen at DRAFT → OPEN.
 
     Args:
+        request:         The incoming HTTP request (used to extract Bearer token).
         body:            CustomerReceiptCreate with header + allocations.
         organization_id: Organisation UUID for scoping.
         current_user:    Authenticated user (must hold sales.create permission).
@@ -249,6 +260,14 @@ async def create_customer_receipt_endpoint(
         HTTPException 422: If validation fails (sum mismatch, overpayment, etc.).
     """
     org_id = _resolve_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=_extract_auth_token(request),
+        )
+        body = body.model_copy(update={"company_code": resolved})
 
     try:
         receipt = await create_customer_receipt(
@@ -283,6 +302,7 @@ async def create_customer_receipt_endpoint(
     summary="Create Customer Receipt from a single AR Invoice",
 )
 async def create_customer_receipt_from_invoice_endpoint(
+    request: Request,
     ar_invoice_doc_entry: str,
     body: CustomerReceiptFromInvoiceRequest,
     organization_id: Optional[str] = Query(None),
@@ -296,6 +316,7 @@ async def create_customer_receipt_from_invoice_endpoint(
     The caller can override this with the ``amount`` field to make a partial payment.
 
     Args:
+        request:              The incoming HTTP request (used to extract Bearer token).
         ar_invoice_doc_entry: UUID of the AR Invoice to pay.
         body:                 CustomerReceiptFromInvoiceRequest.
         organization_id:      Organisation UUID for scoping.
@@ -311,6 +332,14 @@ async def create_customer_receipt_from_invoice_endpoint(
         HTTPException 422: If the requested amount exceeds the invoice open_amount.
     """
     org_id = _resolve_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=_extract_auth_token(request),
+        )
+        body = body.model_copy(update={"company_code": resolved})
 
     try:
         receipt = await create_customer_receipt_from_invoice(

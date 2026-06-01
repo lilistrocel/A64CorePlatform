@@ -65,6 +65,7 @@ from ...services.ar_invoice_service import (
 )
 from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.modules.sales.services.database import sales_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -281,6 +282,14 @@ async def create_ar_invoice_endpoint(
     org_id = _resolve_org_id(organization_id, current_user)
     auth_token = _extract_auth_token(request)
 
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=auth_token,
+        )
+        body = body.model_copy(update={"company_code": resolved})
+
     try:
         ari = await create_ar_invoice(
             db,
@@ -353,6 +362,14 @@ async def create_ar_invoice_from_delivery_endpoint(
     """
     org_id = _resolve_org_id(organization_id, current_user)
     auth_token = _extract_auth_token(request)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=auth_token,
+        )
+        body = body.model_copy(update={"company_code": resolved})
 
     try:
         ari = await create_ar_invoice_from_delivery(

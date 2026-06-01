@@ -51,7 +51,7 @@ const lineSchema = z.object({
 });
 
 const formSchema = z.object({
-  companyCode: z.string().min(1, 'Company code required'),
+  companyCode: z.string().optional().default(''),
   customerId: z.string().min(1, 'Customer required'),
   customerName: z.string().min(1, 'Customer name required'),
   bpRefNo: z.string().nullable().optional(),
@@ -454,7 +454,7 @@ export function ARInvoiceFormPage() {
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyCode: 'A001',
+      companyCode: '',
       customerId: '',
       customerName: '',
       bpRefNo: '',

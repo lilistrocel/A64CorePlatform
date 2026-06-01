@@ -1,6 +1,30 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 87 tasks
+> **Total completed:** 88 tasks
+
+## 2026-06
+
+### T-201.0 | Backend companyCode resolver (replaces hardcoded defaults)
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Completed:** 2026-06-01 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** T-100.11.2 ✅ (A001 company configured), Wave 3 foundation
+- **Blocks:** T-201.1 (multi-company UX picker)
+- **Summary:** Replaced all hardcoded `"1000"` / `"DEFAULT"` / `"A001"` companyCode
+  defaults across the purchasing and sales modules with a live resolver that queries
+  `GET /api/v1/finance/companies?organization_id=...` and auto-resolves when exactly
+  one company exists. Files changed:
+  - NEW: `src/core/finance/company_resolver.py` — `resolve_company_code()` async helper;
+    `src/core/finance/__init__.py`; `tests/unit/test_company_resolver.py` (11 tests, all pass)
+  - PURCHASING: `document_service.py`, `vendor_service.py`, `purchase_item_service.py` —
+    `Optional[str] = None` defaults; ValueError guards on create methods
+  - PURCHASING API: `purchase_requests.py`, `purchase_orders.py`, `goods_receipts.py`,
+    `ap_invoices.py`, `vendors.py`, `purchase_items.py` — `Request` + resolver on all create endpoints
+  - SALES MODELS: `ar_invoices.py`, `deliveries.py`, `customer_receipts.py`, `quotes.py`,
+    `sales_orders.py`, `return_requests.py`, `ar_credit_notes.py`, `returns.py` — optional `company_code`
+  - SALES API: `ar_invoices.py`, `quotes.py`, `sales_orders.py`, `deliveries.py`,
+    `customer_receipts.py`, `return_requests.py`, `ar_credit_notes.py`, `returns_v2.py` — resolver
+  - FRONTEND: `salesApi.ts` (12 create interfaces), 8 form pages — `'A001'` removed; Zod optional
+- **Follow-up:** T-201.1 — multi-company UX picker (org with >1 companies currently returns 400)
 
 ## 2026-05
 

@@ -545,7 +545,8 @@ export function SalesOrderFormPage() {
   }, [lines]);
 
   async function onSubmit(data: FormData) {
-    const companyCode = user?.companyCode ?? 'A001';
+    // Reason: companyCode is now auto-resolved by the backend via the company_resolver.
+    // Do not pass it from the frontend — omit from the create payload entirely.
     const linePayload = data.lines.map((l) => ({
       itemId: l.itemId,
       itemCode: l.itemCode,
@@ -594,7 +595,6 @@ export function SalesOrderFormPage() {
     } else {
       const so = await createMut.mutateAsync({
         data: {
-          companyCode,
           customerId: data.customerId,
           customerName: data.customerName,
           bpRefNo: data.bpRefNo ?? null,

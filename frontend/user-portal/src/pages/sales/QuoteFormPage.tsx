@@ -486,7 +486,6 @@ export function QuoteFormPage() {
       } else {
         const created = await createMutation.mutateAsync({
           data: {
-            companyCode: 'A001',
             customerId: data.customerId,
             customerName: data.customerName,
             bpRefNo: data.bpRefNo ?? null,

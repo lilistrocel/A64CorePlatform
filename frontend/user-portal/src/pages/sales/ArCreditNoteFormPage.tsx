@@ -81,7 +81,7 @@ const allocationSchema = z.object({
 const formSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
   customerName: z.string().min(1, 'Customer is required'),
-  companyCode: z.string().default('A001'),
+  companyCode: z.string().optional().default(''),
   bpRefNo: z.string().max(100).optional().nullable(),
   docDate: z.string().min(1, 'Document date is required'),
   dateOfSupply: z.string().min(1, 'Date of supply is required'),
@@ -465,7 +465,7 @@ export function ArCreditNoteFormPage() {
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyCode: 'A001',
+      companyCode: '',
       currency: 'AED',
       exchangeRate: 1,
       creditReason: 'other',
@@ -548,7 +548,7 @@ export function ArCreditNoteFormPage() {
       : [];
 
     reset({
-      companyCode: 'A001',
+      companyCode: '',
       customerId: sourceRTN.customerId,
       customerName: sourceRTN.customerName,
       currency: sourceRTN.currency ?? 'AED',
@@ -600,7 +600,7 @@ export function ArCreditNoteFormPage() {
     }];
 
     reset({
-      companyCode: 'A001',
+      companyCode: '',
       customerId: sourceARI.customerId,
       customerName: sourceARI.customerName,
       currency: sourceARI.currency,

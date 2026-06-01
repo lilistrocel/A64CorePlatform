@@ -209,7 +209,7 @@ class ARCreditNoteCreate(BaseModel):
         notes:                   Free-text notes.
     """
 
-    company_code: str = Field("1000", max_length=20)
+    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
     customer_id: str = Field(..., description="FK to customer")
     customer_name: str = Field(..., max_length=200)
     bp_ref_no: Optional[str] = Field(None, max_length=100)

@@ -158,7 +158,7 @@ class DeliveryCreate(BaseModel):
     """
 
     organization_id: str = Field(..., description="Owning organisation UUID")
-    company_code: str = Field(..., max_length=20, description="Finance company code")
+    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
     doc_date: date = Field(..., description="Accounting date for this document")
     actual_delivery_date: date = Field(
         ..., description="Physical shipment date (may differ from doc_date)"
@@ -330,7 +330,7 @@ class DeliveryFromSORequest(BaseModel):
         lines:                 Lines specifying which SO lines to deliver and qty.
     """
 
-    company_code: str = Field(..., max_length=20, description="Finance company code")
+    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
     doc_date: date = Field(..., description="Accounting date")
     actual_delivery_date: date = Field(..., description="Physical shipment date")
     delivered_by_user_id: Optional[str] = Field(None)

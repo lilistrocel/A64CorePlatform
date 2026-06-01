@@ -68,7 +68,7 @@ const lineSchema = z.object({
 const formSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
   customerName: z.string().min(1, 'Customer is required'),
-  companyCode: z.string().default('A001'),
+  companyCode: z.string().optional().default(''),
   docDate: z.string().min(1, 'Document date is required'),
   validUntilDate: z.string().min(1, 'Valid until date is required'),
   reason: z.enum([
@@ -365,7 +365,7 @@ export function ReturnRequestFormPage() {
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyCode: 'A001',
+      companyCode: '',
       docDate: today(),
       validUntilDate: thirtyDaysLater(),
       reason: 'damaged',
@@ -388,7 +388,7 @@ export function ReturnRequestFormPage() {
     if (!delivery || !isFromDelivery) return;
     const deliveryLines = delivery.lines as DeliveryLine[];
     reset({
-      companyCode: delivery.companyCode ?? 'A001',
+      companyCode: delivery.companyCode ?? '',
       customerId: delivery.customerId,
       customerName: delivery.customerName,
       docDate: today(),

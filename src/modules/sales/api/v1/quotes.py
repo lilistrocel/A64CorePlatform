@@ -23,7 +23,7 @@ import logging
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -48,6 +48,7 @@ from ...services.quote_service import (
 from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.core.documents.document_status import DocumentStatus
 from src.modules.sales.services.database import sales_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,14 @@ def _resolve_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_auth_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +225,9 @@ async def get_quote_endpoint(
     summary="Create Sales Quote",
 )
 async def create_quote_endpoint(
+    request: Request,
     body: QuoteCreate,
+    organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(require_permission("sales.create")),
     db=Depends(_get_db),
 ) -> SuccessResponse[QuoteResponse]:
@@ -227,9 +238,11 @@ async def create_quote_endpoint(
     helper (prefix "QUOTE" → "SQ-YYYY-NNNN").
 
     Args:
-        body:         Validated QuoteCreate payload.
-        current_user: Authenticated user (must hold sales.create permission).
-        db:           Motor database dependency.
+        request:         The incoming HTTP request (used to extract Bearer token).
+        body:            Validated QuoteCreate payload.
+        organization_id: Organisation UUID for scoping (query string).
+        current_user:    Authenticated user (must hold sales.create permission).
+        db:              Motor database dependency.
 
     Returns:
         SuccessResponse wrapping the newly created QuoteResponse (HTTP 201).
@@ -237,6 +250,16 @@ async def create_quote_endpoint(
     Raises:
         HTTPException 422: If doc_number generation fails or payload is invalid.
     """
+    org_id = _resolve_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=_extract_auth_token(request),
+        )
+        body = body.model_copy(update={"company_code": resolved})
+
     try:
         quote = await create_quote(db, payload=body, user_id=current_user.userId)
     except ValueError as exc:

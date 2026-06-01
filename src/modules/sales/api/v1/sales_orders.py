@@ -30,7 +30,7 @@ import logging
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -56,6 +56,7 @@ from ...services.sales_order_service import (
 )
 from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.modules.sales.services.database import sales_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,14 @@ def _resolve_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_auth_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +228,9 @@ async def get_sales_order_endpoint(
     summary="Create Sales Order (v2)",
 )
 async def create_sales_order_endpoint(
+    request: Request,
     body: SalesOrderCreate,
+    organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(require_permission("sales.create")),
     db=Depends(_get_db),
 ) -> SuccessResponse[SalesOrderResponse]:
@@ -229,13 +240,25 @@ async def create_sales_order_endpoint(
     The doc_number is generated automatically (prefix "SO" → "SO-YYYY-NNNN").
 
     Args:
-        body:         Validated SalesOrderCreate payload.
-        current_user: Authenticated user (must hold sales.create permission).
-        db:           Motor database dependency.
+        request:         The incoming HTTP request (used to extract Bearer token).
+        body:            Validated SalesOrderCreate payload.
+        organization_id: Organisation UUID for scoping (query string).
+        current_user:    Authenticated user (must hold sales.create permission).
+        db:              Motor database dependency.
 
     Returns:
         SuccessResponse wrapping the newly created SalesOrderResponse (HTTP 201).
     """
+    org_id = _resolve_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=_extract_auth_token(request),
+        )
+        body = body.model_copy(update={"company_code": resolved})
+
     try:
         so = await create_sales_order(db, payload=body, user_id=current_user.userId)
     except ValueError as exc:

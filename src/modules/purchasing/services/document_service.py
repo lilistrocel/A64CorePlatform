@@ -163,7 +163,7 @@ def _validate_transition(doc_type: str, current: str, target: str) -> None:
 def build_pr_event_payload(
     header: Dict[str, Any],
     previous_state: Optional[str],
-    company_code: str,
+    company_code: Optional[str],
 ) -> Dict[str, Any]:
     """
     Build the pr_state_changed outbox payload dict from a raw header document.
@@ -206,7 +206,7 @@ def build_pr_event_payload(
 def build_po_event_payload(
     header: Dict[str, Any],
     previous_state: Optional[str],
-    company_code: str,
+    company_code: Optional[str],
 ) -> Dict[str, Any]:
     """
     Build the po_state_changed outbox payload dict from a raw header document.
@@ -303,7 +303,7 @@ def build_gr_event_payload(
         "poDocNumber": header.get("baseDocNumber", ""),
         "vendorId": header["vendorId"],
         "vendorCode": header.get("vendorCode"),
-        "companyCode": header.get("companyCode", "1000"),
+        "companyCode": header.get("companyCode", "A001"),
         "lines": event_lines,
         "currencyCode": header.get("currencyCode", "AED"),
         "totalNetAmount": str(header.get("subtotalNet", 0)),
@@ -407,7 +407,7 @@ def build_ap_invoice_event_payload(
         "poDocNumber": header.get("poDocNumber", ""),
         "vendorId": header["vendorId"],
         "vendorCode": header.get("vendorCode"),
-        "companyCode": header.get("companyCode", "1000"),
+        "companyCode": header.get("companyCode", "A001"),
         "paymentTermsCode": header.get("paymentTermsCode"),
         "lines": event_lines,
         "currencyCode": header.get("currencyCode", "AED"),
@@ -896,7 +896,7 @@ class DocumentService:
         self,
         header: Dict[str, Any],
         previous_state: Optional[str],
-        company_code: str,
+        company_code: Optional[str],
         session: Optional[AsyncIOMotorClientSession] = None,
     ) -> None:
         """
@@ -909,7 +909,7 @@ class DocumentService:
         Args:
             header: Current header document (post-update, read inside session).
             previous_state: State before this transition.
-            company_code: Finance company code.
+            company_code: Finance company code (falls back to header.companyCode).
             session: Motor session participating in the active transaction.
         """
         from src.modules.finance_bridge.outbox_writer import OutboxWriter
@@ -933,7 +933,7 @@ class DocumentService:
         self,
         header: Dict[str, Any],
         previous_state: Optional[str],
-        company_code: str,
+        company_code: Optional[str],
         session: Optional[AsyncIOMotorClientSession] = None,
     ) -> None:
         """
@@ -946,7 +946,7 @@ class DocumentService:
         Args:
             header: Current header document (post-update, read inside session).
             previous_state: State before this transition.
-            company_code: Finance company code.
+            company_code: Finance company code (falls back to header.companyCode).
             session: Motor session participating in the active transaction.
         """
         from src.modules.finance_bridge.outbox_writer import OutboxWriter
@@ -975,7 +975,7 @@ class DocumentService:
         org_id: str,
         data: PRCreate,
         created_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PRDetailResponse:
         """
         Create a new Purchase Request in Draft status.
@@ -984,11 +984,20 @@ class DocumentService:
             org_id: Organisation UUID string.
             data: PR creation payload.
             created_by: UUID of the creating user.
-            company_code: Finance company code.
+            company_code: Finance company code resolved by the API layer via
+                ``resolve_company_code()``. Must not be None when called.
 
         Returns:
             Created PRDetailResponse.
+
+        Raises:
+            ValueError: If company_code is not provided (caller must resolve it).
         """
+        if not company_code:
+            raise ValueError(
+                "company_code is required to create a PR. "
+                "The API layer must resolve it via resolve_company_code()."
+            )
         now = datetime.now(tz=timezone.utc)
         doc_id = str(uuid.uuid4())
 
@@ -1241,7 +1250,7 @@ class DocumentService:
         org_id: str,
         doc_id: str,
         submitted_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PRDetailResponse:
         """
         Submit a PR for approval (Draft → Pending Approval or Approved).
@@ -1331,7 +1340,7 @@ class DocumentService:
         approver_id: str,
         approver_role: str,
         comment: Optional[str],
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PRDetailResponse:
         """
         Approve a PR in Pending Approval state.
@@ -1429,7 +1438,7 @@ class DocumentService:
         approver_id: str,
         approver_role: str,
         comment: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PRDetailResponse:
         """
         Reject a PR in Pending Approval state.
@@ -1508,7 +1517,7 @@ class DocumentService:
         org_id: str,
         doc_id: str,
         cancelled_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PRDetailResponse:
         """
         Cancel a PR in Draft or Pending Approval state.
@@ -1585,7 +1594,7 @@ class DocumentService:
         org_id: str,
         data: POCreate,
         created_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PODetailResponse:
         """
         Create a new Purchase Order in Draft status.
@@ -1594,14 +1603,20 @@ class DocumentService:
             org_id: Organisation UUID string.
             data: PO creation payload.
             created_by: UUID of the creating user.
-            company_code: Finance company code.
+            company_code: Finance company code resolved by the API layer via
+                ``resolve_company_code()``. Must not be None when called.
 
         Returns:
             Created PODetailResponse.
 
         Raises:
-            ValueError: If vendor or any item not found.
+            ValueError: If vendor or any item not found, or company_code not provided.
         """
+        if not company_code:
+            raise ValueError(
+                "company_code is required to create a PO. "
+                "The API layer must resolve it via resolve_company_code()."
+            )
         now = datetime.now(tz=timezone.utc)
         doc_id = str(uuid.uuid4())
 
@@ -1679,7 +1694,7 @@ class DocumentService:
         pr_doc_id: str,
         data: POFromPRCreate,
         created_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PODetailResponse:
         """
         Create a PO from an Approved PR.
@@ -1696,14 +1711,21 @@ class DocumentService:
             pr_doc_id: Approved PR docId.
             data: PO creation options (vendor, payment terms, etc.).
             created_by: User UUID string.
-            company_code: Finance company code.
+            company_code: Finance company code resolved by the API layer via
+                ``resolve_company_code()``. Must not be None when called.
 
         Returns:
             Created PODetailResponse.
 
         Raises:
-            ValueError: If PR not found, not Approved, or vendor not found.
+            ValueError: If PR not found, not Approved, vendor not found, or
+                company_code not provided.
         """
+        if not company_code:
+            raise ValueError(
+                "company_code is required to create a PO from PR. "
+                "The API layer must resolve it via resolve_company_code()."
+            )
         pr_header = await self._headers.find_one(
             {"organizationId": org_id, "docId": pr_doc_id, "docType": "PR", "deletedAt": None}
         )
@@ -2019,7 +2041,7 @@ class DocumentService:
         org_id: str,
         doc_id: str,
         submitted_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PODetailResponse:
         """
         Submit a PO (Draft → Pending Approval or Open).
@@ -2108,7 +2130,7 @@ class DocumentService:
         approver_id: str,
         approver_role: str,
         comment: Optional[str],
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PODetailResponse:
         """
         Approve a PO in Pending Approval state → Open.
@@ -2198,7 +2220,7 @@ class DocumentService:
         approver_id: str,
         approver_role: str,
         comment: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PODetailResponse:
         """
         Reject a PO in Pending Approval state.
@@ -2277,7 +2299,7 @@ class DocumentService:
         org_id: str,
         doc_id: str,
         cancelled_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PODetailResponse:
         """
         Cancel a PO (Draft, Pending Approval, Open, or Sent).
@@ -2331,7 +2353,7 @@ class DocumentService:
         org_id: str,
         doc_id: str,
         sent_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> PODetailResponse:
         """
         Mark a PO as Sent (Open → Sent).
@@ -2434,7 +2456,7 @@ class DocumentService:
             db=self._db,
             event_type="purchase_received",
             organization_id=header["organizationId"],
-            company_code=header.get("companyCode", "1000"),
+            company_code=header.get("companyCode", "A001"),
             payload=payload,
             source_user_id=header.get("postedBy") or header.get("createdBy"),
             source_document_id=header["docId"],
@@ -2633,7 +2655,7 @@ class DocumentService:
         po_doc_id: str,
         data: "GRFromPOCreate",
         created_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> "GRDetailResponse":
         """
         Create a Draft GR by receiving goods against an Open or Sent PO.
@@ -2648,14 +2670,21 @@ class DocumentService:
             po_doc_id: UUID of the source PO.
             data: GRFromPOCreate payload.
             created_by: User UUID string.
-            company_code: Finance company code.
+            company_code: Finance company code resolved by the API layer via
+                ``resolve_company_code()``. Must not be None when called.
 
         Returns:
             Created GRDetailResponse (status: Draft).
 
         Raises:
-            ValueError: If PO not found, wrong status, or quantity violations.
+            ValueError: If PO not found, wrong status, quantity violations, or
+                company_code not provided.
         """
+        if not company_code:
+            raise ValueError(
+                "company_code is required to create a GR. "
+                "The API layer must resolve it via resolve_company_code()."
+            )
         po_header = await self._headers.find_one(
             {"organizationId": org_id, "docId": po_doc_id, "docType": "PO", "deletedAt": None}
         )
@@ -2705,7 +2734,7 @@ class DocumentService:
         org_id: str,
         data: "GRCreate",
         created_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> "GRDetailResponse":
         """
         Create a Draft GR with an explicit baseDocId in the body.
@@ -2888,7 +2917,7 @@ class DocumentService:
         org_id: str,
         doc_id: str,
         posted_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> "GRDetailResponse":
         """
         Post a GR (Draft → Posted).
@@ -3145,7 +3174,7 @@ class DocumentService:
             db=self._db,
             event_type="ap_invoice_posted",
             organization_id=header["organizationId"],
-            company_code=header.get("companyCode", "1000"),
+            company_code=header.get("companyCode", "A001"),
             payload=payload,
             source_user_id=header.get("approvalDecidedBy") or header.get("createdBy"),
             source_document_id=header["docId"],
@@ -3284,7 +3313,7 @@ class DocumentService:
         gr_doc_id: str,
         data: "APFromGRCreate",
         created_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> "APDetailResponse":
         """
         Create a Draft AP Invoice from a Posted GR (primary UX path).
@@ -3303,14 +3332,21 @@ class DocumentService:
             gr_doc_id: UUID of the source Posted GR.
             data: APFromGRCreate payload.
             created_by: User UUID string.
-            company_code: Finance company code.
+            company_code: Finance company code resolved by the API layer via
+                ``resolve_company_code()``. Must not be None when called.
 
         Returns:
             Created APDetailResponse (status: Draft).
 
         Raises:
-            ValueError: If GR not found, not Posted, or AP already exists.
+            ValueError: If GR not found, not Posted, AP already exists, or
+                company_code not provided.
         """
+        if not company_code:
+            raise ValueError(
+                "company_code is required to create an AP Invoice. "
+                "The API layer must resolve it via resolve_company_code()."
+            )
         from ..models.document import APDetailResponse  # local import
 
         # Reason: read the GR header outside the transaction to keep txn window short
@@ -3430,7 +3466,7 @@ class DocumentService:
         org_id: str,
         data: "APCreate",
         created_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> "APDetailResponse":
         """
         Create a Draft AP Invoice with an explicit baseDocId (GR docId) in the body.
@@ -3621,7 +3657,7 @@ class DocumentService:
         org_id: str,
         doc_id: str,
         submitted_by: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> "APDetailResponse":
         """
         Submit an AP Invoice for approval (Draft → Pending Approval).
@@ -3748,7 +3784,7 @@ class DocumentService:
         approver_id: str,
         approver_role: str,
         comment: Optional[str],
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> "APDetailResponse":
         """
         Approve an AP Invoice in Pending Approval state.
@@ -3872,7 +3908,7 @@ class DocumentService:
         approver_id: str,
         approver_role: str,
         comment: str,
-        company_code: str = "1000",
+        company_code: Optional[str] = None,
     ) -> "APDetailResponse":
         """
         Reject an AP Invoice in Pending Approval state.

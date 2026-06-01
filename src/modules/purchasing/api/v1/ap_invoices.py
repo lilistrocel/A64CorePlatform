@@ -24,7 +24,7 @@ Permissions:
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -46,6 +46,7 @@ from src.modules.farm_manager.utils.responses import (
     SuccessResponse,
 )
 from src.modules.farm_manager.services.database import farm_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,14 @@ def _get_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +177,7 @@ async def list_aps(
     summary="Create AP invoice from a posted GR (primary path)",
 )
 async def create_ap_from_gr(
+    request: Request,
     gr_doc_id: str,
     body: APFromGRCreate,
     organization_id: Optional[str] = Query(None),
@@ -186,6 +196,7 @@ async def create_ap_from_gr(
     The user may specify invoiceUnitPrice per line to capture vendor price differences.
 
     Args:
+        request: Incoming HTTP request (Bearer token forwarded to finance service).
         gr_doc_id: UUID of the source Posted GR.
         body: AP Invoice creation payload with line prices.
         organization_id: Override org.
@@ -196,10 +207,18 @@ async def create_ap_from_gr(
         Created APDetailResponse (status: Draft).
 
     Raises:
+        HTTPException 400: If company code cannot be resolved.
         HTTPException 422: If GR not found, wrong status, or AP already exists.
+        HTTPException 503: If finance service is unreachable.
     """
     _require_ap_write(current_user)
     org_id = _get_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    company_code = await resolve_company_code(
+        organization_id=org_id,
+        auth_token=_extract_token(request),
+    )
 
     try:
         ap = await service.create_ap_from_gr(
@@ -207,6 +226,7 @@ async def create_ap_from_gr(
             gr_doc_id=gr_doc_id,
             data=body,
             created_by=current_user.userId,
+            company_code=company_code,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -223,6 +243,7 @@ async def create_ap_from_gr(
     summary="Create AP invoice (explicit baseDocId)",
 )
 async def create_ap(
+    request: Request,
     body: APCreate,
     organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(get_current_active_user),
@@ -235,6 +256,7 @@ async def create_ap(
     flexible alternative where the caller already has the GR docId in the body.
 
     Args:
+        request: Incoming HTTP request (Bearer token forwarded to finance service).
         body: APCreate payload (includes baseDocId = GR docId).
         organization_id: Override org.
         current_user: Authenticated user (must have AP write role).
@@ -244,16 +266,25 @@ async def create_ap(
         Created APDetailResponse (status: Draft).
 
     Raises:
+        HTTPException 400: If company code cannot be resolved.
         HTTPException 422: If GR not found, wrong status, or AP already exists.
+        HTTPException 503: If finance service is unreachable.
     """
     _require_ap_write(current_user)
     org_id = _get_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    company_code = await resolve_company_code(
+        organization_id=org_id,
+        auth_token=_extract_token(request),
+    )
 
     try:
         ap = await service.create_ap(
             org_id=org_id,
             data=body,
             created_by=current_user.userId,
+            company_code=company_code,
         )
     except ValueError as exc:
         raise HTTPException(

@@ -11,7 +11,7 @@ Permissions:
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -22,10 +22,19 @@ from ...models.purchase_item import PurchaseItemCreate, PurchaseItemResponse, Pu
 from ...services.purchase_item_service import PurchaseItemService
 from src.modules.farm_manager.utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.modules.farm_manager.services.database import farm_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Purchasing — Purchase Items"])
+
+
+def _extract_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        return auth[7:]
+    return None
 
 
 def _get_service() -> PurchaseItemService:
@@ -100,6 +109,7 @@ async def list_purchase_items(
     description="Create a new purchase item. Requires procurement_officer or higher.",
 )
 async def create_purchase_item(
+    request: Request,
     body: PurchaseItemCreate,
     current_user: CurrentUser = Depends(get_current_active_user),
     service: PurchaseItemService = Depends(_get_service),
@@ -108,6 +118,7 @@ async def create_purchase_item(
     Create a new purchase item.
 
     Args:
+        request: FastAPI request (used to forward Bearer token to finance service).
         body: Validated purchase item creation payload.
         current_user: Authenticated user (must have procurement write role).
         service: PurchaseItemService dependency.
@@ -121,10 +132,24 @@ async def create_purchase_item(
     """
     require_purchasing_write(current_user)
 
+    org_id = current_user.organizationId or ""
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="organization_id is required",
+        )
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    company_code = await resolve_company_code(
+        organization_id=org_id,
+        auth_token=_extract_token(request),
+    )
+
     try:
         item = await service.create_item(
             data=body,
             created_by=current_user.userId,
+            company_code=company_code,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))

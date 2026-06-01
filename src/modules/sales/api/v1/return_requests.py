@@ -30,7 +30,7 @@ import logging
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -54,6 +54,7 @@ from ...services.return_request_service import (
 )
 from ...utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.modules.sales.services.database import sales_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,14 @@ def _resolve_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_auth_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +223,7 @@ async def get_return_request_endpoint(
     summary="Create Return Request",
 )
 async def create_return_request_endpoint(
+    request: Request,
     body: ReturnRequestCreate,
     organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(require_permission("sales.create")),
@@ -226,6 +236,7 @@ async def create_return_request_endpoint(
     No GL impact at any stage — this is a commitment document only.
 
     Args:
+        request:         The incoming HTTP request (used to extract Bearer token).
         body:            Validated ReturnRequestCreate payload.
         organization_id: Organisation UUID for scoping (defaults to JWT claim).
         current_user:    Authenticated user (must hold sales.create permission).
@@ -238,6 +249,14 @@ async def create_return_request_endpoint(
         HTTPException 422: If payload validation fails.
     """
     org_id = _resolve_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=_extract_auth_token(request),
+        )
+        body = body.model_copy(update={"company_code": resolved})
 
     try:
         rr = await create_return_request(

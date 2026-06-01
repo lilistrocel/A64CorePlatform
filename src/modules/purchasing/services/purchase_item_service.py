@@ -152,7 +152,7 @@ class PurchaseItemService:
         self,
         data: PurchaseItemCreate,
         created_by: str,
-        company_code: str = "DEFAULT",
+        company_code: Optional[str] = None,
     ) -> PurchaseItemResponse:
         """
         Create a new purchase item and emit purchase_item_changed outbox event.
@@ -228,7 +228,7 @@ class PurchaseItemService:
         item_id: str,
         data: PurchaseItemUpdate,
         updated_by: str,
-        company_code: str = "DEFAULT",
+        company_code: Optional[str] = None,
     ) -> Optional[PurchaseItemResponse]:
         """
         Partially update a purchase item and emit outbox event.
@@ -285,7 +285,7 @@ class PurchaseItemService:
         organization_id: str,
         item_id: str,
         deleted_by: str,
-        company_code: str = "DEFAULT",
+        company_code: Optional[str] = None,
     ) -> bool:
         """
         Soft-delete a purchase item.

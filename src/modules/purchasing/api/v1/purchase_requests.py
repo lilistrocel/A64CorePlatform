@@ -13,7 +13,7 @@ Permissions:
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -31,6 +31,7 @@ from ...models.document import (
 from ...services.document_service import DocumentService
 from src.modules.farm_manager.utils.responses import PaginatedResponse, PaginationMeta, SuccessResponse
 from src.modules.farm_manager.services.database import farm_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,14 @@ def _get_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +147,7 @@ async def list_prs(
     summary="Create purchase request",
 )
 async def create_pr(
+    request: Request,
     body: PRCreate,
     organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(get_current_active_user),
@@ -147,6 +157,8 @@ async def create_pr(
     Create a new Purchase Request in Draft status.
 
     Args:
+        request: Incoming HTTP request (used to extract Bearer token for
+            the company-code resolver's finance service call).
         body: PR creation payload with header + lines.
         organization_id: Override org — defaults to current_user.organizationId.
         current_user: Authenticated user (must have procurement write role).
@@ -156,17 +168,27 @@ async def create_pr(
         Created PRDetailResponse wrapped in SuccessResponse.
 
     Raises:
+        HTTPException 400: If company code cannot be resolved.
         HTTPException 403: If insufficient role.
         HTTPException 422: If item not found.
+        HTTPException 503: If finance service is unreachable.
     """
     require_purchasing_write(current_user)
     org_id = _get_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from the finance service so no hardcoded
+    # default is used.  Raises 400 if org has no company configured.
+    company_code = await resolve_company_code(
+        organization_id=org_id,
+        auth_token=_extract_token(request),
+    )
 
     try:
         pr = await service.create_pr(
             org_id=org_id,
             data=body,
             created_by=current_user.userId,
+            company_code=company_code,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))

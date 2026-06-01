@@ -56,7 +56,7 @@ const allocationSchema = z.object({
 });
 
 const formSchema = z.object({
-  companyCode: z.string().min(1, 'Company code required'),
+  companyCode: z.string().optional().default(''),
   customerId: z.string().min(1, 'Customer required'),
   customerName: z.string().min(1, 'Customer name required'),
   bpRefNo: z.string().nullable().optional(),
@@ -416,7 +416,7 @@ export function CustomerReceiptFormPage() {
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyCode: 'A001',
+      companyCode: '',
       customerId: '',
       customerName: '',
       bpRefNo: null,
@@ -454,7 +454,7 @@ export function CustomerReceiptFormPage() {
     if (isEditMode && existingReceipt) {
       const dateStr = existingReceipt.docDate?.slice(0, 10) ?? today;
       reset({
-        companyCode: existingReceipt.companyCode ?? 'A001',
+        companyCode: existingReceipt.companyCode ?? '',
         customerId: existingReceipt.customerId,
         customerName: existingReceipt.customerName,
         bpRefNo: existingReceipt.bpRefNo ?? null,
@@ -482,7 +482,7 @@ export function CustomerReceiptFormPage() {
     if (isFromInvoice && sourceARI) {
       const openAmount = Number(sourceARI.totals.openAmount);
       reset({
-        companyCode: sourceARI.companyCode ?? 'A001',
+        companyCode: sourceARI.companyCode ?? '',
         customerId: sourceARI.customerId,
         customerName: sourceARI.customerName,
         bpRefNo: null,

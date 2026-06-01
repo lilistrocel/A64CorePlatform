@@ -16,7 +16,7 @@ Permissions:
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...middleware.auth import (
     CurrentUser,
@@ -38,6 +38,7 @@ from src.modules.farm_manager.utils.responses import (
     SuccessResponse,
 )
 from src.modules.farm_manager.services.database import farm_db
+from src.core.finance.company_resolver import resolve_company_code
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,14 @@ def _get_org_id(
             detail="organization_id is required",
         )
     return org_id
+
+
+def _extract_token(request: Request) -> Optional[str]:
+    """Extract the raw Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[len("Bearer "):]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +135,7 @@ async def list_grs(
     summary="Create goods receipt from an open PO",
 )
 async def create_gr_from_po(
+    request: Request,
     po_doc_id: str,
     body: GRFromPOCreate,
     organization_id: Optional[str] = Query(None),
@@ -141,6 +151,7 @@ async def create_gr_from_po(
     line that is not yet fully received.
 
     Args:
+        request: Incoming HTTP request (Bearer token forwarded to finance service).
         po_doc_id: UUID of the source PO.
         body: GR creation payload.
         organization_id: Override org.
@@ -151,10 +162,18 @@ async def create_gr_from_po(
         Created GRDetailResponse (status: Draft).
 
     Raises:
+        HTTPException 400: If company code cannot be resolved.
         HTTPException 422: If PO not found, wrong status, or quantity violations.
+        HTTPException 503: If finance service is unreachable.
     """
     require_purchasing_write(current_user)
     org_id = _get_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    company_code = await resolve_company_code(
+        organization_id=org_id,
+        auth_token=_extract_token(request),
+    )
 
     try:
         gr = await service.create_gr_from_po(
@@ -162,6 +181,7 @@ async def create_gr_from_po(
             po_doc_id=po_doc_id,
             data=body,
             created_by=current_user.userId,
+            company_code=company_code,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -178,6 +198,7 @@ async def create_gr_from_po(
     summary="Create goods receipt (explicit baseDocId)",
 )
 async def create_gr(
+    request: Request,
     body: GRCreate,
     organization_id: Optional[str] = Query(None),
     current_user: CurrentUser = Depends(get_current_active_user),
@@ -191,6 +212,7 @@ async def create_gr(
     to pass it in the body.
 
     Args:
+        request: Incoming HTTP request (Bearer token forwarded to finance service).
         body: GRCreate payload (includes baseDocId).
         organization_id: Override org.
         current_user: Authenticated user (must have procurement write role).
@@ -200,16 +222,25 @@ async def create_gr(
         Created GRDetailResponse (status: Draft).
 
     Raises:
+        HTTPException 400: If company code cannot be resolved.
         HTTPException 422: If PO not found, wrong status, or quantity violations.
+        HTTPException 503: If finance service is unreachable.
     """
     require_purchasing_write(current_user)
     org_id = _get_org_id(organization_id, current_user)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    company_code = await resolve_company_code(
+        organization_id=org_id,
+        auth_token=_extract_token(request),
+    )
 
     try:
         gr = await service.create_gr(
             org_id=org_id,
             data=body,
             created_by=current_user.userId,
+            company_code=company_code,
         )
     except ValueError as exc:
         raise HTTPException(

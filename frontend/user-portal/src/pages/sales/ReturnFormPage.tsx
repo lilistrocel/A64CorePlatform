@@ -71,7 +71,7 @@ const lineSchema = z.object({
 const formSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
   customerName: z.string().min(1, 'Customer is required'),
-  companyCode: z.string().default('A001'),
+  companyCode: z.string().optional().default(''),
   docDate: z.string().min(1, 'Document date is required'),
   actualReturnDate: z.string().min(1, 'Actual return date is required'),
   notes: z.string().max(1000).optional().nullable(),
@@ -358,7 +358,7 @@ export function ReturnFormPage() {
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyCode: 'A001',
+      companyCode: '',
       docDate: today,
       actualReturnDate: today,
       lines: [],
@@ -375,7 +375,7 @@ export function ReturnFormPage() {
 
     setValue('customerId', rr.customerId);
     setValue('customerName', rr.customerName);
-    setValue('companyCode', rr.companyCode ?? 'A001');
+    setValue('companyCode', rr.companyCode ?? '');
     setValue('docDate', today);
     setValue('actualReturnDate', today);
 
@@ -417,7 +417,7 @@ export function ReturnFormPage() {
 
     setValue('customerId', dn.customerId);
     setValue('customerName', dn.customerName);
-    setValue('companyCode', dn.companyCode ?? 'A001');
+    setValue('companyCode', dn.companyCode ?? '');
     setValue('docDate', today);
     setValue('actualReturnDate', today);
     setValue('baseDocRefDocType', 'DELIVERY');
@@ -462,7 +462,7 @@ export function ReturnFormPage() {
 
     setValue('customerId', existingRtn.customerId);
     setValue('customerName', existingRtn.customerName);
-    setValue('companyCode', existingRtn.companyCode ?? 'A001');
+    setValue('companyCode', existingRtn.companyCode ?? '');
     setValue('docDate', existingRtn.docDate);
     setValue('actualReturnDate', existingRtn.actualReturnDate);
     setValue('notes', existingRtn.notes ?? null);
@@ -526,7 +526,7 @@ export function ReturnFormPage() {
         const result = await createFromRR.mutateAsync({
           rrDocEntry,
           data: {
-            companyCode: data.companyCode ?? 'A001',
+            companyCode: data.companyCode ?? '',
             docDate: data.docDate,
             actualReturnDate: data.actualReturnDate,
             notes: data.notes ?? null,
@@ -538,7 +538,7 @@ export function ReturnFormPage() {
       } else if (isFromDN) {
         const result = await createFromDN.mutateAsync({
           data: {
-            companyCode: data.companyCode ?? 'A001',
+            companyCode: data.companyCode ?? '',
             customerId: data.customerId,
             customerName: data.customerName,
             docDate: data.docDate,
@@ -571,7 +571,7 @@ export function ReturnFormPage() {
         // Blank form — new manual RTN (very rare)
         const result = await createBlank.mutateAsync({
           data: {
-            companyCode: data.companyCode ?? 'A001',
+            companyCode: data.companyCode ?? '',
             customerId: data.customerId,
             customerName: data.customerName,
             docDate: data.docDate,

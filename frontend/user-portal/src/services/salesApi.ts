@@ -158,7 +158,7 @@ export interface ARInvoiceLineCreate {
 }
 
 export interface ARInvoiceCreate {
-  companyCode: string;
+  companyCode?: string;
   customerId: string;
   customerName: string;
   bpRefNo?: string | null;
@@ -196,7 +196,7 @@ export interface ARInvoiceFromDeliveryLineRequest {
 }
 
 export interface ARInvoiceFromDelivery {
-  companyCode: string;
+  companyCode?: string;
   bpRefNo?: string | null;
   docDate: string;
   invoiceDate: string;
@@ -298,7 +298,7 @@ export interface CustomerReceiptAllocationCreate {
 }
 
 export interface CustomerReceiptCreate {
-  companyCode: string;
+  companyCode?: string;
   customerId: string;
   customerName: string;
   bpRefNo?: string | null;
@@ -330,7 +330,7 @@ export interface CustomerReceiptUpdate {
 
 /** Used for the from-invoice shortcut endpoint. */
 export interface CustomerReceiptFromInvoice {
-  companyCode: string;
+  companyCode?: string;
   docDate: string;
   paymentMethod: 'bank_transfer' | 'cheque' | 'cash' | 'card';
   paymentRef?: string | null;
@@ -458,7 +458,7 @@ export interface QuoteLineCreate {
 }
 
 export interface QuoteCreate {
-  companyCode: string;
+  companyCode?: string;
   customerId: string;
   customerName: string;
   bpRefNo?: string | null;
@@ -627,7 +627,7 @@ export interface SalesOrderLineCreate {
 }
 
 export interface SalesOrderCreate {
-  companyCode: string;
+  companyCode?: string;
   customerId: string;
   customerName: string;
   bpRefNo?: string | null;
@@ -771,7 +771,7 @@ export interface DeliveryLineCreate {
 
 /** Full create payload — used only when building manually (rare). */
 export interface DeliveryCreate {
-  companyCode: string;
+  companyCode?: string;
   docDate: string;
   actualDeliveryDate: string;
   deliveredByUserId?: string | null;
@@ -790,7 +790,7 @@ export interface DeliveryUpdate {
 
 /** Request body for POST /from-so/:soDocEntry. */
 export interface DeliveryFromSORequest {
-  companyCode: string;
+  companyCode?: string;
   docDate: string;
   actualDeliveryDate: string;
   deliveredByUserId?: string | null;
@@ -919,7 +919,7 @@ export interface ReturnRequestLineCreate {
 }
 
 export interface ReturnRequestCreate {
-  companyCode: string;
+  companyCode?: string;
   customerId: string;
   customerName: string;
   docDate: string;
@@ -1061,7 +1061,7 @@ export interface ReturnNoteLineCreate {
  * The backend endpoint is POST /returns-v2/from-request/:rrDocEntry.
  */
 export interface ReturnNoteFromRRRequest {
-  companyCode: string;
+  companyCode?: string;
   docDate: string;
   actualReturnDate: string;
   receivedByUserId?: string | null;
@@ -1075,7 +1075,7 @@ export interface ReturnNoteFromRRRequest {
  * The backend does not expose a dedicated /from-delivery endpoint.
  */
 export interface ReturnNoteFromDNCreate {
-  companyCode: string;
+  companyCode?: string;
   customerId: string;
   customerName: string;
   docDate: string;
@@ -1088,7 +1088,7 @@ export interface ReturnNoteFromDNCreate {
 }
 
 export interface ReturnNoteCreate {
-  companyCode: string;
+  companyCode?: string;
   customerId: string;
   customerName: string;
   docDate: string;

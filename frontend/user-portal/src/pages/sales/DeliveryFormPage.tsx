@@ -59,7 +59,7 @@ const lineSchema = z.object({
 const formSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
   customerName: z.string().min(1, 'Customer is required'),
-  companyCode: z.string().default('A001'),
+  companyCode: z.string().optional().default(''),
   docDate: z.string().min(1, 'Document date is required'),
   actualDeliveryDate: z.string().min(1, 'Actual delivery date is required'),
   notes: z.string().optional().nullable(),
@@ -360,7 +360,7 @@ export function DeliveryFormPage() {
     defaultValues: {
       customerId: '',
       customerName: '',
-      companyCode: 'A001',
+      companyCode: '',
       docDate: today,
       actualDeliveryDate: today,
       notes: '',

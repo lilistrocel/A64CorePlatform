@@ -139,7 +139,7 @@ class CustomerReceiptCreate(BaseModel):
     """
 
     organization_id: str = Field(..., description="Owning organisation UUID")
-    company_code: str = Field(..., max_length=20, description="Finance company code")
+    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
     customer_id: str = Field(..., description="FK to customers collection")
     customer_name: str = Field(..., max_length=200, description="Denormalised customer name")
     bp_ref_no: Optional[str] = Field(
@@ -412,7 +412,7 @@ class CustomerReceiptFromInvoiceRequest(BaseModel):
         notes:             Free-text notes.
     """
 
-    company_code: str = Field(..., max_length=20, description="Finance company code")
+    company_code: Optional[str] = Field(None, max_length=20, description="Finance company code — auto-resolved by API layer if omitted")
     doc_date: date = Field(..., description="Payment receipt date")
     payment_method: Literal["bank_transfer", "cheque", "cash", "card"] = Field(...)
     payment_ref: Optional[str] = Field(None, max_length=100)
