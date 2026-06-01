@@ -66,7 +66,10 @@ export const GlobalStyles = createGlobalStyle`
 
   button {
     font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
+    -webkit-font-smoothing: inherit;
+    -moz-osx-font-smoothing: inherit;
   }
 
   button:focus-visible {
