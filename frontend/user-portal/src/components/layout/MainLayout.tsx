@@ -79,22 +79,28 @@ const PURCHASING_NAV_GROUP: NavItemDef = {
   ],
 };
 
-// Sales (Wave 3) group — AR Invoices + placeholders for remaining Wave 3 docs.
-// DO NOT remove the legacy flat sales nav items until T-200.11 cutover.
+// Sales group — full Wave 3 surface (Wave 3 rebuild closed by T-200.11; the
+// legacy flat /sales entry has been folded in as Dashboard).
 const SALES_NAV_GROUP: NavItemDef = {
-  icon: '🧾',
-  label: 'Sales (Wave 3)',
+  icon: '💰',
+  label: 'Sales',
   defaultExpanded: false,
   children: [
-    { to: '/sales/ar-invoices', icon: '🧾', label: 'AR Invoices' },
-    { to: '/sales/customer-receipts', icon: '💵', label: 'Customer Receipts' },
-    { to: '/sales/reports/ar-aging', icon: '📉', label: 'AR Aging' },
+    // Overview
+    { to: '/sales', icon: '📊', label: 'Dashboard' },
+    // Forward cycle (Quote → Receipt) — in document-chain order
     { to: '/sales/quotes', icon: '📋', label: 'Quotes' },
     { to: '/sales/orders-v2', icon: '📑', label: 'Sales Orders' },
     { to: '/sales/deliveries', icon: '📦', label: 'Deliveries' },
+    { to: '/sales/ar-invoices', icon: '🧾', label: 'AR Invoices' },
+    { to: '/sales/customer-receipts', icon: '💵', label: 'Customer Receipts' },
+    // Returns cycle (RR → RTN → ARC)
     { to: '/sales/return-requests', icon: '↩️', label: 'Return Requests' },
     { to: '/sales/returns-v2', icon: '🔄', label: 'Returns' },
     { to: '/sales/ar-credit-notes', icon: '📝', label: 'AR Credit Notes' },
+    // Reports + reference + admin
+    { to: '/sales/reports/ar-aging', icon: '📉', label: 'AR Aging' },
+    { to: '/sales/stock', icon: '📦', label: 'Stock' },
     { to: '/sales/items', icon: '🏷️', label: 'Sales Items Config' },
   ],
 };
@@ -165,7 +171,7 @@ export function MainLayout() {
       Operations: false,
       Purchasing: PURCHASING_NAV_GROUP.defaultExpanded ?? false,
       Finance: FINANCE_NAV_GROUP.defaultExpanded ?? false,
-      'Sales (Wave 3)': SALES_NAV_GROUP.defaultExpanded ?? false,
+      Sales: SALES_NAV_GROUP.defaultExpanded ?? false,
     };
   }, [storageKey]);
 
@@ -295,9 +301,6 @@ export function MainLayout() {
         { to: '/operations', icon: '📋', label: 'Task Manager', showBadge: true },
         { to: '/inventory', icon: '📦', label: 'Inventory' },
         ...(_PURCHASING_ROLES.has(user?.role ?? '') ? [PURCHASING_NAV_GROUP] : []),
-        // Legacy flat Sales nav items — kept until T-200.11 cutover
-        { to: '/sales', icon: '💰', label: 'Sales' },
-        // Wave 3 Sales accordion (T-200.0) — AR Invoices + placeholders
         SALES_NAV_GROUP,
         { to: '/logistics', icon: '🚚', label: 'Logistics' },
         { to: '/marketing', icon: '📢', label: 'Marketing' },
