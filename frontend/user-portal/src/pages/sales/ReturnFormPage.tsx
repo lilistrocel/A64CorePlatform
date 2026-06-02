@@ -32,7 +32,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Trash2 } from 'lucide-react';
@@ -41,6 +41,8 @@ import { useReturn, useCreateReturnFromRR, useCreateReturnFromDelivery, useCreat
 import { useReturnRequest } from '../../hooks/queries/useReturnRequests';
 import { useDelivery } from '../../hooks/queries/useDeliveries';
 import { useAuthStore } from '../../stores/auth.store';
+import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import type { ReturnRequestLine, DeliveryLine } from '../../services/salesApi';
 
@@ -735,14 +737,31 @@ export function ReturnFormPage() {
                   <tr key={field.id}>
                     <Td style={{ width: 32, color: '#9ca3af' }}>{idx + 1}</Td>
                     <Td>
-                      <SmallInput
-                        {...register(`lines.${idx}.itemCode`)}
-                        $hasError={Boolean(lineErrors?.itemCode)}
-                        $width="90px"
-                        placeholder="Code"
-                        disabled={isFromRR || isFromDN}
+                      <Controller
+                        name={`lines.${idx}.itemId`}
+                        control={control}
+                        render={({ field }) => (
+                          <SalesItemCombobox
+                            valueItemId={field.value ?? ''}
+                            valueItemCode={watch(`lines.${idx}.itemCode`) ?? ''}
+                            onChange={(selection: SalesItemSelection | null) => {
+                              if (selection) {
+                                field.onChange(selection.itemId);
+                                setValue(`lines.${idx}.itemCode`, selection.itemCode, { shouldValidate: true });
+                                setValue(`lines.${idx}.itemName`, selection.itemName, { shouldValidate: true });
+                              } else {
+                                field.onChange('');
+                                setValue(`lines.${idx}.itemCode`, '', { shouldValidate: true });
+                                setValue(`lines.${idx}.itemName`, '', { shouldValidate: true });
+                              }
+                            }}
+                            hasError={Boolean(lineErrors?.itemId || lineErrors?.itemCode)}
+                            disabled={isFromRR || isFromDN || isSubmitting}
+                            placeholder="Search item…"
+                          />
+                        )}
                       />
-                      <input type="hidden" {...register(`lines.${idx}.itemId`)} />
+                      <input type="hidden" {...register(`lines.${idx}.itemCode`)} />
                       <input type="hidden" {...register(`lines.${idx}.itemName`)} />
                       <input type="hidden" {...register(`lines.${idx}.baseDocRefDocType`)} />
                       <input type="hidden" {...register(`lines.${idx}.baseDocRefDocId`)} />

@@ -44,6 +44,8 @@ import { useArInvoice } from '../../hooks/queries/useArInvoices';
 import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
 import { CustomerCombobox } from '../../components/sales/CustomerCombobox';
 import { AccountCombobox } from '../../components/finance/AccountCombobox';
+import { CurrencyCombobox } from '../../components/sales/CurrencyCombobox';
+import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
 import type { Customer } from '../../types/crm';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
@@ -438,6 +440,18 @@ export function CustomerReceiptFormPage() {
   const watchAllocations = watch('allocations');
   const watchAmountReceived = watch('amountReceived');
 
+  // Exchange rate visibility
+  const baseCurrency = useTenantBaseCurrency();
+  const watchedCurrency = watch('currency');
+  const showExchangeRate = watchedCurrency !== baseCurrency;
+
+  // Reset exchangeRate to 1.0 when currency reverts to base.
+  useEffect(() => {
+    if (!showExchangeRate) {
+      setValue('exchangeRate', 1);
+    }
+  }, [showExchangeRate, setValue]);
+
   const allocationSum = useMemo(
     () =>
       (watchAllocations || []).reduce(
@@ -726,24 +740,32 @@ export function CustomerReceiptFormPage() {
             {/* Currency */}
             <Field>
               <Label htmlFor="currency">Currency</Label>
-              <Input
-                id="currency"
-                type="text"
-                maxLength={3}
-                {...register('currency')}
+              <Controller
+                name="currency"
+                control={control}
+                render={({ field }) => (
+                  <CurrencyCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isSubmitting}
+                    hasError={Boolean(errors.currency)}
+                  />
+                )}
               />
             </Field>
 
-            {/* Exchange Rate */}
-            <Field>
-              <Label htmlFor="exchange-rate">Exchange Rate</Label>
-              <Input
-                id="exchange-rate"
-                type="number"
-                step="0.0001"
-                {...register('exchangeRate')}
-              />
-            </Field>
+            {/* Exchange Rate — only when currency differs from base */}
+            {showExchangeRate && (
+              <Field>
+                <Label htmlFor="exchange-rate">Exchange Rate</Label>
+                <Input
+                  id="exchange-rate"
+                  type="number"
+                  step="0.0001"
+                  {...register('exchangeRate')}
+                />
+              </Field>
+            )}
 
             {/* Amount Received */}
             <Field>

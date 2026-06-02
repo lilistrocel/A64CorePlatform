@@ -24,7 +24,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Trash2 } from 'lucide-react';
@@ -37,6 +37,8 @@ import {
 } from '../../hooks/queries/useReturnRequests';
 import { useDelivery } from '../../hooks/queries/useDeliveries';
 import { useAuthStore } from '../../stores/auth.store';
+import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import type { DeliveryLine, ReturnReason } from '../../services/salesApi';
 
@@ -361,6 +363,7 @@ export function ReturnRequestFormPage() {
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -679,8 +682,7 @@ export function ReturnRequestFormPage() {
               <thead>
                 <tr>
                   <Th style={{ width: 40 }}>#</Th>
-                  <Th>Item Code</Th>
-                  <Th>Item Name</Th>
+                  <Th style={{ minWidth: 200 }}>Item</Th>
                   <Th>Description</Th>
                   <Th style={{ width: 120 }}>Requested Qty *</Th>
                   <Th style={{ width: 80 }}>UOM</Th>
@@ -703,20 +705,38 @@ export function ReturnRequestFormPage() {
                       <tr key={field.id}>
                         <Td style={{ color: '#9ca3af', fontWeight: 600 }}>{idx + 1}</Td>
 
-                        {/* Item Code — read-only in from-delivery mode */}
+                        {/* Item picker — disabled in from-delivery mode (locked to source) */}
                         <Td>
-                          <TdInput
-                            {...register(`lines.${idx}.itemCode`)}
-                            disabled={isFromDelivery}
+                          <Controller
+                            name={`lines.${idx}.itemId`}
+                            control={control}
+                            render={({ field }) => (
+                              <SalesItemCombobox
+                                valueItemId={field.value ?? ''}
+                                valueItemCode={watch(`lines.${idx}.itemCode`) ?? ''}
+                                onChange={(selection: SalesItemSelection | null) => {
+                                  if (selection) {
+                                    field.onChange(selection.itemId);
+                                    setValue(`lines.${idx}.itemCode`, selection.itemCode, { shouldValidate: true });
+                                    setValue(`lines.${idx}.itemName`, selection.itemName, { shouldValidate: true });
+                                    if (selection.salesTaxCode) {
+                                      setValue(`lines.${idx}.taxCodeId`, selection.salesTaxCode);
+                                    }
+                                  } else {
+                                    field.onChange('');
+                                    setValue(`lines.${idx}.itemCode`, '', { shouldValidate: true });
+                                    setValue(`lines.${idx}.itemName`, '', { shouldValidate: true });
+                                    setValue(`lines.${idx}.taxCodeId`, null);
+                                  }
+                                }}
+                                hasError={Boolean(errors.lines?.[idx]?.itemId || errors.lines?.[idx]?.itemCode)}
+                                disabled={isFromDelivery || isSubmitting}
+                                placeholder="Search item…"
+                              />
+                            )}
                           />
-                        </Td>
-
-                        {/* Item Name — read-only in from-delivery mode */}
-                        <Td>
-                          <TdInput
-                            {...register(`lines.${idx}.itemName`)}
-                            disabled={isFromDelivery}
-                          />
+                          <input type="hidden" {...register(`lines.${idx}.itemCode`)} />
+                          <input type="hidden" {...register(`lines.${idx}.itemName`)} />
                         </Td>
 
                         {/* Description */}

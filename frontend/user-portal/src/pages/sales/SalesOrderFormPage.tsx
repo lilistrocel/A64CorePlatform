@@ -25,10 +25,10 @@
  * NO Audit History button — sales audit endpoint pending T-200.x.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
@@ -42,6 +42,12 @@ import {
 import { useQuote } from '../../hooks/queries/useQuotes';
 import { useAuthStore } from '../../stores/auth.store';
 import { CustomerCombobox } from '../../components/sales/CustomerCombobox';
+import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import { CurrencyCombobox } from '../../components/sales/CurrencyCombobox';
+import { PaymentTermsCombobox } from '../../components/sales/PaymentTermsCombobox';
+import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
+import type { PaymentTermsSelection } from '../../components/sales/PaymentTermsCombobox';
+import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
@@ -461,6 +467,18 @@ export function SalesOrderFormPage() {
   const lines = watch('lines');
   const currency = watch('currency');
 
+  // Exchange rate visibility + base currency
+  const baseCurrency = useTenantBaseCurrency();
+  const showExchangeRate = currency !== baseCurrency;
+  const [paymentTermsName, setPaymentTermsName] = useState<string>('');
+
+  // Reset exchangeRate to 1.0 when currency reverts to base.
+  useEffect(() => {
+    if (!showExchangeRate) {
+      setValue('exchangeRate', 1);
+    }
+  }, [showExchangeRate, setValue]);
+
   // Pre-fill from Quote when in from-quote mode
   useEffect(() => {
     if (mode === 'from-quote' && sourceQuote) {
@@ -662,7 +680,7 @@ export function SalesOrderFormPage() {
                 valueCustomerId={watch('customerId') || null}
                 valueCustomerName={watch('customerName') || ''}
                 onCustomerSelect={(customer) => {
-                  setValue('customerId', customer.id, { shouldValidate: true });
+                  setValue('customerId', customer.customerId, { shouldValidate: true });
                   setValue('customerName', customer.name, { shouldValidate: true });
                 }}
                 onClear={() => {
@@ -702,32 +720,51 @@ export function SalesOrderFormPage() {
             {/* Currency */}
             <Field>
               <Label>Currency</Label>
-              <Input
-                type="text"
-                maxLength={3}
-                placeholder="AED"
-                {...register('currency')}
+              <Controller
+                name="currency"
+                control={control}
+                render={({ field }) => (
+                  <CurrencyCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isSubmitting}
+                    hasError={Boolean(errors.currency)}
+                  />
+                )}
               />
             </Field>
 
-            {/* Exchange Rate */}
-            <Field>
-              <Label>Exchange Rate</Label>
-              <Input
-                type="number"
-                step="0.0001"
-                min="0"
-                {...register('exchangeRate')}
-              />
-            </Field>
+            {/* Exchange Rate — only visible when currency differs from base */}
+            {showExchangeRate && (
+              <Field>
+                <Label>Exchange Rate</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  {...register('exchangeRate')}
+                />
+              </Field>
+            )}
 
             {/* Payment Terms */}
             <Field>
-              <Label>Payment Terms ID</Label>
-              <Input
-                type="text"
-                placeholder="e.g. NET30"
-                {...register('paymentTermsId')}
+              <Label>Payment Terms</Label>
+              <Controller
+                name="paymentTermsId"
+                control={control}
+                render={({ field }) => (
+                  <PaymentTermsCombobox
+                    valueTermsId={field.value ?? null}
+                    valueTermsName={paymentTermsName}
+                    onChange={(selection: PaymentTermsSelection | null) => {
+                      field.onChange(selection?.termsId ?? null);
+                      setPaymentTermsName(selection?.description ?? '');
+                    }}
+                    disabled={isSubmitting}
+                    hasError={Boolean(errors.paymentTermsId)}
+                  />
+                )}
               />
             </Field>
 
@@ -774,8 +811,7 @@ export function SalesOrderFormPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th style={{ width: 80 }}>Item Code</Th>
-                  <Th style={{ width: 160 }}>Item Name</Th>
+                  <Th style={{ minWidth: 200 }}>Item</Th>
                   <Th style={{ width: 120 }}>Description</Th>
                   <Th style={{ width: 70 }}>Qty</Th>
                   <Th style={{ width: 60 }}>UOM</Th>
@@ -790,16 +826,36 @@ export function SalesOrderFormPage() {
                 {fields.map((field, idx) => (
                   <tr key={field.id}>
                     <Td>
-                      <LineInput
-                        {...register(`lines.${idx}.itemCode`)}
-                        placeholder="Code"
+                      <Controller
+                        name={`lines.${idx}.itemId`}
+                        control={control}
+                        render={({ field }) => (
+                          <SalesItemCombobox
+                            valueItemId={field.value ?? ''}
+                            valueItemCode={watch(`lines.${idx}.itemCode`) ?? ''}
+                            onChange={(selection: SalesItemSelection | null) => {
+                              if (selection) {
+                                field.onChange(selection.itemId);
+                                setValue(`lines.${idx}.itemCode`, selection.itemCode, { shouldValidate: true });
+                                setValue(`lines.${idx}.itemName`, selection.itemName, { shouldValidate: true });
+                                if (selection.salesTaxCode) {
+                                  setValue(`lines.${idx}.taxCodeId`, selection.salesTaxCode);
+                                }
+                              } else {
+                                field.onChange('');
+                                setValue(`lines.${idx}.itemCode`, '', { shouldValidate: true });
+                                setValue(`lines.${idx}.itemName`, '', { shouldValidate: true });
+                                setValue(`lines.${idx}.taxCodeId`, null);
+                              }
+                            }}
+                            hasError={Boolean(errors.lines?.[idx]?.itemId || errors.lines?.[idx]?.itemCode)}
+                            disabled={mode === 'from-quote' || isSubmitting}
+                            placeholder="Search item…"
+                          />
+                        )}
                       />
-                    </Td>
-                    <Td>
-                      <LineInput
-                        {...register(`lines.${idx}.itemName`)}
-                        placeholder="Name"
-                      />
+                      <input type="hidden" {...register(`lines.${idx}.itemCode`)} />
+                      <input type="hidden" {...register(`lines.${idx}.itemName`)} />
                     </Td>
                     <Td>
                       <LineInput

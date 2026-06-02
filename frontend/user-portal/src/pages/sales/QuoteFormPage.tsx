@@ -20,16 +20,23 @@
  * NO Audit History button — sales audit endpoint not yet built (T-200.x).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
 import { useQuote, useCreateQuote, useUpdateQuote } from '../../hooks/queries/useQuotes';
 import { useAuthStore } from '../../stores/auth.store';
 import { CustomerCombobox } from '../../components/sales/CustomerCombobox';
+import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import { CurrencyCombobox } from '../../components/sales/CurrencyCombobox';
+import { PaymentTermsCombobox } from '../../components/sales/PaymentTermsCombobox';
+import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
+import type { PaymentTermsSelection } from '../../components/sales/PaymentTermsCombobox';
+import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
+import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import type { Customer } from '../../types/crm';
 
@@ -224,6 +231,8 @@ const LineInput = styled.input`
   border-radius: 6px;
   font-size: 13px;
   width: 100%;
+  min-width: 80px;
+  box-sizing: border-box;
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.textPrimary};
   &:focus {
@@ -436,8 +445,14 @@ export function QuoteFormPage() {
     }
   }, [existingQuote, isEditMode, setValue]);
 
-  // Live totals calculation
-  const watchedLines = watch('lines');
+  // Tax codes (used to look up tax rate when an item is picked)
+  const { data: taxCodesData } = useTaxCodes(orgId);
+  const taxCodes = taxCodesData ?? [];
+
+  // Live totals calculation — useWatch is reactive on inner field-array changes
+  // (plain `watch('lines')` returns a stale snapshot for nested updates in
+  // react-hook-form v7+ field arrays).
+  const watchedLines = useWatch({ control, name: 'lines' });
   const liveTotals = useMemo(() => {
     let net = 0;
     let tax = 0;
@@ -461,6 +476,21 @@ export function QuoteFormPage() {
 
   const currentCustomerId = watch('customerId');
   const currentCustomerName = watch('customerName');
+
+  // Exchange rate visibility: only show when currency !== base currency.
+  const baseCurrency = useTenantBaseCurrency();
+  const watchedCurrency = watch('currency');
+  const showExchangeRate = watchedCurrency !== baseCurrency;
+
+  // Keep a display name for the PaymentTermsCombobox chip in edit mode.
+  const [paymentTermsName, setPaymentTermsName] = useState<string>('');
+
+  // When currency reverts to base, reset exchangeRate to 1.0 in form state.
+  useEffect(() => {
+    if (!showExchangeRate) {
+      setValue('exchangeRate', 1);
+    }
+  }, [showExchangeRate, setValue]);
 
   async function onSubmit(data: FormData) {
     try {
@@ -588,30 +618,49 @@ export function QuoteFormPage() {
 
             <Field>
               <Label>Currency</Label>
-              <Input
-                type="text"
-                placeholder="AED"
-                maxLength={3}
-                {...register('currency')}
+              <Controller
+                name="currency"
+                control={control}
+                render={({ field }) => (
+                  <CurrencyCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isSubmitting}
+                    hasError={Boolean(errors.currency)}
+                  />
+                )}
               />
             </Field>
 
-            <Field>
-              <Label>Exchange Rate</Label>
-              <Input
-                type="number"
-                step="0.0001"
-                min="0"
-                {...register('exchangeRate')}
-              />
-            </Field>
+            {showExchangeRate && (
+              <Field>
+                <Label>Exchange Rate</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  {...register('exchangeRate')}
+                />
+              </Field>
+            )}
 
             <Field>
               <Label>Payment Terms</Label>
-              <Input
-                type="text"
-                placeholder="e.g. Net 30"
-                {...register('paymentTermsId')}
+              <Controller
+                name="paymentTermsId"
+                control={control}
+                render={({ field }) => (
+                  <PaymentTermsCombobox
+                    valueTermsId={field.value ?? null}
+                    valueTermsName={paymentTermsName}
+                    onChange={(selection: PaymentTermsSelection | null) => {
+                      field.onChange(selection?.termsId ?? null);
+                      setPaymentTermsName(selection?.description ?? '');
+                    }}
+                    disabled={isSubmitting}
+                    hasError={Boolean(errors.paymentTermsId)}
+                  />
+                )}
               />
             </Field>
 
@@ -658,8 +707,7 @@ export function QuoteFormPage() {
               <thead>
                 <tr>
                   <Th style={{ width: 30 }}>#</Th>
-                  <Th style={{ minWidth: 110 }}>Item Code</Th>
-                  <Th style={{ minWidth: 140 }}>Item Name</Th>
+                  <Th style={{ minWidth: 220 }}>Item</Th>
                   <Th style={{ minWidth: 120 }}>Description</Th>
                   <Th style={{ width: 70 }}>Qty</Th>
                   <Th style={{ width: 60 }}>UoM</Th>
@@ -678,27 +726,52 @@ export function QuoteFormPage() {
                       {index + 1}
                     </Td>
                     <Td>
-                      <LineInput
-                        placeholder="CODE-001"
-                        {...register(`lines.${index}.itemCode`)}
+                      {/* SalesItemCombobox — stamps UUID itemId, itemCode, itemName, salesTaxCode */}
+                      {/*
+                        SalesItemCombobox — Controller wraps itemId (the UUID).
+                        itemCode and itemName are stamped via setValue; they are
+                        registered as hidden inputs so RHF validation fires on them.
+                        We do NOT register itemId separately (Controller owns it).
+                      */}
+                      <Controller
+                        name={`lines.${index}.itemId`}
+                        control={control}
+                        render={({ field }) => (
+                          <SalesItemCombobox
+                            valueItemId={field.value ?? ''}
+                            valueItemCode={watch(`lines.${index}.itemCode`) ?? ''}
+                            onChange={(selection: SalesItemSelection | null) => {
+                              if (selection) {
+                                field.onChange(selection.itemId);
+                                setValue(`lines.${index}.itemCode`, selection.itemCode, { shouldValidate: true });
+                                setValue(`lines.${index}.itemName`, selection.itemName, { shouldValidate: true });
+                                if (selection.salesTaxCode) {
+                                  setValue(`lines.${index}.taxCodeId`, selection.salesTaxCode);
+                                  // Look up the rate for this tax code and stamp taxPercent
+                                  // so line totals + Tax Total recompute immediately.
+                                  const tc = taxCodes.find(
+                                    (t) => t.taxCode === selection.salesTaxCode,
+                                  );
+                                  const rate = tc ? Number(tc.rate) : 0;
+                                  setValue(`lines.${index}.taxPercent`, rate);
+                                }
+                              } else {
+                                field.onChange('');
+                                setValue(`lines.${index}.itemCode`, '', { shouldValidate: true });
+                                setValue(`lines.${index}.itemName`, '', { shouldValidate: true });
+                                setValue(`lines.${index}.taxCodeId`, null);
+                                setValue(`lines.${index}.taxPercent`, 0);
+                              }
+                            }}
+                            hasError={Boolean(errors.lines?.[index]?.itemId || errors.lines?.[index]?.itemCode)}
+                            disabled={isSubmitting}
+                            placeholder="Search item…"
+                          />
+                        )}
                       />
-                      {/* Hidden fields — fill alongside itemCode in a real item-picker scenario */}
-                      <input type="hidden" {...register(`lines.${index}.itemId`)} />
+                      {/* itemCode and itemName registered so Zod validates them */}
+                      <input type="hidden" {...register(`lines.${index}.itemCode`)} />
                       <input type="hidden" {...register(`lines.${index}.itemName`)} />
-                    </Td>
-                    <Td>
-                      <LineInput
-                        placeholder="Product name"
-                        {...register(`lines.${index}.itemName`)}
-                        onChange={(e) => {
-                          // Keep itemId in sync with itemCode as a simple default
-                          const v = e.target.value;
-                          setValue(`lines.${index}.itemName`, v);
-                          if (!watch(`lines.${index}.itemId`)) {
-                            setValue(`lines.${index}.itemId`, watch(`lines.${index}.itemCode`) || v);
-                          }
-                        }}
-                      />
                     </Td>
                     <Td>
                       <LineInput
@@ -709,8 +782,8 @@ export function QuoteFormPage() {
                     <Td>
                       <LineInput
                         type="number"
-                        step="0.001"
-                        min="0.001"
+                        step="1"
+                        min="0"
                         placeholder="1"
                         style={{ textAlign: 'right' }}
                         {...register(`lines.${index}.quantity`)}

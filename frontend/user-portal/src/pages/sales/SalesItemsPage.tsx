@@ -622,7 +622,10 @@ export function SalesItemsPage() {
   } = useSaleItemFinanceExtList(orgId);
 
   const { data: accountsData } = useFinanceAccounts(orgId ?? '', { isActive: true });
-  const allAccounts: GLAccount[] = accountsData?.data ?? [];
+  // useFinanceAccounts returns paginated { items, total, page, size, pages }.
+  // Earlier `.data` here was always undefined → empty list → "Unknown" name
+  // labels in the table + empty dropdowns in the edit modal.
+  const allAccounts: GLAccount[] = accountsData?.items ?? [];
 
   const [modalState, setModalState] = useState<ModalState>(null);
 

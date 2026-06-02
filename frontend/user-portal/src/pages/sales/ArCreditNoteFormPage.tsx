@@ -33,7 +33,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Trash2, Plus } from 'lucide-react';
@@ -47,6 +47,12 @@ import {
 import { useReturn } from '../../hooks/queries/useReturns';
 import { useArInvoice } from '../../hooks/queries/useArInvoices';
 import { useAuthStore } from '../../stores/auth.store';
+import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import { CurrencyCombobox } from '../../components/sales/CurrencyCombobox';
+import { PaymentTermsCombobox } from '../../components/sales/PaymentTermsCombobox';
+import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
+import type { PaymentTermsSelection } from '../../components/sales/PaymentTermsCombobox';
+import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
 import type { CreditReason } from '../../services/salesApi';
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
@@ -461,6 +467,8 @@ export function ArCreditNoteFormPage() {
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -488,6 +496,19 @@ export function ArCreditNoteFormPage() {
   });
 
   const watchedLines = useWatch({ control, name: 'lines' });
+
+  // Exchange rate visibility + payment terms display name
+  const baseCurrency = useTenantBaseCurrency();
+  const watchedCurrency = watch('currency');
+  const showExchangeRate = watchedCurrency !== baseCurrency;
+  const [paymentTermsName, setPaymentTermsName] = useState<string>('');
+
+  // Reset exchangeRate to 1.0 when currency reverts to base.
+  useEffect(() => {
+    if (!showExchangeRate) {
+      setValue('exchangeRate', 1);
+    }
+  }, [showExchangeRate, setValue]);
 
   // ── Live totals calculation ──────────────────────────────────────────────────
 
@@ -879,22 +900,50 @@ export function ArCreditNoteFormPage() {
 
             <FieldGroup>
               <Label htmlFor="currency">Currency</Label>
-              <Input
-                id="currency"
-                {...register('currency')}
-                placeholder="AED"
-                readOnly={customerLocked}
+              <Controller
+                name="currency"
+                control={control}
+                render={({ field }) => (
+                  <CurrencyCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isSubmitting || customerLocked}
+                    hasError={Boolean(errors.currency)}
+                  />
+                )}
               />
             </FieldGroup>
 
+            {showExchangeRate && (
+              <FieldGroup>
+                <Label htmlFor="exchangeRate">Exchange Rate</Label>
+                <Input
+                  id="exchangeRate"
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  {...register('exchangeRate')}
+                />
+              </FieldGroup>
+            )}
+
             <FieldGroup>
-              <Label htmlFor="exchangeRate">Exchange Rate</Label>
-              <Input
-                id="exchangeRate"
-                type="number"
-                step="0.0001"
-                min="0"
-                {...register('exchangeRate')}
+              <Label>Payment Terms</Label>
+              <Controller
+                name="paymentTermsId"
+                control={control}
+                render={({ field }) => (
+                  <PaymentTermsCombobox
+                    valueTermsId={field.value ?? null}
+                    valueTermsName={paymentTermsName}
+                    onChange={(selection: PaymentTermsSelection | null) => {
+                      field.onChange(selection?.termsId ?? null);
+                      setPaymentTermsName(selection?.description ?? '');
+                    }}
+                    disabled={isSubmitting}
+                    hasError={Boolean(errors.paymentTermsId)}
+                  />
+                )}
               />
             </FieldGroup>
 
@@ -929,7 +978,7 @@ export function ArCreditNoteFormPage() {
               <thead>
                 <tr>
                   <Th>#</Th>
-                  <Th>Item Code</Th>
+                  <Th style={{ minWidth: 200 }}>Item</Th>
                   <Th>Description</Th>
                   <Th>Qty</Th>
                   <Th>UOM</Th>
@@ -954,11 +1003,36 @@ export function ArCreditNoteFormPage() {
                     <tr key={field.id}>
                       <Td style={{ color: '#9ca3af', fontSize: 12 }}>{idx + 1}</Td>
                       <Td>
-                        <SmallInput
-                          {...register(`lines.${idx}.itemCode`)}
-                          placeholder="Item code"
-                          readOnly={customerLocked}
+                        <Controller
+                          name={`lines.${idx}.itemId`}
+                          control={control}
+                          render={({ field }) => (
+                            <SalesItemCombobox
+                              valueItemId={field.value ?? ''}
+                              valueItemCode={watch(`lines.${idx}.itemCode`) ?? ''}
+                              onChange={(selection: SalesItemSelection | null) => {
+                                if (selection) {
+                                  field.onChange(selection.itemId);
+                                  setValue(`lines.${idx}.itemCode`, selection.itemCode, { shouldValidate: true });
+                                  setValue(`lines.${idx}.itemName`, selection.itemName, { shouldValidate: true });
+                                  if (selection.salesTaxCode) {
+                                    setValue(`lines.${idx}.taxCodeId`, selection.salesTaxCode);
+                                  }
+                                } else {
+                                  field.onChange('');
+                                  setValue(`lines.${idx}.itemCode`, '', { shouldValidate: true });
+                                  setValue(`lines.${idx}.itemName`, '', { shouldValidate: true });
+                                  setValue(`lines.${idx}.taxCodeId`, null);
+                                }
+                              }}
+                              hasError={Boolean(errors.lines?.[idx]?.itemId || errors.lines?.[idx]?.itemCode)}
+                              disabled={customerLocked || isSubmitting}
+                              placeholder="Search item…"
+                            />
+                          )}
                         />
+                        <input type="hidden" {...register(`lines.${idx}.itemCode`)} />
+                        <input type="hidden" {...register(`lines.${idx}.itemName`)} />
                       </Td>
                       <Td>
                         <SmallInput

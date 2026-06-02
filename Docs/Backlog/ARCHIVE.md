@@ -1,8 +1,43 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 88 tasks
+> **Total completed:** 90 tasks
 
 ## 2026-06
+
+### T-201.3 | Sales form pickers + UX polish
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-06-01 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-201.2 ✅
+- **Summary:** Four deliverables: (1) `CurrencyCombobox` — constrained dropdown with 11 GCC+
+  common currencies; tenant base currency (from `useFinanceCompanies`) floats to top with "Base"
+  badge; (2) `PaymentTermsCombobox` — typeahead chip-picker over `payment_terms` master via
+  `usePaymentTerms` hook (shared with purchasing); (3) Exchange Rate conditional visibility —
+  hidden when currency === tenant base, `exchangeRate` form field always tracks `1.0` underneath
+  so submit payload is always valid; (4) Portal fix for `SalesItemCombobox` AND `CustomerCombobox`
+  — dropdown panels portaled to `document.body` via `createPortal` with `position:fixed`
+  coordinates from `getBoundingClientRect()`, auto-repositioned on scroll/resize, z-index 9999;
+  eliminates clipping by table-cell `overflow:hidden`. Wired into 5 of 8 sales forms (Quote ×3,
+  SO ×3, ARI ×2, Receipt ×2, ARC ×3; Delivery/RR/RTN skip — no currency/paymentTerms fields).
+  TypeScript clean, lint clean, 228 backend tests pass.
+- **Files added:** `components/sales/CurrencyCombobox.tsx`, `components/sales/PaymentTermsCombobox.tsx`,
+  `hooks/queries/useTenantBaseCurrency.ts`
+- **Files modified:** `components/sales/SalesItemCombobox.tsx` (portal), `components/sales/CustomerCombobox.tsx`
+  (portal), `QuoteFormPage.tsx`, `SalesOrderFormPage.tsx`, `ARInvoiceFormPage.tsx`,
+  `CustomerReceiptFormPage.tsx`, `ArCreditNoteFormPage.tsx`
+- **DevLog:** `Docs/3-DevLog/2026-06-01_T-201.3-sales-form-pickers.md`
+
+### T-201.2 | SalesItemCombobox + wire into all 8 sales doc form pages
+- **Category:** Frontend · **Priority:** P0
+- **Completed:** 2026-06-01 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-200.9 ✅ (useSaleItemFinanceExtList hook)
+- **Summary:** Fixed correctness bug where `itemId` was set to `itemCode` string
+  ("TOM-SEED") instead of the real UUID. Built `SalesItemCombobox` (typeahead picker
+  over `sale_item_finance_ext` isSellable=true items). Wired into all 7 line-item
+  sales doc forms (Quote, SO, Delivery, ARI, RR, RTN, ARC). CustomerReceiptFormPage
+  skipped (no item lines — invoice allocations only). From-X modes disable the picker
+  (item locked to source doc). TypeScript clean, lint clean, 228 backend tests pass.
+- **Files:** NEW `components/sales/SalesItemCombobox.tsx`; modified 7 form pages.
+- **DevLog:** `Docs/3-DevLog/2026-06-01_T-201.2-sales-item-combobox.md`
 
 ### T-201.0 | Backend companyCode resolver (replaces hardcoded defaults)
 - **Category:** Backend + Frontend · **Priority:** P1

@@ -24,7 +24,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Trash2 } from 'lucide-react';
@@ -36,6 +36,8 @@ import {
 } from '../../hooks/queries/useDeliveries';
 import { useSalesOrderV2 } from '../../hooks/queries/useSalesOrders';
 import { useAuthStore } from '../../stores/auth.store';
+import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import type { SalesOrderLine } from '../../services/salesApi';
 
@@ -596,8 +598,7 @@ export function DeliveryFormPage() {
               <thead>
                 <tr>
                   <Th style={{ width: 50 }}>#</Th>
-                  <Th>Item Code</Th>
-                  <Th>Item Name</Th>
+                  <Th style={{ minWidth: 200 }}>Item</Th>
                   <Th>Description</Th>
                   <Th style={{ width: 90 }}>Qty</Th>
                   <Th style={{ width: 70 }}>UoM</Th>
@@ -615,18 +616,32 @@ export function DeliveryFormPage() {
                         <span style={{ fontSize: 13, color: '#6b7280' }}>{idx + 1}</span>
                       </Td>
                       <Td>
-                        <LineInput
-                          {...register(`lines.${idx}.itemCode`)}
-                          disabled={isFromSO}
-                          placeholder="Code"
+                        <Controller
+                          name={`lines.${idx}.itemId`}
+                          control={control}
+                          render={({ field }) => (
+                            <SalesItemCombobox
+                              valueItemId={field.value ?? ''}
+                              valueItemCode={watch(`lines.${idx}.itemCode`) ?? ''}
+                              onChange={(selection: SalesItemSelection | null) => {
+                                if (selection) {
+                                  field.onChange(selection.itemId);
+                                  setValue(`lines.${idx}.itemCode`, selection.itemCode, { shouldValidate: true });
+                                  setValue(`lines.${idx}.itemName`, selection.itemName, { shouldValidate: true });
+                                } else {
+                                  field.onChange('');
+                                  setValue(`lines.${idx}.itemCode`, '', { shouldValidate: true });
+                                  setValue(`lines.${idx}.itemName`, '', { shouldValidate: true });
+                                }
+                              }}
+                              hasError={Boolean(errors.lines?.[idx]?.itemId || errors.lines?.[idx]?.itemCode)}
+                              disabled={isFromSO || isSubmitting}
+                              placeholder="Search item…"
+                            />
+                          )}
                         />
-                      </Td>
-                      <Td>
-                        <LineInput
-                          {...register(`lines.${idx}.itemName`)}
-                          disabled={isFromSO}
-                          placeholder="Name"
-                        />
+                        <input type="hidden" {...register(`lines.${idx}.itemCode`)} />
+                        <input type="hidden" {...register(`lines.${idx}.itemName`)} />
                       </Td>
                       <Td>
                         <LineInput

@@ -22,7 +22,9 @@ import {
   useRef,
   useCallback,
   useId,
+  useLayoutEffect,
 } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { crmApi } from '../../services/crmService';
 import type { Customer } from '../../types/crm';
@@ -152,18 +154,33 @@ const ClearButton = styled.button`
   }
 `;
 
-const Dropdown = styled.ul`
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+/**
+ * DropdownPanel — portaled to document.body via createPortal.
+ * Uses fixed positioning so it escapes any overflow:hidden ancestor.
+ * Coordinates are calculated from the trigger input's getBoundingClientRect().
+ */
+interface CustomerDropdownStyle {
+  top: number;
+  left: number;
+  width: number;
+  bottom?: number;
+}
+
+const Dropdown = styled.ul<{ $style: CustomerDropdownStyle }>`
+  position: fixed;
+  top: ${({ $style }) =>
+    $style.bottom !== undefined ? 'auto' : `${$style.top}px`};
+  bottom: ${({ $style }) =>
+    $style.bottom !== undefined ? `${$style.bottom}px` : 'auto'};
+  left: ${({ $style }) => `${$style.left}px`};
+  width: ${({ $style }) => `${$style.width}px`};
   background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   max-height: 280px;
   overflow-y: auto;
-  z-index: 1100;
+  z-index: 9999;
   list-style: none;
   margin: 0;
   padding: 4px 0;
@@ -273,6 +290,52 @@ export function CustomerCombobox({
   // AbortController for the current in-flight search — lets us cancel stale requests.
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // ── Portal panel positioning ───────────────────────────────────────────────
+  const [panelStyle, setPanelStyle] = useState<CustomerDropdownStyle>({
+    top: 0,
+    left: 0,
+    width: 300,
+  });
+
+  const recalcPosition = useCallback(() => {
+    const trigger = wrapperRef.current;
+    if (!trigger || !open) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const DROPDOWN_MAX_HEIGHT = 280;
+    const GAP = 4;
+
+    const spaceBelow = viewportHeight - rect.bottom - GAP;
+    const spaceAbove = rect.top - GAP;
+
+    if (spaceBelow >= DROPDOWN_MAX_HEIGHT || spaceBelow >= spaceAbove) {
+      setPanelStyle({ top: rect.bottom + GAP, left: rect.left, width: rect.width });
+    } else {
+      setPanelStyle({
+        top: 0,
+        left: rect.left,
+        width: rect.width,
+        bottom: viewportHeight - rect.top + GAP,
+      });
+    }
+  }, [open]);
+
+  useLayoutEffect(() => {
+    recalcPosition();
+  }, [open, recalcPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = () => recalcPosition();
+    window.addEventListener('scroll', handler, true);
+    window.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('scroll', handler, true);
+      window.removeEventListener('resize', handler);
+    };
+  }, [open, recalcPosition]);
+
   // Keep input display in sync when parent updates the value (e.g. edit mode).
   useEffect(() => {
     setInputValue(valueCustomerName);
@@ -281,10 +344,16 @@ export function CustomerCombobox({
 
   // -------------------------------------------------------------------------
   // Close dropdown on click-outside.
+  // Account for portaled dropdown (rendered outside wrapperRef in the DOM).
   // -------------------------------------------------------------------------
   useEffect(() => {
     const handlePointerDown = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideWrapper = wrapperRef.current?.contains(target) ?? false;
+      const portalEl = document.getElementById(listboxId);
+      const insidePortal = portalEl?.contains(target) ?? false;
+
+      if (!insideWrapper && !insidePortal) {
         setOpen(false);
         setHighlightedIndex(-1);
         // Restore the confirmed display name if the user clicked away mid-search.
@@ -296,7 +365,7 @@ export function CustomerCombobox({
 
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [isSelectionConfirmed, valueCustomerName]);
+  }, [isSelectionConfirmed, valueCustomerName, listboxId]);
 
   // -------------------------------------------------------------------------
   // Debounced search trigger.
@@ -335,7 +404,7 @@ export function CustomerCombobox({
 
       setResults(customers.slice(0, 10));
       setHighlightedIndex(-1);
-    } catch (err: unknown) {
+    } catch {
       if (abortControllerRef.current.signal.aborted) return;
       setSearchError('Search failed. Type again to retry.');
     } finally {
@@ -536,14 +605,16 @@ export function CustomerCombobox({
             $hasError={!!error}
           />
 
-          {open && (
+          {open && createPortal(
             <Dropdown
               id={listboxId}
               role="listbox"
               aria-label="Customer search results"
+              $style={panelStyle}
             >
               {renderDropdownContent()}
-            </Dropdown>
+            </Dropdown>,
+            document.body,
           )}
         </>
       )}
