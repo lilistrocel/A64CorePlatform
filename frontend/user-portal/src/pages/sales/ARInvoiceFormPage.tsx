@@ -28,7 +28,13 @@ import styled from 'styled-components';
 import { Trash2, Plus } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth.store';
 import { useArInvoice, useCreateArInvoice, useUpdateArInvoice, useCreateArInvoiceFromDelivery } from '../../hooks/queries/useArInvoices';
+import { useDelivery } from '../../hooks/queries/useDeliveries';
+import { useSalesOrderV2 } from '../../hooks/queries/useSalesOrders';
 import { CustomerCombobox } from '../../components/sales/CustomerCombobox';
+import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import { CurrencyCombobox } from '../../components/sales/CurrencyCombobox';
+import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
+import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
 import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
 import type { Customer } from '../../types/crm';
@@ -37,6 +43,8 @@ import type { ARInvoiceLineCreate } from '../../services/salesApi';
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
 const lineSchema = z.object({
+  // Set only in from-Delivery mode — the source Delivery line UUID required by the backend.
+  deliveryLineId: z.string().nullable().optional(),
   itemId: z.string().min(1, 'Item ID required'),
   itemCode: z.string().min(1, 'Item code required'),
   itemName: z.string().min(1, 'Item name required'),
@@ -151,20 +159,6 @@ const Input = styled.input<{ $hasError?: boolean }>`
   }
 `;
 
-const Select = styled.select<{ $hasError?: boolean }>`
-  padding: 10px 12px;
-  border: 1px solid
-    ${({ $hasError, theme }) =>
-      $hasError ? theme.colors.error || '#ef4444' : theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary[500]};
-  }
-`;
 
 const Textarea = styled.textarea`
   padding: 10px 12px;
@@ -231,6 +225,12 @@ const LineInput = styled.input`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary[500]};
+  }
+  &:disabled,
+  &[readonly] {
+    background: ${({ theme }) => theme.colors.neutral[100]};
+    color: ${({ theme }) => theme.colors.textSecondary};
+    cursor: not-allowed;
   }
 `;
 
@@ -391,6 +391,7 @@ function formatAmount(value: number): string {
 }
 
 const EMPTY_LINE = {
+  deliveryLineId: null as string | null,
   itemId: '',
   itemCode: '',
   itemName: '',
@@ -429,6 +430,23 @@ export function ARInvoiceFormPage() {
   const { data: existingInvoice, isLoading: loadingInvoice } = useArInvoice(
     isEdit ? docId : undefined,
     isEdit ? orgId : undefined,
+  );
+
+  // Fetch source Delivery for from-Delivery mode (header + lines).
+  const { data: sourceDelivery, isLoading: loadingDelivery } = useDelivery(
+    isFromDelivery ? deliveryDocId : undefined,
+    isFromDelivery ? orgId : undefined,
+  );
+
+  // Fetch source SO (via Delivery.baseDocRef) so we can inherit pricing —
+  // Delivery lines themselves carry quantity + warehouse + cost only, not unitPrice/tax.
+  const sourceSoDocId =
+    isFromDelivery && sourceDelivery?.baseDocRef?.docType === 'SO'
+      ? sourceDelivery.baseDocRef.docId
+      : undefined;
+  const { data: sourceSo, isLoading: loadingSourceSo } = useSalesOrderV2(
+    sourceSoDocId,
+    sourceSoDocId ? orgId : undefined,
   );
 
   // Mutations
@@ -487,6 +505,7 @@ export function ARInvoiceFormPage() {
         journalMemo: existingInvoice.journalMemo ?? '',
         notes: existingInvoice.notes ?? '',
         lines: existingInvoice.lines.map((l) => ({
+          deliveryLineId: null,
           itemId: l.itemId,
           itemCode: l.itemCode,
           itemName: l.itemName,
@@ -503,11 +522,95 @@ export function ARInvoiceFormPage() {
     }
   }, [isEdit, existingInvoice, reset]);
 
+  // Pre-fill form in from-Delivery mode once the source Delivery (and its SO) load.
+  // Customer, company, item data + qty come from the Delivery; pricing/tax come from the SO.
+  useEffect(() => {
+    if (!isFromDelivery || !sourceDelivery) return;
+    // Wait for the SO too if we have a ref to chase — pricing depends on it.
+    if (sourceSoDocId && !sourceSo) return;
+
+    type SoLine = NonNullable<typeof sourceSo>['lines'][number];
+    const soLineByItemId = new Map<string, SoLine>();
+    if (sourceSo) {
+      for (const sl of sourceSo.lines) {
+        soLineByItemId.set(sl.itemId, sl);
+      }
+    }
+
+    reset({
+      companyCode: sourceDelivery.companyCode,
+      customerId: sourceDelivery.customerId,
+      customerName: sourceDelivery.customerName,
+      bpRefNo: sourceSo?.bpRefNo ?? '',
+      docDate: today(),
+      dateOfSupply: sourceDelivery.actualDeliveryDate,
+      invoiceDate: today(),
+      paymentTermsId: sourceSo?.paymentTermsId ?? null,
+      currency: sourceSo?.currency ?? 'AED',
+      exchangeRate: sourceSo?.exchangeRate ?? 1,
+      journalMemo: '',
+      notes: '',
+      lines: sourceDelivery.lines
+        .map((dl) => {
+          // open_invoice_qty = delivered − invoiced − credited − cancelled
+          // Default to what's *left* to invoice, not the full delivered amount —
+          // otherwise re-entering this form after a partial invoice would pre-fill
+          // a qty the backend will reject.
+          const openInvoiceQty = Math.max(
+            0,
+            Number(dl.quantity) -
+              Number(dl.invoicedQty ?? 0) -
+              Number((dl as { creditedQty?: number }).creditedQty ?? 0) -
+              Number(dl.cancelledQty ?? 0),
+          );
+          // Prefer the SO line that this DN line points back to; fall back to itemId match.
+          const soLineRef = dl.baseDocRef?.lineId ?? null;
+          const soLine =
+            (soLineRef && sourceSo?.lines.find((sl) => sl.lineId === soLineRef)) ||
+            soLineByItemId.get(dl.itemId) ||
+            null;
+          return {
+            deliveryLineId: dl.lineId,
+            itemId: dl.itemId,
+            itemCode: dl.itemCode,
+            itemName: dl.itemName,
+            description: dl.description ?? '',
+            quantity: openInvoiceQty,
+            uom: dl.uom,
+            unitPrice: soLine ? Number(soLine.unitPrice) : 0,
+            discountPercent: soLine ? Number(soLine.discountPercent) : 0,
+            taxCodeId: soLine?.taxCodeId ?? null,
+            warehouseId: dl.warehouseId ?? null,
+            costCenterId: dl.costCenterId ?? null,
+            _openInvoiceQty: openInvoiceQty,
+          };
+        })
+        // Skip lines with nothing left to invoice — they'd fail validation anyway.
+        .filter((l) => l._openInvoiceQty > 0)
+        .map(({ _openInvoiceQty: _drop, ...rest }) => {
+          void _drop;
+          return rest;
+        }),
+    });
+  }, [isFromDelivery, sourceDelivery, sourceSo, sourceSoDocId, reset]);
+
   // Field array for invoice lines
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'lines',
   });
+
+  // Exchange rate visibility
+  const baseCurrency = useTenantBaseCurrency();
+  const watchedCurrency = watch('currency');
+  const showExchangeRate = watchedCurrency !== baseCurrency;
+
+  // Reset exchangeRate to 1.0 when currency reverts to base.
+  useEffect(() => {
+    if (!showExchangeRate) {
+      setValue('exchangeRate', 1);
+    }
+  }, [showExchangeRate, setValue]);
 
   // Watch lines for computed totals
   const watchedLines = watch('lines');
@@ -584,11 +687,25 @@ export function ARInvoiceFormPage() {
         });
         navigate(`/sales/ar-invoices/${result.docEntry}`);
       } else if (isFromDelivery && deliveryDocId) {
-        // For from-delivery mode: the backend handles the copy.
-        // We send header overrides + line references.
-        // Since we don't have the delivery line IDs available on the form
-        // in this initial task, we call create-from-delivery with the
-        // header data. The user will fill in line details manually.
+        // Each line carries the source Delivery line UUID (stamped during the
+        // pre-fill effect). The backend inherits item/uom/warehouse from the
+        // Delivery line and applies the prices/tax we send here.
+        const fromDeliveryLines = data.lines.map((l) => {
+          if (!l.deliveryLineId) {
+            throw new Error(
+              'Cannot submit a line without a source Delivery line reference. ' +
+                'Reload the page or recreate the invoice from the Delivery.',
+            );
+          }
+          return {
+            deliveryLineId: l.deliveryLineId,
+            quantity: l.quantity,
+            unitPrice: l.unitPrice,
+            discountPercent: l.discountPercent,
+            taxCodeId: l.taxCodeId || null,
+            costCenterId: l.costCenterId || null,
+          };
+        });
         const result = await fromDeliveryMutation.mutateAsync({
           deliveryDocId,
           data: {
@@ -602,18 +719,7 @@ export function ARInvoiceFormPage() {
             exchangeRate: data.exchangeRate,
             journalMemo: data.journalMemo || null,
             notes: data.notes || null,
-            lines: lines.map((l) => ({
-              // For direct-line from delivery we need deliveryLineId.
-              // This path is exercised when the user has pre-populated lines
-              // from a prior Delivery fetch. In the base T-200.0 flow,
-              // the form shows the header and the user confirms.
-              deliveryLineId: l.baseDocRef?.lineId ?? '',
-              quantity: l.quantity,
-              unitPrice: l.unitPrice,
-              discountPercent: l.discountPercent,
-              taxCodeId: l.taxCodeId || null,
-              costCenterId: l.costCenterId || null,
-            })),
+            lines: fromDeliveryLines,
           },
           orgId,
         });
@@ -658,6 +764,18 @@ export function ARInvoiceFormPage() {
     );
   }
 
+  // In from-Delivery mode, wait for the Delivery (and its source SO if linked)
+  // before painting — otherwise the form would briefly show blank fields and
+  // the user would think nothing was inherited.
+  if (isFromDelivery && (loadingDelivery || (sourceSoDocId && loadingSourceSo))) {
+    return (
+      <Container>
+        <BackLink onClick={() => navigate('/sales/ar-invoices')}>← AR Invoices</BackLink>
+        <PageTitle>Loading source Delivery…</PageTitle>
+      </Container>
+    );
+  }
+
   const watchedCustomerId = watch('customerId');
   const watchedCustomerName = watch('customerName');
 
@@ -668,11 +786,12 @@ export function ARInvoiceFormPage() {
       </BackLink>
       <PageTitle>{pageTitle}</PageTitle>
 
-      {isFromDelivery && (
+      {isFromDelivery && sourceDelivery && (
         <InfoBanner>
-          Creating AR Invoice from Delivery <strong>{deliveryDocId}</strong>. The backend will
-          inherit customer and item data from the source Delivery. Review and confirm the header
-          details below, then click Save as Draft.
+          Creating AR Invoice from Delivery <strong>{sourceDelivery.docNumber}</strong>. Customer
+          and item lines are inherited from the Delivery; prices and tax codes come from the
+          source Sales Order. Adjust quantities (for partial invoicing) or pricing as needed,
+          then click Save as Draft.
         </InfoBanner>
       )}
 
@@ -688,6 +807,8 @@ export function ARInvoiceFormPage() {
               <Input
                 id="companyCode"
                 $hasError={Boolean(errors.companyCode)}
+                readOnly={isFromDelivery}
+                disabled={isFromDelivery}
                 {...register('companyCode')}
               />
               {errors.companyCode && (
@@ -707,7 +828,7 @@ export function ARInvoiceFormPage() {
                     onCustomerSelect={handleCustomerSelect}
                     onClear={handleCustomerClear}
                     error={errors.customerId?.message}
-                    disabled={isSubmitting}
+                    disabled={isFromDelivery || isSubmitting}
                   />
                 )}
               />
@@ -768,27 +889,35 @@ export function ARInvoiceFormPage() {
 
             <FieldGroup>
               <Label htmlFor="currency">Currency</Label>
-              <Select id="currency" {...register('currency')}>
-                <option value="AED">AED</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-              </Select>
+              <Controller
+                name="currency"
+                control={control}
+                render={({ field }) => (
+                  <CurrencyCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isSubmitting}
+                    hasError={Boolean(errors.currency)}
+                  />
+                )}
+              />
             </FieldGroup>
 
-            <FieldGroup>
-              <Label htmlFor="exchangeRate">Exchange Rate</Label>
-              <Input
-                id="exchangeRate"
-                type="number"
-                step="0.0001"
-                $hasError={Boolean(errors.exchangeRate)}
-                {...register('exchangeRate')}
-              />
-              {errors.exchangeRate && (
-                <ErrorText>{errors.exchangeRate.message}</ErrorText>
-              )}
-            </FieldGroup>
+            {showExchangeRate && (
+              <FieldGroup>
+                <Label htmlFor="exchangeRate">Exchange Rate</Label>
+                <Input
+                  id="exchangeRate"
+                  type="number"
+                  step="0.0001"
+                  $hasError={Boolean(errors.exchangeRate)}
+                  {...register('exchangeRate')}
+                />
+                {errors.exchangeRate && (
+                  <ErrorText>{errors.exchangeRate.message}</ErrorText>
+                )}
+              </FieldGroup>
+            )}
 
             <FieldGroup style={{ gridColumn: 'span 3' }}>
               <Label htmlFor="journalMemo">Journal Memo</Label>
@@ -828,7 +957,7 @@ export function ARInvoiceFormPage() {
             <LinesTable>
               <thead>
                 <tr>
-                  <LTh style={{ minWidth: '80px' }}>Item Code</LTh>
+                  <LTh style={{ minWidth: '200px' }}>Item</LTh>
                   <LTh style={{ minWidth: '160px' }}>Description</LTh>
                   <LThRight style={{ minWidth: '80px' }}>Qty</LThRight>
                   <LTh style={{ minWidth: '60px' }}>UoM</LTh>
@@ -858,22 +987,37 @@ export function ARInvoiceFormPage() {
                   return (
                     <tr key={field.id}>
                       <LTd>
-                        <LineInput
-                          {...register(`lines.${index}.itemCode`)}
-                          placeholder="Code"
-                          aria-label={`Line ${index + 1} item code`}
+                        <Controller
+                          name={`lines.${index}.itemId`}
+                          control={control}
+                          render={({ field }) => (
+                            <SalesItemCombobox
+                              valueItemId={field.value ?? ''}
+                              valueItemCode={watch(`lines.${index}.itemCode`) ?? ''}
+                              onChange={(selection: SalesItemSelection | null) => {
+                                if (selection) {
+                                  field.onChange(selection.itemId);
+                                  setValue(`lines.${index}.itemCode`, selection.itemCode, { shouldValidate: true });
+                                  setValue(`lines.${index}.itemName`, selection.itemName, { shouldValidate: true });
+                                  if (selection.salesTaxCode) {
+                                    setValue(`lines.${index}.taxCodeId`, selection.salesTaxCode);
+                                  }
+                                } else {
+                                  field.onChange('');
+                                  setValue(`lines.${index}.itemCode`, '', { shouldValidate: true });
+                                  setValue(`lines.${index}.itemName`, '', { shouldValidate: true });
+                                  setValue(`lines.${index}.taxCodeId`, null);
+                                }
+                              }}
+                              hasError={Boolean(errors.lines?.[index]?.itemId || errors.lines?.[index]?.itemCode)}
+                              disabled={isFromDelivery || isSubmitting}
+                              placeholder="Search item…"
+                              describedBy={`line-${index}-item-error`}
+                            />
+                          )}
                         />
-                        {/* Hidden itemId and itemName — fill alongside itemCode */}
-                        <input
-                          type="hidden"
-                          {...register(`lines.${index}.itemId`)}
-                        />
-                        <LineInput
-                          {...register(`lines.${index}.itemName`)}
-                          placeholder="Name"
-                          style={{ marginTop: '4px' }}
-                          aria-label={`Line ${index + 1} item name`}
-                        />
+                        <input type="hidden" {...register(`lines.${index}.itemCode`)} />
+                        <input type="hidden" {...register(`lines.${index}.itemName`)} />
                       </LTd>
                       <LTd>
                         <LineInput
@@ -895,6 +1039,8 @@ export function ARInvoiceFormPage() {
                         <LineInput
                           {...register(`lines.${index}.uom`)}
                           placeholder="EA"
+                          readOnly={isFromDelivery}
+                          disabled={isFromDelivery}
                           aria-label={`Line ${index + 1} unit of measure`}
                         />
                       </LTd>
@@ -967,14 +1113,16 @@ export function ARInvoiceFormPage() {
             </LinesTable>
           </div>
 
-          <AddLineButton
-            type="button"
-            onClick={() => append({ ...EMPTY_LINE })}
-            aria-label="Add invoice line"
-          >
-            <Plus size={15} />
-            Add Line
-          </AddLineButton>
+          {!isFromDelivery && (
+            <AddLineButton
+              type="button"
+              onClick={() => append({ ...EMPTY_LINE })}
+              aria-label="Add invoice line"
+            >
+              <Plus size={15} />
+              Add Line
+            </AddLineButton>
+          )}
 
           <TotalsCard>
             <TotalsRow>
