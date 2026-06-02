@@ -331,15 +331,46 @@ def _doc_to_response(raw: Dict[str, Any]) -> DeliveryResponse:
     )
 
 
+def _compute_open_invoice_qty(raw: Dict[str, Any]) -> Decimal:
+    """
+    Compute the aggregate open-to-invoice quantity across all lines of a Delivery.
+
+    open_invoice_qty per line = quantity - invoicedQty - creditedQty - cancelledQty
+    The header-level value is the sum across all lines.
+
+    Args:
+        raw: Raw Delivery document (must include the embedded lines array).
+
+    Returns:
+        Total open-to-invoice quantity as Decimal (floor of 0 — never negative).
+    """
+    total = Decimal("0")
+    for ln in raw.get("lines", []):
+        qty = Decimal(str(ln.get("quantity", 0)))
+        invoiced = Decimal(str(ln.get("invoicedQty", 0)))
+        credited = Decimal(str(ln.get("creditedQty", 0)))
+        cancelled = Decimal(str(ln.get("cancelledQty", 0)))
+        # Reason: clamp per-line contribution at 0 to avoid over-crediting
+        # scenarios from surfacing as negative totals.
+        line_open = qty - invoiced - credited - cancelled
+        if line_open > Decimal("0"):
+            total += line_open
+    return total
+
+
 def _doc_to_list_item(raw: Dict[str, Any]) -> DeliveryListItem:
     """
     Convert a raw MongoDB Delivery document to slim DeliveryListItem.
 
+    The raw document MUST include the embedded lines array so that
+    open_invoice_qty can be computed.  The lines array is NOT included in
+    the returned model (it is stripped at the caller level).
+
     Args:
-        raw: Partial document from a list projection query.
+        raw: Full document from a list query (lines array present).
 
     Returns:
-        DeliveryListItem instance.
+        DeliveryListItem instance with open_invoice_qty computed.
     """
 
     def _norm_ref(ref: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -352,6 +383,8 @@ def _doc_to_list_item(raw: Dict[str, Any]) -> DeliveryListItem:
             "line_id": ref.get("line_id") or ref.get("lineId"),
         }
 
+    open_invoice_qty = _compute_open_invoice_qty(raw)
+
     return DeliveryListItem(
         doc_entry=raw["docEntry"],
         doc_number=raw["docNumber"],
@@ -363,6 +396,7 @@ def _doc_to_list_item(raw: Dict[str, Any]) -> DeliveryListItem:
         status=DocumentStatus(raw["status"]),
         total_cogs=Decimal(str(raw.get("totalCogs", 0))),
         base_doc_ref=_norm_ref(raw.get("baseDocRef")),
+        open_invoice_qty=open_invoice_qty,
         created_at=raw["createdAt"],
         updated_at=raw["updatedAt"],
     )
@@ -738,15 +772,16 @@ async def list_deliveries(
     if date_range:
         query["docDate"] = date_range
 
-    # Reason: project out lines for list queries to keep payloads lean.
-    projection = {"lines": 0}
-
+    # Reason: lines are fetched so that open_invoice_qty can be computed per
+    # document (sum of quantity - invoicedQty - creditedQty - cancelledQty
+    # across all lines).  The lines array is NOT passed through to the API
+    # response — DeliveryListItem omits it, keeping list payloads lean.
     total = await db[_DN_COL].count_documents(query)
     skip = (page - 1) * size
 
     cursor = (
         db[_DN_COL]
-        .find(query, projection)
+        .find(query)
         .sort("docDate", -1)
         .skip(skip)
         .limit(size)

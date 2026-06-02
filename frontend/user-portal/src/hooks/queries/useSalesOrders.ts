@@ -86,7 +86,7 @@ export function useCreateSalesOrderV2() {
     mutationFn: ({ data, orgId }: { data: SalesOrderCreate; orgId: string }) =>
       salesApi.createSalesOrder(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: soQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: soQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -112,9 +112,9 @@ export function useCreateSalesOrderFromQuote() {
       orgId: string;
     }) => salesApi.createSalesOrderFromQuote(quoteDocEntry, data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: soQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: soQueryKeys.all(), refetchType: 'all' });
       // Invalidate quotes list because the source quote may have auto-closed
-      qc.invalidateQueries({ queryKey: ['sales', 'quotes'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'quotes'], refetchType: 'all' });
     },
   });
 }
@@ -138,7 +138,7 @@ export function useUpdateSalesOrderV2() {
       orgId: string;
     }) => salesApi.updateSalesOrder(docId, data, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: soQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: soQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(soQueryKeys.detail(result.docEntry), result);
     },
   });
@@ -154,7 +154,7 @@ export function useDeleteSalesOrderV2() {
     mutationFn: ({ docId, orgId }: { docId: string; orgId: string }) =>
       salesApi.deleteSalesOrder(docId, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: soQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: soQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -184,7 +184,7 @@ export function useTransitionSalesOrderV2() {
       orgId: string;
     }) => salesApi.transitionSalesOrder(docId, transition, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: soQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: soQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(soQueryKeys.detail(result.docEntry), result);
     },
   });

@@ -240,6 +240,63 @@ const ReturnedBadge = styled.span`
   margin-left: 6px;
 `;
 
+/**
+ * Badge for the per-line Invoiced Qty column.
+ * Zero → muted grey dash; any positive → neutral display.
+ */
+const InvoicedBadge = styled.span<{ $zero: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: ${({ $zero }) => ($zero ? 'transparent' : '#f0f4ff')};
+  color: ${({ $zero }) => ($zero ? '#d1d5db' : '#3730a3')};
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: ${({ $zero }) => ($zero ? 400 : 600)};
+  font-family: monospace;
+`;
+
+/**
+ * Badge for the per-line Open to Invoice column.
+ * full open (= delivered qty) → green; partial → amber; zero → muted grey.
+ */
+const OpenInvoiceBadge = styled.span<{ $state: 'full' | 'partial' | 'zero' }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: ${({ $state }) => {
+    switch ($state) {
+      case 'full':    return '#d1fae5';
+      case 'partial': return '#fef3c7';
+      case 'zero':    return 'transparent';
+    }
+  }};
+  color: ${({ $state }) => {
+    switch ($state) {
+      case 'full':    return '#065f46';
+      case 'partial': return '#92400e';
+      case 'zero':    return '#d1d5db';
+    }
+  }};
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: ${({ $state }) => ($state === 'zero' ? 400 : 600)};
+  font-family: monospace;
+`;
+
+/** Muted chip shown in the action bar when all lines are fully invoiced. */
+const FullyInvoicedChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+`;
+
 const DocChainItem = styled.button`
   display: inline-flex;
   align-items: center;
@@ -426,6 +483,17 @@ export function DeliveryDetailPage() {
   const totalLines = dn.lines.length;
   const totalQty = dn.lines.reduce((sum, l) => sum + Number(l.quantity), 0);
 
+  /**
+   * F-2: A delivery is "fully invoiced" when every line has open_invoice_qty <= 0.
+   * open_invoice_qty = max(0, quantity − invoicedQty − creditedQty − cancelledQty)
+   */
+  const isFullyInvoiced =
+    dn.lines.length > 0 &&
+    dn.lines.every((l) => {
+      const open = Number(l.quantity) - Number(l.invoicedQty) - Number(l.creditedQty) - Number(l.cancelledQty);
+      return open <= 0;
+    });
+
   return (
     <Container>
       <BackLink onClick={() => navigate('/sales/deliveries')}>← Delivery Notes</BackLink>
@@ -453,10 +521,15 @@ export function DeliveryDetailPage() {
 
           {dn.status === 'open' && (
             <>
-              <PrimaryButton onClick={() => navigate(`/sales/ar-invoices/from-delivery/${dn.docEntry}`)}>
-                <FileText size={15} />
-                Generate AR Invoice
-              </PrimaryButton>
+              {/* F-2: hide "Generate AR Invoice" when all lines are fully invoiced */}
+              {isFullyInvoiced ? (
+                <FullyInvoicedChip>Fully Invoiced</FullyInvoicedChip>
+              ) : (
+                <PrimaryButton onClick={() => navigate(`/sales/ar-invoices/from-delivery/${dn.docEntry}`)}>
+                  <FileText size={15} />
+                  Generate AR Invoice
+                </PrimaryButton>
+              )}
               <SecondaryButton
                 onClick={() => navigate(`/sales/return-requests/from-delivery/${dn.docEntry}`)}
               >
@@ -550,6 +623,9 @@ export function DeliveryDetailPage() {
                 <Th>Item Name</Th>
                 <Th>Description</Th>
                 <Th style={{ textAlign: 'right' }}>Qty</Th>
+                {/* F-1: Invoiced + Open to Invoice columns */}
+                <Th style={{ textAlign: 'right' }}>Invoiced</Th>
+                <Th style={{ textAlign: 'right' }}>Open to Invoice</Th>
                 <Th>UoM</Th>
                 <Th>Warehouse</Th>
                 <Th style={{ textAlign: 'right' }}>Returned</Th>
@@ -561,6 +637,18 @@ export function DeliveryDetailPage() {
               {dn.lines.map((line: DeliveryLine) => {
                 const returnedQty = Number(line.returnedQty ?? 0);
                 const qty = Number(line.quantity);
+                // F-1: per-line invoiced + open-to-invoice computation
+                const invoicedQty = Number(line.invoicedQty);
+                const openQty = Math.max(
+                  0,
+                  qty - invoicedQty - Number(line.creditedQty) - Number(line.cancelledQty),
+                );
+                const openState: 'full' | 'partial' | 'zero' =
+                  openQty <= 0
+                    ? 'zero'
+                    : openQty >= qty
+                    ? 'full'
+                    : 'partial';
                 return (
                   <tr key={line.lineId}>
                     <Td>{line.lineNumber}</Td>
@@ -573,6 +661,18 @@ export function DeliveryDetailPage() {
                     <Td style={{ color: '#6b7280', fontSize: 13 }}>{line.description}</Td>
                     <Td style={{ textAlign: 'right' }}>
                       {qty.toLocaleString('en-AE', { maximumFractionDigits: 3 })}
+                    </Td>
+                    {/* F-1: Invoiced column */}
+                    <Td style={{ textAlign: 'right' }}>
+                      <InvoicedBadge $zero={invoicedQty === 0}>
+                        {invoicedQty === 0 ? '—' : invoicedQty.toFixed(3)}
+                      </InvoicedBadge>
+                    </Td>
+                    {/* F-1: Open to Invoice column */}
+                    <Td style={{ textAlign: 'right' }}>
+                      <OpenInvoiceBadge $state={openState}>
+                        {openState === 'zero' ? '—' : openQty.toFixed(3)}
+                      </OpenInvoiceBadge>
                     </Td>
                     <Td>{line.uom}</Td>
                     <Td style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>

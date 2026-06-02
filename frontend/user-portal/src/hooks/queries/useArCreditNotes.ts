@@ -100,9 +100,9 @@ export function useCreateArCreditNoteFromRTN() {
       orgId: string;
     }) => salesApi.createArCreditNoteFromRTN(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: arcQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: arcQueryKeys.all(), refetchType: 'all' });
       // Source RTN's consumedQty ticked up — invalidate RTN cache
-      qc.invalidateQueries({ queryKey: ['sales', 'returns-v2'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'returns-v2'], refetchType: 'all' });
     },
   });
 }
@@ -126,9 +126,9 @@ export function useCreateArCreditNoteFromInvoice() {
       orgId: string;
     }) => salesApi.createArCreditNoteFromInvoice(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: arcQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: arcQueryKeys.all(), refetchType: 'all' });
       // Source ARI's creditedAmount/openAmount may update — invalidate ARI cache
-      qc.invalidateQueries({ queryKey: ['sales', 'ar-invoices'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'ar-invoices'], refetchType: 'all' });
     },
   });
 }
@@ -147,7 +147,7 @@ export function useCreateArCreditNote() {
       orgId: string;
     }) => salesApi.createArCreditNote(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: arcQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: arcQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -171,7 +171,7 @@ export function useUpdateArCreditNote() {
       orgId: string;
     }) => salesApi.updateArCreditNote(docId, data, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: arcQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: arcQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(arcQueryKeys.detail(result.docEntry), result);
     },
   });
@@ -186,7 +186,7 @@ export function useDeleteArCreditNote() {
     mutationFn: ({ docId, orgId }: { docId: string; orgId: string }) =>
       salesApi.deleteArCreditNote(docId, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: arcQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: arcQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -217,12 +217,12 @@ export function useTransitionArCreditNote() {
       orgId: string;
     }) => salesApi.transitionArCreditNote(docId, transition, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: arcQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: arcQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(arcQueryKeys.detail(result.docEntry), result);
       // Posting affects AR Invoice creditedAmount and openAmount
-      qc.invalidateQueries({ queryKey: ['sales', 'ar-invoices'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'ar-invoices'], refetchType: 'all' });
       // If this ARC was from a RTN, RTN state may update too
-      qc.invalidateQueries({ queryKey: ['sales', 'returns-v2'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'returns-v2'], refetchType: 'all' });
     },
   });
 }

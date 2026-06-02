@@ -751,6 +751,12 @@ export interface DeliveryListItem {
   actualDeliveryDate: string;
   status: DeliveryStatus;
   totalCogs: number;
+  /**
+   * T-201.5 F-3: Sum of (quantity − invoicedQty − creditedQty − cancelledQty)
+   * across all lines of this Delivery, floored at 0. Provided by the backend.
+   * Exposed as `openInvoiceQty` on the DeliveryListItem response.
+   */
+  openInvoiceQty: number;
   baseDocRef: DocumentLinkRef | null;
   createdAt: string;
   updatedAt: string;

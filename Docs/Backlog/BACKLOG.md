@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-06-01
-> **Tasks:** 0 active · 2 ready · 2 blocked · 0 completed (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
+> **Tasks:** 8 active · 2 ready · 2 blocked · 0 completed (T-201.3 moved to ARCHIVE.md; T-201.2 moved to ARCHIVE.md) — T-201.4/.5/.6/.7 awaiting verify+commit; T-201.8/.9/.10/.11 filed 2026-06-01 as the SAP B1 chain-via-SO epic; T-600 filed 2026-06-01 as Wave 6 (standalone-mode hardening + external accounting export) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
 
 ---
 
@@ -91,6 +91,270 @@
 
 ---
 
+### T-201.8 | AR Invoice direct-create: `isStock` flag + gating (foundation for SO-chain epic) — Wave 3
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Assigned:** — · **Started:** —
+- **Depends on:** T-201.7 ✅ (chain cleanup) — must verify+commit first
+- **Blocks:** T-201.9, T-201.10, T-201.11
+- **Description:** Today `create_ar_invoice` (direct-create, no Delivery) emits only `sales_invoice_posted` —
+  no inventory movement, no COGS event. Direct-invoicing a stock item creates a real accounting
+  asymmetry (revenue without COGS). Fix by gating direct-create on a new `isStock: boolean` flag
+  on the sale-item master. Stock items must flow through DN; service/fee items can be invoiced direct.
+  This task is the foundation for the SAP B1 chain-via-SO pattern (T-201.9 → T-201.11).
+- **Steps:**
+  1. **Backend schema** — add `is_stock: bool = True` to sale_items master + Pydantic schema.
+     Default = True (conservative; existing items behave as today).
+  2. **Backend migration** — Alembic/Mongo migration script to set `isStock=true` on all
+     existing sale_items records. Provide an optional heuristic backfill: items whose name
+     matches `(?i)(fee|charge|delivery|freight|service|rental|deposit|consulting)` get
+     `isStock=false`. Run as a one-off; admin can audit + override.
+  3. **Backend validation** — in `create_ar_invoice` (direct path, line 930):
+     for each line, look up the item's `isStock`. If any line has `isStock=true`,
+     raise ValueError: "Item 'XYZ' is a stock item and cannot be invoiced directly.
+     Create a Delivery Note first, then invoice from the Delivery."
+  4. **Backend validation** — in `update_ar_invoice` when payload.lines changes AND the ARI
+     has no header baseDocRef (direct-create): same per-line `isStock` check.
+  5. **Backend validation** — in `transition_status DRAFT → OPEN` for direct-create ARIs:
+     re-validate `isStock` (catches the edge case where admin flipped the flag mid-DRAFT).
+  6. **Frontend SalesItemCombobox** — add prop `filterIsStock?: false` that filters
+     the typeahead query to non-stock items only when set.
+  7. **Frontend ARInvoiceFormPage** — in direct-create mode (no `deliveryDocId` URL param),
+     pass `filterIsStock={false}` to the SalesItemCombobox. Add contextual help text near
+     the Lines section: *"Only service/fee items can be invoiced directly. To bill for
+     delivered goods, use the Generate AR Invoice button on the source Delivery."*
+  8. **Frontend SalesItemsPage admin** — add "Type" column showing **Stock** / **Service**
+     badge. Add `isStock` toggle in the item edit modal with help text:
+     *"Stock items decrement inventory and post COGS when delivered. Turn off for services,
+     fees, freight, and other non-physical charges."*
+  9. **Mirror in symmetric flows (if scope allows, else defer to a sub-task)** —
+     same gating in `create_ar_credit_note` (direct, no Return) and `create_return_request`
+     (direct, no Delivery).
+  10. **Tests:**
+      - Direct-create with only stock items → 400 + clear error
+      - Direct-create with only service items → success
+      - Direct-create mixed → 400 (rejected wholesale)
+      - From-Delivery → unchanged behaviour (no isStock check; already validated at DN-time)
+      - Update DRAFT direct-create with a stock item → 400
+      - Transition DRAFT → OPEN after admin flipped a service item to stock → 400
+      - Frontend: SalesItemCombobox `filterIsStock=false` excludes stock items
+  11. Verify with Playwright MCP. Verify via mongosh that migration set defaults correctly.
+- **Notes:**
+  - Decided 2026-06-01 with Viet Anh: ship Option A (item-type gating).
+  - Way 2 (SO-chain for service items) is the follow-up epic (T-201.9 → T-201.11).
+  - Honest downside: admin must manually classify items once (one-time data setup cost,
+    mitigated by heuristic backfill).
+  - **CRITICAL for agent dispatch:** do not run git commit/push. Parent session handles commits.
+
+---
+
+### T-201.9 | SO service-line tracking + from-SO AR Invoice endpoint (SAP B1 chain-via-SO) — Wave 3
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** — · **Started:** —
+- **Depends on:** T-201.8 (isStock flag)
+- **Blocks:** T-201.10, T-201.11
+- **Description:** Build the SAP B1 / NetSuite pattern: every billable event has an SO root.
+  Service lines on an SO are invoiced directly from the SO (no DN). Mixed SOs split: stock
+  lines flow through DN → AR Invoice (from-DN); service lines flow SO → AR Invoice (from-SO).
+  Service-only SOs (late fees, retainers, ad-hoc charges) skip DN entirely.
+- **Steps:**
+  1. **SO state machine** — confirm/allow DRAFT → OPEN with all-service lines (no DN gate).
+  2. **SO line tracking** — add `invoicedQty` field on the SO line response model (already
+     present? confirm). Service-line `invoicedQty` is incremented when a from-SO AR Invoice
+     is created against it (parallel to how DN-line `invoicedQty` increments today).
+  3. **`create_delivery_from_so`** — when building the DN, filter out lines where the
+     underlying sale item is non-stock. Document this in the docstring.
+  4. **New endpoint:** `POST /api/v1/sales/ar-invoices/from-so/{soDocEntry}` —
+     mirror of `/from-delivery/{deliveryDocEntry}`. Validates that requested lines are
+     service-only (else direct user to the DN flow). Increments SO line `invoicedQty`.
+     Sets ARI header `baseDocRef = {docType: "SO", docId: soDocEntry, ...}` and per-line
+     `baseDocRef = {docType: "SO", docId: soDocEntry, lineId: soLineId}`.
+  5. **Auto-close on SO** — apply the same logic as T-201.5 to the SO: when every SO line
+     (stock + service) has `open_invoice_qty == 0`, auto-transition SO to CLOSED.
+     Audit action: `auto_close_on_full_invoice` (reuse from T-201.5 by parameterizing the
+     helper to accept a generic doc collection).
+  6. **Counter reconciliation on update/delete/cancel** — apply T-201.6 logic to from-SO
+     AR Invoices: edit DRAFT line qty reconciles SO line `invoicedQty`; delete releases;
+     `OPEN → CANCELLED` releases. Symmetric auto-reopen.
+  7. **Document-chain cleanup** — apply T-201.7 logic to from-SO AR Invoices: `$pull`
+     dangling refs from SO `targetDocRefs` (header + per-line) on delete + update.
+  8. **Tests:** comprehensive — mirror the test_delivery_invoice_visibility.py suite for
+     SO scenarios. Service-only SO end-to-end. Mixed SO: stock through DN, service direct.
+     Multi-line, partial invoicing, edit, delete, cancel.
+  9. **Important constraint:** stock lines on a mixed SO must still be unreachable from the
+     from-SO endpoint (only DN can invoice them). Test this explicitly.
+- **Notes:**
+  - This is the larger half of the epic. ~250-350 lines of code + ~400 lines of tests.
+  - Reuse helpers from T-201.5/.6/.7 where possible (`_is_fully_invoiced`, `_write_audit`,
+    `_TOLERANCE`). Consider extracting into a generic `doc_chain_reconciler` module.
+  - **CRITICAL for agent dispatch:** do not run git commit/push.
+
+---
+
+### T-201.10 | Frontend: SO form mode-aware + SO detail service-invoice flow — Wave 3
+- **Category:** Frontend · **Priority:** P1
+- **Assigned:** — · **Started:** —
+- **Depends on:** T-201.9
+- **Blocks:** T-201.11
+- **Description:** Wire the SO-chain pattern into the UI: SO form adapts to line type mix,
+  SO detail surfaces the "Create Service Invoice" action, AR Invoice form gains a
+  `from-so` mode.
+- **Steps:**
+  1. **`SalesOrderFormPage`** — detect line-type mix:
+     - When all picked items are non-stock → "service-only mode": hide `deliveryDate`,
+       warehouse fields, etc. Form title hint: "Service-Only Sales Order".
+     - When mixed → tag each line visually with **[Stock]** / **[Service]** badge.
+     - Stock-only → existing form unchanged.
+  2. **`SalesOrderDetailPage`** — add "Generate Service Invoice" button when SO has
+     unbilled service lines (computed: any line where `item.isStock=false` AND
+     `line.invoicedQty < line.quantity`). Button navigates to
+     `/sales/ar-invoices/from-so/{soDocEntry}`.
+  3. **`SalesOrderDetailPage`** — Lines table:
+     - For service lines: show **Invoiced** + **Open to Invoice** columns (like DN detail).
+     - For stock lines: show **Delivered** + **Invoiced** (existing).
+     - Mixed table: both column sets visible; per-row rendering depends on item type.
+  4. **`ARInvoiceFormPage`** — add `from-so` mode (third mode alongside `direct` + `from-delivery`):
+     - URL param `:soDocEntry` triggers it
+     - Pre-fill: customer from SO, lines from SO service-lines, prices from SO, qty defaults
+       to `open_invoice_qty` per line
+     - Customer locked (like from-Delivery)
+     - Item picker disabled (like from-Delivery)
+     - Submit calls the new from-SO endpoint
+  5. **Routing** — add `/sales/ar-invoices/from-so/:soDocEntry` to the router.
+  6. **DeliveriesPage** — no changes needed (service items never appear on DNs).
+  7. **`SalesOrdersPage`** — add Service-only filter chip (analogous to T-201.5's
+     "Open to Invoice" chip on Deliveries). Add per-row badge for `service_open_invoice_qty`.
+  8. **Tests:** TypeScript clean. Manual hand-testing checklist for the next session.
+- **Notes:**
+  - Reuse the existing `SalesItemCombobox` with `filterIsStock` prop (from T-201.8).
+  - Reuse the existing badge/chip styled components from T-201.5's DN detail work.
+  - **CRITICAL for agent dispatch:** do not run git commit/push.
+
+---
+
+### T-201.11 | (Optional polish) Quick Service Charge shortcut on customer detail — Wave 3
+- **Category:** Frontend · **Priority:** P2
+- **Assigned:** — · **Started:** —
+- **Depends on:** T-201.10
+- **Blocks:** —
+- **Description:** UX shortcut for frequent ad-hoc service charges (late fees, surcharges).
+  Streamlined modal: pick fee item + qty + price → creates service-only SO + posts it +
+  creates AR Invoice + posts it, all behind one button. 3 clicks vs 6.
+- **Steps:**
+  1. Add "Quick Service Charge" button on `CustomerDetailPage`.
+  2. Build modal with item picker (`filterIsStock=false`), qty, price, optional notes.
+  3. On submit, sequentially call: `POST /sales/orders` (service-only SO) → transition to OPEN
+     → `POST /sales/ar-invoices/from-so/{soDocEntry}` (service AR Invoice) → transition to OPEN.
+  4. Show progress / handle partial failure (rollback or surface step that failed).
+  5. After success, navigate to the AR Invoice detail page or show a success toast with
+     chain summary.
+- **Notes:**
+  - Defer this entirely if T-201.10 is fully sufficient for daily accountant work.
+  - **CRITICAL for agent dispatch:** do not run git commit/push.
+
+---
+
+### T-201.7 | Fix dangling targetDocRefs on Delivery when AR Invoice is hard-deleted — Wave 3
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** backend-dev-expert · **Started:** 2026-06-01
+- **Depends on:** T-201.6 ✅ (invoicedQty counter consistency)
+- **Blocks:** —
+- **Description:** When a DRAFT AR Invoice created from a Delivery is deleted, the
+  back-pointers on the Delivery are left in place:
+  - `Delivery.targetDocRefs` (header) still contains `{docType: "ARI", docId: <deleted>}`.
+  - `Delivery.lines[].targetDocRefs` still contain per-line entries for the deleted ARI.
+  UI symptom: Document Chain card still lists the deleted AR Invoice; clicking it returns 404.
+  Fix: in `delete_ar_invoice`, $pull ARI ref from header and from each affected DN line.
+  Also fix in `update_ar_invoice`: $pull old ARI line refs from DN lines and $push new ones
+  when lines are replaced wholesale.
+- **Steps:**
+  1. Fix `delete_ar_invoice` — $pull header + per-line targetDocRefs from DN ✅
+  2. Fix `update_ar_invoice` — reconcile per-line targetDocRefs on DN when lines replaced ✅
+  3. Add 5 new tests to `test_delivery_invoice_visibility.py` ✅
+  4. Run full sales test suite — pass/fail count reported honestly ✅
+- **Backend test results (2026-06-01):** 106/106 pass (35 visibility + 41 ar_invoices + 30 deliveries). Zero regressions.
+- **Progress:** Implementation and tests complete — pending user verification.
+  > Context (2026-06-01, backend-dev-expert): delete_ar_invoice now $pulls the ARI docEntry
+  > from Delivery.targetDocRefs (header, one call) and from each Delivery line's targetDocRefs
+  > (one $pull per affected DN line). update_ar_invoice now also reconciles per-line
+  > targetDocRefs: pulls old ARI line refs matching old line UUIDs, pushes new refs with new
+  > line UUIDs after the line replacement. The fake DB _apply_update_embedded helper in
+  > test_delivery_invoice_visibility.py was extended to handle $pull on both header arrays
+  > and on embedded lines.$.subfield arrays. 6 new tests added (1 sanity + 5 main: delete
+  > header chain, delete per-line chain, delete with multiple ARIs on same DN, update
+  > reconciles per-line chain, update + delete combination). Task stays Active for parent
+  > session to verify and commit.
+
+---
+
+### T-201.5 | AR Invoice ↔ Delivery visibility (B-1, B-2, B-3 backend + F-1, F-2, F-3 frontend) — Wave 3
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Assigned:** backend-dev-expert (backend) + frontend-dev-expert (frontend) · **Started:** 2026-06-01
+- **Depends on:** T-201.4 ✅ (AR Invoice from-Delivery pre-fill)
+- **Blocks:** —
+- **Description:** Backend (B-1, B-2, B-3) + Frontend (F-1, F-2, F-3) changes for AR Invoice ↔ Delivery visibility.
+  B-1: `DeliveryListItem` gains `open_invoice_qty` (camelCase: `openInvoiceQty`).
+  B-2: `create_ar_invoice_from_delivery` auto-closes DN when fully invoiced.
+  B-3: 19 new tests covering B-1 and B-2.
+  F-1: DeliveryDetailPage — add Invoiced + Open to Invoice per-line columns.
+  F-2: DeliveryDetailPage — hide "Generate AR Invoice" when fully invoiced.
+  F-3: DeliveriesPage — "Open to Invoice" filter chip + openInvoiceQty column.
+- **Backend steps:**
+  1. `DeliveryListItem` model — add `open_invoice_qty: Decimal` field ✅
+  2. `_compute_open_invoice_qty()` helper + updated `_doc_to_list_item()` ✅
+  3. `list_deliveries()` fetches docs with lines (no `{"lines": 0}` projection) ✅
+  4. `_dn_is_fully_invoiced()` + `_write_dn_audit()` helpers in ar_invoice_service.py ✅
+  5. Auto-close block in `create_ar_invoice_from_delivery()` ✅
+  6. `test_delivery_invoice_visibility.py` — 19 tests, 19 pass ✅
+- **Frontend steps:**
+  1. salesApi.ts — add `openInvoiceQty: number` to DeliveryListItem ✅
+  2. DeliveryDetailPage.tsx — new Invoiced + Open-to-Invoice columns in Lines table ✅
+  3. DeliveryDetailPage.tsx — hide Generate AR Invoice button + Fully Invoiced badge ✅
+  4. DeliveriesPage.tsx — Open to Invoice filter chip + openInvoiceQty column ✅
+  5. TypeScript check (`npx tsc --noEmit`) ✅
+- **Backend test results (2026-06-01):** 90/90 pass (30 test_deliveries + 41 test_ar_invoices + 19 test_delivery_invoice_visibility). Zero regressions.
+- **CodeMaps flag:** api-map.md should be regenerated (new `openInvoiceQty` field on Delivery list response). No new endpoint.
+- **Progress:** Backend B-1 ✅, B-2 ✅, B-3 ✅ — pending user verification and commit.
+  Frontend F-1 ✅, F-2 ✅, F-3 ✅ — pending user verification.
+  > Context (2026-06-01, backend-dev-expert): B-1 adds open_invoice_qty to DeliveryListItem
+  > (computed in Python from lines data fetched with each list doc). B-2 auto-closes the
+  > Delivery in create_ar_invoice_from_delivery when all lines fully invoiced — only if
+  > current status is OPEN; writes audit entry to deliveries_v2_audit. No outbox event.
+  > 19 tests all pass; 71 pre-existing tests still pass. Task stays Active for parent session.
+
+---
+
+### T-201.6 | Fix AR Invoice ↔ Delivery invoicedQty counter tracking consistency bugs — Wave 3
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** backend-dev-expert · **Started:** 2026-06-01
+- **Depends on:** T-201.5 ✅ (AR Invoice ↔ Delivery visibility + auto-close)
+- **Blocks:** —
+- **Description:** Two consistency bugs in the AR Invoice ↔ Delivery `invoicedQty` counter:
+  Bug 1: `update_ar_invoice` does not reconcile DN `invoicedQty` counters when lines change.
+  Bug 2: Delete and cancel paths do not re-open a previously auto-closed Delivery when the
+  decrement makes it no longer fully invoiced.
+- **Steps:**
+  1. Fix `update_ar_invoice` — reconcile DN line `invoicedQty` deltas on DRAFT line edit ✅
+  2. Fix `delete_ar_invoice` — reopen DN if CLOSED + no longer fully invoiced ✅
+  3. Fix `transition_status OPEN → CANCELLED` — reopen DN if CLOSED + no longer fully invoiced ✅
+  4. Add 10 new tests to `test_delivery_invoice_visibility.py` ✅
+  5. Run pytest ✅ — 100/100 pass (29 visibility + 41 ar_invoices + 30 deliveries). Zero regressions.
+- **Backend test results (2026-06-01):** 100/100 pass. Zero regressions.
+- **CodeMaps flag:** module-map.md should note new audit action `auto_reopen_on_invoice_release`; api-map.md unchanged (no new endpoints).
+- **Progress:** All fixes implemented and all tests pass — pending user verification.
+  > Context (2026-06-01, backend-dev-expert):
+  > Bug 1 fixed in `update_ar_invoice` (~line 1570): when payload.lines is not None AND the
+  > AR Invoice has a header baseDocRef pointing to a Delivery, the service now builds old/new
+  > DN-line totals, computes deltas, cap-checks positive deltas, applies $inc on each changed
+  > DN line, then runs the auto-close / auto-reopen symmetry check on the reloaded Delivery.
+  > Bug 2 fixed in both `delete_ar_invoice` and `transition_status OPEN→CANCELLED`: after the
+  > existing release loops, the code reloads the Delivery and — if it is CLOSED but no longer
+  > fully invoiced — transitions it to OPEN and writes `auto_reopen_on_invoice_release` audit.
+  > New helper `_dn_is_fully_invoiced` and `_write_dn_audit` (from T-201.5) are reused; no
+  > duplication. New audit action string: `auto_reopen_on_invoice_release` (no outbox event).
+  > Task stays Active for parent session to verify and commit.
+
+---
+
 ### T-500 | Wave 5 — Production Cost Accounting (bridge farm production to sales inventory)
 - **Category:** Cross-module (farm_manager · finance · sales) · **Priority:** P2
 - **Status:** 🟢 Ready (Wave 3 fully closed — T-200.11 ✅ completed 2026-05-31)
@@ -167,6 +431,94 @@
   - Wave 4 (Purchasing parity upgrade — Blanket Agreement, Quotation, Returns flow,
     Down Payment, Vendor Refund) is independent and can interleave with Wave 5
     phases as priorities allow.
+
+---
+
+### T-600 | Wave 6 — Standalone-mode hardening + external accounting export (run Sales/Purchasing without finance)
+- **Category:** Cross-module (sales · purchasing · core · finance-gating) · **Priority:** P2
+- **Status:** 🟢 Ready (post-Wave 5; can interleave with Wave 4)
+- **Assigned:** — · **Started:** —
+- **Depends on:** Wave 3 Phase 2 closeout (✅), Wave 5 (T-500) phases 1–3 ideally complete so inventory cost flow is correct in standalone too
+- **Blocks:** Shipping A64 as a non-finance product mode to customers who use Xero/QuickBooks/etc.
+- **Description:** Wave 0 already split deployment into ops-only vs full-stack via the
+  `organizations.modules.financeEnabled` flag + the `--profile finance` Docker split.
+  The architecture supports standalone, but several ops-side code paths still assume
+  the finance microservice is reachable, and there is no built-in way to push transactions
+  to an external accounting system. This wave hardens standalone mode and ships the
+  export feature so customers running Xero/QuickBooks/external can use Sales + Purchasing
+  as their operational system of record.
+- **Customer profiles this serves:**
+  - **Pattern 1 (dominant) — "I have Xero/QuickBooks already":** wants A64 for inventory +
+    document workflow + customer/vendor management, accounting lives elsewhere. Needs
+    transaction export.
+  - **Pattern 2 — "Small op, manual reconciliation in Excel":** logs in periodically,
+    grabs CSV exports of open AR / open AP / cash flow. Most exists; needs polish.
+  - **Pattern 3 — "Internal procurement / packing-house portal, no accounting":** today's
+    modules already serve this; just needs the finance-required code paths to degrade
+    gracefully.
+- **What works in ops-only today (verified):**
+  - Full document chain: Quote → SO → DN → AR Invoice → Customer Receipt (sales)
+  - Full document chain: PR → PO → GR → AP Invoice → Vendor Payment (purchasing)
+  - Inventory tracking (`inventory_movements`, `inventory_balances`) in ops Mongo
+  - Customer/vendor masters, BP Ref tracking, doc numbering, audit trail
+  - Tax codes, operational reports (Open SOs, Open POs, Inventory on Hand, Sales by Customer)
+- **Known gaps in current code (must be fixed for clean standalone):**
+  1. `_build_line_doc` in `ar_invoice_service.py` looks up `revenue_account_id` from finance
+     microservice's `sale_item_finance_ext` (MySQL). Today this would error out blocking
+     AR Invoice creation when `financeEnabled=false`. Needs: conditional lookup + `null`
+     fallback OR Mongo-side default revenue category string per item.
+  2. Same pattern for `customer_finance_ext.arControlAccountId` lookup in AR Invoice creation.
+  3. Credit limit checks on SO (`outstandingAr` source) — needs Mongo-based fallback
+     (sum of open AR Invoices per customer) when finance is off.
+  4. Finance Companies lookup for `companyCode` resolution (T-201.0) — standalone needs
+     either a replicated company list in ops Mongo OR accepts single-company-only.
+  5. `SalesItemsPage` displays Revenue Account + COGS Account columns from `sale_item_finance_ext`;
+     in standalone mode these should hide gracefully, replaced by free-text "Revenue Category"
+     / "Cost Category" strings stored on the ops-side `sale_items` document.
+  6. Posting Setup page (already correctly gated by `financeEnabled`) — verify it hides cleanly.
+  7. AR / AP aging reports — today these can be derived from Mongo but aren't formal
+     standalone reports; need Mongo-side aggregation endpoints.
+- **External accounting export feature (Pattern 1):**
+  - Minimum viable: CSV exports of AR Invoices (header + lines), AP Invoices, Customer Receipts,
+    Vendor Payments, with a per-tenant column-mapping config (which CSV column = which
+    Xero/QuickBooks field).
+  - Better: Universal Business Language (UBL) XML export for tax-compliant invoice
+    interchange (UAE eInvoicing alignment is a future bonus).
+  - Best: Direct API integration with Xero / QuickBooks / Zoho Books via OAuth + webhook
+    push on document post. Probably one integration per cycle; ship CSV first.
+  - Reconciliation tracking: each pushed document gets a `externalSyncStatus` field
+    (pending / pushed / failed) so the user can see which docs are in their external system.
+- **Steps (sequenced):**
+  1. **Phase A — Graceful degradation audit.** Walk every backend call that reaches into
+     finance MySQL or the finance microservice. For each, decide: skip-if-disabled,
+     Mongo-fallback, or fail-with-clear-error. Document in a new
+     `Docs/1-Main-Documentation/Standalone-Mode.md`. Estimate: 1 cycle.
+  2. **Phase B — Implement Mongo fallbacks.** AR Invoice creation works with
+     `financeEnabled=false`; credit checks fall back to Mongo aggregation; SalesItemsPage
+     swaps the finance columns for ops-side strings. Estimate: 2 cycles.
+  3. **Phase C — Standalone-mode UI polish.** Sidebar shows only relevant modules; doc
+     detail pages hide finance-specific sections (JE preview, posted GL refs); item form
+     swaps comboboxes for free-text. Estimate: 1 cycle.
+  4. **Phase D — Mongo-based aging reports.** AR Aging (Current / 30 / 60 / 90+ buckets by
+     customer); AP Aging (same shape by vendor); accessible from a new "Reports" section
+     under each module. Estimate: 1 cycle.
+  5. **Phase E — CSV export endpoints.** Per-tenant column mapping config; downloads for
+     each of the 4 doc types; "Mark as Exported" workflow. Estimate: 1-2 cycles.
+  6. **Phase F — External system integrations (per integration; ship as a per-cycle
+     incremental feature).** Xero OAuth + push-on-post. Then QuickBooks. Then Zoho Books.
+     Each integration ~1-2 cycles. Skip until customer demand exists.
+  7. **Phase G — Deployment guide + documentation.** `Docs/1-Main-Documentation/Standalone-Mode.md`
+     covers tenant setup, what works, what doesn't, the export feature, integration setup,
+     limitations. Estimate: 0.5 cycle.
+- **Total estimate (Phases A-E):** ~5-6 task cycles for a polished, customer-shippable
+  standalone story. Phase F integrations add ~1-2 cycles each as demand surfaces.
+- **Notes:**
+  - User confirmed scope on 2026-06-01 after a discussion of the standalone story.
+  - Wave 6 can interleave with Wave 4 (Purchasing parity) and Wave 5 phases — they touch
+    different code surface, so parallelism is feasible if developer bandwidth allows.
+  - The architectural foundation already exists (Wave 0 split + `financeEnabled` flag);
+    this wave is **completing** rather than **introducing** the standalone story.
+  - **CRITICAL for agent dispatch:** do not run git commit/push.
 
 ---
 

@@ -106,9 +106,9 @@ export function useCreateReturnFromRR() {
       orgId: string;
     }) => salesApi.createReturnFromRR(rrDocEntry, data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rtnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rtnQueryKeys.all(), refetchType: 'all' });
       // Source RR's consumedQty ticked up — invalidate RR cache
-      qc.invalidateQueries({ queryKey: ['sales', 'return-requests'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'return-requests'], refetchType: 'all' });
     },
   });
 }
@@ -133,9 +133,9 @@ export function useCreateReturnFromDelivery() {
       orgId: string;
     }) => salesApi.createReturnFromDelivery(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rtnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rtnQueryKeys.all(), refetchType: 'all' });
       // Source DN's returnedQty may update — invalidate delivery cache
-      qc.invalidateQueries({ queryKey: ['sales', 'deliveries'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'deliveries'], refetchType: 'all' });
     },
   });
 }
@@ -155,7 +155,7 @@ export function useCreateReturn() {
       orgId: string;
     }) => salesApi.createReturn(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rtnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rtnQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -179,7 +179,7 @@ export function useUpdateReturn() {
       orgId: string;
     }) => salesApi.updateReturn(docId, data, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: rtnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rtnQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(rtnQueryKeys.detail(result.docEntry), result);
     },
   });
@@ -195,7 +195,7 @@ export function useDeleteReturn() {
     mutationFn: ({ docId, orgId }: { docId: string; orgId: string }) =>
       salesApi.deleteReturn(docId, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rtnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rtnQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -225,12 +225,12 @@ export function useTransitionReturn() {
       orgId: string;
     }) => salesApi.transitionReturn(docId, transition, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: rtnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rtnQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(rtnQueryKeys.detail(result.docEntry), result);
       // A posting also affects RR consumedQty
-      qc.invalidateQueries({ queryKey: ['sales', 'return-requests'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'return-requests'], refetchType: 'all' });
       // And DN returnedQty
-      qc.invalidateQueries({ queryKey: ['sales', 'deliveries'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'deliveries'], refetchType: 'all' });
     },
   });
 }

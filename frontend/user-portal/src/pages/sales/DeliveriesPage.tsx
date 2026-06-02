@@ -215,6 +215,42 @@ const StatusBadge = styled.span<{ $status: DeliveryStatus }>`
   }};
 `;
 
+/**
+ * F-3: Chip-style toggle for "Open to Invoice" filter.
+ * Uses the same transient-prop pattern as StatusChip to avoid DOM leakage.
+ */
+const FilterToggleChip = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 99px;
+  border: 1.5px solid ${({ $active }) => ($active ? '#6366f1' : 'transparent')};
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: ${({ $active }) => ($active ? '#e0e7ff' : '#f3f4f6')};
+  color: ${({ $active }) => ($active ? '#3730a3' : '#6b7280')};
+  &:hover { opacity: 0.85; }
+`;
+
+/**
+ * F-3: Badge for openInvoiceQty in the list row.
+ * Zero → muted grey dash; positive → coloured (amber for partial).
+ */
+const OpenInvoiceListBadge = styled.span<{ $zero: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: ${({ $zero }) => ($zero ? 'transparent' : '#fef3c7')};
+  color: ${({ $zero }) => ($zero ? '#d1d5db' : '#92400e')};
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: ${({ $zero }) => ($zero ? 400 : 600)};
+  font-family: monospace;
+`;
+
 const EmptyState = styled.div`
   text-align: center;
   padding: 64px 32px;
@@ -290,10 +326,26 @@ export function DeliveriesPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
+  /**
+   * F-3: "Open to Invoice" toggle.
+   * When true, passes status='open' to the API query so only deliveries
+   * with potentially invoiceable lines are returned.
+   * Mutually exclusive with the status chip — activating this chip resets
+   * the status chip to 'ALL' (otherwise the explicit status takes precedence).
+   */
+  const [openToInvoiceFilter, setOpenToInvoiceFilter] = useState(false);
+
+  // Derive the effective status for the API: explicit chip wins, else open-to-invoice gate
+  const effectiveStatus: DeliveryStatus | null =
+    statusFilter !== 'ALL'
+      ? statusFilter
+      : openToInvoiceFilter
+      ? 'open'
+      : null;
 
   const queryParams = {
     organizationId: orgId,
-    status: statusFilter === 'ALL' ? null : statusFilter,
+    status: effectiveStatus,
     dateFrom: dateFrom || null,
     dateTo: dateTo || null,
     page,
@@ -320,10 +372,12 @@ export function DeliveriesPage() {
     <Container>
       <Header>
         <Title>Delivery Notes</Title>
-        <PrimaryButton onClick={() => navigate('/sales/deliveries/new')}>
-          <Truck size={16} />
-          + New Delivery
-        </PrimaryButton>
+        {/* No standalone "+ New Delivery" button by design.
+            Deliveries must originate from a Sales Order to preserve the
+            doc chain audit trail and credit-limit gate. Open a Sales Order
+            and click "Create Delivery" on its detail page.
+            The /sales/deliveries/new route remains live for admin /
+            data-correction use via direct URL. */}
       </Header>
 
       <FilterRow>
@@ -342,6 +396,17 @@ export function DeliveriesPage() {
             </StatusChip>
           ))}
         </StatusChips>
+        {/* F-3: Open to Invoice toggle chip */}
+        <FilterToggleChip
+          $active={openToInvoiceFilter}
+          onClick={() => {
+            setOpenToInvoiceFilter((prev) => !prev);
+            setPage(1);
+          }}
+          title="Show only deliveries with open quantity still to be invoiced (status=Open)"
+        >
+          {openToInvoiceFilter ? '✓ ' : ''}Open to Invoice
+        </FilterToggleChip>
       </FilterRow>
 
       <FilterRow>
@@ -385,13 +450,15 @@ export function DeliveriesPage() {
                 <Th>Customer</Th>
                 <Th>Source SO</Th>
                 <Th>Status</Th>
+                {/* F-3: Open to Invoice qty column */}
+                <Th style={{ textAlign: 'right' }}>Open to Invoice</Th>
                 <Th style={{ textAlign: 'right' }}>Total COGS</Th>
               </tr>
             </thead>
             <tbody>
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <EmptyState>No delivery notes found.</EmptyState>
                   </td>
                 </tr>
@@ -426,6 +493,17 @@ export function DeliveriesPage() {
                       <StatusBadge $status={dn.status}>
                         {statusLabel(dn.status)}
                       </StatusBadge>
+                    </Td>
+                    {/* F-3: openInvoiceQty — provided by backend on DeliveryListItem */}
+                    <Td style={{ textAlign: 'right' }}>
+                      {(() => {
+                        const openQty = Number(dn.openInvoiceQty ?? 0);
+                        return (
+                          <OpenInvoiceListBadge $zero={openQty <= 0}>
+                            {openQty <= 0 ? '—' : openQty.toFixed(3)}
+                          </OpenInvoiceListBadge>
+                        );
+                      })()}
                     </Td>
                     <Td style={{ textAlign: 'right', fontWeight: 500 }}>
                       {Number(dn.totalCogs).toLocaleString('en-AE', {

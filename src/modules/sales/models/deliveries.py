@@ -247,6 +247,11 @@ class DeliveryListItem(BaseModel):
     Slim view of a Delivery for paginated list responses.
 
     Excludes the full lines array to keep list payloads lean.
+
+    open_invoice_qty is the aggregate remaining-to-invoice quantity across
+    all lines:
+        sum(line.quantity - line.invoicedQty - line.creditedQty - line.cancelledQty)
+    A value of 0 (within tolerance) means the Delivery is fully invoiced.
     """
 
     doc_entry: str
@@ -259,6 +264,13 @@ class DeliveryListItem(BaseModel):
     status: DocumentStatus
     total_cogs: Decimal
     base_doc_ref: Optional[DocumentLinkRef]
+    open_invoice_qty: Decimal = Field(
+        Decimal("0"),
+        description=(
+            "Sum of (quantity - invoicedQty - creditedQty - cancelledQty) across all "
+            "Delivery lines.  Zero means fully invoiced."
+        ),
+    )
     created_at: datetime
     updated_at: datetime
 

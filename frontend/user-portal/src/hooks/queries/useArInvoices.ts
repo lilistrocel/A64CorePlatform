@@ -86,7 +86,7 @@ export function useCreateArInvoice() {
     mutationFn: ({ data, orgId }: { data: ARInvoiceCreate; orgId: string }) =>
       salesApi.createArInvoice(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ariQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: ariQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -110,7 +110,7 @@ export function useCreateArInvoiceFromDelivery() {
       orgId: string;
     }) => salesApi.createArInvoiceFromDelivery(deliveryDocId, data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ariQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: ariQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -134,7 +134,7 @@ export function useUpdateArInvoice() {
       orgId: string;
     }) => salesApi.updateArInvoice(docId, data, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: ariQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: ariQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(ariQueryKeys.detail(result.docEntry), result);
     },
   });
@@ -153,7 +153,7 @@ export function useDeleteArInvoice() {
     mutationFn: ({ docId, orgId }: { docId: string; orgId: string }) =>
       salesApi.deleteArInvoice(docId, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ariQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: ariQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -180,7 +180,7 @@ export function useTransitionArInvoice() {
       orgId: string;
     }) => salesApi.transitionArInvoice(docId, transition, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: ariQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: ariQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(ariQueryKeys.detail(result.docEntry), result);
     },
   });

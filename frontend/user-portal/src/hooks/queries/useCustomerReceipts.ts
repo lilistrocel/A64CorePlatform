@@ -83,7 +83,7 @@ export function useCreateCustomerReceipt() {
     mutationFn: ({ data, orgId }: { data: CustomerReceiptCreate; orgId: string }) =>
       salesApi.createCustomerReceipt(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: crQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: crQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -107,9 +107,9 @@ export function useCreateCustomerReceiptFromInvoice() {
       orgId: string;
     }) => salesApi.createCustomerReceiptFromInvoice(ariDocEntry, data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: crQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: crQueryKeys.all(), refetchType: 'all' });
       // Invalidate AR Invoices list because the ARI's open_amount changed.
-      qc.invalidateQueries({ queryKey: ['sales', 'ar-invoices'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'ar-invoices'], refetchType: 'all' });
     },
   });
 }
@@ -133,7 +133,7 @@ export function useUpdateCustomerReceipt() {
       orgId: string;
     }) => salesApi.updateCustomerReceipt(docId, data, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: crQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: crQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(crQueryKeys.detail(result.docEntry), result);
     },
   });
@@ -150,7 +150,7 @@ export function useDeleteCustomerReceipt() {
     mutationFn: ({ docId, orgId }: { docId: string; orgId: string }) =>
       salesApi.deleteCustomerReceipt(docId, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: crQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: crQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -178,10 +178,10 @@ export function useTransitionCustomerReceipt() {
       orgId: string;
     }) => salesApi.transitionCustomerReceipt(docId, transition, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: crQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: crQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(crQueryKeys.detail(result.docEntry), result);
       // Posting/cancellation changes AR Invoice open_amount — refresh ARI cache.
-      qc.invalidateQueries({ queryKey: ['sales', 'ar-invoices'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'ar-invoices'], refetchType: 'all' });
     },
   });
 }

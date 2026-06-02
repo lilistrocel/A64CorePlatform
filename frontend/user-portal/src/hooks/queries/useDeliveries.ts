@@ -96,9 +96,9 @@ export function useCreateDeliveryFromSO() {
       orgId: string;
     }) => salesApi.createDeliveryFromSO(soDocEntry, data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: dnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: dnQueryKeys.all(), refetchType: 'all' });
       // Source SO may have auto-transitioned to PARTLY_CLOSED — invalidate both
-      qc.invalidateQueries({ queryKey: ['sales', 'orders-v2'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'orders-v2'], refetchType: 'all' });
     },
   });
 }
@@ -122,7 +122,7 @@ export function useUpdateDelivery() {
       orgId: string;
     }) => salesApi.updateDelivery(docId, data, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: dnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: dnQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(dnQueryKeys.detail(result.docEntry), result);
     },
   });
@@ -138,7 +138,7 @@ export function useDeleteDelivery() {
     mutationFn: ({ docId, orgId }: { docId: string; orgId: string }) =>
       salesApi.deleteDelivery(docId, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: dnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: dnQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -168,10 +168,10 @@ export function useTransitionDelivery() {
       orgId: string;
     }) => salesApi.transitionDelivery(docId, transition, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: dnQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: dnQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(dnQueryKeys.detail(result.docEntry), result);
       // SO may have auto-closed when all lines are now delivered
-      qc.invalidateQueries({ queryKey: ['sales', 'orders-v2'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'orders-v2'], refetchType: 'all' });
     },
   });
 }

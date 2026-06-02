@@ -82,7 +82,7 @@ export function useCreateQuote() {
     mutationFn: ({ data, orgId }: { data: QuoteCreate; orgId: string }) =>
       salesApi.createQuote(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: quotesQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: quotesQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -106,7 +106,7 @@ export function useUpdateQuote() {
       orgId: string;
     }) => salesApi.updateQuote(docId, data, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: quotesQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: quotesQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(quotesQueryKeys.detail(result.docEntry), result);
     },
   });
@@ -123,7 +123,7 @@ export function useDeleteQuote() {
     mutationFn: ({ docId, orgId }: { docId: string; orgId: string }) =>
       salesApi.deleteQuote(docId, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: quotesQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: quotesQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -152,7 +152,7 @@ export function useTransitionQuote() {
       orgId: string;
     }) => salesApi.transitionQuote(docId, transition, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: quotesQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: quotesQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(quotesQueryKeys.detail(result.docEntry), result);
     },
   });

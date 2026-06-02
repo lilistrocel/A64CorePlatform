@@ -91,7 +91,7 @@ export function useCreateReturnRequest() {
       orgId: string;
     }) => salesApi.createReturnRequest(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rrQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rrQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -114,9 +114,9 @@ export function useCreateReturnRequestFromDelivery() {
       orgId: string;
     }) => salesApi.createReturnRequestFromDelivery(data, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rrQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rrQueryKeys.all(), refetchType: 'all' });
       // Source Delivery's returnedQty tracking may update — invalidate it
-      qc.invalidateQueries({ queryKey: ['sales', 'deliveries'] });
+      qc.invalidateQueries({ queryKey: ['sales', 'deliveries'], refetchType: 'all' });
     },
   });
 }
@@ -140,7 +140,7 @@ export function useUpdateReturnRequest() {
       orgId: string;
     }) => salesApi.updateReturnRequest(docId, data, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: rrQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rrQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(rrQueryKeys.detail(result.docEntry), result);
     },
   });
@@ -156,7 +156,7 @@ export function useDeleteReturnRequest() {
     mutationFn: ({ docId, orgId }: { docId: string; orgId: string }) =>
       salesApi.deleteReturnRequest(docId, orgId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: rrQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rrQueryKeys.all(), refetchType: 'all' });
     },
   });
 }
@@ -185,7 +185,7 @@ export function useTransitionReturnRequest() {
       orgId: string;
     }) => salesApi.transitionReturnRequest(docId, transition, orgId),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: rrQueryKeys.all() });
+      qc.invalidateQueries({ queryKey: rrQueryKeys.all(), refetchType: 'all' });
       qc.setQueryData(rrQueryKeys.detail(result.docEntry), result);
     },
   });

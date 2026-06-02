@@ -89,6 +89,7 @@ logger = logging.getLogger(__name__)
 _ARI_COL = "ar_invoices_v2"
 _AUDIT_COL = "ar_invoices_v2_audit"
 _DN_COL = "deliveries_v2"
+_DN_AUDIT_COL = "deliveries_v2_audit"
 _TAX_CODES_COL = "tax_codes"
 _PAYMENT_TERMS_COL = "payment_terms"
 _TOLERANCE = Decimal("0.0001")
@@ -782,6 +783,67 @@ def _dn_line_open_invoice_qty(ln: Dict[str, Any]) -> Decimal:
     return ordered - invoiced - credited
 
 
+def _dn_is_fully_invoiced(dn_raw: Dict[str, Any]) -> bool:
+    """
+    Return True when every Delivery line has open_invoice_qty <= _TOLERANCE.
+
+    A Delivery is "fully invoiced" when no more qty can be invoiced across
+    all of its embedded lines — i.e. the sum of per-line open_invoice_qty
+    is within the float-comparison tolerance.
+
+    Args:
+        dn_raw: Raw Delivery document with the embedded lines array present.
+
+    Returns:
+        True if the Delivery is fully invoiced, False otherwise.
+    """
+    for ln in dn_raw.get("lines", []):
+        if _dn_line_open_invoice_qty(ln) > _TOLERANCE:
+            return False
+    return True
+
+
+async def _write_dn_audit(
+    db: AsyncIOMotorDatabase,
+    *,
+    doc_entry: str,
+    action: str,
+    user_id: str,
+    detail: Optional[Dict[str, Any]] = None,
+) -> None:
+    """
+    Append an audit entry to deliveries_v2_audit from the AR Invoice service.
+
+    Used for the auto_close_on_full_invoice action so the Delivery's audit
+    trail records who (via AR Invoice creation) triggered the auto-close.
+    Best-effort: logs warning on failure but does not re-raise.
+
+    Args:
+        db:        Motor database instance.
+        doc_entry: UUID of the affected Delivery.
+        action:    Short action label (e.g. "auto_close_on_full_invoice").
+        user_id:   User who triggered the originating AR Invoice creation.
+        detail:    Optional extra metadata dict.
+    """
+    try:
+        entry = {
+            "docEntry": doc_entry,
+            "action": action,
+            "userId": user_id,
+            "detail": detail or {},
+            "timestamp": _now(),
+        }
+        await db[_DN_AUDIT_COL].insert_one(entry)
+    except Exception as exc:  # noqa: BLE001
+        # Reason: audit failure must not roll back the originating operation.
+        logger.warning(
+            "DN audit write failed for Delivery %s action=%s: %s",
+            doc_entry,
+            action,
+            exc,
+        )
+
+
 def _build_outbox_payload(
     invoice_raw: Dict[str, Any],
     *,
@@ -1264,6 +1326,50 @@ async def create_ar_invoice_from_delivery(
             },
         )
 
+    # Part B-2: Auto-close Delivery when fully invoiced.
+    # Reload the Delivery after all invoicedQty increments so we have the
+    # current post-increment state of every line.
+    dn_updated = await db[_DN_COL].find_one(
+        {"docEntry": delivery_doc_entry, "organizationId": org_id}
+    )
+    if (
+        dn_updated is not None
+        and dn_updated.get("status") == DocumentStatus.OPEN.value
+        and _dn_is_fully_invoiced(dn_updated)
+    ):
+        # Reason: transition the Delivery to CLOSED when every line's
+        # open_invoice_qty has dropped to ≤ _TOLERANCE.  This is a pure
+        # status flag for UI/listing purposes — no new outbox event is
+        # emitted (the original delivery_posted event already covers the
+        # finance side; CLOSED is not a new accounting event).
+        await db[_DN_COL].update_one(
+            {"docEntry": delivery_doc_entry, "organizationId": org_id},
+            {
+                "$set": {
+                    "status": DocumentStatus.CLOSED.value,
+                    "updatedAt": now,
+                    "updatedBy": user_id,
+                }
+            },
+        )
+        logger.info(
+            "[ARInvoiceService] Delivery '%s' auto-closed on full invoice by user '%s' "
+            "(AR Invoice '%s' consumed remaining open_invoice_qty)",
+            delivery_doc_entry,
+            user_id,
+            doc_entry,
+        )
+        await _write_dn_audit(
+            db,
+            doc_entry=delivery_doc_entry,
+            action="auto_close_on_full_invoice",
+            user_id=user_id,
+            detail={
+                "triggeredByAriDocEntry": doc_entry,
+                "triggeredByAriDocNumber": doc_number,
+            },
+        )
+
     # Step 7: Audit.
     await _write_audit(
         db,
@@ -1461,6 +1567,11 @@ async def update_ar_invoice(
         terms_days = await _get_payment_terms_days(db, terms_id, org_id)
         updates["dueDate"] = _to_dt(doc_date_for_due + timedelta(days=terms_days))
 
+    # DN-counter reconciliation state (populated below if this is a from-Delivery invoice
+    # and payload.lines is not None).
+    _dn_line_deltas: Dict[str, float] = {}  # dn_line_id → net delta applied
+    _delivery_doc_entry_for_update: Optional[str] = None
+
     if payload.lines is not None:
         new_lines: List[Dict[str, Any]] = []
         for i, line in enumerate(payload.lines, start=1):
@@ -1487,17 +1598,254 @@ async def update_ar_invoice(
         updates["lines"] = new_lines
         updates["totals"] = _build_totals(new_lines)
 
+        # --------------------------------------------------------------------
+        # Bug 1 fix: reconcile Delivery line invoicedQty when lines change.
+        # Only applies when the AR Invoice is anchored to a Delivery (has a
+        # header-level baseDocRef pointing to a DELIVERY doc).
+        # --------------------------------------------------------------------
+        ari_base_ref = raw.get("baseDocRef") or {}
+        _delivery_doc_entry_for_update = (
+            ari_base_ref.get("docId") or ari_base_ref.get("doc_id")
+        )
+        if _delivery_doc_entry_for_update:
+            # Build old-line totals: dn_line_id → sum of old invoiced qty.
+            old_totals: Dict[str, Decimal] = {}
+            for old_ln in raw.get("lines", []):
+                old_base = old_ln.get("baseDocRef") or {}
+                dn_lid = old_base.get("lineId") or old_base.get("line_id")
+                if dn_lid:
+                    old_qty = Decimal(str(old_ln.get("invoicedQty", old_ln.get("quantity", 0))))
+                    old_totals[dn_lid] = old_totals.get(dn_lid, _ZERO) + old_qty
+
+            # Build new-line totals: dn_line_id → sum of new qty.
+            new_totals: Dict[str, Decimal] = {}
+            for new_ln in new_lines:
+                new_base = new_ln.get("baseDocRef") or {}
+                dn_lid = new_base.get("lineId") or new_base.get("line_id")
+                if dn_lid:
+                    new_qty = Decimal(str(new_ln.get("quantity", 0)))
+                    new_totals[dn_lid] = new_totals.get(dn_lid, _ZERO) + new_qty
+                else:
+                    # Reason: new line has no DN anchor — warn but don't block.
+                    logger.warning(
+                        "[ARInvoiceService] update_ar_invoice '%s': new line '%s' "
+                        "has no baseDocRef.lineId — cannot reconcile DN counter for it.",
+                        doc_entry,
+                        new_ln.get("lineId", "?"),
+                    )
+
+            # Collect all DN line IDs that appear in either map.
+            all_dn_line_ids = set(old_totals.keys()) | set(new_totals.keys())
+
+            if all_dn_line_ids:
+                # Load the Delivery for cap validation.
+                dn_for_cap = await db[_DN_COL].find_one(
+                    {"docEntry": _delivery_doc_entry_for_update, "organizationId": org_id}
+                )
+                dn_lines_map_cap: Dict[str, Dict[str, Any]] = {}
+                if dn_for_cap:
+                    dn_lines_map_cap = {
+                        ln["lineId"]: ln for ln in dn_for_cap.get("lines", [])
+                    }
+
+                now_update = updates.get("updatedAt") or _now()
+
+                for dn_lid in all_dn_line_ids:
+                    old_qty_d = old_totals.get(dn_lid, _ZERO)
+                    new_qty_d = new_totals.get(dn_lid, _ZERO)
+                    delta = new_qty_d - old_qty_d
+
+                    if abs(delta) <= _TOLERANCE:
+                        # Reason: no meaningful change — skip to avoid spurious DB writes.
+                        continue
+
+                    if delta > _ZERO:
+                        # Cap check: delta must not exceed the current open_invoice_qty on
+                        # the DN line BEFORE this delta is applied.
+                        dn_ln = dn_lines_map_cap.get(dn_lid)
+                        if dn_ln is not None:
+                            open_qty = _dn_line_open_invoice_qty(dn_ln)
+                            if delta > open_qty + _TOLERANCE:
+                                raise ValueError(
+                                    f"Cannot update AR Invoice '{doc_entry}': "
+                                    f"increased quantity for Delivery line '{dn_lid}' "
+                                    f"by {float(delta):.4f} exceeds available "
+                                    f"open_invoice_qty={float(open_qty):.4f}. "
+                                    "Reduce the invoice quantity or create a new invoice."
+                                )
+
+                    # Apply $inc on the Delivery line.
+                    await db[_DN_COL].update_one(
+                        {
+                            "docEntry": _delivery_doc_entry_for_update,
+                            "organizationId": org_id,
+                            "lines.lineId": dn_lid,
+                        },
+                        {
+                            "$inc": {"lines.$.invoicedQty": float(delta)},
+                            "$set": {"updatedAt": now_update, "updatedBy": user_id},
+                        },
+                    )
+                    _dn_line_deltas[dn_lid] = float(delta)
+
+            # T-201.7 fix: reconcile per-line targetDocRefs on the Delivery when
+            # the AR Invoice's line set is replaced wholesale.
+            #
+            # Because update_ar_invoice replaces the entire line array, the new
+            # ARI lines get fresh lineId UUIDs.  Any back-pointer that existed
+            # on a Delivery line (pointing to an OLD ARI lineId) is now stale.
+            #
+            # Strategy:
+            #   - For each OLD ARI line that referenced a DN line: $pull the ref
+            #     from that DN line's targetDocRefs (keyed on docId == doc_entry,
+            #     so we don't touch other ARI refs on the same DN line).
+            #   - For each NEW ARI line that references a DN line: $push the new
+            #     ref (with the new lineId UUID) onto the same DN line.
+            #
+            # Note: the header-level Delivery.targetDocRefs does NOT need to
+            # change — the ARI docEntry is stable across updates.
+            now_ref = updates.get("updatedAt") or _now()
+
+            # Build old ARI lineId → DN line ID map from the raw document.
+            old_ari_line_to_dn_line: Dict[str, str] = {}
+            for old_ln in raw.get("lines", []):
+                ari_lid = old_ln.get("lineId")
+                old_base = old_ln.get("baseDocRef") or {}
+                dn_lid = old_base.get("lineId") or old_base.get("line_id")
+                if ari_lid and dn_lid:
+                    old_ari_line_to_dn_line[ari_lid] = dn_lid
+
+            # $pull stale per-line refs: remove any ref with docId == doc_entry
+            # from every DN line that the old ARI pointed to.  We key on
+            # docId so a sibling ARI's ref on the same DN line is preserved.
+            for dn_lid_old in set(old_ari_line_to_dn_line.values()):
+                await db[_DN_COL].update_one(
+                    {
+                        "docEntry": _delivery_doc_entry_for_update,
+                        "organizationId": org_id,
+                        "lines.lineId": dn_lid_old,
+                    },
+                    {
+                        "$pull": {"lines.$.targetDocRefs": {"docId": doc_entry}},
+                    },
+                )
+
+            # $push fresh per-line refs: add the new ARI line UUID onto the
+            # corresponding DN line.
+            new_doc_number = raw.get("docNumber")  # docNumber is stable on update
+            for new_ln in new_lines:
+                new_base = new_ln.get("baseDocRef") or {}
+                dn_lid_new = new_base.get("lineId") or new_base.get("line_id")
+                new_ari_line_id = new_ln.get("lineId")
+                if dn_lid_new and new_ari_line_id:
+                    new_ari_line_ref = {
+                        "docType": _DOC_TYPE,
+                        "docId": doc_entry,
+                        "docNumber": new_doc_number,
+                        "lineId": new_ari_line_id,
+                    }
+                    await db[_DN_COL].update_one(
+                        {
+                            "docEntry": _delivery_doc_entry_for_update,
+                            "organizationId": org_id,
+                            "lines.lineId": dn_lid_new,
+                        },
+                        {
+                            "$push": {"lines.$.targetDocRefs": new_ari_line_ref},
+                            "$set": {"updatedAt": now_ref, "updatedBy": user_id},
+                        },
+                    )
+
     await db[_ARI_COL].update_one(
         {"docEntry": doc_entry, "organizationId": org_id},
         {"$set": updates},
     )
+
+    # --------------------------------------------------------------------
+    # Bug 1 fix (continued): after all $inc operations, check if the DN
+    # auto-close / auto-reopen logic needs to trigger.
+    # --------------------------------------------------------------------
+    if _delivery_doc_entry_for_update and _dn_line_deltas:
+        dn_reloaded = await db[_DN_COL].find_one(
+            {"docEntry": _delivery_doc_entry_for_update, "organizationId": org_id}
+        )
+        if dn_reloaded is not None:
+            dn_status_now = dn_reloaded.get("status")
+            fully_invoiced_now = _dn_is_fully_invoiced(dn_reloaded)
+            audit_now = updates.get("updatedAt") or _now()
+
+            if fully_invoiced_now and dn_status_now == DocumentStatus.OPEN.value:
+                # Transition Delivery OPEN → CLOSED (auto-close on full invoice edit).
+                await db[_DN_COL].update_one(
+                    {"docEntry": _delivery_doc_entry_for_update, "organizationId": org_id},
+                    {
+                        "$set": {
+                            "status": DocumentStatus.CLOSED.value,
+                            "updatedAt": audit_now,
+                            "updatedBy": user_id,
+                        }
+                    },
+                )
+                logger.info(
+                    "[ARInvoiceService] Delivery '%s' auto-closed via invoice edit "
+                    "by user '%s' (AR Invoice '%s' now fully covers all lines)",
+                    _delivery_doc_entry_for_update,
+                    user_id,
+                    doc_entry,
+                )
+                await _write_dn_audit(
+                    db,
+                    doc_entry=_delivery_doc_entry_for_update,
+                    action="auto_close_on_full_invoice",
+                    user_id=user_id,
+                    detail={
+                        "triggeredByAriDocEntry": doc_entry,
+                        "triggeredByAriDocNumber": raw.get("docNumber"),
+                        "trigger": "invoice_edit",
+                    },
+                )
+
+            elif not fully_invoiced_now and dn_status_now == DocumentStatus.CLOSED.value:
+                # Transition Delivery CLOSED → OPEN (auto-reopen on invoice release).
+                await db[_DN_COL].update_one(
+                    {"docEntry": _delivery_doc_entry_for_update, "organizationId": org_id},
+                    {
+                        "$set": {
+                            "status": DocumentStatus.OPEN.value,
+                            "updatedAt": audit_now,
+                            "updatedBy": user_id,
+                        }
+                    },
+                )
+                logger.info(
+                    "[ARInvoiceService] Delivery '%s' auto-reopened via invoice edit "
+                    "by user '%s' (AR Invoice '%s' now covers less than full qty)",
+                    _delivery_doc_entry_for_update,
+                    user_id,
+                    doc_entry,
+                )
+                await _write_dn_audit(
+                    db,
+                    doc_entry=_delivery_doc_entry_for_update,
+                    action="auto_reopen_on_invoice_release",
+                    user_id=user_id,
+                    detail={
+                        "triggeredByAriDocEntry": doc_entry,
+                        "triggeredByAriDocNumber": raw.get("docNumber"),
+                        "trigger": "invoice_edit",
+                    },
+                )
+
+    audit_detail: Dict[str, Any] = {"updatedFields": list(updates.keys())}
+    if _dn_line_deltas:
+        audit_detail["dnLineDeltas"] = _dn_line_deltas
 
     await _write_audit(
         db,
         doc_entry=doc_entry,
         action="update",
         user_id=user_id,
-        detail={"updatedFields": list(updates.keys())},
+        detail=audit_detail,
     )
 
     updated_raw = await db[_ARI_COL].find_one(
@@ -1552,6 +1900,7 @@ async def delete_ar_invoice(
     # line should be released so a new invoice can be created for the same qty.
     base_ref = raw.get("baseDocRef") or {}
     delivery_doc_entry = base_ref.get("docId") or base_ref.get("doc_id")
+    _decremented_any_dn_line = False
     if delivery_doc_entry:
         now = _now()
         for ln in raw.get("lines", []):
@@ -1568,6 +1917,81 @@ async def delete_ar_invoice(
                     {
                         "$inc": {"lines.$.invoicedQty": -release_qty},
                         "$set": {"updatedAt": now, "updatedBy": user_id},
+                    },
+                )
+                _decremented_any_dn_line = True
+
+        # Bug 2 fix: if the decrement made the DN no longer fully invoiced AND
+        # the DN is currently CLOSED, reopen it.
+        if _decremented_any_dn_line:
+            dn_reloaded = await db[_DN_COL].find_one(
+                {"docEntry": delivery_doc_entry, "organizationId": org_id}
+            )
+            if (
+                dn_reloaded is not None
+                and dn_reloaded.get("status") == DocumentStatus.CLOSED.value
+                and not _dn_is_fully_invoiced(dn_reloaded)
+            ):
+                await db[_DN_COL].update_one(
+                    {"docEntry": delivery_doc_entry, "organizationId": org_id},
+                    {
+                        "$set": {
+                            "status": DocumentStatus.OPEN.value,
+                            "updatedAt": now,
+                            "updatedBy": user_id,
+                        }
+                    },
+                )
+                logger.info(
+                    "[ARInvoiceService] Delivery '%s' auto-reopened on DRAFT delete "
+                    "of AR Invoice '%s' by user '%s'",
+                    delivery_doc_entry,
+                    doc_entry,
+                    user_id,
+                )
+                await _write_dn_audit(
+                    db,
+                    doc_entry=delivery_doc_entry,
+                    action="auto_reopen_on_invoice_release",
+                    user_id=user_id,
+                    detail={
+                        "triggeredByAriDocEntry": doc_entry,
+                        "triggeredByAriDocNumber": raw.get("docNumber"),
+                        "trigger": "invoice_delete",
+                    },
+                )
+
+        # T-201.7 fix: clean dangling targetDocRefs on the Delivery so the
+        # Document Chain card does not surface a 404-dead link after delete.
+        #
+        # Step 1: $pull the ARI docEntry from the Delivery header targetDocRefs
+        # (one call — the header ref is docId-keyed, not line-keyed).
+        # Reason: `now` is guaranteed set above (line `now = _now()`) before
+        # the per-line loop — no second _now() call needed.
+        await db[_DN_COL].update_one(
+            {"docEntry": delivery_doc_entry, "organizationId": org_id},
+            {
+                "$pull": {"targetDocRefs": {"docId": doc_entry}},
+                "$set": {"updatedAt": now, "updatedBy": user_id},
+            },
+        )
+
+        # Step 2: $pull per-line targetDocRefs from each Delivery line that was
+        # covered by this AR Invoice.  Each pull is keyed on docId == doc_entry
+        # so only this ARI's ref is removed (a second ARI on the same DN line
+        # keeps its own ref).
+        for ln in raw.get("lines", []):
+            line_base_ref = ln.get("baseDocRef") or {}
+            dn_line_id = line_base_ref.get("lineId") or line_base_ref.get("line_id")
+            if dn_line_id:
+                await db[_DN_COL].update_one(
+                    {
+                        "docEntry": delivery_doc_entry,
+                        "organizationId": org_id,
+                        "lines.lineId": dn_line_id,
+                    },
+                    {
+                        "$pull": {"lines.$.targetDocRefs": {"docId": doc_entry}},
                     },
                 )
 
@@ -1788,6 +2212,7 @@ async def transition_status(
         # Step 2: Decrement source Delivery line invoiced_qty back (if from-Delivery).
         base_ref = raw.get("baseDocRef") or {}
         delivery_doc_entry = base_ref.get("docId") or base_ref.get("doc_id")
+        _cancel_decremented_any = False
         if delivery_doc_entry:
             for ln in raw.get("lines", []):
                 line_base_ref = ln.get("baseDocRef") or {}
@@ -1805,6 +2230,47 @@ async def transition_status(
                         {
                             "$inc": {"lines.$.invoicedQty": -restore_qty},
                             "$set": {"updatedAt": now, "updatedBy": user_id},
+                        },
+                    )
+                    _cancel_decremented_any = True
+
+            # Bug 2 fix: if the decrement made the DN no longer fully invoiced AND
+            # the DN is currently CLOSED, reopen it.
+            if _cancel_decremented_any:
+                dn_reloaded_cancel = await db[_DN_COL].find_one(
+                    {"docEntry": delivery_doc_entry, "organizationId": org_id}
+                )
+                if (
+                    dn_reloaded_cancel is not None
+                    and dn_reloaded_cancel.get("status") == DocumentStatus.CLOSED.value
+                    and not _dn_is_fully_invoiced(dn_reloaded_cancel)
+                ):
+                    await db[_DN_COL].update_one(
+                        {"docEntry": delivery_doc_entry, "organizationId": org_id},
+                        {
+                            "$set": {
+                                "status": DocumentStatus.OPEN.value,
+                                "updatedAt": now,
+                                "updatedBy": user_id,
+                            }
+                        },
+                    )
+                    logger.info(
+                        "[ARInvoiceService] Delivery '%s' auto-reopened on ARI '%s' "
+                        "OPEN→CANCELLED by user '%s'",
+                        delivery_doc_entry,
+                        doc_entry,
+                        user_id,
+                    )
+                    await _write_dn_audit(
+                        db,
+                        doc_entry=delivery_doc_entry,
+                        action="auto_reopen_on_invoice_release",
+                        user_id=user_id,
+                        detail={
+                            "triggeredByAriDocEntry": doc_entry,
+                            "triggeredByAriDocNumber": raw.get("docNumber"),
+                            "trigger": "invoice_cancel",
                         },
                     )
 
