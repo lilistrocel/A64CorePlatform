@@ -1172,6 +1172,40 @@
   - **Honest scope estimate:** ~2-3 task cycles (1 backend aggregation endpoint, 1 frontend page expansion, 1 test pass for the endpoint).
 
 
+### T-204 | Direct-create AR Credit Note: required "Reason" field for audit-trail clarity
+- **Category:** Backend + Frontend · **Priority:** P2
+- **Assigned:** — · **Started:** —
+- **Discovered:** During T-201.11 verification, 2026-06-04. Viet Anh observed that the direct-create AR Credit Note flow (`/sales/ar-credit-notes/new`) lets the user post a credit note without referencing a source ARI or RTN — and asked "should this even be allowed?".
+- **Background:** Direct-create ARC exists today for legitimate use cases that don't map to a single source invoice:
+  - **Goodwill credit** — customer relationship gesture
+  - **Multi-invoice correction** — single credit spread across many historical invoices
+  - **Promotional credit** — future-order vouchers
+  - **Bad-debt write-off** — stale receivables crossing many old invoices
+  - **Other** — escape hatch for the long tail
+  T-201.8 already restricts direct-create ARC to service items only (same isStock gate as direct ARI), so stock-item credits must go via Return Note → from-RTN ARC. But the orphan-credit (no source) audit trail concern remains: today there is no recorded reason for the lack of source doc.
+- **Decision (2026-06-04, Viet Anh):** keep the flexibility — direct-create is industry-standard (SAP B1, NetSuite, Oracle) — but require a `direct_credit_reason` field at the schema level so the audit log captures *why* the credit has no source.
+- **Description:**
+  - Add `direct_credit_reason: Optional[DirectCreditReason]` to AR Credit Note model + Pydantic Create/Update schemas.
+  - New enum `DirectCreditReason`: GOODWILL | MULTI_INVOICE_CORRECTION | PROMOTIONAL | BAD_DEBT_WRITE_OFF | OTHER
+  - When `OTHER`, surface optional `direct_credit_reason_notes: str` for free-text context.
+  - Backend validation: `direct_credit_reason` is REQUIRED on create + update when both `baseInvoiceDocRef` and `baseReturnDocRef` are absent; PROHIBITED otherwise (mutually exclusive with chained-create paths). Returns 422 with clear error if the rule is violated.
+  - Audit log: include `direct_credit_reason` in the `create_ar_credit_note` audit row and any `transition_status` audit row that touches it.
+  - Frontend `ArCreditNoteFormPage` direct-create mode:
+    - Add a "Reason for direct credit" dropdown above the lines table, alongside the existing T-201.8 banner.
+    - Conditional notes textarea when reason === OTHER.
+    - Form hides the field entirely in from-invoice / from-RTN / edit modes.
+- **Acceptance criteria:**
+  - Direct-create ARC without reason → 422 with descriptive error.
+  - Direct-create ARC with each reason value → success.
+  - From-invoice and from-RTN ARC continue to work without sending the reason field.
+  - Audit log on every direct ARC includes the reason.
+  - `OTHER` requires non-empty `direct_credit_reason_notes`.
+- **Honest scope estimate:** ~1 task cycle (1 backend schema/validation/audit change + 1 frontend form field + tests). Smaller than typical because backend gating logic mirrors T-201.8's existing direct-vs-chained discriminator.
+- **Notes:**
+  - Filed during the same session that shipped T-201.8 + T-201.9 + T-201.10 + T-201.11. The direct-create reason field is a natural completion of T-201.8's "direct-create gating" theme — T-201.8 gated by item type, T-204 augments with intent capture.
+  - Frontend mirroring opportunity: when this lands, consider whether the same reason-capture pattern should apply to direct-create Return Requests (T-201.8's known dead-code path) or direct-create AR Invoices (rare in practice). Out of scope for T-204; capture in a future ticket if the pattern proves useful.
+
+
 ### T-200 | Wave 4 — Purchasing parity upgrade (SAP B1-style document depth)
 - **Category:** Backend + Frontend · **Priority:** P1
 - **Depends on:** T-100 🔵 (Wave 3 shared infrastructure must be complete)
