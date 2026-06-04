@@ -211,6 +211,19 @@ const ProgressPill = styled.span`
   padding: 2px 8px;
 `;
 
+// T-201.10 — amber badge for SOs with unbilled service-line qty.
+// Mirrors DeliveriesPage's Open-Qty badge palette; amber signals "action needed".
+const ServiceOpenBadge = styled.span`
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 99px;
+  padding: 2px 10px;
+`;
+
 const PaginationRow = styled.div`
   display: flex;
   justify-content: space-between;
@@ -336,6 +349,8 @@ export function SalesOrdersV2Page() {
   const [searchText, setSearchText] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  // T-201.10: filter for SOs with unbilled service lines (requires backend support)
+  const [hasServiceOpenLines, setHasServiceOpenLines] = useState(false);
   const [page, setPage] = useState(1);
 
   const queryParams = useMemo(() => ({
@@ -343,9 +358,11 @@ export function SalesOrdersV2Page() {
     status: statusFilter !== 'ALL' ? statusFilter : undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
+    // Only send when true — backend ignores null/undefined
+    hasServiceOpenLines: hasServiceOpenLines ? true : undefined,
     page,
     size: PAGE_SIZE,
-  }), [orgId, statusFilter, dateFrom, dateTo, page]);
+  }), [orgId, statusFilter, dateFrom, dateTo, hasServiceOpenLines, page]);
 
   const { data, isLoading, isError, error } = useSalesOrdersV2(queryParams);
 
@@ -430,6 +447,20 @@ export function SalesOrdersV2Page() {
             {label}
           </Chip>
         ))}
+        {/* T-201.10: filter chip for SOs with unbilled service lines.
+            Note: requires backend support for has_service_open_lines param.
+            The chip is visible and toggleable; when the backend param is not
+            yet supported, the filter will silently return all results. */}
+        <Chip
+          $active={hasServiceOpenLines}
+          onClick={() => {
+            setHasServiceOpenLines((v) => !v);
+            setPage(1);
+          }}
+          title="Show only Sales Orders with unbilled service lines (requires backend support)"
+        >
+          Has Service Open Qty
+        </Chip>
       </FilterChips>
 
       <TableWrapper>
@@ -460,6 +491,7 @@ export function SalesOrdersV2Page() {
                   <Th>Customer</Th>
                   <Th>BP Ref No</Th>
                   <Th style={{ textAlign: 'right' }}>Total Gross</Th>
+                  <Th style={{ textAlign: 'right' }}>Service Open Qty</Th>
                   <Th>Status</Th>
                   <Th>Fulfilment</Th>
                 </tr>
@@ -479,6 +511,15 @@ export function SalesOrdersV2Page() {
                     <Td>{item.bpRefNo ?? '—'}</Td>
                     <Td style={{ textAlign: 'right' }}>
                       {formatAmount(item.totals.gross, item.currency)}
+                    </Td>
+                    <Td style={{ textAlign: 'right' }}>
+                      {item.serviceOpenInvoiceQty > 0 ? (
+                        <ServiceOpenBadge>
+                          {item.serviceOpenInvoiceQty.toLocaleString()}
+                        </ServiceOpenBadge>
+                      ) : (
+                        <span style={{ color: '#9ca3af' }}>—</span>
+                      )}
                     </Td>
                     <Td>
                       <StatusBadge $status={item.status}>

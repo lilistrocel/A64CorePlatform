@@ -24,15 +24,16 @@
  * Route: /sales/orders-v2/:docId
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { ExternalLink, Truck } from 'lucide-react';
+import { ExternalLink, Truck, FileText } from 'lucide-react';
 import {
   useSalesOrderV2,
   useTransitionSalesOrderV2,
   useDeleteSalesOrderV2,
 } from '../../hooks/queries/useSalesOrders';
+import { useSaleItemFinanceExtList } from '../../hooks/queries/useSaleItemFinanceExt';
 import { useAuthStore } from '../../stores/auth.store';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { SalesAuditHistoryModal } from '../../components/sales/SalesAuditHistoryModal';
@@ -177,6 +178,46 @@ const DeliveryButton = styled.button`
   cursor: pointer;
   &:hover { background: #047857; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+/**
+ * T-201.10 — "Generate Service Invoice" primary action button.
+ * Teal/indigo palette to distinguish from the green Delivery button.
+ */
+const ServiceInvoiceButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.primary[700]}; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+/**
+ * T-201.10 — Type badge for SO Lines table.
+ * Mirrors the TypeChip from SalesItemsPage (T-201.8).
+ */
+const TypeChip = styled.span<{ $isStock: boolean }>`
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: ${({ $isStock, theme }) =>
+    $isStock
+      ? (theme.colors?.primary?.light ?? '#eff6ff')
+      : '#fef3c7'};
+  color: ${({ $isStock, theme }) =>
+    $isStock
+      ? (theme.colors?.primary?.main ?? '#1d4ed8')
+      : '#92400e'};
 `;
 
 const Card = styled.div`
@@ -453,6 +494,16 @@ export function SalesOrderDetailPage() {
   const transitionMut = useTransitionSalesOrderV2();
   const deleteMut = useDeleteSalesOrderV2();
 
+  // T-201.10: Fetch item finance exts to determine isStock per SO line.
+  const { data: itemFinanceExts = [] } = useSaleItemFinanceExtList(orgId);
+  const itemExtByItemId = useMemo(() => {
+    const map = new Map<string, { isStock: boolean }>();
+    for (const ext of itemFinanceExts) {
+      map.set(ext.itemId, { isStock: ext.isStock ?? true });
+    }
+    return map;
+  }, [itemFinanceExts]);
+
   const isSuperAdmin = user?.role === 'super_admin';
 
   async function handlePost() {
@@ -500,8 +551,12 @@ export function SalesOrderDetailPage() {
   }
 
   function handleCreateDelivery() {
-    // Route lands in T-200.5 — navigates but 404s until then
     if (so) navigate(`/sales/deliveries/from-so/${so.docEntry}`);
+  }
+
+  // T-201.10: Navigate to the from-SO AR Invoice form for service lines.
+  function handleCreateServiceInvoice() {
+    if (so) navigate(`/sales/ar-invoices/from-so/${so.docEntry}`);
   }
 
   if (isLoading) {
@@ -528,6 +583,16 @@ export function SalesOrderDetailPage() {
   const isOpen = so.status === 'open';
   const isPartlyClosed = so.status === 'partly_closed';
   const isClosed = so.status === 'closed';
+
+  // T-201.10: Determine if the SO has any service lines with open invoice qty.
+  // A service line has open qty when: orderedQty - invoicedQty - cancelledQty > 0.
+  const hasUnbilledServiceLines =
+    (isOpen || isPartlyClosed) &&
+    so.lines.some((l) => {
+      const isService = itemExtByItemId.get(l.itemId)?.isStock === false;
+      const openInvoiceQty = Math.max(0, l.orderedQty - l.invoicedQty - l.cancelledQty);
+      return isService && openInvoiceQty > 0;
+    });
 
   return (
     <Container>
@@ -562,13 +627,17 @@ export function SalesOrderDetailPage() {
 
           {(isOpen || isPartlyClosed) && (
             <>
-              <DeliveryButton
-                onClick={handleCreateDelivery}
-                title="Create a Delivery from this SO. Route /sales/deliveries/from-so/:soDocEntry — will 404 until T-200.5 ships."
-              >
+              <DeliveryButton onClick={handleCreateDelivery}>
                 <Truck size={16} />
                 Create Delivery
               </DeliveryButton>
+              {/* T-201.10: Generate Service Invoice — shown when SO has unbilled service lines */}
+              {hasUnbilledServiceLines && (
+                <ServiceInvoiceButton onClick={handleCreateServiceInvoice}>
+                  <FileText size={16} />
+                  Generate Service Invoice
+                </ServiceInvoiceButton>
+              )}
               {isSuperAdmin && (
                 <DangerButton
                   onClick={handleCancel}
@@ -636,7 +705,7 @@ export function SalesOrderDetailPage() {
         </InfoGrid>
       </Card>
 
-      {/* Lines table with fulfilment columns */}
+      {/* Lines table with fulfilment columns — T-201.10 adds Type + per-type columns */}
       <Card>
         <SectionTitle>Order Lines — Fulfilment Progress</SectionTitle>
         <TableWrapper>
@@ -644,13 +713,16 @@ export function SalesOrderDetailPage() {
             <thead>
               <tr>
                 <Th>#</Th>
+                <Th>Type</Th>
                 <Th>Item</Th>
                 <Th>Description</Th>
                 <Th>UOM</Th>
                 <ThRight>Unit Price</ThRight>
                 <ThRight>Line Gross</ThRight>
                 <ThRight>Ordered</ThRight>
+                {/* Stock lines: Delivered column; service lines: Invoiced Qty column */}
                 <ThRight>Delivered</ThRight>
+                <ThRight>Invoiced</ThRight>
                 <ThRight>Cancelled</ThRight>
                 <ThRight>Open</ThRight>
                 <Th style={{ minWidth: 100 }}>Progress</Th>
@@ -658,11 +730,22 @@ export function SalesOrderDetailPage() {
             </thead>
             <tbody>
               {so.lines.map((line) => {
+                const isService = itemExtByItemId.get(line.itemId)?.isStock === false;
                 const pct = deliveryPct(line);
                 const oQty = openQty(line);
+                // For service lines open qty includes both delivery and invoice tracking.
+                const serviceOpenQty = Math.max(
+                  0,
+                  line.orderedQty - line.invoicedQty - line.cancelledQty,
+                );
                 return (
                   <tr key={line.lineId}>
                     <Td style={{ color: '#6b7280' }}>{line.lineNumber}</Td>
+                    <Td>
+                      <TypeChip $isStock={!isService}>
+                        {isService ? 'Service' : 'Stock'}
+                      </TypeChip>
+                    </Td>
                     <Td>
                       <div style={{ fontWeight: 500 }}>{line.itemCode}</div>
                       <div style={{ color: '#6b7280', fontSize: 12 }}>{line.itemName}</div>
@@ -672,18 +755,46 @@ export function SalesOrderDetailPage() {
                     <TdRight>{formatAmount(line.unitPrice, so.currency)}</TdRight>
                     <TdRight>{formatAmount(line.lineGross, so.currency)}</TdRight>
                     <TdRight style={{ fontWeight: 600 }}>{line.orderedQty}</TdRight>
-                    <TdRight style={{ color: '#059669' }}>{line.deliveredQty}</TdRight>
+                    {/* Stock: show deliveredQty; Service: show — */}
+                    <TdRight style={{ color: '#059669' }}>
+                      {isService ? '—' : line.deliveredQty}
+                    </TdRight>
+                    {/* Service: show invoicedQty; Stock: show — */}
+                    <TdRight style={{ color: '#059669' }}>
+                      {isService ? line.invoicedQty : '—'}
+                    </TdRight>
                     <TdRight style={{ color: '#dc2626' }}>{line.cancelledQty}</TdRight>
-                    <TdRight style={{ fontWeight: 600, color: oQty > 0 ? '#b45309' : '#6b7280' }}>
-                      {oQty}
+                    <TdRight style={{ fontWeight: 600, color: (isService ? serviceOpenQty : oQty) > 0 ? '#b45309' : '#6b7280' }}>
+                      {isService ? serviceOpenQty : oQty}
                     </TdRight>
                     <Td>
-                      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>
-                        {pct.toFixed(0)}% delivered
-                      </div>
-                      <ProgressBar>
-                        <ProgressFill $pct={pct} />
-                      </ProgressBar>
+                      {isService ? (
+                        <>
+                          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>
+                            {line.orderedQty > 0
+                              ? ((line.invoicedQty / line.orderedQty) * 100).toFixed(0)
+                              : '0'}% invoiced
+                          </div>
+                          <ProgressBar>
+                            <ProgressFill
+                              $pct={
+                                line.orderedQty > 0
+                                  ? (line.invoicedQty / line.orderedQty) * 100
+                                  : 0
+                              }
+                            />
+                          </ProgressBar>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>
+                            {pct.toFixed(0)}% delivered
+                          </div>
+                          <ProgressBar>
+                            <ProgressFill $pct={pct} />
+                          </ProgressBar>
+                        </>
+                      )}
                     </Td>
                   </tr>
                 );
@@ -745,14 +856,6 @@ export function SalesOrderDetailPage() {
             </EmptyDocChain>
           )}
         </div>
-
-        {/* T-200.5 dependency notice */}
-        {(isOpen || isPartlyClosed) && (
-          <p style={{ fontSize: 12, color: '#b45309', marginTop: 12, marginBottom: 0 }}>
-            Note: "Create Delivery" navigates to /sales/deliveries/from-so/:docEntry. This route
-            will return 404 until T-200.5 (Delivery UI) ships.
-          </p>
-        )}
 
         {isClosed && so.targetDocRefs.length === 0 && (
           <p style={{ fontSize: 12, color: '#6b7280', marginTop: 12, marginBottom: 0 }}>

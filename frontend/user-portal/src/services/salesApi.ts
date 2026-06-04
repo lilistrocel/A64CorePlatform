@@ -214,6 +214,41 @@ export interface ARInvoiceTransition {
   reason?: string | null;
 }
 
+// ── T-201.10: From-SO AR Invoice request shapes ───────────────────────────────
+
+/**
+ * One line in an ARInvoiceFromSORequest.
+ * References a specific SO line (soLineId) and must be a non-stock (service) item.
+ * Mirrors ARInvoiceFromSOLineRequest in the backend.
+ */
+export interface ARInvoiceFromSOLineRequest {
+  soLineId: string;
+  quantity: number;
+  unitPrice: number;
+  discountPercent?: number;
+  taxCodeId?: string | null;
+  costCenterId?: string | null;
+}
+
+/**
+ * Request body for POST /api/v1/sales/ar-invoices/from-so/:soDocEntry.
+ * Creates an AR Invoice from service lines on a Sales Order.
+ * Stock lines on a mixed SO must use the DN → from-Delivery flow instead.
+ */
+export interface ARInvoiceFromSORequest {
+  companyCode?: string;
+  bpRefNo?: string | null;
+  docDate: string;
+  invoiceDate: string;
+  dateOfSupply?: string | null;
+  paymentTermsId?: string | null;
+  currency?: string;
+  exchangeRate?: number;
+  journalMemo?: string | null;
+  notes?: string | null;
+  lines: ARInvoiceFromSOLineRequest[];
+}
+
 export interface ARInvoiceListParams {
   organizationId?: string;
   status?: ARInvoiceStatus | null;
@@ -606,6 +641,13 @@ export interface SalesOrderListItem {
   status: SalesOrderStatus;
   currency: string;
   totals: SalesOrderTotals;
+  /**
+   * T-201.10 — sum of (quantity - invoicedQty - creditedQty - cancelledQty) across
+   * the SO's service lines (item.isStock=false). Stock lines are excluded — they
+   * invoice via the DN chain, not the from-SO endpoint. Powers the per-row badge
+   * + the "Has Service Open Qty" filter chip on SalesOrdersV2Page.
+   */
+  serviceOpenInvoiceQty: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -676,6 +718,12 @@ export interface SalesOrderListParams {
   dateFrom?: string | null;
   dateTo?: string | null;
   hasOpenLines?: boolean | null;
+  /**
+   * T-201.10: Filter to SOs that have at least one service line with open invoice qty > 0.
+   * Requires backend support (has_service_open_lines query param on the list endpoint).
+   * Flag: backend must add this param — it is NOT yet supported.
+   */
+  hasServiceOpenLines?: boolean | null;
   page?: number;
   size?: number;
 }
@@ -1391,6 +1439,24 @@ export async function createArInvoiceFromDelivery(
 }
 
 /**
+ * T-201.10: Create an AR Invoice from service lines on a Sales Order.
+ * The SO must be OPEN or PARTLY_CLOSED. Each referenced SO line must be a
+ * non-stock (service) item — stock lines must use the from-Delivery flow.
+ */
+export async function createArInvoiceFromSO(
+  soDocEntry: string,
+  data: ARInvoiceFromSORequest,
+  orgId: string,
+): Promise<ARInvoice> {
+  const response = await apiClient.post<SuccessEnvelope<ARInvoice>>(
+    `${AR_INVOICE_BASE}/from-so/${soDocEntry}`,
+    data,
+    { params: { organization_id: orgId } },
+  );
+  return response.data.data;
+}
+
+/**
  * Partially update a DRAFT AR Invoice.
  * If `lines` is provided the existing line set is replaced wholesale.
  */
@@ -1817,6 +1883,8 @@ export async function listSalesOrders(
   if (params.dateFrom) queryParams['date_from'] = params.dateFrom;
   if (params.dateTo) queryParams['date_to'] = params.dateTo;
   if (params.hasOpenLines != null) queryParams['has_open_lines'] = params.hasOpenLines;
+  // T-201.10: hasServiceOpenLines — forwarded to backend; requires server-side support.
+  if (params.hasServiceOpenLines != null) queryParams['has_service_open_lines'] = params.hasServiceOpenLines;
   if (params.page) queryParams['page'] = params.page;
   if (params.size) queryParams['size'] = params.size;
 

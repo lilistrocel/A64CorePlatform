@@ -1,11 +1,12 @@
 /**
- * ARInvoiceFormPage — Wave 3 (T-200.0)
+ * ARInvoiceFormPage — Wave 3 (T-200.0 / T-201.10)
  *
- * Shared form page for creating, editing, and "copy-from-Delivery" AR Invoices.
+ * Shared form page for creating, editing, and "copy-from-source-doc" AR Invoices.
  *
- * Three modes (determined by URL params):
- *   new              — no params → direct create
+ * Four modes (determined by URL params):
+ *   new              — no params → direct create (service items only)
  *   from-delivery    — has deliveryDocId URL param → copy-from-delivery create
+ *   from-so          — has soDocEntry URL param → copy service lines from SO (T-201.10)
  *   edit             — has docId param (from /ar-invoices/:docId/edit) → update
  *
  * Submit creates the doc in DRAFT status. Status transition (DRAFT → OPEN)
@@ -16,7 +17,10 @@
  *   - useTaxCodes (tax code dropdown)
  *
  * Modals do NOT close on overlay click — X button only (project rule).
- * Route: /sales/ar-invoices/new | /sales/ar-invoices/from-delivery/:deliveryDocId | /sales/ar-invoices/:docId/edit
+ * Route: /sales/ar-invoices/new
+ *      | /sales/ar-invoices/from-delivery/:deliveryDocId
+ *      | /sales/ar-invoices/from-so/:soDocEntry
+ *      | /sales/ar-invoices/:docId/edit
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -28,7 +32,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { Trash2, Plus } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth.store';
-import { useArInvoice, useCreateArInvoice, useUpdateArInvoice, useCreateArInvoiceFromDelivery } from '../../hooks/queries/useArInvoices';
+import { useArInvoice, useCreateArInvoice, useUpdateArInvoice, useCreateArInvoiceFromDelivery, useCreateARInvoiceFromSO } from '../../hooks/queries/useArInvoices';
 import { useDelivery } from '../../hooks/queries/useDeliveries';
 import { useSalesOrderV2 } from '../../hooks/queries/useSalesOrders';
 import { CustomerCombobox } from '../../components/sales/CustomerCombobox';
@@ -48,6 +52,8 @@ import type { ARInvoiceLineCreate } from '../../services/salesApi';
 const lineSchema = z.object({
   // Set only in from-Delivery mode — the source Delivery line UUID required by the backend.
   deliveryLineId: z.string().nullable().optional(),
+  // Set only in from-SO mode — the source SO line UUID required by the backend.
+  soLineId: z.string().nullable().optional(),
   itemId: z.string().min(1, 'Item ID required'),
   itemCode: z.string().min(1, 'Item code required'),
   itemName: z.string().min(1, 'Item name required'),
@@ -409,6 +415,7 @@ function formatAmount(value: number): string {
 
 const EMPTY_LINE = {
   deliveryLineId: null as string | null,
+  soLineId: null as string | null,
   itemId: '',
   itemCode: '',
   itemName: '',
@@ -426,24 +433,29 @@ const EMPTY_LINE = {
 
 export function ARInvoiceFormPage() {
   const navigate = useNavigate();
-  const { docId, deliveryDocId } = useParams<{
+  const { docId, deliveryDocId, soDocEntry } = useParams<{
     docId?: string;
     deliveryDocId?: string;
+    soDocEntry?: string;
   }>();
   const { user } = useAuthStore();
   const orgId = user?.organizationId ?? '';
 
-  // Determine form mode
+  // Determine form mode — exactly one of these is true at a time.
   const isEdit = Boolean(docId);
-  const isFromDelivery = Boolean(deliveryDocId) && !docId;
-  // T-201.8: direct-create = neither from-Delivery nor edit. Only this mode
-  // restricts the item picker to service/fee items (isStock=false).
-  const isDirectCreate = !deliveryDocId && !docId;
+  const isFromDelivery = Boolean(deliveryDocId) && !docId && !soDocEntry;
+  // T-201.10: from-SO mode — invoicing service lines directly from the SO.
+  const isFromSo = Boolean(soDocEntry) && !docId && !deliveryDocId;
+  // T-201.8: direct-create = no URL param. Only this mode restricts the item
+  // picker to service/fee items (isStock=false).
+  const isDirectCreate = !deliveryDocId && !docId && !soDocEntry;
 
   const pageTitle = isEdit
     ? 'Edit AR Invoice'
     : isFromDelivery
-    ? `New AR Invoice from Delivery`
+    ? 'New AR Invoice from Delivery'
+    : isFromSo
+    ? 'New AR Invoice from Sales Order'
     : 'New AR Invoice';
 
   // Fetch existing invoice for edit mode
@@ -469,10 +481,17 @@ export function ARInvoiceFormPage() {
     sourceSoDocId ? orgId : undefined,
   );
 
+  // T-201.10: Fetch source SO for from-SO mode directly (soDocEntry IS the docEntry).
+  const { data: fromSoSourceSo, isLoading: loadingFromSoSo } = useSalesOrderV2(
+    isFromSo ? soDocEntry : undefined,
+    isFromSo ? orgId : undefined,
+  );
+
   // Mutations
   const createMutation = useCreateArInvoice();
   const updateMutation = useUpdateArInvoice();
   const fromDeliveryMutation = useCreateArInvoiceFromDelivery();
+  const fromSoMutation = useCreateARInvoiceFromSO();
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -530,6 +549,7 @@ export function ARInvoiceFormPage() {
         notes: existingInvoice.notes ?? '',
         lines: existingInvoice.lines.map((l) => ({
           deliveryLineId: null,
+          soLineId: null,
           itemId: l.itemId,
           itemCode: l.itemCode,
           itemName: l.itemName,
@@ -595,6 +615,7 @@ export function ARInvoiceFormPage() {
             null;
           return {
             deliveryLineId: dl.lineId,
+            soLineId: null as string | null,
             itemId: dl.itemId,
             itemCode: dl.itemCode,
             itemName: dl.itemName,
@@ -617,6 +638,62 @@ export function ARInvoiceFormPage() {
         }),
     });
   }, [isFromDelivery, sourceDelivery, sourceSo, sourceSoDocId, reset]);
+
+  // T-201.10: Pre-fill form in from-SO mode once the source SO loads.
+  // Only service lines (identified via SO line invoicedQty / open qty logic) are included.
+  // The item ext's isStock flag is not projected onto SO lines, so we rely on the
+  // backend to reject any stock lines at submit time (HTTP 422 with a clear message).
+  // Client-side we pre-fill ALL lines with open invoice qty > 0 and show the note
+  // explaining that stock lines are excluded.
+  useEffect(() => {
+    if (!isFromSo || !fromSoSourceSo) return;
+
+    reset({
+      companyCode: fromSoSourceSo.companyCode ?? '',
+      customerId: fromSoSourceSo.customerId,
+      customerName: fromSoSourceSo.customerName,
+      bpRefNo: fromSoSourceSo.bpRefNo ?? '',
+      docDate: today(),
+      dateOfSupply: fromSoSourceSo.docDate,
+      invoiceDate: today(),
+      paymentTermsId: fromSoSourceSo.paymentTermsId ?? null,
+      currency: fromSoSourceSo.currency ?? 'AED',
+      exchangeRate: fromSoSourceSo.exchangeRate ?? 1,
+      journalMemo: '',
+      notes: '',
+      lines: fromSoSourceSo.lines
+        .map((sl) => {
+          // open invoice qty = ordered − invoiced − cancelled
+          // (SO lines track invoicedQty directly; no creditedQty on SO lines)
+          const openInvoiceQty = Math.max(
+            0,
+            Number(sl.orderedQty) - Number(sl.invoicedQty ?? 0) - Number(sl.cancelledQty ?? 0),
+          );
+          return {
+            soLineId: sl.lineId,
+            deliveryLineId: null as string | null,
+            itemId: sl.itemId,
+            itemCode: sl.itemCode,
+            itemName: sl.itemName,
+            description: sl.description ?? '',
+            quantity: openInvoiceQty,
+            uom: sl.uom,
+            unitPrice: Number(sl.unitPrice),
+            discountPercent: Number(sl.discountPercent),
+            taxCodeId: sl.taxCodeId ?? null,
+            warehouseId: null as string | null,
+            costCenterId: sl.costCenterId ?? null,
+            _openQty: openInvoiceQty,
+          };
+        })
+        // Only include lines with something left to invoice.
+        .filter((l) => l._openQty > 0)
+        .map(({ _openQty: _drop, ...rest }) => {
+          void _drop;
+          return rest;
+        }),
+    });
+  }, [isFromSo, fromSoSourceSo, reset]);
 
   // Field array for invoice lines
   const { fields, append, remove } = useFieldArray({
@@ -748,6 +825,43 @@ export function ARInvoiceFormPage() {
           orgId,
         });
         navigate(`/sales/ar-invoices/${result.docEntry}`);
+      } else if (isFromSo && soDocEntry) {
+        // T-201.10: Each line carries the source SO line UUID (soLineId).
+        // The backend enforces that all referenced lines are service (non-stock) items.
+        const fromSoLines = data.lines.map((l) => {
+          if (!l.soLineId) {
+            throw new Error(
+              'Cannot submit a line without a source Sales Order line reference. ' +
+                'Reload the page or recreate the invoice from the Sales Order.',
+            );
+          }
+          return {
+            soLineId: l.soLineId,
+            quantity: l.quantity,
+            unitPrice: l.unitPrice,
+            discountPercent: l.discountPercent,
+            taxCodeId: l.taxCodeId || null,
+            costCenterId: l.costCenterId || null,
+          };
+        });
+        const result = await fromSoMutation.mutateAsync({
+          soDocEntry,
+          data: {
+            companyCode: data.companyCode || undefined,
+            bpRefNo: data.bpRefNo || null,
+            docDate: data.docDate,
+            invoiceDate: data.invoiceDate,
+            dateOfSupply: data.dateOfSupply || null,
+            paymentTermsId: data.paymentTermsId || null,
+            currency: data.currency,
+            exchangeRate: data.exchangeRate,
+            journalMemo: data.journalMemo || null,
+            notes: data.notes || null,
+            lines: fromSoLines,
+          },
+          orgId,
+        });
+        navigate(`/sales/ar-invoices/${result.docEntry}`);
       } else {
         // Direct create
         const result = await createMutation.mutateAsync({
@@ -809,6 +923,16 @@ export function ARInvoiceFormPage() {
     );
   }
 
+  // T-201.10: In from-SO mode, wait for the source SO to load before painting.
+  if (isFromSo && loadingFromSoSo) {
+    return (
+      <Container>
+        <BackLink onClick={() => navigate('/sales/ar-invoices')}>← AR Invoices</BackLink>
+        <PageTitle>Loading source Sales Order…</PageTitle>
+      </Container>
+    );
+  }
+
   const watchedCustomerId = watch('customerId');
   const watchedCustomerName = watch('customerName');
 
@@ -825,6 +949,15 @@ export function ARInvoiceFormPage() {
           and item lines are inherited from the Delivery; prices and tax codes come from the
           source Sales Order. Adjust quantities (for partial invoicing) or pricing as needed,
           then click Save as Draft.
+        </InfoBanner>
+      )}
+
+      {/* T-201.10: from-SO mode info banner */}
+      {isFromSo && fromSoSourceSo && (
+        <InfoBanner>
+          Invoicing service lines from Sales Order <strong>{fromSoSourceSo.docNumber}</strong>.
+          Stock lines from this order are invoiced separately via the Delivery Note flow.
+          Adjust quantities (for partial invoicing) or pricing as needed, then click Save as Draft.
         </InfoBanner>
       )}
 
@@ -846,7 +979,7 @@ export function ARInvoiceFormPage() {
                       value={field.value}
                       onChange={field.onChange}
                       orgId={orgId}
-                      disabled={isFromDelivery}
+                      disabled={isFromDelivery || isFromSo}
                       hasError={Boolean(errors.companyCode)}
                       describedBy={errors.companyCode ? 'companyCode-error' : undefined}
                     />
@@ -870,7 +1003,7 @@ export function ARInvoiceFormPage() {
                     onCustomerSelect={handleCustomerSelect}
                     onClear={handleCustomerClear}
                     error={errors.customerId?.message}
-                    disabled={isFromDelivery || isSubmitting}
+                    disabled={isFromDelivery || isFromSo || isSubmitting}
                   />
                 )}
               />
@@ -1060,9 +1193,9 @@ export function ARInvoiceFormPage() {
                                 }
                               }}
                               hasError={Boolean(errors.lines?.[index]?.itemId || errors.lines?.[index]?.itemCode)}
-                              disabled={isFromDelivery || isSubmitting}
+                              disabled={isFromDelivery || isFromSo || isSubmitting}
                               // T-201.8: restrict to service items in direct-create mode;
-                              // from-Delivery and edit modes have the picker disabled anyway.
+                              // from-Delivery, from-SO, and edit modes have the picker disabled.
                               filterIsStock={isDirectCreate ? false : undefined}
                               placeholder="Search item…"
                               describedBy={`line-${index}-item-error`}
@@ -1092,8 +1225,8 @@ export function ARInvoiceFormPage() {
                         <LineInput
                           {...register(`lines.${index}.uom`)}
                           placeholder="EA"
-                          readOnly={isFromDelivery}
-                          disabled={isFromDelivery}
+                          readOnly={isFromDelivery || isFromSo}
+                          disabled={isFromDelivery || isFromSo}
                           aria-label={`Line ${index + 1} unit of measure`}
                         />
                       </LTd>
@@ -1166,7 +1299,7 @@ export function ARInvoiceFormPage() {
             </LinesTable>
           </div>
 
-          {!isFromDelivery && (
+          {!isFromDelivery && !isFromSo && (
             <AddLineButton
               type="button"
               onClick={() => append({ ...EMPTY_LINE })}

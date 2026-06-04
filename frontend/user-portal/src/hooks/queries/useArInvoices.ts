@@ -21,6 +21,7 @@ import type {
   ARInvoiceCreate,
   ARInvoiceUpdate,
   ARInvoiceFromDelivery,
+  ARInvoiceFromSORequest,
   ARInvoiceTransition,
 } from '../../services/salesApi';
 
@@ -111,6 +112,35 @@ export function useCreateArInvoiceFromDelivery() {
     }) => salesApi.createArInvoiceFromDelivery(deliveryDocId, data, orgId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ariQueryKeys.all(), refetchType: 'all' });
+    },
+  });
+}
+
+/**
+ * T-201.10: Mutation: create an AR Invoice from service lines on a Sales Order.
+ *
+ * The SO must be OPEN or PARTLY_CLOSED. Stock lines on the same SO are invoiced
+ * separately via the Delivery Note → from-Delivery flow.
+ *
+ * Invalidates AR Invoices, Sales Orders, and Deliveries (in case a related
+ * stock line on a mixed SO was partially invoiced via DN earlier).
+ */
+export function useCreateARInvoiceFromSO() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      soDocEntry,
+      data,
+      orgId,
+    }: {
+      soDocEntry: string;
+      data: ARInvoiceFromSORequest;
+      orgId: string;
+    }) => salesApi.createArInvoiceFromSO(soDocEntry, data, orgId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ariQueryKeys.all(), refetchType: 'all' });
+      qc.invalidateQueries({ queryKey: ['sales', 'orders-v2'], refetchType: 'all' });
+      qc.invalidateQueries({ queryKey: ['sales', 'deliveries'], refetchType: 'all' });
     },
   });
 }

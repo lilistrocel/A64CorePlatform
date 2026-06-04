@@ -48,6 +48,7 @@ import { PaymentTermsCombobox } from '../../components/sales/PaymentTermsCombobo
 import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import type { PaymentTermsSelection } from '../../components/sales/PaymentTermsCombobox';
 import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
+import { useSaleItemFinanceExtList } from '../../hooks/queries/useSaleItemFinanceExt';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
@@ -356,6 +357,35 @@ const ErrorBanner = styled.div`
   margin-bottom: 24px;
 `;
 
+/**
+ * T-201.10 — Type badge for line-type visual hint in the SO form.
+ * Mirrors the TypeChip from SalesItemsPage (T-201.8) — same palette.
+ * $isStock=true → Stock (blue tint); $isStock=false → Service (amber).
+ */
+const TypeChip = styled.span<{ $isStock: boolean }>`
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: ${({ $isStock, theme }) =>
+    $isStock
+      ? (theme.colors?.primary?.light ?? '#eff6ff')
+      : '#fef3c7'};
+  color: ${({ $isStock, theme }) =>
+    $isStock
+      ? (theme.colors?.primary?.main ?? '#1d4ed8')
+      : '#92400e'};
+`;
+
+/** T-201.10 — Small subtitle below the page title indicating Service-Only mode. */
+const ServiceOnlySubtitle = styled.p`
+  font-size: 13px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin: -20px 0 24px;
+`;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatAmount(amount: number, currency = 'AED'): string {
@@ -471,6 +501,26 @@ export function SalesOrderFormPage() {
   const baseCurrency = useTenantBaseCurrency();
   const showExchangeRate = currency !== baseCurrency;
   const [paymentTermsName, setPaymentTermsName] = useState<string>('');
+
+  // T-201.10: Fetch all item finance exts so we can determine isStock per line.
+  const { data: itemFinanceExts = [] } = useSaleItemFinanceExtList(orgId);
+  const itemExtByItemId = useMemo(() => {
+    const map = new Map<string, { isStock: boolean }>();
+    for (const ext of itemFinanceExts) {
+      map.set(ext.itemId, { isStock: ext.isStock ?? true });
+    }
+    return map;
+  }, [itemFinanceExts]);
+
+  // Derive line-type mix from the watched lines.
+  const lineTypeFlags = useMemo(
+    () => lines.map((l) => itemExtByItemId.get(l.itemId)?.isStock ?? true),
+    [lines, itemExtByItemId],
+  );
+  const hasLines = lineTypeFlags.length > 0;
+  const allService = hasLines && lineTypeFlags.every((s) => s === false);
+  const allStock = hasLines && lineTypeFlags.every((s) => s === true);
+  const isMixed = hasLines && !allService && !allStock;
 
   // Reset exchangeRate to 1.0 when currency reverts to base.
   useEffect(() => {
@@ -656,6 +706,10 @@ export function SalesOrderFormPage() {
     <Container>
       <BackLink onClick={() => navigate('/sales/orders-v2')}>← Sales Orders</BackLink>
       <PageTitle>{pageTitle}</PageTitle>
+      {/* T-201.10: service-only subtitle — shown only when all lines are service items */}
+      {allService && (
+        <ServiceOnlySubtitle>Service-Only Sales Order</ServiceOnlySubtitle>
+      )}
 
       {mode === 'from-quote' && sourceQuote && (
         <FromQuoteBanner>
@@ -705,16 +759,18 @@ export function SalesOrderFormPage() {
               {errors.docDate && <FieldError>{errors.docDate.message}</FieldError>}
             </Field>
 
-            {/* Delivery Date */}
-            <Field>
-              <Label>Delivery Date</Label>
-              <Input
-                type="date"
-                $error={Boolean(errors.deliveryDate)}
-                {...register('deliveryDate')}
-              />
-              {errors.deliveryDate && <FieldError>{errors.deliveryDate.message}</FieldError>}
-            </Field>
+            {/* Delivery Date — hidden when all lines are service items (T-201.10) */}
+            {!allService && (
+              <Field>
+                <Label>Delivery Date</Label>
+                <Input
+                  type="date"
+                  $error={Boolean(errors.deliveryDate)}
+                  {...register('deliveryDate')}
+                />
+                {errors.deliveryDate && <FieldError>{errors.deliveryDate.message}</FieldError>}
+              </Field>
+            )}
 
             {/* Currency */}
             <Field>
@@ -811,13 +867,15 @@ export function SalesOrderFormPage() {
               <thead>
                 <tr>
                   <Th style={{ minWidth: 200 }}>Item</Th>
+                  {/* T-201.10: Type column shown in mixed mode only */}
+                  {isMixed && <Th style={{ width: 72 }}>Type</Th>}
                   <Th style={{ width: 120 }}>Description</Th>
                   <Th style={{ width: 70 }}>Qty</Th>
                   <Th style={{ width: 60 }}>UOM</Th>
                   <Th style={{ width: 90 }}>Unit Price</Th>
                   <Th style={{ width: 70 }}>Disc %</Th>
                   <Th style={{ width: 60 }}>Tax %</Th>
-                  <Th style={{ width: 100 }}>Warehouse</Th>
+                  {!allService && <Th style={{ width: 100 }}>Warehouse</Th>}
                   <Th style={{ width: 32 }}></Th>
                 </tr>
               </thead>
@@ -856,6 +914,16 @@ export function SalesOrderFormPage() {
                       <input type="hidden" {...register(`lines.${idx}.itemCode`)} />
                       <input type="hidden" {...register(`lines.${idx}.itemName`)} />
                     </Td>
+                    {/* T-201.10: Type badge column — shown only in mixed mode */}
+                    {isMixed && (
+                      <Td>
+                        {lines[idx]?.itemId ? (
+                          <TypeChip $isStock={itemExtByItemId.get(lines[idx].itemId)?.isStock ?? true}>
+                            {(itemExtByItemId.get(lines[idx].itemId)?.isStock ?? true) ? 'Stock' : 'Service'}
+                          </TypeChip>
+                        ) : null}
+                      </Td>
+                    )}
                     <Td>
                       <LineInput
                         {...register(`lines.${idx}.description`)}
@@ -902,12 +970,24 @@ export function SalesOrderFormPage() {
                         {...register(`lines.${idx}.taxPercent`)}
                       />
                     </Td>
-                    <Td>
-                      <LineInput
-                        {...register(`lines.${idx}.warehouseId`)}
-                        placeholder="WH-001"
-                      />
-                    </Td>
+                    {/* T-201.10: Warehouse hidden in service-only mode; shown per-row in mixed/stock */}
+                    {!allService && (
+                      <Td>
+                        <LineInput
+                          {...register(`lines.${idx}.warehouseId`)}
+                          placeholder="WH-001"
+                          disabled={!!(lines[idx]?.itemId && itemExtByItemId.get(lines[idx].itemId)?.isStock === false)}
+                          style={{
+                            opacity: (lines[idx]?.itemId && itemExtByItemId.get(lines[idx].itemId)?.isStock === false) ? 0.4 : 1,
+                          }}
+                          title={
+                            (lines[idx]?.itemId && itemExtByItemId.get(lines[idx].itemId)?.isStock === false)
+                              ? 'Warehouse not applicable for service items'
+                              : undefined
+                          }
+                        />
+                      </Td>
+                    )}
                     <Td>
                       <DeleteLineBtn
                         type="button"

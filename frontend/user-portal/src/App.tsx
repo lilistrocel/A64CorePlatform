@@ -370,11 +370,13 @@ function App() {
                 <Route path="/sales/returns" element={<Navigate to="/sales/returns-v2" replace />} />
 
                 {/* Sales module — Wave 3 AR Invoices (T-200.0)
-                    Route order matters: /new and /from-delivery/:id MUST come before /:docId
-                    to avoid matching the literal string "new" as a docId. */}
+                    Route order matters: /new, /from-delivery/:id, /from-so/:id MUST come
+                    before /:docId to avoid matching the literal strings as a docId. */}
                 <Route path="/sales/ar-invoices" element={<ARInvoicesPage />} />
                 <Route path="/sales/ar-invoices/new" element={<ARInvoiceFormPage />} />
                 <Route path="/sales/ar-invoices/from-delivery/:deliveryDocId" element={<ARInvoiceFormPage />} />
+                {/* T-201.10: from-so mode — service lines invoiced directly from the SO */}
+                <Route path="/sales/ar-invoices/from-so/:soDocEntry" element={<ARInvoiceFormPage />} />
                 <Route path="/sales/ar-invoices/:docId/edit" element={<ARInvoiceFormPage />} />
                 <Route path="/sales/ar-invoices/:docId" element={<ARInvoiceDetailPage />} />
                 <Route path="/sales/customer-receipts" element={<CustomerReceiptsPage />} />
