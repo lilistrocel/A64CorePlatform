@@ -162,8 +162,9 @@
      from-SO endpoint (only DN can invoice them). Test this explicitly.
 - **Notes:**
   - This is the larger half of the epic. ~250-350 lines of code + ~400 lines of tests.
-  - Reuse helpers from T-201.5/.6/.7 where possible (`_is_fully_invoiced`, `_write_audit`,
-    `_TOLERANCE`). Consider extracting into a generic `doc_chain_reconciler` module.
+  - **T-201.9.0 (refactor pre-step) ✅ DONE 2026-06-04:** `doc_chain_reconciler.py` extracted.
+    All DN-chain helpers are now parameterised by collection name. Use them directly for SO chain.
+    See `src/modules/sales/services/doc_chain_reconciler.py`.
   - **CRITICAL for agent dispatch:** do not run git commit/push.
 
 ---
