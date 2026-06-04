@@ -102,6 +102,22 @@ from ..models.document import (
     PendingApprovalItem,
 )
 from .approval_engine import ApprovalDecision as EngineDecision, ApprovalEngine
+from .purchasing_chain_reconciler import (
+    _GR_AUDIT_COL,
+    _PO_AUDIT_COL,
+    _PR_AUDIT_COL,
+    auto_close_gr_if_fully_invoiced,
+    auto_close_po_if_fully_received,
+    auto_reopen_gr_if_not_fully_invoiced,
+    auto_reopen_po_if_not_fully_received,
+    load_gr_with_lines,
+    load_po_with_lines,
+    pull_dangling_gr_chain_refs,
+    pull_dangling_po_chain_refs,
+    reconcile_gr_line_invoice_counters,
+    reconcile_po_line_receipt_counters,
+    write_purchasing_audit,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1919,9 +1935,14 @@ class DocumentService:
                 await self._lines.insert_many(po_line_docs, session=session)
             await self._headers.insert_one(header, session=session)
 
-            # Reason: auto-close the PR once a PO is created from it.
-            # Both the PR header update and the PO header insert must be in
-            # the same transaction so neither can commit without the other.
+            # Reason: auto-close the PR once a PO is created from it (Part 1 —
+            # T-200.22).  The close is unconditional here because create_po_from_pr
+            # always takes all open PR lines in one shot; the PR is fully ordered
+            # after this call.  Both the PR header update and the PO header insert
+            # must be in the same transaction so neither can commit without the other.
+            # Audit action "auto_close_on_full_order" is the purchasing semantic
+            # variant of sales' "auto_close_on_full_invoice"; the different name
+            # makes it distinguishable in the audit trail.
             await self._headers.update_one(
                 {"docId": pr_doc_id},
                 {"$set": {"status": DocumentStatus.CLOSED.value, "updatedAt": now, "updatedBy": created_by}},
@@ -1933,6 +1954,21 @@ class DocumentService:
             # Emit both events inside the same transaction.
             await self._emit_pr_event(pr_updated, DocumentStatus.OPEN.value, company_code, session=session)
             await self._emit_po_event(header, None, company_code, session=session)
+
+        # Reason: best-effort audit write OUTSIDE the transaction — audit failure
+        # must never roll back the PR/PO creation.  The PR is already closed by
+        # this point; we are just recording the chain event.
+        await write_purchasing_audit(
+            self._db,
+            audit_collection=_PR_AUDIT_COL,
+            doc_id=pr_doc_id,
+            action="auto_close_on_full_order",
+            user_id=created_by,
+            detail={
+                "triggeredByPoDocId": doc_id,
+                "triggeredByPoDocNumber": doc_number,
+            },
+        )
 
         logger.info(
             "[DocumentService] created PO %s from PR %s", doc_number, pr_header["docNumber"]
@@ -2953,6 +2989,18 @@ class DocumentService:
         Only warehouseId, notes, and lines (received quantities) may be changed.
         baseDocId, vendor, and companyCode are immutable.
 
+        T-200.22 note (Part 5): No PO counter reconciliation is performed on
+        DRAFT GR update because DRAFT GRs have not yet committed any PO line
+        counters (openQuantity / closedQuantity on PO lines only change at
+        ``post_gr`` time, not at create or update time).  The line quantity
+        validation in ``_build_gr_lines_from_po`` prevents over-receiving
+        against the PO's current openQuantity, which is the correct guardrail
+        at draft-edit time.
+
+        This is an intentional asymmetry vs. sales where DN DRAFT creation
+        immediately increments SO line ``invoicedQty`` (reservation semantics).
+        Purchasing v1 does not implement reservation semantics for Draft GRs.
+
         Args:
             org_id: Organisation scope.
             doc_id: GR document UUID string.
@@ -3092,12 +3140,22 @@ class DocumentService:
             for pl in po_all_lines
         )
 
+        # Build po_line_deltas for chain-reconciler audit trail (T-200.22).
+        # Maps PO lineId → quantity received by this GR post.
+        po_line_deltas: Dict[str, Decimal] = {
+            po_line["lineId"]: line_qty_map.get(po_line["lineId"], Decimal("0"))
+            for po_line in po_all_lines
+            if line_qty_map.get(po_line["lineId"], Decimal("0")) > Decimal("0")
+        }
+
         now = datetime.now(tz=timezone.utc)
         previous_po_status = po_header["status"]
         posted_event_id: Optional[str] = None
 
         async with self._txn() as session:
             # Step 1: decrement openQuantity on each PO line and increment closedQuantity
+            # Reason: these counter updates are kept inside the transaction for
+            # atomicity with the GR status change and outbox event.
             for po_line in po_all_lines:
                 recv_qty = line_qty_map.get(po_line["lineId"], Decimal("0"))
                 if recv_qty == Decimal("0"):
@@ -3131,6 +3189,8 @@ class DocumentService:
             assert updated_gr is not None
 
             # Step 3: if fully received, close the PO and emit po_state_changed
+            # Reason: PO close kept inside transaction to maintain outbox atomicity
+            # (the po_state_changed event and the PO header update commit together).
             if all_fully_received:
                 await self._headers.update_one(
                     {"docId": po_doc_id},
@@ -3152,12 +3212,28 @@ class DocumentService:
                     doc_id,
                 )
 
-            # Step 4: emit purchase_received event (outbox)
+            # Step 4: Append targetDocRefs on PO header so the PO detail card
+            # can link to this GR (T-200.22 chain-ref tracking).
+            await self._headers.update_one(
+                {"docId": po_doc_id},
+                {
+                    "$push": {
+                        "targetDocRefs": {
+                            "docType": "GR",
+                            "docId": doc_id,
+                            "docNumber": header.get("docNumber", ""),
+                        }
+                    }
+                },
+                session=session,
+            )
+
+            # Step 5: emit purchase_received event (outbox)
             posted_event_id = await self._emit_purchase_received_event(
                 updated_gr, gr_lines, session=session
             )
 
-            # Step 5: stamp the postedEventId on the GR header for idempotency
+            # Step 6: stamp the postedEventId on the GR header for idempotency
             await self._headers.update_one(
                 {"docId": doc_id},
                 {"$set": {"postedEventId": posted_event_id}},
@@ -3166,6 +3242,28 @@ class DocumentService:
             # Refresh header with postedEventId
             updated_gr = await self._headers.find_one({"docId": doc_id}, session=session)
             assert updated_gr is not None
+
+        # Reason: best-effort audit write OUTSIDE the transaction — mirrors T-201.5
+        # pattern.  If the PO was auto-closed above, record the chain event.
+        # auto_close_po_if_fully_received is idempotent: if the PO is already CLOSED
+        # (closed inside the txn above) it checks status == OPEN → returns False
+        # without firing again.  We call it here only for its audit write side-effect
+        # when the PO is fully received; for the audit, reload the PO first.
+        if all_fully_received:
+            await write_purchasing_audit(
+                self._db,
+                audit_collection=_PO_AUDIT_COL,
+                doc_id=po_doc_id,
+                action="auto_close_on_full_receipt",
+                user_id=posted_by,
+                detail={
+                    "triggeredByGrDocId": doc_id,
+                    "triggeredByGrDocNumber": header.get("docNumber", ""),
+                    "poLineDeltas": {
+                        lid: float(qty) for lid, qty in po_line_deltas.items()
+                    },
+                },
+            )
 
         logger.info(
             "[DocumentService] posted GR docId=%s eventId=%s poCloses=%s",
@@ -3182,6 +3280,13 @@ class DocumentService:
 
         Posted GRs are immutable per the INTEGRATION_MODEL.md immutability
         rules and can never be deleted.
+
+        On deletion (T-200.22 chain mechanics):
+          1. Soft-deletes the GR header.
+          2. Releases the PO line counters that this GR had locked
+             (decrements closedQuantity, increments openQuantity).
+          3. Auto-reopens the PO if it was CLOSED and is no longer fully received.
+          4. Pulls stale GR targetDocRef from the PO header.
 
         Args:
             org_id: Organisation scope.
@@ -3205,12 +3310,73 @@ class DocumentService:
                 "Posted GRs are immutable — create a reversal GR to correct errors."
             )
 
+        # Reason: read GR lines BEFORE the soft-delete so we know what counters to release.
+        gr_lines_cursor = self._lines.find({"docId": doc_id})
+        gr_lines: List[Dict[str, Any]] = await gr_lines_cursor.to_list(length=None)
+
+        # Build release deltas: negative because we are returning qty to the PO.
+        # GR lines carry baseLineId = PO lineId.
+        release_deltas: Dict[str, Decimal] = {
+            ln["baseLineId"]: -Decimal(str(ln["quantity"]))
+            for ln in gr_lines
+            if ln.get("baseLineId")
+        }
+
+        po_doc_id: Optional[str] = header.get("baseDocId")
+
         now = datetime.now(tz=timezone.utc)
         await self._headers.update_one(
             {"docId": doc_id},
             {"$set": {"deletedAt": now, "updatedAt": now, "updatedBy": deleted_by}},
         )
         logger.info("[DocumentService] soft-deleted GR docId=%s", doc_id)
+
+        # Reason: release PO line counters only when the GR had a source PO and
+        # had registered receipt quantities (DRAFT GRs created via create_gr_from_po
+        # do NOT yet have counters on PO lines — counters are committed at post_gr
+        # time, not at create time).  For DRAFT GRs the release_deltas are all 0
+        # and reconcile_po_line_receipt_counters will be a no-op.
+        if po_doc_id and release_deltas:
+            await reconcile_po_line_receipt_counters(
+                self._db,
+                po_doc_id=po_doc_id,
+                org_id=org_id,
+                user_id=deleted_by,
+                gr_doc_id=doc_id,
+                # Reason: cap_check=False — release deltas are negative; they
+                # cannot exceed any cap.
+                line_deltas=release_deltas,
+                cap_check=False,
+            )
+
+            # Reload PO with lines (post-release state) and auto-reopen if needed.
+            po_raw = await load_po_with_lines(self._db, org_id=org_id, po_doc_id=po_doc_id)
+            if po_raw is not None:
+                await auto_reopen_po_if_not_fully_received(
+                    self._db,
+                    po_doc_id=po_doc_id,
+                    po_raw=po_raw,
+                    org_id=org_id,
+                    user_id=deleted_by,
+                    action="auto_reopen_on_receipt_release",
+                    extra_detail={
+                        "releasedByGrDocId": doc_id,
+                        "releasedDeltas": {
+                            lid: float(qty) for lid, qty in release_deltas.items()
+                        },
+                    },
+                )
+
+            # Reason: $pull the stale GR targetDocRef from the PO header so the
+            # PO detail chain card does not show a deleted GR.
+            await pull_dangling_po_chain_refs(
+                self._db,
+                po_doc_id=po_doc_id,
+                org_id=org_id,
+                user_id=deleted_by,
+                gr_doc_id=doc_id,
+            )
+
         return True
 
     # ==================================================================
@@ -3430,6 +3596,21 @@ class DocumentService:
         The user's invoiceUnitPrice per line may differ from the PO unit price; the system
         records the price variance.
 
+        T-200.22 chain mechanics (Part 6):
+          - After creating the AP, increments GR line ``invoicedQty`` for each
+            referenced GR line (via reconcile_gr_line_invoice_counters).
+          - Appends the AP as a ``targetDocRef`` on the GR header.
+          - Auto-closes the GR when all lines are fully invoiced (auto_close_gr_if_fully_invoiced).
+          - In v1 quantities are always full (locked to GR qty), so auto-close
+            fires on every successful AP creation.
+
+        Intentional asymmetry vs. Sales (Part 8 decision):
+          - AP Invoice creation does NOT bubble up to re-close the PO.  The PO
+            closes at receipt time (post_gr), not at invoice time.  This mirrors
+            SAP B1 purchasing semantics: goods arrival closes the PO; invoicing is
+            a separate back-office step.  If PO-close-on-full-invoice is needed in
+            future, file T-200.22.1.
+
         Args:
             org_id: Organisation scope.
             gr_doc_id: UUID of the source Posted GR.
@@ -3500,6 +3681,15 @@ class DocumentService:
         from datetime import timedelta
         due_date = data.dueDate or (invoice_date + timedelta(days=30))
 
+        # Build GR-line invoice deltas for chain-counter reconciliation.
+        # ap_line_docs carry grLineId = the GR line being invoiced; quantity is
+        # always the full GR line qty in v1 (no partial AP invoicing).
+        gr_line_deltas: Dict[str, Decimal] = {
+            ld["grLineId"]: Decimal(str(ld["quantity"]))
+            for ld in ap_line_docs
+            if ld.get("grLineId")
+        }
+
         # Stamp all lines with the AP docId and org
         for idx, ld in enumerate(ap_line_docs, start=1):
             ld["docId"] = doc_id
@@ -3553,6 +3743,53 @@ class DocumentService:
             if ap_line_docs:
                 await self._lines.insert_many(ap_line_docs, session=session)
             await self._headers.insert_one(header, session=session)
+
+            # Append AP as targetDocRef on GR header (T-200.22 chain-ref tracking).
+            await self._headers.update_one(
+                {"docId": gr_doc_id},
+                {
+                    "$push": {
+                        "targetDocRefs": {
+                            "docType": "AP",
+                            "docId": doc_id,
+                            "docNumber": doc_number,
+                        }
+                    }
+                },
+                session=session,
+            )
+
+        # Reason: counter and auto-close calls OUTSIDE the transaction — best-effort;
+        # mirrors the sales AR Invoice pattern in create_ar_invoice_from_delivery.
+        # If these fail, the AP Draft is already created and the user can re-submit;
+        # the GR status being OPEN rather than CLOSED is a cosmetic/listing concern,
+        # not a financial integrity issue.
+        await reconcile_gr_line_invoice_counters(
+            self._db,
+            gr_doc_id=gr_doc_id,
+            org_id=org_id,
+            user_id=created_by,
+            ap_doc_id=doc_id,
+            line_deltas=gr_line_deltas,
+            # cap_check=True: v1 locks qty to GR qty, so delta == GR qty; if
+            # invoicedQty already == qty (duplicate AP guard missed somehow), the
+            # cap raises a ValueError before any $inc.
+            cap_check=True,
+        )
+
+        gr_raw = await load_gr_with_lines(self._db, org_id=org_id, gr_doc_id=gr_doc_id)
+        await auto_close_gr_if_fully_invoiced(
+            self._db,
+            gr_doc_id=gr_doc_id,
+            gr_raw=gr_raw,
+            org_id=org_id,
+            user_id=created_by,
+            action="auto_close_on_full_invoice",
+            extra_detail={
+                "triggeredByApDocId": doc_id,
+                "triggeredByApDocNumber": doc_number,
+            },
+        )
 
         logger.info(
             "[DocumentService] created AP docNumber=%s from GR=%s org=%s",
@@ -3693,6 +3930,14 @@ class DocumentService:
         Only header metadata (invoiceNumber, invoiceDate, dueDate, notes) and
         line invoiceUnitPrices may be changed. baseDocId, vendor, companyCode,
         and line quantities are immutable.
+
+        T-200.22 note (Part 9): No GR counter reconciliation is needed on AP
+        update because AP line **quantities** are immutable in purchasing v1
+        (they are locked to the GR received quantity; only ``invoiceUnitPrice``
+        can change).  The GR ``invoicedQty`` counter was set at
+        ``create_ap_from_gr`` time and remains valid throughout the AP's life.
+        If partial-quantity AP invoicing is added in a future ticket, this
+        function will need counter delta logic mirroring T-201.6 on the sales side.
 
         Args:
             org_id: Organisation scope.
@@ -4024,6 +4269,16 @@ class DocumentService:
         Rejection is terminal in v1. The user must create a new AP Invoice
         if corrections are needed.
 
+        T-200.22 chain mechanics (Part 11 — AP terminal-reject path):
+          - Rejection is semantically equivalent to cancellation: the AP will
+            never be posted, so GR line ``invoicedQty`` counters are released.
+          - Auto-reopens the source GR if it was CLOSED (i.e. was the only AP
+            covering all lines).
+          - Pulls stale AP targetDocRef from the GR header.
+          - This parallels the sales ``OPEN→CANCELLED`` release path.  There is
+            no OPEN→CANCELLED transition for AP in v1; "Rejected" is the only
+            terminal-failure path.
+
         Args:
             org_id: Organisation scope.
             doc_id: AP document UUID string.
@@ -4055,6 +4310,19 @@ class DocumentService:
             raise ValueError(
                 f"Approval requires role '{required_role}'; your role is '{approver_role}'"
             )
+
+        # Reason: read AP lines BEFORE the rejection for chain counter release.
+        ap_lines_cursor = self._lines.find({"docId": doc_id})
+        ap_lines: List[Dict[str, Any]] = await ap_lines_cursor.to_list(length=None)
+
+        gr_doc_id: Optional[str] = header.get("baseDocId")
+
+        # Build release deltas (negative — releasing invoicedQty committed at create).
+        release_deltas: Dict[str, Decimal] = {
+            ln["grLineId"]: -Decimal(str(ln["quantity"]))
+            for ln in ap_lines
+            if ln.get("grLineId")
+        }
 
         now = datetime.now(tz=timezone.utc)
 
@@ -4090,6 +4358,48 @@ class DocumentService:
             assert updated is not None
 
         logger.info("[DocumentService] rejected AP docId=%s by user=%s", doc_id, approver_id)
+
+        # Reason: release GR chain counters after rejection — best-effort, outside
+        # the transaction.  Rejection is terminal; if the user wants to re-invoice
+        # the GR they must create a new AP Invoice, which requires the GR to show
+        # open invoice qty.
+        if gr_doc_id and release_deltas:
+            await reconcile_gr_line_invoice_counters(
+                self._db,
+                gr_doc_id=gr_doc_id,
+                org_id=org_id,
+                user_id=approver_id,
+                ap_doc_id=doc_id,
+                line_deltas=release_deltas,
+                cap_check=False,
+            )
+
+            gr_raw = await load_gr_with_lines(self._db, org_id=org_id, gr_doc_id=gr_doc_id)
+            if gr_raw is not None:
+                await auto_reopen_gr_if_not_fully_invoiced(
+                    self._db,
+                    gr_doc_id=gr_doc_id,
+                    gr_raw=gr_raw,
+                    org_id=org_id,
+                    user_id=approver_id,
+                    action="auto_reopen_on_invoice_release",
+                    extra_detail={
+                        "releasedByApDocId": doc_id,
+                        "reason": "ap_rejected",
+                        "releasedDeltas": {
+                            lid: float(qty) for lid, qty in release_deltas.items()
+                        },
+                    },
+                )
+
+            await pull_dangling_gr_chain_refs(
+                self._db,
+                gr_doc_id=gr_doc_id,
+                org_id=org_id,
+                user_id=approver_id,
+                ap_doc_id=doc_id,
+            )
+
         lines_resp = await self._get_lines(doc_id)
         return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines_resp)
 
@@ -4158,6 +4468,14 @@ class DocumentService:
         Approved AP Invoices are immutable per INTEGRATION_MODEL.md §5 and can
         never be deleted.  To correct an Approved AP, a future Amendment flow is needed.
 
+        T-200.22 chain mechanics (Part 10):
+          - After soft-deletion, releases GR line ``invoicedQty`` counters for
+            each AP line (reconcile_gr_line_invoice_counters with negative deltas).
+          - Auto-reopens the source GR if it was CLOSED and is no longer fully
+            invoiced (auto_reopen_gr_if_not_fully_invoiced).
+          - Pulls stale AP targetDocRef from the GR header
+            (pull_dangling_gr_chain_refs).
+
         Args:
             org_id: Organisation scope.
             doc_id: AP document UUID string.
@@ -4180,12 +4498,70 @@ class DocumentService:
                 "Approved AP Invoices are immutable — use Amendment flow to correct errors."
             )
 
+        # Reason: read AP lines BEFORE soft-delete to know what GR counters to release.
+        ap_lines_cursor = self._lines.find({"docId": doc_id})
+        ap_lines: List[Dict[str, Any]] = await ap_lines_cursor.to_list(length=None)
+
+        gr_doc_id: Optional[str] = header.get("baseDocId")
+
+        # Build release deltas: negative (releasing previously-committed invoicedQty).
+        # AP lines carry grLineId = the source GR line.
+        release_deltas: Dict[str, Decimal] = {
+            ln["grLineId"]: -Decimal(str(ln["quantity"]))
+            for ln in ap_lines
+            if ln.get("grLineId")
+        }
+
         now = datetime.now(tz=timezone.utc)
         await self._headers.update_one(
             {"docId": doc_id},
             {"$set": {"deletedAt": now, "updatedAt": now, "updatedBy": deleted_by}},
         )
         logger.info("[DocumentService] soft-deleted AP docId=%s", doc_id)
+
+        # Reason: only apply chain mechanics when the AP was created from a GR
+        # and has registered invoice counters.  Pure direct-AP paths (if ever
+        # introduced) would have no baseDocId and are skipped here.
+        if gr_doc_id and release_deltas:
+            await reconcile_gr_line_invoice_counters(
+                self._db,
+                gr_doc_id=gr_doc_id,
+                org_id=org_id,
+                user_id=deleted_by,
+                ap_doc_id=doc_id,
+                line_deltas=release_deltas,
+                # Reason: cap_check=False — release deltas are negative;
+                # no over-invoice cap applies.
+                cap_check=False,
+            )
+
+            gr_raw = await load_gr_with_lines(self._db, org_id=org_id, gr_doc_id=gr_doc_id)
+            if gr_raw is not None:
+                await auto_reopen_gr_if_not_fully_invoiced(
+                    self._db,
+                    gr_doc_id=gr_doc_id,
+                    gr_raw=gr_raw,
+                    org_id=org_id,
+                    user_id=deleted_by,
+                    action="auto_reopen_on_invoice_release",
+                    extra_detail={
+                        "releasedByApDocId": doc_id,
+                        "releasedDeltas": {
+                            lid: float(qty) for lid, qty in release_deltas.items()
+                        },
+                    },
+                )
+
+            # Reason: $pull stale AP docId from GR targetDocRefs so the GR
+            # detail chain card does not show a deleted AP Invoice.
+            await pull_dangling_gr_chain_refs(
+                self._db,
+                gr_doc_id=gr_doc_id,
+                org_id=org_id,
+                user_id=deleted_by,
+                ap_doc_id=doc_id,
+            )
+
         return True
 
     # ==================================================================

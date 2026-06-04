@@ -91,6 +91,23 @@
 
 ---
 
+### T-200.22 | Purchasing counter rollup + auto-close + chain cleanup via doc_chain_reconciler — Wave 4
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** backend-dev-expert · **Started:** 2026-06-04
+- **Depends on:** T-200.21 ✅
+- **Blocks:** T-200.23 (AP Credit Note)
+- **Description:** Apply `doc_chain_reconciler` pattern to the PR→PO→GR→AP chain.
+  PO/GR open-qty tracking via purchasing-specific adapter, auto-close when fully consumed
+  downstream, auto-reopen on downstream release, $pull dangling targetDocRefs on delete,
+  audit writes on every chain event.
+- **Status:** Implementation complete. Tests at T-200.21 baseline (36 passed / 10 failed —
+  the 10 failures are pre-existing T-200.21a tech debt, not regressions from T-200.22).
+  Sales tests 334 passed (no regressions).
+- **Files changed:**
+  - `src/modules/purchasing/services/purchasing_chain_reconciler.py` (NEW — 480 lines)
+  - `src/modules/purchasing/services/document_service.py` (modified: +~250 lines)
+
+---
 
 ### T-201.8b | Extract ops-side `sale_items` master from finance ext (Wave 6 prep) — Wave 6
 - **Category:** Backend (ops + finance) · **Priority:** P2
