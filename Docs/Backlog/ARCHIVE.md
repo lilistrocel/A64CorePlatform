@@ -1,8 +1,103 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 90 tasks
+> **Total completed:** 97 tasks
 
 ## 2026-06
+
+### T-201.1 | Multi-company UX picker — companyCode selector when org has >1 companies
+- **Category:** Frontend · **Priority:** P2 (priority-bumped to P1 during session because user hit the gap mid-T-201.8 verification)
+- **Completed:** 2026-06-04 · **Assigned:** frontend-dev-expert (Viet Anh)
+- **Depends on:** T-201.0 ✅
+- **Summary:** Replaces the plain-text Company Code Input on 6 sales create forms
+  with a typed picker. Three artefacts shipped: (1) `companiesService.listCompanies(orgId)`
+  hitting `GET /api/v1/finance/companies`; (2) `useCompanies(orgId)` hook
+  mirroring `useTaxCodes` shape (5-minute staleTime); (3) `CompanyCombobox`
+  four-state component (loading / single-locked-with-help-text / multi-dropdown / zero-with-setup-link).
+  Wired into ARI, ARC, RR, RTN, Delivery, Customer Receipt via Controller binding.
+  Single-company orgs see a disabled select displaying the auto-filled code +
+  help text "Auto-selected — only company configured on this tenant" (visibility
+  iteration: original spec returned `null` to hide entirely; Viet Anh asked for
+  visible-but-locked to confirm what's filled). Multi-company shows an active
+  dropdown of "CODE — Legal Name" options. Same `shouldShowCompanyField` helper
+  kept exported (now always returns true) so callers' wrapper conditionals
+  stay in place without churn. SO doesn't carry companyCode at all (T-201.0
+  handles server-side); Quote never had this field.
+- **Files added:** `services/companiesService.ts`, `hooks/queries/useCompanies.ts`,
+  `components/sales/CompanyCombobox.tsx`
+- **Files modified:** 6 form pages
+- **Commit:** `cdc71a4`
+- **DevLog:** `Docs/3-DevLog/2026-06-02_T-201.8-isstock-gating.md` (Day 2 section)
+
+### T-202 | AR Invoice backend stamps `taxPercent=0` (queries tax_codes from ops Mongo instead of finance MySQL) — Hotfix
+- **Category:** Backend · **Priority:** P0
+- **Completed:** 2026-06-04 · **Assigned:** parent session + backend-dev-expert (Viet Anh)
+- **Discovered:** During T-201.8 UI verification of ARI-2026-0004 (re-created from DN-2026-0003 / SO-2026-0002). User noticed totals.gross = 29,000 instead of expected 30,450 (SO net 29,000 + 5% VAT 1,450).
+- **Root cause:** `ar_invoice_service.py:167` `_get_tax_percent` queried `db["tax_codes"]` on ops MongoDB. Tax codes live in finance MySQL (count=0 in ops Mongo). Lookup returned None → function returned `Decimal("0")` → backend stamped `taxPercent=0` on every line. Same class of bug as T-100.9a.1.
+- **Accounting impact:** Every from-Delivery AND direct-create AR Invoice silently dropped VAT from its JE — DR AR / CR Revenue with no CR Output VAT line. ARC and SO unaffected (both trust client-submitted taxPercent directly).
+- **Fix:** Added `get_tax_percent(tax_code, org_id, auth_token)` to `_finance_ext_client.py`. Hits `GET /api/v1/finance/tax-codes`, filters client-side by taxCode. Fail-hard on unknown/non-2xx/httpx exception. Null code short-circuits to `Decimal("0")` with no HTTP call. `_get_tax_percent` in ar_invoice_service delegates; `_TAX_CODES_COL` removed; docstrings updated. Single call site in `_build_line_doc` updated (auth_token already threaded from T-201.8). 4 new test cases in test_ar_invoices.py + helper `_patch_tax_percent`.
+- **Verified end-to-end on live stack:** ARI-2026-0004 re-created + posted; 3-leg JE confirmed (DR AR 30,450 / CR Revenue 29,000 / CR Output VAT 1,450).
+- **Standalone-mode tax correctness** filed as T-600 gap 2a (2026-06-04). Two options surveyed (ops-side tax_codes Mongo OR snapshot taxPercent at quote/order time); decision deferred to Wave 6.
+- **Commit:** `14046b3`
+- **DevLog:** `Docs/3-DevLog/2026-06-02_T-201.8-isstock-gating.md` (Day 2 section)
+
+### T-201.7 | Fix dangling `targetDocRefs` on Delivery when AR Invoice is hard-deleted — Wave 3
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-06-02 (committed in `420d120`; backlog cleanup 2026-06-04) · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** T-201.6 ✅
+- **Summary:** `delete_ar_invoice` and `update_ar_invoice` (from-Delivery, lines change) now `$pull` stale ARI references from `Delivery.targetDocRefs` (header) and `Delivery.lines[].targetDocRefs`. Keyed on docId so sibling ARIs on the same DN are untouched. `$push` fresh refs after update reconciles per-line UUID drift. 6 new tests (1 sanity + 5 main); fake-DB helper extended to handle `$pull` on header arrays and `lines.$.subfield` arrays.
+- **Commit:** `420d120` (bundled with T-201.5, T-201.6)
+- **DevLog:** `Docs/3-DevLog/2026-06-01_T-201.4-to-T-201.7-ar-invoice-delivery-consistency.md`
+
+### T-201.6 | Fix AR Invoice ↔ Delivery `invoicedQty` counter tracking consistency bugs — Wave 3
+- **Category:** Backend · **Priority:** P1
+- **Completed:** 2026-06-02 (committed in `420d120`; backlog cleanup 2026-06-04) · **Assigned:** backend-dev-expert (Viet Anh)
+- **Depends on:** T-201.5 ✅
+- **Summary:** Two cascading bugs fixed. (a) `update_ar_invoice` for from-Delivery ARIs computes per-DN-line old vs new totals, cap-checks positive deltas against live `open_invoice_qty`, `$inc` each changed DN line, reload, applies symmetric auto-close / auto-reopen. Audit detail records `dnLineDeltas`. (b) `delete_ar_invoice` and `transition_status OPEN→CANCELLED` reload DN after the release loops; if CLOSED but not fully invoiced, transition to OPEN with audit `auto_reopen_on_invoice_release`. 10 new tests.
+- **Commit:** `420d120` (bundled with T-201.5, T-201.7)
+- **DevLog:** `Docs/3-DevLog/2026-06-01_T-201.4-to-T-201.7-ar-invoice-delivery-consistency.md`
+
+### T-201.5 | AR Invoice ↔ Delivery visibility + auto-close — Wave 3
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Completed:** 2026-06-02 (committed in `420d120`; backlog cleanup 2026-06-04) · **Assigned:** backend-dev-expert + frontend-dev-expert (Viet Anh)
+- **Depends on:** T-201.4 ✅
+- **Summary:** Backend — `DeliveryListItem.open_invoice_qty` (camelCase `openInvoiceQty`) added; `_compute_open_invoice_qty(raw)` sums `quantity − invoicedQty − creditedQty − cancelledQty` per line; `list_deliveries()` keeps `lines` in projection. New helpers `_dn_is_fully_invoiced(dn_raw)` + `_write_dn_audit(...)`. `create_ar_invoice_from_delivery` step 6 reloads DN after invoicedQty increments and auto-transitions to CLOSED with audit action `auto_close_on_full_invoice` when fully invoiced. Frontend — DeliveryDetailPage Lines table gains Invoiced + Open to Invoice columns (later relabelled to Invoiced Qty / Open Qty in T-201.8 session); Generate-AR-Invoice button hidden when fully invoiced; DeliveriesPage filter chip + per-row column. 19 new tests.
+- **Commit:** `420d120` (bundled with T-201.6, T-201.7)
+- **DevLog:** `Docs/3-DevLog/2026-06-01_T-201.4-to-T-201.7-ar-invoice-delivery-consistency.md`
+
+### T-201.4 | AR Invoice from-Delivery pre-fill + locked field set — Wave 3
+- **Category:** Frontend · **Priority:** P1
+- **Completed:** 2026-06-02 (committed in `2a4fc6e`; backlog cleanup 2026-06-04) · **Assigned:** parent session (Viet Anh)
+- **Summary:** Rewrote `isFromDelivery` mode pre-fill in ARInvoiceFormPage. Fetches source DN + parent SO; pre-fills customer/companyCode/dateOfSupply from DN, currency/exchangeRate/paymentTerms/bpRefNo from SO, lines per-DN-line with pricing+tax inherited from matching SO line. New `deliveryLineId` field on the line zod schema. Pre-filled qty defaults to `max(0, quantity − invoicedQty − creditedQty − cancelledQty)`; zero-open lines dropped. Lock-set decided by "would editing this break doc integrity?" — Customer/Company Code/UoM/item picker locked; qty/price/tax/dates/payment terms editable.
+- **Commit:** `2a4fc6e`
+- **DevLog:** `Docs/3-DevLog/2026-06-01_T-201.4-to-T-201.7-ar-invoice-delivery-consistency.md`
+
+### T-201.8 | AR Invoice direct-create: `isStock` flag + gating (foundation for SO-chain epic) — Wave 3
+- **Category:** Backend + Frontend · **Priority:** P1
+- **Completed:** 2026-06-04 · **Assigned:** parent session + backend-dev-expert + frontend-dev-expert + testing-backend-specialist (Viet Anh)
+- **Depends on:** T-201.7 ✅
+- **Blocks:** T-201.9, T-201.10, T-201.11
+- **Architecture decision (Option C, 2026-06-02 with Viet Anh):** `isStock` lives on `SaleItemFinanceExt` (finance MySQL) — the de-facto sale-item master today. `isStock` is a billing-routing flag, not an inventory flag (inventory_movements stays entirely ops-side, routes by inventoryId presence). T-201.8b filed for Wave 6 SKU-master extraction.
+- **Symmetric flows shipped within T-201.8:** AR Credit Note and Return Request direct-create paths gate isStock the same way (no defer).
+- **Summary:**
+  • **Finance backend:** new `isStock: bool` column on `SaleItemFinanceExt` (default True). Pydantic Create/Update/Response. LIST endpoint accepts `is_stock` query param. PATCH audit diff captures changes via existing model_fields_set loop. Alembic migration 020 with server_default + heuristic backfill (sets isStock=0 for itemName matching `(?i)(fee|charge|delivery|freight|service|rental|deposit|consulting)`).
+  • **Ops backend:** new `src/modules/sales/services/_finance_ext_client.py` (shared HTTP wrapper, eliminates triple-duplication). ARI, ARC, RR services each gate three paths (create direct, update direct DRAFT lines change, DRAFT→OPEN transition). Direct path discriminated by absence of `baseDocRef.docId` (ARI/RR) or `baseReturnDocRef.docId` (ARC). Route handlers thread `auth_token` for the HTTP call. RR create-path gate documented as defensive code (Pydantic rejects empty baseDocRef upstream; gate kept for if/when schema is loosened).
+  • **Frontend UI:** `SalesItemCombobox.filterIsStock` prop forwarded to `useSaleItemFinanceExtList` with `allFiltered` cache key variant; ARI/ARC/RR direct-create forms pass `filterIsStock={false}` and display a help banner explaining the gating. `SalesItemsPage` gains a Type column with badge + an Item-type radio group in the edit modal (UX iteration after Viet Anh flagged the original dynamic-label checkbox as misleading). Mutation `refetchType: 'all'` added to work around the global `refetchOnMount: false` (same pattern as T-201.5–.7).
+  • **Tests:** new `test_isstock_gating.py` (39 cases across three classes — TestARInvoiceIsStock / TestARCreditNoteIsStock / TestReturnRequestIsStock). Existing fixtures patched. Full sales suite: 306 pass.
+- **UX iterations during verification (committed together as part of T-201.8 UI work):**
+  - Item-type checkbox → radio group (category vs binary)
+  - SalesItemFinanceExt mutation cache invalidation (`refetchType: 'all'`)
+  - Manual mongosh `$pull` on DN-2026-0003 for pre-T-201.7 dangling targetDocRef (one-off data hygiene)
+  - "Open to Invoice" column relabeled to "Open Qty" + "Has Open Qty" filter chip
+  - Duplicate customerId error removed on ARI/SO/Customer Receipt forms
+- **Bugs surfaced + filed separately (NOT part of T-201.8):**
+  - T-202 (P0, fixed same session)
+  - T-501 (Wave 5 sibling — Packing materials BOM)
+  - T-600 gap 2a (standalone-mode tax)
+- **Honest downsides:** Admin must manually classify items once (one-time data setup cost, mitigated by heuristic backfill). RR create-path gate is dead code today (kept defensive). ARI transition asymmetry between rev-account (hard-fail) and isStock (fail-open) is intentional and documented in tests.
+- **Commits:** `096be1a` (finance), `14046b3` (ops + tests), `cdc71a4` (frontend UI), `2ccb9dc` (docs)
+- **DevLog:** `Docs/3-DevLog/2026-06-02_T-201.8-isstock-gating.md`
+
+---
 
 ### T-201.3 | Sales form pickers + UX polish
 - **Category:** Frontend · **Priority:** P1
