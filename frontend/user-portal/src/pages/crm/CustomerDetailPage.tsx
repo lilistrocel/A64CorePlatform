@@ -11,6 +11,7 @@ import { CustomerForm } from '../../components/crm/CustomerForm';
 import { crmApi, formatCustomerAddress, getCustomerStatusColor, getCustomerTypeLabel } from '../../services/crmService';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { showSuccessToast, showErrorToast } from '../../stores/toast.store';
+import { QuickServiceChargeModal } from '../../components/sales/QuickServiceChargeModal';
 import type { Customer, CustomerUpdate } from '../../types/crm';
 
 // ============================================================================
@@ -272,6 +273,7 @@ export function CustomerDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [isNew, setIsNew] = useState(false);
   const [formDirty, setFormDirty] = useState(false);
+  const [showQuickCharge, setShowQuickCharge] = useState(false);
 
   // Track unsaved changes for navigation warning
   useUnsavedChanges(editMode && formDirty);
@@ -389,6 +391,13 @@ export function CustomerDetailPage() {
         <BackButton onClick={handleBack}>← Back to Customers</BackButton>
         {!isNew && !editMode && (
           <HeaderActions>
+            {/* T-201.11: Quick Service Charge — collapses 6-click SO→ARI chain into 1 modal.
+                Only shown for active customers (status === 'active'). */}
+            {customer?.status === 'active' && (
+              <ActionButton onClick={() => setShowQuickCharge(true)}>
+                Quick Service Charge
+              </ActionButton>
+            )}
             <ActionButton onClick={handleEdit}>Edit</ActionButton>
             <ActionButton $variant="danger" onClick={handleDelete}>
               Delete
@@ -396,6 +405,19 @@ export function CustomerDetailPage() {
           </HeaderActions>
         )}
       </Header>
+
+      {/* T-201.11: Quick Service Charge modal — shown when button is clicked.
+          onSuccess navigates to the newly-created AR Invoice detail page. */}
+      {showQuickCharge && customer && (
+        <QuickServiceChargeModal
+          customer={customer}
+          onClose={() => setShowQuickCharge(false)}
+          onSuccess={(ariDocEntry) => {
+            setShowQuickCharge(false);
+            navigate(`/sales/ar-invoices/${ariDocEntry}`);
+          }}
+        />
+      )}
 
       <DetailsCard>
         {editMode ? (
