@@ -1217,12 +1217,31 @@
   and the DocumentStatus enum.  Also adds any SAP B1 parity gaps identified during
   Wave 3 (e.g. Down Payment Invoice, AP Credit Note, Blanket Agreement stubs).
   ~4-6 weeks total effort.
-- **Sub-tasks (outline):**
-  - T-200.1 — Retrofit purchasing document_service.py to use core/documents helpers
-  - T-200.2 — AP Credit Note document type
-  - T-200.3 — Down Payment Invoice (DPI)
-  - T-200.4 — Blanket Agreement (BLA) stubs
-  - T-200.5 — Purchasing frontend pages V2 (parity with Wave 3 sales UX)
+- **Numbering note (2026-06-04):** sub-tasks start at T-200.21, NOT T-200.1, because
+  T-200.0 through T-200.11 are all archived completed sales-UI work (see ARCHIVE.md —
+  T-200.0 Sales UI foundation, T-200.1 Customer Receipt UI, etc.). Reusing those IDs
+  for purchasing would create permanent confusion. The "20s" prefix flags that these
+  belong to Wave 4 purchasing, mirroring how Wave 3 sales used .0-.11.
+- **Sub-tasks (outline — sequenced; each becomes its own ticket as it's claimed):**
+  - **T-200.21** — Foundation: replace ad-hoc status strings with `DocumentStatus`
+    enum + `assert_legal_transition` validation across all purchasing services.
+    Behavior-preserving. ~2-3 task cycles.
+  - **T-200.22** — Counter rollup: apply `doc_chain_reconciler` (extracted in
+    T-201.9.0) to the PO → GR → AP chain. PO-line open-qty tracking, auto-close
+    on full GR, auto-reopen on GR delete/cancel, $pull dangling refs. Mirrors
+    T-201.5/.6/.7 done for DN. ~3-4 task cycles.
+  - **T-200.23** — AP Credit Note: vendor-side counterpart to ARC. From-AP-Invoice
+    and from-GR (return-of-goods) paths. ~2-3 task cycles.
+  - **T-200.24** — Down Payment Invoice (DPI): SAP B1 vendor-prepayment doc.
+    Allocates against future AP Invoices. ~2-3 task cycles.
+  - **T-200.25** — Blanket Agreement (BLA) stubs: long-term volume/price
+    commitments that PRs/POs reference. Skeleton only per the BACKLOG note.
+    ~1-2 task cycles.
+  - **T-200.26** — Purchasing V2 frontend pages: parity with the Wave 3 sales UI
+    patterns (list+form+detail+from-X modes, T-201.x lock-set decisions,
+    CompanyCombobox / SalesItemCombobox-equivalent purchasing pickers, etc.).
+    Largest slice. ~6-10 task cycles.
+- **Total realistic estimate:** ~16-25 task cycles across the sub-tasks.
 
 ---
 
