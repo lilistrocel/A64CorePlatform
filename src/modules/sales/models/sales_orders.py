@@ -457,6 +457,11 @@ class SalesOrderListItem(BPReferenceMixin):
     Slim view of a Sales Order for use in paginated list responses.
 
     Excludes the full lines array to keep list payloads lean.
+
+    service_open_invoice_qty is the aggregate open-to-invoice quantity across
+    all *service* lines (lines whose underlying item has isStock=False).
+    Stock lines are excluded because they invoice via the DN chain, not the
+    from-SO endpoint.  Computed at list time via the finance HTTP client.
     """
 
     model_config = _RESPONSE_CONFIG
@@ -471,6 +476,18 @@ class SalesOrderListItem(BPReferenceMixin):
     status: DocumentStatus
     currency: str
     totals: SalesOrderTotals
+    service_open_invoice_qty: Decimal = Field(
+        default=Decimal("0"),
+        alias="serviceOpenInvoiceQty",
+        description=(
+            "Sum of (line.quantity - line.invoicedQty - line.creditedQty - line.cancelledQty) "
+            "across the SO's service lines (lines whose underlying item has isStock=False). "
+            "Computed at list time via _finance_ext_client.get_item_finance_ext HTTP "
+            "calls to the finance microservice. Used by SalesOrdersV2Page for the "
+            "'Has Service Open Qty' filter chip and the per-row badge. Stock lines are "
+            "excluded because they invoice via the DN chain, not the from-SO endpoint."
+        ),
+    )
     created_at: datetime
     updated_at: datetime
 

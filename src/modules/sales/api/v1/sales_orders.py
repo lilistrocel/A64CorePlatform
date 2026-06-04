@@ -114,16 +114,34 @@ def _extract_auth_token(request: Request) -> Optional[str]:
     summary="List Sales Orders (v2)",
     description=(
         "Return a paginated list of Sales Orders (v2) for the given organisation. "
-        "Supports filtering by status, customer_id, date range, and has_open_lines."
+        "Supports filtering by status, customer_id, date range, has_open_lines, and "
+        "has_service_open_lines. "
+        "Note: has_service_open_lines is applied post-pagination (requires per-item "
+        "HTTP calls to the finance microservice to classify isStock); the returned "
+        "page may contain fewer items than the requested page size when this filter "
+        "is active."
     ),
 )
 async def list_sales_orders_endpoint(
+    request: Request,
     organization_id: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
     customer_id: Optional[str] = Query(None),
     date_from: Optional[date] = Query(None, description="Inclusive lower bound on doc_date"),
     date_to: Optional[date] = Query(None, description="Inclusive upper bound on doc_date"),
     has_open_lines: Optional[bool] = Query(None, description="Filter to SOs with open qty"),
+    has_service_open_lines: Optional[bool] = Query(
+        None,
+        alias="hasServiceOpenLines",
+        description=(
+            "When True, filter to only Sales Orders that have at least one service "
+            "line with service_open_invoice_qty > 0. Computed via isStock HTTP calls "
+            "to the finance microservice. Used by SalesOrdersV2Page's "
+            "'Has Service Open Qty' filter chip. "
+            "Known limitation: applied post-pagination; pages may be shorter than "
+            "the requested size when active."
+        ),
+    ),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=200),
     current_user: CurrentUser = Depends(get_current_active_user),
@@ -133,21 +151,26 @@ async def list_sales_orders_endpoint(
     Paginated list of Sales Orders for an organisation.
 
     Args:
-        organization_id: Organisation UUID (defaults to JWT claim).
-        status_filter:   Filter by status value (draft, open, partly_closed, closed, cancelled).
-        customer_id:     Filter by customer FK.
-        date_from:       Inclusive lower bound on docDate.
-        date_to:         Inclusive upper bound on docDate.
-        has_open_lines:  When True, filter to SOs with open lines.
-        page:            1-based page number.
-        size:            Items per page (max 200).
-        current_user:    Authenticated user.
-        db:              Motor database dependency.
+        request:                  Incoming HTTP request (for Bearer token extraction).
+        organization_id:          Organisation UUID (defaults to JWT claim).
+        status_filter:            Filter by status value (draft, open, partly_closed,
+                                  closed, cancelled).
+        customer_id:              Filter by customer FK.
+        date_from:                Inclusive lower bound on docDate.
+        date_to:                  Inclusive upper bound on docDate.
+        has_open_lines:           When True, filter to SOs with open lines.
+        has_service_open_lines:   When True, filter to SOs with service_open_invoice_qty > 0.
+                                  Computed via finance microservice HTTP calls. Post-pagination.
+        page:                     1-based page number.
+        size:                     Items per page (max 200).
+        current_user:             Authenticated user.
+        db:                       Motor database dependency.
 
     Returns:
         PaginatedResponse containing SalesOrderListItem objects.
     """
     org_id = _resolve_org_id(organization_id, current_user)
+    auth_token = _extract_auth_token(request)
 
     result = await list_sales_orders(
         db,
@@ -157,8 +180,10 @@ async def list_sales_orders_endpoint(
         date_from=date_from,
         date_to=date_to,
         has_open_lines=has_open_lines,
+        has_service_open_lines=has_service_open_lines,
         page=page,
         size=size,
+        auth_token=auth_token,
     )
 
     return PaginatedResponse(

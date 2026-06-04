@@ -1848,3 +1848,335 @@ class TestStockLineUnreachableFromSO:
         dn_doc = next(d for d in db["deliveries_v2"]._docs if d["docEntry"] == dn_entry)
         dn_ln = next(ln for ln in dn_doc["lines"] if ln["lineId"] == DN_STOCK_LINE_1_ID)
         assert dn_ln["invoicedQty"] == pytest.approx(10.0)
+
+
+# ---------------------------------------------------------------------------
+# Class 5 — TestSOListServiceOpenInvoiceQty (T-201.10 backend gap)
+# ---------------------------------------------------------------------------
+
+
+class TestSOListServiceOpenInvoiceQty:
+    """
+    T-201.10 backend gap — serviceOpenInvoiceQty aggregate on list response.
+
+    Verifies _compute_service_open_invoice_qty and the list_sales_orders
+    has_service_open_lines filter end-to-end using the in-memory fake DB
+    and mocked finance HTTP calls.
+    """
+
+    def _patch_so_item_ext_isstock(self, by_item_id: Dict[str, bool]) -> Any:
+        """
+        Patch _get_item_finance_ext in sales_order_service with per-item isStock flag.
+
+        Different import alias from the ar_invoice_service patch above.
+        """
+        async def _side_effect(item_id: str, org_id: str, auth_token: Any) -> Dict[str, Any]:
+            is_stock = by_item_id.get(item_id, False)
+            return {
+                "itemId": item_id,
+                "organizationId": org_id,
+                "revenueAccountId": REVENUE_ACCOUNT_ID,
+                "cogsAccountId": "gl-cogs-001" if is_stock else None,
+                "salesTaxCode": None,
+                "isSellable": True,
+                "isStock": is_stock,
+            }
+
+        return patch(
+            "src.modules.sales.services.sales_order_service._get_item_finance_ext",
+            side_effect=_side_effect,
+        )
+
+    @pytest.mark.asyncio
+    async def test_service_only_so_with_zero_invoiced_qty_returns_full_qty(self) -> None:
+        """
+        Service-only SO with one line, qty=10, invoicedQty=0.
+
+        _compute_service_open_invoice_qty must return 10.
+        """
+        from src.modules.sales.services.sales_order_service import (
+            _compute_service_open_invoice_qty,
+        )
+
+        so_line_id = str(uuid.uuid4())
+        so_raw = _make_so_doc(
+            lines=[
+                _make_so_line(so_line_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
+                              quantity=10.0, invoiced_qty=0.0, line_number=1),
+            ],
+            status="open",
+        )
+
+        is_stock_map = {SVC_ITEM_1_ID: False}
+        with self._patch_so_item_ext_isstock(is_stock_map):
+            result = await _compute_service_open_invoice_qty(
+                so_raw, ORG_ID, auth_token="dummy-token"
+            )
+
+        assert result == Decimal("10"), (
+            "Service-only SO with invoicedQty=0 must return qty=10 as open qty"
+        )
+
+    @pytest.mark.asyncio
+    async def test_service_only_so_fully_invoiced_returns_zero(self) -> None:
+        """
+        Service-only SO with one line fully invoiced.
+
+        _compute_service_open_invoice_qty must return 0.
+        """
+        from src.modules.sales.services.sales_order_service import (
+            _compute_service_open_invoice_qty,
+        )
+
+        so_line_id = str(uuid.uuid4())
+        so_raw = _make_so_doc(
+            lines=[
+                _make_so_line(so_line_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
+                              quantity=10.0, invoiced_qty=10.0, line_number=1),
+            ],
+            status="open",
+        )
+
+        is_stock_map = {SVC_ITEM_1_ID: False}
+        with self._patch_so_item_ext_isstock(is_stock_map):
+            result = await _compute_service_open_invoice_qty(
+                so_raw, ORG_ID, auth_token="dummy-token"
+            )
+
+        assert result == Decimal("0"), (
+            "Fully-invoiced service line must contribute 0 to service_open_invoice_qty"
+        )
+
+    @pytest.mark.asyncio
+    async def test_mixed_so_only_service_lines_contribute(self) -> None:
+        """
+        Mixed SO (2 stock + 1 service), service line partly invoiced.
+
+        Stock lines must NOT contribute; only the service line does.
+        """
+        from src.modules.sales.services.sales_order_service import (
+            _compute_service_open_invoice_qty,
+        )
+
+        svc_line_id = str(uuid.uuid4())
+        stk_line_1_id = str(uuid.uuid4())
+        stk_line_2_id = str(uuid.uuid4())
+
+        # Service line: qty=10, invoicedQty=4 → open_qty=6.
+        # Stock lines: each qty=10, invoicedQty=10 (fully invoiced via DN path).
+        so_raw = _make_so_doc(
+            lines=[
+                _make_so_line(stk_line_1_id, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
+                              quantity=10.0, invoiced_qty=10.0, line_number=1),
+                _make_so_line(stk_line_2_id, STOCK_ITEM_2_ID, "STK-002", "Stock Item 2",
+                              quantity=10.0, invoiced_qty=10.0, line_number=2),
+                _make_so_line(svc_line_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
+                              quantity=10.0, invoiced_qty=4.0, line_number=3),
+            ],
+            status="open",
+        )
+
+        is_stock_map = {
+            STOCK_ITEM_1_ID: True,
+            STOCK_ITEM_2_ID: True,
+            SVC_ITEM_1_ID: False,
+        }
+        with self._patch_so_item_ext_isstock(is_stock_map):
+            result = await _compute_service_open_invoice_qty(
+                so_raw, ORG_ID, auth_token="dummy-token"
+            )
+
+        # Only service line contributes: 10 - 4 = 6.
+        assert result == Decimal("6"), (
+            "Stock lines must NOT contribute; only the service line's open qty (6) counts"
+        )
+
+    @pytest.mark.asyncio
+    async def test_stock_only_so_returns_zero(self) -> None:
+        """
+        Stock-only SO — no service lines.
+
+        _compute_service_open_invoice_qty must return 0 (all lines skipped as stock).
+        """
+        from src.modules.sales.services.sales_order_service import (
+            _compute_service_open_invoice_qty,
+        )
+
+        so_raw = _make_so_doc(
+            lines=[
+                _make_so_line(SO_STOCK_LINE_1_ID, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
+                              quantity=10.0, invoiced_qty=0.0, line_number=1),
+            ],
+            status="open",
+        )
+
+        is_stock_map = {STOCK_ITEM_1_ID: True}
+        with self._patch_so_item_ext_isstock(is_stock_map):
+            result = await _compute_service_open_invoice_qty(
+                so_raw, ORG_ID, auth_token="dummy-token"
+            )
+
+        assert result == Decimal("0"), (
+            "Stock-only SO must return 0 — no service lines to aggregate"
+        )
+
+    @pytest.mark.asyncio
+    async def test_list_filter_has_service_open_lines_true_returns_only_matching_sos(
+        self,
+    ) -> None:
+        """
+        list_sales_orders with has_service_open_lines=True returns only SOs with
+        service_open_invoice_qty > 0.
+
+        Seeds two SOs: one service-only with open qty, one stock-only.
+        Filter must return exactly the service-only SO.
+        """
+        from src.modules.sales.services.sales_order_service import list_sales_orders
+
+        db = _FakeDB()
+
+        svc_so_entry = str(uuid.uuid4())
+        stk_so_entry = str(uuid.uuid4())
+        svc_line_id = str(uuid.uuid4())
+
+        # Service-only SO, one line, qty=5, invoicedQty=0.
+        db["sales_orders_v2"]._add(
+            _make_so_doc(
+                lines=[
+                    _make_so_line(svc_line_id, SVC_ITEM_1_ID, "SVC-001", "Service Item 1",
+                                  quantity=5.0, invoiced_qty=0.0, line_number=1),
+                ],
+                status="open",
+                doc_entry=svc_so_entry,
+                doc_number="SO-2026-SVC-0001",
+            )
+        )
+        # Stock-only SO, one line, qty=10, invoicedQty=0 (stock; not counted).
+        db["sales_orders_v2"]._add(
+            _make_so_doc(
+                lines=[
+                    _make_so_line(SO_STOCK_LINE_1_ID, STOCK_ITEM_1_ID, "STK-001", "Stock Item 1",
+                                  quantity=10.0, invoiced_qty=0.0, line_number=1),
+                ],
+                status="open",
+                doc_entry=stk_so_entry,
+                doc_number="SO-2026-STK-0001",
+            )
+        )
+
+        is_stock_map = {SVC_ITEM_1_ID: False, STOCK_ITEM_1_ID: True}
+        with self._patch_so_item_ext_isstock(is_stock_map):
+            result = await list_sales_orders(
+                db,
+                ORG_ID,
+                has_service_open_lines=True,
+                auth_token="dummy-token",
+            )
+
+        assert result["total"] == 1, (
+            "Only 1 SO must be returned when has_service_open_lines=True"
+        )
+        assert len(result["items"]) == 1
+        assert result["items"][0].doc_entry == svc_so_entry, (
+            "The returned SO must be the service-only one"
+        )
+        assert result["items"][0].service_open_invoice_qty == Decimal("5")
+
+    @pytest.mark.asyncio
+    async def test_list_filter_not_set_returns_all_sos(self) -> None:
+        """
+        list_sales_orders without has_service_open_lines returns all SOs regardless
+        of service_open_invoice_qty.
+        """
+        from src.modules.sales.services.sales_order_service import list_sales_orders
+
+        db = _FakeDB()
+
+        for i in range(3):
+            db["sales_orders_v2"]._add(
+                _make_so_doc(
+                    lines=[
+                        _make_so_line(str(uuid.uuid4()), SVC_ITEM_1_ID, "SVC-001",
+                                      "Service Item 1", quantity=float(i + 1),
+                                      invoiced_qty=0.0, line_number=1),
+                    ],
+                    status="open",
+                    doc_entry=str(uuid.uuid4()),
+                    doc_number=f"SO-2026-FILTER-{i:04d}",
+                )
+            )
+
+        is_stock_map = {SVC_ITEM_1_ID: False}
+        with self._patch_so_item_ext_isstock(is_stock_map):
+            result = await list_sales_orders(
+                db,
+                ORG_ID,
+                has_service_open_lines=None,
+                auth_token="dummy-token",
+            )
+
+        assert result["total"] == 3, (
+            "All 3 SOs must be returned when has_service_open_lines is not set"
+        )
+        assert len(result["items"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_finance_unreachable_for_item_treats_as_stock_excludes_from_aggregate(
+        self,
+    ) -> None:
+        """
+        When the finance service raises ValueError for a specific item, that line
+        is treated as stock (excluded from service aggregate).  Other items that
+        succeed still aggregate correctly.
+        """
+        from src.modules.sales.services.sales_order_service import (
+            _compute_service_open_invoice_qty,
+        )
+
+        UNREACHABLE_ITEM_ID = "item-unreachable-001"
+        reachable_svc_line_id = str(uuid.uuid4())
+        unreachable_line_id = str(uuid.uuid4())
+
+        so_raw = _make_so_doc(
+            lines=[
+                # Finance unreachable — must be treated as stock (excluded).
+                _make_so_line(unreachable_line_id, UNREACHABLE_ITEM_ID, "UNREACH-001",
+                              "Unreachable Item", quantity=10.0, invoiced_qty=0.0,
+                              line_number=1),
+                # Reachable service item — must contribute its open qty.
+                _make_so_line(reachable_svc_line_id, SVC_ITEM_1_ID, "SVC-001",
+                              "Service Item 1", quantity=7.0, invoiced_qty=2.0,
+                              line_number=2),
+            ],
+            status="open",
+        )
+
+        async def _side_effect_with_failure(
+            item_id: str, org_id: str, auth_token: Any
+        ) -> Dict[str, Any]:
+            if item_id == UNREACHABLE_ITEM_ID:
+                raise ValueError("Finance service unreachable for item")
+            return {
+                "itemId": item_id,
+                "organizationId": org_id,
+                "revenueAccountId": REVENUE_ACCOUNT_ID,
+                "cogsAccountId": None,
+                "salesTaxCode": None,
+                "isSellable": True,
+                "isStock": False,
+            }
+
+        with patch(
+            "src.modules.sales.services.sales_order_service._get_item_finance_ext",
+            side_effect=_side_effect_with_failure,
+        ):
+            result = await _compute_service_open_invoice_qty(
+                so_raw, ORG_ID, auth_token="dummy-token"
+            )
+
+        # Only the reachable service line contributes: 7 - 2 = 5.
+        # The unreachable item is treated as stock and excluded.
+        assert result == Decimal("5"), (
+            "Unreachable item must be treated as stock (excluded); "
+            "reachable service line contributes qty 7 - invoiced 2 = 5"
+        )

@@ -75,6 +75,9 @@ from src.core.documents.doc_number import next_doc_number
 from src.core.documents.document_links import DocumentLinkRef
 from src.core.documents.document_status import DocumentStatus, assert_legal_transition
 
+from ._finance_ext_client import get_item_finance_ext as _get_item_finance_ext
+from .doc_chain_reconciler import TOLERANCE
+
 from ..models.sales_orders import (
     CreditCheckSnapshot,
     SalesOrderCreate,
@@ -396,12 +399,19 @@ def _doc_to_response(raw: Dict[str, Any]) -> SalesOrderResponse:
     )
 
 
-def _doc_to_list_item(raw: Dict[str, Any]) -> SalesOrderListItem:
+def _doc_to_list_item(
+    raw: Dict[str, Any],
+    service_open_invoice_qty: Decimal = Decimal("0"),
+) -> SalesOrderListItem:
     """
     Convert a raw MongoDB document dict to a slim SalesOrderListItem.
 
     Args:
-        raw: Partial document from a list projection query.
+        raw:                       Full document from a list query (lines present).
+        service_open_invoice_qty:  Pre-computed open-invoice qty across service lines
+                                   (T-201.10).  Caller must compute this first via
+                                   _compute_service_open_invoice_qty before calling
+                                   this helper.
 
     Returns:
         SalesOrderListItem instance.
@@ -424,6 +434,7 @@ def _doc_to_list_item(raw: Dict[str, Any]) -> SalesOrderListItem:
         currency=raw.get("currency", "AED"),
         totals=totals,
         bp_ref_no=raw.get("bpRefNo"),
+        service_open_invoice_qty=service_open_invoice_qty,
         created_at=raw["createdAt"],
         updated_at=raw["updatedAt"],
     )
@@ -563,6 +574,80 @@ async def _check_credit_limit(
         "overrideByUserId": None,
         "overrideReason": None,
     }
+
+
+# ---------------------------------------------------------------------------
+# Service-open-invoice-qty aggregation (T-201.10)
+# ---------------------------------------------------------------------------
+
+
+async def _compute_service_open_invoice_qty(
+    so_raw: Dict[str, Any],
+    org_id: str,
+    auth_token: Optional[str],
+) -> Decimal:
+    """
+    Sum the open-invoice qty across SO *service* lines (isStock=False).
+
+    For each SO line, fetches the item's isStock flag via the finance HTTP
+    client.  Stock lines (isStock=True or absent) are skipped — they invoice
+    via the DN chain, not from-SO.  Service lines (isStock=False) contribute
+    max(0, quantity - invoicedQty - creditedQty - cancelledQty).
+
+    Best-effort on the HTTP lookup: if the finance service is unreachable for
+    a specific item, that line is conservatively treated as stock (excluded
+    from the service aggregate).  This matches the existing _get_item_finance_ext
+    fail-hard ValueError semantics — we catch and log here.
+
+    Performance note: this makes one HTTP call per SO line per list-page
+    request.  For 25 SOs × 3 lines = 75 HTTP calls per page.  Acceptable for
+    the early use case (small tenants, default page size = 20–25).  A future
+    optimisation could batch unique item IDs across all SOs on the page, but
+    that is premature today.
+
+    Args:
+        so_raw:     Raw SO document from MongoDB (must include embedded lines).
+        org_id:     Organisation UUID for scoping the HTTP call.
+        auth_token: Bearer token forwarded to the finance microservice.
+                    When None, all lines are treated as stock (skip aggregation).
+
+    Returns:
+        Total open-invoice qty across service lines as Decimal.
+    """
+    if auth_token is None:
+        # Reason: without a token the finance HTTP call cannot authenticate;
+        # treat conservatively as 0 rather than making unauthenticated calls.
+        return Decimal("0")
+
+    total = Decimal("0")
+    for line in so_raw.get("lines", []):
+        item_id = line.get("itemId")
+        if not item_id:
+            continue
+        try:
+            ext = await _get_item_finance_ext(item_id, org_id, auth_token)
+        except ValueError:
+            # Finance unreachable or item ext missing → treat as stock (skip).
+            # Reason: fail-safe; a missing finance ext must not surface an error
+            # in the list endpoint that callers depend on for the daily workflow.
+            logger.warning(
+                "[SalesOrderService] Could not fetch isStock for item '%s' "
+                "during service_open_invoice_qty computation — treating as stock (skip).",
+                item_id,
+            )
+            continue
+        if ext.get("isStock", True):
+            # Stock line — excluded from service aggregate.
+            continue
+        # Service line — compute its open-invoice qty.
+        qty = Decimal(str(line.get("quantity", 0)))
+        invoiced = Decimal(str(line.get("invoicedQty", 0)))
+        credited = Decimal(str(line.get("creditedQty", 0)))
+        cancelled = Decimal(str(line.get("cancelledQty", 0)))
+        open_qty = qty - invoiced - credited - cancelled
+        if open_qty > Decimal("0"):
+            total += open_qty
+    return total
 
 
 # ---------------------------------------------------------------------------
@@ -971,28 +1056,49 @@ async def list_sales_orders(
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
     has_open_lines: Optional[bool] = None,
+    has_service_open_lines: Optional[bool] = None,
     page: int = 1,
     size: int = 20,
+    auth_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Paginated list of Sales Orders with optional filters.
 
     Results are ordered by docDate descending (most recent first).
 
+    T-201.10 — service_open_invoice_qty aggregate:
+    ``lines`` is kept in the MongoDB fetch so that per-SO service-line aggregation
+    can run.  Lines are NOT passed through to the API response shape (SalesOrderListItem
+    omits them, keeping list payloads lean).
+
+    T-201.10 — has_service_open_lines filter:
+    When active this filter CANNOT be pushed down to a MongoDB $match because the
+    isStock classification requires an HTTP call to the finance microservice per item.
+    The filter is therefore applied POST-aggregation (after all per-SO HTTP calls).
+
+    Trade-off: when has_service_open_lines=True is active, ALL documents matching
+    the base Mongo query are fetched and aggregated before pagination is applied.
+    This means the returned page may contain fewer items than ``size``.  For the
+    current use case (small tenants, ≤200 items total) this is acceptable.  A
+    future optimisation would denormalise isStock onto SO lines at creation time so
+    the filter can be a Mongo $match, but that is a separate ticket.
+
     Args:
-        db:             Motor database instance.
-        org_id:         Organisation UUID — always required for isolation.
-        status:         Filter by status string value (e.g. "draft", "open").
-        customer_id:    Filter by customer FK.
-        date_from:      Inclusive lower bound on docDate.
-        date_to:        Inclusive upper bound on docDate.
-        has_open_lines: When True, return only SOs with at least one open line.
-                        (Note: This filter is informational — a full open-line
-                        scan is expensive; for now the filter is applied in-query
-                        via a placeholder approach.  Future: add index on
-                        openLinesCount field updated by delivery service.)
-        page:           1-based page number.
-        size:           Items per page (max 200 enforced in route layer).
+        db:                      Motor database instance.
+        org_id:                  Organisation UUID — always required for isolation.
+        status:                  Filter by status string value (e.g. "draft", "open").
+        customer_id:             Filter by customer FK.
+        date_from:               Inclusive lower bound on docDate.
+        date_to:                 Inclusive upper bound on docDate.
+        has_open_lines:          When True, return only SOs with at least one open line.
+                                 (Legacy param — placeholder; not yet fully implemented.)
+        has_service_open_lines:  When True, return only SOs whose service_open_invoice_qty
+                                 is > TOLERANCE.  Applied post-aggregation (see trade-off note).
+        page:                    1-based page number.
+        size:                    Items per page (max 200 enforced in route layer).
+        auth_token:              Bearer token forwarded to the finance microservice for
+                                 isStock lookups.  When None, service_open_invoice_qty
+                                 defaults to 0 for all SOs and the filter cannot match.
 
     Returns:
         Dict with keys: items, total, page, perPage, totalPages.
@@ -1012,25 +1118,61 @@ async def list_sales_orders(
     if date_range:
         query["docDate"] = date_range
 
-    # Reason: project out the embedded lines array for list queries to keep payloads lean.
-    projection = {"lines": 0}
+    # Reason: keep lines in the projection so _compute_service_open_invoice_qty can run
+    # per document (T-201.10).  Lines are stripped from the API response shape by
+    # SalesOrderListItem — they never reach the wire.  This differs from the original
+    # {"lines": 0} projection used before T-201.10.
+    # When has_service_open_lines is active we must fetch ALL matching docs before
+    # slicing, so pagination is handled manually after filtering.
+    if has_service_open_lines:
+        # Fetch all matching documents (no skip/limit) so the post-filter can run
+        # over the full result set before re-slicing to the requested page.
+        total_unfiltered = await db[_SO_COL].count_documents(query)
+        cursor_all = (
+            db[_SO_COL]
+            .find(query)
+            .sort("docDate", -1)
+        )
+        all_raw = await cursor_all.to_list(length=total_unfiltered or 1)
 
+        # Compute aggregate and filter post-Mongo.
+        filtered_items: List[SalesOrderListItem] = []
+        for doc in all_raw:
+            svc_qty = await _compute_service_open_invoice_qty(doc, org_id, auth_token)
+            if svc_qty > TOLERANCE:
+                filtered_items.append(_doc_to_list_item(doc, service_open_invoice_qty=svc_qty))
+
+        total = len(filtered_items)
+        skip = (page - 1) * size
+        items = filtered_items[skip: skip + size]
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "perPage": size,
+            "totalPages": ceil(total / size) if total > 0 else 1,
+        }
+
+    # Normal path — paginate first, then compute aggregates on the page slice.
     total = await db[_SO_COL].count_documents(query)
     skip = (page - 1) * size
 
     cursor = (
         db[_SO_COL]
-        .find(query, projection)
+        .find(query)
         .sort("docDate", -1)
         .skip(skip)
         .limit(size)
     )
     raw_docs = await cursor.to_list(length=size)
 
-    items = [_doc_to_list_item(doc) for doc in raw_docs]
+    items_list: List[SalesOrderListItem] = []
+    for doc in raw_docs:
+        svc_qty = await _compute_service_open_invoice_qty(doc, org_id, auth_token)
+        items_list.append(_doc_to_list_item(doc, service_open_invoice_qty=svc_qty))
 
     return {
-        "items": items,
+        "items": items_list,
         "total": total,
         "page": page,
         "perPage": size,
