@@ -414,6 +414,10 @@ class SaleItemFinanceExtCreate(BaseModel):
     # cross-table validation is done at the application layer, not at DB level.
     salesTaxCode: Optional[str] = Field(None, max_length=10)
     isSellable: bool = Field(default=True)
+    # Reason: gates direct-create AR Invoice (T-201.8). True = stock item (must flow
+    # through Delivery Note); False = service/fee item (may be invoiced directly).
+    # Defaults True (conservative) so legacy items behave exactly as before.
+    isStock: bool = Field(default=True)
     notes: Optional[str] = Field(None, max_length=500)
 
 
@@ -443,6 +447,8 @@ class SaleItemFinanceExtUpdate(BaseModel):
     )
     salesTaxCode: Optional[str] = Field(default=None, max_length=10)
     isSellable: Optional[bool] = Field(default=None)
+    # Reason: nullable on Update so callers can omit the field to leave it unchanged.
+    isStock: Optional[bool] = Field(default=None)
     notes: Optional[str] = Field(default=None, max_length=500)
 
 
@@ -460,6 +466,7 @@ class SaleItemFinanceExtResponse(BaseModel):
     cogsAccountId: Optional[str] = None
     salesTaxCode: Optional[str] = None
     isSellable: bool
+    isStock: bool
     notes: Optional[str] = None
     createdBy: Optional[str] = None
     updatedBy: Optional[str] = None

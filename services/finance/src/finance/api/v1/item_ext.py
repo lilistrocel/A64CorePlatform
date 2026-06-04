@@ -219,6 +219,7 @@ def _ext_to_dict(ext: SaleItemFinanceExt) -> dict:
         "cogsAccountId": ext.cogsAccountId,
         "salesTaxCode": ext.salesTaxCode,
         "isSellable": ext.isSellable,
+        "isStock": ext.isStock,
         "notes": ext.notes,
         "createdBy": ext.createdBy,
         "updatedBy": ext.updatedBy,
@@ -277,6 +278,11 @@ async def list_item_ext(
         alias="isSellable",
         description="Filter by isSellable flag",
     ),
+    is_stock: Optional[bool] = Query(
+        None,
+        alias="isStock",
+        description="Filter by isStock flag (True = stock items; False = service/fee items)",
+    ),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
@@ -286,10 +292,12 @@ async def list_item_ext(
     Return paginated sale item finance extensions for an organisation.
 
     Optionally filter by isSellable to retrieve only items configured for sale.
+    Optionally filter by isStock to separate stock items from service/fee items.
 
     Args:
         organization_id: Org scope (required).
         is_sellable: Optional filter on the isSellable flag.
+        is_stock: Optional filter on the isStock flag (T-201.8).
         page: 1-based page number.
         size: Items per page (max 200).
         db: Async DB session.
@@ -301,6 +309,8 @@ async def list_item_ext(
     base_filter = [SaleItemFinanceExt.organizationId == organization_id]
     if is_sellable is not None:
         base_filter.append(SaleItemFinanceExt.isSellable == is_sellable)
+    if is_stock is not None:
+        base_filter.append(SaleItemFinanceExt.isStock == is_stock)
 
     count_q = (
         select(func.count())
@@ -435,6 +445,7 @@ async def create_item_ext(
         cogsAccountId=body.cogsAccountId,
         salesTaxCode=body.salesTaxCode,
         isSellable=body.isSellable,
+        isStock=body.isStock,
         notes=body.notes,
         createdBy=current_user.userId,
         updatedBy=current_user.userId,

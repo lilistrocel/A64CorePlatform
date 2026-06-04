@@ -691,6 +691,12 @@ class SaleItemFinanceExt(Base):
     # that are configured for sale (i.e. have been enabled by finance).
     # Defaults to True so items created via event sync are immediately visible.
     isSellable = Column(Boolean, nullable=False, default=True, server_default="1")
+    # Reason: gates direct-create AR Invoice (T-201.8). Stock items must flow through
+    # a Delivery Note so COGS posts symmetrically with the revenue side. Service/fee
+    # items (delivery fees, late charges, retainers) can be invoiced directly because
+    # they have no inventory to deplete. Defaults True (conservative) so legacy items
+    # behave exactly as before until an admin classifies them.
+    isStock = Column(Boolean, nullable=False, default=True, server_default="1")
     notes = Column(String(500), nullable=True)
     createdBy = Column(String(36), nullable=True)
     updatedBy = Column(String(36), nullable=True)
