@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-06-01
-> **Tasks:** 8 active · 2 ready · 2 blocked · 0 completed (T-201.3 moved to ARCHIVE.md; T-201.2 moved to ARCHIVE.md) — T-201.4/.5/.6/.7 awaiting verify+commit; T-201.8/.9/.10/.11 filed 2026-06-01 as the SAP B1 chain-via-SO epic; T-600 filed 2026-06-01 as Wave 6 (standalone-mode hardening + external accounting export) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
+> **Updated:** 2026-06-02
+> **Tasks:** 8 active · 2 ready · 2 blocked · 0 completed (T-201.3, T-201.2 in ARCHIVE; T-201.4/.5/.6/.7 committed 2026-06-02 in 4-commit chain a/b → c → d after .gitignore recovery commit) — T-201.8 Active (Option C: isStock on SaleItemFinanceExt + T-201.8b filed for Wave 6 SKU master extraction); T-201.9/.10/.11 still SAP B1 chain-via-SO epic; T-501 filed 2026-06-02 (Wave 5 Packing materials BOM + multi-component COGS at Delivery, sibling to T-500); T-600 still Wave 6 (standalone-mode hardening + external accounting export) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
 
 ---
 
@@ -91,10 +91,39 @@
 
 ---
 
+### T-202 | AR Invoice backend stamps `taxPercent=0` (queries tax_codes from ops Mongo instead of finance MySQL) — Hotfix
+- **Category:** Backend · **Priority:** P0 · **Status:** Active
+- **Assigned:** parent session + backend-dev-expert
+- **Started:** 2026-06-02
+- **Discovered:** During T-201.8 UI verification (ARI-2026-0004 created from DN-2026-0003 / SO-2026-0002). Viet Anh noticed totals.gross = 29,000 instead of expected 30,450 (SO net 29,000 + 5% VAT 1,450).
+- **Root cause:** `src/modules/sales/services/ar_invoice_service.py:167` (`_get_tax_percent`) queries `db["tax_codes"]` on ops MongoDB. The `tax_codes` collection in ops has `count=0` — tax codes live in **finance MySQL**, not ops Mongo. Lookup returns None → function returns `Decimal("0")` → backend stamps `taxPercent=0` on every line → totals.tax = 0.
+- **Same class of bug as T-100.9a.1** (Lessons Learned at top of this file). The fix pattern is established: HTTP call to finance, exactly like `_get_item_finance_ext` / `_get_customer_finance_ext` (already in `src/modules/sales/services/_finance_ext_client.py` from T-201.8).
+- **Accounting impact:** Every from-Delivery AND direct-create AR Invoice silently drops VAT from its JE. JE on the broken ARI = `DR AR 29,000 / CR Revenue 29,000` — no `CR Output VAT` line. VAT obligation is missing from the GL. AR Credit Note + Sales Order are NOT affected (both trust client-submitted `taxPercent`).
+- **Scope is small (~30 lines + tests):**
+  1. Add `get_tax_percent(tax_code, org_id, auth_token) -> Decimal` to `src/modules/sales/services/_finance_ext_client.py`. Hits `GET /api/v1/finance/tax-codes?organization_id=<org>`, filters to the matching `taxCode` string, returns `Decimal(record["rate"])`. Fail-hard if finance is unreachable or the code is unknown (revenue posting integrity > availability — same posture as the existing rev-account check at transition).
+  2. Replace the body of `_get_tax_percent` in `ar_invoice_service.py` to delegate. Thread `auth_token` through `_build_line_doc` / `create_ar_invoice` / `create_ar_invoice_from_delivery` / `update_ar_invoice` / `transition_status` (some paths already have it from T-201.8 — confirm).
+  3. Drop the `_TAX_CODES_COL` constant and the docstring claim that tax_codes is on ops Mongo. Update the module-level comment block to reflect HTTP source.
+  4. Tests: add cases to `test_ar_invoices.py` (or a new `test_tax_lookup.py`) covering: (a) valid code "S" → 5%, (b) unknown code → ValueError, (c) finance unreachable → ValueError, (d) null code → Decimal("0") (exempt-line shortcut, unchanged).
+  5. Also delete & re-create ARI-2026-0004 in Viet Anh's local DB to verify the fix end-to-end on the live stack.
+- **Steps:**
+  1. Backend agent ships the change above. **CRITICAL: agent does not run git.**
+  2. Restart `api` container (no migration needed; finance side unchanged).
+  3. Parent session deletes broken ARI-2026-0004 + re-creates from DN-2026-0003 in Viet Anh's UI; confirms totals.tax = 1,450 and totals.gross = 30,450.
+  4. Commit alongside T-201.8 chain.
+- **Notes:**
+  - This is a pre-existing bug surfaced by T-201.8 verification, not introduced by T-201.8. Filed as T-202 (top-level), not T-201.x.
+  - Should also audit `delivery_service.py` for similar Mongo-misroutes even though delivery doesn't post tax — surface any related findings.
+  - **CRITICAL for agent dispatch:** do not run git commit/push.
+
+---
+
 ### T-201.8 | AR Invoice direct-create: `isStock` flag + gating (foundation for SO-chain epic) — Wave 3
-- **Category:** Backend + Frontend · **Priority:** P1
-- **Assigned:** — · **Started:** —
-- **Depends on:** T-201.7 ✅ (chain cleanup) — must verify+commit first
+- **Category:** Backend + Frontend · **Priority:** P1 · **Status:** Active
+- **Assigned:** parent session (orchestrator) + backend-dev-expert + database-schema-architect + frontend-dev-expert + testing-backend-specialist
+- **Started:** 2026-06-02
+- **Architecture decision (2026-06-02 with Viet Anh):** Option C — `isStock` lives on `SaleItemFinanceExt` (finance MySQL) for now. T-201.8b filed for Wave 6 SKU-master extraction so standalone mode can administer items without finance.
+- **Symmetric flows decision:** Mirror gating in AR Credit Note (direct) and Return Request (direct) within T-201.8 itself (no defer).
+- **Depends on:** T-201.7 ✅ (chain cleanup) — committed 2026-06-02
 - **Blocks:** T-201.9, T-201.10, T-201.11
 - **Description:** Today `create_ar_invoice` (direct-create, no Delivery) emits only `sales_invoice_posted` —
   no inventory movement, no COGS event. Direct-invoicing a stock item creates a real accounting
@@ -144,6 +173,39 @@
   - Honest downside: admin must manually classify items once (one-time data setup cost,
     mitigated by heuristic backfill).
   - **CRITICAL for agent dispatch:** do not run git commit/push. Parent session handles commits.
+
+---
+
+### T-201.8b | Extract ops-side `sale_items` master from finance ext (Wave 6 prep) — Wave 6
+- **Category:** Backend (ops + finance) · **Priority:** P2
+- **Assigned:** — · **Started:** —
+- **Depends on:** T-201.8 ✅ (gives us isStock as the migration testbed)
+- **Blocks:** T-600 (standalone mode hardening)
+- **Description:** Today the de-facto sale-item master is `SaleItemFinanceExt` in the
+  finance microservice MySQL. This breaks standalone mode — ops cannot administer items
+  (name, code, isStock, isSellable, UoM, defaultPrice) without finance running. Build
+  a proper ops-side `sale_items` Mongo collection and shrink `SaleItemFinanceExt` to a
+  GL-account-only overlay (`revenueAccountId`, `cogsAccountId`, `salesTaxCode`).
+- **Steps (high level — refine when picked up):**
+  1. New ops Mongo collection: `sale_items` (organizationId, itemCode, itemName, isStock,
+     isSellable, defaultPrice, uom, isActive, audit timestamps).
+  2. Ops endpoints: `GET/POST/PATCH/DELETE /api/v1/sales/items`.
+  3. Migration: snapshot read of `SaleItemFinanceExt` denormalized fields (itemCode,
+     itemName, isSellable, isStock from T-201.8) → seed `sale_items`. Keep finance ext
+     for backward compat; deprecate the denormalized fields with a TODO.
+  4. SalesItemsPage refactor: switch primary list source from `useSaleItemFinanceExtList`
+     to a new `useSaleItems` hook; render the finance-ext fields (revenue/COGS/tax) as
+     a secondary panel that only shows when `financeEnabled` module flag is on.
+  5. AR Invoice gating: read `isStock` from ops-side `sale_items` instead of HTTP-hopping
+     to finance for the flag. JE handlers continue to call finance for GL accounts.
+  6. Standalone-mode smoke test: items can be created + listed + flagged isStock without
+     finance running.
+- **Notes:**
+  - Filed 2026-06-02 alongside T-201.8 Option C decision as the architectural follow-up.
+  - Not blocking T-201.8 — runs in parallel with T-201.9/.10/.11.
+  - The "snapshot read" migration assumes finance is reachable at migration time. For
+    tenants that flipped to standalone before this ships, provide a separate one-off
+    import-from-CSV path.
 
 ---
 
@@ -434,6 +496,121 @@
 
 ---
 
+### T-501 | Wave 5 — Packing materials BOM + multi-component COGS at Delivery
+- **Category:** Cross-module (sales · finance · inventory) · **Priority:** P2
+- **Status:** 🟢 Ready (design-doc first; pre-empts no other ticket)
+- **Assigned:** — · **Started:** —
+- **Depends on:** T-500 Phase 3 ideally (real produce avgCost so the produce side of the
+  composite COGS posting carries a real number, not zero). Can start design + Phase 1
+  schema in parallel with T-500.
+- **Blocks:** Accurate margin reporting on packed-and-shipped produce; per-block
+  profitability reports that include packing overhead.
+- **Description:** Today every sales item posts a single-component COGS at Delivery
+  (`Dr COGS / Cr Inventory` for the produce side only). Real produce sales bundle the
+  harvested item with packing materials — cartons, punnets, labels, tape, ice packs —
+  each with its own unit cost and its own COGS account. A "Tomato 5 kg carton" sold at
+  AED 105 actually costs (5 kg × bulk-cost) + (1 × carton-10kg cost) + (1 × label) +
+  (~0.05 m tape). Without packing in COGS, margin reports overstate gross margin by
+  whatever the packing share is — often 4–8% on produce. T-501 lands a small BOM-lite
+  layer that attributes packing components at the existing Delivery posting event.
+
+- **Design decisions to settle BEFORE implementation:**
+  1. **Where the packing BOM lives.** Two options:
+     (a) New table `sale_item_packing_components` keyed on `saleItemId` with rows
+         `(packingItemId, qtyPerSoldUnit, cogsAccountId?)`. Same shape as a production
+         BOM, smaller scope.
+     (b) Embed packing list inside the ops-side `sale_items` master (T-201.8b) as a
+         `packing: [{itemId, qtyPerUnit}]` array.
+     Recommend (a) — keeps the master clean, easy to extend to multi-variant per item
+     (different packing per customer / region).
+  2. **Single-variant vs multi-variant packing per item.** "Tomatoes" might pack as
+     5 kg punnet OR 10 kg carton depending on customer. Recommend supporting multiple
+     variants from day one with a default flag; the SO line picks which variant.
+  3. **Where packing materials live in inventory.** Cartons / labels / tape are their
+     own SKUs in the new `sale_items` master (`isStock=true, isSellable=false`).
+     Inventory tracked by `inventory_movements`; reorder via existing purchasing flow.
+  4. **Cost-flow timing.** COGS posts at DN OPEN, same event as produce COGS today.
+     Single composite JE per DN line with multiple debit + credit legs.
+  5. **SO-line reservation.** SO commit reserves both produce inventory AND packing
+     materials. Out-of-stock packing should warn at SO time (not surprise at DN).
+  6. **Pickup orders / bulk sales.** Customer picks up loose — no packing. Packing
+     plan = empty; DN posts produce-only COGS. Default flow handles this.
+  7. **Spoilage / waste during packing.** Separate event (inventory adjustment),
+     not the DN's problem. Out of scope for T-501.
+
+- **Recommended user flow (sketch — refine in design doc):**
+
+  *Item master setup (one-time, admin):*
+    On the SalesItemsPage, "Tomatoes" gets a Packing section with one or more variants:
+    `[10 kg carton] = 1 × Carton-10kg + 1 × Label + 0.05m Tape (default)`,
+    `[5 kg punnet] = 2 × Punnet-5kg + 2 × Label + 0.1m Tape`.
+
+  *Sales Order line (salesperson):*
+    Add "Tomatoes 1000 kg". A "Packing" dropdown defaults to the item's default
+    variant. Salesperson can override per customer ("they want 5 kg punnets"). SO
+    reserves both produce + computed packing materials.
+
+  *Delivery Note (warehouse):*
+    DN from SO pre-fills packing plan. Each line shows two allocations:
+      - Produce allocation — existing flow (batch → quantity)
+      - Packing allocation — `100 × Carton-10kg + 100 × Label + 5m Tape` (new)
+    Warehouse can adjust on the fly: "ran out of 10 kg cartons, used 80 × 10 kg
+    + 40 × 5 kg" — the row splits into two packing sub-lines, packing material
+    requirements recompute. On DRAFT → OPEN, `inventory_movements` rows are
+    written for **both** produce (existing) and each packing component (new).
+    The JE handler emits one composite JE per DN line:
+      `Dr COGS-Produce + Dr COGS-Packing × N / Cr Inventory-Produce + Cr Inventory-Packing × N`.
+
+  *AR Invoice (accountant):* Unchanged — bills the kg ordered. Revenue side is
+  packing-agnostic.
+
+  *Reports:* New "COGS breakdown" column on AR/sales reports split produce vs
+  packing per line, per period. Packing-materials consumption rolls into the
+  reorder report.
+
+- **Implementation phases (sequenced; estimate ~6-8 task cycles total):**
+  - **Phase 1 — Schema + admin.** New `sale_item_packing_components` table (or the
+    chosen home from decision #1) + admin UI to define variants on SalesItemsPage.
+    Cartons/labels/tape land in inventory as their own items. Estimate: 2 cycles.
+  - **Phase 2 — SO + DN propagation.** SO line carries `packingVariant` reference.
+    DN line carries `packingActual: [{packingItemId, quantity}]` allowing warehouse
+    adjustment. `inventory_movements` rows written for both produce and packing on
+    DRAFT → OPEN. Estimate: 2 cycles.
+  - **Phase 3 — JE handler multi-leg.** Extend `delivery_posted` finance handler to
+    emit composite COGS posting (multiple Dr COGS legs, multiple Cr Inventory legs).
+    Per-component cogsAccountId resolved from the packing item's finance ext.
+    Estimate: 1-2 cycles.
+  - **Phase 4 — Reports + reservation warnings.** COGS-breakdown report column,
+    out-of-stock packing warning at SO commit, packing consumption in reorder feed.
+    Estimate: 1-2 cycles.
+
+- **Honest trade-offs:**
+  - **Pro:** Margin reports become honest. Packing-material visibility for reorder
+    + waste. Reuses the existing DN posting event — no new doc type, no new chain
+    transitions. The packing-BOM table generalises to a full production BOM later
+    (Wave 5 progression — Pattern B → Pattern A).
+  - **Con:** Forces operational discipline: cartons / labels / tape must be tracked
+    as inventory SKUs with periodic counts. Without that discipline, packing-COGS
+    drifts from reality. ~3 new touch points across services. Multi-leg JE is more
+    work than the current single-leg COGS — testing surface widens.
+  - **Honest gap:** True catch-weight produce (each 5 kg carton actually weighs
+    4.7 to 5.3 kg) is NOT addressed by T-501. The carton's contents weight is
+    assumed equal to the SO line's nominal qty. Catch-weight is its own ticket
+    (T-502 if needed, post-Wave-5).
+
+- **Notes:**
+  - Filed 2026-06-02 with Viet Anh during T-201.8 closeout after a design discussion
+    on how to capture packing cost in COGS. Decided this is a Wave 5 sibling concern,
+    not a Wave 3 fix.
+  - Design doc should be drafted BEFORE Phase 1 implementation. Especially decisions
+    #1 and #2 (BOM home + multi-variant) have second-order consequences.
+  - Loosely depends on T-201.8b (ops-side sale_items master) — packing materials
+    naturally live there. If T-201.8b ships first, the packing-components table just
+    keys to ops-side items. If T-501 ships first, it can key to finance-side
+    `SaleItemFinanceExt.itemId` and migrate later.
+
+---
+
 ### T-600 | Wave 6 — Standalone-mode hardening + external accounting export (run Sales/Purchasing without finance)
 - **Category:** Cross-module (sales · purchasing · core · finance-gating) · **Priority:** P2
 - **Status:** 🟢 Ready (post-Wave 5; can interleave with Wave 4)
@@ -468,6 +645,17 @@
      AR Invoice creation when `financeEnabled=false`. Needs: conditional lookup + `null`
      fallback OR Mongo-side default revenue category string per item.
   2. Same pattern for `customer_finance_ext.arControlAccountId` lookup in AR Invoice creation.
+  2a. **(Added 2026-06-02, surfaced during T-202.)** `_build_line_doc` resolves `taxPercent`
+     by HTTP-calling `GET /api/v1/finance/tax-codes` and filtering for the line's
+     `taxCodeId`. Standalone mode either (a) needs an ops-side `tax_codes` Mongo
+     collection seeded at tenant setup and read locally, OR (b) needs to mirror the
+     SO pattern — the client (frontend) ships `taxPercent` as a number on every
+     ARI line, the backend trusts it, no HTTP lookup. **Option (b) is the smaller change
+     and matches the existing SO flow** — the only caveat is the frontend tax-code
+     picker (`useTaxCodes` hook) needs a Mongo fallback for the dropdown source.
+     **Decision (Viet Anh, 2026-06-02):** defer to Wave 6, don't carve out a T-202.1.
+     The current T-202 fix is correct for full-stack mode; standalone tax correctness
+     waits for the broader Wave 6 standalone-mode hardening pass.
   3. Credit limit checks on SO (`outstandingAr` source) — needs Mongo-based fallback
      (sum of open AR Invoices per customer) when finance is off.
   4. Finance Companies lookup for `companyCode` resolution (T-201.0) — standalone needs
