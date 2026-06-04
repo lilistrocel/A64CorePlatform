@@ -930,7 +930,7 @@ async def test_submit_ap_moves_to_pending_when_approval_required() -> None:
             submitted_by=USER_ID,
         )
 
-    assert result.status == "Pending Approval"
+    assert result.status == "pending_approval"
     assert result.approvalState == "Pending"
     assert result.approvalRequestedFrom == "accountant"
 

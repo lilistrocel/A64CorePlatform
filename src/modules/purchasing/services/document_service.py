@@ -1,21 +1,41 @@
 """
-Purchasing Module — Document Service (PR + PO)
+Purchasing Module — Document Service (PR + PO + GR + AP Invoice)
 
-Business logic for Purchase Request and Purchase Order documents stored in
-MongoDB. Implements:
+Business logic for Purchase Request, Purchase Order, Goods Receipt, and
+AP Invoice documents stored in MongoDB.  Implements:
 
 - Document creation with auto-numbered docNumber
 - Line management (create, replace on update)
 - Total recalculation
-- State machine enforcement (PR + PO)
+- State machine enforcement via shared DocumentStatus enum + assert_legal_transition
 - Approval engine integration
 - Outbox event emission on every state transition, atomic with the header write
 
 Collections:
-  document_headers  — one doc per PR/PO header
+  document_headers  — one doc per PR/PO/GR/AP header
   document_lines    — child lines, one per line item
   document_counters — atomic counters for docNumber generation
   finance_outbox    — outbox events written inside the same Mongo transaction
+
+Status vocabulary (T-200.21 — Wave 4 foundation)
+-------------------------------------------------
+Stored values are now the lowercase_snake form from DocumentStatus enum.
+A ``_parse_status`` helper accepts both the legacy TitleCase purchasing
+vocabulary AND the new lowercase_snake enum values so the service works
+during the migration window (before wave4_purchasing_status_migration.py
+has been run against the database).
+
+Legacy → enum mapping:
+  "Draft"          → DocumentStatus.DRAFT          ("draft")
+  "Pending Approval" → DocumentStatus.PENDING_APPROVAL ("pending_approval")
+  "Approved"       → DocumentStatus.OPEN           ("open")   — semantic rename
+  "Open"           → DocumentStatus.OPEN           ("open")
+  "Partly Closed"  → DocumentStatus.PARTLY_CLOSED  ("partly_closed")
+  "Closed"         → DocumentStatus.CLOSED         ("closed")
+  "Cancelled"      → DocumentStatus.CANCELLED      ("cancelled")
+  "Posted"  (GR)   → DocumentStatus.OPEN           ("open")   — GR terminal state
+  "Sent"    (PO)   → kept as raw string; no shared enum equivalent yet (Wave 4)
+  "Rejected" (PR/PO/AP) → kept as raw string; no shared enum equivalent yet
 
 Transactional outbox (Phase 2)
 -------------------------------
@@ -50,6 +70,8 @@ from decimal import Decimal
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorDatabase
+
+from src.core.documents.document_status import DocumentStatus, assert_legal_transition
 
 from ..models.document import (
     AP_TAX_RATES,
@@ -88,66 +110,113 @@ _LINES_COL = "document_lines"
 _COUNTERS_COL = "document_counters"
 
 # ---------------------------------------------------------------------------
-# Valid state transitions
+# Doc-type string constants — match keys in LEGAL_TRANSITIONS exactly.
+# Defined here so a typo is caught at import time, not at runtime.
 # ---------------------------------------------------------------------------
 
-_PR_TRANSITIONS: Dict[str, List[str]] = {
-    "Draft": ["Pending Approval", "Approved", "Cancelled"],
-    "Pending Approval": ["Approved", "Rejected", "Cancelled"],
-    "Approved": ["Closed"],
-    "Rejected": [],
-    "Cancelled": [],
-    "Closed": [],
+_DOC_TYPE_PR: str = "PR"
+_DOC_TYPE_PO: str = "PO"
+_DOC_TYPE_GR: str = "GR"
+_DOC_TYPE_AP_INVOICE: str = "AP_INVOICE"
+
+# ---------------------------------------------------------------------------
+# Tolerant status parser (migration window helper — T-200.21)
+#
+# Accepts both the legacy TitleCase purchasing vocabulary that may still be
+# stored in MongoDB AND the new lowercase_snake DocumentStatus enum values.
+# Once wave4_purchasing_status_migration.py has been applied to all
+# environments and all stored documents carry the new vocabulary, this
+# function can be simplified to just: return DocumentStatus(raw).
+#
+# Caller MUST handle the cases where the raw value is a legacy state that
+# has no DocumentStatus equivalent ("Rejected", "Sent", "Posted").  Those
+# paths use the raw string directly (see comments at each call site).
+# ---------------------------------------------------------------------------
+
+_LEGACY_STATUS_MAP: Dict[str, DocumentStatus] = {
+    "Draft":            DocumentStatus.DRAFT,
+    "Pending Approval": DocumentStatus.PENDING_APPROVAL,
+    "Approved":         DocumentStatus.OPEN,       # semantic: Approved = active/open
+    "Open":             DocumentStatus.OPEN,
+    "Partly Closed":    DocumentStatus.PARTLY_CLOSED,
+    "Closed":           DocumentStatus.CLOSED,
+    "Cancelled":        DocumentStatus.CANCELLED,
+    # Reason: GR uses "Posted" to mean the document is terminal/open in the
+    # shared vocabulary.  LEGAL_TRANSITIONS["GR"] maps DRAFT → OPEN.
+    "Posted":           DocumentStatus.OPEN,
 }
 
-_PO_TRANSITIONS: Dict[str, List[str]] = {
-    "Draft": ["Pending Approval", "Open", "Cancelled"],
-    "Pending Approval": ["Open", "Rejected", "Cancelled"],
-    "Open": ["Sent", "Partially Received", "Received", "Cancelled"],
-    "Sent": ["Partially Received", "Received", "Cancelled"],
-    "Partially Received": ["Received"],
-    "Received": ["Closed"],
-    "Closed": [],
-    "Cancelled": [],
-    "Rejected": [],
-}
-
-# Goods Receipt — single transition: Draft → Posted (no approval in v1)
-_GR_TRANSITIONS: Dict[str, List[str]] = {
-    "Draft": ["Posted"],
-    "Posted": [],
-}
-
-# AP Invoice — approval flow mirrors PR: Draft → Pending Approval → Approved | Rejected
-_AP_TRANSITIONS: Dict[str, List[str]] = {
-    "Draft": ["Pending Approval"],
-    "Pending Approval": ["Approved", "Rejected", "Draft"],
-    "Approved": [],     # terminal in v1; Phase D adds Paid / Closed
-    "Rejected": [],     # terminal in v1
-}
+# Reason: these legacy statuses have no equivalent in DocumentStatus.
+# They are purchasing-module-internal states not yet modelled in the shared
+# enum.  Transition validation for paths involving these states falls back to
+# the per-module check below.  T-200.22+ will decide whether to add them or
+# rename them.
+_LEGACY_NO_ENUM_STATES = frozenset({"Rejected", "Sent", "Partially Received", "Received"})
 
 
-def _validate_transition(doc_type: str, current: str, target: str) -> None:
+def _parse_status(raw: Optional[str]) -> DocumentStatus:
     """
-    Raise ValueError if the transition is not allowed.
+    Tolerant parser: accepts both legacy TitleCase purchasing vocabulary and
+    the new lowercase_snake DocumentStatus enum values.
+
+    Migration window only — once all stored data uses the new vocabulary,
+    this reduces to ``return DocumentStatus(raw)``.
 
     Args:
-        doc_type: 'PR', 'PO', or 'GR'.
-        current: Current status.
-        target: Target status.
+        raw: Raw status string from MongoDB (may be TitleCase or lowercase_snake).
+
+    Returns:
+        DocumentStatus enum member.
 
     Raises:
-        ValueError: If the transition is forbidden.
+        ValueError: If raw is None, empty, or an unrecognised string.
     """
-    if doc_type == "PR":
-        transitions = _PR_TRANSITIONS
-    elif doc_type == "PO":
-        transitions = _PO_TRANSITIONS
-    elif doc_type == "GR":
-        transitions = _GR_TRANSITIONS
+    if not raw:
+        raise ValueError("status is required and must not be empty")
+    if raw in _LEGACY_STATUS_MAP:
+        return _LEGACY_STATUS_MAP[raw]
+    # Reason: may already be the new vocabulary; let DocumentStatus validate it.
+    return DocumentStatus(raw)
+
+
+def _validate_transition_legacy(doc_type: str, current: str, target: str) -> None:
+    """
+    Fallback transition validator for legacy states that have no DocumentStatus
+    equivalent (Rejected, Sent, Partially Received, Received).
+
+    Used only when the target state is one of those legacy-only values.
+    For all other transitions, ``assert_legal_transition`` is used instead.
+
+    Args:
+        doc_type: 'PR', 'PO', 'GR', or 'AP'.
+        current: Current status string (may be legacy or enum vocabulary).
+        target: Target status string.
+
+    Raises:
+        ValueError: If the transition is not in the legacy table.
+    """
+    _PR_LEGACY: Dict[str, List[str]] = {
+        "Pending Approval": ["Rejected"],
+        "pending_approval": ["Rejected"],
+    }
+    _PO_LEGACY: Dict[str, List[str]] = {
+        "open": ["Sent"],
+        "Open": ["Sent"],
+        "Sent": ["Cancelled"],
+        "Pending Approval": ["Rejected"],
+        "pending_approval": ["Rejected"],
+    }
+    _AP_LEGACY: Dict[str, List[str]] = {
+        "Pending Approval": ["Rejected"],
+        "pending_approval": ["Rejected"],
+    }
+    if doc_type == _DOC_TYPE_PR:
+        table = _PR_LEGACY
+    elif doc_type == _DOC_TYPE_PO:
+        table = _PO_LEGACY
     else:
-        transitions = _AP_TRANSITIONS
-    allowed = transitions.get(current, [])
+        table = _AP_LEGACY
+    allowed = table.get(current, [])
     if target not in allowed:
         raise ValueError(
             f"Invalid {doc_type} transition: {current} → {target}. "
@@ -1045,7 +1114,7 @@ class DocumentService:
                 "issuedBy": None,
                 "issuedDate": None,
                 "baseDocId": None,
-                "status": "Draft",
+                "status": DocumentStatus.DRAFT.value,
                 **totals,
                 "notes": data.notes,
                 "approvalState": "NotRequired",
@@ -1165,7 +1234,7 @@ class DocumentService:
         )
         if not header:
             return None
-        if header["status"] != "Draft":
+        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
             raise ValueError("Only Draft PRs can be updated")
 
         now = datetime.now(tz=timezone.utc)
@@ -1234,7 +1303,7 @@ class DocumentService:
         )
         if not header:
             return False
-        if header["status"] != "Draft":
+        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
             raise ValueError("Only Draft PRs can be deleted")
 
         now = datetime.now(tz=timezone.utc)
@@ -1279,7 +1348,10 @@ class DocumentService:
         if not header:
             raise ValueError(f"PR '{doc_id}' not found")
 
-        _validate_transition("PR", header["status"], "Pending Approval")
+        current_status = _parse_status(header["status"])
+        # Reason: submit always targets PENDING_APPROVAL first; the engine may
+        # then auto-approve to OPEN.  Validate the first hop (DRAFT → PENDING_APPROVAL).
+        assert_legal_transition(_DOC_TYPE_PR, current_status, DocumentStatus.PENDING_APPROVAL)
 
         # Reason: resolve approval decision before opening the transaction so
         # the network call cannot hold the Mongo transaction open.
@@ -1295,7 +1367,7 @@ class DocumentService:
         previous_status = header["status"]
 
         if decision.required:
-            new_status = "Pending Approval"
+            new_status = DocumentStatus.PENDING_APPROVAL.value
             updates: Dict[str, Any] = {
                 "status": new_status,
                 "approvalState": "Pending",
@@ -1305,7 +1377,10 @@ class DocumentService:
                 "updatedBy": submitted_by,
             }
         else:
-            new_status = "Approved"
+            # Reason: no approval gate → direct DRAFT → OPEN (the "auto-approve" path).
+            # LEGAL_TRANSITIONS["PR"] allows DRAFT → OPEN directly.
+            assert_legal_transition(_DOC_TYPE_PR, current_status, DocumentStatus.OPEN)
+            new_status = DocumentStatus.OPEN.value
             updates = {
                 "status": new_status,
                 "approvalState": "NotRequired",
@@ -1370,7 +1445,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"PR '{doc_id}' not found")
 
-        _validate_transition("PR", header["status"], "Approved")
+        current_status = _parse_status(header["status"])
+        assert_legal_transition(_DOC_TYPE_PR, current_status, DocumentStatus.OPEN)
 
         # Reason: approver must hold the role specified in the approval request
         required_role = header.get("approvalRequestedFrom")
@@ -1411,7 +1487,7 @@ class DocumentService:
                 {"docId": doc_id},
                 {
                     "$set": {
-                        "status": "Approved",
+                        "status": DocumentStatus.OPEN.value,
                         "approvalState": "Approved",
                         "approvalDecidedBy": approver_id,
                         "approvalDecidedAt": now,
@@ -1463,7 +1539,9 @@ class DocumentService:
         if not header:
             raise ValueError(f"PR '{doc_id}' not found")
 
-        _validate_transition("PR", header["status"], "Rejected")
+        # Reason: "Rejected" has no DocumentStatus equivalent (Wave 4 gap).
+        # Use the legacy fallback validator for this path.
+        _validate_transition_legacy(_DOC_TYPE_PR, header["status"], "Rejected")
 
         required_role = header.get("approvalRequestedFrom")
         # Reason: admin and super_admin always have approval authority over any
@@ -1492,6 +1570,8 @@ class DocumentService:
                 {"docId": doc_id},
                 {
                     "$set": {
+                        # Reason: "Rejected" has no shared enum equivalent;
+                        # stored as-is until the enum is extended in a future task.
                         "status": "Rejected",
                         "approvalState": "Rejected",
                         "approvalDecidedBy": approver_id,
@@ -1540,7 +1620,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"PR '{doc_id}' not found")
 
-        _validate_transition("PR", header["status"], "Cancelled")
+        current_status = _parse_status(header["status"])
+        assert_legal_transition(_DOC_TYPE_PR, current_status, DocumentStatus.CANCELLED)
 
         now = datetime.now(tz=timezone.utc)
         previous_status = header["status"]
@@ -1549,7 +1630,7 @@ class DocumentService:
             await self._headers.update_one(
                 {"docId": doc_id},
                 {"$set": {
-                    "status": "Cancelled",
+                    "status": DocumentStatus.CANCELLED.value,
                     "approvalState": header.get("approvalState", "NotRequired"),
                     "updatedAt": now,
                     "updatedBy": cancelled_by,
@@ -1663,7 +1744,7 @@ class DocumentService:
                 "issuedBy": created_by,
                 "issuedDate": None,
                 "baseDocId": None,
-                "status": "Draft",
+                "status": DocumentStatus.DRAFT.value,
                 **totals,
                 "notes": data.notes,
                 "approvalState": "NotRequired",
@@ -1731,7 +1812,7 @@ class DocumentService:
         )
         if not pr_header:
             raise ValueError(f"PR '{pr_doc_id}' not found")
-        if pr_header["status"] != "Approved":
+        if _parse_status(pr_header["status"]) != DocumentStatus.OPEN:
             raise ValueError("Only Approved PRs can be converted to a PO")
 
         # Reason: resolve vendor before opening the transaction to avoid network
@@ -1818,7 +1899,7 @@ class DocumentService:
                 "issuedBy": created_by,
                 "issuedDate": None,
                 "baseDocId": pr_doc_id,
-                "status": "Draft",
+                "status": DocumentStatus.DRAFT.value,
                 **totals,
                 "notes": data.notes,
                 "approvalState": "NotRequired",
@@ -1843,14 +1924,14 @@ class DocumentService:
             # the same transaction so neither can commit without the other.
             await self._headers.update_one(
                 {"docId": pr_doc_id},
-                {"$set": {"status": "Closed", "updatedAt": now, "updatedBy": created_by}},
+                {"$set": {"status": DocumentStatus.CLOSED.value, "updatedAt": now, "updatedBy": created_by}},
                 session=session,
             )
             pr_updated = await self._headers.find_one({"docId": pr_doc_id}, session=session)
             assert pr_updated is not None
 
             # Emit both events inside the same transaction.
-            await self._emit_pr_event(pr_updated, "Approved", company_code, session=session)
+            await self._emit_pr_event(pr_updated, DocumentStatus.OPEN.value, company_code, session=session)
             await self._emit_po_event(header, None, company_code, session=session)
 
         logger.info(
@@ -1954,7 +2035,7 @@ class DocumentService:
         )
         if not header:
             return None
-        if header["status"] != "Draft":
+        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
             raise ValueError("Only Draft POs can be updated")
 
         now = datetime.now(tz=timezone.utc)
@@ -2025,7 +2106,7 @@ class DocumentService:
         )
         if not header:
             return False
-        if header["status"] != "Draft":
+        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
             raise ValueError("Only Draft POs can be deleted")
 
         now = datetime.now(tz=timezone.utc)
@@ -2067,7 +2148,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
 
-        _validate_transition("PO", header["status"], "Pending Approval")
+        current_status = _parse_status(header["status"])
+        assert_legal_transition(_DOC_TYPE_PO, current_status, DocumentStatus.PENDING_APPROVAL)
 
         # Reason: resolve approval decision before opening the transaction so
         # the network call cannot hold the Mongo transaction open.
@@ -2083,7 +2165,7 @@ class DocumentService:
         previous_status = header["status"]
 
         if decision.required:
-            new_status = "Pending Approval"
+            new_status = DocumentStatus.PENDING_APPROVAL.value
             updates: Dict[str, Any] = {
                 "status": new_status,
                 "approvalState": "Pending",
@@ -2094,7 +2176,9 @@ class DocumentService:
                 "updatedBy": submitted_by,
             }
         else:
-            new_status = "Open"
+            # Reason: no approval gate → direct DRAFT → OPEN.
+            assert_legal_transition(_DOC_TYPE_PO, current_status, DocumentStatus.OPEN)
+            new_status = DocumentStatus.OPEN.value
             updates = {
                 "status": new_status,
                 "approvalState": "NotRequired",
@@ -2155,7 +2239,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
 
-        _validate_transition("PO", header["status"], "Open")
+        current_status = _parse_status(header["status"])
+        assert_legal_transition(_DOC_TYPE_PO, current_status, DocumentStatus.OPEN)
 
         required_role = header.get("approvalRequestedFrom")
         # Reason: admin and super_admin always have approval authority over any
@@ -2192,7 +2277,7 @@ class DocumentService:
                 {"docId": doc_id},
                 {
                     "$set": {
-                        "status": "Open",
+                        "status": DocumentStatus.OPEN.value,
                         "approvalState": "Approved",
                         "issuedDate": now,
                         "approvalDecidedBy": approver_id,
@@ -2245,7 +2330,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
 
-        _validate_transition("PO", header["status"], "Rejected")
+        # Reason: "Rejected" has no DocumentStatus equivalent (Wave 4 gap).
+        _validate_transition_legacy(_DOC_TYPE_PO, header["status"], "Rejected")
 
         required_role = header.get("approvalRequestedFrom")
         # Reason: admin and super_admin always have approval authority over any
@@ -2274,6 +2360,7 @@ class DocumentService:
                 {"docId": doc_id},
                 {
                     "$set": {
+                        # Reason: "Rejected" stored as-is; no shared enum equivalent yet.
                         "status": "Rejected",
                         "approvalState": "Rejected",
                         "approvalDecidedBy": approver_id,
@@ -2325,7 +2412,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
 
-        _validate_transition("PO", header["status"], "Cancelled")
+        current_status = _parse_status(header["status"])
+        assert_legal_transition(_DOC_TYPE_PO, current_status, DocumentStatus.CANCELLED)
 
         now = datetime.now(tz=timezone.utc)
         previous_status = header["status"]
@@ -2334,7 +2422,7 @@ class DocumentService:
             await self._headers.update_one(
                 {"docId": doc_id},
                 {"$set": {
-                    "status": "Cancelled",
+                    "status": DocumentStatus.CANCELLED.value,
                     "updatedAt": now,
                     "updatedBy": cancelled_by,
                 }},
@@ -2376,7 +2464,9 @@ class DocumentService:
         if not header:
             raise ValueError(f"PO '{doc_id}' not found")
 
-        _validate_transition("PO", header["status"], "Sent")
+        # Reason: "Sent" has no DocumentStatus equivalent (Wave 4 gap).
+        # Use legacy fallback validator; the PO must be OPEN to be sent.
+        _validate_transition_legacy(_DOC_TYPE_PO, header["status"], "Sent")
 
         now = datetime.now(tz=timezone.utc)
         previous_status = header["status"]
@@ -2385,6 +2475,7 @@ class DocumentService:
             await self._headers.update_one(
                 {"docId": doc_id},
                 {"$set": {
+                    # Reason: "Sent" stored as-is; no shared enum equivalent yet.
                     "status": "Sent",
                     "updatedAt": now,
                     "updatedBy": sent_by,
@@ -2520,7 +2611,7 @@ class DocumentService:
                 "docType": "GR",
                 "docNumber": doc_number,
                 "docDate": doc_date,
-                "status": "Draft",
+                "status": DocumentStatus.DRAFT.value,
                 "baseDocId": po_header["docId"],
                 "baseDocNumber": po_header.get("docNumber", ""),
                 "vendorId": po_header["vendorId"],
@@ -2690,10 +2781,18 @@ class DocumentService:
         )
         if not po_header:
             raise ValueError(f"PO '{po_doc_id}' not found")
-        if po_header["status"] not in ("Open", "Sent"):
+        # Reason: "Sent" has no enum equivalent; compare raw string for that case.
+        # OPEN maps to both enum "open" and legacy "Approved"/"Open".
+        _po_status_raw = po_header["status"]
+        _po_status_enum: Optional[DocumentStatus] = None
+        try:
+            _po_status_enum = _parse_status(_po_status_raw)
+        except (ValueError, KeyError):
+            pass
+        if _po_status_enum != DocumentStatus.OPEN and _po_status_raw != "Sent":
             raise ValueError(
                 f"GR can only be created from an Open or Sent PO "
-                f"(current status: {po_header['status']})"
+                f"(current status: {_po_status_raw})"
             )
 
         now = datetime.now(tz=timezone.utc)
@@ -2873,7 +2972,7 @@ class DocumentService:
         )
         if not header:
             return None
-        if header["status"] != "Draft":
+        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
             raise ValueError("Only Draft GRs can be updated")
 
         now = datetime.now(tz=timezone.utc)
@@ -2949,7 +3048,10 @@ class DocumentService:
         if not header:
             raise ValueError(f"GR '{doc_id}' not found")
 
-        _validate_transition("GR", header["status"], "Posted")
+        current_status = _parse_status(header["status"])
+        # Reason: "Posted" maps to DocumentStatus.OPEN in the shared GR transition table.
+        # LEGAL_TRANSITIONS["GR"] defines DRAFT → OPEN as the "post" transition.
+        assert_legal_transition(_DOC_TYPE_GR, current_status, DocumentStatus.OPEN)
 
         po_doc_id = header["baseDocId"]
 
@@ -3012,9 +3114,10 @@ class DocumentService:
                     session=session,
                 )
 
-            # Step 2: update GR header to Posted (without postedEventId yet)
+            # Step 2: update GR header to Open/Posted (without postedEventId yet)
+            # Reason: GR "Posted" = DocumentStatus.OPEN in the shared vocabulary.
             gr_updates: Dict[str, Any] = {
-                "status": "Posted",
+                "status": DocumentStatus.OPEN.value,
                 "receivedDate": now,
                 "postedAt": now,
                 "postedBy": posted_by,
@@ -3032,7 +3135,7 @@ class DocumentService:
                 await self._headers.update_one(
                     {"docId": po_doc_id},
                     {"$set": {
-                        "status": "Closed",
+                        "status": DocumentStatus.CLOSED.value,
                         "updatedAt": now,
                         "updatedBy": posted_by,
                     }},
@@ -3096,7 +3199,7 @@ class DocumentService:
         )
         if not header:
             return False
-        if header["status"] != "Draft":
+        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
             raise ValueError(
                 "Only Draft GRs can be deleted. "
                 "Posted GRs are immutable — create a reversal GR to correct errors."
@@ -3355,18 +3458,20 @@ class DocumentService:
         )
         if not gr_header:
             raise ValueError(f"GR '{gr_doc_id}' not found")
-        if gr_header["status"] != "Posted":
+        # Reason: "Posted" maps to DocumentStatus.OPEN; accept both forms.
+        if _parse_status(gr_header["status"]) != DocumentStatus.OPEN:
             raise ValueError(
                 f"AP Invoice can only be created from a Posted GR "
                 f"(current status: {gr_header['status']})"
             )
 
-        # Reason: enforce one-AP-per-GR in v1 — reject if any non-Rejected AP exists
+        # Reason: enforce one-AP-per-GR in v1 — reject if any non-Rejected AP exists.
+        # "Rejected" stored as raw string (no enum equivalent); $ne on both forms.
         existing_ap = await self._headers.find_one({
             "organizationId": org_id,
             "docType": "AP",
             "baseDocId": gr_doc_id,
-            "status": {"$ne": "Rejected"},
+            "status": {"$nin": ["Rejected", "rejected"]},
             "deletedAt": None,
         })
         if existing_ap:
@@ -3413,7 +3518,7 @@ class DocumentService:
                 "docType": "AP",
                 "docNumber": doc_number,
                 "docDate": doc_date,
-                "status": "Draft",
+                "status": DocumentStatus.DRAFT.value,
                 "baseDocId": gr_doc_id,
                 "baseDocNumber": gr_header.get("docNumber", ""),
                 "poDocId": po_doc_id,
@@ -3608,7 +3713,7 @@ class DocumentService:
         )
         if not header:
             return None
-        if header["status"] != "Draft":
+        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
             raise ValueError("Only Draft AP Invoices can be updated")
 
         now = datetime.now(tz=timezone.utc)
@@ -3689,7 +3794,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"AP Invoice '{doc_id}' not found")
 
-        _validate_transition("AP", header["status"], "Pending Approval")
+        current_status = _parse_status(header["status"])
+        assert_legal_transition(_DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.PENDING_APPROVAL)
 
         # Reason: resolve approval decision before opening the transaction
         total_gross = Decimal(str(header.get("totalGross", 0)))
@@ -3704,7 +3810,7 @@ class DocumentService:
         previous_status = header["status"]
 
         if decision.required:
-            new_status = "Pending Approval"
+            new_status = DocumentStatus.PENDING_APPROVAL.value
             updates: Dict[str, Any] = {
                 "status": new_status,
                 "approvalState": "Pending",
@@ -3725,8 +3831,9 @@ class DocumentService:
                 assert updated is not None
 
         else:
-            # Reason: no approval required → auto-approve and emit the finance event
-            new_status = "Approved"
+            # Reason: no approval gate → direct DRAFT → OPEN (the auto-approve path).
+            assert_legal_transition(_DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.OPEN)
+            new_status = DocumentStatus.OPEN.value
             history_entry = {
                 "stepNumber": 1,
                 "approverId": submitted_by,
@@ -3819,7 +3926,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"AP Invoice '{doc_id}' not found")
 
-        _validate_transition("AP", header["status"], "Approved")
+        current_status = _parse_status(header["status"])
+        assert_legal_transition(_DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.OPEN)
 
         # Reason: approver must hold the role specified in the approval request;
         # admin and super_admin have override authority.
@@ -3860,7 +3968,7 @@ class DocumentService:
                 {"docId": doc_id},
                 {
                     "$set": {
-                        "status": "Approved",
+                        "status": DocumentStatus.OPEN.value,
                         "approvalState": "Approved",
                         "approvalDecidedBy": approver_id,
                         "approvalDecidedAt": now,
@@ -3938,7 +4046,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"AP Invoice '{doc_id}' not found")
 
-        _validate_transition("AP", header["status"], "Rejected")
+        # Reason: "Rejected" has no DocumentStatus equivalent (Wave 4 gap).
+        _validate_transition_legacy(_DOC_TYPE_AP_INVOICE, header["status"], "Rejected")
 
         required_role = header.get("approvalRequestedFrom")
         _APPROVAL_OVERRIDE_ROLES = {"admin", "super_admin"}
@@ -3964,6 +4073,7 @@ class DocumentService:
                 {"docId": doc_id},
                 {
                     "$set": {
+                        # Reason: "Rejected" stored as-is; no shared enum equivalent yet.
                         "status": "Rejected",
                         "approvalState": "Rejected",
                         "approvalDecidedBy": approver_id,
@@ -4014,7 +4124,8 @@ class DocumentService:
         if not header:
             raise ValueError(f"AP Invoice '{doc_id}' not found")
 
-        _validate_transition("AP", header["status"], "Draft")
+        current_status = _parse_status(header["status"])
+        assert_legal_transition(_DOC_TYPE_AP_INVOICE, current_status, DocumentStatus.DRAFT)
 
         now = datetime.now(tz=timezone.utc)
 
@@ -4023,7 +4134,7 @@ class DocumentService:
                 {"docId": doc_id},
                 {
                     "$set": {
-                        "status": "Draft",
+                        "status": DocumentStatus.DRAFT.value,
                         "approvalState": "NotRequired",
                         "approvalRequestedFrom": None,
                         "approvalRequestedAt": None,
@@ -4063,7 +4174,7 @@ class DocumentService:
         )
         if not header:
             return False
-        if header["status"] != "Draft":
+        if _parse_status(header["status"]) != DocumentStatus.DRAFT:
             raise ValueError(
                 "Only Draft AP Invoices can be deleted. "
                 "Approved AP Invoices are immutable — use Amendment flow to correct errors."

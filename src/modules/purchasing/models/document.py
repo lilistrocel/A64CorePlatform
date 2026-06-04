@@ -57,25 +57,14 @@ DocType = Literal["PR", "PO", "GR", "AP"]
 
 ItemType = Literal["raw_material", "consumable", "service", "fixed_asset_acquisition"]
 
-PRStatus = Literal[
-    "Draft",
-    "Pending Approval",
-    "Approved",
-    "Rejected",
-    "Cancelled",
-    "Closed",
-]
-
-POStatus = Literal[
-    "Draft",
-    "Pending Approval",
-    "Open",
-    "Sent",
-    "Partially Received",
-    "Received",
-    "Closed",
-    "Cancelled",
-]
+# Reason: T-200.21 Wave 4 status retrofit — these aliases are kept for backward
+# compatibility with any external callers but the response models now use `str`
+# directly.  The stored vocabulary changed from TitleCase to lowercase_snake
+# (see document_service.py docstring).  These Literal sets would need updating
+# to include both old and new forms during the migration window; using `str` is
+# simpler and is explicitly required by the T-200.21 spec.
+PRStatus = str
+POStatus = str
 
 ApprovalState = Literal["NotRequired", "Pending", "Approved", "Rejected"]
 
@@ -381,7 +370,8 @@ class ApprovalHistoryItem(BaseModel):
 # Goods Receipt schemas (Phase B.1)
 # ---------------------------------------------------------------------------
 
-GRStatus = Literal["Draft", "Posted"]
+# Reason: T-200.21 — GR "Posted" now stored as "open" (DocumentStatus.OPEN).
+GRStatus = str
 
 
 class GRLineInput(BaseModel):
@@ -495,7 +485,8 @@ class GRDetailResponse(GRResponse):
 # AP Invoice schemas (Phase C.1)
 # ---------------------------------------------------------------------------
 
-APStatus = Literal["Draft", "Pending Approval", "Approved", "Rejected"]
+# Reason: T-200.21 — AP status vocabulary migrated to lowercase_snake.
+APStatus = str
 """State machine for AP Invoice: Draft → Pending Approval → Approved | Rejected."""
 
 # Hardcoded tax rates per tax code for v1 (no tax-code lookup service yet).
