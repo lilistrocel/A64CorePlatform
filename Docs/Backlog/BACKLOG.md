@@ -127,7 +127,7 @@
 
 ### T-201.9 | SO service-line tracking + from-SO AR Invoice endpoint (SAP B1 chain-via-SO) — Wave 3
 - **Category:** Backend · **Priority:** P1
-- **Assigned:** — · **Started:** —
+- **Assigned:** backend-dev-expert · **Started:** 2026-06-04
 - **Depends on:** T-201.8 (isStock flag)
 - **Blocks:** T-201.10, T-201.11
 - **Description:** Build the SAP B1 / NetSuite pattern: every billable event has an SO root.

@@ -359,6 +359,126 @@ class ARInvoiceFromDeliveryLineRequest(BaseModel):
 ARInvoiceFromDeliveryRequest.model_rebuild()
 
 
+# ---------------------------------------------------------------------------
+# From-SO AR Invoice schemas (T-201.9)
+# ---------------------------------------------------------------------------
+
+
+class ARInvoiceFromSOLineRequest(BaseModel):
+    """
+    One line in an ARInvoiceFromSORequest.
+
+    The caller references a specific SO line (by so_line_id) and specifies
+    the quantity to invoice.  The line must be a service (non-stock) item;
+    stock lines on the same SO are invoiced via the DN → from-Delivery flow.
+
+    Accepts both snake_case and camelCase field names for API consistency.
+
+    Attributes:
+        so_line_id:        lineId UUID of the source SO line.
+        quantity:          Qty to invoice from this SO line (must be > 0 and
+                           <= open invoice qty on the SO line).
+        unit_price:        Selling price (may differ from the SO line price).
+        discount_percent:  Line discount 0–100.
+        tax_code_id:       Tax code string (e.g. "S"); if None, line is exempt.
+        cost_center_id:    Optional cost-centre override.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    so_line_id: str = Field(
+        ..., alias="soLineId", description="lineId UUID of the source SO line"
+    )
+    quantity: Decimal = Field(..., gt=Decimal("0"), description="Qty to invoice; must be > 0")
+    unit_price: Decimal = Field(
+        ..., alias="unitPrice", ge=Decimal("0"), description="Selling price per unit"
+    )
+    discount_percent: Decimal = Field(
+        Decimal("0"),
+        alias="discountPercent",
+        ge=Decimal("0"),
+        le=Decimal("100"),
+    )
+    tax_code_id: Optional[str] = Field(None, alias="taxCodeId")
+    cost_center_id: Optional[str] = Field(None, alias="costCenterId")
+
+
+class ARInvoiceFromSORequest(BaseModel):
+    """
+    DTO for creating an AR Invoice directly from a Sales Order (service lines only).
+
+    The SO must be in OPEN or PARTLY_CLOSED status.  Each line referenced by
+    ``lines`` must be a non-stock (service) item — stock lines on the same SO
+    must flow through a Delivery Note and the from-Delivery endpoint instead.
+
+    Invariant enforced server-side:
+        Stock lines on a mixed SO are unreachable from this endpoint.  Any
+        attempt to invoice a stock SO line via from-SO raises HTTP 422 with a
+        clear message directing the caller to the DN flow.  This prevents
+        revenue-without-COGS postings for stock items.
+
+    The service inherits customer and dates from the SO header.  Header
+    overrides (bp_ref_no, payment_terms, currency, etc.) are accepted.
+
+    At DRAFT creation the SO line ``invoicedQty`` is incremented immediately
+    (parallel to how Delivery line ``invoicedQty`` increments on from-Delivery).
+    If the DRAFT invoice is deleted, the qty is released back.
+
+    If every SO line (stock + service) has open_invoice_qty == 0 after creation,
+    the SO is auto-transitioned to CLOSED.  For a mixed SO this means all stock
+    lines were already fully invoiced via DN AND all service lines are now
+    fully invoiced via this from-SO ARI.
+
+    Accepts both snake_case and camelCase field names.
+
+    Attributes:
+        company_code:      Finance company code — auto-resolved if omitted.
+        bp_ref_no:         Customer's own PO / reference number.
+        doc_date:          Accounting posting date.
+        invoice_date:      Date printed on the invoice (defaults to doc_date).
+        date_of_supply:    UAE VAT supply date; defaults to SO doc_date if omitted.
+        payment_terms_id:  Optional FK to payment_terms.
+        currency:          Override currency (defaults to SO currency if omitted).
+        exchange_rate:     Override FX rate.
+        journal_memo:      Optional GL memo.
+        notes:             Free-text header notes.
+        lines:             Service SO lines to invoice (at least one required).
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    company_code: Optional[str] = Field(
+        None,
+        alias="companyCode",
+        max_length=20,
+        description="Finance company code — auto-resolved by API layer if omitted",
+    )
+    bp_ref_no: Optional[str] = Field(None, alias="bpRefNo", max_length=100)
+    doc_date: date = Field(..., alias="docDate", description="Accounting posting date")
+    invoice_date: date = Field(
+        ..., alias="invoiceDate", description="Date printed on the invoice"
+    )
+    date_of_supply: Optional[date] = Field(
+        None,
+        alias="dateOfSupply",
+        description="Override supply date; defaults to SO doc_date",
+    )
+    payment_terms_id: Optional[str] = Field(None, alias="paymentTermsId")
+    currency: str = Field("AED", max_length=3)
+    exchange_rate: Decimal = Field(Decimal("1.0"), alias="exchangeRate", gt=Decimal("0"))
+    journal_memo: Optional[str] = Field(None, alias="journalMemo", max_length=500)
+    notes: Optional[str] = Field(None, max_length=2000)
+    lines: List[ARInvoiceFromSOLineRequest] = Field(
+        ...,
+        min_length=1,
+        description="Service SO lines to invoice (at least one required)",
+    )
+
+
+# Rebuild after the line model is defined.
+ARInvoiceFromSORequest.model_rebuild()
+
+
 class ARInvoiceTotals(BaseModel):
     model_config = _RESPONSE_CONFIG
 

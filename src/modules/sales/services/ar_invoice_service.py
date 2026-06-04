@@ -91,6 +91,7 @@ from .doc_chain_reconciler import (
 from ..models.ar_invoices import (
     ARInvoiceCreate,
     ARInvoiceFromDeliveryRequest,
+    ARInvoiceFromSORequest,
     ARInvoiceLineResponse,
     ARInvoiceListItem,
     ARInvoiceResponse,
@@ -105,6 +106,8 @@ _ARI_COL = "ar_invoices_v2"
 _AUDIT_COL = "ar_invoices_v2_audit"
 _DN_COL = "deliveries_v2"
 _DN_AUDIT_COL = "deliveries_v2_audit"
+_SO_COL = "sales_orders_v2"
+_SO_AUDIT_COL = "sales_orders_v2_audit"
 _PAYMENT_TERMS_COL = "payment_terms"
 # Reason: _TOLERANCE is imported from doc_chain_reconciler as the canonical
 # source of truth for float-comparison tolerance used across DN and SO chains.
@@ -1257,6 +1260,124 @@ async def create_ar_invoice_from_delivery(
         },
     )
 
+    # Part B-3: SO bubble-up — when the DN has a parent SO, propagate the
+    # invoicedQty increment to the SO lines so that the SO's auto-close logic
+    # can fire for mixed SOs (stock lines via DN + service lines via from-SO).
+    #
+    # Mapping: each DN line carries baseDocRef.lineId = the SO line UUID and
+    # baseDocRef.docId = the SO doc entry (set by delivery_service._build_line_doc).
+    # If the DN has no SO parent (standalone DN — not supported in current code
+    # but guarded defensively), skip silently.  If the parent SO cannot be found,
+    # raise ValueError (data inconsistency — real error, not a skip).
+    dn_base_ref = dn_raw.get("baseDocRef") or {}
+    so_doc_entry_from_dn = dn_base_ref.get("docId") or dn_base_ref.get("doc_id")
+
+    if so_doc_entry_from_dn:
+        # Build so_line_deltas: so_line_id → qty invoiced in this ARI.
+        # Reason: the DN line's baseDocRef.lineId is the SO line UUID.
+        so_line_deltas_create: Dict[str, Decimal] = {}
+        for req_line in payload.lines:
+            dn_line = dn_lines_map[req_line.delivery_line_id]
+            dn_line_base = dn_line.get("baseDocRef") or {}
+            so_line_id = dn_line_base.get("lineId") or dn_line_base.get("line_id")
+            if so_line_id:
+                qty = Decimal(str(req_line.quantity))
+                so_line_deltas_create[so_line_id] = (
+                    so_line_deltas_create.get(so_line_id, _ZERO) + qty
+                )
+
+        if so_line_deltas_create:
+            # Verify the SO exists before writing any counters.
+            so_exists = await db[_SO_COL].find_one(
+                {"docEntry": so_doc_entry_from_dn, "organizationId": org_id},
+                {"_id": 1},
+            )
+            if so_exists is None:
+                raise ValueError(
+                    f"Cannot bubble up invoicedQty from Delivery "
+                    f"'{delivery_doc_entry}' to parent Sales Order "
+                    f"'{so_doc_entry_from_dn}': SO not found in organisation "
+                    f"'{org_id}'. Data inconsistency — check the DN's baseDocRef."
+                )
+
+            # Reconcile SO line invoicedQty counters via the generic reconciler.
+            # cap_check=True: a stock SO line should never be over-invoiced via
+            # the DN path; the cap-check guards against drift between the two counters.
+            await _reconcile_line_counters(
+                db,
+                source_collection=_SO_COL,
+                source_doc_entry=so_doc_entry_from_dn,
+                org_id=org_id,
+                user_id=user_id,
+                ari_doc_entry=doc_entry,
+                line_deltas=so_line_deltas_create,
+                cap_check=True,
+            )
+
+            # Write ARI header ref onto SO header targetDocRefs.
+            # Reason: mirrors the from-SO ARI pattern so the SO's Document Chain
+            # card surfaces this ARI regardless of whether it came from a DN or SO.
+            ari_so_header_ref = {
+                "docType": _DOC_TYPE,
+                "docId": doc_entry,
+                "docNumber": doc_number,
+                "lineId": None,
+            }
+            await db[_SO_COL].update_one(
+                {"docEntry": so_doc_entry_from_dn, "organizationId": org_id},
+                {
+                    "$push": {"targetDocRefs": ari_so_header_ref},
+                    "$set": {"updatedAt": now, "updatedBy": user_id},
+                },
+            )
+
+            # Write ARI line refs onto SO per-line targetDocRefs.
+            # Reason: per-line granularity matches what create_ar_invoice_from_so does
+            # so both code paths produce identical traceability on the SO side.
+            for req_line, ari_line in zip(payload.lines, computed_lines):
+                dn_line = dn_lines_map[req_line.delivery_line_id]
+                dn_line_base = dn_line.get("baseDocRef") or {}
+                so_line_id = dn_line_base.get("lineId") or dn_line_base.get("line_id")
+                if so_line_id:
+                    ari_so_line_ref = {
+                        "docType": _DOC_TYPE,
+                        "docId": doc_entry,
+                        "docNumber": doc_number,
+                        "lineId": ari_line["lineId"],
+                    }
+                    await db[_SO_COL].update_one(
+                        {
+                            "docEntry": so_doc_entry_from_dn,
+                            "organizationId": org_id,
+                            "lines.lineId": so_line_id,
+                        },
+                        {
+                            "$push": {"lines.$.targetDocRefs": ari_so_line_ref},
+                        },
+                    )
+
+            # Reload SO and auto-close if all lines (stock + service) are fully invoiced.
+            # For a mixed SO: stock lines close when all DN-based invoicing is done
+            # (this call); service lines close when the from-SO ARI path is done.
+            # Both audit entries fire for their respective paths — correct rollup behaviour.
+            so_updated_from_dn = await db[_SO_COL].find_one(
+                {"docEntry": so_doc_entry_from_dn, "organizationId": org_id}
+            )
+            await _auto_close_if_fully_invoiced(
+                db,
+                doc_collection=_SO_COL,
+                audit_collection=_SO_AUDIT_COL,
+                doc_entry=so_doc_entry_from_dn,
+                doc_raw=so_updated_from_dn,
+                org_id=org_id,
+                user_id=user_id,
+                extra_detail={
+                    "triggeredByAriDocEntry": doc_entry,
+                    "triggeredByAriDocNumber": doc_number,
+                    "soLineDeltas": {k: float(v) for k, v in so_line_deltas_create.items()},
+                },
+            )
+
     # Step 7: Audit.
     await _write_audit(
         db,
@@ -1268,6 +1389,346 @@ async def create_ar_invoice_from_delivery(
             "deliveryDocNumber": dn_raw.get("docNumber"),
             "lineCount": len(computed_lines),
             "totalGross": totals["gross"],
+        },
+    )
+
+    doc.pop("_id", None)
+    return _doc_to_response(doc)
+
+
+async def create_ar_invoice_from_so(
+    db: AsyncIOMotorDatabase,
+    so_doc_entry: str,
+    payload: ARInvoiceFromSORequest,
+    org_id: str,
+    user_id: str,
+    auth_token: Optional[str] = None,
+) -> ARInvoiceResponse:
+    """
+    Create a new AR Invoice from an OPEN Sales Order (service lines only).
+
+    This is the SO-chain counterpart to ``create_ar_invoice_from_delivery``.
+    It invoices service (non-stock) lines directly from the SO without requiring
+    a Delivery Note.
+
+    Design invariant — stock lines are unreachable from this endpoint:
+        If a caller references an SO line whose underlying item has
+        ``isStock=True``, the request is rejected with HTTP 422 and a message
+        directing the caller to the Delivery Note flow.  This invariant prevents
+        revenue-without-COGS postings for stock items (the COGS event is tied to
+        the Delivery → finance ``delivery_posted`` handler, which must happen
+        before revenue is recognised via the AR Invoice).
+
+    Difference from from-Delivery:
+        - Source document is a Sales Order (not a Delivery).
+        - The SO line's ``invoicedQty`` counter is incremented (not the DN line's).
+        - ``baseDocRef`` on the ARI header and per-line carry ``docType="SO"``.
+        - Auto-close fires on the SO when all lines (stock + service) are fully
+          invoiced.  For a mixed SO this means all stock lines were also fully
+          invoiced via the DN→from-Delivery path AND all service lines are now
+          fully invoiced via this path.
+
+    Sequence:
+    1. Load SO; assert status in {OPEN, PARTLY_CLOSED}.
+    2. For each requested line: validate SO line exists, assert item is non-stock
+       (reject with clear message if stock), validate requested qty <= open_invoice_qty.
+    3. Pre-fetch all finance exts via HTTP (single call per line).
+    4. Build ARI lines using ``_build_line_doc``.  Per-line ``baseDocRef`` set to
+       ``{docType: "SO", docId: so_doc_entry, docNumber: so.docNumber, lineId: soLineId}``.
+    5. Set ARI header ``baseDocRef`` to
+       ``{docType: "SO", docId: so_doc_entry, docNumber: so.docNumber, lineId: None}``.
+    6. Insert ARI in DRAFT status.
+    7. Write ARI header ref back onto SO ``targetDocRefs`` (header).
+    8. Write ARI line refs onto SO line ``targetDocRefs`` (per-line).
+    9. Reconcile SO line ``invoicedQty`` via ``_reconcile_line_counters``.
+    10. Reload SO; call ``_auto_close_if_fully_invoiced`` on the SO.
+    11. Audit-log.
+
+    Args:
+        db:            Motor database instance (ops MongoDB).
+        so_doc_entry:  UUID of the source Sales Order.
+        payload:       ARInvoiceFromSORequest with header + lines.
+        org_id:        Organisation UUID for scoping.
+        user_id:       Authenticated user creating the invoice.
+        auth_token:    Bearer token forwarded to the finance microservice for
+                       item-ext (isStock + revenueAccountId) and tax-percent lookups.
+
+    Returns:
+        ARInvoiceResponse for the newly-created DRAFT AR Invoice.
+
+    Raises:
+        ValueError: If the SO is not found, not in {OPEN, PARTLY_CLOSED},
+                    any referenced line is a stock item (use DN flow),
+                    any requested qty exceeds the SO line open_invoice_qty,
+                    or any item is missing a revenueAccountId.
+    """
+    # Step 1: Load SO; assert status.
+    so_raw = await db[_SO_COL].find_one(
+        {"docEntry": so_doc_entry, "organizationId": org_id}
+    )
+    if so_raw is None:
+        raise ValueError(
+            f"Sales Order '{so_doc_entry}' not found in organisation '{org_id}'"
+        )
+
+    so_status = DocumentStatus(so_raw["status"])
+    if so_status not in {DocumentStatus.OPEN, DocumentStatus.PARTLY_CLOSED}:
+        raise ValueError(
+            f"Cannot create AR Invoice from Sales Order '{so_doc_entry}': "
+            f"SO status is '{so_status.value}' "
+            "(must be 'open' or 'partly_closed' — SO must be confirmed before invoicing)"
+        )
+
+    # Build SO line map for O(1) lookups.
+    so_lines_map: Dict[str, Dict[str, Any]] = {
+        ln["lineId"]: ln for ln in so_raw.get("lines", [])
+    }
+
+    # Step 2: Validate each requested line + fetch finance ext for isStock check.
+    # Pre-fetch all exts up-front so we can reject the entire request before any
+    # DB writes if any line fails validation.
+    request_line_exts: List[Dict[str, Any]] = []
+    for req_line in payload.lines:
+        so_line = so_lines_map.get(req_line.so_line_id)
+        if so_line is None:
+            raise ValueError(
+                f"SO line '{req_line.so_line_id}' not found on "
+                f"Sales Order '{so_doc_entry}'"
+            )
+
+        # Fetch finance ext for isStock check + revenueAccountId pre-load.
+        ext = await _get_item_finance_ext(
+            so_line["itemId"], org_id, auth_token
+        )
+
+        # Reason: stock lines must flow through a Delivery Note so that the
+        # delivery_posted COGS JE fires before revenue is recognised.  Invoicing
+        # a stock line directly from the SO would post revenue without COGS.
+        if ext.get("isStock", True):
+            item_code = so_line.get("itemCode", so_line["itemId"])
+            raise ValueError(
+                f"Line '{item_code}' on Sales Order "
+                f"'{so_raw.get('docNumber', so_doc_entry)}' is a stock item; "
+                "invoice via the Delivery Note flow, not from-SO."
+            )
+
+        # Validate quantity against open invoice qty.
+        open_invoice_qty = _dn_line_open_invoice_qty(so_line)
+        if open_invoice_qty <= _TOLERANCE:
+            raise ValueError(
+                f"SO line '{req_line.so_line_id}' has "
+                f"open_invoice_qty={float(open_invoice_qty):.4f} — nothing left to invoice"
+            )
+        if req_line.quantity > open_invoice_qty + _TOLERANCE:
+            raise ValueError(
+                f"Invoice quantity {float(req_line.quantity)} for SO line "
+                f"'{req_line.so_line_id}' exceeds available "
+                f"open_invoice_qty={float(open_invoice_qty):.4f}"
+            )
+
+        request_line_exts.append(ext)
+
+    # Step 3–4: Build ARI lines.
+    # Use pre-fetched finance exts so _build_line_doc skips second HTTP round-trip.
+    computed_lines: List[Dict[str, Any]] = []
+    for i, (req_line, ext) in enumerate(zip(payload.lines, request_line_exts), start=1):
+        so_line = so_lines_map[req_line.so_line_id]
+
+        # Per-line baseDocRef pointing to this SO line.
+        so_line_ref = {
+            "doc_type": "SO",
+            "doc_id": so_doc_entry,
+            "doc_number": so_raw.get("docNumber", ""),
+            "line_id": req_line.so_line_id,
+        }
+
+        line_doc = await _build_line_doc(
+            db,
+            item_id=so_line["itemId"],
+            item_code=so_line.get("itemCode", ""),
+            item_name=so_line.get("itemName", ""),
+            description=so_line.get("description"),
+            quantity=req_line.quantity,
+            uom=so_line.get("uom", "pcs"),
+            unit_price=req_line.unit_price,
+            discount_percent=req_line.discount_percent,
+            tax_code_id=req_line.tax_code_id,
+            warehouse_id=so_line.get("warehouseId"),
+            cost_center_id=req_line.cost_center_id or so_line.get("costCenterId"),
+            base_doc_ref=so_line_ref,
+            line_number=i,
+            org_id=org_id,
+            auth_token=auth_token,
+            _preloaded_finance_ext=ext,
+        )
+        computed_lines.append(line_doc)
+
+    # Step 5: Compute date fields.
+    # date_of_supply defaults to SO doc_date if not overridden.
+    so_doc_date = so_raw.get("docDate")
+    effective_date_of_supply: date = payload.date_of_supply or (
+        so_doc_date if isinstance(so_doc_date, (date, datetime)) else payload.doc_date
+    )
+    if isinstance(effective_date_of_supply, datetime):
+        effective_date_of_supply = effective_date_of_supply.date()
+
+    tax_date = _compute_tax_date(effective_date_of_supply, payload.invoice_date)
+    terms_days = await _get_payment_terms_days(db, payload.payment_terms_id, org_id)
+    due_date = payload.doc_date + timedelta(days=terms_days)
+
+    doc_date_dt = _to_dt(payload.doc_date)
+    date_of_supply_dt = _to_dt(effective_date_of_supply)
+    invoice_date_dt = _to_dt(payload.invoice_date)
+    tax_date_dt = _to_dt(tax_date)
+    due_date_dt = _to_dt(due_date)
+
+    totals = _build_totals(computed_lines)
+
+    doc_entry = str(uuid.uuid4())
+    doc_number = await next_doc_number(
+        db,
+        doc_type=_DOC_TYPE,
+        org_id=org_id,
+        company_code=payload.company_code,
+    )
+
+    now = _now()
+
+    # Step 5 (continued): Build ARI header baseDocRef → SO.
+    so_header_ref = {
+        "docType": "SO",
+        "docId": so_doc_entry,
+        "docNumber": so_raw.get("docNumber", ""),
+        "lineId": None,  # header-level link
+    }
+
+    # Reason: PyMongo cannot encode bare datetime.date — all date fields use _dt.
+    doc: Dict[str, Any] = {
+        "docEntry": doc_entry,
+        "docNumber": doc_number,
+        "docType": _DOC_TYPE,
+        "organizationId": org_id,
+        "companyCode": payload.company_code,
+        "customerId": so_raw["customerId"],
+        "customerName": so_raw["customerName"],
+        "bpRefNo": payload.bp_ref_no,
+        "docDate": doc_date_dt,
+        "dateOfSupply": date_of_supply_dt,
+        "invoiceDate": invoice_date_dt,
+        "taxDate": tax_date_dt,
+        "dueDate": due_date_dt,
+        "currency": payload.currency,
+        "exchangeRate": float(payload.exchange_rate),
+        "paymentTermsId": payload.payment_terms_id,
+        "status": DocumentStatus.DRAFT.value,
+        "totals": totals,
+        "isReserveInvoice": False,
+        "isCashSale": False,
+        "baseDocRef": so_header_ref,
+        "targetDocRefs": [],
+        "outboxEventId": None,
+        "outboxEventEmittedAt": None,
+        "journalMemo": payload.journal_memo,
+        "notes": payload.notes,
+        "lines": computed_lines,
+        "createdAt": now,
+        "createdBy": user_id,
+        "updatedAt": now,
+        "updatedBy": user_id,
+    }
+
+    # Step 6: Insert ARI in DRAFT.
+    await db[_ARI_COL].insert_one(doc)
+
+    # Step 7: Write ARI header ref onto SO header targetDocRefs.
+    ari_header_ref = {
+        "docType": _DOC_TYPE,
+        "docId": doc_entry,
+        "docNumber": doc_number,
+        "lineId": None,
+    }
+    await db[_SO_COL].update_one(
+        {"docEntry": so_doc_entry, "organizationId": org_id},
+        {
+            "$push": {"targetDocRefs": ari_header_ref},
+            "$set": {"updatedAt": now, "updatedBy": user_id},
+        },
+    )
+
+    # Step 8: Write ARI line refs onto SO line targetDocRefs (per-line).
+    for req_line, ari_line in zip(payload.lines, computed_lines):
+        ari_line_ref = {
+            "docType": _DOC_TYPE,
+            "docId": doc_entry,
+            "docNumber": doc_number,
+            "lineId": ari_line["lineId"],
+        }
+        await db[_SO_COL].update_one(
+            {
+                "docEntry": so_doc_entry,
+                "organizationId": org_id,
+                "lines.lineId": req_line.so_line_id,
+            },
+            {
+                "$push": {"lines.$.targetDocRefs": ari_line_ref},
+            },
+        )
+
+    # Step 9: Reconcile SO line invoicedQty via the generic reconciler.
+    # Build line_deltas: so_line_id → qty invoiced in this ARI.
+    so_line_deltas: Dict[str, Decimal] = {}
+    for req_line, ari_line in zip(payload.lines, computed_lines):
+        qty = Decimal(str(ari_line.get("quantity", 0)))
+        so_line_deltas[req_line.so_line_id] = (
+            so_line_deltas.get(req_line.so_line_id, _ZERO) + qty
+        )
+
+    await _reconcile_line_counters(
+        db,
+        source_collection=_SO_COL,
+        source_doc_entry=so_doc_entry,
+        org_id=org_id,
+        user_id=user_id,
+        ari_doc_entry=doc_entry,
+        line_deltas=so_line_deltas,
+        cap_check=True,
+    )
+
+    # Step 10: Reload SO and auto-close if fully invoiced.
+    # "Fully invoiced" for a mixed SO means:
+    #   - All stock lines: open_invoice_qty == 0 (invoiced via DN → from-Delivery ARI).
+    #   - All service lines: open_invoice_qty == 0 (invoiced via this from-SO ARI).
+    # The reconciler checks orderedQty - invoicedQty - creditedQty per line,
+    # so both stock and service lines participate in the check uniformly.
+    so_updated = await db[_SO_COL].find_one(
+        {"docEntry": so_doc_entry, "organizationId": org_id}
+    )
+    await _auto_close_if_fully_invoiced(
+        db,
+        doc_collection=_SO_COL,
+        audit_collection=_SO_AUDIT_COL,
+        doc_entry=so_doc_entry,
+        doc_raw=so_updated,
+        org_id=org_id,
+        user_id=user_id,
+        extra_detail={
+            "triggeredByAriDocEntry": doc_entry,
+            "triggeredByAriDocNumber": doc_number,
+        },
+    )
+
+    # Step 11: Audit.
+    await _write_audit(
+        db,
+        doc_entry=doc_entry,
+        action="create_from_so",
+        user_id=user_id,
+        detail={
+            "soDocEntry": so_doc_entry,
+            "soDocNumber": so_raw.get("docNumber"),
+            "lineCount": len(computed_lines),
+            "totalGross": totals["gross"],
+            "soLineDeltas": {k: float(v) for k, v in so_line_deltas.items()},
         },
     )
 
@@ -1454,19 +1915,35 @@ async def update_ar_invoice(
         terms_days = await _get_payment_terms_days(db, terms_id, org_id)
         updates["dueDate"] = _to_dt(doc_date_for_due + timedelta(days=terms_days))
 
-    # DN-counter reconciliation state (populated below if this is a from-Delivery invoice
-    # and payload.lines is not None).
-    _dn_line_deltas: Dict[str, float] = {}  # dn_line_id → net delta applied
+    # Counter reconciliation state (populated below when this is a from-Delivery or
+    # from-SO invoice and payload.lines is not None).
+    # Discrimination: read baseDocRef.docType to tell DN vs SO.
+    # - from-Delivery ARIs: docType="DELIVERY" — reconcile deliveries_v2.
+    # - from-SO ARIs:       docType="SO"       — reconcile sales_orders_v2.
+    # - direct-create ARIs: baseDocRef is None  — no source counters to reconcile.
+    _dn_line_deltas: Dict[str, float] = {}  # source_line_id → net delta applied
     _delivery_doc_entry_for_update: Optional[str] = None
+    _so_doc_entry_for_update: Optional[str] = None
+    # T-201.9 follow-up: SO doc entry derived from the DN's parent SO when this is
+    # a from-Delivery ARI.  Populated in the DN update block when the DN has a parent SO.
+    _so_doc_entry_from_dn_for_update: Optional[str] = None
+    # T-201.9 follow-up: SO-line deltas built by mapping DN-line IDs → SO-line IDs.
+    # Keyed so_line_id → net delta (Decimal).  Used to reconcile the SO after the
+    # DN reconciliation runs.
+    _so_line_deltas_from_dn: Dict[str, Decimal] = {}
 
     if payload.lines is not None:
-        # Determine whether this is a direct-create ARI (no Delivery base).
+        # Determine the creation mode of this ARI for line validation + counter routing.
         # Reason: isStock gating only applies to direct-create invoices; from-Delivery
-        # invoices were already validated at Delivery time and must not be re-gated.
+        # and from-SO invoices were validated at create time and must not be re-gated.
+        # Discrimination: baseDocRef.docType distinguishes DN from SO.
         _update_base_ref = raw.get("baseDocRef") or {}
-        _update_is_direct = not bool(
-            _update_base_ref.get("docId") or _update_base_ref.get("doc_id")
-        )
+        _update_base_doc_id = _update_base_ref.get("docId") or _update_base_ref.get("doc_id")
+        _update_base_doc_type = (
+            _update_base_ref.get("docType") or _update_base_ref.get("doc_type") or ""
+        ).upper()
+        _update_is_direct = not bool(_update_base_doc_id)
+        _update_is_from_so = bool(_update_base_doc_id) and _update_base_doc_type == "SO"
 
         # Pre-fetch finance exts for isStock check on direct-create invoices.
         # Reason: reject the entire update (before any DB writes) if any new line
@@ -1483,8 +1960,8 @@ async def update_ar_invoice(
                     )
                 update_line_finance_exts.append(ext)
         else:
-            # From-Delivery path: no isStock check; pass None so _build_line_doc
-            # falls back to its own HTTP lookup.
+            # From-Delivery or from-SO path: no isStock re-check; pass None so
+            # _build_line_doc falls back to its own HTTP lookup.
             update_line_finance_exts = [None] * len(payload.lines)
 
         new_lines: List[Dict[str, Any]] = []
@@ -1516,14 +1993,20 @@ async def update_ar_invoice(
         updates["totals"] = _build_totals(new_lines)
 
         # --------------------------------------------------------------------
-        # Bug 1 fix: reconcile Delivery line invoicedQty when lines change.
-        # Only applies when the AR Invoice is anchored to a Delivery (has a
-        # header-level baseDocRef pointing to a DELIVERY doc).
+        # Counter reconciliation: reconcile source line invoicedQty when lines change.
+        # Applies to from-Delivery (source_collection=deliveries_v2) and
+        # from-SO (source_collection=sales_orders_v2) ARIs.
+        # Direct-create ARIs have no source counters to reconcile.
         # --------------------------------------------------------------------
         ari_base_ref = raw.get("baseDocRef") or {}
-        _delivery_doc_entry_for_update = (
-            ari_base_ref.get("docId") or ari_base_ref.get("doc_id")
-        )
+        _base_doc_id = ari_base_ref.get("docId") or ari_base_ref.get("doc_id")
+        _base_doc_type = (
+            ari_base_ref.get("docType") or ari_base_ref.get("doc_type") or ""
+        ).upper()
+        if _base_doc_id and _base_doc_type == "DELIVERY":
+            _delivery_doc_entry_for_update = _base_doc_id
+        elif _base_doc_id and _base_doc_type == "SO":
+            _so_doc_entry_for_update = _base_doc_id
         if _delivery_doc_entry_for_update:
             # Build old-line totals: dn_line_id → sum of old invoiced qty.
             old_totals: Dict[str, Decimal] = {}
@@ -1554,12 +2037,16 @@ async def update_ar_invoice(
             # Collect all DN line IDs that appear in either map.
             all_dn_line_ids = set(old_totals.keys()) | set(new_totals.keys())
 
+            # Reason: initialise raw_deltas before the conditional block so that
+            # the SO bubble-up code below can safely reference it regardless of
+            # whether all_dn_line_ids was non-empty.
+            raw_deltas: Dict[str, Decimal] = {}
+
             if all_dn_line_ids:
                 # Build pre-computed deltas dict for reconciliation + audit.
                 # Reason: compute deltas first so we can populate _dn_line_deltas
                 # for the audit row (detail.dnLineDeltas) AND pass them to
                 # _reconcile_line_counters in a single pass.
-                raw_deltas: Dict[str, Decimal] = {}
                 for dn_lid in all_dn_line_ids:
                     old_qty_d = old_totals.get(dn_lid, _ZERO)
                     new_qty_d = new_totals.get(dn_lid, _ZERO)
@@ -1650,14 +2137,226 @@ async def update_ar_invoice(
                         },
                     )
 
+            # T-201.9 follow-up: SO bubble-up for from-Delivery ARI update.
+            # When the DN has a parent SO, propagate the DN-line delta to the
+            # corresponding SO line so the SO's invoicedQty stays in sync.
+            #
+            # Strategy: load the DN to get its baseDocRef (SO doc entry) and
+            # build a DN-line-id → SO-line-id mapping from the DN lines' own
+            # baseDocRef fields.  Then rekey raw_deltas from dn_lid → so_lid.
+            dn_for_so_map = await db[_DN_COL].find_one(
+                {"docEntry": _delivery_doc_entry_for_update, "organizationId": org_id}
+            )
+            if dn_for_so_map is not None:
+                dn_parent_ref = dn_for_so_map.get("baseDocRef") or {}
+                _so_doc_entry_from_dn_for_update = (
+                    dn_parent_ref.get("docId") or dn_parent_ref.get("doc_id")
+                )
+                if _so_doc_entry_from_dn_for_update and raw_deltas:
+                    # Build dn_line_id → so_line_id map from the DN's embedded lines.
+                    dn_line_to_so_line: Dict[str, str] = {}
+                    for dn_ln in dn_for_so_map.get("lines", []):
+                        dn_ln_base = dn_ln.get("baseDocRef") or {}
+                        so_lid = dn_ln_base.get("lineId") or dn_ln_base.get("line_id")
+                        if so_lid:
+                            dn_line_to_so_line[dn_ln["lineId"]] = so_lid
+
+                    # Rekey raw_deltas (dn_lid → delta) to so_lid → delta.
+                    for dn_lid, delta in raw_deltas.items():
+                        so_lid = dn_line_to_so_line.get(dn_lid)
+                        if so_lid:
+                            _so_line_deltas_from_dn[so_lid] = (
+                                _so_line_deltas_from_dn.get(so_lid, _ZERO) + delta
+                            )
+
+                    if _so_line_deltas_from_dn:
+                        await _reconcile_line_counters(
+                            db,
+                            source_collection=_SO_COL,
+                            source_doc_entry=_so_doc_entry_from_dn_for_update,
+                            org_id=org_id,
+                            user_id=user_id,
+                            ari_doc_entry=doc_entry,
+                            line_deltas=_so_line_deltas_from_dn,
+                            cap_check=True,
+                        )
+
+                        # Mirror T-201.7's $pull-stale / $push-fresh for SO lines.
+                        now_ref_so_dn = updates.get("updatedAt") or _now()
+
+                        # Build old ARI lineId → SO line ID map via the DN-line bridge.
+                        old_ari_line_to_so_line_dn: Dict[str, str] = {}
+                        for old_ln in raw.get("lines", []):
+                            ari_lid = old_ln.get("lineId")
+                            old_base_dn = old_ln.get("baseDocRef") or {}
+                            dn_lid_old = (
+                                old_base_dn.get("lineId") or old_base_dn.get("line_id")
+                            )
+                            if ari_lid and dn_lid_old:
+                                so_lid_mapped = dn_line_to_so_line.get(dn_lid_old)
+                                if so_lid_mapped:
+                                    old_ari_line_to_so_line_dn[ari_lid] = so_lid_mapped
+
+                        # $pull stale per-line refs from SO lines.
+                        for so_lid_old in set(old_ari_line_to_so_line_dn.values()):
+                            await db[_SO_COL].update_one(
+                                {
+                                    "docEntry": _so_doc_entry_from_dn_for_update,
+                                    "organizationId": org_id,
+                                    "lines.lineId": so_lid_old,
+                                },
+                                {
+                                    "$pull": {"lines.$.targetDocRefs": {"docId": doc_entry}},
+                                },
+                            )
+
+                        # $push fresh per-line refs onto SO lines.
+                        new_doc_number_so_dn = raw.get("docNumber")
+                        for new_ln in new_lines:
+                            new_base_dn = new_ln.get("baseDocRef") or {}
+                            dn_lid_for_new = (
+                                new_base_dn.get("lineId") or new_base_dn.get("line_id")
+                            )
+                            new_ari_line_id = new_ln.get("lineId")
+                            if dn_lid_for_new and new_ari_line_id:
+                                so_lid_new = dn_line_to_so_line.get(dn_lid_for_new)
+                                if so_lid_new:
+                                    new_ari_so_line_ref = {
+                                        "docType": _DOC_TYPE,
+                                        "docId": doc_entry,
+                                        "docNumber": new_doc_number_so_dn,
+                                        "lineId": new_ari_line_id,
+                                    }
+                                    await db[_SO_COL].update_one(
+                                        {
+                                            "docEntry": _so_doc_entry_from_dn_for_update,
+                                            "organizationId": org_id,
+                                            "lines.lineId": so_lid_new,
+                                        },
+                                        {
+                                            "$push": {
+                                                "lines.$.targetDocRefs": new_ari_so_line_ref
+                                            },
+                                            "$set": {
+                                                "updatedAt": now_ref_so_dn,
+                                                "updatedBy": user_id,
+                                            },
+                                        },
+                                    )
+
+        # ----------------------------------------------------------------
+        # T-201.9: from-SO counter reconciliation (mirrors from-Delivery above).
+        # Applies when this ARI is anchored to a Sales Order (baseDocRef.docType=="SO").
+        # ----------------------------------------------------------------
+        if _so_doc_entry_for_update:
+            # Build old SO-line totals: so_line_id → sum of old invoiced qty.
+            old_so_totals: Dict[str, Decimal] = {}
+            for old_ln in raw.get("lines", []):
+                old_base = old_ln.get("baseDocRef") or {}
+                so_lid = old_base.get("lineId") or old_base.get("line_id")
+                if so_lid:
+                    old_qty = Decimal(str(old_ln.get("invoicedQty", old_ln.get("quantity", 0))))
+                    old_so_totals[so_lid] = old_so_totals.get(so_lid, _ZERO) + old_qty
+
+            # Build new SO-line totals: so_line_id → sum of new qty.
+            new_so_totals: Dict[str, Decimal] = {}
+            for new_ln in new_lines:
+                new_base = new_ln.get("baseDocRef") or {}
+                so_lid = new_base.get("lineId") or new_base.get("line_id")
+                if so_lid:
+                    new_qty = Decimal(str(new_ln.get("quantity", 0)))
+                    new_so_totals[so_lid] = new_so_totals.get(so_lid, _ZERO) + new_qty
+                else:
+                    logger.warning(
+                        "[ARInvoiceService] update_ar_invoice '%s': new line '%s' "
+                        "has no baseDocRef.lineId — cannot reconcile SO counter for it.",
+                        doc_entry,
+                        new_ln.get("lineId", "?"),
+                    )
+
+            all_so_line_ids = set(old_so_totals.keys()) | set(new_so_totals.keys())
+
+            if all_so_line_ids:
+                so_raw_deltas: Dict[str, Decimal] = {}
+                for so_lid in all_so_line_ids:
+                    old_qty_d = old_so_totals.get(so_lid, _ZERO)
+                    new_qty_d = new_so_totals.get(so_lid, _ZERO)
+                    delta = new_qty_d - old_qty_d
+                    if abs(delta) > _TOLERANCE:
+                        so_raw_deltas[so_lid] = delta
+                        _dn_line_deltas[so_lid] = float(delta)
+
+                if so_raw_deltas:
+                    await _reconcile_line_counters(
+                        db,
+                        source_collection=_SO_COL,
+                        source_doc_entry=_so_doc_entry_for_update,
+                        org_id=org_id,
+                        user_id=user_id,
+                        ari_doc_entry=doc_entry,
+                        line_deltas=so_raw_deltas,
+                        cap_check=True,
+                    )
+
+            # T-201.9 chain-ref cleanup: mirror T-201.7's $pull-stale / $push-fresh
+            # pattern but targeting SO lines instead of DN lines.
+            now_ref_so = updates.get("updatedAt") or _now()
+
+            # Build old ARI lineId → SO line ID map.
+            old_ari_line_to_so_line: Dict[str, str] = {}
+            for old_ln in raw.get("lines", []):
+                ari_lid = old_ln.get("lineId")
+                old_base = old_ln.get("baseDocRef") or {}
+                so_lid = old_base.get("lineId") or old_base.get("line_id")
+                if ari_lid and so_lid:
+                    old_ari_line_to_so_line[ari_lid] = so_lid
+
+            # $pull stale per-line refs from SO lines.
+            for so_lid_old in set(old_ari_line_to_so_line.values()):
+                await db[_SO_COL].update_one(
+                    {
+                        "docEntry": _so_doc_entry_for_update,
+                        "organizationId": org_id,
+                        "lines.lineId": so_lid_old,
+                    },
+                    {
+                        "$pull": {"lines.$.targetDocRefs": {"docId": doc_entry}},
+                    },
+                )
+
+            # $push fresh per-line refs onto SO lines.
+            new_doc_number_so = raw.get("docNumber")  # docNumber is stable on update
+            for new_ln in new_lines:
+                new_base = new_ln.get("baseDocRef") or {}
+                so_lid_new = new_base.get("lineId") or new_base.get("line_id")
+                new_ari_line_id = new_ln.get("lineId")
+                if so_lid_new and new_ari_line_id:
+                    new_ari_line_ref_so = {
+                        "docType": _DOC_TYPE,
+                        "docId": doc_entry,
+                        "docNumber": new_doc_number_so,
+                        "lineId": new_ari_line_id,
+                    }
+                    await db[_SO_COL].update_one(
+                        {
+                            "docEntry": _so_doc_entry_for_update,
+                            "organizationId": org_id,
+                            "lines.lineId": so_lid_new,
+                        },
+                        {
+                            "$push": {"lines.$.targetDocRefs": new_ari_line_ref_so},
+                            "$set": {"updatedAt": now_ref_so, "updatedBy": user_id},
+                        },
+                    )
+
     await db[_ARI_COL].update_one(
         {"docEntry": doc_entry, "organizationId": org_id},
         {"$set": updates},
     )
 
     # --------------------------------------------------------------------
-    # Bug 1 fix (continued): after all $inc operations, check if the DN
-    # auto-close / auto-reopen logic needs to trigger.
+    # After all $inc operations: check if the source document (DN or SO)
+    # needs auto-close / auto-reopen.
     # --------------------------------------------------------------------
     if _delivery_doc_entry_for_update and _dn_line_deltas:
         dn_reloaded = await db[_DN_COL].find_one(
@@ -1695,9 +2394,89 @@ async def update_ar_invoice(
             },
         )
 
+    # T-201.9: from-SO auto-close / auto-reopen after reconciliation.
+    if _so_doc_entry_for_update and _dn_line_deltas:
+        so_reloaded_update = await db[_SO_COL].find_one(
+            {"docEntry": _so_doc_entry_for_update, "organizationId": org_id}
+        )
+        await _auto_close_if_fully_invoiced(
+            db,
+            doc_collection=_SO_COL,
+            audit_collection=_SO_AUDIT_COL,
+            doc_entry=_so_doc_entry_for_update,
+            doc_raw=so_reloaded_update,
+            org_id=org_id,
+            user_id=user_id,
+            extra_detail={
+                "triggeredByAriDocEntry": doc_entry,
+                "triggeredByAriDocNumber": raw.get("docNumber"),
+                "trigger": "invoice_edit",
+            },
+        )
+        await _auto_reopen_if_not_fully_invoiced(
+            db,
+            doc_collection=_SO_COL,
+            audit_collection=_SO_AUDIT_COL,
+            doc_entry=_so_doc_entry_for_update,
+            doc_raw=so_reloaded_update,
+            org_id=org_id,
+            user_id=user_id,
+            extra_detail={
+                "triggeredByAriDocEntry": doc_entry,
+                "triggeredByAriDocNumber": raw.get("docNumber"),
+                "trigger": "invoice_edit",
+            },
+        )
+
+    # T-201.9 follow-up: from-Delivery ARI → SO auto-close / auto-reopen.
+    # When the DN-derived SO bubble-up was performed, also run auto-close / auto-reopen
+    # on the parent SO so that a mixed SO can auto-close when all lines are invoiced.
+    if _so_doc_entry_from_dn_for_update and _so_line_deltas_from_dn:
+        so_reloaded_from_dn = await db[_SO_COL].find_one(
+            {"docEntry": _so_doc_entry_from_dn_for_update, "organizationId": org_id}
+        )
+        await _auto_close_if_fully_invoiced(
+            db,
+            doc_collection=_SO_COL,
+            audit_collection=_SO_AUDIT_COL,
+            doc_entry=_so_doc_entry_from_dn_for_update,
+            doc_raw=so_reloaded_from_dn,
+            org_id=org_id,
+            user_id=user_id,
+            extra_detail={
+                "triggeredByAriDocEntry": doc_entry,
+                "triggeredByAriDocNumber": raw.get("docNumber"),
+                "trigger": "invoice_edit",
+                "soLineDeltas": {k: float(v) for k, v in _so_line_deltas_from_dn.items()},
+            },
+        )
+        await _auto_reopen_if_not_fully_invoiced(
+            db,
+            doc_collection=_SO_COL,
+            audit_collection=_SO_AUDIT_COL,
+            doc_entry=_so_doc_entry_from_dn_for_update,
+            doc_raw=so_reloaded_from_dn,
+            org_id=org_id,
+            user_id=user_id,
+            extra_detail={
+                "triggeredByAriDocEntry": doc_entry,
+                "triggeredByAriDocNumber": raw.get("docNumber"),
+                "trigger": "invoice_edit",
+                "soLineDeltas": {k: float(v) for k, v in _so_line_deltas_from_dn.items()},
+            },
+        )
+
     audit_detail: Dict[str, Any] = {"updatedFields": list(updates.keys())}
     if _dn_line_deltas:
-        audit_detail["dnLineDeltas"] = _dn_line_deltas
+        # Reason: key is "soLineDeltas" for from-SO ARIs, "dnLineDeltas" for from-Delivery.
+        # The _dn_line_deltas dict is reused for both paths (variable name is historical).
+        if _so_doc_entry_for_update:
+            audit_detail["soLineDeltas"] = _dn_line_deltas
+        else:
+            audit_detail["dnLineDeltas"] = _dn_line_deltas
+    if _so_line_deltas_from_dn:
+        # Reason: from-Delivery ARI update also touched SO lines; record separately.
+        audit_detail["soLineDeltas"] = {k: float(v) for k, v in _so_line_deltas_from_dn.items()}
 
     await _write_audit(
         db,
@@ -1726,9 +2505,9 @@ async def delete_ar_invoice(
     Hard-delete a DRAFT AR Invoice.
 
     Only DRAFT AR Invoices may be deleted.  If the invoice was created from a
-    Delivery, the Delivery line invoiced_qty counters are NOT decremented here —
-    that is intentionally left simple for the delete path (the Delivery line
-    tracking will self-heal when the invoice is confirmed or a new one is created).
+    Delivery, both the Delivery line invoiced_qty counters AND the parent SO line
+    invoiced_qty counters are decremented (DN bubble-up release).  This ensures
+    mixed SOs reopen correctly when a from-Delivery ARI is deleted.
 
     Args:
         db:        Motor database instance.
@@ -1754,11 +2533,19 @@ async def delete_ar_invoice(
             f"status is '{raw['status']}' (only DRAFT AR Invoices may be deleted)"
         )
 
-    # Release Delivery line invoiced_qty if this was a from-Delivery invoice.
-    # Reason: when a DRAFT invoice is deleted, the committed qty on the Delivery
-    # line should be released so a new invoice can be created for the same qty.
+    # Release source line invoiced_qty when a DRAFT invoice is deleted.
+    # Discrimination: baseDocRef.docType determines whether source is DN or SO.
+    # - from-Delivery ARIs: release deliveries_v2 line invoicedQty.
+    # - from-SO ARIs:       release sales_orders_v2 line invoicedQty.
+    # - direct-create ARIs: no source counters to release.
     base_ref = raw.get("baseDocRef") or {}
-    delivery_doc_entry = base_ref.get("docId") or base_ref.get("doc_id")
+    _delete_base_doc_id = base_ref.get("docId") or base_ref.get("doc_id")
+    _delete_base_doc_type = (
+        base_ref.get("docType") or base_ref.get("doc_type") or ""
+    ).upper()
+    delivery_doc_entry = _delete_base_doc_id if _delete_base_doc_type == "DELIVERY" else None
+    so_doc_entry_for_delete = _delete_base_doc_id if _delete_base_doc_type == "SO" else None
+
     _decremented_any_dn_line = False
     if delivery_doc_entry:
         now = _now()
@@ -1780,8 +2567,8 @@ async def delete_ar_invoice(
                 )
                 _decremented_any_dn_line = True
 
-        # Bug 2 fix: if the decrement made the DN no longer fully invoiced AND
-        # the DN is currently CLOSED, reopen it.
+        # If the decrement made the DN no longer fully invoiced AND the DN is
+        # currently CLOSED, reopen it.
         if _decremented_any_dn_line:
             dn_reloaded = await db[_DN_COL].find_one(
                 {"docEntry": delivery_doc_entry, "organizationId": org_id}
@@ -1815,6 +2602,140 @@ async def delete_ar_invoice(
             user_id=user_id,
             target_doc_entry=doc_entry,
             affected_line_ids=[lid for lid in dn_line_ids_to_clean if lid],
+        )
+
+        # T-201.9 follow-up: SO bubble-up release for from-Delivery ARI delete.
+        # Load the DN to find its parent SO and the DN-line → SO-line mapping.
+        # If the DN has no parent SO (standalone DN), skip silently.
+        dn_for_delete_so = await db[_DN_COL].find_one(
+            {"docEntry": delivery_doc_entry, "organizationId": org_id}
+        )
+        if dn_for_delete_so is not None:
+            dn_del_base_ref = dn_for_delete_so.get("baseDocRef") or {}
+            so_doc_entry_from_dn_delete = (
+                dn_del_base_ref.get("docId") or dn_del_base_ref.get("doc_id")
+            )
+            if so_doc_entry_from_dn_delete:
+                # Build dn_line_id → so_line_id map from DN embedded lines.
+                dn_del_line_to_so: Dict[str, str] = {}
+                for dn_ln in dn_for_delete_so.get("lines", []):
+                    dn_ln_base = dn_ln.get("baseDocRef") or {}
+                    so_lid = dn_ln_base.get("lineId") or dn_ln_base.get("line_id")
+                    if so_lid:
+                        dn_del_line_to_so[dn_ln["lineId"]] = so_lid
+
+                # Release SO-line invoicedQty using negative deltas.
+                so_del_line_deltas: Dict[str, Decimal] = {}
+                for ln in raw.get("lines", []):
+                    line_base = ln.get("baseDocRef") or {}
+                    dn_lid = line_base.get("lineId") or line_base.get("line_id")
+                    if dn_lid:
+                        so_lid = dn_del_line_to_so.get(dn_lid)
+                        if so_lid:
+                            release_qty = Decimal(
+                                str(ln.get("invoicedQty", ln.get("quantity", 0)))
+                            )
+                            so_del_line_deltas[so_lid] = (
+                                so_del_line_deltas.get(so_lid, _ZERO) - release_qty
+                            )
+
+                if so_del_line_deltas:
+                    # cap_check=False: releasing qty; no cap applies.
+                    await _reconcile_line_counters(
+                        db,
+                        source_collection=_SO_COL,
+                        source_doc_entry=so_doc_entry_from_dn_delete,
+                        org_id=org_id,
+                        user_id=user_id,
+                        ari_doc_entry=doc_entry,
+                        line_deltas=so_del_line_deltas,
+                        cap_check=False,
+                    )
+
+                    so_reloaded_del = await db[_SO_COL].find_one(
+                        {"docEntry": so_doc_entry_from_dn_delete, "organizationId": org_id}
+                    )
+                    await _auto_reopen_if_not_fully_invoiced(
+                        db,
+                        doc_collection=_SO_COL,
+                        audit_collection=_SO_AUDIT_COL,
+                        doc_entry=so_doc_entry_from_dn_delete,
+                        doc_raw=so_reloaded_del,
+                        org_id=org_id,
+                        user_id=user_id,
+                        extra_detail={
+                            "triggeredByAriDocEntry": doc_entry,
+                            "triggeredByAriDocNumber": raw.get("docNumber"),
+                            "trigger": "invoice_delete",
+                        },
+                    )
+
+                # Clean dangling targetDocRefs on the SO (header + per-line).
+                so_line_ids_to_clean_from_dn = list(so_del_line_deltas.keys())
+                await _pull_dangling_chain_refs(
+                    db,
+                    source_collection=_SO_COL,
+                    source_doc_entry=so_doc_entry_from_dn_delete,
+                    org_id=org_id,
+                    user_id=user_id,
+                    target_doc_entry=doc_entry,
+                    affected_line_ids=so_line_ids_to_clean_from_dn,
+                )
+
+    # T-201.9: release SO line invoicedQty for from-SO ARIs on delete.
+    _decremented_any_so_line = False
+    if so_doc_entry_for_delete:
+        now = _now()
+        so_line_ids_to_clean = []
+        for ln in raw.get("lines", []):
+            line_base_ref = ln.get("baseDocRef") or {}
+            so_line_id = line_base_ref.get("lineId") or line_base_ref.get("line_id")
+            if so_line_id:
+                release_qty = float(Decimal(str(ln.get("invoicedQty", ln.get("quantity", 0)))))
+                await db[_SO_COL].update_one(
+                    {
+                        "docEntry": so_doc_entry_for_delete,
+                        "organizationId": org_id,
+                        "lines.lineId": so_line_id,
+                    },
+                    {
+                        "$inc": {"lines.$.invoicedQty": -release_qty},
+                        "$set": {"updatedAt": now, "updatedBy": user_id},
+                    },
+                )
+                _decremented_any_so_line = True
+                so_line_ids_to_clean.append(so_line_id)
+
+        # If the decrement made the SO no longer fully invoiced AND the SO is
+        # currently CLOSED, reopen it.
+        if _decremented_any_so_line:
+            so_reloaded_delete = await db[_SO_COL].find_one(
+                {"docEntry": so_doc_entry_for_delete, "organizationId": org_id}
+            )
+            await _auto_reopen_if_not_fully_invoiced(
+                db,
+                doc_collection=_SO_COL,
+                audit_collection=_SO_AUDIT_COL,
+                doc_entry=so_doc_entry_for_delete,
+                doc_raw=so_reloaded_delete,
+                org_id=org_id,
+                user_id=user_id,
+                extra_detail={
+                    "triggeredByAriDocEntry": doc_entry,
+                    "triggeredByAriDocNumber": raw.get("docNumber"),
+                    "trigger": "invoice_delete",
+                },
+            )
+
+        # T-201.9 chain-ref cleanup: pull dangling refs from SO after delete.
+        await _pull_dangling_chain_refs(
+            db,
+            source_collection=_SO_COL,
+            source_doc_entry=so_doc_entry_for_delete,
+            org_id=org_id,
+            user_id=user_id,
+            target_doc_entry=doc_entry,
+            affected_line_ids=so_line_ids_to_clean,
         )
 
     # Reason: write audit BEFORE delete so the trail survives deletion.
@@ -1939,7 +2860,9 @@ async def transition_status(
         # Step 1b: Re-validate isStock for direct-create ARIs.
         # Reason: an admin may have flipped an item from service to stock while this
         # ARI sat in DRAFT.  Re-check before posting to prevent revenue-without-COGS.
-        # Only applies to direct-create ARIs (no header baseDocRef pointing to a DN).
+        # Only applies to direct-create ARIs (no header baseDocRef pointing to a DN or SO).
+        # From-SO ARIs: service-only items were already validated at create time;
+        # re-gating at OPEN would double-check something we already guaranteed.
         _transition_base_ref = raw.get("baseDocRef") or {}
         _transition_is_direct = not bool(
             _transition_base_ref.get("docId") or _transition_base_ref.get("doc_id")
@@ -2056,9 +2979,20 @@ async def transition_status(
                 exc,
             )
 
-        # Step 2: Decrement source Delivery line invoiced_qty back (if from-Delivery).
+        # Step 2: Decrement source line invoiced_qty back when cancelled.
+        # Discrimination: baseDocRef.docType distinguishes DN from SO.
         base_ref = raw.get("baseDocRef") or {}
-        delivery_doc_entry = base_ref.get("docId") or base_ref.get("doc_id")
+        _cancel_base_doc_id = base_ref.get("docId") or base_ref.get("doc_id")
+        _cancel_base_doc_type = (
+            base_ref.get("docType") or base_ref.get("doc_type") or ""
+        ).upper()
+        delivery_doc_entry = (
+            _cancel_base_doc_id if _cancel_base_doc_type == "DELIVERY" else None
+        )
+        so_doc_entry_for_cancel = (
+            _cancel_base_doc_id if _cancel_base_doc_type == "SO" else None
+        )
+
         _cancel_decremented_any = False
         if delivery_doc_entry:
             for ln in raw.get("lines", []):
@@ -2081,8 +3015,8 @@ async def transition_status(
                     )
                     _cancel_decremented_any = True
 
-            # Bug 2 fix: if the decrement made the DN no longer fully invoiced AND
-            # the DN is currently CLOSED, reopen it.
+            # If the decrement made the DN no longer fully invoiced AND the DN is
+            # currently CLOSED, reopen it.
             if _cancel_decremented_any:
                 dn_reloaded_cancel = await db[_DN_COL].find_one(
                     {"docEntry": delivery_doc_entry, "organizationId": org_id}
@@ -2093,6 +3027,117 @@ async def transition_status(
                     audit_collection=_DN_AUDIT_COL,
                     doc_entry=delivery_doc_entry,
                     doc_raw=dn_reloaded_cancel,
+                    org_id=org_id,
+                    user_id=user_id,
+                    extra_detail={
+                        "triggeredByAriDocEntry": doc_entry,
+                        "triggeredByAriDocNumber": raw.get("docNumber"),
+                        "trigger": "invoice_cancel",
+                    },
+                )
+
+            # T-201.9 follow-up: SO bubble-up release for from-Delivery ARI cancel.
+            # Load the DN (already fetched as dn_reloaded_cancel if decremented,
+            # else fetch now) to get the DN's parent SO and build the release deltas.
+            dn_for_cancel_so = (
+                dn_reloaded_cancel if _cancel_decremented_any
+                else await db[_DN_COL].find_one(
+                    {"docEntry": delivery_doc_entry, "organizationId": org_id}
+                )
+            )
+            if dn_for_cancel_so is not None:
+                dn_cancel_base = dn_for_cancel_so.get("baseDocRef") or {}
+                so_doc_entry_from_dn_cancel = (
+                    dn_cancel_base.get("docId") or dn_cancel_base.get("doc_id")
+                )
+                if so_doc_entry_from_dn_cancel:
+                    # Build dn_line_id → so_line_id map from DN embedded lines.
+                    dn_cancel_line_to_so: Dict[str, str] = {}
+                    for dn_ln in dn_for_cancel_so.get("lines", []):
+                        dn_ln_base = dn_ln.get("baseDocRef") or {}
+                        so_lid = dn_ln_base.get("lineId") or dn_ln_base.get("line_id")
+                        if so_lid:
+                            dn_cancel_line_to_so[dn_ln["lineId"]] = so_lid
+
+                    # Build negative SO-line deltas (release semantics).
+                    so_cancel_line_deltas: Dict[str, Decimal] = {}
+                    for ln in raw.get("lines", []):
+                        line_base = ln.get("baseDocRef") or {}
+                        dn_lid = line_base.get("lineId") or line_base.get("line_id")
+                        if dn_lid:
+                            so_lid = dn_cancel_line_to_so.get(dn_lid)
+                            if so_lid:
+                                release_qty = Decimal(
+                                    str(ln.get("invoicedQty", ln.get("quantity", 0)))
+                                )
+                                so_cancel_line_deltas[so_lid] = (
+                                    so_cancel_line_deltas.get(so_lid, _ZERO) - release_qty
+                                )
+
+                    if so_cancel_line_deltas:
+                        # cap_check=False: releasing qty; no cap applies on release.
+                        await _reconcile_line_counters(
+                            db,
+                            source_collection=_SO_COL,
+                            source_doc_entry=so_doc_entry_from_dn_cancel,
+                            org_id=org_id,
+                            user_id=user_id,
+                            ari_doc_entry=doc_entry,
+                            line_deltas=so_cancel_line_deltas,
+                            cap_check=False,
+                        )
+
+                        so_reloaded_cancel_so = await db[_SO_COL].find_one(
+                            {"docEntry": so_doc_entry_from_dn_cancel, "organizationId": org_id}
+                        )
+                        await _auto_reopen_if_not_fully_invoiced(
+                            db,
+                            doc_collection=_SO_COL,
+                            audit_collection=_SO_AUDIT_COL,
+                            doc_entry=so_doc_entry_from_dn_cancel,
+                            doc_raw=so_reloaded_cancel_so,
+                            org_id=org_id,
+                            user_id=user_id,
+                            extra_detail={
+                                "triggeredByAriDocEntry": doc_entry,
+                                "triggeredByAriDocNumber": raw.get("docNumber"),
+                                "trigger": "invoice_cancel",
+                            },
+                        )
+
+        # T-201.9: release SO line invoicedQty for from-SO ARIs on cancellation.
+        if so_doc_entry_for_cancel:
+            _cancel_decremented_so_any = False
+            for ln in raw.get("lines", []):
+                line_base_ref = ln.get("baseDocRef") or {}
+                so_line_id = line_base_ref.get("lineId") or line_base_ref.get("line_id")
+                if so_line_id:
+                    restore_qty = float(
+                        Decimal(str(ln.get("invoicedQty", ln.get("quantity", 0))))
+                    )
+                    await db[_SO_COL].update_one(
+                        {
+                            "docEntry": so_doc_entry_for_cancel,
+                            "organizationId": org_id,
+                            "lines.lineId": so_line_id,
+                        },
+                        {
+                            "$inc": {"lines.$.invoicedQty": -restore_qty},
+                            "$set": {"updatedAt": now, "updatedBy": user_id},
+                        },
+                    )
+                    _cancel_decremented_so_any = True
+
+            if _cancel_decremented_so_any:
+                so_reloaded_cancel = await db[_SO_COL].find_one(
+                    {"docEntry": so_doc_entry_for_cancel, "organizationId": org_id}
+                )
+                await _auto_reopen_if_not_fully_invoiced(
+                    db,
+                    doc_collection=_SO_COL,
+                    audit_collection=_SO_AUDIT_COL,
+                    doc_entry=so_doc_entry_for_cancel,
+                    doc_raw=so_reloaded_cancel,
                     org_id=org_id,
                     user_id=user_id,
                     extra_detail={

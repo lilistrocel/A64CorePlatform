@@ -281,6 +281,7 @@ async def create_delivery_from_so_endpoint(
             payload=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_auth_token(request),
         )
     except ValueError as exc:
         err_msg = str(exc)

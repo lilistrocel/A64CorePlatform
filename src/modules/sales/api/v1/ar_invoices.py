@@ -49,6 +49,7 @@ from ...middleware.auth import (
 from ...models.ar_invoices import (
     ARInvoiceCreate,
     ARInvoiceFromDeliveryRequest,
+    ARInvoiceFromSORequest,
     ARInvoiceListItem,
     ARInvoiceResponse,
     ARInvoiceStatusTransitionRequest,
@@ -57,6 +58,7 @@ from ...models.ar_invoices import (
 from ...services.ar_invoice_service import (
     create_ar_invoice,
     create_ar_invoice_from_delivery,
+    create_ar_invoice_from_so,
     delete_ar_invoice,
     get_ar_invoice,
     list_ar_invoices,
@@ -399,6 +401,104 @@ async def create_ar_invoice_from_delivery_endpoint(
         )
 
     return SuccessResponse(data=ari, message="AR Invoice created from Delivery successfully")
+
+
+# ---------------------------------------------------------------------------
+# Create from Sales Order (service lines only — T-201.9)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/from-so/{so_doc_entry}",
+    response_model=SuccessResponse[ARInvoiceResponse],
+    response_model_by_alias=True,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create AR Invoice from Sales Order (service lines only)",
+    description=(
+        "Create a DRAFT AR Invoice directly from an OPEN Sales Order. "
+        "Only non-stock (service) SO lines may be invoiced via this endpoint. "
+        "Stock lines must flow through a Delivery Note first, then use the "
+        "from-delivery endpoint. "
+        "The SO line invoicedQty is incremented at DRAFT creation; if the "
+        "DRAFT invoice is deleted the qty is released back. "
+        "If all SO lines (stock + service) reach zero open_invoice_qty the SO "
+        "is automatically transitioned to CLOSED."
+    ),
+)
+async def create_ar_invoice_from_so_endpoint(
+    request: Request,
+    so_doc_entry: str,
+    body: ARInvoiceFromSORequest,
+    organization_id: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(require_permission("sales.create")),
+    db=Depends(_get_db),
+) -> SuccessResponse[ARInvoiceResponse]:
+    """
+    Create a new AR Invoice from an OPEN Sales Order (service lines only).
+
+    The system validates:
+        - The SO is in OPEN or PARTLY_CLOSED status.
+        - Each line in the body references a valid SO line ID.
+        - Each referenced SO line is a service (non-stock) item.
+        - Each requested quantity does not exceed the SO line open invoice qty.
+
+    On DRAFT creation the SO line ``invoicedQty`` is incremented immediately.
+    If the DRAFT invoice is deleted, the qty is released back.
+
+    Args:
+        request:        The incoming HTTP request (used to extract Bearer token).
+        so_doc_entry:   UUID of the source Sales Order.
+        body:           ARInvoiceFromSORequest with header + lines.
+        organization_id: Organisation UUID for scoping (query string).
+        current_user:   Authenticated user (must hold sales.create permission).
+        db:             Motor database dependency.
+
+    Returns:
+        SuccessResponse wrapping the newly created ARInvoiceResponse (HTTP 201).
+
+    Raises:
+        HTTPException 404: If the Sales Order is not found.
+        HTTPException 409: If the SO is not in OPEN or PARTLY_CLOSED status.
+        HTTPException 422: If any line is a stock item or qty exceeds open invoice qty.
+    """
+    org_id = _resolve_org_id(organization_id, current_user)
+    auth_token = _extract_auth_token(request)
+
+    # Reason: resolve companyCode from finance service — no hardcoded default.
+    if not body.company_code:
+        resolved = await resolve_company_code(
+            organization_id=org_id,
+            auth_token=auth_token,
+        )
+        body = body.model_copy(update={"company_code": resolved})
+
+    try:
+        ari = await create_ar_invoice_from_so(
+            db,
+            so_doc_entry=so_doc_entry,
+            payload=body,
+            org_id=org_id,
+            user_id=current_user.userId,
+            auth_token=auth_token,
+        )
+    except ValueError as exc:
+        err_msg = str(exc)
+        if "not found" in err_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=err_msg,
+            )
+        if "status is" in err_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=err_msg,
+            )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=err_msg,
+        )
+
+    return SuccessResponse(data=ari, message="AR Invoice created from Sales Order successfully")
 
 
 # ---------------------------------------------------------------------------

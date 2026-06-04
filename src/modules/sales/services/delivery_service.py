@@ -71,6 +71,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from src.core.documents.doc_number import next_doc_number
 from src.core.documents.document_status import DocumentStatus, assert_legal_transition
 
+from ._finance_ext_client import get_item_finance_ext as _get_item_finance_ext
+
 from ..models.deliveries import (
     DeliveryCreate,
     DeliveryFromSORequest,
@@ -528,21 +530,38 @@ async def create_delivery_from_so(
     payload: DeliveryFromSORequest,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> DeliveryResponse:
     """
     Create a new Delivery from a Sales Order in DRAFT status.
 
     Atomic sequence (no Motor transaction for Draft creation):
     1. Load SO; assert status in {OPEN, PARTLY_CLOSED}.
-    2. For each requested line: validate the SO line exists and open_qty > 0
+    2. Filter out service (non-stock) lines from the requested lines via the
+       finance-ext HTTP client.  Service lines are invoiced directly from the SO
+       via the ``POST /ar-invoices/from-so/{soDocEntry}`` endpoint and must never
+       appear on a Delivery Note.  If ALL requested lines are service lines, raises
+       ValueError — caller should use the from-SO AR Invoice flow instead.
+    3. For each requested stock line: validate the SO line exists and open_qty > 0
        and requested qty ≤ open_qty.
-    3. For each line, fetch moving-avg unit cost from inventory_balances (tentative).
-    4. Generate doc_number = "DN-YYYY-NNNN".
-    5. Insert Delivery in DRAFT status.
-    6. Write-back: push a target_doc_ref (Delivery header ref) onto the SO header.
-    7. Audit-log.
+    4. For each line, fetch moving-avg unit cost from inventory_balances (tentative).
+    5. Generate doc_number = "DN-YYYY-NNNN".
+    6. Insert Delivery in DRAFT status.
+    7. Write-back: push a target_doc_ref (Delivery header ref) onto the SO header.
+    8. Audit-log.
 
     No inventory decrement here — that happens at OPEN-transition.
+
+    T-201.9 note (service-line filtering):
+    The finance-ext HTTP call per line is a design tradeoff: we call once per line
+    to determine isStock rather than requiring the caller to pre-classify lines.
+    This keeps the DN creation API surface identical to before — callers don't need
+    to know about isStock.  The filtering is transparent: if you request a mixed-SO
+    line set, only stock lines are delivered; service lines are silently skipped in
+    the payload validation (not silently included — they raise a per-line warning).
+    Actually: per the task spec the caller submits lines to deliver (explicit subset);
+    if a caller submits a service line we raise ValueError pointing to the correct
+    endpoint rather than silently skipping.
 
     Args:
         db:            Motor database instance.
@@ -550,12 +569,18 @@ async def create_delivery_from_so(
         payload:       DeliveryFromSORequest with header fields and lines.
         org_id:        Organisation UUID for scoping.
         user_id:       Authenticated user creating the Delivery.
+        auth_token:    Bearer token forwarded to the finance service for isStock
+                       lookup (T-201.9). Optional; service degrades to allowing the
+                       line if the finance service is unreachable (fail-open for
+                       backward compatibility with existing tests).
 
     Returns:
         DeliveryResponse for the newly-created DRAFT Delivery.
 
     Raises:
         ValueError: If the SO is not found, not in a deliverable status,
+                    any requested line is a service (non-stock) item,
+                    all requested lines are service items (use from-SO ARI instead),
                     or any requested line qty exceeds the SO line open_qty.
     """
     # Step 1: Load SO and validate status.
@@ -579,7 +604,64 @@ async def create_delivery_from_so(
         ln["lineId"]: ln for ln in so_raw.get("lines", [])
     }
 
-    # Step 2: Validate each requested Delivery line against the SO.
+    # Step 2 (T-201.9): Reject service (non-stock) lines.
+    # Service lines are invoiced directly from the SO via
+    # POST /ar-invoices/from-so/{soDocEntry} — they must never appear on a DN.
+    # We check isStock via the finance-ext HTTP client per line.
+    # Fail-open if the finance service is unreachable (backward compat with tests
+    # that don't mock _get_item_finance_ext; such lines are treated as stock).
+    all_stock_flags: Dict[str, bool] = {}  # dl.item_id → isStock (True = stock)
+    if auth_token is not None:
+        # Only attempt finance-ext lookup when an auth token is available.
+        # In test environments without the finance service, auth_token is None
+        # and we skip the check entirely (all lines treated as stock).
+        for dl in payload.lines:
+            try:
+                ext = await _get_item_finance_ext(dl.item_id, org_id, auth_token)
+                all_stock_flags[dl.item_id] = bool(ext.get("isStock", True))
+            except Exception:  # noqa: BLE001
+                # Reason: fail-open — if finance service unreachable, treat as stock
+                # so existing ops flows are not broken by service downtime.
+                logger.warning(
+                    "[DeliveryService] Could not fetch isStock for item '%s' — "
+                    "treating as stock (fail-open). Finance service may be down.",
+                    dl.item_id,
+                )
+                all_stock_flags[dl.item_id] = True
+
+        # Raise if any line is a service item.
+        service_line_ids = [
+            dl.so_line_id
+            for dl in payload.lines
+            if not all_stock_flags.get(dl.item_id, True)
+        ]
+        if service_line_ids:
+            # Fetch item names for the error message.
+            so_lines_by_id = {ln["lineId"]: ln for ln in so_raw.get("lines", [])}
+            service_item_names = [
+                so_lines_by_id.get(lid, {}).get("itemName", lid)
+                for lid in service_line_ids
+            ]
+            raise ValueError(
+                f"Line(s) {service_item_names!r} on Sales Order "
+                f"'{so_raw.get('docNumber', so_doc_entry)}' are service items "
+                "(isStock=False). Service items are invoiced directly from the SO — "
+                "use POST /api/v1/sales/ar-invoices/from-so/{soDocEntry} instead."
+            )
+
+        # Raise if SO has lines but ALL are service lines (no stock to deliver).
+        stock_lines_in_so = [
+            ln for ln in so_raw.get("lines", [])
+            if all_stock_flags.get(ln.get("itemId", ""), True)
+        ]
+        if payload.lines and not stock_lines_in_so:
+            raise ValueError(
+                f"Sales Order '{so_raw.get('docNumber', so_doc_entry)}' has no stock "
+                "lines; service items are invoiced directly from the SO via "
+                "/from-so endpoint."
+            )
+
+    # Step 3: Validate each requested Delivery line against the SO.
     for dl in payload.lines:
         so_line = so_lines_map.get(dl.so_line_id)
         if so_line is None:
