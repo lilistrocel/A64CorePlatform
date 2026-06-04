@@ -1144,6 +1144,34 @@
 ## 🟢 Ready
 
 
+### T-203 | CRM Customer detail — AR visibility (outstanding balance, open invoices, payment history, aging)
+- **Category:** Frontend + Backend (read-only aggregation endpoints) · **Priority:** P2
+- **Assigned:** — · **Started:** —
+- **Discovered:** During T-201.10 verification (Customer Receipt cycle), 2026-06-04. Viet Anh asked where to verify the customer's outstanding AR after a receipt posted. Walked through `CRM → Customers → {customer}`; the page only shows Contact Information / Address / Tags / Notes. No financial context anywhere.
+- **Description:** The CRM CustomerDetailPage is a pure contact-management surface today. For a sales-module app, this is a real UX gap — accountants and salespeople routinely want to see, from a customer's page:
+  1. **Outstanding AR balance** — sum of open AR Invoices (`status IN (open, partly_closed)`) minus allocated receipts. The number that matters for "should we ship more to them?"
+  2. **Open invoices list** — recent unpaid ARIs (docNumber, docDate, dueDate, gross, openAmount, days overdue), clickable to ARI detail.
+  3. **Payment history** — recent Customer Receipts allocated to this customer (docNumber, date, amount, payment method).
+  4. **Aging breakdown** — Current / 1-30 / 31-60 / 61-90 / 90+ buckets, dollar amounts. Mirror the report shape from `Sales → Reports → AR Aging` but scoped to one customer.
+  5. **Credit limit** — pulled from `customer_finance_ext.creditLimit` (already exists per T-100.9b); show next to outstanding balance with a colour indicator (green if balance ≤ 70% of limit, amber 70-100%, red over limit).
+  6. **Recent SO + Quote activity** (optional, lower priority) — last 5 SOs and Quotes for quick context.
+- **Backend touchpoints:**
+  - Likely needs a new aggregation endpoint `GET /api/v1/sales/customers/{customerId}/ar-summary` returning outstanding balance, aging buckets, recent invoices, recent receipts in a single call. Reduces N+1 query risk on the frontend.
+  - Reuses existing AR Invoice + Customer Receipt query patterns. Mostly read-only.
+  - Standalone-mode consideration: if finance is disabled, the aging + credit-limit columns should hide gracefully (same approach as T-201.0 / T-201.1).
+- **Frontend touchpoints:**
+  - Add new sections to `CustomerDetailPage.tsx` (between existing Contact Info and Address):
+    - "Account Summary" card — outstanding balance + credit limit + age bucket headline
+    - "Open Invoices" table
+    - "Recent Payments" table
+    - "Aging" mini-chart or table
+  - Reuse styled-components from existing `SectionTitle` + `Section` patterns in the page. Don't introduce a new design language.
+- **Notes:**
+  - Filed 2026-06-04 during T-201.10 verification. Discovered the gap when I (Claude) hallucinated that the page already had this info — it didn't.
+  - This is a sales/CRM convergence concern. Could naturally land alongside T-201.11 (Quick Service Charge shortcut, also on CustomerDetailPage) — they'd share the "we're already touching the customer detail page" cost. But priorities differ: T-201.11 is P2 polish for ad-hoc service invoicing; T-203 is P2 because the underlying data is verifiable through other reports today, just inconveniently.
+  - **Honest scope estimate:** ~2-3 task cycles (1 backend aggregation endpoint, 1 frontend page expansion, 1 test pass for the endpoint).
+
+
 ### T-200 | Wave 4 — Purchasing parity upgrade (SAP B1-style document depth)
 - **Category:** Backend + Frontend · **Priority:** P1
 - **Depends on:** T-100 🔵 (Wave 3 shared infrastructure must be complete)
