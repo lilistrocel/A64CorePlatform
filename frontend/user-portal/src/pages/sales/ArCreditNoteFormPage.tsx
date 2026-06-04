@@ -33,6 +33,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
+import axios from 'axios';
 import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -50,9 +51,11 @@ import { useAuthStore } from '../../stores/auth.store';
 import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
 import { CurrencyCombobox } from '../../components/sales/CurrencyCombobox';
 import { PaymentTermsCombobox } from '../../components/sales/PaymentTermsCombobox';
+import { CompanyCombobox, shouldShowCompanyField } from '../../components/sales/CompanyCombobox';
 import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import type { PaymentTermsSelection } from '../../components/sales/PaymentTermsCombobox';
 import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
+import { useCompanies } from '../../hooks/queries/useCompanies';
 import type { CreditReason } from '../../services/salesApi';
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
@@ -395,6 +398,20 @@ const InfoBanner = styled.div`
   font-size: 13px;
 `;
 
+/**
+ * T-201.8 — contextual help note shown in the Lines section of direct-create mode.
+ * Inlined within the Card (no bottom margin needed — card padding provides spacing).
+ */
+const DirectCreateNote = styled.div`
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+`;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function today(): string {
@@ -433,6 +450,13 @@ export function ArCreditNoteFormPage() {
   const isEditMode = Boolean(docId && docId !== 'new');
   const isFromRTN = Boolean(rtnDocEntry);
   const isFromInvoice = Boolean(ariDocEntry);
+  // T-201.8: direct-create = none of the source-doc params are present and not editing.
+  // Only this mode restricts the item picker to service/fee items (isStock=false).
+  const isDirectCreate = !rtnDocEntry && !ariDocEntry && !isEditMode;
+
+  // Companies — for CompanyCombobox
+  const { data: companies = [], isLoading: companiesLoading } = useCompanies(orgId);
+  const showCompanyField = shouldShowCompanyField(companies, companiesLoading);
 
   // ── Source data fetches ──────────────────────────────────────────────────────
 
@@ -775,7 +799,19 @@ export function ArCreditNoteFormPage() {
 
       navigate(`/sales/ar-credit-notes/${result.docEntry}`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to save AR Credit Note.';
+      // T-201.8: surface the backend's 422 detail message (e.g. stock item rejection)
+      // directly rather than a generic fallback so the user knows exactly what to fix.
+      let msg = 'Failed to save AR Credit Note.';
+      if (axios.isAxiosError(err)) {
+        const detail = err.response?.data?.detail;
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (err.message) {
+          msg = err.message;
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
       setSubmitError(msg);
     }
   };
@@ -842,6 +878,29 @@ export function ArCreditNoteFormPage() {
               />
               {errors.customerName && <ErrorMsg>{errors.customerName.message}</ErrorMsg>}
             </FieldGroup>
+
+            {showCompanyField && (
+              <FieldGroup>
+                <Label htmlFor="companyCode">Company Code *</Label>
+                <Controller
+                  control={control}
+                  name="companyCode"
+                  render={({ field }) => (
+                    <CompanyCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      orgId={orgId}
+                      disabled={customerLocked}
+                      hasError={Boolean(errors.companyCode)}
+                      describedBy={errors.companyCode ? 'companyCode-error' : undefined}
+                    />
+                  )}
+                />
+                {errors.companyCode && (
+                  <ErrorMsg id="companyCode-error">{errors.companyCode.message}</ErrorMsg>
+                )}
+              </FieldGroup>
+            )}
 
             <FieldGroup>
               <Label htmlFor="bpRefNo">BP Ref No</Label>
@@ -967,6 +1026,14 @@ export function ArCreditNoteFormPage() {
         <Card>
           <CardTitle>Credit Note Lines</CardTitle>
 
+          {/* T-201.8 — visible only in direct-create mode; explains the item restriction */}
+          {isDirectCreate && (
+            <DirectCreateNote role="note">
+              Only service / fee items can be credited directly. To credit delivered goods,
+              create a Return first, then credit from the Return.
+            </DirectCreateNote>
+          )}
+
           {errors.lines && typeof errors.lines === 'object' && 'message' in errors.lines && (
             <ErrorMsg style={{ display: 'block', marginBottom: 12 }}>
               {(errors.lines as { message?: string }).message}
@@ -1027,6 +1094,9 @@ export function ArCreditNoteFormPage() {
                               }}
                               hasError={Boolean(errors.lines?.[idx]?.itemId || errors.lines?.[idx]?.itemCode)}
                               disabled={customerLocked || isSubmitting}
+                              // T-201.8: restrict to service items in direct-create mode;
+                              // from-RTN and from-Invoice modes have the picker disabled anyway.
+                              filterIsStock={isDirectCreate ? false : undefined}
                               placeholder="Search item…"
                             />
                           )}

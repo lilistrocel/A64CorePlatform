@@ -2778,6 +2778,12 @@ export interface SaleItemFinanceExt {
   cogsAccountId: string | null;
   salesTaxCode: string | null;
   isSellable: boolean;
+  /**
+   * T-201.8 — true = physical stock item (tracked in warehouse).
+   * Direct-create AR Invoice / ARC / RR must only use service items (isStock=false).
+   * Backend enforces this with HTTP 422; frontend filters via the isStock list param.
+   */
+  isStock: boolean;
   notes: string | null;
   createdBy: string | null;
   updatedBy: string | null;
@@ -2804,6 +2810,8 @@ export interface SaleItemFinanceExtUpdate {
   cogsAccountId?: string | null;
   salesTaxCode?: string | null;
   isSellable?: boolean;
+  /** T-201.8 — true = physical stock item; false = service / fee / freight. */
+  isStock?: boolean;
   notes?: string | null;
 }
 
@@ -2811,6 +2819,11 @@ export interface SaleItemFinanceExtUpdate {
 export interface SaleItemFinanceExtListParams {
   organizationId: string;
   isSellable?: boolean | null;
+  /**
+   * T-201.8 — pass `false` to restrict results to service/fee items only
+   * (items where isStock=false). Omit to return all items regardless of stock type.
+   */
+  isStock?: boolean | null;
   page?: number;
   size?: number;
 }
@@ -2852,6 +2865,11 @@ export async function listSaleItemFinanceExt(
   };
   if (params.isSellable != null) {
     queryParams['isSellable'] = params.isSellable;
+  }
+  // T-201.8: pass is_stock filter when caller explicitly sets it.
+  // Backend accepts both `is_stock` (snake) and `isStock` (camel) as aliases.
+  if (params.isStock != null) {
+    queryParams['isStock'] = params.isStock;
   }
   const response = await apiClient.get<SaleItemFinanceExtListResponse>(
     ITEM_EXT_BASE,

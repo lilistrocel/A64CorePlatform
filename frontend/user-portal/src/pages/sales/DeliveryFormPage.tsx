@@ -37,8 +37,10 @@ import {
 import { useSalesOrderV2 } from '../../hooks/queries/useSalesOrders';
 import { useAuthStore } from '../../stores/auth.store';
 import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import { CompanyCombobox, shouldShowCompanyField } from '../../components/sales/CompanyCombobox';
 import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { useCompanies } from '../../hooks/queries/useCompanies';
 import type { SalesOrderLine } from '../../services/salesApi';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
@@ -324,6 +326,10 @@ export function DeliveryFormPage() {
     ? 'Edit Delivery Note'
     : 'New Delivery Note';
 
+  // Companies — for CompanyCombobox
+  const { data: companies = [], isLoading: companiesLoading } = useCompanies(orgId);
+  const showCompanyField = shouldShowCompanyField(companies, companiesLoading);
+
   // ── Data fetches ──────────────────────────────────────────────────────────
 
   // Load the source SO when in from-SO mode
@@ -540,10 +546,27 @@ export function DeliveryFormPage() {
               )}
             </Field>
 
-            <Field>
-              <Label>Company Code *</Label>
-              <Input {...register('companyCode')} placeholder="e.g. A001" />
-            </Field>
+            {showCompanyField && (
+              <Field>
+                <Label htmlFor="companyCode">Company Code *</Label>
+                <Controller
+                  control={control}
+                  name="companyCode"
+                  render={({ field }) => (
+                    <CompanyCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      orgId={orgId}
+                      hasError={Boolean(errors.companyCode)}
+                      describedBy={errors.companyCode ? 'companyCode-error' : undefined}
+                    />
+                  )}
+                />
+                {errors.companyCode && (
+                  <FieldError id="companyCode-error">{errors.companyCode.message}</FieldError>
+                )}
+              </Field>
+            )}
 
             <Field>
               <Label>Document Date *</Label>

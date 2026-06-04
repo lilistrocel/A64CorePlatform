@@ -42,8 +42,10 @@ import { useReturnRequest } from '../../hooks/queries/useReturnRequests';
 import { useDelivery } from '../../hooks/queries/useDeliveries';
 import { useAuthStore } from '../../stores/auth.store';
 import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import { CompanyCombobox, shouldShowCompanyField } from '../../components/sales/CompanyCombobox';
 import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { useCompanies } from '../../hooks/queries/useCompanies';
 import type { ReturnRequestLine, DeliveryLine } from '../../services/salesApi';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
@@ -331,6 +333,10 @@ export function ReturnFormPage() {
   const isFromRR = Boolean(rrDocEntry);
   const isFromDN = Boolean(dnDocEntry);
   const isEdit = Boolean(docId);
+
+  // Companies — for CompanyCombobox
+  const { data: companies = [], isLoading: companiesLoading } = useCompanies(orgId);
+  const showCompanyField = shouldShowCompanyField(companies, companiesLoading);
 
   // ─── Source doc fetches ───────────────────────────────────────────────────
 
@@ -677,6 +683,30 @@ export function ReturnFormPage() {
               {errors.customerName && <ErrorMsg>{errors.customerName.message}</ErrorMsg>}
               <input type="hidden" {...register('customerId')} />
             </Field>
+
+            {/* Company Code — hidden for single-company orgs, picker for multi */}
+            {showCompanyField && (
+              <Field>
+                <Label htmlFor="companyCode">Company Code *</Label>
+                <Controller
+                  control={control}
+                  name="companyCode"
+                  render={({ field }) => (
+                    <CompanyCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      orgId={orgId}
+                      disabled={customerLocked}
+                      hasError={Boolean(errors.companyCode)}
+                      describedBy={errors.companyCode ? 'companyCode-error' : undefined}
+                    />
+                  )}
+                />
+                {errors.companyCode && (
+                  <ErrorMsg id="companyCode-error">{errors.companyCode.message}</ErrorMsg>
+                )}
+              </Field>
+            )}
 
             {/* Doc Date */}
             <Field>

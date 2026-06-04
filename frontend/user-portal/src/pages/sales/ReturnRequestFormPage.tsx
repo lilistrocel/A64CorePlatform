@@ -38,8 +38,10 @@ import {
 import { useDelivery } from '../../hooks/queries/useDeliveries';
 import { useAuthStore } from '../../stores/auth.store';
 import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
+import { CompanyCombobox, shouldShowCompanyField } from '../../components/sales/CompanyCombobox';
 import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { useCompanies } from '../../hooks/queries/useCompanies';
 import type { DeliveryLine, ReturnReason } from '../../services/salesApi';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
@@ -303,6 +305,20 @@ const SourceBanner = styled.div`
   margin-bottom: 20px;
 `;
 
+/**
+ * T-201.8 — contextual help note shown in the Lines section of direct-create mode.
+ * Inlined within the Card to sit just above the table.
+ */
+const DirectCreateNote = styled.div`
+  padding: 10px 14px;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+  border-radius: 8px;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.primary[700]};
+  margin-bottom: 16px;
+`;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const REASON_OPTIONS: Array<{ value: ReturnReason; label: string }> = [
@@ -335,6 +351,13 @@ export function ReturnRequestFormPage() {
   // Determine mode
   const isFromDelivery = Boolean(dnDocEntry);
   const isEdit = Boolean(docId);
+  // T-201.8: direct-create = no source Delivery param and not editing.
+  // Only this mode restricts the item picker to service/fee items (isStock=false).
+  const isDirectCreate = !dnDocEntry && !docId;
+
+  // Companies — for CompanyCombobox
+  const { data: companies = [], isLoading: companiesLoading } = useCompanies(orgId);
+  const showCompanyField = shouldShowCompanyField(companies, companiesLoading);
 
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -616,6 +639,30 @@ export function ReturnRequestFormPage() {
               <input type="hidden" {...register('baseDocRefDocType')} />
             </Field>
 
+            {/* Company Code — hidden for single-company orgs, picker for multi */}
+            {showCompanyField && (
+              <Field>
+                <Label htmlFor="companyCode">Company Code *</Label>
+                <Controller
+                  control={control}
+                  name="companyCode"
+                  render={({ field }) => (
+                    <CompanyCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      orgId={orgId}
+                      disabled={isFromDelivery}
+                      hasError={Boolean(errors.companyCode)}
+                      describedBy={errors.companyCode ? 'companyCode-error' : undefined}
+                    />
+                  )}
+                />
+                {errors.companyCode && (
+                  <ErrorText id="companyCode-error">{errors.companyCode.message}</ErrorText>
+                )}
+              </Field>
+            )}
+
             {/* Document Date */}
             <Field>
               <Label>Document Date *</Label>
@@ -672,6 +719,15 @@ export function ReturnRequestFormPage() {
         {/* ── Lines card ── */}
         <Card>
           <SectionTitle>Return Lines</SectionTitle>
+
+          {/* T-201.8 — visible only in direct-create mode; explains the item restriction */}
+          {isDirectCreate && (
+            <DirectCreateNote role="note">
+              Only service / fee items can be returned without a Delivery. To return
+              delivered goods, reference the original Delivery Note.
+            </DirectCreateNote>
+          )}
+
           {errors.lines && !Array.isArray(errors.lines) && (
             <SubmitError style={{ marginBottom: 16 }}>
               {(errors.lines as { message?: string }).message ?? 'Lines error'}
@@ -731,6 +787,9 @@ export function ReturnRequestFormPage() {
                                 }}
                                 hasError={Boolean(errors.lines?.[idx]?.itemId || errors.lines?.[idx]?.itemCode)}
                                 disabled={isFromDelivery || isSubmitting}
+                                // T-201.8: restrict to service items in direct-create mode;
+                                // from-Delivery mode has the picker disabled anyway.
+                                filterIsStock={isDirectCreate ? false : undefined}
                                 placeholder="Search item…"
                               />
                             )}

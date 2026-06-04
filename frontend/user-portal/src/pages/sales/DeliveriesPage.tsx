@@ -405,7 +405,7 @@ export function DeliveriesPage() {
           }}
           title="Show only deliveries with open quantity still to be invoiced (status=Open)"
         >
-          {openToInvoiceFilter ? '✓ ' : ''}Open to Invoice
+          {openToInvoiceFilter ? '✓ ' : ''}Has Open Qty
         </FilterToggleChip>
       </FilterRow>
 
@@ -450,8 +450,11 @@ export function DeliveriesPage() {
                 <Th>Customer</Th>
                 <Th>Source SO</Th>
                 <Th>Status</Th>
-                {/* F-3: Open to Invoice qty column */}
-                <Th style={{ textAlign: 'right' }}>Open to Invoice</Th>
+                {/* F-3: Open to Invoice qty column. Renamed 2026-06-02 to make it
+                    explicit this is a unit-quantity sum (not a money amount) —
+                    the adjacent "Total COGS" column made the prior "Open to Invoice"
+                    label easy to read as money. See DeliveryDetailPage for per-line breakdown. */}
+                <Th style={{ textAlign: 'right' }}>Open Qty</Th>
                 <Th style={{ textAlign: 'right' }}>Total COGS</Th>
               </tr>
             </thead>

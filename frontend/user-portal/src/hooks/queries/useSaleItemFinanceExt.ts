@@ -28,6 +28,12 @@ import type {
 
 export const saleItemFinanceExtKeys = {
   all: (orgId: string) => ['finance', 'sale-item-finance-ext', orgId] as const,
+  /**
+   * T-201.8 — key variant that bakes in the isStock filter so React Query caches
+   * stock-filtered and unfiltered lists separately.
+   */
+  allFiltered: (orgId: string, isStock: boolean | null | undefined) =>
+    ['finance', 'sale-item-finance-ext', orgId, { isStock: isStock ?? null }] as const,
   byItem: (orgId: string, itemId: string) =>
     ['finance', 'sale-item-finance-ext', orgId, itemId] as const,
 } as const;
@@ -35,18 +41,42 @@ export const saleItemFinanceExtKeys = {
 // ─── List hook ─────────────────────────────────────────────────────────────────
 
 /**
+ * Options bag for useSaleItemFinanceExtList.
+ */
+export interface SaleItemFinanceExtListOptions {
+  /**
+   * T-201.8 — when set to `false`, fetches only service/fee items (isStock=false).
+   * Omit (or pass undefined) to return all items regardless of stock type.
+   */
+  isStock?: boolean | null;
+}
+
+/**
  * Fetch all sale item finance extensions for the given organisation.
  *
  * Results are cached for 2 minutes (master data that changes infrequently).
  * The query is disabled when orgId is falsy.
  *
- * @param orgId - Organisation UUID. Pass null/undefined to disable.
+ * @param orgId   - Organisation UUID. Pass null/undefined to disable.
+ * @param options - Optional filter bag (e.g. { isStock: false } for service items only).
  */
-export function useSaleItemFinanceExtList(orgId: string | null | undefined) {
+export function useSaleItemFinanceExtList(
+  orgId: string | null | undefined,
+  options?: SaleItemFinanceExtListOptions,
+) {
+  const isStock = options?.isStock;
   return useQuery({
-    queryKey: saleItemFinanceExtKeys.all(orgId ?? ''),
+    // Use a differentiated query key so stock-filtered and full lists cache separately.
+    queryKey:
+      isStock != null
+        ? saleItemFinanceExtKeys.allFiltered(orgId ?? '', isStock)
+        : saleItemFinanceExtKeys.all(orgId ?? ''),
     queryFn: () =>
-      listSaleItemFinanceExt({ organizationId: orgId!, size: 200 }),
+      listSaleItemFinanceExt({
+        organizationId: orgId!,
+        size: 200,
+        ...(isStock != null ? { isStock } : {}),
+      }),
     enabled: !!orgId,
     staleTime: 2 * 60_000,
     select: (data) => data.items,
@@ -86,7 +116,10 @@ export function useCreateSaleItemFinanceExt(orgId: string) {
     mutationFn: (body: SaleItemFinanceExtCreate) =>
       createSaleItemFinanceExt(body),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: saleItemFinanceExtKeys.all(orgId) });
+      void qc.invalidateQueries({
+        queryKey: saleItemFinanceExtKeys.all(orgId),
+        refetchType: 'all',
+      });
     },
   });
 }
@@ -96,6 +129,12 @@ export function useCreateSaleItemFinanceExt(orgId: string) {
 /**
  * Update an existing sale item finance extension.
  * Invalidates both the list and the per-item queries on success.
+ *
+ * Note (T-201.8 follow-up, 2026-06-02): `refetchType: 'all'` is required because
+ * `react-query.config.ts` sets `refetchOnMount: false` globally. Without it,
+ * the SalesItemCombobox (mounted later on the ARI direct-create form) would
+ * serve a stale `isStock=false` cache from before the toggle. Same pattern
+ * used across the T-201.5–.7 DN visibility mutations.
  */
 export function useUpdateSaleItemFinanceExt(orgId: string) {
   const qc = useQueryClient();
@@ -108,9 +147,13 @@ export function useUpdateSaleItemFinanceExt(orgId: string) {
       body: SaleItemFinanceExtUpdate;
     }) => updateSaleItemFinanceExt(itemId, body, orgId),
     onSuccess: (_data, variables) => {
-      void qc.invalidateQueries({ queryKey: saleItemFinanceExtKeys.all(orgId) });
+      void qc.invalidateQueries({
+        queryKey: saleItemFinanceExtKeys.all(orgId),
+        refetchType: 'all',
+      });
       void qc.invalidateQueries({
         queryKey: saleItemFinanceExtKeys.byItem(orgId, variables.itemId),
+        refetchType: 'all',
       });
     },
   });
@@ -127,7 +170,10 @@ export function useDeleteSaleItemFinanceExt(orgId: string) {
   return useMutation({
     mutationFn: (itemId: string) => deleteSaleItemFinanceExt(itemId, orgId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: saleItemFinanceExtKeys.all(orgId) });
+      void qc.invalidateQueries({
+        queryKey: saleItemFinanceExtKeys.all(orgId),
+        refetchType: 'all',
+      });
     },
   });
 }

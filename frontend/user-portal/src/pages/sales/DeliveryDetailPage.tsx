@@ -623,9 +623,12 @@ export function DeliveryDetailPage() {
                 <Th>Item Name</Th>
                 <Th>Description</Th>
                 <Th style={{ textAlign: 'right' }}>Qty</Th>
-                {/* F-1: Invoiced + Open to Invoice columns */}
-                <Th style={{ textAlign: 'right' }}>Invoiced</Th>
-                <Th style={{ textAlign: 'right' }}>Open to Invoice</Th>
+                {/* F-1: Invoiced + Open to Invoice columns. "Open Qty" rename
+                    2026-06-02 — see DeliveriesPage for rationale. Stays as a
+                    quantity sum here too (per-line); "Line COGS" further right
+                    is the money. */}
+                <Th style={{ textAlign: 'right' }}>Invoiced Qty</Th>
+                <Th style={{ textAlign: 'right' }}>Open Qty</Th>
                 <Th>UoM</Th>
                 <Th>Warehouse</Th>
                 <Th style={{ textAlign: 'right' }}>Returned</Th>

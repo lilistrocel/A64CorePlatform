@@ -690,9 +690,8 @@ export function SalesOrderFormPage() {
                 error={errors.customerId?.message}
                 disabled={mode === 'from-quote'}
               />
-              {errors.customerId && (
-                <FieldError>{errors.customerId.message}</FieldError>
-              )}
+              {/* CustomerCombobox renders errors.customerId internally via its
+                  `error` prop — no external FieldError needed (was duplicating). */}
             </Field>
 
             {/* Doc Date */}

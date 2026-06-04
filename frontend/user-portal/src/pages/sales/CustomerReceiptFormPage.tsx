@@ -45,7 +45,9 @@ import { useFinanceAccounts } from '../../hooks/queries/useFinanceAccounts';
 import { CustomerCombobox } from '../../components/sales/CustomerCombobox';
 import { AccountCombobox } from '../../components/finance/AccountCombobox';
 import { CurrencyCombobox } from '../../components/sales/CurrencyCombobox';
+import { CompanyCombobox, shouldShowCompanyField } from '../../components/sales/CompanyCombobox';
 import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
+import { useCompanies } from '../../hooks/queries/useCompanies';
 import type { Customer } from '../../types/crm';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
@@ -380,6 +382,10 @@ export function CustomerReceiptFormPage() {
   const isFromInvoice = Boolean(ariDocEntry);
   const isEditMode = Boolean(docId);
 
+  // Companies — for CompanyCombobox
+  const { data: companies = [], isLoading: companiesLoading } = useCompanies(orgId);
+  const showCompanyField = shouldShowCompanyField(companies, companiesLoading);
+
   // Load existing receipt for edit mode
   const { data: existingReceipt, isLoading: receiptLoading } = useCustomerReceipt(
     isEditMode ? docId : undefined,
@@ -678,9 +684,9 @@ export function CustomerReceiptFormPage() {
                   />
                 )}
               />
-              {errors.customerId && (
-                <FieldError role="alert">{errors.customerId.message}</FieldError>
-              )}
+              {/* CustomerCombobox renders errors.customerId internally via its
+                  `error` prop (role="alert") — no external FieldError needed
+                  (was duplicating). */}
             </Field>
 
             {/* Doc Date */}
@@ -804,8 +810,40 @@ export function CustomerReceiptFormPage() {
               />
             </Field>
 
-            {/* Company Code — hidden but kept in form */}
-            <input type="hidden" {...register('companyCode')} />
+            {/* Company Code — hidden for single-company orgs, picker for multi.
+                The Controller is always mounted so the CompanyCombobox useEffect
+                can silently auto-set the value for single-company orgs even when
+                the FieldGroup is not visible. */}
+            <Controller
+              control={control}
+              name="companyCode"
+              render={({ field }) => (
+                showCompanyField ? (
+                  <Field>
+                    <Label htmlFor="companyCode">Company Code *</Label>
+                    <CompanyCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      orgId={orgId}
+                      disabled={isFromInvoice}
+                      hasError={Boolean(errors.companyCode)}
+                      describedBy={errors.companyCode ? 'companyCode-error' : undefined}
+                    />
+                    {errors.companyCode && (
+                      <FieldError id="companyCode-error">{errors.companyCode.message}</FieldError>
+                    )}
+                  </Field>
+                ) : (
+                  // Single-company: renders null (no DOM output) but the
+                  // useEffect inside CompanyCombobox still fires onChange.
+                  <CompanyCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    orgId={orgId}
+                  />
+                )
+              )}
+            />
 
             {/* Journal Memo */}
             <Field>

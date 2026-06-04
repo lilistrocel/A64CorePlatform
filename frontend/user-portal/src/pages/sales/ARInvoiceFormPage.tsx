@@ -25,6 +25,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
+import axios from 'axios';
 import { Trash2, Plus } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth.store';
 import { useArInvoice, useCreateArInvoice, useUpdateArInvoice, useCreateArInvoiceFromDelivery } from '../../hooks/queries/useArInvoices';
@@ -33,10 +34,12 @@ import { useSalesOrderV2 } from '../../hooks/queries/useSalesOrders';
 import { CustomerCombobox } from '../../components/sales/CustomerCombobox';
 import { SalesItemCombobox } from '../../components/sales/SalesItemCombobox';
 import { CurrencyCombobox } from '../../components/sales/CurrencyCombobox';
+import { CompanyCombobox, shouldShowCompanyField } from '../../components/sales/CompanyCombobox';
 import type { SalesItemSelection } from '../../components/sales/SalesItemCombobox';
 import { useTenantBaseCurrency } from '../../hooks/queries/useTenantBaseCurrency';
 import { useTaxCodes } from '../../hooks/queries/useTaxCodes';
 import { FALLBACK_TAX_CODES } from '../../services/taxCodesService';
+import { useCompanies } from '../../hooks/queries/useCompanies';
 import type { Customer } from '../../types/crm';
 import type { ARInvoiceLineCreate } from '../../services/salesApi';
 
@@ -368,6 +371,20 @@ const InfoBanner = styled.div`
   font-size: 14px;
 `;
 
+/**
+ * T-201.8 — contextual help note shown in the Lines section of direct-create mode.
+ * Reuses the InfoBanner palette but is inlined within the Card (no bottom margin).
+ */
+const DirectCreateNote = styled.div`
+  background: ${({ theme }) => theme.colors.primary[50] || '#eff6ff'};
+  color: ${({ theme }) => theme.colors.primary[700] || '#1d4ed8'};
+  border: 1px solid ${({ theme }) => theme.colors.primary[200] || '#bfdbfe'};
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+`;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function today(): string {
@@ -419,6 +436,9 @@ export function ARInvoiceFormPage() {
   // Determine form mode
   const isEdit = Boolean(docId);
   const isFromDelivery = Boolean(deliveryDocId) && !docId;
+  // T-201.8: direct-create = neither from-Delivery nor edit. Only this mode
+  // restricts the item picker to service/fee items (isStock=false).
+  const isDirectCreate = !deliveryDocId && !docId;
 
   const pageTitle = isEdit
     ? 'Edit AR Invoice'
@@ -459,6 +479,10 @@ export function ARInvoiceFormPage() {
   // Tax codes
   const { data: fetchedTaxCodes } = useTaxCodes(orgId);
   const taxCodes = fetchedTaxCodes ?? FALLBACK_TAX_CODES;
+
+  // Companies — for CompanyCombobox
+  const { data: companies = [], isLoading: companiesLoading } = useCompanies(orgId);
+  const showCompanyField = shouldShowCompanyField(companies, companiesLoading);
 
   // React Hook Form setup
   const {
@@ -747,10 +771,19 @@ export function ARInvoiceFormPage() {
         navigate(`/sales/ar-invoices/${result.docEntry}`);
       }
     } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : 'An unexpected error occurred. Please try again.';
+      // T-201.8: surface the backend's 422 detail message (e.g. stock item rejection)
+      // directly rather than a generic fallback so the user knows exactly what to fix.
+      let msg = 'An unexpected error occurred. Please try again.';
+      if (axios.isAxiosError(err)) {
+        const detail = err.response?.data?.detail;
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (err.message) {
+          msg = err.message;
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
       setSubmitError(msg);
     }
   };
@@ -802,19 +835,28 @@ export function ARInvoiceFormPage() {
         <Card>
           <CardTitle>Header</CardTitle>
           <Grid $cols={3}>
-            <FieldGroup>
-              <Label htmlFor="companyCode">Company Code *</Label>
-              <Input
-                id="companyCode"
-                $hasError={Boolean(errors.companyCode)}
-                readOnly={isFromDelivery}
-                disabled={isFromDelivery}
-                {...register('companyCode')}
-              />
-              {errors.companyCode && (
-                <ErrorText>{errors.companyCode.message}</ErrorText>
-              )}
-            </FieldGroup>
+            {showCompanyField && (
+              <FieldGroup>
+                <Label htmlFor="companyCode">Company Code *</Label>
+                <Controller
+                  control={control}
+                  name="companyCode"
+                  render={({ field }) => (
+                    <CompanyCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      orgId={orgId}
+                      disabled={isFromDelivery}
+                      hasError={Boolean(errors.companyCode)}
+                      describedBy={errors.companyCode ? 'companyCode-error' : undefined}
+                    />
+                  )}
+                />
+                {errors.companyCode && (
+                  <ErrorText id="companyCode-error">{errors.companyCode.message}</ErrorText>
+                )}
+              </FieldGroup>
+            )}
 
             <FieldGroup style={{ gridColumn: 'span 2' }}>
               <Label>Customer *</Label>
@@ -832,9 +874,8 @@ export function ARInvoiceFormPage() {
                   />
                 )}
               />
-              {errors.customerId && !watchedCustomerId && (
-                <ErrorText>{errors.customerId.message}</ErrorText>
-              )}
+              {/* CustomerCombobox renders errors.customerId internally via its
+                  `error` prop — no external ErrorText needed (was duplicating). */}
             </FieldGroup>
           </Grid>
 
@@ -942,6 +983,15 @@ export function ARInvoiceFormPage() {
         {/* ── Lines section ── */}
         <Card>
           <CardTitle>Invoice Lines</CardTitle>
+
+          {/* T-201.8 — visible only in direct-create mode; explains the item restriction */}
+          {isDirectCreate && (
+            <DirectCreateNote role="note">
+              Only service / fee items can be invoiced directly. To bill for delivered goods,
+              use the <strong>Generate AR Invoice</strong> button on the source Delivery Note.
+            </DirectCreateNote>
+          )}
+
           {errors.lines?.root && (
             <ErrorText style={{ display: 'block', marginBottom: '12px' }}>
               {errors.lines.root.message}
@@ -1011,6 +1061,9 @@ export function ARInvoiceFormPage() {
                               }}
                               hasError={Boolean(errors.lines?.[index]?.itemId || errors.lines?.[index]?.itemCode)}
                               disabled={isFromDelivery || isSubmitting}
+                              // T-201.8: restrict to service items in direct-create mode;
+                              // from-Delivery and edit modes have the picker disabled anyway.
+                              filterIsStock={isDirectCreate ? false : undefined}
                               placeholder="Search item…"
                               describedBy={`line-${index}-item-error`}
                             />

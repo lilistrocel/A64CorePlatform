@@ -78,6 +78,15 @@ export interface SalesItemComboboxProps {
   hasError?: boolean;
   /** aria-describedby forwarded to the input. */
   describedBy?: string;
+  /**
+   * T-201.8 — when set to `false`, the dropdown only shows service/fee items
+   * (items where isStock=false on the finance extension).
+   *
+   * Pass `false` on direct-create AR Invoice / AR Credit Note / Return Request forms
+   * to prevent users from accidentally selecting physical stock items.
+   * Omit (or pass `undefined`) to show all sellable items (default behaviour).
+   */
+  filterIsStock?: boolean;
 }
 
 // ─── Styled components ─────────────────────────────────────────────────────────
@@ -288,6 +297,7 @@ export function SalesItemCombobox({
   disabled = false,
   hasError = false,
   describedBy,
+  filterIsStock,
 }: SalesItemComboboxProps) {
   const listboxId = useId();
 
@@ -295,11 +305,16 @@ export function SalesItemCombobox({
   const user = useAuthStore((s) => s.user);
   const orgId = user?.organizationId ?? '';
 
-  // Fetch all sellable items once (small list — client-side filtering is fine).
-  const { data: allItems = [], isLoading: itemsLoading } =
-    useSaleItemFinanceExtList(orgId);
+  // T-201.8: when filterIsStock=false, request only service items from the API
+  // so React Query caches stock-filtered and full lists under separate keys.
+  const { data: allItems = [], isLoading: itemsLoading } = useSaleItemFinanceExtList(
+    orgId,
+    filterIsStock !== undefined ? { isStock: filterIsStock } : undefined,
+  );
 
   // Only expose isSellable=true items.
+  // When filterIsStock=false the API already excludes stock items, but we still
+  // apply the isSellable guard here as a belt-and-suspenders filter.
   const sellableItems = allItems.filter((it) => it.isSellable);
 
   // ── Internal state ─────────────────────────────────────────────────────────

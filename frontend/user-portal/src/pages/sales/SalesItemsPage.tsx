@@ -168,6 +168,27 @@ const SellableChip = styled.span<{ $active: boolean }>`
       : (theme.colors?.text?.secondary ?? '#6b7280')};
 `;
 
+/**
+ * T-201.8 — Type badge: Stock (teal) / Service (amber).
+ * $isStock=true  → Stock   (teal/green family, mirrors the positive SellableChip colour)
+ * $isStock=false → Service (amber, visually distinct but not alarming)
+ */
+const TypeChip = styled.span<{ $isStock: boolean }>`
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: ${({ $isStock, theme }) =>
+    $isStock
+      ? (theme.colors?.primary?.light ?? '#eff6ff')
+      : '#fef3c7'};
+  color: ${({ $isStock, theme }) =>
+    $isStock
+      ? (theme.colors?.primary?.main ?? '#1d4ed8')
+      : '#92400e'};
+`;
+
 const ActionBtn = styled.button`
   display: inline-flex;
   align-items: center;
@@ -365,6 +386,8 @@ interface EditFormState {
   cogsAccountId: string | null;
   salesTaxCode: string;
   isSellable: boolean;
+  /** T-201.8 — true = physical stock item; false = service / fee / freight. */
+  isStock: boolean;
   notes: string;
 }
 
@@ -419,6 +442,9 @@ function EditModal({ ext, allAccounts, onClose, onSaved, orgId }: EditModalProps
     cogsAccountId: ext.cogsAccountId,
     salesTaxCode: ext.salesTaxCode ?? '',
     isSellable: ext.isSellable,
+    // T-201.8 — default to true if undefined (conservative: treat unknown legacy
+    // records as stock to avoid accidentally enabling direct-invoice on stock items).
+    isStock: ext.isStock ?? true,
     notes: ext.notes ?? '',
   });
 
@@ -443,6 +469,7 @@ function EditModal({ ext, allAccounts, onClose, onSaved, orgId }: EditModalProps
           cogsAccountId: form.cogsAccountId,
           salesTaxCode: form.salesTaxCode || null,
           isSellable: form.isSellable,
+          isStock: form.isStock,
           notes: form.notes || null,
         },
       });
@@ -558,6 +585,42 @@ function EditModal({ ext, allAccounts, onClose, onSaved, orgId }: EditModalProps
                   : 'Item is NOT available for sale'}
               </FormLabel>
             </ToggleRow>
+          </FormField>
+
+          {/* Item type (T-201.8). Two-option radio group rather than a single
+              checkbox because Stock vs Service is a category choice — modelling
+              it as a boolean checkbox creates ambiguous UX (whichever label sits
+              next to an unchecked box implies it's what ticking does). */}
+          <FormField>
+            <FormLabel>Item type</FormLabel>
+            <ToggleRow>
+              <ToggleRow as="label" style={{ cursor: 'pointer', gap: 6 }}>
+                <ToggleInput
+                  type="radio"
+                  name="edit-item-type"
+                  value="stock"
+                  checked={form.isStock === true}
+                  onChange={() => setForm((prev) => ({ ...prev, isStock: true }))}
+                />
+                <span>Stock item</span>
+              </ToggleRow>
+              <ToggleRow as="label" style={{ cursor: 'pointer', gap: 6 }}>
+                <ToggleInput
+                  type="radio"
+                  name="edit-item-type"
+                  value="service"
+                  checked={form.isStock === false}
+                  onChange={() => setForm((prev) => ({ ...prev, isStock: false }))}
+                />
+                <span>Service item</span>
+              </ToggleRow>
+            </ToggleRow>
+            <FormHint>
+              Stock items decrement inventory and post COGS when delivered.
+              Pick Service for fees, freight, retainers, and other non-physical
+              charges. Service items are the only ones that can be invoiced directly
+              without a Delivery Note.
+            </FormHint>
           </FormField>
 
           {/* Notes */}
@@ -689,6 +752,7 @@ export function SalesItemsPage() {
                 <Tr>
                   <Th>Item Code</Th>
                   <Th>Item Name</Th>
+                  <Th>Type</Th>
                   <Th>Revenue Account</Th>
                   <Th>COGS Account</Th>
                   <Th>Tax Code</Th>
@@ -703,6 +767,12 @@ export function SalesItemsPage() {
                       <ItemCodeBadge>{ext.itemCode ?? ext.itemId.slice(0, 8)}</ItemCodeBadge>
                     </Td>
                     <Td>{ext.itemName ?? '—'}</Td>
+                    <Td>
+                      {/* T-201.8 — default undefined (legacy) to Stock (conservative). */}
+                      <TypeChip $isStock={ext.isStock ?? true}>
+                        {(ext.isStock ?? true) ? 'Stock' : 'Service'}
+                      </TypeChip>
+                    </Td>
                     <Td>{renderAccount(ext.revenueAccountId, allAccounts)}</Td>
                     <Td>{renderAccount(ext.cogsAccountId, allAccounts)}</Td>
                     <Td>
