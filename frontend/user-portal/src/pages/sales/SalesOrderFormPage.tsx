@@ -251,19 +251,33 @@ const LineInput = styled.input`
 `;
 
 const DeleteLineBtn = styled.button`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: none;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  background: ${({ theme }) => theme.colors.background};
+  color: #dc2626;
   border-radius: 6px;
   cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
   &:hover {
     background: #fef2f2;
-    color: #dc2626;
+    border-color: #dc2626;
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  /* Ensure SVG icon inherits color and stays visible. */
+  & > svg {
+    width: 16px;
+    height: 16px;
+    color: currentColor;
+    stroke: currentColor;
   }
 `;
 
@@ -512,11 +526,19 @@ export function SalesOrderFormPage() {
     return map;
   }, [itemFinanceExts]);
 
-  // Derive line-type mix from the watched lines.
-  const lineTypeFlags = useMemo(
-    () => lines.map((l) => itemExtByItemId.get(l.itemId)?.isStock ?? true),
-    [lines, itemExtByItemId],
-  );
+  // Derive line-type mix from the watched lines. Empty/default rows
+  // (itemId === '') are excluded so the default "+ Add Line" blank row
+  // doesn't poison the detection.
+  //
+  // NOTE: NOT memoised — `watch('lines')` from react-hook-form returns a
+  // reference-stable array when individual line contents change (only
+  // the inner objects mutate). useMemo's Object.is dep check missed
+  // those mutations and served stale flags after a second line was
+  // added. Recomputing per render is cheap for small line counts and
+  // guarantees the mode reflects current form state.
+  const lineTypeFlags = (lines ?? [])
+    .filter((l) => Boolean(l?.itemId))
+    .map((l) => itemExtByItemId.get(l.itemId)?.isStock ?? true);
   const hasLines = lineTypeFlags.length > 0;
   const allService = hasLines && lineTypeFlags.every((s) => s === false);
   const allStock = hasLines && lineTypeFlags.every((s) => s === true);
