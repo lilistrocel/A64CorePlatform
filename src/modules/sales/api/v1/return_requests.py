@@ -264,6 +264,7 @@ async def create_return_request_endpoint(
             payload=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_auth_token(request),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -286,6 +287,7 @@ async def create_return_request_endpoint(
     summary="Update draft Return Request",
 )
 async def update_return_request_endpoint(
+    request: Request,
     doc_entry: str,
     body: ReturnRequestUpdate,
     organization_id: Optional[str] = Query(None),
@@ -322,6 +324,7 @@ async def update_return_request_endpoint(
             payload=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_auth_token(request),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -407,6 +410,7 @@ async def delete_return_request_endpoint(
     summary="Transition Return Request status",
 )
 async def transition_return_request_endpoint(
+    request: Request,
     doc_entry: str,
     body: ReturnRequestStatusTransitionRequest,
     organization_id: Optional[str] = Query(None),
@@ -445,6 +449,7 @@ async def transition_return_request_endpoint(
             request_body=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_auth_token(request),
         )
     except ValueError as exc:
         raise HTTPException(

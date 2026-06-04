@@ -70,6 +70,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from src.core.documents.doc_number import next_doc_number
 from src.core.documents.document_status import DocumentStatus, assert_legal_transition
 
+from ._finance_ext_client import get_item_finance_ext as _get_item_finance_ext
+
 from ..models.ar_credit_notes import (
     ARCreditNoteCreate,
     ARCreditNoteListItem,
@@ -645,6 +647,7 @@ async def create_ar_credit_note(
     payload: ARCreditNoteCreate,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> ARCreditNoteResponse:
     """
     Create a new AR Credit Note in DRAFT status.
@@ -659,6 +662,7 @@ async def create_ar_credit_note(
 
     Sequence:
     1. Soft-validate each allocation target (existence, customer, status).
+    1b. isStock gate (standalone path only): reject stock items.
     2. Build embedded line and allocation docs.
     3. Generate doc_number = "ARC-YYYY-NNNN".
     4. Compute tax_date = min(date_of_supply, invoice_date).
@@ -666,16 +670,19 @@ async def create_ar_credit_note(
     6. Audit-log.
 
     Args:
-        db:      Motor database instance.
-        payload: Validated ARCreditNoteCreate payload.
-        org_id:  Organisation UUID for scoping.
-        user_id: Authenticated user creating the Credit Note.
+        db:         Motor database instance.
+        payload:    Validated ARCreditNoteCreate payload.
+        org_id:     Organisation UUID for scoping.
+        user_id:    Authenticated user creating the Credit Note.
+        auth_token: Bearer token forwarded to the finance microservice for
+                    isStock lookups on standalone Credit Notes.
 
     Returns:
         ARCreditNoteResponse for the newly-created DRAFT AR Credit Note.
 
     Raises:
-        ValueError: If any allocation target fails soft validation.
+        ValueError: If any allocation target fails soft validation, or if any
+                    line contains a stock item on a standalone (direct) Credit Note.
     """
     # Step 1: Soft-validate allocation targets.
     for alloc in payload.allocations:
@@ -699,6 +706,20 @@ async def create_ar_credit_note(
                 f"'{ari_raw.get('status')}'. Must be 'open', 'partly_closed', "
                 "or 'closed' to accept a credit note."
             )
+
+    # Step 1b (direct path only): isStock gate — reject stock items on standalone
+    # Credit Notes.  Return-driven Credit Notes are exempted because the source
+    # Return has already validated the item through the Delivery chain.
+    # Reason: crediting a stock item directly bypasses inventory and COGS reversal;
+    # the correct path is Return Note → AR Credit Note (from-Return).
+    if payload.base_return_doc_ref is None:
+        for line in payload.lines:
+            ext = await _get_item_finance_ext(line.item_id, org_id, auth_token)
+            if ext.get("isStock", True):
+                raise ValueError(
+                    f"Item '{line.item_name}' is a stock item and cannot be credited "
+                    "directly. Create a Return first, then credit from the Return."
+                )
 
     # Step 2: Build line and allocation docs.
     computed_lines: List[Dict[str, Any]] = []
@@ -897,6 +918,7 @@ async def update_ar_credit_note(
     payload: ARCreditNoteUpdate,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> Optional[ARCreditNoteResponse]:
     """
     Partially update a DRAFT AR Credit Note.
@@ -906,17 +928,20 @@ async def update_ar_credit_note(
     Only DRAFT Credit Notes may be updated.
 
     Args:
-        db:        Motor database instance.
-        doc_entry: UUID of the AR Credit Note.
-        payload:   Validated ARCreditNoteUpdate payload.
-        org_id:    Organisation UUID for scoping.
-        user_id:   Authenticated user performing the update.
+        db:         Motor database instance.
+        doc_entry:  UUID of the AR Credit Note.
+        payload:    Validated ARCreditNoteUpdate payload.
+        org_id:     Organisation UUID for scoping.
+        user_id:    Authenticated user performing the update.
+        auth_token: Bearer token forwarded to the finance microservice for
+                    isStock lookups on standalone Credit Notes.
 
     Returns:
         Updated ARCreditNoteResponse, or None if not found.
 
     Raises:
-        ValueError: If the Credit Note is not in DRAFT status.
+        ValueError: If the Credit Note is not in DRAFT status, or if any new
+                    line is a stock item on a standalone (direct) Credit Note.
     """
     raw = await db[_ARC_COL].find_one(
         {"docEntry": doc_entry, "organizationId": org_id}
@@ -965,6 +990,27 @@ async def update_ar_credit_note(
         updates["taxDate"] = _to_dt(_compute_tax_date(eff_dos, eff_inv))
 
     if payload.lines is not None:
+        # isStock gate for standalone (direct) Credit Notes.
+        # Reason: Return-driven Credit Notes already validated items via the Return
+        # chain; standalone Credit Notes must not bypass COGS reversal.
+        _update_base_return_ref = raw.get("baseReturnDocRef")
+        _update_is_direct = not bool(
+            _update_base_return_ref
+            and (
+                _update_base_return_ref.get("docId")
+                or _update_base_return_ref.get("doc_id")
+            )
+        )
+        if _update_is_direct:
+            for line in payload.lines:
+                ext = await _get_item_finance_ext(line.item_id, org_id, auth_token)
+                if ext.get("isStock", True):
+                    raise ValueError(
+                        f"Item '{line.item_name}' is a stock item and cannot be "
+                        "credited directly. Create a Return first, then credit "
+                        "from the Return."
+                    )
+
         new_lines: List[Dict[str, Any]] = []
         for i, line in enumerate(payload.lines, start=1):
             new_lines.append(_build_line_doc(line, line_number=i))
@@ -1054,6 +1100,7 @@ async def transition_status(
     request_body: ARCreditNoteStatusTransitionRequest,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> Optional[ARCreditNoteResponse]:
     """
     Transition an AR Credit Note to a new status.
@@ -1132,6 +1179,36 @@ async def transition_status(
         allocations = raw.get("allocations", [])
         arc_lines = raw.get("lines", [])
         totals = raw.get("totals", {})
+
+        # Step 0b: Re-validate isStock for standalone (direct) Credit Notes.
+        # Reason: an admin may have reclassified an item from service to stock while
+        # this ARC sat in DRAFT.  Re-check before posting to prevent COGS gaps.
+        # Return-driven Credit Notes are exempt (validated at Return chain time).
+        _transition_base_return_ref = raw.get("baseReturnDocRef")
+        _transition_is_direct = not bool(
+            _transition_base_return_ref
+            and (
+                _transition_base_return_ref.get("docId")
+                or _transition_base_return_ref.get("doc_id")
+            )
+        )
+        if _transition_is_direct:
+            for arc_ln in arc_lines:
+                item_id_ln = arc_ln.get("itemId", "")
+                item_name_ln = arc_ln.get("itemName", item_id_ln)
+                try:
+                    ext_ln = await _get_item_finance_ext(item_id_ln, org_id, auth_token)
+                except ValueError:
+                    ext_ln = None
+                # Reason: if finance ext fetch fails we skip isStock block (fail-open)
+                # to avoid blocking posting due to finance service downtime.
+                # The isStock check is a safeguard, not a hard accounting control here.
+                if ext_ln is not None and ext_ln.get("isStock", True):
+                    raise ValueError(
+                        f"Cannot post AR Credit Note '{doc_entry}': item '{item_name_ln}' "
+                        "is now classified as a stock item. Create a Return first, "
+                        "then credit from the Return."
+                    )
 
         # Step 1: Validate allocation sum == totals.gross.
         total_allocated = sum(

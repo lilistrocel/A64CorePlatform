@@ -52,9 +52,11 @@ Collections used
   ar_invoices_v2              — one document per AR Invoice header + embedded lines
   ar_invoices_v2_audit        — append-only audit trail
   deliveries_v2               — source Delivery collection (invoiced_qty updates)
-  tax_codes                   — tax percent lookup (read-only, ops MongoDB)
   payment_terms               — net days lookup (read-only, ops MongoDB)
   finance_outbox              — OutboxWriter destination
+
+  NOTE: tax_codes are looked up via HTTP from the finance microservice
+  (GET /api/v1/finance/tax-codes) — NOT from ops MongoDB (T-202).
 """
 
 from __future__ import annotations
@@ -73,6 +75,9 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from src.core.documents.doc_number import next_doc_number
 from src.core.documents.document_status import DocumentStatus, assert_legal_transition
 
+from ._finance_ext_client import get_item_finance_ext as _get_item_finance_ext
+from ._finance_ext_client import get_tax_percent
+
 from ..models.ar_invoices import (
     ARInvoiceCreate,
     ARInvoiceFromDeliveryRequest,
@@ -90,7 +95,6 @@ _ARI_COL = "ar_invoices_v2"
 _AUDIT_COL = "ar_invoices_v2_audit"
 _DN_COL = "deliveries_v2"
 _DN_AUDIT_COL = "deliveries_v2_audit"
-_TAX_CODES_COL = "tax_codes"
 _PAYMENT_TERMS_COL = "payment_terms"
 _TOLERANCE = Decimal("0.0001")
 
@@ -163,103 +167,34 @@ def _compute_tax_date(date_of_supply: date, invoice_date: date) -> date:
 
 
 async def _get_tax_percent(
-    db: AsyncIOMotorDatabase,
     tax_code_id: Optional[str],
     org_id: str,
+    auth_token: Optional[str],
 ) -> Decimal:
     """
-    Fetch the tax percent for a given tax code ID.
+    Fetch the tax percent for a given tax code ID via the finance microservice HTTP API.
 
-    Returns Decimal("0") for null/missing tax codes (exempt lines).
+    Delegates to ``get_tax_percent`` in ``_finance_ext_client``.  Tax codes live in
+    the finance service's MySQL DB — they must NOT be queried as a MongoDB collection
+    from the ops backend (T-202 / T-100.9a.1 architectural rule).
 
-    Args:
-        db:          Motor database instance.
-        tax_code_id: FK to tax_codes collection, or None for exempt.
-        org_id:      Organisation scope.
-
-    Returns:
-        Tax percent as Decimal (e.g. Decimal("5") for UAE 5% standard rate).
-    """
-    if not tax_code_id:
-        return _ZERO
-
-    record = await db[_TAX_CODES_COL].find_one(
-        {"_id": tax_code_id, "organizationId": org_id}
-    )
-    if record is None:
-        # Reason: try without org scope — some tax codes are system-wide.
-        record = await db[_TAX_CODES_COL].find_one({"_id": tax_code_id})
-
-    if record is None:
-        logger.warning(
-            "[ARInvoiceService] Tax code '%s' not found for org '%s' — using 0%%",
-            tax_code_id,
-            org_id,
-        )
-        return _ZERO
-
-    raw_pct = record.get("rate") or record.get("taxRate") or record.get("percent", 0)
-    return Decimal(str(raw_pct)).quantize(_TWOPLACES, rounding=ROUND_HALF_UP)
-
-
-async def _get_item_finance_ext(
-    item_id: str,
-    org_id: str,
-    auth_token: Optional[str],
-) -> Dict[str, Any]:
-    """
-    Fetch the sale_item_finance_ext record from the finance microservice via HTTP.
-
-    sale_item_finance_ext lives in the finance service's MySQL DB — it must
-    NOT be queried as a MongoDB collection from the ops backend.
+    Returns Decimal("0.00") immediately for None/empty tax_code_id (exempt lines).
 
     Args:
-        item_id:    MongoDB itemId UUID string.
-        org_id:     Organisation UUID for scoping.
-        auth_token: Bearer token from the calling user's JWT, forwarded to
-                    the finance service for authentication.
+        tax_code_id: Tax code string (e.g. "S" for UAE 5% standard rate), or None
+                     for exempt lines.
+        org_id:      Organisation UUID for scoping.
+        auth_token:  Bearer token from the calling user's JWT, forwarded to the
+                     finance service.
 
     Returns:
-        Dict of the finance extension fields (camelCase, matching the
-        finance service's SaleItemFinanceExtResponse schema).
+        Tax rate as Decimal (e.g. Decimal("5.00") for UAE 5% standard rate).
 
     Raises:
-        ValueError: If the finance service returns 404 (no ext configured)
-                    or a non-2xx status.
+        ValueError: If the tax code is not configured in the finance service,
+                    or the finance service is unreachable.
     """
-    url = f"{_FINANCE_BASE_URL}/api/v1/finance/item-finance-ext/{item_id}"
-    headers: Dict[str, str] = {}
-    if auth_token:
-        headers["Authorization"] = f"Bearer {auth_token}"
-
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(
-                url,
-                params={"organization_id": org_id},
-                headers=headers,
-            )
-    except Exception as exc:  # noqa: BLE001
-        raise ValueError(
-            f"Finance service unreachable when looking up item '{item_id}': {exc}. "
-            "Ensure FINANCE_SERVICE_URL is set and the finance service is running."
-        ) from exc
-
-    if resp.status_code == 404:
-        raise ValueError(
-            f"Item '{item_id}' has no sale_item_finance_ext record in org '{org_id}'. "
-            "Configure the item's finance extension (revenueAccountId) before invoicing."
-        )
-
-    if not resp.is_success:
-        raise ValueError(
-            f"Finance service returned HTTP {resp.status_code} when looking up "
-            f"item '{item_id}' finance ext. Response: {resp.text[:200]}"
-        )
-
-    body = resp.json()
-    # Reason: finance service wraps data under 'data' key per its SuccessResponse.
-    return body.get("data", body)
+    return await get_tax_percent(tax_code_id, org_id, auth_token)
 
 
 async def _get_customer_finance_ext(
@@ -467,13 +402,14 @@ async def _build_line_doc(
     line_number: int,
     org_id: str,
     auth_token: Optional[str] = None,
+    _preloaded_finance_ext: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Build an embedded AR Invoice line dict for MongoDB storage.
 
-    Looks up tax_percent from tax_codes (ops MongoDB) and revenue_account_id from
-    the finance microservice's sale_item_finance_ext via HTTP.
-    Raises ValueError if revenue account is missing.
+    Looks up tax_percent via HTTP from the finance microservice's tax-codes list
+    (GET /api/v1/finance/tax-codes) and revenue_account_id from
+    sale_item_finance_ext via HTTP.  Raises ValueError if either lookup fails.
 
     Args:
         db:               Motor database instance (ops MongoDB).
@@ -485,13 +421,16 @@ async def _build_line_doc(
         uom:              Unit of measure.
         unit_price:       Selling price per unit.
         discount_percent: Line discount 0–100.
-        tax_code_id:      FK to tax_codes or None.
+        tax_code_id:      Tax code string (e.g. "S") or None for exempt lines.
         warehouse_id:     Optional warehouse reference.
         cost_center_id:   Optional cost-centre.
         base_doc_ref:     Optional upstream Delivery line ref (Pydantic or dict).
         line_number:      1-indexed position.
         org_id:           Organisation scope.
         auth_token:       Bearer token forwarded to the finance service.
+        _preloaded_finance_ext: Pre-fetched finance ext dict to avoid a second
+                    HTTP round-trip when the caller already fetched it for
+                    isStock validation.  If None, falls back to fetching via HTTP.
 
     Returns:
         Embedded line dict ready for insertion into ar_invoices_v2.
@@ -499,8 +438,24 @@ async def _build_line_doc(
     Raises:
         ValueError: If sale_item_finance_ext missing or revenueAccountId null.
     """
-    tax_percent = await _get_tax_percent(db, tax_code_id, org_id)
-    revenue_account_id = await _get_revenue_account_id(item_id, org_id, auth_token)
+    tax_percent = await _get_tax_percent(tax_code_id, org_id, auth_token)
+
+    if _preloaded_finance_ext is not None:
+        # Reason: caller already fetched finance ext (e.g. for isStock gating);
+        # extract revenueAccountId directly to avoid a second HTTP round-trip.
+        rev_account = (
+            _preloaded_finance_ext.get("revenueAccountId")
+            or _preloaded_finance_ext.get("revenue_account_id")
+        )
+        if not rev_account:
+            raise ValueError(
+                f"Item '{item_id}' has a sale_item_finance_ext record but "
+                "revenueAccountId is null/empty. "
+                "Set a revenue GL account before invoicing."
+            )
+        revenue_account_id = str(rev_account)
+    else:
+        revenue_account_id = await _get_revenue_account_id(item_id, org_id, auth_token)
 
     amounts = _compute_line_amounts(
         quantity=quantity,
@@ -941,7 +896,7 @@ async def create_ar_invoice(
     1. Validate customer exists (lightweight check; fail-fast is on revenue account).
     2. For each line: look up revenue_account_id from the finance microservice's
        sale_item_finance_ext; raise ValueError if missing or null.
-    3. For each line: look up tax_percent from tax_codes (ops MongoDB).
+    3. For each line: look up tax_percent via HTTP from the finance microservice.
     4. Compute tax_date = min(date_of_supply, invoice_date).
     5. Compute due_date = doc_date + payment_terms_days (fallback 30).
     6. Compute line amounts (line_net, line_tax, line_gross) and header totals.
@@ -961,7 +916,8 @@ async def create_ar_invoice(
         ARInvoiceResponse for the newly-created DRAFT AR Invoice.
 
     Raises:
-        ValueError: If any item is missing sale_item_finance_ext or
+        ValueError: If any item is a stock item (must flow through Delivery),
+                    if any item is missing sale_item_finance_ext, or if
                     revenueAccountId is null.
     """
     # Step 3/4: Compute dates.
@@ -979,9 +935,28 @@ async def create_ar_invoice(
     tax_date_dt = _to_dt(tax_date)
     due_date_dt = _to_dt(due_date)
 
+    # Step 2-pre: Fetch finance ext for each line once, check isStock BEFORE any DB
+    # writes.  Collecting all exts up-front also eliminates a second HTTP round-trip
+    # inside _build_line_doc (_preloaded_finance_ext is forwarded below).
+    # Reason: stock items must flow through a Delivery Note; direct-invoicing them
+    # creates an accounting asymmetry (revenue without COGS).  Reject the entire
+    # request if any line is a stock item (no partial accepts).
+    line_finance_exts: List[Dict[str, Any]] = []
+    for line in payload.lines:
+        ext = await _get_item_finance_ext(line.item_id, org_id, auth_token)
+        # Reason: isStock defaults True (conservative) if field absent — matches
+        # the backfill heuristic: unknown items behave as stock until classified.
+        if ext.get("isStock", True):
+            raise ValueError(
+                f"Item '{line.item_name}' is a stock item and cannot be invoiced "
+                "directly. Create a Delivery Note first, then invoice from the Delivery."
+            )
+        line_finance_exts.append(ext)
+
     # Steps 2–3: Build lines with revenue account lookup + tax percent lookup.
+    # Pass the pre-fetched ext so _build_line_doc skips the second HTTP call.
     computed_lines: List[Dict[str, Any]] = []
-    for i, line in enumerate(payload.lines, start=1):
+    for i, (line, ext) in enumerate(zip(payload.lines, line_finance_exts), start=1):
         line_doc = await _build_line_doc(
             db,
             item_id=line.item_id,
@@ -999,6 +974,7 @@ async def create_ar_invoice(
             line_number=i,
             org_id=org_id,
             auth_token=auth_token,
+            _preloaded_finance_ext=ext,
         )
         computed_lines.append(line_doc)
 
@@ -1573,8 +1549,37 @@ async def update_ar_invoice(
     _delivery_doc_entry_for_update: Optional[str] = None
 
     if payload.lines is not None:
+        # Determine whether this is a direct-create ARI (no Delivery base).
+        # Reason: isStock gating only applies to direct-create invoices; from-Delivery
+        # invoices were already validated at Delivery time and must not be re-gated.
+        _update_base_ref = raw.get("baseDocRef") or {}
+        _update_is_direct = not bool(
+            _update_base_ref.get("docId") or _update_base_ref.get("doc_id")
+        )
+
+        # Pre-fetch finance exts for isStock check on direct-create invoices.
+        # Reason: reject the entire update (before any DB writes) if any new line
+        # contains a stock item on a direct-create invoice.
+        update_line_finance_exts: List[Optional[Dict[str, Any]]] = []
+        if _update_is_direct:
+            for line in payload.lines:
+                ext = await _get_item_finance_ext(line.item_id, org_id, auth_token)
+                if ext.get("isStock", True):
+                    raise ValueError(
+                        f"Item '{line.item_name}' is a stock item and cannot be "
+                        "invoiced directly. Create a Delivery Note first, then "
+                        "invoice from the Delivery."
+                    )
+                update_line_finance_exts.append(ext)
+        else:
+            # From-Delivery path: no isStock check; pass None so _build_line_doc
+            # falls back to its own HTTP lookup.
+            update_line_finance_exts = [None] * len(payload.lines)
+
         new_lines: List[Dict[str, Any]] = []
-        for i, line in enumerate(payload.lines, start=1):
+        for i, (line, ext) in enumerate(
+            zip(payload.lines, update_line_finance_exts), start=1
+        ):
             line_doc = await _build_line_doc(
                 db,
                 item_id=line.item_id,
@@ -1592,6 +1597,7 @@ async def update_ar_invoice(
                 line_number=i,
                 org_id=org_id,
                 auth_token=auth_token,
+                _preloaded_finance_ext=ext,
             )
             new_lines.append(line_doc)
 
@@ -2091,6 +2097,8 @@ async def transition_status(
         # Step 1: Re-validate revenue_account_id per line (catch deactivations).
         # Reason: call finance microservice via HTTP — sale_item_finance_ext is in
         # the finance service's MySQL DB, not in the ops MongoDB.
+        # Collect ext records so the isStock re-check (below) can reuse them.
+        transition_ext_records: Dict[str, Any] = {}  # item_id → ext or None
         for ln in invoice_lines:
             item_id = ln["itemId"]
             existing_rev_account = ln.get("revenueAccountId", "")
@@ -2109,6 +2117,29 @@ async def transition_status(
                     f"(Previously snapshotted as '{existing_rev_account}'.) "
                     "Fix the item finance configuration before posting."
                 )
+
+            transition_ext_records[item_id] = ext_record
+
+        # Step 1b: Re-validate isStock for direct-create ARIs.
+        # Reason: an admin may have flipped an item from service to stock while this
+        # ARI sat in DRAFT.  Re-check before posting to prevent revenue-without-COGS.
+        # Only applies to direct-create ARIs (no header baseDocRef pointing to a DN).
+        _transition_base_ref = raw.get("baseDocRef") or {}
+        _transition_is_direct = not bool(
+            _transition_base_ref.get("docId") or _transition_base_ref.get("doc_id")
+        )
+        if _transition_is_direct:
+            for ln in invoice_lines:
+                item_id = ln["itemId"]
+                item_name = ln.get("itemName", item_id)
+                ext_record = transition_ext_records.get(item_id)
+                # Reason: default True (conservative) if field absent — matches backfill.
+                if ext_record is not None and ext_record.get("isStock", True):
+                    raise ValueError(
+                        f"Cannot post AR Invoice '{doc_entry}': item '{item_name}' "
+                        "is now classified as a stock item. Create a Delivery Note "
+                        "first, then invoice from the Delivery."
+                    )
 
         # Step 2: Re-validate customer_finance_ext (for T-100.9b arControlAccountId).
         # Reason: call finance microservice via HTTP — customer_finance_ext is in

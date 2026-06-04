@@ -39,6 +39,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from src.core.documents.doc_number import next_doc_number
 from src.core.documents.document_status import DocumentStatus, assert_legal_transition
 
+from ._finance_ext_client import get_item_finance_ext as _get_item_finance_ext
+
 from ..models.return_requests import (
     ReturnRequestCreate,
     ReturnRequestLineCreate,
@@ -376,25 +378,63 @@ async def create_return_request(
     payload: ReturnRequestCreate,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> ReturnRequestResponse:
     """
     Create a new Return Request in DRAFT status.
 
     Sequence:
+    0b. isStock gate (direct path, no Delivery base): reject stock items.
     1. Build lines with computed amounts.
     2. Generate doc_number = "RR-YYYY-NNNN".
     3. Persist in DRAFT status.
     4. Audit-log.
 
     Args:
-        db:      Motor database instance.
-        payload: Validated ReturnRequestCreate payload.
-        org_id:  Organisation UUID for scoping.
-        user_id: Authenticated user creating the RR.
+        db:         Motor database instance.
+        payload:    Validated ReturnRequestCreate payload.
+        org_id:     Organisation UUID for scoping.
+        user_id:    Authenticated user creating the RR.
+        auth_token: Bearer token forwarded to the finance microservice for
+                    isStock lookups on direct Return Requests.
 
     Returns:
         ReturnRequestResponse for the newly-created DRAFT RR.
+
+    Raises:
+        ValueError: If any line is a stock item on a direct (no Delivery) RR.
     """
+    # Step 0b: isStock gate for direct Return Requests (no header baseDocRef).
+    # Reason: returning a stock item without a source Delivery reference creates
+    # an inventory reconciliation problem — the system cannot determine which
+    # Delivery shipped the goods being returned.  Stock returns must reference
+    # the original Delivery.
+    #
+    # NOTE (T-201.8, 2026-06-02): this gate is intentionally defensive — currently
+    # unreachable through the public API because `ReturnRequestCreate.base_doc_ref`
+    # is a required Pydantic field with a required `doc_id`, so Pydantic rejects
+    # any direct-create payload before this check runs.  The update + transition
+    # mirrors (below) are reachable because they read `raw["baseDocRef"]` from
+    # persisted state, which can be null after an admin-tool mutation.  Keep the
+    # create-path guard so behaviour stays correct if the schema is ever loosened
+    # to allow refund-without-original-shipment scenarios (filed for consideration
+    # as a possible follow-up; not in T-201.8 scope).
+    _rr_is_direct = not bool(
+        payload.base_doc_ref
+        and (
+            getattr(payload.base_doc_ref, "doc_id", None)
+            or (isinstance(payload.base_doc_ref, dict) and payload.base_doc_ref.get("doc_id"))
+        )
+    )
+    if _rr_is_direct:
+        for line in payload.lines:
+            ext = await _get_item_finance_ext(line.item_id, org_id, auth_token)
+            if ext.get("isStock", True):
+                raise ValueError(
+                    f"Item '{line.item_name}' is a stock item and cannot be returned "
+                    "without a Delivery. Reference the original Delivery Note."
+                )
+
     # Build lines
     computed_lines: List[Dict[str, Any]] = []
     for i, line in enumerate(payload.lines, start=1):
@@ -564,6 +604,7 @@ async def update_return_request(
     payload: ReturnRequestUpdate,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> Optional[ReturnRequestResponse]:
     """
     Partially update a DRAFT Return Request.
@@ -571,17 +612,20 @@ async def update_return_request(
     If payload.lines is supplied, replaces the line set wholesale.
 
     Args:
-        db:        Motor database instance.
-        doc_entry: UUID of the RR.
-        payload:   Validated ReturnRequestUpdate payload.
-        org_id:    Organisation UUID for scoping.
-        user_id:   Authenticated user performing the update.
+        db:         Motor database instance.
+        doc_entry:  UUID of the RR.
+        payload:    Validated ReturnRequestUpdate payload.
+        org_id:     Organisation UUID for scoping.
+        user_id:    Authenticated user performing the update.
+        auth_token: Bearer token forwarded to the finance microservice for
+                    isStock lookups on direct Return Requests.
 
     Returns:
         Updated ReturnRequestResponse, or None if not found.
 
     Raises:
-        ValueError: If the RR status is not DRAFT.
+        ValueError: If the RR status is not DRAFT, or if any new line is a
+                    stock item on a direct (no Delivery) Return Request.
     """
     raw = await db[_RR_COL].find_one(
         {"docEntry": doc_entry, "organizationId": org_id}
@@ -609,6 +653,22 @@ async def update_return_request(
             updates[db_key] = value
 
     if payload.lines is not None:
+        # isStock gate for direct Return Requests (no Delivery base).
+        # Reason: same constraint as create — stock returns must reference a Delivery.
+        _update_base_ref = raw.get("baseDocRef") or {}
+        _update_is_direct = not bool(
+            _update_base_ref.get("docId") or _update_base_ref.get("doc_id")
+        )
+        if _update_is_direct:
+            for line in payload.lines:
+                ext = await _get_item_finance_ext(line.item_id, org_id, auth_token)
+                if ext.get("isStock", True):
+                    raise ValueError(
+                        f"Item '{line.item_name}' is a stock item and cannot be "
+                        "returned without a Delivery. Reference the original "
+                        "Delivery Note."
+                    )
+
         new_lines: List[Dict[str, Any]] = []
         for i, line in enumerate(payload.lines, start=1):
             new_lines.append(_build_line_doc(line, line_number=i))
@@ -693,11 +753,14 @@ async def transition_status(
     request_body: ReturnRequestStatusTransitionRequest,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> Optional[ReturnRequestResponse]:
     """
     Transition a Return Request to a new status.
 
     DRAFT → OPEN: status flip only (no GL impact for RR).
+      For direct RRs (no Delivery base): re-validates isStock per line to catch
+      admin flag changes while the RR sat in DRAFT.
     OPEN → CLOSED: status flip only (manually closed).
     OPEN/DRAFT → CANCELLED: status flip only.
 
@@ -707,12 +770,15 @@ async def transition_status(
         request_body: Transition request with new_status and optional reason.
         org_id:       Organisation UUID for scoping.
         user_id:      Authenticated user performing the transition.
+        auth_token:   Bearer token forwarded to the finance microservice for
+                      isStock re-validation on DRAFT → OPEN.
 
     Returns:
         Updated ReturnRequestResponse, or None if not found.
 
     Raises:
-        ValueError: If the transition is illegal.
+        ValueError: If the transition is illegal, or if a direct RR has a stock
+                    item when transitioning DRAFT → OPEN.
     """
     raw = await db[_RR_COL].find_one(
         {"docEntry": doc_entry, "organizationId": org_id}
@@ -725,6 +791,34 @@ async def transition_status(
 
     # Reason: assert_legal_transition raises ValueError for illegal transitions.
     assert_legal_transition(_DOC_TYPE, current_status, new_status)
+
+    # DRAFT → OPEN: re-validate isStock for direct (no Delivery) RRs.
+    # Reason: catches edge case where an admin reclassified an item to stock
+    # after the RR was created as a DRAFT.
+    if (
+        current_status == DocumentStatus.DRAFT
+        and new_status == DocumentStatus.OPEN
+    ):
+        _trans_base_ref = raw.get("baseDocRef") or {}
+        _trans_is_direct = not bool(
+            _trans_base_ref.get("docId") or _trans_base_ref.get("doc_id")
+        )
+        if _trans_is_direct:
+            for rr_ln in raw.get("lines", []):
+                item_id_ln = rr_ln.get("itemId", "")
+                item_name_ln = rr_ln.get("itemName", item_id_ln)
+                try:
+                    ext_ln = await _get_item_finance_ext(item_id_ln, org_id, auth_token)
+                except ValueError:
+                    ext_ln = None
+                # Reason: fail-open on finance service unavailability to avoid blocking
+                # Return Requests when finance is down; isStock is a safeguard.
+                if ext_ln is not None and ext_ln.get("isStock", True):
+                    raise ValueError(
+                        f"Cannot open Return Request '{doc_entry}': item '{item_name_ln}' "
+                        "is now classified as a stock item. Reference the original "
+                        "Delivery Note instead of using a direct Return Request."
+                    )
 
     now = _now()
 

@@ -281,6 +281,7 @@ async def create_ar_credit_note_endpoint(
             payload=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_auth_token(request),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -303,6 +304,7 @@ async def create_ar_credit_note_endpoint(
     summary="Update draft AR Credit Note",
 )
 async def update_ar_credit_note_endpoint(
+    request: Request,
     doc_entry: str,
     body: ARCreditNoteUpdate,
     organization_id: Optional[str] = Query(None),
@@ -339,6 +341,7 @@ async def update_ar_credit_note_endpoint(
             payload=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_auth_token(request),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -425,6 +428,7 @@ async def delete_ar_credit_note_endpoint(
     summary="Transition AR Credit Note status",
 )
 async def transition_ar_credit_note_endpoint(
+    request: Request,
     doc_entry: str,
     body: ARCreditNoteStatusTransitionRequest,
     organization_id: Optional[str] = Query(None),
@@ -469,6 +473,7 @@ async def transition_ar_credit_note_endpoint(
             request_body=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_auth_token(request),
         )
     except ValueError as exc:
         raise HTTPException(

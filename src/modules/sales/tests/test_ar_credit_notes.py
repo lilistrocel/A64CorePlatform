@@ -62,6 +62,43 @@ from src.modules.sales.services.ar_credit_note_service import (
     update_ar_credit_note,
 )
 
+# ---------------------------------------------------------------------------
+# Finance ext mock
+#
+# T-201.8 added isStock gating to direct-path Credit Notes.  The service now
+# calls _get_item_finance_ext (via the shared _finance_ext_client) for isStock
+# validation.  Patch it module-wide to return isStock=False (service item) so
+# existing tests pass without hitting the live finance service.
+# ---------------------------------------------------------------------------
+
+_ARC_ITEM_FIN_EXT = {
+    "sale_item_finance_ext_id": "arc-ext-001",
+    "itemId": "item-001",
+    "revenueAccountId": "41000-001",
+    "cogsAccountId": "gl-cogs-001",
+    "isSellable": True,
+    # Reason: isStock=False prevents isStock gating from blocking existing tests
+    # that use service/fee items.  Tests that need isStock=True supply their own mock.
+    "isStock": False,
+}
+
+
+@pytest.fixture(autouse=True)
+def _mock_arc_item_finance_ext():
+    """
+    Auto-apply mock for _get_item_finance_ext in ar_credit_note_service.
+
+    Patches the imported name in the service module so the isStock gate
+    (added in T-201.8) does not call the live finance microservice during tests.
+    Returns isStock=False by default (service item).
+    """
+    with patch(
+        "src.modules.sales.services.ar_credit_note_service._get_item_finance_ext",
+        new_callable=AsyncMock,
+        return_value=_ARC_ITEM_FIN_EXT,
+    ):
+        yield
+
 
 # ---------------------------------------------------------------------------
 # Fake DB

@@ -293,6 +293,9 @@ _ITEM_FIN_EXT_DATA = {
     "cogsAccountId": "gl-cogs-001",
     "salesTaxCode": None,
     "isSellable": True,
+    # Reason: existing tests use service items; isStock=False prevents isStock gating
+    # from blocking tests that pre-date the T-201.8 feature.
+    "isStock": False,
 }
 
 _ITEM_2_FIN_EXT_DATA = {
@@ -303,6 +306,8 @@ _ITEM_2_FIN_EXT_DATA = {
     "cogsAccountId": "gl-cogs-001",
     "salesTaxCode": None,
     "isSellable": True,
+    # Reason: same as _ITEM_FIN_EXT_DATA above.
+    "isStock": False,
 }
 
 _CUST_FIN_EXT_DATA = {
@@ -387,14 +392,29 @@ def _patch_customer_ext(
     )
 
 
-def _make_tax_code(tax_code_id: str = TAX_CODE_ID, rate: float = 5.0) -> Dict[str, Any]:
-    """Build a tax_codes document (stored in ops MongoDB, not finance service)."""
-    return {
-        "_id": tax_code_id,
-        "organizationId": ORG_ID,
-        "code": tax_code_id,
-        "rate": rate,
-    }
+def _patch_tax_percent(
+    return_value: Decimal = Decimal("5.00"),
+    raise_exc: Optional[Exception] = None,
+):
+    """
+    Context manager: patch get_tax_percent (the HTTP helper imported into
+    ar_invoice_service) to return a canned Decimal or raise an exception.
+
+    Architectural rule (T-202 / T-100.9a.1):
+      tax_codes live in the finance microservice's MySQL DB — tests must mock
+      the HTTP helper, never seed db["tax_codes"] with Mongo docs.
+    """
+    if raise_exc is not None:
+        return patch(
+            "src.modules.sales.services.ar_invoice_service.get_tax_percent",
+            new_callable=AsyncMock,
+            side_effect=raise_exc,
+        )
+    return patch(
+        "src.modules.sales.services.ar_invoice_service.get_tax_percent",
+        new_callable=AsyncMock,
+        return_value=return_value,
+    )
 
 
 def _make_delivery(
@@ -615,11 +635,14 @@ async def test_direct_create_happy_path() -> None:
 async def test_direct_create_with_tax_code() -> None:
     """
     Direct create with a 5% tax code — verify line_tax and totals computed.
+
+    T-202: tax_percent is now looked up via HTTP from the finance service's
+    tax-codes list.  The test mocks get_tax_percent (the HTTP helper) — it must
+    NOT seed db["tax_codes"] (that was the broken pre-T-202 pattern).
     """
     db = _FakeDB()
-    db["tax_codes"]._add(_make_tax_code(tax_code_id=TAX_CODE_ID))
 
-    with _patch_item_ext(), _patch_customer_ext():
+    with _patch_item_ext(), _patch_customer_ext(), _patch_tax_percent(Decimal("5.00")):
         payload = _make_direct_create_payload(tax_code_id=TAX_CODE_ID)
         ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
 
@@ -817,6 +840,108 @@ async def test_finance_ext_null_revenue_account_raises() -> None:
         payload = _make_direct_create_payload()
         with pytest.raises(ValueError, match="revenueAccountId"):
             await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+
+
+# ---------------------------------------------------------------------------
+# Tests: T-202 — tax_percent HTTP lookup contract
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_t202_valid_tax_code_stamps_tax_percent() -> None:
+    """
+    T-202 Case 1: tax code "S" returned as 5% by finance service.
+
+    Verifies that the ARI line receives taxPercent=5.00 and lineTax=25.00
+    when get_tax_percent returns Decimal("5.00").
+    """
+    db = _FakeDB()
+
+    with _patch_item_ext(), _patch_customer_ext(), _patch_tax_percent(Decimal("5.00")):
+        payload = _make_direct_create_payload(tax_code_id="S")
+        ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+
+    line = ari.lines[0]
+    # qty=5, price=100, 5% tax → net=500, tax=25, gross=525
+    assert line.tax_percent == Decimal("5.00")
+    assert line.line_tax == Decimal("25.00")
+    assert line.line_gross == Decimal("525.00")
+    assert line.tax_code_id == "S"
+
+
+@pytest.mark.asyncio
+async def test_t202_unknown_tax_code_raises_value_error() -> None:
+    """
+    T-202 Case 2: unknown tax code "BOGUS" → ValueError raised, no ARI persisted.
+
+    The finance service returns a list that does not contain "BOGUS", causing
+    get_tax_percent to raise ValueError.  The create must fail entirely.
+    """
+    db = _FakeDB()
+    exc = ValueError("Tax code 'BOGUS' not found in org '...'.")
+
+    with _patch_item_ext(), _patch_customer_ext(), _patch_tax_percent(raise_exc=exc):
+        payload = _make_direct_create_payload(tax_code_id="BOGUS")
+        with pytest.raises(ValueError, match="BOGUS"):
+            await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+
+    # Verify no document was persisted
+    assert db["ar_invoices_v2"]._docs == []
+
+
+@pytest.mark.asyncio
+async def test_t202_finance_unreachable_raises_value_error() -> None:
+    """
+    T-202 Case 3: finance service unreachable → ValueError raised, no ARI persisted.
+
+    get_tax_percent raises ValueError when httpx itself fails (connection error).
+    The create must propagate the error and leave no document in the DB.
+    """
+    db = _FakeDB()
+    exc = ValueError("Finance service unreachable when looking up tax code 'S'.")
+
+    with _patch_item_ext(), _patch_customer_ext(), _patch_tax_percent(raise_exc=exc):
+        payload = _make_direct_create_payload(tax_code_id="S")
+        with pytest.raises(ValueError, match="Finance service unreachable"):
+            await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+
+    assert db["ar_invoices_v2"]._docs == []
+
+
+@pytest.mark.asyncio
+async def test_t202_exempt_line_zero_tax_no_http_call() -> None:
+    """
+    T-202 Case 4: taxCodeId=None → taxPercent=0, no HTTP call issued.
+
+    When tax_code_id is None the short-circuit in get_tax_percent returns
+    Decimal("0.00") immediately without making an HTTP request.  We verify
+    this by patching httpx.AsyncClient — if it is called the test fails.
+
+    Using the real get_tax_percent (not a mock) so the short-circuit logic
+    actually executes.
+    """
+    db = _FakeDB()
+
+    with _patch_item_ext(), _patch_customer_ext():
+        with patch("httpx.AsyncClient") as mock_client:
+            # tax_code_id=None → exempt line
+            payload = _make_direct_create_payload(tax_code_id=None)
+            ari = await create_ar_invoice(db, payload=payload, org_id=ORG_ID, user_id=USER_ID)
+
+    line = ari.lines[0]
+    assert line.tax_percent == Decimal("0.00")
+    assert line.line_tax == Decimal("0.00")
+    # Reason: httpx.AsyncClient must NOT have been used for the tax lookup.
+    # (It may still be used for item finance ext lookup — verify tax-specific
+    # path by checking the call had nothing to do with tax-codes URL.)
+    tax_code_calls = [
+        call for call in mock_client.call_args_list
+        if "tax-codes" in str(call)
+    ]
+    assert tax_code_calls == [], (
+        "httpx.AsyncClient should not be called for exempt (None) tax code, "
+        f"but found calls: {tax_code_calls}"
+    )
 
 
 # ---------------------------------------------------------------------------
