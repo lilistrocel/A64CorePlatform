@@ -1,5 +1,5 @@
 """
-Purchasing Module — Document Chain Reconciler Adapter (T-200.22)
+Purchasing Module — Document Chain Reconciler Adapter (T-200.22 + T-200.23)
 
 Implements SAP B1-style document chain mechanics for the purchasing PR → PO →
 GR → AP Invoice chain, mirroring what T-201.5/.6/.7 and T-201.9.0 added for
@@ -57,6 +57,11 @@ Exports
 - ``reconcile_gr_line_invoice_counters`` — $inc invoicedQty on GR lines
 - ``pull_dangling_po_chain_refs``        — $pull stale GR docId from PO targetDocRefs
 - ``pull_dangling_gr_chain_refs``        — $pull stale AP docId from GR targetDocRefs
+- ``load_ap_with_lines``                — reload AP header + lines as embedded shape (T-200.23)
+- ``reconcile_ap_line_credit_counters`` — $inc creditedQty on AP lines + creditedAmount on AP header (T-200.23)
+- ``auto_close_ap_if_fully_credited``   — auto-close AP on full credit (T-200.23)
+- ``auto_reopen_ap_if_not_fully_credited`` — auto-reopen AP when credit released (T-200.23)
+- ``pull_dangling_ap_credit_refs``      — $pull stale ACN docId from AP targetDocRefs (T-200.23)
 """
 
 from __future__ import annotations
@@ -816,6 +821,364 @@ async def pull_dangling_gr_chain_refs(
         {"docId": gr_doc_id, "organizationId": org_id},
         {
             "$pull": {"targetDocRefs": {"docId": ap_doc_id}},
+            "$set": {"updatedAt": now, "updatedBy": user_id},
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-200.23 — AP Credit Note chain helpers
+# ---------------------------------------------------------------------------
+
+_ACN_AUDIT_COL = "ap_credit_notes_v2_audit"
+_AP_INVOICES_COL = "ap_invoices_v2"
+
+
+async def load_ap_with_lines(
+    db: AsyncIOMotorDatabase,
+    *,
+    org_id: str,
+    ap_doc_id: str,
+) -> Optional[Dict[str, Any]]:
+    """
+    Reload an AP Invoice header and its lines, returning a synthetic embedded-lines doc.
+
+    AP Invoices live in the ``ap_invoices_v2`` collection (not document_headers).
+    This loader returns a synthetic dict that mirrors the shape expected by the
+    AP Credit Note service for cap-check and auto-close decisions.
+
+    The returned dict normalises AP Invoice lines for credit counter checks:
+    - ``orderedQty``  = AP line ``quantity`` (total invoiced at creation)
+    - ``invoicedQty`` = 0 (not applicable for credit-side counting)
+    - ``creditedQty`` = AP line ``creditedQty`` (added by T-200.23; 0 if absent)
+
+    Args:
+        db:        Motor database instance.
+        org_id:    Organisation UUID for query scoping.
+        ap_doc_id: AP Invoice ``docId`` UUID string.
+
+    Returns:
+        Dict with header fields + synthetic ``lines`` array, or None if not found.
+    """
+    header = await db[_AP_INVOICES_COL].find_one(
+        {"docId": ap_doc_id, "organizationId": org_id, "deletedAt": None}
+    )
+    if not header:
+        return None
+
+    raw_lines: List[Dict[str, Any]] = header.get("lines", [])
+
+    synthetic_lines: List[Dict[str, Any]] = [
+        {
+            "lineId": ln["lineId"],
+            # Reason: orderedQty = total AP line qty (locked to GR received qty in v1).
+            "orderedQty": float(ln.get("quantity", 0)),
+            # Reason: creditedQty tracks how much has been credited against this AP line.
+            # Default to 0.0 for pre-T-200.23 AP lines.
+            "creditedQty": float(ln.get("creditedQty", 0)),
+            # Reason: invoicedQty not applicable for the credit counter direction.
+            "invoicedQty": 0.0,
+            "cancelledQty": 0.0,
+        }
+        for ln in raw_lines
+    ]
+
+    result = dict(header)
+    result["lines"] = synthetic_lines
+    return result
+
+
+async def reconcile_ap_line_credit_counters(
+    db: AsyncIOMotorDatabase,
+    *,
+    ap_doc_id: str,
+    org_id: str,
+    user_id: str,
+    acn_doc_id: str,
+    line_deltas: Dict[str, Decimal],
+    gross_delta: Decimal,
+    cap_check: bool = True,
+) -> None:
+    """
+    Apply per-line credit-qty deltas to AP Invoice lines (``creditedQty`` field)
+    and increment the AP Invoice header's ``creditedAmount``.
+
+    Positive deltas = more credited (ACN posting).
+    Negative deltas = qty released (ACN deletion or cancellation).
+
+    When ``cap_check=True``, positive deltas are validated against the remaining
+    creditable qty on each AP line (``quantity - creditedQty``).
+
+    AP Invoice lines are embedded in the ``ap_invoices_v2`` header document.
+    This function uses the positional ``$`` operator to update embedded lines.
+
+    Args:
+        db:           Motor database instance.
+        ap_doc_id:    AP Invoice ``docId`` UUID string.
+        org_id:       Organisation UUID.
+        user_id:      User stamped on ``updatedBy``.
+        acn_doc_id:   AP Credit Note ``docId`` (for error messages).
+        line_deltas:  Mapping of AP line ``lineId`` → net qty delta to apply.
+        gross_delta:  Net gross amount delta to apply to header ``creditedAmount``.
+        cap_check:    When True, validate positive deltas against available creditedQty.
+
+    Returns:
+        None.
+
+    Raises:
+        ValueError: If ``cap_check=True`` and a delta exceeds line's creditable qty.
+    """
+    significant = {
+        lid: delta
+        for lid, delta in line_deltas.items()
+        if abs(delta) > TOLERANCE
+    }
+    if not significant and abs(gross_delta) <= TOLERANCE:
+        return
+
+    now = _now()
+
+    # Reload the AP Invoice header to get current embedded line state.
+    ap_header = await db[_AP_INVOICES_COL].find_one(
+        {"docId": ap_doc_id, "organizationId": org_id}
+    )
+    if ap_header is None:
+        logger.warning(
+            "[PurchasingChainReconciler] AP Invoice '%s' not found for credit counter update",
+            ap_doc_id,
+        )
+        return
+
+    ap_lines: List[Dict[str, Any]] = ap_header.get("lines", [])
+    ap_lines_map: Dict[str, Dict[str, Any]] = {
+        ln["lineId"]: ln for ln in ap_lines
+    }
+
+    if cap_check:
+        # Reason: validate ALL positive deltas before any update to prevent
+        # partial-batch inconsistency (all-or-nothing pre-flight).
+        for line_id, delta in significant.items():
+            if delta > _ZERO:
+                ap_ln = ap_lines_map.get(line_id)
+                if ap_ln is not None:
+                    total_qty = Decimal(str(ap_ln.get("quantity", 0)))
+                    already_credited = Decimal(str(ap_ln.get("creditedQty", 0)))
+                    open_credit_qty = total_qty - already_credited
+                    if delta > open_credit_qty + TOLERANCE:
+                        raise ValueError(
+                            f"Cannot post AP Credit Note '{acn_doc_id}': "
+                            f"credit quantity for AP Invoice line '{line_id}' "
+                            f"({float(delta):.4f}) exceeds available "
+                            f"creditable qty={float(open_credit_qty):.4f}. "
+                            "Reduce the credited quantity."
+                        )
+
+    # Apply per-line creditedQty increments using the positional $ operator.
+    for line_id, delta in significant.items():
+        await db[_AP_INVOICES_COL].update_one(
+            {"docId": ap_doc_id, "organizationId": org_id, "lines.lineId": line_id},
+            {
+                "$inc": {"lines.$.creditedQty": float(delta)},
+                "$set": {"updatedAt": now, "updatedBy": user_id},
+            },
+        )
+
+    # Update header-level creditedAmount.
+    if abs(gross_delta) > TOLERANCE:
+        await db[_AP_INVOICES_COL].update_one(
+            {"docId": ap_doc_id, "organizationId": org_id},
+            {
+                "$inc": {"creditedAmount": float(gross_delta)},
+                "$set": {"updatedAt": now, "updatedBy": user_id},
+            },
+        )
+
+
+async def auto_close_ap_if_fully_credited(
+    db: AsyncIOMotorDatabase,
+    *,
+    ap_doc_id: str,
+    ap_raw: Dict[str, Any],
+    org_id: str,
+    user_id: str,
+    action: str = "auto_close_on_full_credit",
+    extra_detail: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """
+    Transition an AP Invoice from OPEN (or PARTLY_CLOSED) to CLOSED when
+    the entire gross amount has been credited by AP Credit Notes.
+
+    The check compares ``creditedAmount`` (updated by reconcile_ap_line_credit_counters)
+    against ``totalGross`` on the AP Invoice header.  Closes if
+    ``creditedAmount >= totalGross - TOLERANCE``.
+
+    Uses the ``ap_invoices_v2`` collection (not document_headers).
+
+    Args:
+        db:           Motor database instance.
+        ap_doc_id:    AP Invoice ``docId`` UUID string.
+        ap_raw:       Current AP Invoice header doc (pre-reload acceptable here;
+                      the function re-reads creditedAmount from ``ap_raw``).
+        org_id:       Organisation UUID.
+        user_id:      User who triggered the originating ACN operation.
+        action:       Audit action label.
+        extra_detail: Additional audit detail keys.
+
+    Returns:
+        True if the AP Invoice was transitioned to CLOSED, False otherwise.
+    """
+    if ap_raw is None:
+        return False
+
+    current_status = ap_raw.get("status", "")
+    # Reason: only close if AP is in a non-terminal, creditable state.
+    if current_status not in {
+        DocumentStatus.OPEN.value,
+        DocumentStatus.PARTLY_CLOSED.value,
+    }:
+        return False
+
+    # Re-read the post-increment state to get the correct creditedAmount.
+    ap_refreshed = await db[_AP_INVOICES_COL].find_one(
+        {"docId": ap_doc_id, "organizationId": org_id}
+    )
+    if ap_refreshed is None:
+        return False
+
+    total_gross = Decimal(str(ap_refreshed.get("totalGross", 0)))
+    credited = Decimal(str(ap_refreshed.get("creditedAmount", 0)))
+
+    if credited < total_gross - TOLERANCE:
+        return False
+
+    now = _now()
+    await db[_AP_INVOICES_COL].update_one(
+        {"docId": ap_doc_id, "organizationId": org_id},
+        {
+            "$set": {
+                "status": DocumentStatus.CLOSED.value,
+                "updatedAt": now,
+                "updatedBy": user_id,
+            }
+        },
+    )
+    logger.info(
+        "[PurchasingChainReconciler] AP Invoice '%s' auto-closed on full credit by user '%s'",
+        ap_doc_id,
+        user_id,
+    )
+    await write_purchasing_audit(
+        db,
+        audit_collection=_AP_AUDIT_COL,
+        doc_id=ap_doc_id,
+        action=action,
+        user_id=user_id,
+        detail=dict(extra_detail or {}),
+    )
+    return True
+
+
+async def auto_reopen_ap_if_not_fully_credited(
+    db: AsyncIOMotorDatabase,
+    *,
+    ap_doc_id: str,
+    org_id: str,
+    user_id: str,
+    action: str = "auto_reopen_on_credit_release",
+    extra_detail: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """
+    Transition an AP Invoice from CLOSED back to OPEN when a credit note
+    against it is cancelled or deleted, releasing the credited amount.
+
+    Re-reads the AP Invoice from MongoDB to get the post-decrement state.
+    Only acts if the AP is currently CLOSED and the remaining credited amount
+    no longer covers the full gross.
+
+    Args:
+        db:           Motor database instance.
+        ap_doc_id:    AP Invoice ``docId`` UUID string.
+        org_id:       Organisation UUID.
+        user_id:      User who triggered the credit release.
+        action:       Audit action label.
+        extra_detail: Additional audit detail keys.
+
+    Returns:
+        True if the AP Invoice was reopened, False otherwise.
+    """
+    ap_refreshed = await db[_AP_INVOICES_COL].find_one(
+        {"docId": ap_doc_id, "organizationId": org_id}
+    )
+    if ap_refreshed is None:
+        return False
+
+    if ap_refreshed.get("status") != DocumentStatus.CLOSED.value:
+        return False
+
+    total_gross = Decimal(str(ap_refreshed.get("totalGross", 0)))
+    credited = Decimal(str(ap_refreshed.get("creditedAmount", 0)))
+
+    if credited >= total_gross - TOLERANCE:
+        # Still fully credited — don't reopen.
+        return False
+
+    now = _now()
+    await db[_AP_INVOICES_COL].update_one(
+        {"docId": ap_doc_id, "organizationId": org_id},
+        {
+            "$set": {
+                "status": DocumentStatus.OPEN.value,
+                "updatedAt": now,
+                "updatedBy": user_id,
+            }
+        },
+    )
+    logger.info(
+        "[PurchasingChainReconciler] AP Invoice '%s' auto-reopened after credit release by user '%s'",
+        ap_doc_id,
+        user_id,
+    )
+    await write_purchasing_audit(
+        db,
+        audit_collection=_AP_AUDIT_COL,
+        doc_id=ap_doc_id,
+        action=action,
+        user_id=user_id,
+        detail=dict(extra_detail or {}),
+    )
+    return True
+
+
+async def pull_dangling_ap_credit_refs(
+    db: AsyncIOMotorDatabase,
+    *,
+    ap_doc_id: str,
+    org_id: str,
+    user_id: str,
+    acn_doc_id: str,
+) -> None:
+    """
+    Remove stale ``targetDocRefs`` entries from an AP Invoice header after a
+    Draft AP Credit Note is deleted.
+
+    The AP Invoice header's ``targetDocRefs`` array stores ACN back-pointers.
+    This function ``$pull``s the entry whose ``docId`` matches the deleted ACN.
+
+    Args:
+        db:        Motor database instance.
+        ap_doc_id: AP Invoice ``docId`` UUID string.
+        org_id:    Organisation UUID.
+        user_id:   User performing the operation (stamped on ``updatedBy``).
+        acn_doc_id: ``docId`` of the AP Credit Note being deleted.
+
+    Returns:
+        None.
+    """
+    now = _now()
+    await db[_AP_INVOICES_COL].update_one(
+        {"docId": ap_doc_id, "organizationId": org_id},
+        {
+            "$pull": {"targetDocRefs": {"docId": acn_doc_id}},
             "$set": {"updatedAt": now, "updatedBy": user_id},
         },
     )

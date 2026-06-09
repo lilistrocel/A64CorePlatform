@@ -6,6 +6,7 @@ Phase 1A: vendors, purchase_items, payment_terms
 Phase 1B: purchase_requests, purchase_orders, approvals
 Phase B.1: goods_receipts
 Phase C.1: ap_invoices
+Wave 4 / T-200.23: ap_credit_notes
 """
 
 from fastapi import APIRouter
@@ -18,6 +19,7 @@ from .purchase_orders import router as po_router
 from .approvals import router as approvals_router
 from .goods_receipts import router as gr_router
 from .ap_invoices import router as ap_router
+from .ap_credit_notes import router as acn_router
 
 api_router = APIRouter()
 
@@ -29,3 +31,4 @@ api_router.include_router(po_router)
 api_router.include_router(approvals_router)
 api_router.include_router(gr_router)
 api_router.include_router(ap_router)
+api_router.include_router(acn_router)

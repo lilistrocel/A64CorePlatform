@@ -142,6 +142,10 @@ class DocumentLineResponse(BaseModel):
     frontend can read it under its semantic name. Populated for AP lines."""
     priceVarianceAmount: Optional[Decimal] = None
     """(invoiceUnitPrice - poUnitPrice) * quantity. Populated only on AP lines."""
+    # Reason: T-200.23 — tracks how much of this AP Invoice line's quantity has
+    # been reversed by AP Credit Notes. Defaults to 0 on existing lines.
+    creditedQty: Decimal = Decimal("0")
+    """Quantity credited against this AP Invoice line by AP Credit Notes. 0 before T-200.23."""
     createdAt: datetime
     updatedAt: datetime
 
@@ -627,6 +631,11 @@ class APResponse(BaseModel):
     postedAt: Optional[datetime] = None
     postedBy: Optional[str] = None
     postedEventId: Optional[str] = None
+    # Reason: T-200.23 — tracks how much of the AP Invoice gross has been
+    # reversed by AP Credit Notes. Defaults to 0 on existing docs (no migration
+    # needed; reconcile_ap_line_credit_counters uses $inc which creates the field
+    # if absent, and 0 is the correct default for pre-T-200.23 invoices).
+    creditedAmount: Decimal = Decimal("0")
     createdAt: datetime
     updatedAt: datetime
     deletedAt: Optional[datetime] = None
@@ -636,3 +645,277 @@ class APDetailResponse(APResponse):
     """AP Invoice header plus line items."""
 
     lines: List[DocumentLineResponse] = []
+
+
+# ---------------------------------------------------------------------------
+# AP Credit Note schemas (T-200.23 — Wave 4)
+# ---------------------------------------------------------------------------
+
+
+class DocumentLinkRef(BaseModel):
+    """
+    A cross-document link reference.
+
+    Used on both header-level (baseInvoiceDocRef) and line-level
+    (base_doc_ref) fields to record the originating document.
+
+    Attributes:
+        doc_type:   Document type code, e.g. "AP_INVOICE".
+        doc_id:     UUID of the source document.
+        doc_number: Human-readable document number for display.
+        line_id:    Optional UUID of the specific source line.
+    """
+
+    doc_type: str
+    doc_id: str
+    doc_number: str
+    line_id: Optional[str] = None
+
+
+class APCreditNoteLineCreate(BaseModel):
+    """
+    One line in an AP Credit Note creation/update payload.
+
+    Mirrors CreditNoteLineCreate from the sales side but adapted for the
+    purchasing schema: no revenue account, uses AP_TAX_RATES dict, carries
+    an optional gr_line_id for chain audit purposes.
+
+    Attributes:
+        gr_line_id:       Link to the originating GR line (for audit).
+                          Populated on from-AP-Invoice path via the AP line's grLineId.
+                          None on direct-create path.
+        item_id:          UUID of the item being credited.
+        item_code:        Item code for display.
+        item_name:        Item name for display.
+        description:      Optional override description.
+        quantity:         Credited quantity (must be > 0).
+        uom:              Unit of measure.
+        unit_price:       Credit unit price (usually mirrors AP line price).
+        discount_percent: Line discount 0–100.
+        tax_code:         Tax code key from AP_TAX_RATES.
+        cost_center_id:   Optional cost centre reference.
+        notes:            Optional per-line notes.
+        base_doc_ref:     Line-level link to the source AP Invoice line.
+                          Set on from-AP-Invoice path; None on direct-create.
+    """
+
+    gr_line_id: Optional[str] = None
+    item_id: str
+    item_code: str
+    item_name: str
+    description: Optional[str] = Field(None, max_length=500)
+    quantity: Decimal = Field(..., gt=0)
+    uom: str = Field(..., max_length=50)
+    unit_price: Decimal = Field(..., ge=0)
+    discount_percent: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    tax_code: Optional[str] = Field(None, max_length=20)
+    cost_center_id: Optional[str] = Field(None, max_length=20)
+    notes: Optional[str] = Field(None, max_length=500)
+    base_doc_ref: Optional[DocumentLinkRef] = None
+
+
+class APCreditNoteCreate(BaseModel):
+    """
+    Input schema for creating a new AP Credit Note.
+
+    Supports two creation paths:
+    - Direct-create (base_invoice_doc_ref is None): free-standing credit note
+      for vendor billing corrections, price adjustments, etc.
+    - From-AP-Invoice (base_invoice_doc_ref is set): chained from an existing
+      OPEN or PARTLY_CLOSED AP Invoice.
+
+    organizationId comes from the JWT.
+
+    Attributes:
+        vendor_id:              UUID of the vendor.
+        vendor_name:            Vendor name (denormalised for display).
+        company_code:           Finance company code. Backend resolves if empty.
+        doc_date:               Accounting/posting date.
+        credit_date:            Date the credit is issued (defaults to doc_date).
+        due_date:               Payment/credit due date (optional).
+        currency:               ISO 4217 currency code.
+        exchange_rate:          FX rate against base currency.
+        payment_terms_id:       Optional payment terms reference.
+        bp_ref_no:              Vendor's credit memo reference number.
+        journal_memo:           Free-text memo for the finance JE.
+        notes:                  Internal notes.
+        base_invoice_doc_ref:   Set on from-AP-Invoice path; None for direct.
+        lines:                  At least one line item.
+    """
+
+    vendor_id: str
+    vendor_name: str
+    vendor_code: Optional[str] = None
+    company_code: str = Field(default="")
+    doc_date: Optional[datetime] = Field(
+        None, description="Accounting date; defaults to today when omitted"
+    )
+    credit_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    currency: str = Field(default="AED", max_length=10)
+    exchange_rate: Decimal = Field(default=Decimal("1"), ge=0)
+    payment_terms_id: Optional[str] = None
+    bp_ref_no: Optional[str] = Field(None, max_length=100)
+    journal_memo: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=2000)
+    base_invoice_doc_ref: Optional[DocumentLinkRef] = None
+    lines: List[APCreditNoteLineCreate] = Field(..., min_length=1)
+
+
+class APCreditNoteUpdate(BaseModel):
+    """
+    Partial update for a Draft AP Credit Note.
+
+    Lines, when supplied, replace the current set wholesale.
+    base_invoice_doc_ref, vendor, and companyCode are immutable after creation.
+
+    Only DRAFT credit notes may be updated.
+    """
+
+    doc_date: Optional[datetime] = None
+    credit_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    currency: Optional[str] = Field(None, max_length=10)
+    exchange_rate: Optional[Decimal] = None
+    payment_terms_id: Optional[str] = None
+    bp_ref_no: Optional[str] = Field(None, max_length=100)
+    journal_memo: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=2000)
+    lines: Optional[List[APCreditNoteLineCreate]] = None
+
+
+class APCreditNoteTotals(BaseModel):
+    """Aggregated monetary totals for an AP Credit Note."""
+
+    net: Decimal
+    tax: Decimal
+    gross: Decimal
+
+
+class APCreditNoteLine(BaseModel):
+    """
+    Embedded line response shape for an AP Credit Note.
+
+    Mirrors DocumentLineResponse but uses credit semantics (no openQuantity /
+    closedQuantity since credit notes don't themselves get partially consumed).
+    """
+
+    line_id: str
+    line_number: int
+    gr_line_id: Optional[str] = None
+    item_id: str
+    item_code: str
+    item_name: str
+    description: Optional[str] = None
+    quantity: Decimal
+    uom: str
+    unit_price: Decimal
+    discount_percent: Decimal
+    line_net: Decimal
+    tax_code: Optional[str] = None
+    tax_rate: Decimal
+    line_tax: Decimal
+    line_gross: Decimal
+    cost_center_id: Optional[str] = None
+    notes: Optional[str] = None
+    base_doc_ref: Optional[DocumentLinkRef] = None
+
+
+class APCreditNoteStatusTransitionRequest(BaseModel):
+    """
+    Request body for AP Credit Note status transitions.
+
+    Attributes:
+        target_status: The desired new status (as the DocumentStatus enum value string).
+        notes:         Optional free-text reason / approver comment.
+    """
+
+    target_status: str
+    notes: Optional[str] = Field(None, max_length=1000)
+
+
+class APCreditNoteResponse(BaseModel):
+    """
+    Full response schema for an AP Credit Note (header + embedded lines).
+
+    Used for GET /ap-credit-notes/{doc_id} and as the result of create/update.
+
+    Attributes:
+        doc_id:               UUID primary key (stored as ``docId`` in MongoDB).
+        doc_number:           Human-readable number, e.g. "APC-2026-0001".
+        doc_type:             Always "AP_CREDIT".
+        organization_id:      Organisation scope UUID.
+        company_code:         Finance company code.
+        vendor_id:            UUID of the vendor.
+        vendor_code:          Vendor code (denormalised).
+        vendor_name:          Vendor name (denormalised).
+        bp_ref_no:            Vendor's credit memo reference.
+        doc_date:             Accounting date.
+        credit_date:          Date credit was issued.
+        due_date:             Optional payment/credit due date.
+        currency:             ISO 4217 currency code.
+        exchange_rate:        FX rate.
+        payment_terms_id:     Optional payment terms.
+        status:               Current document status.
+        totals:               Aggregated net/tax/gross.
+        base_invoice_doc_ref: Source AP Invoice reference (or None if direct).
+        target_doc_refs:      Downstream document references (future payments).
+        journal_memo:         Finance JE memo.
+        notes:                Internal notes.
+        outbox_event_id:      ID of the ap_credit_note_posted outbox event.
+        outbox_event_emitted_at: Timestamp the event was emitted.
+        lines:                Embedded line items.
+        created_at:           Creation timestamp.
+        created_by:           UUID of the creating user.
+        updated_at:           Last update timestamp.
+        updated_by:           UUID of the last updating user.
+    """
+
+    doc_id: str
+    doc_number: str
+    doc_type: str = "AP_CREDIT"
+    organization_id: str
+    company_code: str
+    vendor_id: str
+    vendor_code: Optional[str] = None
+    vendor_name: str
+    bp_ref_no: Optional[str] = None
+    doc_date: datetime
+    credit_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    currency: str
+    exchange_rate: Decimal
+    payment_terms_id: Optional[str] = None
+    status: str
+    totals: APCreditNoteTotals
+    base_invoice_doc_ref: Optional[DocumentLinkRef] = None
+    target_doc_refs: List[DocumentLinkRef] = []
+    journal_memo: Optional[str] = None
+    notes: Optional[str] = None
+    outbox_event_id: Optional[str] = None
+    outbox_event_emitted_at: Optional[datetime] = None
+    lines: List[APCreditNoteLine] = []
+    created_at: datetime
+    created_by: str
+    updated_at: datetime
+    updated_by: str
+
+
+class APCreditNoteListItem(BaseModel):
+    """
+    Slim list-view schema for AP Credit Notes.
+
+    Used in paginated GET /ap-credit-notes to avoid transmitting full line sets.
+    """
+
+    doc_id: str
+    doc_number: str
+    organization_id: str
+    vendor_id: str
+    vendor_name: str
+    doc_date: datetime
+    status: str
+    totals: APCreditNoteTotals
+    base_invoice_doc_ref: Optional[DocumentLinkRef] = None
+    created_at: datetime
+    updated_at: datetime
