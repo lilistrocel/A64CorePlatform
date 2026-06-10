@@ -80,8 +80,10 @@ from ..models.document import (
     APFromGRCreate,
     APResponse,
     APUpdate,
+    AppliedDPIAllocation,
     ApprovalHistoryEntry,
     ApprovalHistoryItem,
+    DPIAllocation,
     DocType,
     DocumentLineCreate,
     DocumentLineResponse,
@@ -106,14 +108,18 @@ from .purchasing_chain_reconciler import (
     _GR_AUDIT_COL,
     _PO_AUDIT_COL,
     _PR_AUDIT_COL,
+    auto_close_dpi_if_fully_consumed,
     auto_close_gr_if_fully_invoiced,
     auto_close_po_if_fully_received,
+    auto_reopen_dpi_if_not_fully_consumed,
     auto_reopen_gr_if_not_fully_invoiced,
     auto_reopen_po_if_not_fully_received,
     load_gr_with_lines,
     load_po_with_lines,
+    pull_dangling_dpi_allocation_refs,
     pull_dangling_gr_chain_refs,
     pull_dangling_po_chain_refs,
+    reconcile_dpi_consumption,
     reconcile_gr_line_invoice_counters,
     reconcile_po_line_receipt_counters,
     write_purchasing_audit,
@@ -703,6 +709,11 @@ def _header_to_ap_response(doc: Dict[str, Any]) -> "APResponse":
         createdAt=doc["createdAt"],
         updatedAt=doc["updatedAt"],
         deletedAt=doc.get("deletedAt"),
+        # T-200.24: surface DPI allocations that were linked at AP creation time
+        dpiAllocations=[
+            AppliedDPIAllocation(**alloc) if isinstance(alloc, dict) else alloc
+            for alloc in doc.get("dpiAllocations", [])
+        ],
     )
 
 
@@ -3681,6 +3692,88 @@ class DocumentService:
         from datetime import timedelta
         due_date = data.dueDate or (invoice_date + timedelta(days=30))
 
+        # -----------------------------------------------------------------------
+        # T-200.24 — DPI allocation pre-flight validation
+        # -----------------------------------------------------------------------
+        # Validate each requested DPI allocation BEFORE entering the transaction.
+        # Rules:
+        #   1. DPI must exist + be OPEN or PARTLY_CLOSED.
+        #   2. DPI must belong to the same vendor as the GR/AP.
+        #   3. DPI must be in the same currency as the GR.
+        #   4. allocated_amount <= DPI outstanding_amount (gross - consumedAmount).
+        #   5. Sum of all allocations <= AP totalGross.
+        # Stores validated allocations as a list of dicts on the AP header.
+        # The actual $inc consumedAmount on DPIs fires at AP DRAFT→OPEN (approve_ap).
+
+        _DPI_COL = "ap_down_payments_v2"
+        _DPI_ALLOCATABLE_STATUSES = {"open", "partly_closed"}
+
+        vendor_id_from_gr = gr_header["vendorId"]
+        currency_from_gr = gr_header.get("currencyCode", "AED")
+        ap_total_gross = Decimal(str(totals.get("totalGross", 0)))
+
+        validated_dpi_allocations: List[Dict[str, Any]] = []
+        total_allocated = Decimal("0")
+
+        for alloc in (data.dpi_allocations or []):
+            alloc_amount = Decimal(str(alloc.allocated_amount))
+            dpi_raw = await self._db[_DPI_COL].find_one(
+                {"docId": alloc.dpi_doc_id, "organizationId": org_id}
+            )
+            if dpi_raw is None:
+                raise ValueError(
+                    f"DPI allocation error: AP Down Payment Invoice '{alloc.dpi_doc_id}' "
+                    f"not found in organisation '{org_id}'."
+                )
+
+            dpi_status = dpi_raw.get("status", "")
+            if dpi_status not in _DPI_ALLOCATABLE_STATUSES:
+                raise ValueError(
+                    f"DPI allocation error: AP Down Payment Invoice '{alloc.dpi_doc_id}' "
+                    f"is in status '{dpi_status}'. "
+                    "Must be 'open' or 'partly_closed' to accept an allocation."
+                )
+
+            if dpi_raw.get("vendorId") != vendor_id_from_gr:
+                raise ValueError(
+                    f"DPI allocation error: AP Down Payment Invoice '{alloc.dpi_doc_id}' "
+                    f"belongs to vendor '{dpi_raw.get('vendorId')}' but the AP Invoice "
+                    f"vendor is '{vendor_id_from_gr}'. Vendor must match."
+                )
+
+            dpi_currency = dpi_raw.get("currency", "AED")
+            if dpi_currency != currency_from_gr:
+                raise ValueError(
+                    f"DPI allocation error: AP Down Payment Invoice '{alloc.dpi_doc_id}' "
+                    f"is in currency '{dpi_currency}' but the AP Invoice currency is "
+                    f"'{currency_from_gr}'. Currency must match."
+                )
+
+            dpi_gross = Decimal(str(dpi_raw.get("totals", {}).get("gross", 0)))
+            dpi_consumed = Decimal(str(dpi_raw.get("consumedAmount", 0)))
+            dpi_outstanding = max(dpi_gross - dpi_consumed, Decimal("0"))
+
+            if alloc_amount > dpi_outstanding + Decimal("0.005"):
+                raise ValueError(
+                    f"DPI allocation error: allocated amount {float(alloc_amount):.2f} "
+                    f"exceeds outstanding balance {float(dpi_outstanding):.2f} "
+                    f"on AP Down Payment Invoice '{alloc.dpi_doc_id}'."
+                )
+
+            total_allocated += alloc_amount
+            validated_dpi_allocations.append({
+                "dpiDocId": alloc.dpi_doc_id,
+                "dpiDocNumber": dpi_raw.get("docNumber", ""),
+                "allocatedAmount": float(alloc_amount),
+            })
+
+        if total_allocated > ap_total_gross + Decimal("0.005"):
+            raise ValueError(
+                f"DPI allocation error: total allocated amount {float(total_allocated):.2f} "
+                f"exceeds the AP Invoice total gross {float(ap_total_gross):.2f}. "
+                "Cannot allocate more DPI prepayment than the AP Invoice is worth."
+            )
+
         # Build GR-line invoice deltas for chain-counter reconciliation.
         # ap_line_docs carry grLineId = the GR line being invoiced; quantity is
         # always the full GR line qty in v1 (no partial AP invoicing).
@@ -3733,6 +3826,10 @@ class DocumentService:
                 "postedAt": None,
                 "postedBy": None,
                 "postedEventId": None,
+                # Reason: T-200.24 — store validated DPI allocations on the AP header.
+                # These will be consumed (reconcile_dpi_consumption) when the AP
+                # transitions to OPEN (i.e. when approve_ap fires the posting event).
+                "dpiAllocations": validated_dpi_allocations,
                 "createdAt": now,
                 "createdBy": created_by,
                 "updatedAt": now,
@@ -4126,6 +4223,53 @@ class DocumentService:
         logger.info(
             "[DocumentService] submitted AP docId=%s newStatus=%s", doc_id, new_status
         )
+
+        # -----------------------------------------------------------------------
+        # T-200.24 — Apply DPI consumption if this was an auto-approve (DRAFT→OPEN).
+        # When approval was required (DRAFT → PENDING_APPROVAL path), DPI consumption
+        # fires in approve_ap() instead.
+        # -----------------------------------------------------------------------
+        if new_status == DocumentStatus.OPEN.value:
+            dpi_allocs = updated.get("dpiAllocations") or []
+            for dpi_alloc in dpi_allocs:
+                dpi_doc_id = dpi_alloc.get("dpiDocId")
+                alloc_amt = Decimal(str(dpi_alloc.get("allocatedAmount", 0)))
+                if not dpi_doc_id or alloc_amt <= Decimal("0"):
+                    continue
+                try:
+                    await reconcile_dpi_consumption(
+                        self._db,
+                        dpi_doc_id=dpi_doc_id,
+                        org_id=org_id,
+                        user_id=submitted_by,
+                        ap_doc_id=doc_id,
+                        allocated_amount=alloc_amt,
+                        cap_check=False,
+                    )
+                    dpi_raw_post = await self._db["ap_down_payments_v2"].find_one(
+                        {"docId": dpi_doc_id, "organizationId": org_id}
+                    )
+                    if dpi_raw_post is not None:
+                        await auto_close_dpi_if_fully_consumed(
+                            self._db,
+                            dpi_doc_id=dpi_doc_id,
+                            dpi_raw=dpi_raw_post,
+                            org_id=org_id,
+                            user_id=submitted_by,
+                            extra_detail={
+                                "triggeredByApDocId": doc_id,
+                                "triggeredByApDocNumber": updated.get("docNumber", ""),
+                            },
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(
+                        "[DocumentService] DPI consumption update failed for DPI '%s' "
+                        "on auto-approve AP '%s': %s",
+                        dpi_doc_id,
+                        doc_id,
+                        exc,
+                    )
+
         lines_resp = await self._get_lines(doc_id)
         return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines_resp)
 
@@ -4251,6 +4395,56 @@ class DocumentService:
             posted_event_id,
             approver_id,
         )
+
+        # -----------------------------------------------------------------------
+        # T-200.24 — Apply DPI consumption counters after AP approval.
+        # Best-effort (outside the transaction) — mirrors the GR counter pattern.
+        # For each DPI allocation stored on the AP header:
+        #   1. $inc consumedAmount on the DPI.
+        #   2. Auto-close or auto-partly-close the DPI if fully/partially consumed.
+        # -----------------------------------------------------------------------
+        dpi_allocs = header.get("dpiAllocations") or updated.get("dpiAllocations") or []
+        for dpi_alloc in dpi_allocs:
+            dpi_doc_id = dpi_alloc.get("dpiDocId")
+            alloc_amt = Decimal(str(dpi_alloc.get("allocatedAmount", 0)))
+            if not dpi_doc_id or alloc_amt <= Decimal("0"):
+                continue
+            try:
+                await reconcile_dpi_consumption(
+                    self._db,
+                    dpi_doc_id=dpi_doc_id,
+                    org_id=org_id,
+                    user_id=approver_id,
+                    ap_doc_id=doc_id,
+                    allocated_amount=alloc_amt,
+                    cap_check=False,  # cap was checked at create_ap_from_gr time
+                )
+                # Reload DPI for auto-close decision.
+                dpi_raw_post = await self._db["ap_down_payments_v2"].find_one(
+                    {"docId": dpi_doc_id, "organizationId": org_id}
+                )
+                if dpi_raw_post is not None:
+                    await auto_close_dpi_if_fully_consumed(
+                        self._db,
+                        dpi_doc_id=dpi_doc_id,
+                        dpi_raw=dpi_raw_post,
+                        org_id=org_id,
+                        user_id=approver_id,
+                        extra_detail={
+                            "triggeredByApDocId": doc_id,
+                            "triggeredByApDocNumber": updated.get("docNumber", ""),
+                        },
+                    )
+            except Exception as exc:  # noqa: BLE001
+                # Reason: DPI counter failure must not roll back AP approval.
+                logger.error(
+                    "[DocumentService] DPI consumption update failed for DPI '%s' "
+                    "on AP approval '%s': %s",
+                    dpi_doc_id,
+                    doc_id,
+                    exc,
+                )
+
         lines_resp = await self._get_lines(doc_id)
         return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines_resp)
 
@@ -4399,6 +4593,20 @@ class DocumentService:
                 user_id=approver_id,
                 ap_doc_id=doc_id,
             )
+
+        # -----------------------------------------------------------------------
+        # T-200.24 — Release DPI allocations on rejection (best-effort).
+        # Rejection is terminal — DPI balances must be restored so they can be
+        # allocated to the replacement AP Invoice.
+        # Note: at rejection time the AP was still PENDING_APPROVAL (never OPEN),
+        # so consumedAmount was never incremented. Nothing to release.
+        # However, if the DPI targetDocRef was pushed at create time (it was not —
+        # we only push on $inc), there's nothing to pull here.  This block is a
+        # defensive no-op to document the reasoning and leave space for future
+        # allocation-at-create semantics.
+        # -----------------------------------------------------------------------
+        # (No-op: allocations are only committed at approve_ap time, so no
+        # consumedAmount was incremented and no targetDocRef was pushed on rejection.)
 
         lines_resp = await self._get_lines(doc_id)
         return APDetailResponse(**_header_to_ap_response(updated).model_dump(), lines=lines_resp)
@@ -4561,6 +4769,12 @@ class DocumentService:
                 user_id=deleted_by,
                 ap_doc_id=doc_id,
             )
+
+        # Reason: T-200.24 — No DPI release needed on DRAFT AP deletion.
+        # DPI consumedAmount is only incremented at AP PENDING_APPROVAL → OPEN
+        # (approve_ap).  A DRAFT AP has never been approved, so no DPI consumption
+        # was ever committed.  The dpiAllocations stored on the AP header are
+        # discarded with the AP document itself.
 
         return True
 

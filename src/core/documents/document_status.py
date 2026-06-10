@@ -130,6 +130,41 @@ LEGAL_TRANSITIONS: Dict[str, Dict[DocumentStatus, FrozenSet[DocumentStatus]]] = 
         _CL: frozenset(),
     },
     # -----------------------------------------------------------------------
+    # AP Down Payment Invoice (AP_DPI) — T-200.24 / Wave 4
+    #
+    # A DPI is a vendor-driven prepayment record.  The accountant creates it
+    # when a vendor demands a deposit before delivering goods/services.  It is
+    # a STANDALONE document (not chained from a PR/PO).
+    #
+    # Lifecycle:
+    #   DRAFT    — being composed; freely editable; no financial impact.
+    #   PENDING_APPROVAL → vendor deposit demand is submitted for approval.
+    #   OPEN     — approved and "posted": the prepayment is recorded.
+    #              Books a prepaid-asset / cash-out JE via outbox.
+    #              The DPI may be partially consumed (PARTLY_CLOSED) as AP
+    #              Invoices allocated against it are approved.
+    #   PARTLY_CLOSED — some (but not all) of the DPI's gross has been
+    #              consumed by AP Invoice allocations.
+    #   CLOSED   — fully consumed (consumedAmount == totalGross ± tolerance)
+    #              or manually closed.  Terminal; no further allocations.
+    #   CANCELLED — voided before posting.  Terminal.
+    #
+    # Auto-transitions (triggered by AP Invoice approval / delete / cancel):
+    #   OPEN         → PARTLY_CLOSED  when consumedAmount > 0 but < totalGross
+    #   OPEN/PARTLY_CLOSED → CLOSED   when consumedAmount >= totalGross
+    #   CLOSED       → PARTLY_CLOSED  when an AP Invoice consuming the DPI
+    #                                  is deleted / cancelled (partial release)
+    #   PARTLY_CLOSED → OPEN          when consumedAmount drops back to zero
+    # -----------------------------------------------------------------------
+    "AP_DPI": {
+        _D:  frozenset({_PA, _CA}),          # submit for approval or cancel draft
+        _PA: frozenset({_O, _D, _CA}),       # approve / reject (→ D) / cancel
+        _O:  frozenset({_PC, _CL, _CA}),     # partial AP netting / full consumption / cancel
+        _PC: frozenset({_CL, _CA}),          # full consumption from partial / cancel
+        _CL: frozenset(),
+        _CA: frozenset(),
+    },
+    # -----------------------------------------------------------------------
     # Sales documents
     # -----------------------------------------------------------------------
     "QUOTE": {

@@ -1,5 +1,5 @@
 """
-Purchasing Module — Document Chain Reconciler Adapter (T-200.22 + T-200.23)
+Purchasing Module — Document Chain Reconciler Adapter (T-200.22 + T-200.23 + T-200.24)
 
 Implements SAP B1-style document chain mechanics for the purchasing PR → PO →
 GR → AP Invoice chain, mirroring what T-201.5/.6/.7 and T-201.9.0 added for
@@ -39,6 +39,7 @@ Chain audit collections
 - PO audit:  ``purchase_orders_audit``
 - GR audit:  ``goods_receipts_audit``
 - AP audit:  ``ap_invoices_audit``
+- DPI audit: ``ap_down_payments_v2_audit``
 
 Exports
 -------
@@ -62,6 +63,11 @@ Exports
 - ``auto_close_ap_if_fully_credited``   — auto-close AP on full credit (T-200.23)
 - ``auto_reopen_ap_if_not_fully_credited`` — auto-reopen AP when credit released (T-200.23)
 - ``pull_dangling_ap_credit_refs``      — $pull stale ACN docId from AP targetDocRefs (T-200.23)
+- ``load_dpi_with_lines``               — reload DPI header + lines as embedded shape (T-200.24)
+- ``reconcile_dpi_consumption``         — $inc consumedAmount on DPI header (T-200.24)
+- ``auto_close_dpi_if_fully_consumed``  — auto-close/partly-close DPI on consumption (T-200.24)
+- ``auto_reopen_dpi_if_not_fully_consumed`` — auto-reopen DPI on consumption release (T-200.24)
+- ``pull_dangling_dpi_allocation_refs`` — $pull stale AP docId from DPI targetDocRefs (T-200.24)
 """
 
 from __future__ import annotations
@@ -1179,6 +1185,369 @@ async def pull_dangling_ap_credit_refs(
         {"docId": ap_doc_id, "organizationId": org_id},
         {
             "$pull": {"targetDocRefs": {"docId": acn_doc_id}},
+            "$set": {"updatedAt": now, "updatedBy": user_id},
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-200.24 — AP Down Payment Invoice (DPI) chain helpers
+# ---------------------------------------------------------------------------
+
+_DPI_COL = "ap_down_payments_v2"
+_DPI_AUDIT_COL = "ap_down_payments_v2_audit"
+
+# Float tolerance for DPI consumption checks — same as general TOLERANCE.
+_DPI_TOLERANCE = TOLERANCE
+
+
+async def load_dpi_with_lines(
+    db: AsyncIOMotorDatabase,
+    *,
+    org_id: str,
+    dpi_doc_id: str,
+) -> Optional[Dict[str, Any]]:
+    """
+    Reload a DPI header and its embedded lines, returning the raw document.
+
+    DPI Invoices live in the ``ap_down_payments_v2`` collection with embedded
+    lines (not in separate document_lines collection).  The returned dict
+    includes a computed ``outstanding_amount`` field for convenience.
+
+    Args:
+        db:         Motor database instance.
+        org_id:     Organisation UUID for query scoping.
+        dpi_doc_id: DPI ``docId`` UUID string.
+
+    Returns:
+        Raw DPI dict with embedded ``lines`` + computed ``outstandingAmount``,
+        or None if not found.
+    """
+    raw = await db[_DPI_COL].find_one({"docId": dpi_doc_id, "organizationId": org_id})
+    if raw is None:
+        return None
+    # Compute outstanding_amount for caller convenience.
+    total_gross = Decimal(str(raw.get("totals", {}).get("gross", 0)))
+    consumed = Decimal(str(raw.get("consumedAmount", 0)))
+    raw["outstandingAmount"] = float(max(total_gross - consumed, _ZERO))
+    return raw
+
+
+async def reconcile_dpi_consumption(
+    db: AsyncIOMotorDatabase,
+    *,
+    dpi_doc_id: str,
+    org_id: str,
+    user_id: str,
+    ap_doc_id: str,
+    allocated_amount: Decimal,
+    cap_check: bool = True,
+) -> None:
+    """
+    Apply an allocation delta to the DPI's ``consumedAmount`` via ``$inc``.
+
+    Positive delta = more consumed (AP Invoice approved with this DPI allocation).
+    Negative delta = consumption released (AP Invoice deleted / cancelled).
+
+    When ``cap_check=True`` and ``allocated_amount > 0``, validates that
+    ``consumedAmount + allocated_amount <= totalGross + TOLERANCE``.
+
+    Also pushes the AP Invoice back-pointer onto the DPI's ``targetDocRefs``
+    (positive delta only).
+
+    Args:
+        db:               Motor database instance.
+        dpi_doc_id:       DPI ``docId`` UUID string.
+        org_id:           Organisation UUID.
+        user_id:          User stamped on ``updatedBy``.
+        ap_doc_id:        AP Invoice ``docId`` (for targetDocRefs + error messages).
+        allocated_amount: Net delta to apply (+ve = consume, -ve = release).
+        cap_check:        When True, validate positive deltas against outstanding.
+
+    Returns:
+        None.
+
+    Raises:
+        ValueError: If DPI not found, or cap_check=True and delta exceeds outstanding.
+    """
+    if abs(allocated_amount) <= _DPI_TOLERANCE:
+        return
+
+    dpi_raw = await db[_DPI_COL].find_one({"docId": dpi_doc_id, "organizationId": org_id})
+    if dpi_raw is None:
+        raise ValueError(
+            f"AP Down Payment Invoice '{dpi_doc_id}' not found in organisation '{org_id}'."
+        )
+
+    if cap_check and allocated_amount > _ZERO:
+        total_gross = Decimal(str(dpi_raw.get("totals", {}).get("gross", 0)))
+        consumed = Decimal(str(dpi_raw.get("consumedAmount", 0)))
+        outstanding = max(total_gross - consumed, _ZERO)
+        if allocated_amount > outstanding + _DPI_TOLERANCE:
+            raise ValueError(
+                f"Cannot allocate {float(allocated_amount):.2f} against DPI '{dpi_doc_id}': "
+                f"outstanding balance is {float(outstanding):.2f}. "
+                "Reduce the allocated amount."
+            )
+
+    now = _now()
+
+    update_op: Dict[str, Any] = {
+        "$inc": {"consumedAmount": float(allocated_amount)},
+        "$set": {"updatedAt": now, "updatedBy": user_id},
+    }
+
+    # Reason: push AP back-pointer on positive allocation only.
+    # On negative (release), the caller calls pull_dangling_dpi_allocation_refs separately.
+    if allocated_amount > _ZERO:
+        # Fetch AP doc_number for display (best-effort; empty string if not found).
+        ap_raw = await db[_AP_INVOICES_COL].find_one({"docId": ap_doc_id})
+        ap_doc_number = ap_raw.get("docNumber", "") if ap_raw else ""
+        ap_ref = {
+            "docType": "AP_INVOICE",
+            "docId": ap_doc_id,
+            "docNumber": ap_doc_number,
+            "lineId": None,
+        }
+        update_op["$push"] = {"targetDocRefs": ap_ref}
+
+    await db[_DPI_COL].update_one(
+        {"docId": dpi_doc_id, "organizationId": org_id},
+        update_op,
+    )
+
+    # Write audit for the allocation event.
+    await write_purchasing_audit(
+        db,
+        audit_collection=_DPI_AUDIT_COL,
+        doc_id=dpi_doc_id,
+        action="dpi_allocated" if allocated_amount > _ZERO else "dpi_allocation_released",
+        user_id=user_id,
+        detail={
+            "allocatedAmount": float(allocated_amount),
+            "apDocId": ap_doc_id,
+        },
+    )
+
+    logger.info(
+        "[PurchasingChainReconciler] DPI '%s' consumedAmount %+.2f by AP '%s' user '%s'",
+        dpi_doc_id,
+        float(allocated_amount),
+        ap_doc_id,
+        user_id,
+    )
+
+
+async def auto_close_dpi_if_fully_consumed(
+    db: AsyncIOMotorDatabase,
+    *,
+    dpi_doc_id: str,
+    dpi_raw: Dict[str, Any],
+    org_id: str,
+    user_id: str,
+    action: str = "auto_close_on_full_consumption",
+    extra_detail: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """
+    Transition a DPI to CLOSED when fully consumed, or to PARTLY_CLOSED when
+    partially consumed.
+
+    Decision logic (re-reads ``consumedAmount`` from post-increment state):
+    - If ``consumedAmount >= totalGross - TOLERANCE`` → transition to CLOSED.
+    - Else if ``consumedAmount > TOLERANCE`` (partial) and status is OPEN →
+      transition to PARTLY_CLOSED.
+    - Otherwise → no-op.
+
+    Idempotent: if already in the target state, returns False without writing.
+
+    Args:
+        db:           Motor database instance.
+        dpi_doc_id:   DPI ``docId`` UUID string.
+        dpi_raw:      Current (pre-reload acceptable) DPI header doc; used only
+                      for the status guard before the re-read.
+        org_id:       Organisation UUID.
+        user_id:      User who triggered the originating AP Invoice operation.
+        action:       Audit action label.
+        extra_detail: Additional audit detail keys.
+
+    Returns:
+        True if a status transition was written, False otherwise.
+    """
+    if dpi_raw is None:
+        return False
+
+    current_status = dpi_raw.get("status", "")
+    # Reason: only act on live (non-terminal) DPI states.
+    if current_status not in {
+        DocumentStatus.OPEN.value,
+        DocumentStatus.PARTLY_CLOSED.value,
+    }:
+        return False
+
+    # Re-read for the post-increment consumedAmount.
+    refreshed = await db[_DPI_COL].find_one({"docId": dpi_doc_id, "organizationId": org_id})
+    if refreshed is None:
+        return False
+
+    total_gross = Decimal(str(refreshed.get("totals", {}).get("gross", 0)))
+    consumed = Decimal(str(refreshed.get("consumedAmount", 0)))
+
+    now = _now()
+
+    # Fully consumed → CLOSED.
+    if consumed >= total_gross - _DPI_TOLERANCE:
+        if refreshed.get("status") == DocumentStatus.CLOSED.value:
+            return False  # already closed
+        await db[_DPI_COL].update_one(
+            {"docId": dpi_doc_id, "organizationId": org_id},
+            {"$set": {"status": DocumentStatus.CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+        )
+        logger.info(
+            "[PurchasingChainReconciler] DPI '%s' auto-closed on full consumption by user '%s'",
+            dpi_doc_id,
+            user_id,
+        )
+        await write_purchasing_audit(
+            db,
+            audit_collection=_DPI_AUDIT_COL,
+            doc_id=dpi_doc_id,
+            action=action,
+            user_id=user_id,
+            detail=dict(extra_detail or {}),
+        )
+        return True
+
+    # Partially consumed + currently OPEN → PARTLY_CLOSED.
+    if consumed > _DPI_TOLERANCE and refreshed.get("status") == DocumentStatus.OPEN.value:
+        await db[_DPI_COL].update_one(
+            {"docId": dpi_doc_id, "organizationId": org_id},
+            {"$set": {"status": DocumentStatus.PARTLY_CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+        )
+        logger.info(
+            "[PurchasingChainReconciler] DPI '%s' transitioned to PARTLY_CLOSED by user '%s'",
+            dpi_doc_id,
+            user_id,
+        )
+        await write_purchasing_audit(
+            db,
+            audit_collection=_DPI_AUDIT_COL,
+            doc_id=dpi_doc_id,
+            action="auto_partly_close_on_partial_consumption",
+            user_id=user_id,
+            detail=dict(extra_detail or {}),
+        )
+        return True
+
+    return False
+
+
+async def auto_reopen_dpi_if_not_fully_consumed(
+    db: AsyncIOMotorDatabase,
+    *,
+    dpi_doc_id: str,
+    org_id: str,
+    user_id: str,
+    action: str = "auto_reopen_on_consumption_release",
+    extra_detail: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """
+    Reverse an auto-close or auto-partly-close on a DPI when an AP Invoice
+    that consumed it is deleted or cancelled.
+
+    Decision logic (re-reads post-decrement state):
+    - If DPI is CLOSED and ``consumedAmount < totalGross - TOLERANCE`` →
+      transition to PARTLY_CLOSED (still has some consumption) or OPEN (no consumption).
+    - If DPI is PARTLY_CLOSED and ``consumedAmount <= TOLERANCE`` →
+      transition to OPEN.
+    - Otherwise → no-op.
+
+    Args:
+        db:           Motor database instance.
+        dpi_doc_id:   DPI ``docId`` UUID string.
+        org_id:       Organisation UUID.
+        user_id:      User who triggered the release.
+        action:       Audit action label.
+        extra_detail: Additional audit detail keys.
+
+    Returns:
+        True if a status transition was written, False otherwise.
+    """
+    refreshed = await db[_DPI_COL].find_one({"docId": dpi_doc_id, "organizationId": org_id})
+    if refreshed is None:
+        return False
+
+    current_status = refreshed.get("status", "")
+    total_gross = Decimal(str(refreshed.get("totals", {}).get("gross", 0)))
+    consumed = Decimal(str(refreshed.get("consumedAmount", 0)))
+
+    now = _now()
+    target: Optional[str] = None
+
+    if current_status == DocumentStatus.CLOSED.value:
+        if consumed >= total_gross - _DPI_TOLERANCE:
+            return False  # still fully consumed
+        # Partially consumed → PARTLY_CLOSED; zero consumed → OPEN.
+        target = (
+            DocumentStatus.PARTLY_CLOSED.value
+            if consumed > _DPI_TOLERANCE
+            else DocumentStatus.OPEN.value
+        )
+    elif current_status == DocumentStatus.PARTLY_CLOSED.value:
+        if consumed <= _DPI_TOLERANCE:
+            target = DocumentStatus.OPEN.value
+        # If partially consumed but not zero, stays PARTLY_CLOSED.
+
+    if target is None:
+        return False
+
+    await db[_DPI_COL].update_one(
+        {"docId": dpi_doc_id, "organizationId": org_id},
+        {"$set": {"status": target, "updatedAt": now, "updatedBy": user_id}},
+    )
+    logger.info(
+        "[PurchasingChainReconciler] DPI '%s' reopened to '%s' after consumption release by user '%s'",
+        dpi_doc_id,
+        target,
+        user_id,
+    )
+    await write_purchasing_audit(
+        db,
+        audit_collection=_DPI_AUDIT_COL,
+        doc_id=dpi_doc_id,
+        action=action,
+        user_id=user_id,
+        detail=dict(extra_detail or {}),
+    )
+    return True
+
+
+async def pull_dangling_dpi_allocation_refs(
+    db: AsyncIOMotorDatabase,
+    *,
+    dpi_doc_id: str,
+    org_id: str,
+    user_id: str,
+    ap_doc_id: str,
+) -> None:
+    """
+    Remove stale ``targetDocRefs`` entries from a DPI header after an AP Invoice
+    that allocated it is deleted or cancelled.
+
+    Args:
+        db:         Motor database instance.
+        dpi_doc_id: DPI ``docId`` UUID string.
+        org_id:     Organisation UUID.
+        user_id:    User performing the operation (stamped on ``updatedBy``).
+        ap_doc_id:  ``docId`` of the AP Invoice being deleted/cancelled.
+
+    Returns:
+        None.
+    """
+    now = _now()
+    await db[_DPI_COL].update_one(
+        {"docId": dpi_doc_id, "organizationId": org_id},
+        {
+            "$pull": {"targetDocRefs": {"docId": ap_doc_id}},
             "$set": {"updatedAt": now, "updatedBy": user_id},
         },
     )

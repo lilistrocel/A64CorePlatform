@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
-> **Updated:** 2026-06-04
-> **Tasks:** 4 active · 1 ready · 2 blocked · 0 completed (Wave 3 T-201.4/.5/.6/.7/.8 + T-201.0/.1/.2/.3 + T-202 all in ARCHIVE — this session closed 6 tickets in commits `096be1a` / `14046b3` / `cdc71a4` / `2ccb9dc`) — remaining Active: T-201.8b (Wave 6 SKU-master extraction), T-201.9/.10/.11 (SAP B1 chain-via-SO epic); Wave 5: T-500 (production cost accounting) + T-501 (packing materials BOM); Wave 6: T-600 (standalone hardening) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
+> **Updated:** 2026-06-10
+> **Tasks:** 5 active · 1 ready · 2 blocked · 0 completed (Wave 3 T-201.4/.5/.6/.7/.8 + T-201.0/.1/.2/.3 + T-202 all in ARCHIVE — this session closed 6 tickets in commits `096be1a` / `14046b3` / `cdc71a4` / `2ccb9dc`) — remaining Active: T-201.8b (Wave 6 SKU-master extraction), T-201.9/.10/.11 (SAP B1 chain-via-SO epic), T-200.24 (DPI backend); Wave 5: T-500 (production cost accounting) + T-501 (packing materials BOM); Wave 6: T-600 (standalone hardening) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
 
 ---
 
@@ -1282,7 +1282,7 @@
   - **T-200.23** — AP Credit Note: vendor-side counterpart to ARC. From-AP-Invoice
     and from-GR (return-of-goods) paths. ~2-3 task cycles.
   - **T-200.24** — Down Payment Invoice (DPI): SAP B1 vendor-prepayment doc.
-    Allocates against future AP Invoices. ~2-3 task cycles.
+    Allocates against future AP Invoices. ~2-3 task cycles. **🔵 Active — see standalone task below.**
   - **T-200.25** — Blanket Agreement (BLA) stubs: long-term volume/price
     commitments that PRs/POs reference. Skeleton only per the BACKLOG note.
     ~1-2 task cycles.
@@ -1291,6 +1291,45 @@
     CompanyCombobox / SalesItemCombobox-equivalent purchasing pickers, etc.).
     Largest slice. ~6-10 task cycles.
 - **Total realistic estimate:** ~16-25 task cycles across the sub-tasks.
+
+---
+
+### T-200.24 | 🔵 AP Down Payment Invoice (DPI) — vendor prepayment document
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** backend-dev-expert · **Started:** 2026-06-10
+- **Depends on:** T-200.21 ✅, T-200.22 ✅, T-200.23 ✅
+- **Blocks:** T-200.26 (purchasing frontend)
+- **Description:** New `AP_DPI` document type for SAP B1-style vendor prepayments.
+  DPIs are standalone (not chained from PR/PO). AP Invoices can allocate one or
+  more DPIs at creation time; consumption fires when the AP transitions to OPEN.
+  DPIs auto-close when fully consumed, auto-reopen when an AP allocation is
+  reversed. Emits `ap_down_payment_posted` outbox event.
+- **Scope:**
+  - `AP_DPI` added to `LEGAL_TRANSITIONS` in `document_status.py`
+  - New Pydantic models in `models/document.py` (`APDownPaymentCreate`,
+    `APDownPaymentResponse`, `APDownPaymentListItem`, `DPIAllocation`,
+    `AppliedDPIAllocation`, etc.)
+  - New service `services/ap_down_payment_service.py` with full CRUD +
+    `transition_status`. Collection: `ap_down_payments_v2`.
+  - Reconciler helpers in `purchasing_chain_reconciler.py`:
+    `load_dpi_with_lines`, `reconcile_dpi_consumption`,
+    `auto_close_dpi_if_fully_consumed`, `auto_reopen_dpi_if_not_fully_consumed`,
+    `pull_dangling_dpi_allocation_refs`
+  - AP Invoice allocation: pre-flight validation in `create_ap_from_gr`;
+    consumption ($inc consumedAmount) in `approve_ap` / auto-approve path
+  - New route handler `api/v1/ap_down_payments.py` registered in `__init__.py`
+- **Acceptance criteria:**
+  - DPI CRUD (create/list/get/update/delete) working
+  - DPI status transitions: DRAFT → PENDING_APPROVAL → OPEN → PARTLY_CLOSED/CLOSED
+  - AP Invoice creation with `dpi_allocations` validates DPI status, vendor, currency, amounts
+  - AP Invoice approval consumes DPI outstanding balance; DPI auto-closes when fully consumed
+  - `GET /ap-down-payments/outstanding` returns only DPIs with remaining balance
+  - pytest baseline unchanged: 36 passed / 10 failed (purchasing), 334 passed (sales)
+- **Status:** Implementation complete (backend only). Frontend deferred to T-200.26.
+  No tests shipped (separate dispatch). No frontend changes.
+- > Context (2026-06-10): All 6 implementation parts shipped. Symbol import check passes.
+  > pytest baselines confirmed unchanged. `_header_to_ap_response` updated with
+  > `dpiAllocations` mapping. Pending: user verification on live stack before archiving.
 
 ---
 

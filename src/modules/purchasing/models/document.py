@@ -559,6 +559,15 @@ class APFromGRCreate(BaseModel):
         min_length=1,
         description="One entry per GR line with the vendor's invoiced price",
     )
+    # Reason: T-200.24 — optional DPI allocations for prepayment netting.
+    # Defaults to empty list for full backward compatibility with existing callers.
+    dpi_allocations: "List[DPIAllocation]" = Field(
+        default_factory=list,
+        description=(
+            "Optional list of AP Down Payment Invoice allocations to net "
+            "against this AP Invoice on approval."
+        ),
+    )
 
 
 class APCreate(APFromGRCreate):
@@ -636,6 +645,10 @@ class APResponse(BaseModel):
     # needed; reconcile_ap_line_credit_counters uses $inc which creates the field
     # if absent, and 0 is the correct default for pre-T-200.23 invoices).
     creditedAmount: Decimal = Decimal("0")
+    # Reason: T-200.24 — stores DPI allocations applied at AP Invoice posting time.
+    # Each entry records a DPI that was netted against this invoice.
+    # Defaults to empty list for backward compatibility with pre-T-200.24 invoices.
+    dpiAllocations: "List[AppliedDPIAllocation]" = Field(default_factory=list)
     createdAt: datetime
     updatedAt: datetime
     deletedAt: Optional[datetime] = None
@@ -919,3 +932,326 @@ class APCreditNoteListItem(BaseModel):
     base_invoice_doc_ref: Optional[DocumentLinkRef] = None
     created_at: datetime
     updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# AP Down Payment Invoice (AP_DPI) schemas — T-200.24 / Wave 4
+# ---------------------------------------------------------------------------
+
+
+class APDownPaymentLineCreate(BaseModel):
+    """
+    One line in an AP Down Payment Invoice creation/update payload.
+
+    DPI lines represent the prepayment basis.  Some DPIs are amount-only
+    (no items), so item_id and item_code are optional.  At minimum unit_price
+    is required; quantity defaults to 1.
+
+    Attributes:
+        item_id:      Optional UUID of the item (None for amount-only lines).
+        item_code:    Item code for display.
+        item_name:    Item name / description.
+        description:  Optional override description.
+        quantity:     Prepayment quantity basis (defaults to 1.0).
+        uom:          Unit of measure.
+        unit_price:   Prepayment amount per unit (required; the core amount field).
+        discount_percent: Line discount 0–100.
+        tax_code:     Tax code key from AP_TAX_RATES.
+        cost_center_id: Optional cost centre reference.
+        notes:        Optional per-line notes.
+    """
+
+    item_id: Optional[str] = None
+    item_code: Optional[str] = None
+    item_name: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=500)
+    quantity: Decimal = Field(default=Decimal("1"), gt=0)
+    uom: str = Field(default="EA", max_length=50)
+    unit_price: Decimal = Field(..., ge=0)
+    discount_percent: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    tax_code: Optional[str] = Field(None, max_length=20)
+    cost_center_id: Optional[str] = Field(None, max_length=20)
+    notes: Optional[str] = Field(None, max_length=500)
+
+
+class APDownPaymentCreate(BaseModel):
+    """
+    Input schema for creating a new AP Down Payment Invoice.
+
+    A DPI is a STANDALONE document — it does NOT chain from a PR/PO.
+    Created when a vendor demands a deposit before delivering goods/services.
+
+    organizationId comes from the JWT.
+
+    Attributes:
+        vendor_id:       UUID of the vendor.
+        vendor_name:     Vendor name (denormalised for display).
+        vendor_code:     Optional vendor code.
+        company_code:    Finance company code. Backend resolves if empty.
+        doc_date:        Accounting/posting date.
+        due_date:        Optional payment due date.
+        currency:        ISO 4217 currency code.
+        exchange_rate:   FX rate against base currency.
+        payment_terms_id: Optional payment terms reference.
+        bp_ref_no:       Vendor's deposit-request reference number.
+        journal_memo:    Free-text memo for the finance JE.
+        notes:           Internal notes.
+        lines:           At least one line item.
+    """
+
+    vendor_id: str
+    vendor_name: str
+    vendor_code: Optional[str] = None
+    company_code: str = Field(default="")
+    doc_date: Optional[datetime] = Field(
+        None, description="Accounting date; defaults to today when omitted"
+    )
+    due_date: Optional[datetime] = None
+    currency: str = Field(default="AED", max_length=10)
+    exchange_rate: Decimal = Field(default=Decimal("1"), ge=0)
+    payment_terms_id: Optional[str] = None
+    bp_ref_no: Optional[str] = Field(None, max_length=100)
+    journal_memo: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=2000)
+    lines: List[APDownPaymentLineCreate] = Field(..., min_length=1)
+
+
+class APDownPaymentUpdate(BaseModel):
+    """
+    Partial update for a Draft AP Down Payment Invoice.
+
+    Lines, when supplied, replace the current set wholesale.
+    vendor and companyCode are immutable after creation.
+
+    Only DRAFT DPIs may be updated.
+    """
+
+    doc_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    currency: Optional[str] = Field(None, max_length=10)
+    exchange_rate: Optional[Decimal] = None
+    payment_terms_id: Optional[str] = None
+    bp_ref_no: Optional[str] = Field(None, max_length=100)
+    journal_memo: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=2000)
+    lines: Optional[List[APDownPaymentLineCreate]] = None
+
+
+class APDownPaymentTotals(BaseModel):
+    """
+    Aggregated monetary totals for an AP Down Payment Invoice.
+
+    Attributes:
+        net:               Total net amount (sum of all lineNet values).
+        tax:               Total tax amount (sum of all lineTax values).
+        gross:             Total gross = net + tax.
+        consumed_amount:   Amount already consumed by AP Invoice allocations.
+        outstanding_amount: gross - consumed_amount; available for future allocation.
+    """
+
+    net: Decimal
+    tax: Decimal
+    gross: Decimal
+    consumed_amount: Decimal = Decimal("0")
+    outstanding_amount: Decimal = Decimal("0")
+
+
+class APDownPaymentLine(BaseModel):
+    """
+    Embedded line response shape for an AP Down Payment Invoice.
+
+    Attributes:
+        line_id:         UUID of this line.
+        line_number:     1-indexed position.
+        item_id:         Optional item UUID.
+        item_code:       Optional item code.
+        item_name:       Optional item name.
+        description:     Description shown on the document.
+        quantity:        Prepayment quantity basis.
+        uom:             Unit of measure.
+        unit_price:      Price per unit.
+        discount_percent: Discount applied.
+        line_net:        Net amount for this line.
+        tax_code:        Tax code (optional).
+        tax_rate:        Applied tax rate %.
+        line_tax:        Tax amount for this line.
+        line_gross:      Gross amount for this line.
+        cost_center_id:  Optional cost centre.
+        notes:           Optional per-line notes.
+    """
+
+    line_id: str
+    line_number: int
+    item_id: Optional[str] = None
+    item_code: Optional[str] = None
+    item_name: Optional[str] = None
+    description: Optional[str] = None
+    quantity: Decimal
+    uom: str
+    unit_price: Decimal
+    discount_percent: Decimal
+    line_net: Decimal
+    tax_code: Optional[str] = None
+    tax_rate: Decimal
+    line_tax: Decimal
+    line_gross: Decimal
+    cost_center_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class APDownPaymentStatusTransitionRequest(BaseModel):
+    """
+    Request body for AP Down Payment Invoice status transitions.
+
+    Attributes:
+        target_status: The desired new status (as DocumentStatus enum value string).
+        notes:         Optional free-text reason / approver comment.
+    """
+
+    target_status: str
+    notes: Optional[str] = Field(None, max_length=1000)
+
+
+class APDownPaymentResponse(BaseModel):
+    """
+    Full response schema for an AP Down Payment Invoice (header + embedded lines).
+
+    Used for GET /ap-down-payments/{doc_id} and as the result of create/update.
+
+    The ``totals`` field includes ``consumed_amount`` and ``outstanding_amount``
+    computed at read time from the persisted ``consumedAmount`` field.
+
+    Attributes:
+        doc_id:               UUID primary key (stored as ``docId`` in MongoDB).
+        doc_number:           Human-readable number, e.g. "DPI-2026-0001".
+        doc_type:             Always "AP_DPI".
+        organization_id:      Organisation scope UUID.
+        company_code:         Finance company code.
+        vendor_id:            UUID of the vendor.
+        vendor_code:          Vendor code (denormalised).
+        vendor_name:          Vendor name (denormalised).
+        bp_ref_no:            Vendor's deposit-request reference.
+        doc_date:             Accounting date.
+        due_date:             Optional payment due date.
+        currency:             ISO 4217 currency code.
+        exchange_rate:        FX rate.
+        payment_terms_id:     Optional payment terms.
+        status:               Current document status.
+        totals:               Aggregated net/tax/gross + consumed/outstanding.
+        target_doc_refs:      AP Invoices that have allocated this DPI.
+        journal_memo:         Finance JE memo.
+        notes:                Internal notes.
+        outbox_event_id:      ID of the ap_down_payment_posted outbox event.
+        outbox_event_emitted_at: Timestamp the event was emitted.
+        lines:                Embedded line items.
+        created_at:           Creation timestamp.
+        created_by:           UUID of the creating user.
+        updated_at:           Last update timestamp.
+        updated_by:           UUID of the last updating user.
+    """
+
+    doc_id: str
+    doc_number: str
+    doc_type: str = "AP_DPI"
+    organization_id: str
+    company_code: str
+    vendor_id: str
+    vendor_code: Optional[str] = None
+    vendor_name: str
+    bp_ref_no: Optional[str] = None
+    doc_date: datetime
+    due_date: Optional[datetime] = None
+    currency: str
+    exchange_rate: Decimal
+    payment_terms_id: Optional[str] = None
+    status: str
+    totals: APDownPaymentTotals
+    target_doc_refs: List[DocumentLinkRef] = []
+    journal_memo: Optional[str] = None
+    notes: Optional[str] = None
+    outbox_event_id: Optional[str] = None
+    outbox_event_emitted_at: Optional[datetime] = None
+    lines: List[APDownPaymentLine] = []
+    created_at: datetime
+    created_by: str
+    updated_at: datetime
+    updated_by: str
+
+
+class APDownPaymentListItem(BaseModel):
+    """
+    Slim list-view schema for AP Down Payment Invoices.
+
+    Used in paginated GET /ap-down-payments to avoid transmitting full line sets.
+    """
+
+    doc_id: str
+    doc_number: str
+    organization_id: str
+    vendor_id: str
+    vendor_name: str
+    doc_date: datetime
+    status: str
+    totals: APDownPaymentTotals
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# DPI Allocation schemas — used in AP Invoice to pre-pay against DPIs
+# ---------------------------------------------------------------------------
+
+
+class DPIAllocation(BaseModel):
+    """
+    One DPI allocation attached to an AP Invoice.
+
+    When an AP Invoice is created, the accountant may specify one or more DPIs
+    whose outstanding prepayment balance will be netted against the invoice amount.
+
+    Validation rules (enforced in ap_down_payment_service or document_service):
+    - dpi_doc_id must exist and be in OPEN or PARTLY_CLOSED status.
+    - The DPI must belong to the same vendor as the AP Invoice.
+    - The DPI must be in the same currency as the AP Invoice.
+    - allocated_amount <= DPI outstanding_amount (gross - consumed_amount).
+    - Sum of all allocated_amount across all allocations on one AP Invoice
+      must not exceed the AP Invoice's totalGross.
+
+    Attributes:
+        dpi_doc_id:        UUID of the AP Down Payment Invoice being consumed.
+        allocated_amount:  Amount to net against this DPI's outstanding balance.
+    """
+
+    dpi_doc_id: str
+    allocated_amount: Decimal = Field(..., gt=0)
+
+
+class AppliedDPIAllocation(BaseModel):
+    """
+    Applied DPI allocation stored on a posted AP Invoice.
+
+    Records the DPI reference plus the amount that was netted at AP posting time.
+    Surfaced in APResponse / APDetailResponse so finance can reconstruct the JE.
+
+    Attributes:
+        dpi_doc_id:        UUID of the AP Down Payment Invoice.
+        dpi_doc_number:    Human-readable DPI doc number for display.
+        allocated_amount:  Amount netted against this DPI.
+    """
+
+    dpi_doc_id: str
+    dpi_doc_number: str = ""
+    allocated_amount: Decimal
+
+
+# ---------------------------------------------------------------------------
+# Resolve forward references for models that reference DPI classes
+# ---------------------------------------------------------------------------
+# Reason: APFromGRCreate and APResponse use List[DPIAllocation] /
+# List[AppliedDPIAllocation] as string annotations because those classes are
+# defined later in the file.  Call model_rebuild() after all definitions are
+# complete so Pydantic resolves the forward references.
+APFromGRCreate.model_rebuild()
+APCreate.model_rebuild()
+APResponse.model_rebuild()
+APDetailResponse.model_rebuild()
