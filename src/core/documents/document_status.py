@@ -165,6 +165,44 @@ LEGAL_TRANSITIONS: Dict[str, Dict[DocumentStatus, FrozenSet[DocumentStatus]]] = 
         _CA: frozenset(),
     },
     # -----------------------------------------------------------------------
+    # Blanket Agreement (BLA) — T-200.25 / Wave 4
+    #
+    # A BLA is a long-term volume/price commitment between buyer and vendor.
+    # Example: "ACME Corp commits to purchase 10,000 units of widget-X at AED
+    # 5/unit from VendorCo over the next 12 months."
+    #
+    # The BLA is a STANDALONE document with a validity date range (valid_from /
+    # valid_to).  POs that reference the BLA inherit its pricing/terms and
+    # decrement the BLA's consumed counters (T-200.25.1 — PO→BLA integration).
+    #
+    # Lifecycle:
+    #   DRAFT    — being composed; freely editable; no financial impact.
+    #   PENDING_APPROVAL → optional approval gate for large organisations.
+    #              Small orgs can skip this and go DRAFT → OPEN directly.
+    #   OPEN     — active agreement: POs may reference it and consume qty/amount.
+    #              The BLA transitions to PARTLY_CLOSED as POs consume it.
+    #   PARTLY_CLOSED — some (but not all) committed volume has been consumed by
+    #              referencing POs.
+    #   CLOSED   — fully consumed (all committed qty/amount allocated to POs)
+    #              or manually closed after agreement term expires. Terminal.
+    #   CANCELLED — voided before any consumption. Terminal.
+    #
+    # Auto-transitions (triggered by PO creation / deletion — T-200.25.1):
+    #   OPEN         → PARTLY_CLOSED  when any consumption is recorded
+    #   OPEN/PARTLY_CLOSED → CLOSED   when commitments are fully consumed
+    #   CLOSED       → PARTLY_CLOSED  when a PO referencing the BLA is deleted
+    #                                  (partial release of consumed qty)
+    #   PARTLY_CLOSED → OPEN          when all consumption is released
+    # -----------------------------------------------------------------------
+    "BLA": {
+        _D:  frozenset({_PA, _O, _CA}),      # submit (→PA) / direct-open small orgs / cancel
+        _PA: frozenset({_O, _D, _CA}),       # approve / reject (→D) / cancel
+        _O:  frozenset({_PC, _CL, _CA}),     # partial consumption / full consumption / cancel
+        _PC: frozenset({_CL, _CA}),          # full consumption from partial / cancel
+        _CL: frozenset(),
+        _CA: frozenset(),
+    },
+    # -----------------------------------------------------------------------
     # Sales documents
     # -----------------------------------------------------------------------
     "QUOTE": {

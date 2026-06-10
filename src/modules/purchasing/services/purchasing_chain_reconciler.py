@@ -68,6 +68,15 @@ Exports
 - ``auto_close_dpi_if_fully_consumed``  — auto-close/partly-close DPI on consumption (T-200.24)
 - ``auto_reopen_dpi_if_not_fully_consumed`` — auto-reopen DPI on consumption release (T-200.24)
 - ``pull_dangling_dpi_allocation_refs`` — $pull stale AP docId from DPI targetDocRefs (T-200.24)
+- ``load_bla_with_lines``               — reload BLA header + lines + computed outstanding (T-200.25)
+- ``reconcile_bla_consumption``         — $inc consumedAmount + per-line consumedQty on BLA (T-200.25)
+- ``auto_close_bla_if_fully_consumed``  — auto-close/partly-close BLA on PO consumption (T-200.25)
+- ``auto_reopen_bla_if_not_fully_consumed`` — auto-reopen BLA when PO consumption released (T-200.25)
+- ``pull_dangling_bla_consumption_refs`` — $pull stale PO docId from BLA targetDocRefs (T-200.25)
+
+NOTE: BLA helpers (T-200.25) are present but NOT YET WIRED into any calling code path.
+They will be called from PO creation / deletion once the PO→BLA integration
+ships in T-200.25.1.
 """
 
 from __future__ import annotations
@@ -1548,6 +1557,424 @@ async def pull_dangling_dpi_allocation_refs(
         {"docId": dpi_doc_id, "organizationId": org_id},
         {
             "$pull": {"targetDocRefs": {"docId": ap_doc_id}},
+            "$set": {"updatedAt": now, "updatedBy": user_id},
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-200.25 — Blanket Agreement (BLA) chain helpers
+#
+# These helpers are PRESENT but NOT YET WIRED into any calling code path.
+# They will be called from PO creation / deletion once the PO→BLA integration
+# ships in T-200.25.1.
+# ---------------------------------------------------------------------------
+
+_BLA_COL = "blanket_agreements_v2"
+_BLA_AUDIT_COL = "blanket_agreements_v2_audit"
+
+# Float tolerance for BLA consumption checks — same as general TOLERANCE.
+_BLA_TOLERANCE = TOLERANCE
+
+
+async def load_bla_with_lines(
+    db: AsyncIOMotorDatabase,
+    *,
+    org_id: str,
+    bla_doc_id: str,
+) -> Optional[Dict[str, Any]]:
+    """
+    Reload a BLA header and its embedded lines, returning the raw document.
+
+    BLAs live in the ``blanket_agreements_v2`` collection with embedded lines.
+    The returned dict includes a computed ``outstandingAmount`` field for
+    caller convenience.
+
+    For line_based BLAs the per-line ``outstandingQty`` is also computed:
+    ``committedQuantity - consumedQty``.
+
+    # Used by T-200.25.1 once PO→BLA integration ships.
+
+    Args:
+        db:         Motor database instance.
+        org_id:     Organisation UUID for query scoping.
+        bla_doc_id: BLA ``docId`` UUID string.
+
+    Returns:
+        Raw BLA dict with embedded ``lines`` + computed ``outstandingAmount``,
+        or None if not found.
+    """
+    raw = await db[_BLA_COL].find_one({"docId": bla_doc_id, "organizationId": org_id})
+    if raw is None:
+        return None
+    # Compute outstanding_amount for caller convenience.
+    total_gross = Decimal(str(raw.get("totals", {}).get("gross", 0)))
+    consumed = Decimal(str(raw.get("consumedAmount", 0)))
+    raw["outstandingAmount"] = float(max(total_gross - consumed, _ZERO))
+    # Compute per-line outstanding qty for line_based BLAs.
+    for ln in raw.get("lines", []):
+        committed = Decimal(str(ln.get("committedQuantity", 0)))
+        consumed_qty = Decimal(str(ln.get("consumedQty", 0)))
+        ln["outstandingQty"] = float(max(committed - consumed_qty, _ZERO))
+    return raw
+
+
+async def reconcile_bla_consumption(
+    db: AsyncIOMotorDatabase,
+    *,
+    bla_doc_id: str,
+    org_id: str,
+    user_id: str,
+    source_doc_id: str,
+    source_doc_type: str,
+    line_deltas: Dict[str, Decimal],
+    gross_delta: Decimal,
+    cap_check: bool = True,
+) -> None:
+    """
+    Apply consumption deltas to a BLA: per-line ``consumedQty`` increments
+    (for line_based BLAs) and header-level ``consumedAmount`` increment
+    (for both modes).
+
+    Positive deltas = more consumed (PO references this BLA).
+    Negative deltas = consumption released (PO is deleted or amended down).
+
+    When ``cap_check=True`` and ``gross_delta > 0``, validates that
+    ``consumedAmount + gross_delta <= totalGross + TOLERANCE``.
+
+    For line_based BLAs, also validates each ``line_deltas[lineId]`` against
+    the per-line ``committedQuantity - consumedQty`` outstanding.
+
+    Also pushes the PO back-pointer onto the BLA's ``targetDocRefs``
+    (positive delta only).
+
+    # Used by T-200.25.1 once PO→BLA integration ships.
+
+    Args:
+        db:              Motor database instance.
+        bla_doc_id:      BLA ``docId`` UUID string.
+        org_id:          Organisation UUID.
+        user_id:         User stamped on ``updatedBy``.
+        source_doc_id:   Source document ``docId`` (PO) for back-ref + error messages.
+        source_doc_type: Source document type string (e.g. "PO").
+        line_deltas:     Mapping of BLA line ``lineId`` → net qty delta.
+                         Used for line_based BLAs; pass empty dict for amount_based.
+        gross_delta:     Net gross amount delta to apply to header ``consumedAmount``.
+        cap_check:       When True, validate deltas against outstanding balance.
+
+    Returns:
+        None.
+
+    Raises:
+        ValueError: If BLA not found, or cap_check=True and delta exceeds outstanding.
+    """
+    if abs(gross_delta) <= _BLA_TOLERANCE and not line_deltas:
+        return
+
+    bla_raw = await db[_BLA_COL].find_one({"docId": bla_doc_id, "organizationId": org_id})
+    if bla_raw is None:
+        raise ValueError(
+            f"Blanket Agreement '{bla_doc_id}' not found in organisation '{org_id}'."
+        )
+
+    if cap_check and gross_delta > _ZERO:
+        total_gross = Decimal(str(bla_raw.get("totals", {}).get("gross", 0)))
+        consumed = Decimal(str(bla_raw.get("consumedAmount", 0)))
+        outstanding = max(total_gross - consumed, _ZERO)
+        if gross_delta > outstanding + _BLA_TOLERANCE:
+            raise ValueError(
+                f"Cannot consume {float(gross_delta):.2f} from BLA '{bla_doc_id}': "
+                f"outstanding balance is {float(outstanding):.2f}. "
+                "Reduce the consumed amount."
+            )
+
+    now = _now()
+
+    # Apply header-level consumedAmount increment.
+    if abs(gross_delta) > _BLA_TOLERANCE:
+        update_op: Dict[str, Any] = {
+            "$inc": {"consumedAmount": float(gross_delta)},
+            "$set": {"updatedAt": now, "updatedBy": user_id},
+        }
+        # Reason: push PO back-pointer on positive consumption only.
+        if gross_delta > _ZERO:
+            # Reason: fetch PO doc_number for display (best-effort; empty if not found).
+            po_doc_number = ""
+            po_hdr = await db["document_headers"].find_one({"docId": source_doc_id})
+            if po_hdr:
+                po_doc_number = po_hdr.get("docNumber", "")
+            bla_ref = {
+                "docType": source_doc_type,
+                "docId": source_doc_id,
+                "docNumber": po_doc_number,
+                "lineId": None,
+            }
+            update_op["$push"] = {"targetDocRefs": bla_ref}
+
+        await db[_BLA_COL].update_one(
+            {"docId": bla_doc_id, "organizationId": org_id},
+            update_op,
+        )
+
+    # Apply per-line consumedQty increments for line_based BLAs.
+    significant_lines = {
+        lid: delta
+        for lid, delta in line_deltas.items()
+        if abs(delta) > _BLA_TOLERANCE
+    }
+    for line_id, delta in significant_lines.items():
+        await db[_BLA_COL].update_one(
+            {"docId": bla_doc_id, "organizationId": org_id, "lines.lineId": line_id},
+            {
+                "$inc": {"lines.$.consumedQty": float(delta)},
+                "$set": {"updatedAt": now, "updatedBy": user_id},
+            },
+        )
+
+    # Write audit for the consumption event.
+    await write_purchasing_audit(
+        db,
+        audit_collection=_BLA_AUDIT_COL,
+        doc_id=bla_doc_id,
+        action="bla_consumed" if gross_delta > _ZERO else "bla_consumption_released",
+        user_id=user_id,
+        detail={
+            "grossDelta": float(gross_delta),
+            "sourceDocId": source_doc_id,
+            "sourceDocType": source_doc_type,
+        },
+    )
+
+    logger.info(
+        "[PurchasingChainReconciler] BLA '%s' consumedAmount %+.2f by %s '%s' user '%s'",
+        bla_doc_id,
+        float(gross_delta),
+        source_doc_type,
+        source_doc_id,
+        user_id,
+    )
+
+
+async def auto_close_bla_if_fully_consumed(
+    db: AsyncIOMotorDatabase,
+    *,
+    bla_doc_id: str,
+    bla_raw: Dict[str, Any],
+    org_id: str,
+    user_id: str,
+    action: str = "auto_close_on_full_consumption",
+    extra_detail: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """
+    Transition a BLA to CLOSED when fully consumed, or to PARTLY_CLOSED when
+    partially consumed.
+
+    Decision logic (re-reads ``consumedAmount`` from post-increment state):
+    - If ``consumedAmount >= totalGross - TOLERANCE`` → transition to CLOSED.
+    - Else if ``consumedAmount > TOLERANCE`` (partial) and status is OPEN →
+      transition to PARTLY_CLOSED.
+    - Otherwise → no-op.
+
+    Idempotent: if already in the target state, returns False without writing.
+
+    # Used by T-200.25.1 once PO→BLA integration ships.
+
+    Args:
+        db:           Motor database instance.
+        bla_doc_id:   BLA ``docId`` UUID string.
+        bla_raw:      Current (pre-reload acceptable) BLA header doc; used only
+                      for the status guard before the re-read.
+        org_id:       Organisation UUID.
+        user_id:      User who triggered the originating PO operation.
+        action:       Audit action label.
+        extra_detail: Additional audit detail keys.
+
+    Returns:
+        True if a status transition was written, False otherwise.
+    """
+    from src.core.documents.document_status import DocumentStatus as _DS  # noqa: PLC0415
+
+    if bla_raw is None:
+        return False
+
+    current_status = bla_raw.get("status", "")
+    # Reason: only act on live (non-terminal) BLA states.
+    if current_status not in {
+        _DS.OPEN.value,
+        _DS.PARTLY_CLOSED.value,
+    }:
+        return False
+
+    # Re-read for the post-increment consumedAmount.
+    refreshed = await db[_BLA_COL].find_one({"docId": bla_doc_id, "organizationId": org_id})
+    if refreshed is None:
+        return False
+
+    total_gross = Decimal(str(refreshed.get("totals", {}).get("gross", 0)))
+    consumed = Decimal(str(refreshed.get("consumedAmount", 0)))
+
+    now = _now()
+
+    # Fully consumed → CLOSED.
+    if consumed >= total_gross - _BLA_TOLERANCE:
+        if refreshed.get("status") == _DS.CLOSED.value:
+            return False  # already closed
+        await db[_BLA_COL].update_one(
+            {"docId": bla_doc_id, "organizationId": org_id},
+            {"$set": {"status": _DS.CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+        )
+        logger.info(
+            "[PurchasingChainReconciler] BLA '%s' auto-closed on full consumption by user '%s'",
+            bla_doc_id,
+            user_id,
+        )
+        await write_purchasing_audit(
+            db,
+            audit_collection=_BLA_AUDIT_COL,
+            doc_id=bla_doc_id,
+            action=action,
+            user_id=user_id,
+            detail=dict(extra_detail or {}),
+        )
+        return True
+
+    # Partially consumed + currently OPEN → PARTLY_CLOSED.
+    if consumed > _BLA_TOLERANCE and refreshed.get("status") == _DS.OPEN.value:
+        await db[_BLA_COL].update_one(
+            {"docId": bla_doc_id, "organizationId": org_id},
+            {"$set": {"status": _DS.PARTLY_CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+        )
+        logger.info(
+            "[PurchasingChainReconciler] BLA '%s' transitioned to PARTLY_CLOSED by user '%s'",
+            bla_doc_id,
+            user_id,
+        )
+        await write_purchasing_audit(
+            db,
+            audit_collection=_BLA_AUDIT_COL,
+            doc_id=bla_doc_id,
+            action="auto_partly_close_on_partial_consumption",
+            user_id=user_id,
+            detail=dict(extra_detail or {}),
+        )
+        return True
+
+    return False
+
+
+async def auto_reopen_bla_if_not_fully_consumed(
+    db: AsyncIOMotorDatabase,
+    *,
+    bla_doc_id: str,
+    org_id: str,
+    user_id: str,
+    action: str = "auto_reopen_on_consumption_release",
+    extra_detail: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """
+    Reverse an auto-close or auto-partly-close on a BLA when a PO that
+    referenced it is deleted or amended down.
+
+    Decision logic (re-reads post-decrement state):
+    - If BLA is CLOSED and ``consumedAmount < totalGross - TOLERANCE`` →
+      transition to PARTLY_CLOSED (still has some consumption) or OPEN (zero consumption).
+    - If BLA is PARTLY_CLOSED and ``consumedAmount <= TOLERANCE`` →
+      transition to OPEN.
+    - Otherwise → no-op.
+
+    # Used by T-200.25.1 once PO→BLA integration ships.
+
+    Args:
+        db:           Motor database instance.
+        bla_doc_id:   BLA ``docId`` UUID string.
+        org_id:       Organisation UUID.
+        user_id:      User who triggered the PO release.
+        action:       Audit action label.
+        extra_detail: Additional audit detail keys.
+
+    Returns:
+        True if a status transition was written, False otherwise.
+    """
+    from src.core.documents.document_status import DocumentStatus as _DS  # noqa: PLC0415
+
+    refreshed = await db[_BLA_COL].find_one({"docId": bla_doc_id, "organizationId": org_id})
+    if refreshed is None:
+        return False
+
+    current_status = refreshed.get("status", "")
+    total_gross = Decimal(str(refreshed.get("totals", {}).get("gross", 0)))
+    consumed = Decimal(str(refreshed.get("consumedAmount", 0)))
+
+    now = _now()
+    target: Optional[str] = None
+
+    if current_status == _DS.CLOSED.value:
+        if consumed >= total_gross - _BLA_TOLERANCE:
+            return False  # still fully consumed
+        # Partially consumed → PARTLY_CLOSED; zero consumed → OPEN.
+        target = (
+            _DS.PARTLY_CLOSED.value
+            if consumed > _BLA_TOLERANCE
+            else _DS.OPEN.value
+        )
+    elif current_status == _DS.PARTLY_CLOSED.value:
+        if consumed <= _BLA_TOLERANCE:
+            target = _DS.OPEN.value
+        # If partially consumed but not zero, stays PARTLY_CLOSED.
+
+    if target is None:
+        return False
+
+    await db[_BLA_COL].update_one(
+        {"docId": bla_doc_id, "organizationId": org_id},
+        {"$set": {"status": target, "updatedAt": now, "updatedBy": user_id}},
+    )
+    logger.info(
+        "[PurchasingChainReconciler] BLA '%s' reopened to '%s' after consumption release by user '%s'",
+        bla_doc_id,
+        target,
+        user_id,
+    )
+    await write_purchasing_audit(
+        db,
+        audit_collection=_BLA_AUDIT_COL,
+        doc_id=bla_doc_id,
+        action=action,
+        user_id=user_id,
+        detail=dict(extra_detail or {}),
+    )
+    return True
+
+
+async def pull_dangling_bla_consumption_refs(
+    db: AsyncIOMotorDatabase,
+    *,
+    bla_doc_id: str,
+    org_id: str,
+    user_id: str,
+    source_doc_id: str,
+) -> None:
+    """
+    Remove stale ``targetDocRefs`` entries from a BLA header after a PO that
+    referenced it is deleted.
+
+    Args:
+        db:            Motor database instance.
+        bla_doc_id:    BLA ``docId`` UUID string.
+        org_id:        Organisation UUID.
+        user_id:       User performing the operation (stamped on ``updatedBy``).
+        source_doc_id: ``docId`` of the PO being deleted.
+
+    Returns:
+        None.
+
+    # Used by T-200.25.1 once PO→BLA integration ships.
+    """
+    now = _now()
+    await db[_BLA_COL].update_one(
+        {"docId": bla_doc_id, "organizationId": org_id},
+        {
+            "$pull": {"targetDocRefs": {"docId": source_doc_id}},
             "$set": {"updatedAt": now, "updatedBy": user_id},
         },
     )

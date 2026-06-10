@@ -1,7 +1,7 @@
 # A64 Core Platform — Backlog
 
 > **Updated:** 2026-06-10
-> **Tasks:** 5 active · 1 ready · 2 blocked · 0 completed (Wave 3 T-201.4/.5/.6/.7/.8 + T-201.0/.1/.2/.3 + T-202 all in ARCHIVE — this session closed 6 tickets in commits `096be1a` / `14046b3` / `cdc71a4` / `2ccb9dc`) — remaining Active: T-201.8b (Wave 6 SKU-master extraction), T-201.9/.10/.11 (SAP B1 chain-via-SO epic), T-200.24 (DPI backend); Wave 5: T-500 (production cost accounting) + T-501 (packing materials BOM); Wave 6: T-600 (standalone hardening) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
+> **Tasks:** 5 active · 2 ready · 2 blocked · 0 completed (Wave 3 T-201.4/.5/.6/.7/.8 + T-201.0/.1/.2/.3 + T-202 all in ARCHIVE — this session closed 6 tickets in commits `096be1a` / `14046b3` / `cdc71a4` / `2ccb9dc`) — remaining Active: T-201.8b (Wave 6 SKU-master extraction), T-201.9/.10/.11 (SAP B1 chain-via-SO epic), T-200.25 (BLA stubs — implementation complete, awaiting commit); Wave 5: T-500 (production cost accounting) + T-501 (packing materials BOM); Wave 6: T-600 (standalone hardening) (T-003, T-004, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-028, T-029, T-030, T-031, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-040, T-041, T-042, T-043, T-044, T-045, T-046, T-047, T-048, T-050, T-051, T-053, T-055, T-056, T-057-1a, T-060.6, T-060.6.1, T-060.7, T-060.7.1, T-060.8, T-060.9.1, T-060.10, T-060.11-audit, T-060.11-preview, T-060.12, T-060.13, T-060.14, T-061, T-061.1, T-062, T-063, T-100.4, T-100.7, T-100.8, T-100.9a.1, T-100.9a.2, T-100.11.1, T-100.11.2, T-200.0, T-200.1, T-200.2, T-200.3, T-200.4, T-200.5, T-200.6, T-200.7, T-200.8, T-200.9, T-200.10, T-200.11, T-200.x completed, moved to ARCHIVE.md)
 
 ---
 
@@ -106,6 +106,35 @@
 - **Files changed:**
   - `src/modules/purchasing/services/purchasing_chain_reconciler.py` (NEW — 480 lines)
   - `src/modules/purchasing/services/document_service.py` (modified: +~250 lines)
+
+---
+
+### T-200.25 | Blanket Agreement (BLA) document type stubs — Wave 4
+- **Category:** Backend · **Priority:** P1
+- **Assigned:** backend-dev-expert · **Started:** 2026-06-10
+- **Depends on:** T-200.24 ✅ (DPI — establishes per-doc-type service pattern)
+- **Blocks:** T-200.25.1 (PO→BLA integration), T-200.26 (BLA frontend)
+- **Description:** Ship BLA document type + lifecycle + standard CRUD + counter fields
+  for consumption tracking. BLAs are long-term volume/price commitments between buyer
+  and vendor. STUBS ONLY — no PR/PO integration in this slice.
+- **Status:** Implementation complete. Tests at baseline (36 passed / 10 failed —
+  same pre-existing T-200.21a failures, no new regressions). Sales tests 334 passed.
+- **Files added:**
+  - `src/modules/purchasing/services/blanket_agreement_service.py` (NEW — ~550 lines)
+  - `src/modules/purchasing/api/v1/blanket_agreements.py` (NEW — ~330 lines)
+- **Files modified:**
+  - `src/core/documents/document_status.py` (BLA added to LEGAL_TRANSITIONS with comment block)
+  - `src/modules/purchasing/models/document.py` (BLA models appended: 8 new model classes)
+  - `src/modules/purchasing/services/purchasing_chain_reconciler.py` (5 BLA helpers added, not yet wired)
+  - `src/modules/purchasing/api/v1/__init__.py` (bla_router registered)
+- **Endpoints added** (prefix: `/api/v1/purchasing`):
+  - `GET  /blanket-agreements/active` — active BLAs (status+date filter); PO form hint
+  - `GET  /blanket-agreements` — paginated list with filters
+  - `POST /blanket-agreements` — create DRAFT BLA
+  - `GET  /blanket-agreements/{doc_id}`
+  - `PATCH /blanket-agreements/{doc_id}`
+  - `PATCH /blanket-agreements/{doc_id}/status`
+  - `DELETE /blanket-agreements/{doc_id}` — super_admin only
 
 ---
 
@@ -249,6 +278,38 @@
 
 ---
 
+
+### T-200.25.1 | PO→BLA integration — PO references Blanket Agreement + BLA consumption tracking — Wave 4
+- **Category:** Backend · **Priority:** P2
+- **Status:** 🟢 Ready
+- **Assigned:** — · **Started:** —
+- **Depends on:** T-200.25 ✅ (BLA stubs — service + models + reconciler helpers)
+- **Blocks:** T-200.26 (full BLA frontend — consumption counters need this to be meaningful)
+- **Description:** Wire the BLA into the PO creation flow.  When a PO line is created
+  against an active BLA, the BLA's consumption counters are decremented.  When a PO
+  referencing a BLA is deleted, the consumption is released and the BLA may auto-reopen.
+- **Steps:**
+  1. Add optional `bla_doc_id` field to PO line input (and PO create/update schema).
+  2. On PO DRAFT→OPEN transition: for each line with `bla_doc_id` set, call
+     `reconcile_bla_consumption(db, bla_doc_id=..., line_deltas=..., gross_delta=...)`.
+     For line_based BLAs: `line_deltas = {bla_line_id: po_line_qty}`.
+     For amount_based BLAs: `line_deltas = {}`, `gross_delta = po_line_gross`.
+  3. After reconcile, call `auto_close_bla_if_fully_consumed(...)`.
+  4. On PO delete: call `reconcile_bla_consumption` with negative deltas, then
+     `auto_reopen_bla_if_not_fully_consumed` and `pull_dangling_bla_consumption_refs`.
+  5. Price inheritance hint: if `bla_doc_id` is set on a PO line, the PO service copies
+     `bla.lines[matching_line].unitPrice` onto the PO line as a default (frontend may
+     already pre-fill via `/blanket-agreements/active` — this is the backend enforcement).
+  6. Cap check: `reconcile_bla_consumption` with `cap_check=True` prevents over-consumption.
+  7. Tests: PO referencing BLA happy path, over-consumption rejection, PO delete
+     releases BLA, BLA auto-close on full PO consumption, BLA auto-reopen on PO delete.
+- **Notes:**
+  - Reconciler helpers (load_bla_with_lines, reconcile_bla_consumption, etc.) are
+    already implemented in T-200.25; this ticket only wires them.
+  - Estimate: ~1-2 task cycles.
+  - **CRITICAL for agent dispatch:** do not run git commit/push.
+
+---
 
 ### T-500 | Wave 5 — Production Cost Accounting (bridge farm production to sales inventory)
 - **Category:** Cross-module (farm_manager · finance · sales) · **Priority:** P2

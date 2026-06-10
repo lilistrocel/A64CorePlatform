@@ -1255,3 +1255,311 @@ APFromGRCreate.model_rebuild()
 APCreate.model_rebuild()
 APResponse.model_rebuild()
 APDetailResponse.model_rebuild()
+
+
+# ---------------------------------------------------------------------------
+# Blanket Agreement (BLA) schemas — T-200.25 / Wave 4
+# ---------------------------------------------------------------------------
+
+
+class BlanketAgreementLineCreate(BaseModel):
+    """
+    One line in a Blanket Agreement creation/update payload.
+
+    BLA lines are item-anchored: the whole point of a BLA is to lock
+    pricing on a specific item over a validity window.  item_id is
+    therefore required.
+
+    NO discount_percent field — the BLA unit_price IS the agreed/discounted
+    price.  Applying a further discount would double-count the commercial
+    concession.
+
+    Attributes:
+        item_id:            UUID of the item. Required (BLAs are item-anchored).
+        item_code:          Item code for display.
+        item_name:          Item name for display.
+        description:        Optional override description.
+        committed_quantity: Volume committed on this line (> 0).
+        unit_price:         Agreed unit price for this item.
+        uom:                Unit of measure.
+        tax_code:           Tax code key from AP_TAX_RATES (optional).
+        notes:              Optional per-line notes.
+    """
+
+    item_id: str = Field(..., description="UUID of the committed item (required)")
+    item_code: str = Field(..., max_length=100)
+    item_name: str = Field(..., max_length=500)
+    description: Optional[str] = Field(None, max_length=500)
+    committed_quantity: Decimal = Field(..., gt=0)
+    unit_price: Decimal = Field(..., ge=0)
+    uom: str = Field(..., max_length=50)
+    tax_code: Optional[str] = Field(None, max_length=20)
+    notes: Optional[str] = Field(None, max_length=500)
+
+
+class BlanketAgreementCreate(BaseModel):
+    """
+    Input schema for creating a new Blanket Agreement.
+
+    A BLA is a STANDALONE document — not chained from a PR/PO.
+    Created to formalise a long-term volume/price commitment with a vendor.
+
+    The ``agreement_type`` field selects the consumption-tracking mode:
+    - ``"line_based"``:   each line has a committed_quantity; PO consumption
+      is tracked per-line (qty decrements per BLA line).
+    - ``"amount_based"``: header has a committed_total_amount; PO consumption
+      is tracked at header level in currency amount.  Lines still exist as
+      "expected items" for reporting but individual line quantities are
+      informational only.
+
+    agreement_type is immutable after creation.
+
+    organizationId comes from the JWT.
+
+    Attributes:
+        vendor_id:               UUID of the vendor.
+        vendor_name:             Vendor name (denormalised for display).
+        vendor_code:             Optional vendor code.
+        company_code:            Finance company code. Backend resolves if empty.
+        agreement_date:          Date the agreement was signed/formalised.
+        valid_from:              Start date of the agreement's validity window.
+        valid_to:                End date of the agreement's validity window (exclusive).
+        currency:                ISO 4217 currency code.
+        exchange_rate:           FX rate against base currency.
+        payment_terms_id:        Optional payment terms reference.
+        bp_ref_no:               Vendor's contract reference number.
+        journal_memo:            Free-text memo (informational; no JE on BLA).
+        notes:                   Internal notes.
+        agreement_type:          Consumption tracking mode: "line_based" or "amount_based".
+        committed_total_amount:  For amount_based BLAs: total agreed spend.
+                                 Ignored for line_based BLAs (totals are computed from lines).
+        lines:                   At least one line. Required for both modes.
+    """
+
+    vendor_id: str
+    vendor_name: str
+    vendor_code: Optional[str] = None
+    company_code: str = Field(default="")
+    agreement_date: Optional[datetime] = Field(
+        None, description="Agreement signing date; defaults to today when omitted"
+    )
+    valid_from: datetime = Field(..., description="Start of validity window (inclusive)")
+    valid_to: datetime = Field(..., description="End of validity window (exclusive)")
+    currency: str = Field(default="AED", max_length=10)
+    exchange_rate: Decimal = Field(default=Decimal("1"), ge=0)
+    payment_terms_id: Optional[str] = None
+    bp_ref_no: Optional[str] = Field(None, max_length=100)
+    journal_memo: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=2000)
+    agreement_type: Literal["line_based", "amount_based"] = "line_based"
+    committed_total_amount: Optional[Decimal] = Field(
+        None,
+        ge=0,
+        description=(
+            "Total committed spend for amount_based BLAs. "
+            "Ignored for line_based BLAs."
+        ),
+    )
+    lines: List[BlanketAgreementLineCreate] = Field(..., min_length=1)
+
+
+class BlanketAgreementUpdate(BaseModel):
+    """
+    Partial update for a Draft Blanket Agreement.
+
+    Lines, when supplied, replace the current set wholesale.
+    vendor, companyCode, and agreement_type are immutable after creation.
+
+    Only DRAFT BLAs may be updated.
+    """
+
+    agreement_date: Optional[datetime] = None
+    valid_from: Optional[datetime] = None
+    valid_to: Optional[datetime] = None
+    currency: Optional[str] = Field(None, max_length=10)
+    exchange_rate: Optional[Decimal] = None
+    payment_terms_id: Optional[str] = None
+    bp_ref_no: Optional[str] = Field(None, max_length=100)
+    journal_memo: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=2000)
+    committed_total_amount: Optional[Decimal] = Field(None, ge=0)
+    lines: Optional[List[BlanketAgreementLineCreate]] = None
+
+
+class BlanketAgreementTotals(BaseModel):
+    """
+    Aggregated monetary totals for a Blanket Agreement.
+
+    For line_based BLAs: net/tax/gross are computed from committed lines.
+    For amount_based BLAs: gross = committed_total_amount; net/tax may be 0
+    until the commitment is broken into taxable components.
+
+    Attributes:
+        net:                Net amount (sum of line_net for line_based).
+        tax:                Tax amount (sum of line_tax for line_based).
+        gross:              Total gross committed amount.
+        consumed_amount:    Amount consumed by referencing POs (incremented by T-200.25.1).
+        outstanding_amount: gross - consumed_amount.
+    """
+
+    net: Decimal
+    tax: Decimal
+    gross: Decimal
+    consumed_amount: Decimal = Decimal("0")
+    outstanding_amount: Decimal = Decimal("0")
+
+
+class BlanketAgreementLine(BaseModel):
+    """
+    Embedded line response shape for a Blanket Agreement.
+
+    For line_based BLAs, ``consumed_qty`` and ``outstanding_qty`` are tracked
+    per-line as POs reference and consume the committed volume.
+    For amount_based BLAs, these counters carry ``committed_quantity`` and 0
+    respectively (informational only — consumption is at header level).
+
+    Attributes:
+        line_id:             UUID of this BLA line.
+        line_number:         1-indexed position.
+        item_id:             UUID of the committed item.
+        item_code:           Item code.
+        item_name:           Item name.
+        description:         Description.
+        committed_quantity:  Volume committed on this line.
+        consumed_qty:        Qty consumed by POs referencing this BLA (line_based only).
+        outstanding_qty:     committed_quantity - consumed_qty.
+        unit_price:          Agreed unit price.
+        uom:                 Unit of measure.
+        line_net:            committed_quantity * unit_price (net, no tax).
+        tax_code:            Tax code (optional).
+        tax_rate:            Applied tax rate %.
+        line_tax:            Tax on this line.
+        line_gross:          line_net + line_tax.
+        notes:               Optional per-line notes.
+    """
+
+    line_id: str
+    line_number: int
+    item_id: str
+    item_code: str
+    item_name: str
+    description: Optional[str] = None
+    committed_quantity: Decimal
+    consumed_qty: Decimal = Decimal("0")
+    outstanding_qty: Decimal = Decimal("0")
+    unit_price: Decimal
+    uom: str
+    line_net: Decimal
+    tax_code: Optional[str] = None
+    tax_rate: Decimal = Decimal("0")
+    line_tax: Decimal = Decimal("0")
+    line_gross: Decimal
+    notes: Optional[str] = None
+
+
+class BlanketAgreementStatusTransitionRequest(BaseModel):
+    """
+    Request body for Blanket Agreement status transitions.
+
+    Attributes:
+        target_status: The desired new status (as DocumentStatus enum value string).
+        notes:         Optional free-text reason / approver comment.
+    """
+
+    target_status: str
+    notes: Optional[str] = Field(None, max_length=1000)
+
+
+class BlanketAgreementResponse(BaseModel):
+    """
+    Full response schema for a Blanket Agreement (header + embedded lines).
+
+    Used for GET /blanket-agreements/{doc_id} and as the result of create/update.
+
+    The ``totals`` field includes ``consumed_amount`` and ``outstanding_amount``
+    computed at read time from the persisted ``consumedAmount`` field.
+
+    ``target_doc_refs`` lists POs that have referenced this BLA.  This field
+    is populated by T-200.25.1 (PO→BLA integration) and is empty in T-200.25.
+
+    Attributes:
+        doc_id:               UUID primary key (stored as ``docId`` in MongoDB).
+        doc_number:           Human-readable number, e.g. "BLA-2026-0001".
+        doc_type:             Always "BLA".
+        organization_id:      Organisation scope UUID.
+        company_code:         Finance company code.
+        vendor_id:            UUID of the vendor.
+        vendor_code:          Vendor code (denormalised).
+        vendor_name:          Vendor name (denormalised).
+        bp_ref_no:            Vendor's contract reference.
+        agreement_date:       Date the agreement was formalised.
+        valid_from:           Start of validity window.
+        valid_to:             End of validity window.
+        currency:             ISO 4217 currency code.
+        exchange_rate:        FX rate.
+        payment_terms_id:     Optional payment terms.
+        status:               Current document status.
+        agreement_type:       "line_based" or "amount_based".
+        committed_total_amount: For amount_based BLAs; None for line_based.
+        totals:               Aggregated net/tax/gross + consumed/outstanding.
+        target_doc_refs:      POs referencing this BLA (wired in T-200.25.1).
+        journal_memo:         Informational memo.
+        notes:                Internal notes.
+        lines:                Embedded committed line items.
+        created_at:           Creation timestamp.
+        created_by:           UUID of the creating user.
+        updated_at:           Last update timestamp.
+        updated_by:           UUID of the last updating user.
+    """
+
+    doc_id: str
+    doc_number: str
+    doc_type: str = "BLA"
+    organization_id: str
+    company_code: str
+    vendor_id: str
+    vendor_code: Optional[str] = None
+    vendor_name: str
+    bp_ref_no: Optional[str] = None
+    agreement_date: datetime
+    valid_from: datetime
+    valid_to: datetime
+    currency: str
+    exchange_rate: Decimal
+    payment_terms_id: Optional[str] = None
+    status: str
+    agreement_type: str
+    committed_total_amount: Optional[Decimal] = None
+    totals: BlanketAgreementTotals
+    target_doc_refs: List[DocumentLinkRef] = []
+    journal_memo: Optional[str] = None
+    notes: Optional[str] = None
+    lines: List[BlanketAgreementLine] = []
+    created_at: datetime
+    created_by: str
+    updated_at: datetime
+    updated_by: str
+
+
+class BlanketAgreementListItem(BaseModel):
+    """
+    Slim list-view schema for Blanket Agreements.
+
+    Used in paginated GET /blanket-agreements to avoid transmitting full
+    line sets.  Includes enough fields for the list page: vendor, dates,
+    agreement_type, status, and high-level totals.
+    """
+
+    doc_id: str
+    doc_number: str
+    organization_id: str
+    vendor_id: str
+    vendor_name: str
+    agreement_date: datetime
+    valid_from: datetime
+    valid_to: datetime
+    status: str
+    agreement_type: str
+    totals: BlanketAgreementTotals
+    created_at: datetime
+    updated_at: datetime
