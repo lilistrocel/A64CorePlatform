@@ -493,27 +493,6 @@ class GRDetailResponse(GRResponse):
 APStatus = str
 """State machine for AP Invoice: Draft → Pending Approval → Approved | Rejected."""
 
-# Hardcoded tax rates per tax code for v1 (no tax-code lookup service yet).
-# SR (reverse charge) is treated as standard 5% here; the finance handler decides
-# how to split the VAT into input + output on its side.
-AP_TAX_RATES: dict = {
-    "S": Decimal("5"),
-    "SR": Decimal("5"),
-    "Z": Decimal("0"),
-    "E": Decimal("0"),
-    "N": Decimal("0"),
-}
-"""
-v1 hardcoded tax rate table keyed by taxCode.
-
-S  = Standard (5% UAE VAT)
-SR = Reverse charge (5% — finance handler decides input/output split)
-Z  = Zero-rated (0%)
-E  = Exempt (0%)
-N  = Not subject to VAT (0%)
-"""
-
-
 class APLineInput(BaseModel):
     """
     One line in an AP Invoice creation/update payload.
@@ -690,7 +669,8 @@ class APCreditNoteLineCreate(BaseModel):
     One line in an AP Credit Note creation/update payload.
 
     Mirrors CreditNoteLineCreate from the sales side but adapted for the
-    purchasing schema: no revenue account, uses AP_TAX_RATES dict, carries
+    purchasing schema: no revenue account, tax_code resolved via finance
+    HTTP (src.core.finance.get_tax_percent) — see T-200.22b — and carries
     an optional gr_line_id for chain audit purposes.
 
     Attributes:
@@ -705,7 +685,7 @@ class APCreditNoteLineCreate(BaseModel):
         uom:              Unit of measure.
         unit_price:       Credit unit price (usually mirrors AP line price).
         discount_percent: Line discount 0–100.
-        tax_code:         Tax code key from AP_TAX_RATES.
+        tax_code:         Tax code key resolved via src.core.finance.get_tax_percent (T-200.22b).
         cost_center_id:   Optional cost centre reference.
         notes:            Optional per-line notes.
         base_doc_ref:     Line-level link to the source AP Invoice line.
@@ -956,7 +936,7 @@ class APDownPaymentLineCreate(BaseModel):
         uom:          Unit of measure.
         unit_price:   Prepayment amount per unit (required; the core amount field).
         discount_percent: Line discount 0–100.
-        tax_code:     Tax code key from AP_TAX_RATES.
+        tax_code:     Tax code key resolved via src.core.finance.get_tax_percent (T-200.22b).
         cost_center_id: Optional cost centre reference.
         notes:        Optional per-line notes.
     """
@@ -1282,7 +1262,7 @@ class BlanketAgreementLineCreate(BaseModel):
         committed_quantity: Volume committed on this line (> 0).
         unit_price:         Agreed unit price for this item.
         uom:                Unit of measure.
-        tax_code:           Tax code key from AP_TAX_RATES (optional).
+        tax_code:           Tax code key resolved via src.core.finance.get_tax_percent (T-200.22b) (optional).
         notes:              Optional per-line notes.
     """
 

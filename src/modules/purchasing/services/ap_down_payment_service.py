@@ -42,10 +42,12 @@ DPI consumption (cross-cutting with AP Invoice)
   calls auto_close_dpi_if_fully_consumed() to handle PARTLY_CLOSED/CLOSED
   auto-transitions.
 
-AP_TAX_RATES treatment
------------------------
-Uses the same AP_TAX_RATES hardcoded dict from models.document.
-T-200.22b will migrate both AP Invoice and DPI to the finance HTTP lookup.
+Tax resolution (T-200.22b)
+--------------------------
+Tax rates are resolved via the finance microservice HTTP (``get_tax_percent`` from
+``src.core.finance``), matching the sales T-202 pattern.  The hardcoded ``AP_TAX_RATES``
+dict has been removed.  ``auth_token`` is now a parameter on the create function and
+forwarded through the call stack to the HTTP helper.
 """
 
 from __future__ import annotations
@@ -61,9 +63,9 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from src.core.documents.doc_number import next_doc_number
 from src.core.documents.document_status import DocumentStatus, assert_legal_transition
+from src.core.finance import get_tax_percent
 
 from ..models.document import (
-    AP_TAX_RATES,
     APDownPaymentCreate,
     APDownPaymentLine,
     APDownPaymentListItem,
@@ -101,21 +103,32 @@ def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
-def _resolve_tax_rate(tax_code: Optional[str]) -> Decimal:
+async def _resolve_tax_rate(
+    tax_code: Optional[str],
+    org_id: str,
+    auth_token: Optional[str],
+) -> Decimal:
     """
-    Look up the tax rate for a given tax code from the hardcoded AP_TAX_RATES dict.
+    Resolve a tax code to its rate via the finance microservice HTTP.
 
-    Falls back to 0% for unknown or missing tax codes (same as AP Invoice behaviour).
+    T-200.22b migration: previously queried the hardcoded AP_TAX_RATES dict;
+    now mirrors sales' get_tax_percent helper (T-202) so rates are per-tenant
+    and configurable without a code release.
+
+    Returns Decimal("0.00") for null/missing codes (exempt-line shortcut,
+    no HTTP call).
+    Raises ValueError if the code is unknown or finance is unreachable.
 
     Args:
-        tax_code: Tax code string from AP_TAX_RATES dict.
+        tax_code:   Tax code string (e.g. "S", "Z", "E"), or None for exempt lines.
+        org_id:     Organisation UUID for scoping.
+        auth_token: Bearer token from the calling user's JWT, forwarded to the
+                    finance service for authentication.
 
     Returns:
-        Tax rate as a Decimal (e.g. Decimal("5") for 5%).
+        Tax rate as a Decimal (e.g. Decimal("5.00") for 5%).
     """
-    if tax_code is None:
-        return _ZERO
-    return AP_TAX_RATES.get(tax_code, _ZERO)
+    return await get_tax_percent(tax_code, org_id, auth_token)
 
 
 def _compute_line_amounts(
@@ -132,7 +145,7 @@ def _compute_line_amounts(
         quantity:         Prepayment quantity basis.
         unit_price:       Prepayment amount per unit.
         discount_percent: Line discount 0–100.
-        tax_rate:         Tax rate 0–100 (from AP_TAX_RATES).
+        tax_rate:         Tax rate 0–100 (resolved via finance HTTP lookup).
 
     Returns:
         Dict with keys: line_net, line_tax, line_gross.
@@ -149,20 +162,28 @@ def _compute_line_amounts(
     return {"line_net": line_net, "line_tax": line_tax, "line_gross": line_gross}
 
 
-def _build_line_doc(line: Any, *, line_number: int) -> Dict[str, Any]:
+async def _build_line_doc(
+    line: Any,
+    *,
+    line_number: int,
+    org_id: str,
+    auth_token: Optional[str],
+) -> Dict[str, Any]:
     """
     Build the embedded DPI line dict for MongoDB storage.
 
     Args:
         line:        Validated APDownPaymentLineCreate input.
         line_number: 1-indexed position.
+        org_id:      Organisation UUID for scoping (forwarded to finance HTTP lookup).
+        auth_token:  Bearer token forwarded to the finance service for tax resolution.
 
     Returns:
         Dict ready for embedding in the DPI header document.
     """
     line_id = str(uuid.uuid4())
     desc = line.description if line.description is not None else line.item_name
-    tax_rate = _resolve_tax_rate(line.tax_code)
+    tax_rate = await _resolve_tax_rate(line.tax_code, org_id, auth_token)
     amounts = _compute_line_amounts(
         quantity=line.quantity,
         unit_price=line.unit_price,
@@ -429,6 +450,7 @@ async def create_ap_down_payment(
     payload: APDownPaymentCreate,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> APDownPaymentResponse:
     """
     Create a new AP Down Payment Invoice in DRAFT status.
@@ -437,15 +459,16 @@ async def create_ap_down_payment(
 
     Sequence:
     1. Generate docId + docNumber ("DPI-YYYY-NNNN").
-    2. Build embedded line docs with amounts computed from AP_TAX_RATES.
+    2. Build embedded line docs with amounts resolved via finance HTTP (T-200.22b).
     3. Persist in DRAFT status with consumedAmount = 0.
     4. Audit-log.
 
     Args:
-        db:      Motor database instance.
-        payload: Validated APDownPaymentCreate payload.
-        org_id:  Organisation UUID for scoping.
-        user_id: Authenticated user creating the DPI.
+        db:         Motor database instance.
+        payload:    Validated APDownPaymentCreate payload.
+        org_id:     Organisation UUID for scoping.
+        user_id:    Authenticated user creating the DPI.
+        auth_token: Bearer token forwarded to the finance service for tax resolution.
 
     Returns:
         APDownPaymentResponse for the newly-created DRAFT DPI.
@@ -453,7 +476,9 @@ async def create_ap_down_payment(
     # Reason: build lines first so totals are correct before inserting the header.
     computed_lines: List[Dict[str, Any]] = []
     for i, line in enumerate(payload.lines, start=1):
-        computed_lines.append(_build_line_doc(line, line_number=i))
+        computed_lines.append(
+            await _build_line_doc(line, line_number=i, org_id=org_id, auth_token=auth_token)
+        )
 
     totals = _build_totals(computed_lines, consumed_amount=_ZERO)
 

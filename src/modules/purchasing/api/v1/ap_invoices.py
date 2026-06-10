@@ -227,6 +227,7 @@ async def create_ap_from_gr(
             data=body,
             created_by=current_user.userId,
             company_code=company_code,
+            auth_token=_extract_token(request),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -285,6 +286,7 @@ async def create_ap(
             data=body,
             created_by=current_user.userId,
             company_code=company_code,
+            auth_token=_extract_token(request),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -341,6 +343,7 @@ async def get_ap(
     summary="Update draft AP invoice",
 )
 async def update_ap(
+    request: Request,
     doc_id: str,
     body: APUpdate,
     organization_id: Optional[str] = Query(None),
@@ -355,6 +358,7 @@ async def update_ap(
     immutable after creation.
 
     Args:
+        request: Incoming HTTP request (Bearer token forwarded for tax resolution).
         doc_id: AP document UUID string.
         body: Partial update payload.
         organization_id: Override org.
@@ -372,7 +376,10 @@ async def update_ap(
     org_id = _get_org_id(organization_id, current_user)
 
     try:
-        ap = await service.update_ap(org_id, doc_id, body, current_user.userId)
+        ap = await service.update_ap(
+            org_id, doc_id, body, current_user.userId,
+            auth_token=_extract_token(request),
+        )
     except ValueError as exc:
         detail = str(exc)
         if "Only Draft" in detail:

@@ -254,6 +254,7 @@ async def create_acn_direct(
             payload=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_token(request),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -310,6 +311,7 @@ async def create_acn_from_invoice(
             payload=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_token(request),
         )
     except ValueError as exc:
         detail = str(exc)

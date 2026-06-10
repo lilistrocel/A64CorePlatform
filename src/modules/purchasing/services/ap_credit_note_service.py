@@ -57,10 +57,12 @@ The service checks whether ``baseInvoiceDocRef`` is present on the ACN header.
 - If present (from-AP-Invoice path): counter updates and auto-close fire on approval.
 - If absent (direct path): no AP-side mutations on approval; only the outbox event.
 
-AP_TAX_RATES treatment
------------------------
-Uses the same AP_TAX_RATES hardcoded dict from models.document — same as AP Invoice.
-T-200.22b will migrate both AP Invoice and ACN to the finance HTTP lookup simultaneously.
+Tax resolution (T-200.22b)
+--------------------------
+Tax rates are resolved via the finance microservice HTTP (``get_tax_percent`` from
+``src.core.finance``), matching the sales T-202 pattern.  The hardcoded ``AP_TAX_RATES``
+dict has been removed.  ``auth_token`` is now a parameter on both create functions and
+forwarded through the call stack to the HTTP helper.
 """
 
 from __future__ import annotations
@@ -76,9 +78,9 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from src.core.documents.doc_number import next_doc_number
 from src.core.documents.document_status import DocumentStatus, assert_legal_transition
+from src.core.finance import get_tax_percent
 
 from ..models.document import (
-    AP_TAX_RATES,
     APCreditNoteCreate,
     APCreditNoteLine,
     APCreditNoteListItem,
@@ -124,21 +126,32 @@ def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
-def _resolve_tax_rate(tax_code: Optional[str]) -> Decimal:
+async def _resolve_tax_rate(
+    tax_code: Optional[str],
+    org_id: str,
+    auth_token: Optional[str],
+) -> Decimal:
     """
-    Look up the tax rate for a given tax code from the hardcoded AP_TAX_RATES dict.
+    Resolve a tax code to its rate via the finance microservice HTTP.
 
-    Falls back to 0% for unknown or missing tax codes (same as AP Invoice behaviour).
+    T-200.22b migration: previously queried the hardcoded AP_TAX_RATES dict;
+    now mirrors sales' get_tax_percent helper (T-202) so rates are per-tenant
+    and configurable without a code release.
+
+    Returns Decimal("0.00") for null/missing codes (exempt-line shortcut,
+    no HTTP call).
+    Raises ValueError if the code is unknown or finance is unreachable.
 
     Args:
-        tax_code: Tax code string from the AP_TAX_RATES dict, e.g. "S", "Z", "E".
+        tax_code:   Tax code string (e.g. "S", "Z", "E"), or None for exempt lines.
+        org_id:     Organisation UUID for scoping.
+        auth_token: Bearer token from the calling user's JWT, forwarded to the
+                    finance service for authentication.
 
     Returns:
-        Tax rate as a Decimal (e.g. Decimal("5") for 5%).
+        Tax rate as a Decimal (e.g. Decimal("5.00") for 5%).
     """
-    if tax_code is None:
-        return _ZERO
-    return AP_TAX_RATES.get(tax_code, _ZERO)
+    return await get_tax_percent(tax_code, org_id, auth_token)
 
 
 def _compute_line_amounts(
@@ -155,7 +168,7 @@ def _compute_line_amounts(
         quantity:         Credited quantity.
         unit_price:       Credit unit price per unit.
         discount_percent: Line discount 0–100.
-        tax_rate:         Tax rate 0–100 (from AP_TAX_RATES).
+        tax_rate:         Tax rate 0–100 (resolved via finance HTTP lookup).
 
     Returns:
         Dict with keys: line_net, line_tax, line_gross.
@@ -172,10 +185,12 @@ def _compute_line_amounts(
     return {"line_net": line_net, "line_tax": line_tax, "line_gross": line_gross}
 
 
-def _build_line_doc(
+async def _build_line_doc(
     line: Any,
     *,
     line_number: int,
+    org_id: str,
+    auth_token: Optional[str],
 ) -> Dict[str, Any]:
     """
     Build the embedded ACN line dict for MongoDB storage.
@@ -183,6 +198,8 @@ def _build_line_doc(
     Args:
         line:        Validated APCreditNoteLineCreate input.
         line_number: 1-indexed position.
+        org_id:      Organisation UUID for scoping (forwarded to finance HTTP lookup).
+        auth_token:  Bearer token forwarded to the finance service for tax resolution.
 
     Returns:
         Dict ready for embedding in the ACN header document.
@@ -190,7 +207,7 @@ def _build_line_doc(
 
     line_id = str(uuid.uuid4())
     desc = line.description if line.description is not None else line.item_name
-    tax_rate = _resolve_tax_rate(line.tax_code)
+    tax_rate = await _resolve_tax_rate(line.tax_code, org_id, auth_token)
     amounts = _compute_line_amounts(
         quantity=line.quantity,
         unit_price=line.unit_price,
@@ -492,6 +509,7 @@ async def create_ap_credit_note(
     payload: APCreditNoteCreate,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> APCreditNoteResponse:
     """
     Create a new AP Credit Note in DRAFT status (direct-create path).
@@ -504,15 +522,16 @@ async def create_ap_credit_note(
 
     Sequence:
     1. Generate docId + docNumber ("APC-YYYY-NNNN").
-    2. Build embedded line docs with amounts computed from AP_TAX_RATES.
+    2. Build embedded line docs with amounts resolved via finance HTTP (T-200.22b).
     3. Persist in DRAFT status.
     4. Audit-log.
 
     Args:
-        db:      Motor database instance.
-        payload: Validated APCreditNoteCreate payload (base_invoice_doc_ref must be None).
-        org_id:  Organisation UUID for scoping.
-        user_id: Authenticated user creating the Credit Note.
+        db:         Motor database instance.
+        payload:    Validated APCreditNoteCreate payload (base_invoice_doc_ref must be None).
+        org_id:     Organisation UUID for scoping.
+        user_id:    Authenticated user creating the Credit Note.
+        auth_token: Bearer token forwarded to the finance service for tax resolution.
 
     Returns:
         APCreditNoteResponse for the newly-created DRAFT ACN.
@@ -520,7 +539,9 @@ async def create_ap_credit_note(
     # Reason: build lines first so totals are correct before inserting the header.
     computed_lines: List[Dict[str, Any]] = []
     for i, line in enumerate(payload.lines, start=1):
-        computed_lines.append(_build_line_doc(line, line_number=i))
+        computed_lines.append(
+            await _build_line_doc(line, line_number=i, org_id=org_id, auth_token=auth_token)
+        )
 
     totals = _build_totals(computed_lines)
 
@@ -602,6 +623,7 @@ async def create_ap_credit_note_from_invoice(
     payload: APCreditNoteCreate,
     org_id: str,
     user_id: str,
+    auth_token: Optional[str] = None,
 ) -> APCreditNoteResponse:
     """
     Create a new AP Credit Note in DRAFT status, chained to a source AP Invoice.
@@ -619,6 +641,7 @@ async def create_ap_credit_note_from_invoice(
         payload:    Validated APCreditNoteCreate payload.
         org_id:     Organisation UUID for scoping.
         user_id:    Authenticated user creating the Credit Note.
+        auth_token: Bearer token forwarded to the finance service for tax resolution.
 
     Returns:
         APCreditNoteResponse for the newly-created DRAFT ACN.
@@ -647,15 +670,16 @@ async def create_ap_credit_note_from_invoice(
     ap_credited = Decimal(str(ap_raw.get("creditedAmount", 0)))
     open_to_credit = max(ap_total_gross - ap_credited, _ZERO)
 
-    acn_gross = sum(
-        _compute_line_amounts(
+    # Reason: resolve tax rates for all lines to compute the ACN gross for the cap check.
+    acn_gross = _ZERO
+    for ln in payload.lines:
+        rate = await _resolve_tax_rate(ln.tax_code, org_id, auth_token)
+        acn_gross += _compute_line_amounts(
             quantity=ln.quantity,
             unit_price=ln.unit_price,
             discount_percent=ln.discount_percent,
-            tax_rate=_resolve_tax_rate(ln.tax_code),
+            tax_rate=rate,
         )["line_gross"]
-        for ln in payload.lines
-    )
 
     if acn_gross > open_to_credit + _TOLERANCE:
         raise ValueError(
@@ -690,7 +714,9 @@ async def create_ap_credit_note_from_invoice(
     # Step 3: Build the ACN using source AP's vendor/currency/companyCode.
     computed_lines: List[Dict[str, Any]] = []
     for i, line in enumerate(payload.lines, start=1):
-        computed_lines.append(_build_line_doc(line, line_number=i))
+        computed_lines.append(
+            await _build_line_doc(line, line_number=i, org_id=org_id, auth_token=auth_token)
+        )
 
     totals = _build_totals(computed_lines)
 

@@ -353,6 +353,7 @@ async def create_bla(
             payload=body,
             org_id=org_id,
             user_id=current_user.userId,
+            auth_token=_extract_token(request),
         )
     except ValueError as exc:
         raise HTTPException(

@@ -72,9 +72,9 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorDatabase
 
 from src.core.documents.document_status import DocumentStatus, assert_legal_transition
+from src.core.finance import get_tax_percent
 
 from ..models.document import (
-    AP_TAX_RATES,
     APCreate,
     APDetailResponse,
     APFromGRCreate,
@@ -3472,6 +3472,7 @@ class DocumentService:
         org_id: str,
         line_inputs: List[Any],  # List[APLineInput]
         now: datetime,
+        auth_token: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Resolve GR lines, validate grLineId references, and compute AP line dicts.
@@ -3479,11 +3480,15 @@ class DocumentService:
         Quantity is LOCKED to the GR line quantity (no partial invoicing in v1).
         The user's invoiceUnitPrice replaces the GR's PO unit price for variance.
 
+        T-200.22b: tax rate is now resolved via the finance microservice HTTP
+        (``get_tax_percent``) instead of the hardcoded AP_TAX_RATES dict.
+
         Args:
-            gr_doc_id: GR document UUID string.
-            org_id: Organisation scope.
+            gr_doc_id:  GR document UUID string.
+            org_id:     Organisation scope.
             line_inputs: APLineInput objects from the request.
-            now: Timestamp for createdAt/updatedAt.
+            now:        Timestamp for createdAt/updatedAt.
+            auth_token: Bearer token forwarded to the finance service for tax resolution.
 
         Returns:
             List of line dicts ready for insert_many (without docId yet).
@@ -3518,9 +3523,9 @@ class DocumentService:
             invoice_price = Decimal(str(line_in.invoiceUnitPrice))
             po_price = Decimal(str(gr_line.get("unitPrice", 0)))  # GR copied PO price
 
-            # Resolve tax rate from hardcoded table (v1 — no tax lookup service)
+            # Reason: T-200.22b — resolve tax rate via finance microservice HTTP.
             tax_code = gr_line.get("taxCode")
-            tax_rate = AP_TAX_RATES.get(tax_code or "", Decimal("0"))
+            tax_rate = await get_tax_percent(tax_code, org_id, auth_token)
 
             # Reason: discount inherited from GR (which inherited from PO). AP cannot
             # override it. Variance must also be discounted so the JE balances:
@@ -3594,6 +3599,7 @@ class DocumentService:
         data: "APFromGRCreate",
         created_by: str,
         company_code: Optional[str] = None,
+        auth_token: Optional[str] = None,
     ) -> "APDetailResponse":
         """
         Create a Draft AP Invoice from a Posted GR (primary UX path).
@@ -3623,12 +3629,14 @@ class DocumentService:
             future, file T-200.22.1.
 
         Args:
-            org_id: Organisation scope.
-            gr_doc_id: UUID of the source Posted GR.
-            data: APFromGRCreate payload.
-            created_by: User UUID string.
+            org_id:       Organisation scope.
+            gr_doc_id:    UUID of the source Posted GR.
+            data:         APFromGRCreate payload.
+            created_by:   User UUID string.
             company_code: Finance company code resolved by the API layer via
                 ``resolve_company_code()``. Must not be None when called.
+            auth_token:   Bearer token forwarded to the finance service for tax
+                resolution (T-200.22b).
 
         Returns:
             Created APDetailResponse (status: Draft).
@@ -3681,7 +3689,9 @@ class DocumentService:
         po_doc_number = po_header.get("docNumber", "") if po_header else ""
 
         now = datetime.now(tz=timezone.utc)
-        ap_line_docs = await self._build_ap_lines_from_gr(gr_doc_id, org_id, data.lines, now)
+        ap_line_docs = await self._build_ap_lines_from_gr(
+            gr_doc_id, org_id, data.lines, now, auth_token=auth_token
+        )
 
         totals = self._sum_ap_lines(ap_line_docs)
         doc_id = str(uuid.uuid4())
@@ -3906,6 +3916,7 @@ class DocumentService:
         data: "APCreate",
         created_by: str,
         company_code: Optional[str] = None,
+        auth_token: Optional[str] = None,
     ) -> "APDetailResponse":
         """
         Create a Draft AP Invoice with an explicit baseDocId (GR docId) in the body.
@@ -3914,10 +3925,12 @@ class DocumentService:
         the request body rather than the URL path.
 
         Args:
-            org_id: Organisation scope.
-            data: APCreate payload with baseDocId.
-            created_by: User UUID string.
+            org_id:       Organisation scope.
+            data:         APCreate payload with baseDocId.
+            created_by:   User UUID string.
             company_code: Finance company code.
+            auth_token:   Bearer token forwarded to the finance service for tax
+                resolution (T-200.22b).
 
         Returns:
             Created APDetailResponse (status: Draft).
@@ -3942,6 +3955,7 @@ class DocumentService:
             data=ap_from_gr_data,
             created_by=created_by,
             company_code=company_code,
+            auth_token=auth_token,
         )
 
     async def list_aps(
@@ -4020,6 +4034,7 @@ class DocumentService:
         doc_id: str,
         data: "APUpdate",
         updated_by: str,
+        auth_token: Optional[str] = None,
     ) -> Optional["APDetailResponse"]:
         """
         Partial update a Draft AP Invoice.
@@ -4037,10 +4052,12 @@ class DocumentService:
         function will need counter delta logic mirroring T-201.6 on the sales side.
 
         Args:
-            org_id: Organisation scope.
-            doc_id: AP document UUID string.
-            data: Partial update payload.
+            org_id:     Organisation scope.
+            doc_id:     AP document UUID string.
+            data:       Partial update payload.
             updated_by: User UUID string.
+            auth_token: Bearer token forwarded to the finance service for tax
+                resolution when line prices are updated (T-200.22b).
 
         Returns:
             Updated APDetailResponse or None if not found.
@@ -4075,7 +4092,7 @@ class DocumentService:
             # Reason: re-build all lines from GR to re-compute variance on updated prices
             gr_doc_id = header["baseDocId"]
             new_line_docs = await self._build_ap_lines_from_gr(
-                gr_doc_id, org_id, data.lines, now
+                gr_doc_id, org_id, data.lines, now, auth_token=auth_token
             )
             for idx, ld in enumerate(new_line_docs, start=1):
                 ld["docId"] = doc_id

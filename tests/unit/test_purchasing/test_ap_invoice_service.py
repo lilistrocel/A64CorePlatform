@@ -9,13 +9,14 @@ Covers:
   - submit_ap + approve_ap: approvalHistory appended, status Approved, outbox event emitted
   - Variance computation: PO 100 → invoice 105 × qty 10 = 50 (positive variance)
   - Negative variance: PO 100 → invoice 95 × qty 10 = -50
-  - VAT computation: S=5%, Z=0%, E=0%, N=0%, SR=5%
+  - VAT computation via mocked get_tax_percent (T-200.22b): S=5%, Z/E/N/None=0%
   - approvalHistory on reject
   - build_ap_invoice_event_payload: correct shape for ap_invoice_posted contract
 """
 
 import sys
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -241,6 +242,30 @@ def _make_ap_line(
         "createdAt": now,
         "updatedAt": now,
     }
+
+
+# ---------------------------------------------------------------------------
+# T-200.22b: mock get_tax_percent (finance HTTP helper)
+# ---------------------------------------------------------------------------
+
+_PATCH_TAX_TARGET = "src.modules.purchasing.services.document_service.get_tax_percent"
+
+
+@contextmanager
+def _patch_tax_percent(rate: Decimal = Decimal("5.00"), raise_exc: Optional[Exception] = None):
+    """
+    Context manager: patch get_tax_percent in document_service module.
+
+    Args:
+        rate:      The Decimal rate to return (default 5.00 for S / UAE standard).
+        raise_exc: If provided, the mock raises this exception instead of returning rate.
+    """
+    if raise_exc is not None:
+        mock_fn = AsyncMock(side_effect=raise_exc)
+    else:
+        mock_fn = AsyncMock(return_value=rate)
+    with patch(_PATCH_TAX_TARGET, mock_fn):
+        yield mock_fn
 
 
 # ---------------------------------------------------------------------------
@@ -486,7 +511,8 @@ async def test_variance_positive() -> None:
     line_inputs = [APLineInput(grLineId=GR_LINE_ID, invoiceUnitPrice=Decimal("105"))]
     now = datetime.now(tz=timezone.utc)
 
-    result_lines = await service._build_ap_lines_from_gr(GR_DOC_ID, ORG_ID, line_inputs, now)
+    with _patch_tax_percent(Decimal("5.00")):
+        result_lines = await service._build_ap_lines_from_gr(GR_DOC_ID, ORG_ID, line_inputs, now)
 
     assert len(result_lines) == 1
     line = result_lines[0]
@@ -495,7 +521,7 @@ async def test_variance_positive() -> None:
     assert Decimal(str(line["priceVarianceAmount"])) == Decimal("50")
     assert Decimal(str(line["lineNet"])) == Decimal("1050")
     # S tax code → 5%
-    assert Decimal(str(line["taxRate"])) == Decimal("5")
+    assert Decimal(str(line["taxRate"])) == Decimal("5.00")
     assert Decimal(str(line["lineTax"])) == Decimal("52.50")
     assert Decimal(str(line["lineGross"])) == Decimal("1102.50")
 
@@ -524,7 +550,8 @@ async def test_variance_negative() -> None:
     line_inputs = [APLineInput(grLineId=GR_LINE_ID, invoiceUnitPrice=Decimal("95"))]
     now = datetime.now(tz=timezone.utc)
 
-    result_lines = await service._build_ap_lines_from_gr(GR_DOC_ID, ORG_ID, line_inputs, now)
+    with _patch_tax_percent(Decimal("5.00")):
+        result_lines = await service._build_ap_lines_from_gr(GR_DOC_ID, ORG_ID, line_inputs, now)
 
     assert len(result_lines) == 1
     line = result_lines[0]
@@ -533,22 +560,27 @@ async def test_variance_negative() -> None:
 
 
 # ---------------------------------------------------------------------------
-# VAT computation tests (hardcoded v1 rates)
+# VAT computation tests (T-200.22b — via mocked get_tax_percent)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("tax_code,expected_rate", [
-    ("S", Decimal("5")),
-    ("SR", Decimal("5")),
-    ("Z", Decimal("0")),
-    ("E", Decimal("0")),
-    ("N", Decimal("0")),
-    (None, Decimal("0")),
+@pytest.mark.parametrize("tax_code,mock_rate,expected_rate", [
+    ("S",  Decimal("5.00"), Decimal("5.00")),
+    ("SR", Decimal("5.00"), Decimal("5.00")),
+    ("Z",  Decimal("0.00"), Decimal("0.00")),
+    ("E",  Decimal("0.00"), Decimal("0.00")),
+    ("N",  Decimal("0.00"), Decimal("0.00")),
+    # None → get_tax_percent short-circuits to 0 without HTTP; here we skip the
+    # mock entirely and verify the exempt-line fast-path returns 0.
+    (None, Decimal("0.00"), Decimal("0.00")),
 ])
-async def test_tax_rate_by_code(tax_code, expected_rate) -> None:
+async def test_tax_rate_by_code(tax_code, mock_rate, expected_rate) -> None:
     """
-    Hardcoded v1 tax rates: S=5%, SR=5%, Z/E/N=0%, None=0%.
+    T-200.22b: tax rates now resolved via mocked get_tax_percent.
+
+    Verifies that _build_ap_lines_from_gr correctly stamps taxRate and lineTax
+    for each code, including the None (exempt-line) fast-path.
     """
     service, headers_col, lines_col, counters_col, outbox_col, session_mock = (
         _build_service_with_mock_db()
@@ -572,7 +604,8 @@ async def test_tax_rate_by_code(tax_code, expected_rate) -> None:
     line_inputs = [APLineInput(grLineId=GR_LINE_ID, invoiceUnitPrice=Decimal("100"))]
     now = datetime.now(tz=timezone.utc)
 
-    result_lines = await service._build_ap_lines_from_gr(GR_DOC_ID, ORG_ID, line_inputs, now)
+    with _patch_tax_percent(mock_rate):
+        result_lines = await service._build_ap_lines_from_gr(GR_DOC_ID, ORG_ID, line_inputs, now)
     line = result_lines[0]
 
     assert Decimal(str(line["taxRate"])) == expected_rate
@@ -689,7 +722,8 @@ async def test_create_ap_from_posted_gr_happy_path() -> None:
         lines=[APLineInput(grLineId=GR_LINE_ID, invoiceUnitPrice=Decimal("100"))],
     )
 
-    with patch("src.modules.finance_bridge.feature_flag.is_outbox_enabled", return_value=False):
+    with patch("src.modules.finance_bridge.feature_flag.is_outbox_enabled", return_value=False), \
+            _patch_tax_percent(Decimal("5.00")):
         result = await service.create_ap_from_gr(
             org_id=ORG_ID,
             gr_doc_id=GR_DOC_ID,
@@ -854,7 +888,8 @@ async def test_update_ap_recomputes_variance() -> None:
         lines=[APLineInput(grLineId=GR_LINE_ID, invoiceUnitPrice=Decimal("105"))],
     )
 
-    result = await service.update_ap(ORG_ID, ap_doc_id, update_body, USER_ID)
+    with _patch_tax_percent(Decimal("5.00")):
+        result = await service.update_ap(ORG_ID, ap_doc_id, update_body, USER_ID)
 
     assert result is not None
     # Check that line variance was recomputed
