@@ -1,24 +1,32 @@
 """
 Purchasing Module — Document Chain Reconciler Adapter (T-200.22 + T-200.23 + T-200.24)
 
-Implements SAP B1-style document chain mechanics for the purchasing PR → PO →
-GR → AP Invoice chain, mirroring what T-201.5/.6/.7 and T-201.9.0 added for
+This module is now a thin shim over ``src/core/documents/chain_reconciler.py``.
+Generic primitives (TOLERANCE, line_open_qty, is_doc_fully_consumed,
+write_chain_audit, auto_close_if_fully_consumed,
+auto_reopen_if_not_fully_consumed, pull_dangling_chain_refs) live in core;
+this module holds purchasing-specific name aliases and doc-type-specific
+wrappers.
+
+Future cross-module helpers should land in ``src/core/documents/``.
+
+---
+
+Implements SAP B1-style document chain mechanics for the purchasing PR -> PO ->
+GR -> AP Invoice chain, mirroring what T-201.5/.6/.7 and T-201.9.0 added for
 the sales DN-chain.
 
-Architecture note — why not import from sales.services.doc_chain_reconciler
----------------------------------------------------------------------------
-The generic ``doc_chain_reconciler`` lives in ``src/modules/sales/services/``.
-Importing it from this module would execute the sales services ``__init__.py``,
-which in turn imports ``OrderService``, which pulls in ``redis.asyncio``.  Redis
-is not available in the unit-test environment for purchasing tests, so that
-import chain would break all purchasing tests.
+Architecture note
+-----------------
+The original ``purchasing_chain_reconciler.py`` was written as an adapter
+because importing the sales ``doc_chain_reconciler`` triggered the sales
+services ``__init__.py``, which loaded ``OrderService`` -> ``redis.asyncio``.
+Redis was not available in the purchasing unit-test environment.
 
-Resolution: the pure helpers (TOLERANCE, line_open_invoice_qty,
-is_doc_fully_invoiced, write_chain_audit) are small enough to implement
-directly here without copy-pasting logic — they are semantically identical but
-scoped to purchasing.  If the shared helpers move to
-``src/core/documents/doc_chain_helpers.py`` in a future refactor, these can
-be replaced with direct imports at that time.
+T-200.22a resolves this by moving the shared primitives to
+``src/core/documents/chain_reconciler.py`` (zero side-effect imports).
+This shim now imports directly from core; it is safe to import in any context
+that does not have Redis available.
 
 Purchasing PO close semantics (intentional asymmetry vs. Sales)
 ---------------------------------------------------------------
@@ -47,7 +55,7 @@ Exports
 - ``_PO_AUDIT_COL``                      — PO audit collection name constant
 - ``_GR_AUDIT_COL``                      — GR audit collection name constant
 - ``_AP_AUDIT_COL``                      — AP audit collection name constant
-- ``write_purchasing_audit``             — best-effort audit write
+- ``write_purchasing_audit``             — best-effort audit write (thin wrapper over write_chain_audit)
 - ``load_po_with_lines``                 — reload PO header + lines as embedded shape
 - ``load_gr_with_lines``                 — reload GR header + lines as embedded shape
 - ``auto_close_po_if_fully_received``    — auto-close PO on full receipt
@@ -75,7 +83,7 @@ Exports
 - ``pull_dangling_bla_consumption_refs`` — $pull stale PO docId from BLA targetDocRefs (T-200.25)
 
 NOTE: BLA helpers (T-200.25) are present but NOT YET WIRED into any calling code path.
-They will be called from PO creation / deletion once the PO→BLA integration
+They will be called from PO creation / deletion once the PO->BLA integration
 ships in T-200.25.1.
 """
 
@@ -88,6 +96,15 @@ from typing import Any, Dict, List, Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from ....core.documents.chain_reconciler import (
+    TOLERANCE,
+    auto_close_if_fully_consumed,
+    auto_reopen_if_not_fully_consumed,
+    is_doc_fully_consumed as _is_doc_fully_consumed,
+    line_open_qty as _line_open_qty,
+    pull_dangling_chain_refs as _pull_dangling_chain_refs,
+    write_chain_audit,
+)
 from ....core.documents.document_status import DocumentStatus
 
 logger = logging.getLogger(__name__)
@@ -105,14 +122,8 @@ _HEADERS_COL = "document_headers"
 _LINES_COL = "document_lines"
 
 # ---------------------------------------------------------------------------
-# Float-comparison tolerance
-#
-# Mirrors TOLERANCE in doc_chain_reconciler.py.  Any qty within TOLERANCE of
-# zero is treated as "fully consumed" so that floating-point rounding in
-# compounded Decimal operations cannot create spuriously non-zero remainders.
+# Module-local constants
 # ---------------------------------------------------------------------------
-
-TOLERANCE = Decimal("0.0001")
 
 _ZERO = Decimal("0")
 
@@ -123,55 +134,11 @@ def _now() -> datetime:
 
 
 # ---------------------------------------------------------------------------
-# Pure helpers (adapted from doc_chain_reconciler.py for purchasing schema)
-# ---------------------------------------------------------------------------
-
-
-def _line_open_qty(line: Dict[str, Any]) -> Decimal:
-    """
-    Compute remaining open qty on a source document line.
-
-    open_qty = orderedQty - invoicedQty - creditedQty
-
-    Falls back to ``quantity`` if ``orderedQty`` is absent.
-
-    Purchasing context:
-    - For PO lines: orderedQty = quantity, invoicedQty = closedQuantity
-      (normalised by load_po_with_lines).
-    - For GR lines: orderedQty = quantity, invoicedQty = invoicedQty field
-      (normalised by load_gr_with_lines).
-
-    Args:
-        line: Normalised line dict from load_po_with_lines / load_gr_with_lines.
-
-    Returns:
-        Remaining open qty as Decimal.
-    """
-    ordered = Decimal(str(line.get("orderedQty", line.get("quantity", 0))))
-    invoiced = Decimal(str(line.get("invoicedQty", 0)))
-    credited = Decimal(str(line.get("creditedQty", 0)))
-    return ordered - invoiced - credited
-
-
-def _is_doc_fully_consumed(doc_raw: Dict[str, Any]) -> bool:
-    """
-    Return True when every line in the document has open qty <= TOLERANCE.
-
-    Args:
-        doc_raw: Normalised document dict with embedded ``lines`` array
-                 (as produced by load_po_with_lines / load_gr_with_lines).
-
-    Returns:
-        True if all lines are fully consumed, False otherwise.
-    """
-    for ln in doc_raw.get("lines", []):
-        if _line_open_qty(ln) > TOLERANCE:
-            return False
-    return True
-
-
-# ---------------------------------------------------------------------------
-# Audit helper
+# Audit helper — thin wrapper over the shared write_chain_audit.
+#
+# Purchasing uses ``docId`` as its primary key field name (not ``docEntry``).
+# write_chain_audit stores the value under ``docEntry`` regardless, so a
+# shared audit reader can query both modules with one pattern.
 # ---------------------------------------------------------------------------
 
 
@@ -187,9 +154,9 @@ async def write_purchasing_audit(
     """
     Write a best-effort chain audit entry for a purchasing document.
 
-    Stores the entry under a ``docEntry`` key (using purchasing's ``docId``
-    value) to maintain consistency with the sales audit collection shape so
-    that a future shared audit reader can handle both without schema changes.
+    Thin wrapper over ``write_chain_audit`` that accepts purchasing's
+    ``doc_id`` parameter name (instead of ``doc_entry``) and logs under the
+    purchasing reconciler prefix.
 
     Best-effort: logs a warning on failure but does not re-raise.  Audit
     failure must never roll back the originating operation.
@@ -205,28 +172,14 @@ async def write_purchasing_audit(
     Returns:
         None.
     """
-    try:
-        entry: Dict[str, Any] = {
-            # Reason: store as ``docEntry`` (not ``docId``) so a shared audit
-            # reader can handle purchasing and sales audit collections with a
-            # single query pattern.  Purchasing's ``docId`` value is stored here.
-            "docEntry": doc_id,
-            "action": action,
-            "userId": user_id,
-            "detail": detail or {},
-            "timestamp": _now(),
-        }
-        await db[audit_collection].insert_one(entry)
-    except Exception as exc:  # noqa: BLE001
-        # Reason: audit failure must not roll back the originating operation.
-        logger.warning(
-            "[PurchasingChainReconciler] audit write failed for doc '%s' "
-            "collection='%s' action=%s: %s",
-            doc_id,
-            audit_collection,
-            action,
-            exc,
-        )
+    await write_chain_audit(
+        db,
+        audit_collection=audit_collection,
+        doc_entry=doc_id,
+        action=action,
+        user_id=user_id,
+        detail=detail,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +292,15 @@ async def load_gr_with_lines(
 
 
 # ---------------------------------------------------------------------------
-# Auto-close / auto-reopen (purchasing-adapted)
+# Auto-close / auto-reopen — thin wrappers over the generic core helpers.
+#
+# Each wrapper bakes in:
+#   - doc_collection / audit_collection: the purchasing collection names.
+#   - doc_key: "docId" (purchasing primary key field name).
+#   - action: purchasing-semantic audit label (e.g. "auto_close_on_full_receipt").
+#
+# This keeps the doc-type-specific domain knowledge in this shim while the
+# generic IO mechanics live in core.
 # ---------------------------------------------------------------------------
 
 
@@ -356,13 +317,13 @@ async def auto_close_po_if_fully_received(
     """
     Transition a PO from OPEN to CLOSED when all lines are fully received.
 
+    Thin wrapper over ``auto_close_if_fully_consumed`` with PO collection
+    names and purchasing ``docId`` key baked in.
+
     Audit action ``"auto_close_on_full_receipt"`` is the purchasing semantic
     variant of sales' ``"auto_close_on_full_invoice"``.  The different name
     makes it distinguishable in the audit trail: receiving-side close vs.
     invoicing-side close.
-
-    Uses purchasing's ``docId`` field for the DB query (not ``docEntry``).
-    Idempotent: if PO is already CLOSED returns False immediately.
 
     Args:
         db:           Motor database instance.
@@ -377,38 +338,18 @@ async def auto_close_po_if_fully_received(
     Returns:
         True if the PO was transitioned to CLOSED, False otherwise.
     """
-    if po_raw is None:
-        return False
-    if po_raw.get("status") != DocumentStatus.OPEN.value:
-        return False
-    if not _is_doc_fully_consumed(po_raw):
-        return False
-
-    now = _now()
-    await db[_HEADERS_COL].update_one(
-        {"docId": po_doc_id, "organizationId": org_id},
-        {
-            "$set": {
-                "status": DocumentStatus.CLOSED.value,
-                "updatedAt": now,
-                "updatedBy": user_id,
-            }
-        },
-    )
-    logger.info(
-        "[PurchasingChainReconciler] PO '%s' auto-closed on full receipt by user '%s'",
-        po_doc_id,
-        user_id,
-    )
-    await write_purchasing_audit(
+    return await auto_close_if_fully_consumed(
         db,
+        doc_collection=_HEADERS_COL,
         audit_collection=_PO_AUDIT_COL,
-        doc_id=po_doc_id,
-        action=action,
+        doc_entry=po_doc_id,
+        doc_raw=po_raw,
+        org_id=org_id,
         user_id=user_id,
-        detail=dict(extra_detail or {}),
+        doc_key="docId",
+        action=action,
+        extra_detail=extra_detail,
     )
-    return True
 
 
 async def auto_reopen_po_if_not_fully_received(
@@ -424,8 +365,7 @@ async def auto_reopen_po_if_not_fully_received(
     """
     Transition a PO from CLOSED to OPEN when no longer fully received.
 
-    Fires after a Draft GR is deleted, releasing receipt counters on PO lines.
-    Idempotent: if PO is already OPEN returns False immediately.
+    Thin wrapper over ``auto_reopen_if_not_fully_consumed``.
 
     Args:
         db:           Motor database instance.
@@ -440,38 +380,18 @@ async def auto_reopen_po_if_not_fully_received(
     Returns:
         True if the PO was transitioned to OPEN, False otherwise.
     """
-    if po_raw is None:
-        return False
-    if po_raw.get("status") != DocumentStatus.CLOSED.value:
-        return False
-    if _is_doc_fully_consumed(po_raw):
-        return False
-
-    now = _now()
-    await db[_HEADERS_COL].update_one(
-        {"docId": po_doc_id, "organizationId": org_id},
-        {
-            "$set": {
-                "status": DocumentStatus.OPEN.value,
-                "updatedAt": now,
-                "updatedBy": user_id,
-            }
-        },
-    )
-    logger.info(
-        "[PurchasingChainReconciler] PO '%s' auto-reopened on receipt release by user '%s'",
-        po_doc_id,
-        user_id,
-    )
-    await write_purchasing_audit(
+    return await auto_reopen_if_not_fully_consumed(
         db,
+        doc_collection=_HEADERS_COL,
         audit_collection=_PO_AUDIT_COL,
-        doc_id=po_doc_id,
-        action=action,
+        doc_entry=po_doc_id,
+        doc_raw=po_raw,
+        org_id=org_id,
         user_id=user_id,
-        detail=dict(extra_detail or {}),
+        doc_key="docId",
+        action=action,
+        extra_detail=extra_detail,
     )
-    return True
 
 
 async def auto_close_gr_if_fully_invoiced(
@@ -486,6 +406,8 @@ async def auto_close_gr_if_fully_invoiced(
 ) -> bool:
     """
     Transition a GR from OPEN to CLOSED when all lines are fully invoiced.
+
+    Thin wrapper over ``auto_close_if_fully_consumed``.
 
     Fires after an AP Invoice is created and all GR lines have
     ``invoicedQty == quantity``.  In v1 quantities are locked to full GR qty,
@@ -504,38 +426,18 @@ async def auto_close_gr_if_fully_invoiced(
     Returns:
         True if the GR was transitioned to CLOSED, False otherwise.
     """
-    if gr_raw is None:
-        return False
-    if gr_raw.get("status") != DocumentStatus.OPEN.value:
-        return False
-    if not _is_doc_fully_consumed(gr_raw):
-        return False
-
-    now = _now()
-    await db[_HEADERS_COL].update_one(
-        {"docId": gr_doc_id, "organizationId": org_id},
-        {
-            "$set": {
-                "status": DocumentStatus.CLOSED.value,
-                "updatedAt": now,
-                "updatedBy": user_id,
-            }
-        },
-    )
-    logger.info(
-        "[PurchasingChainReconciler] GR '%s' auto-closed on full invoice by user '%s'",
-        gr_doc_id,
-        user_id,
-    )
-    await write_purchasing_audit(
+    return await auto_close_if_fully_consumed(
         db,
+        doc_collection=_HEADERS_COL,
         audit_collection=_GR_AUDIT_COL,
-        doc_id=gr_doc_id,
-        action=action,
+        doc_entry=gr_doc_id,
+        doc_raw=gr_raw,
+        org_id=org_id,
         user_id=user_id,
-        detail=dict(extra_detail or {}),
+        doc_key="docId",
+        action=action,
+        extra_detail=extra_detail,
     )
-    return True
 
 
 async def auto_reopen_gr_if_not_fully_invoiced(
@@ -550,6 +452,8 @@ async def auto_reopen_gr_if_not_fully_invoiced(
 ) -> bool:
     """
     Transition a GR from CLOSED to OPEN when no longer fully invoiced.
+
+    Thin wrapper over ``auto_reopen_if_not_fully_consumed``.
 
     Fires after a Draft AP Invoice is deleted or rejected, releasing
     previously-committed GR line ``invoicedQty``.
@@ -567,42 +471,31 @@ async def auto_reopen_gr_if_not_fully_invoiced(
     Returns:
         True if the GR was transitioned to OPEN, False otherwise.
     """
-    if gr_raw is None:
-        return False
-    if gr_raw.get("status") != DocumentStatus.CLOSED.value:
-        return False
-    if _is_doc_fully_consumed(gr_raw):
-        return False
-
-    now = _now()
-    await db[_HEADERS_COL].update_one(
-        {"docId": gr_doc_id, "organizationId": org_id},
-        {
-            "$set": {
-                "status": DocumentStatus.OPEN.value,
-                "updatedAt": now,
-                "updatedBy": user_id,
-            }
-        },
-    )
-    logger.info(
-        "[PurchasingChainReconciler] GR '%s' auto-reopened on invoice release by user '%s'",
-        gr_doc_id,
-        user_id,
-    )
-    await write_purchasing_audit(
+    return await auto_reopen_if_not_fully_consumed(
         db,
+        doc_collection=_HEADERS_COL,
         audit_collection=_GR_AUDIT_COL,
-        doc_id=gr_doc_id,
-        action=action,
+        doc_entry=gr_doc_id,
+        doc_raw=gr_raw,
+        org_id=org_id,
         user_id=user_id,
-        detail=dict(extra_detail or {}),
+        doc_key="docId",
+        action=action,
+        extra_detail=extra_detail,
     )
-    return True
 
 
 # ---------------------------------------------------------------------------
 # Counter reconciliation (purchasing-adapted)
+#
+# These helpers use the separate document_lines collection shape and their own
+# cap-check logic against field names specific to each document type.
+# They are intentionally NOT wrappers over reconcile_line_counters because:
+# - PO lines use openQuantity + closedQuantity (not invoicedQty).
+# - The separate lines collection requires a different MongoDB query pattern.
+# The core reconcile_line_counters supports the separate-collection case via
+# lines_collection, but PO needs TWO $inc fields (closedQuantity + openQuantity)
+# which falls outside the single-counter-field contract.
 # ---------------------------------------------------------------------------
 
 
@@ -626,13 +519,19 @@ async def reconcile_po_line_receipt_counters(
     When ``cap_check=True``, positive deltas are validated against the current
     PO line ``openQuantity`` before any ``$inc`` is applied.
 
+    Note: this function operates on the separate ``document_lines`` collection
+    (not embedded lines) and updates TWO counter fields per line
+    (``closedQuantity`` and ``openQuantity``).  This dual-field update is
+    specific to PO semantics and is not handled by the generic
+    ``reconcile_line_counters`` in core.
+
     Args:
         db:          Motor database instance.
         po_doc_id:   PO ``docId`` UUID string.
         org_id:      Organisation UUID.
         user_id:     User stamped on ``updatedBy``.
         gr_doc_id:   GR ``docId`` (for error messages).
-        line_deltas: Mapping of PO line ``lineId`` → net delta to apply.
+        line_deltas: Mapping of PO line ``lineId`` -> net delta to apply.
         cap_check:   When True, validate positive deltas against ``openQuantity``.
 
     Returns:
@@ -710,13 +609,15 @@ async def reconcile_gr_line_invoice_counters(
     When ``cap_check=True``, positive deltas are validated against the
     remaining open invoice qty on each GR line (``quantity - invoicedQty``).
 
+    Note: this function operates on the separate ``document_lines`` collection.
+
     Args:
         db:          Motor database instance.
         gr_doc_id:   GR ``docId`` UUID string.
         org_id:      Organisation UUID.
         user_id:     User stamped on ``updatedBy``.
         ap_doc_id:   AP Invoice ``docId`` (for error messages).
-        line_deltas: Mapping of GR line ``lineId`` → net delta.
+        line_deltas: Mapping of GR line ``lineId`` -> net delta.
         cap_check:   When True, validate positive deltas against available qty.
 
     Returns:
@@ -769,7 +670,10 @@ async def reconcile_gr_line_invoice_counters(
 
 
 # ---------------------------------------------------------------------------
-# Chain-ref cleanup (purchasing-adapted)
+# Chain-ref cleanup — thin wrappers over the generic pull_dangling_chain_refs.
+#
+# Each wrapper bakes in doc_key="docId" (purchasing primary key) and the
+# appropriate parameter name translation (po_doc_id -> source_doc_entry, etc.).
 # ---------------------------------------------------------------------------
 
 
@@ -785,9 +689,8 @@ async def pull_dangling_po_chain_refs(
     Remove stale ``targetDocRefs`` entries from a PO header after a Draft GR
     is deleted.
 
-    The PO header's ``targetDocRefs`` array stores entries with a ``docId``
-    key (set by ``post_gr``).  This function ``$pull``s the entry whose
-    ``docId`` matches the deleted GR.
+    Thin wrapper over ``pull_dangling_chain_refs`` with ``doc_key="docId"``
+    and PO collection baked in.
 
     Args:
         db:        Motor database instance.
@@ -799,13 +702,15 @@ async def pull_dangling_po_chain_refs(
     Returns:
         None.
     """
-    now = _now()
-    await db[_HEADERS_COL].update_one(
-        {"docId": po_doc_id, "organizationId": org_id},
-        {
-            "$pull": {"targetDocRefs": {"docId": gr_doc_id}},
-            "$set": {"updatedAt": now, "updatedBy": user_id},
-        },
+    await _pull_dangling_chain_refs(
+        db,
+        source_collection=_HEADERS_COL,
+        source_doc_entry=po_doc_id,
+        target_doc_entry=gr_doc_id,
+        org_id=org_id,
+        user_id=user_id,
+        affected_line_ids=None,
+        doc_key="docId",
     )
 
 
@@ -821,6 +726,8 @@ async def pull_dangling_gr_chain_refs(
     Remove stale ``targetDocRefs`` entries from a GR header after a Draft AP
     Invoice is deleted or rejected.
 
+    Thin wrapper over ``pull_dangling_chain_refs``.
+
     Args:
         db:        Motor database instance.
         gr_doc_id: GR ``docId`` UUID string.
@@ -831,13 +738,15 @@ async def pull_dangling_gr_chain_refs(
     Returns:
         None.
     """
-    now = _now()
-    await db[_HEADERS_COL].update_one(
-        {"docId": gr_doc_id, "organizationId": org_id},
-        {
-            "$pull": {"targetDocRefs": {"docId": ap_doc_id}},
-            "$set": {"updatedAt": now, "updatedBy": user_id},
-        },
+    await _pull_dangling_chain_refs(
+        db,
+        source_collection=_HEADERS_COL,
+        source_doc_entry=gr_doc_id,
+        target_doc_entry=ap_doc_id,
+        org_id=org_id,
+        user_id=user_id,
+        affected_line_ids=None,
+        doc_key="docId",
     )
 
 
@@ -933,7 +842,7 @@ async def reconcile_ap_line_credit_counters(
         org_id:       Organisation UUID.
         user_id:      User stamped on ``updatedBy``.
         acn_doc_id:   AP Credit Note ``docId`` (for error messages).
-        line_deltas:  Mapping of AP line ``lineId`` → net qty delta to apply.
+        line_deltas:  Mapping of AP line ``lineId`` -> net qty delta to apply.
         gross_delta:  Net gross amount delta to apply to header ``creditedAmount``.
         cap_check:    When True, validate positive deltas against available creditedQty.
 
@@ -1029,6 +938,11 @@ async def auto_close_ap_if_fully_credited(
 
     Uses the ``ap_invoices_v2`` collection (not document_headers).
 
+    Note: this function is NOT a simple wrapper over
+    ``auto_close_if_fully_consumed`` because it operates on amount fields
+    (not line-level quantity fields) and uses a separate ``_AP_INVOICES_COL``
+    rather than ``_HEADERS_COL``.
+
     Args:
         db:           Motor database instance.
         ap_doc_id:    AP Invoice ``docId`` UUID string.
@@ -1110,6 +1024,9 @@ async def auto_reopen_ap_if_not_fully_credited(
     Only acts if the AP is currently CLOSED and the remaining credited amount
     no longer covers the full gross.
 
+    Note: this function is NOT a wrapper over ``auto_reopen_if_not_fully_consumed``
+    because it operates on amount fields and the ``ap_invoices_v2`` collection.
+
     Args:
         db:           Motor database instance.
         ap_doc_id:    AP Invoice ``docId`` UUID string.
@@ -1178,6 +1095,10 @@ async def pull_dangling_ap_credit_refs(
 
     The AP Invoice header's ``targetDocRefs`` array stores ACN back-pointers.
     This function ``$pull``s the entry whose ``docId`` matches the deleted ACN.
+
+    Note: AP Invoices live in ``ap_invoices_v2`` (not document_headers), so
+    this does not delegate to ``pull_dangling_chain_refs`` (which targets
+    ``document_headers`` via the ``source_collection`` parameter).
 
     Args:
         db:        Motor database instance.
@@ -1362,12 +1283,16 @@ async def auto_close_dpi_if_fully_consumed(
     partially consumed.
 
     Decision logic (re-reads ``consumedAmount`` from post-increment state):
-    - If ``consumedAmount >= totalGross - TOLERANCE`` → transition to CLOSED.
-    - Else if ``consumedAmount > TOLERANCE`` (partial) and status is OPEN →
+    - If ``consumedAmount >= totalGross - TOLERANCE`` -> transition to CLOSED.
+    - Else if ``consumedAmount > TOLERANCE`` (partial) and status is OPEN ->
       transition to PARTLY_CLOSED.
-    - Otherwise → no-op.
+    - Otherwise -> no-op.
 
     Idempotent: if already in the target state, returns False without writing.
+
+    Note: this function is NOT a wrapper over ``auto_close_if_fully_consumed``
+    because it operates on amount fields (totalGross / consumedAmount) and
+    has a three-way OPEN/PARTLY_CLOSED/CLOSED decision rather than a binary one.
 
     Args:
         db:           Motor database instance.
@@ -1403,7 +1328,7 @@ async def auto_close_dpi_if_fully_consumed(
 
     now = _now()
 
-    # Fully consumed → CLOSED.
+    # Fully consumed -> CLOSED.
     if consumed >= total_gross - _DPI_TOLERANCE:
         if refreshed.get("status") == DocumentStatus.CLOSED.value:
             return False  # already closed
@@ -1426,7 +1351,7 @@ async def auto_close_dpi_if_fully_consumed(
         )
         return True
 
-    # Partially consumed + currently OPEN → PARTLY_CLOSED.
+    # Partially consumed + currently OPEN -> PARTLY_CLOSED.
     if consumed > _DPI_TOLERANCE and refreshed.get("status") == DocumentStatus.OPEN.value:
         await db[_DPI_COL].update_one(
             {"docId": dpi_doc_id, "organizationId": org_id},
@@ -1464,11 +1389,11 @@ async def auto_reopen_dpi_if_not_fully_consumed(
     that consumed it is deleted or cancelled.
 
     Decision logic (re-reads post-decrement state):
-    - If DPI is CLOSED and ``consumedAmount < totalGross - TOLERANCE`` →
+    - If DPI is CLOSED and ``consumedAmount < totalGross - TOLERANCE`` ->
       transition to PARTLY_CLOSED (still has some consumption) or OPEN (no consumption).
-    - If DPI is PARTLY_CLOSED and ``consumedAmount <= TOLERANCE`` →
+    - If DPI is PARTLY_CLOSED and ``consumedAmount <= TOLERANCE`` ->
       transition to OPEN.
-    - Otherwise → no-op.
+    - Otherwise -> no-op.
 
     Args:
         db:           Motor database instance.
@@ -1495,7 +1420,7 @@ async def auto_reopen_dpi_if_not_fully_consumed(
     if current_status == DocumentStatus.CLOSED.value:
         if consumed >= total_gross - _DPI_TOLERANCE:
             return False  # still fully consumed
-        # Partially consumed → PARTLY_CLOSED; zero consumed → OPEN.
+        # Partially consumed -> PARTLY_CLOSED; zero consumed -> OPEN.
         target = (
             DocumentStatus.PARTLY_CLOSED.value
             if consumed > _DPI_TOLERANCE
@@ -1566,7 +1491,7 @@ async def pull_dangling_dpi_allocation_refs(
 # T-200.25 — Blanket Agreement (BLA) chain helpers
 #
 # These helpers are PRESENT but NOT YET WIRED into any calling code path.
-# They will be called from PO creation / deletion once the PO→BLA integration
+# They will be called from PO creation / deletion once the PO->BLA integration
 # ships in T-200.25.1.
 # ---------------------------------------------------------------------------
 
@@ -1593,7 +1518,7 @@ async def load_bla_with_lines(
     For line_based BLAs the per-line ``outstandingQty`` is also computed:
     ``committedQuantity - consumedQty``.
 
-    # Used by T-200.25.1 once PO→BLA integration ships.
+    # Used by T-200.25.1 once PO->BLA integration ships.
 
     Args:
         db:         Motor database instance.
@@ -1648,7 +1573,7 @@ async def reconcile_bla_consumption(
     Also pushes the PO back-pointer onto the BLA's ``targetDocRefs``
     (positive delta only).
 
-    # Used by T-200.25.1 once PO→BLA integration ships.
+    # Used by T-200.25.1 once PO->BLA integration ships.
 
     Args:
         db:              Motor database instance.
@@ -1657,7 +1582,7 @@ async def reconcile_bla_consumption(
         user_id:         User stamped on ``updatedBy``.
         source_doc_id:   Source document ``docId`` (PO) for back-ref + error messages.
         source_doc_type: Source document type string (e.g. "PO").
-        line_deltas:     Mapping of BLA line ``lineId`` → net qty delta.
+        line_deltas:     Mapping of BLA line ``lineId`` -> net qty delta.
                          Used for line_based BLAs; pass empty dict for amount_based.
         gross_delta:     Net gross amount delta to apply to header ``consumedAmount``.
         cap_check:       When True, validate deltas against outstanding balance.
@@ -1770,14 +1695,14 @@ async def auto_close_bla_if_fully_consumed(
     partially consumed.
 
     Decision logic (re-reads ``consumedAmount`` from post-increment state):
-    - If ``consumedAmount >= totalGross - TOLERANCE`` → transition to CLOSED.
-    - Else if ``consumedAmount > TOLERANCE`` (partial) and status is OPEN →
+    - If ``consumedAmount >= totalGross - TOLERANCE`` -> transition to CLOSED.
+    - Else if ``consumedAmount > TOLERANCE`` (partial) and status is OPEN ->
       transition to PARTLY_CLOSED.
-    - Otherwise → no-op.
+    - Otherwise -> no-op.
 
     Idempotent: if already in the target state, returns False without writing.
 
-    # Used by T-200.25.1 once PO→BLA integration ships.
+    # Used by T-200.25.1 once PO->BLA integration ships.
 
     Args:
         db:           Motor database instance.
@@ -1792,16 +1717,14 @@ async def auto_close_bla_if_fully_consumed(
     Returns:
         True if a status transition was written, False otherwise.
     """
-    from src.core.documents.document_status import DocumentStatus as _DS  # noqa: PLC0415
-
     if bla_raw is None:
         return False
 
     current_status = bla_raw.get("status", "")
     # Reason: only act on live (non-terminal) BLA states.
     if current_status not in {
-        _DS.OPEN.value,
-        _DS.PARTLY_CLOSED.value,
+        DocumentStatus.OPEN.value,
+        DocumentStatus.PARTLY_CLOSED.value,
     }:
         return False
 
@@ -1815,13 +1738,13 @@ async def auto_close_bla_if_fully_consumed(
 
     now = _now()
 
-    # Fully consumed → CLOSED.
+    # Fully consumed -> CLOSED.
     if consumed >= total_gross - _BLA_TOLERANCE:
-        if refreshed.get("status") == _DS.CLOSED.value:
+        if refreshed.get("status") == DocumentStatus.CLOSED.value:
             return False  # already closed
         await db[_BLA_COL].update_one(
             {"docId": bla_doc_id, "organizationId": org_id},
-            {"$set": {"status": _DS.CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+            {"$set": {"status": DocumentStatus.CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
         )
         logger.info(
             "[PurchasingChainReconciler] BLA '%s' auto-closed on full consumption by user '%s'",
@@ -1838,11 +1761,11 @@ async def auto_close_bla_if_fully_consumed(
         )
         return True
 
-    # Partially consumed + currently OPEN → PARTLY_CLOSED.
-    if consumed > _BLA_TOLERANCE and refreshed.get("status") == _DS.OPEN.value:
+    # Partially consumed + currently OPEN -> PARTLY_CLOSED.
+    if consumed > _BLA_TOLERANCE and refreshed.get("status") == DocumentStatus.OPEN.value:
         await db[_BLA_COL].update_one(
             {"docId": bla_doc_id, "organizationId": org_id},
-            {"$set": {"status": _DS.PARTLY_CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
+            {"$set": {"status": DocumentStatus.PARTLY_CLOSED.value, "updatedAt": now, "updatedBy": user_id}},
         )
         logger.info(
             "[PurchasingChainReconciler] BLA '%s' transitioned to PARTLY_CLOSED by user '%s'",
@@ -1876,13 +1799,13 @@ async def auto_reopen_bla_if_not_fully_consumed(
     referenced it is deleted or amended down.
 
     Decision logic (re-reads post-decrement state):
-    - If BLA is CLOSED and ``consumedAmount < totalGross - TOLERANCE`` →
+    - If BLA is CLOSED and ``consumedAmount < totalGross - TOLERANCE`` ->
       transition to PARTLY_CLOSED (still has some consumption) or OPEN (zero consumption).
-    - If BLA is PARTLY_CLOSED and ``consumedAmount <= TOLERANCE`` →
+    - If BLA is PARTLY_CLOSED and ``consumedAmount <= TOLERANCE`` ->
       transition to OPEN.
-    - Otherwise → no-op.
+    - Otherwise -> no-op.
 
-    # Used by T-200.25.1 once PO→BLA integration ships.
+    # Used by T-200.25.1 once PO->BLA integration ships.
 
     Args:
         db:           Motor database instance.
@@ -1895,8 +1818,6 @@ async def auto_reopen_bla_if_not_fully_consumed(
     Returns:
         True if a status transition was written, False otherwise.
     """
-    from src.core.documents.document_status import DocumentStatus as _DS  # noqa: PLC0415
-
     refreshed = await db[_BLA_COL].find_one({"docId": bla_doc_id, "organizationId": org_id})
     if refreshed is None:
         return False
@@ -1908,18 +1829,18 @@ async def auto_reopen_bla_if_not_fully_consumed(
     now = _now()
     target: Optional[str] = None
 
-    if current_status == _DS.CLOSED.value:
+    if current_status == DocumentStatus.CLOSED.value:
         if consumed >= total_gross - _BLA_TOLERANCE:
             return False  # still fully consumed
-        # Partially consumed → PARTLY_CLOSED; zero consumed → OPEN.
+        # Partially consumed -> PARTLY_CLOSED; zero consumed -> OPEN.
         target = (
-            _DS.PARTLY_CLOSED.value
+            DocumentStatus.PARTLY_CLOSED.value
             if consumed > _BLA_TOLERANCE
-            else _DS.OPEN.value
+            else DocumentStatus.OPEN.value
         )
-    elif current_status == _DS.PARTLY_CLOSED.value:
+    elif current_status == DocumentStatus.PARTLY_CLOSED.value:
         if consumed <= _BLA_TOLERANCE:
-            target = _DS.OPEN.value
+            target = DocumentStatus.OPEN.value
         # If partially consumed but not zero, stays PARTLY_CLOSED.
 
     if target is None:
@@ -1968,7 +1889,7 @@ async def pull_dangling_bla_consumption_refs(
     Returns:
         None.
 
-    # Used by T-200.25.1 once PO→BLA integration ships.
+    # Used by T-200.25.1 once PO->BLA integration ships.
     """
     now = _now()
     await db[_BLA_COL].update_one(

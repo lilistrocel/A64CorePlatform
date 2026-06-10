@@ -1253,7 +1253,7 @@
 
 ### T-200.22a | Extract shared chain-reconciler primitives to `src/core/documents/` — Wave 4 tech debt
 - **Category:** Backend · **Priority:** P2
-- **Assigned:** — · **Started:** —
+- **Assigned:** Viet Anh · **Started:** 2026-06-10 · **Status:** Done (moved to ARCHIVE pending commit)
 - **Discovered:** During T-200.22 dispatch, 2026-06-04. The brief asked the agent to reuse `src/modules/sales/services/doc_chain_reconciler.py` for the purchasing chain. Agent could not — importing the sales module triggers the sales `services/__init__.py`, which loads `OrderService` → `redis.asyncio`. Redis was not available in the purchasing test environment, breaking 36 previously-passing tests. **Resolution at the time:** wrote a purchasing-specific adapter `src/modules/purchasing/services/purchasing_chain_reconciler.py`. Outcome: **two parallel reconciler modules** (sales + purchasing) following the same contract but with separate implementations. T-200.23/.24/.25 added more helpers to the purchasing copy as the doc-type breadth grew, widening the surface that needs to stay in sync.
 - **Why this is debt:** the "shared infrastructure" goal of Wave 4 is partially undermined. The two modules can drift; a bug fix on one side won't carry to the other unless someone notices.
 - **Scope of fix:**
