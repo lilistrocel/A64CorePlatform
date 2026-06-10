@@ -1,8 +1,20 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 97 tasks
+> **Total completed:** 98 tasks
 
 ## 2026-06
+
+### T-200.21a | Fix 10 pre-existing purchasing test failures — Wave 4 tech debt
+- **Category:** Backend tests · **Priority:** P2
+- **Completed:** 2026-06-10 · **Assigned:** testing-backend-specialist (Viet Anh)
+- **Discovered:** During T-200.21 retrofit on 2026-06-04. Failures verified pre-existing (not regressions) by stashing the change + re-running baseline.
+- **Final pass count:** 46/46 purchasing (was 36/10). Sales 334/334 unchanged.
+- **Three drift patterns fixed** — all on the test side, zero service-code changes:
+  1. **Missing `company_code` parameter** (6 tests) — service methods grew the required kwarg when T-201.0's companyCode resolver landed; unit tests bypass the route layer and were never updated.
+  2. **OutboxWriter mock-path resolution** (4 tests) — `unittest.mock.patch()` tries to import `src.modules.finance_bridge.outbox_writer` which pulls in `redis.asyncio`; redis not installed in test env. Fix: inject mock module into `sys.modules` before service imports it. Same redis import-chain blocker that surfaced in T-200.22.
+  3. **DocumentStatus enum vocabulary drift** (3 tests) — assertions on TitleCase status strings that T-200.21 migrated to lowercase_snake. Note: `"Approved"` maps to `DocumentStatus.OPEN` ("open") on the status field while `approvalState` retains "Approved". Tests use tolerant `assert x in ("OldCase", "new_case")` for migration safety.
+- **Files modified:** `tests/unit/test_purchasing/test_gr_service.py`, `tests/unit/test_purchasing/test_ap_invoice_service.py`. No conftest.py needed; per-test changes sufficient.
+- **Commit:** `6500295`
 
 ### T-201.1 | Multi-company UX picker — companyCode selector when org has >1 companies
 - **Category:** Frontend · **Priority:** P2 (priority-bumped to P1 during session because user hit the gap mid-T-201.8 verification)

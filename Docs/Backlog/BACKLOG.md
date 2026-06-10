@@ -1250,37 +1250,6 @@
   - **Honest scope estimate:** ~2-3 task cycles (1 backend aggregation endpoint, 1 frontend page expansion, 1 test pass for the endpoint).
 
 
-### T-200.21a | Fix 10 pre-existing purchasing test failures (surfaced during T-200.21 retrofit) — Wave 4 tech debt
-- **Category:** Backend tests · **Priority:** P2
-- **Assigned:** — · **Started:** —
-- **Discovered:** During T-200.21 retrofit, 2026-06-04. The purchasing test suite (`tests/unit/test_purchasing/`) showed 10 failures. Verified the failures are NOT regressions from T-200.21 by stashing the change + re-running the baseline — identical 10 failures. These are pre-existing tech debt.
-- **Failing tests (all 10):**
-  - `test_ap_invoice_service.py::test_create_ap_from_posted_gr_happy_path`
-  - `test_ap_invoice_service.py::test_create_ap_from_draft_gr_raises`
-  - `test_ap_invoice_service.py::test_create_second_ap_from_same_gr_raises`
-  - `test_ap_invoice_service.py::test_approve_ap_emits_event_and_updates_history`
-  - `test_gr_service.py::test_create_gr_from_po_happy_path`
-  - `test_gr_service.py::test_create_gr_quantity_exceeds_open_quantity`
-  - `test_gr_service.py::test_create_gr_from_non_open_po_raises`
-  - `test_gr_service.py::test_post_gr_transitions_draft_to_posted_and_decrements_po_lines`
-  - `test_gr_service.py::test_full_receipt_closes_po`
-  - `test_gr_service.py::test_partial_receipt_po_stays_open`
-- **Likely root causes (not yet investigated):**
-  - Stale fixtures referencing old field names that the purchasing service has since renamed
-  - Mock setup that no longer matches the service's HTTP-client patterns (similar to T-100.9a.1 lessons learned)
-  - Migration / schema drift that the tests' embedded test data doesn't reflect
-- **Investigation steps when picked up:**
-  1. Run each failing test individually with `-v --tb=long` to see the exact assertion failures.
-  2. Map the failures to root cause categories (fixture drift, mock pattern, schema mismatch, real regression).
-  3. Fix each category with the smallest-blast-radius change. Don't refactor adjacent passing tests.
-  4. Re-run the full purchasing suite; expect 46/46 pass.
-- **Honest scope estimate:** ~1 task cycle. The failures cluster into 2 test files; fixture pattern fix should propagate.
-- **Notes:**
-  - Not blocking T-200.22 (counter rollup) — that work can proceed on top of the same flaky baseline.
-  - BUT Wave 4 deserves a clean test suite by the time T-200.26 (frontend V2) lands. File this against the T-200 umbrella so it gets done before Wave 4 closeout.
-  - **CRITICAL for agent dispatch:** do not run git commit/push.
-
----
 
 ### T-200.22a | Extract shared chain-reconciler primitives to `src/core/documents/` — Wave 4 tech debt
 - **Category:** Backend · **Priority:** P2
