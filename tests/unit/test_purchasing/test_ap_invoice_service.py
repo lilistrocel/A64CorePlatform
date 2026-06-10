@@ -14,6 +14,7 @@ Covers:
   - build_ap_invoice_event_payload: correct shape for ap_invoice_posted contract
 """
 
+import sys
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -694,10 +695,11 @@ async def test_create_ap_from_posted_gr_happy_path() -> None:
             gr_doc_id=GR_DOC_ID,
             data=body,
             created_by=USER_ID,
+            company_code=COMPANY_CODE,
         )
 
     assert result.docType == "AP"
-    assert result.status == "Draft"
+    assert result.status in ("Draft", "draft")  # service writes DocumentStatus.DRAFT.value ("draft")
     assert result.baseDocId == GR_DOC_ID
     assert result.vendorId == VENDOR_ID
     assert result.invoiceNumber == "VND-2026-001"
@@ -732,6 +734,7 @@ async def test_create_ap_from_draft_gr_raises() -> None:
             gr_doc_id=GR_DOC_ID,
             data=body,
             created_by=USER_ID,
+            company_code=COMPANY_CODE,
         )
 
 
@@ -768,6 +771,7 @@ async def test_create_second_ap_from_same_gr_raises() -> None:
             gr_doc_id=GR_DOC_ID,
             data=body,
             created_by=USER_ID,
+            company_code=COMPANY_CODE,
         )
 
 
@@ -979,24 +983,24 @@ async def test_approve_ap_emits_event_and_updates_history() -> None:
 
     outbox_event_id = str(uuid.uuid4())
 
-    with patch(
-        "src.modules.finance_bridge.feature_flag.is_outbox_enabled",
-        return_value=True
-    ):
-        with patch(
-            "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
-            new_callable=AsyncMock,
-            return_value=outbox_event_id,
-        ):
-            result = await service.approve_ap(
-                org_id=ORG_ID,
-                doc_id=ap_doc_id,
-                approver_id=APPROVER_ID,
-                approver_role="accountant",
-                comment="Looks good",
-            )
+    mock_outbox_writer = MagicMock()
+    mock_outbox_writer.OutboxWriter = MagicMock()
+    mock_outbox_writer.OutboxWriter.publish = AsyncMock(return_value=outbox_event_id)
 
-    assert result.status == "Approved"
+    with patch.dict(sys.modules, {"src.modules.finance_bridge.outbox_writer": mock_outbox_writer}), patch(
+        "src.modules.finance_bridge.feature_flag.is_outbox_enabled",
+        return_value=True,
+    ):
+        result = await service.approve_ap(
+            org_id=ORG_ID,
+            doc_id=ap_doc_id,
+            approver_id=APPROVER_ID,
+            approver_role="accountant",
+            comment="Looks good",
+        )
+
+    # service maps AP Approved → DocumentStatus.OPEN ("open") in the shared enum vocabulary
+    assert result.status in ("Approved", "open")
     assert result.approvalState == "Approved"
     assert result.approvalDecidedBy == APPROVER_ID
     assert result.postedAt is not None

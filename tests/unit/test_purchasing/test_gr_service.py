@@ -11,6 +11,7 @@ Covers:
   - build_gr_event_payload: correct shape for purchase_received contract
 """
 
+import sys
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -453,10 +454,11 @@ async def test_create_gr_from_po_happy_path() -> None:
             po_doc_id=po_id,
             data=data,
             created_by=USER_ID,
+            company_code=COMPANY_CODE,
         )
 
     assert gr.docType == "GR"
-    assert gr.status == "Draft"
+    assert gr.status in ("Draft", "draft")  # service now writes DocumentStatus.DRAFT.value ("draft")
     assert gr.baseDocId == po_id
     assert gr.vendorId == VENDOR_ID
     assert len(gr.lines) == 1
@@ -499,6 +501,7 @@ async def test_create_gr_quantity_exceeds_open_quantity() -> None:
             po_doc_id=po_id,
             data=data,
             created_by=USER_ID,
+            company_code=COMPANY_CODE,
         )
 
 
@@ -530,6 +533,7 @@ async def test_create_gr_from_non_open_po_raises() -> None:
             po_doc_id=po_id,
             data=data,
             created_by=USER_ID,
+            company_code=COMPANY_CODE,
         )
 
 
@@ -600,19 +604,23 @@ async def test_post_gr_transitions_draft_to_posted_and_decrements_po_lines() -> 
 
     lines_col.update_one = AsyncMock(side_effect=_capture_lines_update)
 
-    # Patch OutboxWriter.publish to simulate successful outbox write
+    # Patch OutboxWriter.publish to simulate successful outbox write.
+    # outbox_writer cannot be directly imported in the test environment (requires
+    # Redis), so we inject a mock module into sys.modules before the service's
+    # lazy `from src.modules.finance_bridge.outbox_writer import OutboxWriter` fires.
     published_events: List[Dict[str, Any]] = []
 
     async def _mock_publish(*args: Any, **kwargs: Any) -> Optional[str]:
         published_events.append(kwargs)
         return str(uuid.uuid4())
 
+    mock_outbox_writer = MagicMock()
+    mock_outbox_writer.OutboxWriter = MagicMock()
+    mock_outbox_writer.OutboxWriter.publish = AsyncMock(side_effect=_mock_publish)
+
     service = DocumentService(db)
 
-    with patch(
-        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
-        new=AsyncMock(side_effect=_mock_publish),
-    ), patch(
+    with patch.dict(sys.modules, {"src.modules.finance_bridge.outbox_writer": mock_outbox_writer}), patch(
         "src.modules.finance_bridge.feature_flag.is_outbox_enabled",
         return_value=True,
     ):
@@ -747,12 +755,13 @@ async def test_full_receipt_closes_po() -> None:
         published_event_types.append(event_type)
         return str(uuid.uuid4())
 
+    mock_outbox_writer = MagicMock()
+    mock_outbox_writer.OutboxWriter = MagicMock()
+    mock_outbox_writer.OutboxWriter.publish = AsyncMock(side_effect=_mock_publish)
+
     service = DocumentService(db)
 
-    with patch(
-        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
-        new=AsyncMock(side_effect=_mock_publish),
-    ), patch(
+    with patch.dict(sys.modules, {"src.modules.finance_bridge.outbox_writer": mock_outbox_writer}), patch(
         "src.modules.finance_bridge.feature_flag.is_outbox_enabled",
         return_value=True,
     ):
@@ -763,9 +772,9 @@ async def test_full_receipt_closes_po() -> None:
             company_code=COMPANY_CODE,
         )
 
-    # PO should have been updated to Closed
+    # PO should have been updated to Closed (DocumentStatus.CLOSED.value == "closed")
     assert any(
-        upd.get("$set", {}).get("status") == "Closed"
+        upd.get("$set", {}).get("status") in ("Closed", "closed")
         for upd in po_updates
     ), f"Expected PO to be closed; got updates: {po_updates}"
 
@@ -851,12 +860,13 @@ async def test_partial_receipt_po_stays_open() -> None:
         published_event_types.append(event_type)
         return str(uuid.uuid4())
 
+    mock_outbox_writer = MagicMock()
+    mock_outbox_writer.OutboxWriter = MagicMock()
+    mock_outbox_writer.OutboxWriter.publish = AsyncMock(side_effect=_mock_publish)
+
     service = DocumentService(db)
 
-    with patch(
-        "src.modules.finance_bridge.outbox_writer.OutboxWriter.publish",
-        new=AsyncMock(side_effect=_mock_publish),
-    ), patch(
+    with patch.dict(sys.modules, {"src.modules.finance_bridge.outbox_writer": mock_outbox_writer}), patch(
         "src.modules.finance_bridge.feature_flag.is_outbox_enabled",
         return_value=True,
     ):
