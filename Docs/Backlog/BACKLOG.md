@@ -1251,50 +1251,6 @@
 
 
 
-### T-200.22a | Extract shared chain-reconciler primitives to `src/core/documents/` — Wave 4 tech debt
-- **Category:** Backend · **Priority:** P2
-- **Assigned:** Viet Anh · **Started:** 2026-06-10 · **Status:** Done (moved to ARCHIVE pending commit)
-- **Discovered:** During T-200.22 dispatch, 2026-06-04. The brief asked the agent to reuse `src/modules/sales/services/doc_chain_reconciler.py` for the purchasing chain. Agent could not — importing the sales module triggers the sales `services/__init__.py`, which loads `OrderService` → `redis.asyncio`. Redis was not available in the purchasing test environment, breaking 36 previously-passing tests. **Resolution at the time:** wrote a purchasing-specific adapter `src/modules/purchasing/services/purchasing_chain_reconciler.py`. Outcome: **two parallel reconciler modules** (sales + purchasing) following the same contract but with separate implementations. T-200.23/.24/.25 added more helpers to the purchasing copy as the doc-type breadth grew, widening the surface that needs to stay in sync.
-- **Why this is debt:** the "shared infrastructure" goal of Wave 4 is partially undermined. The two modules can drift; a bug fix on one side won't carry to the other unless someone notices.
-- **Scope of fix:**
-  1. Create `src/core/documents/chain_reconciler.py` with NO side-effect imports (no `redis`, no `motor` at module-load — only at function-call time).
-  2. Extract truly-shared pure helpers: `TOLERANCE`, `line_open_qty(line)`, `is_doc_fully_consumed(doc_raw)`. These have no IO and zero coupling.
-  3. Extract the parametric IO helpers: `write_chain_audit(db, *, audit_collection, ...)`, `auto_close_if_fully_consumed(db, *, doc_collection, ...)`, `auto_reopen_if_not_fully_consumed`, `pull_dangling_chain_refs`, `reconcile_line_counters`. These take the collection name as a parameter — they're already collection-agnostic in spirit; just need to live somewhere both modules can import without side effects.
-  4. Schema differences (sales' embedded `lines` array vs purchasing's separate `document_lines` collection, plus the purchasing-specific `consumedAmount`/`creditedAmount` patterns from T-200.23/.24/.25) handled via an **injected line-loader callback** (caller passes a function that returns lines for a given doc) rather than two impls.
-  5. Sales' `doc_chain_reconciler.py` becomes a thin shim that imports from `src/core/documents/chain_reconciler.py` plus a few sales-specific wrappers if needed (e.g. the audit-write helpers that hard-code `_DN_AUDIT_COL`).
-  6. Purchasing's `purchasing_chain_reconciler.py` becomes a thin shim too. The 9 DPI/BLA/ACN-specific helpers (`reconcile_dpi_consumption`, `auto_close_bla_if_fully_consumed`, etc.) stay in the purchasing shim — they're truly purchasing-specific (different collections + different counter field names) but call into the generic primitives in `src/core/documents/`.
-  7. **Smoke-test invariants:** sales tests (334) + purchasing tests (current pass count) must remain unchanged after the extraction. Zero behavioural change.
-- **Honest scope estimate:** ~1-2 task cycles. The hardest part is making sure the import graph genuinely doesn't pull in redis transitively; might require adjusting `src/modules/sales/services/__init__.py` to not auto-import `OrderService`, OR moving the sales reconciler module out of the sales-services package so it doesn't trigger the `__init__.py`.
-- **Why P2 not P1:** today's parallel-module situation works correctly. Drift risk is real but slow-moving. The extraction is hygiene + future-proofing, not a bug fix. **However** it deserves to be done before T-200.26 frontend lands so the Wave 4 closeout has a clean architectural story.
-- **Notes:**
-  - Filed during the T-200.22 dispatch debrief, 2026-06-04. Re-filed in BACKLOG on 2026-06-10 after Viet Anh caught that the "filed" claim in T-200.22's commit message hadn't actually landed an entry here. Apologies for the original miss.
-  - **CRITICAL for agent dispatch:** do not run git commit/push.
-
----
-
-### T-200.22b | Migrate `AP_TAX_RATES` from hardcoded dict to finance HTTP lookup (parity with T-202 ARI fix) — Wave 4 tech debt
-- **Category:** Backend · **Priority:** P2
-- **Assigned:** — · **Started:** —
-- **Discovered:** During T-200.22 dispatch prep, 2026-06-04. Sales had a Mongo-misroute tax bug (T-202: `_get_tax_percent` queried ops Mongo for tax codes that live in finance MySQL — silently returned 0% on every ARI line). Fixed by routing through `_finance_ext_client.get_tax_percent` HTTP call. I audited purchasing for the same shape and found it was DIFFERENT: purchasing uses a hardcoded `AP_TAX_RATES` dict at `src/modules/purchasing/models/document.py:495` with rates `{"S": 5, "SR": 5, "Z": 0, "E": 0, "N": 0}`. **It works correctly** (no silent-0% bug) but it's bad architecture: per-tenant tax rate changes require a code release; inconsistent with sales' T-202 HTTP-resolution pattern.
-- **Affected services (audited 2026-06-10):**
-  - `src/modules/purchasing/services/document_service.py` — AP Invoice tax via `AP_TAX_RATES.get(tax_code, ...)` at line ~3346
-  - `src/modules/purchasing/services/ap_credit_note_service.py` (T-200.23) — uses same `AP_TAX_RATES`
-  - `src/modules/purchasing/services/ap_down_payment_service.py` (T-200.24) — uses same `AP_TAX_RATES`
-  - `src/modules/purchasing/services/blanket_agreement_service.py` (T-200.25) — uses same `AP_TAX_RATES`
-- **Scope of fix:**
-  1. Add `get_tax_percent` to a purchasing-side HTTP client (`src/modules/purchasing/services/_finance_ext_client.py` if new, or extend if exists). Mirror sales' helper at `src/modules/sales/services/_finance_ext_client.py`. Same fail-hard semantics: unknown code → ValueError; finance unreachable → ValueError; null code → Decimal("0").
-  2. Replace every `AP_TAX_RATES.get(...)` call across the four purchasing services with `await get_tax_percent(tax_code, org_id, auth_token)`.
-  3. Thread `auth_token` through call sites that don't already have it (T-200.23/.24/.25 routes already thread it for forward compatibility).
-  4. Add tests covering: valid code → correct rate, unknown code → ValueError, null code → 0%, finance unreachable → ValueError.
-  5. Delete `AP_TAX_RATES` from `models/document.py` once unused. The constant has zero remaining call sites at this point.
-  6. **Hopefully T-200.22a lands first** — then `get_tax_percent` can live in `src/core/documents/finance_ext_client.py` or similar and serve both sales + purchasing from one place. Otherwise duplicate the HTTP wrapper, file as more tech debt.
-- **Honest scope estimate:** ~1 task cycle. Smaller than T-202 because the bug isn't a Mongo-vs-MySQL untangling — just a hardcoded-vs-HTTP swap. The four call sites are all the same shape.
-- **Why P2 not P1:** purchasing tax rates work correctly today. This is migration to a better architecture, not a bug fix. Should land alongside T-200.22a so the shared `src/core/documents/finance_ext_client.py` (if extracted) serves both modules.
-- **Notes:**
-  - Filed during T-200.22 dispatch prep, 2026-06-04. Re-filed in BACKLOG on 2026-06-10 after Viet Anh caught the original filing miss. Same apology as T-200.22a.
-  - **CRITICAL for agent dispatch:** do not run git commit/push.
-
----
 
 ### T-204 | Direct-create AR Credit Note: required "Reason" field for audit-trail clarity
 - **Category:** Backend + Frontend · **Priority:** P2

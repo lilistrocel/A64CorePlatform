@@ -1,8 +1,22 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 98 tasks
+> **Total completed:** 100 tasks
 
 ## 2026-06
+
+### T-200.22b | Migrate `AP_TAX_RATES` from hardcoded dict to finance HTTP lookup — Wave 4 tech debt
+- **Category:** Backend · **Priority:** P2
+- **Completed:** 2026-06-10 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Summary:** Eliminates the hardcoded `AP_TAX_RATES` dict (`models/document.py:495`) that purchasing services have been using since pre-Wave-4. Replaces with the finance microservice HTTP lookup pattern that sales standardised in T-202. Also extracts the existing sales `_finance_ext_client.py` module to `src/core/finance/finance_ext_client.py` so both sales and purchasing share one source of truth (mirrors T-200.22a's chain-reconciler extraction). Sales' module becomes a thin re-export shim. All four purchasing services (AP Invoice, AP Credit Note, AP Down Payment, Blanket Agreement) now call `await get_tax_percent(tax_code, org_id, auth_token)` from `src.core.finance`. `auth_token` threaded through route handlers via `_extract_token(request)`. AP_TAX_RATES constant deleted from `models/document.py`; only docstring references remain. Honest gap fixed: `document_service.py`'s inline lookup previously silently fell back to `Decimal("0")` for unknown codes, inconsistent with the newer services — now all paths fail-hard via `get_tax_percent`. 8 new tests in `tests/unit/test_purchasing/test_tax_resolution.py`. 5 existing tests in `test_ap_invoice_service.py` updated with `_patch_tax_percent` context-manager helper.
+- **Final pass count:** Sales 334 unchanged. Purchasing 54 (46 baseline + 8 new). Combined 388.
+- **Commit:** `e0afa67` (T-200.22b implementation) — plus the late-filed BACKLOG entry shipped in `09e2cb1`.
+
+### T-200.22a | Extract shared chain-reconciler primitives to `src/core/documents/` — Wave 4 tech debt
+- **Category:** Backend · **Priority:** P2
+- **Completed:** 2026-06-10 · **Assigned:** backend-dev-expert (Viet Anh)
+- **Summary:** Removes the parallel-modules drift risk between sales' `doc_chain_reconciler.py` and purchasing's `purchasing_chain_reconciler.py` (both originally implemented the same contract independently because importing the sales module triggers `redis.asyncio` via the sales `services/__init__.py` auto-loading `OrderService`). New shared module at `src/core/documents/chain_reconciler.py` (686 lines, 8 exports — no `redis`, no `motor` at module level). Sales' module becomes a thin shim (537 → 281 lines) re-exporting core primitives with sales-specific name aliases (`line_open_qty → line_open_invoice_qty`, etc.) and sales-specific action-string defaults baked into wrapper functions. Purchasing's module shrinks (1,981 → 1,901 lines); doc-type-specific helpers (PO/GR/AP/DPI/BLA) stay as thin wrappers calling into core with the right collection names + `doc_key="docId"` (purchasing's key field). Some purchasing helpers (`reconcile_po_line_receipt_counters`, AP/DPI/BLA three-way close+reopen) kept as full implementations where the generic contract doesn't fit cleanly — natural candidates for tighter consolidation in a future ticket. Verified: importing the new core module loads zero redis modules.
+- **Final pass count:** Sales 334 unchanged. Purchasing 46 unchanged. Combined 380.
+- **Commit:** `ee822d1` (implementation) — plus the late-filed BACKLOG entry shipped in `09e2cb1`.
 
 ### T-200.21a | Fix 10 pre-existing purchasing test failures — Wave 4 tech debt
 - **Category:** Backend tests · **Priority:** P2
