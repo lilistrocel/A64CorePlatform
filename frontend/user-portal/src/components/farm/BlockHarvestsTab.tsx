@@ -9,8 +9,8 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { farmApi, getAvailableFarmingYears, type FarmingYearItem } from '../../services/farmApi';
 import { FarmingYearSelector } from './FarmingYearSelector';
-import type { BlockHarvest, BlockHarvestCreate, BlockHarvestSummary, QualityGrade } from '../../types/farm';
-import { formatNumber, positiveNumberInputProps } from '../../utils';
+import type { BlockHarvest, BlockHarvestSummary, QualityGrade } from '../../types/farm';
+import { formatNumber } from '../../utils';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -228,100 +228,11 @@ const ModalTitle = styled.h2`
   margin: 0 0 24px 0;
 `;
 
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-`;
-
-const FormGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const Label = styled.label`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textPrimary};
-`;
-
-const Input = styled.input`
-  padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  transition: border-color 150ms ease-in-out;
-
-  &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
-  }
-
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-  }
-`;
-
-const Textarea = styled.textarea`
-  padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  min-height: 80px;
-  resize: vertical;
-  font-family: inherit;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  transition: border-color 150ms ease-in-out;
-
-  &::placeholder {
-    color: ${({ theme }) => theme.colors.textDisabled};
-  }
-
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-  }
-`;
-
-const Select = styled.select`
-  padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textPrimary};
-  transition: border-color 150ms ease-in-out;
-
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-  }
-`;
-
 const ButtonGroup = styled.div`
   display: flex;
   gap: 12px;
   justify-content: flex-end;
   margin-top: 8px;
-`;
-
-const ErrorMessage = styled.div`
-  padding: 12px;
-  background: ${({ theme }) => theme.colors.errorBg};
-  border: 1px solid ${({ theme }) => theme.colors.error};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.colors.error};
-  font-size: 14px;
-`;
-
-const HelpText = styled.p`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  margin: 0;
 `;
 
 const DeleteButton = styled.button`
@@ -465,7 +376,6 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
   const [harvests, setHarvests] = useState<BlockHarvest[]>([]);
   const [summary, setSummary] = useState<BlockHarvestSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showRecordModal, setShowRecordModal] = useState(false);
   const [harvestToDelete, setHarvestToDelete] = useState<BlockHarvest | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -529,17 +439,6 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
     }
     const yearItem = availableFarmingYears.find((y) => y.year === selectedFarmingYear);
     return yearItem?.display || `Year ${selectedFarmingYear}`;
-  };
-
-  const handleRecordHarvest = async (data: BlockHarvestCreate) => {
-    try {
-      await farmApi.recordBlockHarvest(farmId, blockId, data);
-      await loadHarvests();
-      onRefresh?.();
-      setShowRecordModal(false);
-    } catch (err) {
-      throw err;
-    }
   };
 
   const handleDeleteHarvest = async () => {
@@ -621,9 +520,6 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
             isLoading={loadingFarmingYears}
             compact={true}
           />
-          <Button $variant="primary" onClick={() => setShowRecordModal(true)}>
-            + Record Harvest
-          </Button>
         </HeaderControls>
       </Header>
 
@@ -700,11 +596,6 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
         </HarvestsList>
       )}
 
-      {/* Record Harvest Modal */}
-      {showRecordModal && (
-        <RecordHarvestModal blockId={blockId} onClose={() => setShowRecordModal(false)} onRecord={handleRecordHarvest} />
-      )}
-
       {/* Delete Confirmation Modal */}
       {harvestToDelete && (
         <Overlay>
@@ -736,123 +627,3 @@ export function BlockHarvestsTab({ farmId, blockId, blockCategory, parentBlockId
   );
 }
 
-// ============================================================================
-// RECORD HARVEST MODAL
-// ============================================================================
-
-interface RecordHarvestModalProps {
-  blockId: string;
-  onClose: () => void;
-  onRecord: (data: BlockHarvestCreate) => Promise<void>;
-}
-
-function RecordHarvestModal({ blockId, onClose, onRecord }: RecordHarvestModalProps) {
-  const [formData, setFormData] = useState({
-    harvestDate: new Date().toISOString().split('T')[0],
-    quantityKg: '',
-    qualityGrade: 'A' as QualityGrade,
-    notes: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    const quantity = parseFloat(formData.quantityKg);
-    if (isNaN(quantity) || quantity <= 0) {
-      setError('Quantity must be a positive number');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      // Convert date to ISO datetime string (backend expects datetime, not just date)
-      const harvestDateTime = `${formData.harvestDate}T00:00:00Z`;
-      await onRecord({
-        blockId,
-        harvestDate: harvestDateTime,
-        quantityKg: quantity,
-        qualityGrade: formData.qualityGrade,
-        notes: formData.notes.trim() || undefined,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to record harvest');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Overlay>
-      <Modal>
-        <ModalTitle>Record Harvest</ModalTitle>
-        <Form onSubmit={handleSubmit}>
-          {error && <ErrorMessage>{error}</ErrorMessage>}
-
-          <FormGroup>
-            <Label htmlFor="harvestDate">Harvest Date *</Label>
-            <Input
-              id="harvestDate"
-              type="date"
-              value={formData.harvestDate}
-              onChange={(e) => setFormData({ ...formData, harvestDate: e.target.value })}
-              max={new Date().toISOString().split('T')[0]}
-              required
-            />
-            <HelpText>Date when the harvest was collected</HelpText>
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="quantityKg">Quantity (kg) *</Label>
-            <Input
-              id="quantityKg"
-              {...positiveNumberInputProps}
-              step="0.1"
-              min="0.1"
-              value={formData.quantityKg}
-              onChange={(e) => setFormData({ ...formData, quantityKg: e.target.value })}
-              placeholder="e.g., 25.5"
-              required
-            />
-            <HelpText>Total weight harvested in kilograms</HelpText>
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="qualityGrade">Quality Grade *</Label>
-            <Select
-              id="qualityGrade"
-              value={formData.qualityGrade}
-              onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value as QualityGrade })}
-              required
-            >
-              <option value="A">Grade A - Premium Quality</option>
-              <option value="B">Grade B - Good Quality</option>
-              <option value="C">Grade C - Standard Quality</option>
-            </Select>
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Any additional notes about this harvest..."
-            />
-          </FormGroup>
-
-          <ButtonGroup>
-            <Button type="button" onClick={onClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button type="submit" $variant="primary" disabled={loading}>
-              {loading ? 'Recording...' : 'Record Harvest'}
-            </Button>
-          </ButtonGroup>
-        </Form>
-      </Modal>
-    </Overlay>
-  );
-}
