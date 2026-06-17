@@ -183,6 +183,21 @@ class HistoricalKPI(BaseModel):
     avgYieldPerCycle: float = Field(0.0, ge=0, description="Average yield per completed cycle")
 
 
+class PlantDataSnapshot(BaseModel):
+    """
+    Snapshot of plant data fields captured at planting time.
+
+    Stored on the block so staleness can be detected when the
+    plant library record is subsequently edited in-place.
+    """
+
+    plantName: Optional[str] = None
+    yieldPerPlant: Optional[float] = None
+    yieldUnit: Optional[str] = None
+    expectedWastePercentage: Optional[float] = None
+    totalCycleDays: Optional[int] = None
+
+
 class BlockBase(BaseModel):
     """Base block fields"""
     name: Optional[str] = Field(None, max_length=200, description="Optional block name")
@@ -284,6 +299,16 @@ class Block(BlockBase):
     # Status History
     statusChanges: List[StatusChange] = Field(default_factory=list, description="Status change history")
 
+    # Plant-data version tracking (snapshot-based)
+    plantDataVersion: Optional[int] = Field(
+        None,
+        description="dataVersion of the plant library record captured at planting time"
+    )
+    plantDataSnapshot: Optional[PlantDataSnapshot] = Field(
+        None,
+        description="Key plant fields snapshotted at planting time for staleness detection"
+    )
+
     # Multi-industry scoping
     divisionId: Optional[str] = Field(None, description="Division scope")
     organizationId: Optional[str] = Field(None, description="Organization scope")
@@ -363,6 +388,28 @@ class AddVirtualCropRequest(BaseModel):
     allocatedArea: float = Field(..., gt=0, description="Area to allocate")
     plantCount: int = Field(..., gt=0, description="Number of plants")
     plantingDate: Optional[datetime] = Field(None, description="Planned planting date")
+
+
+class BlockWithStaleness(Block):
+    """
+    Block model augmented with live plant-data staleness fields.
+
+    Used by the block-detail GET endpoint so the frontend can display a
+    "plant data is outdated" banner without a separate analytics call.
+
+    These three fields are NOT stored in MongoDB — they are computed at
+    request time by comparing the snapshotted plantDataVersion against
+    the live dataVersion of the plant_data_enhanced record.
+    """
+
+    latestPlantDataVersion: Optional[int] = Field(
+        None,
+        description="Live dataVersion of the plant_data_enhanced record (fetched on-demand)"
+    )
+    plantDataIsStale: bool = Field(
+        False,
+        description="True when latestPlantDataVersion > plantDataVersion"
+    )
 
 
 class BlockListResponse(BaseModel):

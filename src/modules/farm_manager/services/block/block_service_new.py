@@ -14,7 +14,7 @@ import logging
 
 from ...models.block import (
     Block, BlockCreate, BlockUpdate, BlockStatus,
-    BlockStatusUpdate
+    BlockStatusUpdate, PlantDataSnapshot
 )
 from .block_repository_new import BlockRepository
 from .harvest_repository import HarvestRepository
@@ -246,9 +246,12 @@ class BlockService:
         if not plant_data or not plant_data.yieldInfo:
             raise HTTPException(400, "Plant data not found or has no yield information")
 
-        # Calculate predicted yield
+        # Calculate predicted yield (waste-aware)
+        # Reason: apply expectedWastePercentage so the stored KPI reflects net
+        # deliverable yield rather than gross crop weight.
         yield_per_plant = plant_data.yieldInfo.yieldPerPlant or 0.0
-        predicted_yield_kg = yield_per_plant * plant_count
+        waste_pct = plant_data.yieldInfo.expectedWastePercentage or 0.0
+        predicted_yield_kg = yield_per_plant * plant_count * (1 - waste_pct / 100)
 
         return predicted_yield_kg
 
@@ -609,6 +612,24 @@ class BlockService:
                 await BlockRepository.update_kpi(
                     block_id,
                     predicted_yield_kg=predicted_yield
+                )
+
+                # Build plant-data snapshot so staleness can be detected later
+                snapshot = PlantDataSnapshot(
+                    plantName=plant_data.plantName,
+                    yieldPerPlant=plant_data.yieldInfo.yieldPerPlant if plant_data.yieldInfo else None,
+                    yieldUnit=plant_data.yieldInfo.yieldUnit if plant_data.yieldInfo else None,
+                    expectedWastePercentage=(
+                        plant_data.yieldInfo.expectedWastePercentage if plant_data.yieldInfo else None
+                    ),
+                    totalCycleDays=(
+                        plant_data.growthCycle.totalCycleDays if plant_data.growthCycle else None
+                    ),
+                )
+                await BlockRepository.set_plant_data_version(
+                    block_id,
+                    plant_data.dataVersion,
+                    snapshot,
                 )
 
                 # Update status with planning/planting details

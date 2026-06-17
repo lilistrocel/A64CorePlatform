@@ -415,6 +415,9 @@ class BlockRepository:
                 "farmingYearPlanted": None,  # Clear farming year when cycle ends
                 "expectedHarvestDate": None,
                 "expectedStatusChanges": None,
+                # Clear plant-data version tracking for the new cycle
+                "plantDataVersion": None,
+                "plantDataSnapshot": None,
                 "kpi": {
                     "predictedYieldKg": 0.0,
                     "actualYieldKg": 0.0,
@@ -548,6 +551,40 @@ class BlockRepository:
             f"(yield: {yield_kg_delta:+.2f} kg, harvests: {harvest_count_delta:+d})"
         )
         return updated_block
+
+    @staticmethod
+    async def set_plant_data_version(
+        block_id: UUID,
+        data_version: int,
+        snapshot: "PlantDataSnapshot",
+    ) -> None:
+        """
+        Persist the plant-data version and snapshot on a block document.
+
+        Called at planting time so we can detect when the underlying plant
+        library record has been edited since the block was created.
+
+        Args:
+            block_id: Block UUID to update
+            data_version: Current dataVersion of the plant_data_enhanced record
+            snapshot: Key plant fields captured at this moment
+        """
+        from ...models.block import PlantDataSnapshot  # local to avoid circular import
+
+        db = farm_db.get_database()
+        await db.blocks.update_one(
+            {"blockId": str(block_id), "isActive": True},
+            {
+                "$set": {
+                    "plantDataVersion": data_version,
+                    "plantDataSnapshot": snapshot.model_dump(),
+                    "updatedAt": datetime.utcnow(),
+                }
+            },
+        )
+        logger.info(
+            f"[Block Repository] Stamped plantDataVersion={data_version} on block {block_id}"
+        )
 
     @staticmethod
     async def soft_delete(block_id: UUID) -> bool:

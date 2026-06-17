@@ -623,6 +623,17 @@ export async function deleteArchive(archiveId: string) {
 // ============================================================================
 
 /**
+ * Refresh the plant-data snapshot on a block to the latest library version.
+ * Server-side gated to states: planned / growing / fruiting — returns 409 otherwise.
+ */
+export async function refreshPlantData(farmId: string, blockId: string) {
+  const response = await apiClient.post<{ data: Block }>(
+    `/v1/farm/farms/${farmId}/blocks/${blockId}/refresh-plant-data`, {}
+  );
+  return response.data.data;
+}
+
+/**
  * Add a virtual crop to a physical block
  */
 export async function addVirtualCrop(
@@ -1329,6 +1340,9 @@ export const farmApi = {
   getPlanting,
   createPlanting,
   markPlantingAsPlanted,
+
+  // Plant Data Version
+  refreshPlantData,
 
   // Multi-Crop / Virtual Blocks
   addVirtualCrop,

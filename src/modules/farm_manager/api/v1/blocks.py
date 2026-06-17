@@ -10,7 +10,8 @@ from uuid import UUID
 
 from ...models.block import (
     Block, BlockCreate, BlockUpdate, BlockStatus,
-    BlockStatusUpdate, AddVirtualCropRequest, IoTControllerUpdate
+    BlockStatusUpdate, AddVirtualCropRequest, IoTControllerUpdate,
+    BlockWithStaleness,
 )
 from ...models.block_analytics import BlockAnalyticsResponse, TimePeriod
 from ...services.block.block_service_new import BlockService
@@ -108,7 +109,7 @@ async def list_blocks(
 
 @router.get(
     "/{block_id}",
-    response_model=SuccessResponse[Block],
+    response_model=SuccessResponse[BlockWithStaleness],
     summary="Get block by ID"
 )
 async def get_block(
@@ -120,19 +121,51 @@ async def get_block(
     Get a specific block by ID.
 
     Returns complete block information including current state,
-    planting information, and dates.
+    planting information, dates, and plant-data staleness fields:
+    - `plantDataVersion`: version captured at planting time
+    - `latestPlantDataVersion`: live version of the plant library record
+    - `plantDataIsStale`: True when the library has been edited since planting
     """
+    import logging
+    from ...services.plant_data.plant_data_enhanced_repository import (
+        PlantDataEnhancedRepository,
+    )
+    from fastapi import HTTPException
+
+    _log = logging.getLogger(__name__)
+
     block = await BlockService.get_block(block_id)
 
     # Verify block belongs to the specified farm
     if str(block.farmId) != str(farm_id):
-        from fastapi import HTTPException
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Block not found in this farm"
         )
 
-    return SuccessResponse(data=block)
+    # Compute staleness fields
+    latest_version: Optional[int] = None
+    is_stale = False
+    if block.targetCrop is not None and block.plantDataVersion is not None:
+        try:
+            live_plant = await PlantDataEnhancedRepository.get_by_id(block.targetCrop)
+            if live_plant is not None:
+                latest_version = live_plant.dataVersion
+                is_stale = latest_version > block.plantDataVersion
+        except Exception:
+            # Reason: non-critical enrichment; never 500 on a version lookup failure
+            _log.warning(
+                f"[Block API] Could not fetch live plant version for crop "
+                f"{block.targetCrop} on block {block_id}"
+            )
+
+    block_with_staleness = BlockWithStaleness(
+        **block.model_dump(),
+        latestPlantDataVersion=latest_version,
+        plantDataIsStale=is_stale,
+    )
+
+    return SuccessResponse(data=block_with_staleness)
 
 
 @router.patch(
@@ -742,6 +775,156 @@ async def preview_empty_virtual_block(
     return SuccessResponse(
         data=preview,
         message="Preview of virtual block cleanup"
+    )
+
+
+# ==================== PLANT DATA REFRESH ENDPOINT ====================
+
+@router.post(
+    "/{block_id}/refresh-plant-data",
+    response_model=SuccessResponse[BlockWithStaleness],
+    summary="Refresh block snapshot to latest plant-library version"
+)
+async def refresh_plant_data(
+    farm_id: UUID,
+    block_id: UUID,
+    current_user: CurrentUser = Depends(require_permission("farm.operate"))
+):
+    """
+    Re-snapshot the plant library record onto the block and recompute KPIs.
+
+    **Allowed states**: `planned`, `growing`, `fruiting`.
+    Blocks in `harvesting`, `cleaning`, `empty`, `partial`, or `alert`
+    (without a known pre-harvest previous state) are rejected.
+
+    **Effect:**
+    - Rewrites `plantDataVersion` and `plantDataSnapshot` from current plant data
+    - Recomputes `kpi.predictedYieldKg` (waste-aware)
+    - Recomputes `kpi.yieldEfficiencyPercent` from stored actualYieldKg
+    - Recomputes `expectedHarvestDate` and `expectedStatusChanges` from planting date
+    - Returns the updated block with staleness fields (plantDataIsStale will be False)
+
+    **Requires** `farm.operate` permission.
+    """
+    from fastapi import HTTPException
+    from ...services.plant_data.plant_data_enhanced_repository import (
+        PlantDataEnhancedRepository,
+    )
+    from ...services.block.block_service_new import BlockService as _BlockService
+    from ...services.block.block_repository_new import BlockRepository
+    from ...models.block import PlantDataSnapshot
+
+    # Allowed states for refresh (pre-harvest only)
+    REFRESHABLE_STATES = {
+        BlockStatus.PLANNED,
+        BlockStatus.GROWING,
+        BlockStatus.FRUITING,
+    }
+
+    # Load block
+    block = await BlockService.get_block(block_id)
+    if str(block.farmId) != str(farm_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found in this farm"
+        )
+
+    # Validate crop assigned
+    if block.targetCrop is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Block has no crop assigned"
+        )
+
+    # Gate: only refreshable before harvesting begins
+    if block.state not in REFRESHABLE_STATES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Plant data can only be refreshed before harvesting begins."
+        )
+
+    # Load current plant data
+    plant_data = await PlantDataEnhancedRepository.get_by_id(block.targetCrop)
+    if not plant_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plant data not found for crop {block.targetCrop}"
+        )
+
+    # Recompute predicted yield (waste-aware)
+    plant_count = block.actualPlantCount or 0
+    yield_per_plant = plant_data.yieldInfo.yieldPerPlant or 0.0 if plant_data.yieldInfo else 0.0
+    waste_pct = (
+        plant_data.yieldInfo.expectedWastePercentage or 0.0
+        if plant_data.yieldInfo else 0.0
+    )
+    new_predicted_kg = yield_per_plant * plant_count * (1 - waste_pct / 100)
+
+    # Recompute efficiency from stored actualYieldKg
+    actual_kg = block.kpi.actualYieldKg if block.kpi else 0.0
+    new_efficiency = (actual_kg / new_predicted_kg * 100) if new_predicted_kg > 0 else 0.0
+
+    # Recompute expected dates from original planting date
+    planting_date = block.plantedDate
+    new_expected_harvest_date = None
+    new_expected_status_changes = None
+    if planting_date is not None:
+        new_expected_harvest_date, new_expected_status_changes = (
+            await _BlockService.calculate_expected_dates(block.targetCrop, planting_date)
+        )
+
+    # Build fresh snapshot
+    snapshot = PlantDataSnapshot(
+        plantName=plant_data.plantName,
+        yieldPerPlant=plant_data.yieldInfo.yieldPerPlant if plant_data.yieldInfo else None,
+        yieldUnit=plant_data.yieldInfo.yieldUnit if plant_data.yieldInfo else None,
+        expectedWastePercentage=(
+            plant_data.yieldInfo.expectedWastePercentage if plant_data.yieldInfo else None
+        ),
+        totalCycleDays=(
+            plant_data.growthCycle.totalCycleDays if plant_data.growthCycle else None
+        ),
+    )
+
+    # Persist all updates
+    from ...services.database import farm_db as _farm_db
+    db_obj = _farm_db.get_database()
+
+    from datetime import datetime as _dt
+
+    set_fields = {
+        "kpi.predictedYieldKg": new_predicted_kg,
+        "kpi.yieldEfficiencyPercent": round(new_efficiency, 2),
+        "plantDataVersion": plant_data.dataVersion,
+        "plantDataSnapshot": snapshot.model_dump(),
+        "updatedAt": _dt.utcnow(),
+    }
+    if new_expected_harvest_date is not None:
+        set_fields["expectedHarvestDate"] = new_expected_harvest_date
+    if new_expected_status_changes is not None:
+        set_fields["expectedStatusChanges"] = new_expected_status_changes
+
+    await db_obj.blocks.update_one(
+        {"blockId": str(block_id), "isActive": True},
+        {"$set": set_fields}
+    )
+
+    # Reload fresh block
+    refreshed = await BlockRepository.get_by_id(block_id)
+    if not refreshed:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Failed to reload block after refresh")
+
+    # After refresh, staleness is always False (version just synced)
+    result = BlockWithStaleness(
+        **refreshed.model_dump(),
+        latestPlantDataVersion=plant_data.dataVersion,
+        plantDataIsStale=False,
+    )
+
+    return SuccessResponse(
+        data=result,
+        message="Block plant data refreshed to latest version"
     )
 
 

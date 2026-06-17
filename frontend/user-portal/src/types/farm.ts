@@ -142,6 +142,18 @@ export interface FarmSummary {
 // BLOCK TYPES
 // ============================================================================
 
+/**
+ * Snapshot of plant-library data captured when a block transitions to planted.
+ * Used to show which data version the block's yield predictions are based on.
+ */
+export interface PlantDataSnapshot {
+  plantName: string;
+  yieldPerPlant: number;
+  yieldUnit: string;
+  expectedWastePercentage?: number | null;
+  totalCycleDays: number;
+}
+
 export interface Block {
   blockId: string;
   farmId: string;
@@ -163,6 +175,12 @@ export interface Block {
   virtualBlockCounter?: number;
   childBlockIds?: string[];
   allocatedArea?: number | null;
+
+  // Plant data version staleness (populated by GET /farms/{farmId}/blocks/{blockId})
+  plantDataVersion?: number | null;
+  latestPlantDataVersion?: number | null;
+  plantDataIsStale?: boolean;
+  plantDataSnapshot?: PlantDataSnapshot | null;
 
   // Additional fields from backend
   blockCode?: string;
@@ -614,7 +632,7 @@ export interface LightRequirements {
 }
 
 // 11. Quality Grading
-export interface QualityGrade {
+export interface QualityGradeSpec {
   gradeName: string;
   sizeRequirements?: string;
   colorRequirements?: string;
@@ -721,7 +739,7 @@ export interface PlantDataEnhanced {
   lightRequirements: LightRequirements;
 
   // 9. Quality Grading
-  qualityGrades: QualityGrade[];
+  qualityGrades: QualityGradeSpec[];
 
   // 10. Economics & Labor
   economicsAndLabor: EconomicsAndLabor;
@@ -766,7 +784,7 @@ export interface PlantDataEnhancedCreate {
   soilRequirements?: SoilRequirements;
   diseasesAndPests?: DiseaseOrPest[];
   lightRequirements?: LightRequirements;
-  qualityGrades?: QualityGrade[];
+  qualityGrades?: QualityGradeSpec[];
   economicsAndLabor?: EconomicsAndLabor;
   additionalInfo?: AdditionalInformation;
 
@@ -789,7 +807,7 @@ export interface PlantDataEnhancedUpdate {
   soilRequirements?: SoilRequirements;
   diseasesAndPests?: DiseaseOrPest[];
   lightRequirements?: LightRequirements;
-  qualityGrades?: QualityGrade[];
+  qualityGrades?: QualityGradeSpec[];
   economicsAndLabor?: EconomicsAndLabor;
   additionalInfo?: AdditionalInformation;
   // 12. Data Attribution

@@ -12,7 +12,7 @@ from fastapi import HTTPException
 import logging
 
 from ...models.block import (
-    Block, BlockStatus, AddVirtualCropRequest
+    Block, BlockStatus, AddVirtualCropRequest, PlantDataSnapshot
 )
 from .block_repository_new import BlockRepository
 from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
@@ -147,6 +147,24 @@ class VirtualBlockService:
         await BlockRepository.update_kpi(
             virtual_block.blockId,
             predicted_yield_kg=predicted_yield
+        )
+
+        # Build plant-data snapshot so staleness can be detected later
+        snapshot = PlantDataSnapshot(
+            plantName=plant_data.plantName,
+            yieldPerPlant=plant_data.yieldInfo.yieldPerPlant if plant_data.yieldInfo else None,
+            yieldUnit=plant_data.yieldInfo.yieldUnit if plant_data.yieldInfo else None,
+            expectedWastePercentage=(
+                plant_data.yieldInfo.expectedWastePercentage if plant_data.yieldInfo else None
+            ),
+            totalCycleDays=(
+                plant_data.growthCycle.totalCycleDays if plant_data.growthCycle else None
+            ),
+        )
+        await BlockRepository.set_plant_data_version(
+            virtual_block.blockId,
+            plant_data.dataVersion,
+            snapshot,
         )
 
         # Update virtual block status to PLANNED or GROWING
