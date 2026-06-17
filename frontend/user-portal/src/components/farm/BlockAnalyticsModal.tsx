@@ -11,7 +11,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import styled from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import {
   LineChart,
   Line,
@@ -28,7 +28,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useBlockAnalytics } from '../../hooks/farm/useBlockAnalytics';
-import type { TimePeriod } from '../../types/analytics';
+import type { TimePeriod, StateProgressStep, HarvestRecord } from '../../types/analytics';
 import { TIME_PERIOD_OPTIONS } from '../../types/analytics';
 
 // ============================================================================
@@ -213,6 +213,52 @@ export function BlockAnalyticsModal({ isOpen, onClose, blockId, farmId }: BlockA
 // TAB COMPONENTS
 // ============================================================================
 
+// ---------------------------------------------------------------------------
+// StateProgressBar — horizontal lifecycle stepper shown at the top of Overview
+// ---------------------------------------------------------------------------
+
+function StateProgressBar({ steps }: { steps: StateProgressStep[] }) {
+  if (!steps || steps.length === 0) return null;
+
+  return (
+    <Section>
+      <SectionTitle>Lifecycle Progress</SectionTitle>
+      <ProgressBarRow>
+        {steps.map((step, index) => {
+          // Determine node visual state
+          const nodeState: 'active' | 'completed' | 'upcoming' =
+            step.isCurrent ? 'active' : step.reached ? 'completed' : 'upcoming';
+
+          // Date display logic per spec:
+          // - reached + date present  → formatted date
+          // - reached + date null     → em dash (recorded as passed, no date)
+          // - not reached             → nothing
+          let dateText: string | null = null;
+          if (step.reached) {
+            dateText = step.transitionDate
+              ? new Date(step.transitionDate).toLocaleDateString()
+              : '—'; // em dash
+          }
+
+          const label = step.state.charAt(0).toUpperCase() + step.state.slice(1);
+
+          return (
+            <StepWrapper key={step.state}>
+              {index > 0 && <StepConnector $completed={step.reached} />}
+              <StepNode $state={nodeState}>
+                {nodeState === 'completed' && <StepCheckmark>&#10003;</StepCheckmark>}
+                {nodeState === 'active' && <StepDot />}
+              </StepNode>
+              <StepLabel $state={nodeState}>{label}</StepLabel>
+              {dateText !== null && <StepDate>{dateText}</StepDate>}
+            </StepWrapper>
+          );
+        })}
+      </ProgressBarRow>
+    </Section>
+  );
+}
+
 function OverviewTab({ analytics }: { analytics: any }) {
   if (!analytics || !analytics.performanceMetrics || !analytics.blockInfo) {
     return <TabContent><EmptyText>Loading overview data...</EmptyText></TabContent>;
@@ -230,8 +276,16 @@ function OverviewTab({ analytics }: { analytics: any }) {
 
   return (
     <TabContent>
+      <StateProgressBar steps={analytics.stateProgress ?? []} />
       <Section>
-        <SectionTitle>Block Information</SectionTitle>
+        <SectionTitle>
+          Block Information
+          {analytics.blockInfo.plantDataIsStale && (
+            <StalenessChip>
+              Plant data v{analytics.blockInfo.plantDataVersion ?? '?'} · latest v{analytics.blockInfo.latestPlantDataVersion ?? '?'} (outdated)
+            </StalenessChip>
+          )}
+        </SectionTitle>
         <InfoGrid>
           <InfoCard>
             <InfoLabel>Current State</InfoLabel>
@@ -245,6 +299,12 @@ function OverviewTab({ analytics }: { analytics: any }) {
             <InfoCard>
               <InfoLabel>Current Crop</InfoLabel>
               <InfoValue>🌿 {analytics.blockInfo.currentCrop}</InfoValue>
+            </InfoCard>
+          )}
+          {analytics.blockInfo.actualPlantCount != null && (
+            <InfoCard>
+              <InfoLabel>Number of Plants</InfoLabel>
+              <InfoValue>🌱 {analytics.blockInfo.actualPlantCount.toLocaleString()}</InfoValue>
             </InfoCard>
           )}
           {analytics.blockInfo.daysInCurrentCycle !== null && (
@@ -378,6 +438,36 @@ function YieldTab({ analytics }: { analytics: any }) {
           </YieldStatCard>
         </YieldStatsGrid>
       </Section>
+
+      {/* Yield Records — individual harvest log entries */}
+      {(() => {
+        const records: HarvestRecord[] = analytics.yieldAnalytics.harvestRecords ?? [];
+        if (records.length === 0) return null;
+        return (
+          <Section>
+            <SectionTitle>Yield Records</SectionTitle>
+            <YieldRecordList>
+              {records.map((record) => (
+                <YieldRecordItem key={record.harvestId}>
+                  <YieldRecordMain>
+                    <YieldRecordLeft>
+                      <YieldRecordDate>{new Date(record.harvestDate).toLocaleDateString()}</YieldRecordDate>
+                      <GradeBadge $color={QUALITY_COLORS[record.qualityGrade]}>
+                        Grade {record.qualityGrade}
+                      </GradeBadge>
+                      <YieldRecordQuantity>{record.quantityKg.toFixed(1)} kg</YieldRecordQuantity>
+                    </YieldRecordLeft>
+                    <YieldRecordMeta>
+                      Recorded {new Date(record.recordedAt).toLocaleDateString()} by {record.recordedByEmail}
+                    </YieldRecordMeta>
+                  </YieldRecordMain>
+                  {record.notes && <YieldRecordNotes>{record.notes}</YieldRecordNotes>}
+                </YieldRecordItem>
+              ))}
+            </YieldRecordList>
+          </Section>
+        );
+      })()}
 
       {hasYieldData ? (
         <>
@@ -1263,6 +1353,143 @@ const AlertStatValue = styled.div<{ $color?: string }>`
   color: ${({ $color, theme }) => $color || theme.colors.textPrimary};
 `;
 
+// ---------------------------------------------------------------------------
+// StateProgressBar styled components
+// ---------------------------------------------------------------------------
+
+/**
+ * Row that holds all step wrappers in a single horizontal line.
+ * Top padding ensures the active node's halo ring is never clipped.
+ */
+const ProgressBarRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  /* Top padding so the active node's halo ring is never clipped. No overflow clipping. */
+  padding: 16px 8px 4px;
+`;
+
+/**
+ * Equal-width column for one step: connector (if not first) + node + label + date.
+ * flex:1 1 0 gives all steps the same width so nodes are evenly spaced.
+ */
+const StepWrapper = styled.div`
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+/* Absolutely-positioned line spanning from the PREVIOUS node's center to THIS node's
+   center (left:-50%; width:100% across equal-width columns), sitting behind the nodes. */
+const StepConnector = styled.div<{ $completed: boolean }>`
+  position: absolute;
+  top: 15px;        /* node is 32px tall → center 16px; minus half the 2px line */
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  z-index: 0;
+  background: ${({ $completed, theme }) => ($completed ? '#10B981' : theme.colors.neutral[300])};
+  transition: background 150ms ease-in-out;
+`;
+
+type NodeState = 'active' | 'completed' | 'upcoming';
+
+/**
+ * Water-drop ripple: a ring expands outward from the node, fast at first then
+ * decelerating as it spreads and fades (driven by the ease-out timing function).
+ */
+const ripple = keyframes`
+  0%   { transform: scale(1);   opacity: 0.4; }
+  55%  { transform: scale(1.7); opacity: 0; }
+  100% { transform: scale(1.7); opacity: 0; } /* hold faded = pause before next ripple */
+`;
+
+const StepNode = styled.div<{ $state: NodeState }>`
+  position: relative;
+  z-index: 1;       /* above the connector so lines tuck under the circle */
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 150ms ease-in-out, border-color 150ms ease-in-out;
+
+  ${({ $state }) =>
+    $state === 'active' &&
+    css`
+      background: #3b82f6;
+      border: 2px solid #3b82f6;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+
+      /* Two staggered rings emanate from behind the node like ripples on water.
+         z-index: -1 keeps them behind the solid node so they radiate from under it. */
+      &::before,
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -1px;
+        border-radius: 50%;
+        border: 1.5px solid #3b82f6;
+        z-index: -1;
+        pointer-events: none;
+        animation: ${ripple} 2.8s ease-out infinite;
+      }
+      &::after {
+        animation-delay: 1.4s;
+      }
+    `}
+
+  ${({ $state }) =>
+    $state === 'completed' &&
+    `
+    background: #10B981;
+    border: 2px solid #10B981;
+  `}
+
+  ${({ $state, theme }) =>
+    $state === 'upcoming' &&
+    `
+    background: ${theme.colors.background};
+    border: 2px solid ${theme.colors.neutral[300]};
+  `}
+`;
+
+const StepCheckmark = styled.span`
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+`;
+
+const StepDot = styled.div`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+`;
+
+const StepLabel = styled.div<{ $state: NodeState }>`
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: ${({ $state }) => ($state === 'active' ? '600' : '500')};
+  color: ${({ $state, theme }) =>
+    $state === 'upcoming' ? theme.colors.textDisabled : theme.colors.textPrimary};
+  text-align: center;
+  white-space: nowrap;
+`;
+
+const StepDate = styled.div`
+  margin-top: 4px;
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.textDisabled};
+  text-align: center;
+  white-space: nowrap;
+`;
+
 const LoadingContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -1365,4 +1592,100 @@ const EmptyIcon = styled.div`
 const EmptyText = styled.div`
   font-size: 16px;
   color: ${({ theme }) => theme.colors.textDisabled};
+`;
+
+// ---------------------------------------------------------------------------
+// Yield Records styled components
+// ---------------------------------------------------------------------------
+
+const YieldRecordList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+`;
+
+const YieldRecordItem = styled.div`
+  padding: 12px;
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const YieldRecordMain = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
+
+const YieldRecordLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+`;
+
+const YieldRecordDate = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const GradeBadge = styled.span<{ $color: string }>`
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: ${({ $color }) => `${$color}20`};
+  color: ${({ $color }) => $color};
+`;
+
+const YieldRecordQuantity = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const YieldRecordMeta = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textDisabled};
+  white-space: nowrap;
+
+  @media (max-width: 768px) {
+    white-space: normal;
+  }
+`;
+
+const YieldRecordNotes = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textDisabled};
+  font-style: italic;
+  padding-left: 2px;
+`;
+
+// ---------------------------------------------------------------------------
+// Plant data staleness chip (Overview tab — Block Information section)
+// ---------------------------------------------------------------------------
+
+const StalenessChip = styled.span`
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  margin-left: 8px;
+  vertical-align: middle;
 `;

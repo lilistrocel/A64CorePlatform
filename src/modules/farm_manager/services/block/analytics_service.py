@@ -16,6 +16,7 @@ from ...models.block_analytics import (
     BlockInfoAnalytics,
     YieldAnalytics,
     YieldTrendPoint,
+    HarvestRecord,
     TimelineAnalytics,
     StateTransition,
     TaskAnalytics,
@@ -23,11 +24,13 @@ from ...models.block_analytics import (
     PerformanceMetrics,
     AlertAnalytics,
     TimePeriod,
-    TrendDirection
+    TrendDirection,
+    StateProgressStep
 )
 from .block_repository_new import BlockRepository
 from .harvest_repository import HarvestRepository
 from .alert_repository import AlertRepository
+from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
 from ..database import farm_db
 
 logger = logging.getLogger(__name__)
@@ -69,9 +72,7 @@ class BlockAnalyticsService:
 
         # Generate all analytics sections
         block_info = await BlockAnalyticsService._get_block_info(block)
-        yield_analytics = await BlockAnalyticsService._get_yield_analytics(
-            block, actual_start_date, actual_end_date
-        )
+        yield_analytics = await BlockAnalyticsService._get_yield_analytics(block)
         timeline_analytics = await BlockAnalyticsService._get_timeline_analytics(
             block, actual_start_date, actual_end_date
         )
@@ -87,6 +88,9 @@ class BlockAnalyticsService:
             block, yield_analytics, timeline_analytics, task_analytics
         )
 
+        # Build period-independent state progress bar data
+        state_progress = await BlockAnalyticsService._get_state_progress(block)
+
         return BlockAnalyticsResponse(
             blockInfo=block_info,
             yieldAnalytics=yield_analytics,
@@ -94,6 +98,7 @@ class BlockAnalyticsService:
             taskAnalytics=task_analytics,
             performanceMetrics=performance_metrics,
             alertAnalytics=alert_analytics,
+            stateProgress=state_progress,
             period=period,
             startDate=actual_start_date,
             endDate=actual_end_date
@@ -130,10 +135,31 @@ class BlockAnalyticsService:
 
     @staticmethod
     async def _get_block_info(block: Block) -> BlockInfoAnalytics:
-        """Get basic block information"""
+        """
+        Get basic block information including plant-data staleness fields.
+
+        Staleness is computed by comparing block.plantDataVersion (stamped at
+        planting time) against the live dataVersion of the plant library record.
+        """
         days_in_cycle = None
         if block.plantedDate:
             days_in_cycle = (datetime.utcnow() - block.plantedDate).days
+
+        # Resolve live plant-data version for staleness detection
+        latest_version: Optional[int] = None
+        plant_data_is_stale = False
+        if block.targetCrop is not None and block.plantDataVersion is not None:
+            try:
+                live_plant = await PlantDataEnhancedRepository.get_by_id(block.targetCrop)
+                if live_plant is not None:
+                    latest_version = live_plant.dataVersion
+                    plant_data_is_stale = latest_version > block.plantDataVersion
+            except Exception:
+                # Reason: non-critical enrichment; never fail analytics on a lookup error
+                logger.warning(
+                    f"[Analytics] Could not fetch plant data version for crop "
+                    f"{block.targetCrop} on block {block.blockId}"
+                )
 
         return BlockInfoAnalytics(
             blockId=block.blockId,
@@ -145,25 +171,23 @@ class BlockAnalyticsService:
             currentCropId=block.targetCrop,
             plantedDate=block.plantedDate,
             expectedHarvestDate=block.expectedHarvestDate,
-            daysInCurrentCycle=days_in_cycle
+            daysInCurrentCycle=days_in_cycle,
+            actualPlantCount=block.actualPlantCount,
+            plantDataVersion=block.plantDataVersion,
+            latestPlantDataVersion=latest_version,
+            plantDataIsStale=plant_data_is_stale,
         )
 
     @staticmethod
-    async def _get_yield_analytics(
-        block: Block,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
-    ) -> YieldAnalytics:
-        """Calculate yield analytics from harvest records"""
+    async def _get_yield_analytics(block: Block) -> YieldAnalytics:
+        """Calculate yield analytics from harvest records (lifetime, not period-scoped)"""
         logger.info(f"[Analytics] Calculating yield analytics for block {block.blockId}")
 
-        # Get harvest records
+        # Get ALL harvest records for the block regardless of date range
         harvests, total_harvests = await HarvestRepository.get_by_block(
             block.blockId,
             skip=0,
-            limit=1000,  # Get all harvests for analytics
-            start_date=start_date,
-            end_date=end_date
+            limit=1000  # Get all harvests for analytics
         )
 
         logger.info(f"[Analytics] Found {total_harvests} harvests")
@@ -218,6 +242,20 @@ class BlockAnalyticsService:
         # Performance category from block KPI
         performance_category = block.kpi.performance_category.value if block.kpi else "N/A"
 
+        # Build individual harvest records sorted most-recent harvestDate first
+        harvest_records = [
+            HarvestRecord(
+                harvestId=h.harvestId,
+                harvestDate=h.harvestDate,
+                quantityKg=h.quantityKg,
+                qualityGrade=h.qualityGrade.value,
+                recordedByEmail=h.recordedByEmail,
+                recordedAt=h.createdAt,
+                notes=h.notes,
+            )
+            for h in sorted(harvests, key=lambda x: x.harvestDate, reverse=True)
+        ]
+
         return YieldAnalytics(
             totalYieldKg=total_yield,
             predictedYieldKg=block.kpi.predictedYieldKg if block.kpi else 0.0,
@@ -230,7 +268,8 @@ class BlockAnalyticsService:
             lastHarvestDate=last_harvest_date,
             harvestingDuration=harvesting_duration,
             yieldTrend=yield_trend,
-            performanceCategory=performance_category
+            performanceCategory=performance_category,
+            harvestRecords=harvest_records
         )
 
     @staticmethod
@@ -500,6 +539,74 @@ class BlockAnalyticsService:
             fastestResolutionHours=fastest_resolution,
             slowestResolutionHours=slowest_resolution
         )
+
+    @staticmethod
+    async def _get_state_progress(block: Block) -> List[StateProgressStep]:
+        """
+        Build period-independent lifecycle progress steps for the state-progression bar.
+
+        Args:
+            block: Block domain object with statusChanges, state, previousState,
+                   expectedStatusChanges, and targetCrop fields.
+
+        Returns:
+            Ordered list of StateProgressStep covering applicable canonical states.
+            Returns empty list when the block is idle (state == empty).
+        """
+        CANONICAL = ["planned", "growing", "fruiting", "harvesting", "cleaning"]
+
+        # Build map of first (earliest) changedAt per status value from transition history
+        actual_dates: Dict[str, datetime] = {}
+        for s in sorted(block.statusChanges, key=lambda sc: sc.changedAt):
+            key = getattr(s.status, "value", s.status)
+            if key not in actual_dates:
+                actual_dates[key] = s.changedAt
+
+        # Determine effective current state (look through alert to the real state underneath)
+        eff_current = getattr(block.state, "value", block.state)
+        if eff_current == "alert" and block.previousState is not None:
+            eff_current = getattr(block.previousState, "value", block.previousState)
+
+        # Idle block — no active crop cycle; frontend hides the bar
+        if eff_current == "empty":
+            return []
+
+        # Determine whether fruiting is applicable for this crop
+        if block.expectedStatusChanges:
+            # expectedStatusChanges keys use "fruiting" directly
+            fruiting_applies = "fruiting" in block.expectedStatusChanges
+        elif block.targetCrop is not None:
+            # Reason: mirror pattern from _get_timeline_analytics to avoid a separate DB helper
+            try:
+                db = farm_db.get_database()
+                plant_data = await db.plant_data_enhanced.find_one(
+                    {"plantDataId": str(block.targetCrop)}
+                )
+                if plant_data and plant_data.get("growthCycle"):
+                    fruiting_applies = (plant_data["growthCycle"].get("fruitingDays") or 0) > 0
+                else:
+                    fruiting_applies = "fruiting" in actual_dates
+            except Exception:
+                fruiting_applies = "fruiting" in actual_dates
+        else:
+            fruiting_applies = "fruiting" in actual_dates
+
+        # Build the ordered step list, omitting fruiting when not applicable
+        steps = [s for s in CANONICAL if s != "fruiting" or fruiting_applies]
+
+        # Index of the effective current state within the applicable steps
+        current_index = steps.index(eff_current) if eff_current in steps else -1
+
+        result: List[StateProgressStep] = []
+        for i, step in enumerate(steps):
+            result.append(StateProgressStep(
+                state=step,
+                transitionDate=actual_dates.get(step),
+                reached=(step in actual_dates) or (current_index >= 0 and i <= current_index),
+                isCurrent=(step == eff_current)
+            ))
+
+        return result
 
     @staticmethod
     def _calculate_performance_metrics(

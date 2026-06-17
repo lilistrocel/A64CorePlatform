@@ -19,6 +19,21 @@ export interface BlockInfo {
   plantedDate: string | null;
   expectedHarvestDate: string | null;
   daysInCurrentCycle: number | null;
+  actualPlantCount?: number | null;
+  // Plant data version staleness fields
+  plantDataVersion?: number | null;
+  latestPlantDataVersion?: number | null;
+  plantDataIsStale?: boolean;
+}
+
+export interface HarvestRecord {
+  harvestId: string;
+  harvestDate: string;        // ISO datetime — when harvested
+  quantityKg: number;
+  qualityGrade: 'A' | 'B' | 'C';
+  recordedByEmail: string;    // who made the record
+  recordedAt: string;         // ISO datetime — the date of recording (createdAt)
+  notes: string | null;
 }
 
 export interface YieldByQuality {
@@ -47,6 +62,7 @@ export interface YieldAnalytics {
   harvestingDuration: number | null;
   yieldTrend: YieldTrendPoint[];
   performanceCategory: string;
+  harvestRecords: HarvestRecord[];
 }
 
 export interface StateTransition {
@@ -122,6 +138,13 @@ export interface AlertAnalytics {
   slowestResolutionHours: number | null;
 }
 
+export interface StateProgressStep {
+  state: string;                 // "planned" | "growing" | "fruiting" | "harvesting" | "cleaning"
+  transitionDate: string | null; // ISO datetime, or null if not recorded
+  reached: boolean;              // true if block has reached/passed this state
+  isCurrent: boolean;            // true if this is the block's current state
+}
+
 export interface BlockAnalytics {
   blockInfo: BlockInfo;
   yieldAnalytics: YieldAnalytics;
@@ -129,6 +152,7 @@ export interface BlockAnalytics {
   taskAnalytics: TaskAnalytics;
   performanceMetrics: PerformanceMetrics;
   alertAnalytics: AlertAnalytics;
+  stateProgress: StateProgressStep[];
   generatedAt: string;
   period: TimePeriod;
   startDate: string | null;

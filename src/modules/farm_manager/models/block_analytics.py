@@ -29,6 +29,14 @@ class TrendDirection(str, Enum):
     INSUFFICIENT_DATA = "insufficient_data"
 
 
+class StateProgressStep(BaseModel):
+    """One step in the block's lifecycle progress bar"""
+    state: str = Field(..., description="Canonical state name (planned|growing|fruiting|harvesting|cleaning)")
+    transitionDate: Optional[datetime] = Field(None, description="Actual date the block first entered this state (from statusChanges); null if not recorded")
+    reached: bool = Field(False, description="True if the block has reached or passed this state")
+    isCurrent: bool = Field(False, description="True if this is the block's current state")
+
+
 class BlockInfoAnalytics(BaseModel):
     """Basic block information for analytics"""
     blockId: UUID
@@ -41,6 +49,24 @@ class BlockInfoAnalytics(BaseModel):
     plantedDate: Optional[datetime]
     expectedHarvestDate: Optional[datetime]
     daysInCurrentCycle: Optional[int] = Field(None, description="Days since planting")
+    actualPlantCount: Optional[int] = Field(None, description="Current number of plants in the block")
+
+    # Plant-data version staleness fields
+    plantDataVersion: Optional[int] = Field(
+        None,
+        description="dataVersion of the plant library record captured at planting time"
+    )
+    latestPlantDataVersion: Optional[int] = Field(
+        None,
+        description="Current dataVersion of the underlying plant_data_enhanced record"
+    )
+    plantDataIsStale: bool = Field(
+        False,
+        description=(
+            "True when the plant library has been edited since this block was planted "
+            "(latestPlantDataVersion > plantDataVersion)"
+        ),
+    )
 
 
 class YieldTrendPoint(BaseModel):
@@ -49,6 +75,17 @@ class YieldTrendPoint(BaseModel):
     quantityKg: float
     cumulativeKg: float
     qualityGrade: str
+
+
+class HarvestRecord(BaseModel):
+    """One harvest entry for the Yield Records list"""
+    harvestId: UUID
+    harvestDate: datetime = Field(..., description="When the harvest occurred")
+    quantityKg: float
+    qualityGrade: str = Field(..., description="A | B | C")
+    recordedByEmail: str = Field(..., description="Email of the user who recorded the entry")
+    recordedAt: datetime = Field(..., description="When the record was created (date of recording)")
+    notes: Optional[str] = None
 
 
 class YieldAnalytics(BaseModel):
@@ -77,6 +114,9 @@ class YieldAnalytics(BaseModel):
     # Trend
     yieldTrend: List[YieldTrendPoint] = Field(default_factory=list, description="Yield trend over time")
     performanceCategory: str = Field("N/A", description="Performance category (excellent, good, etc.)")
+
+    # Individual harvest entries
+    harvestRecords: List[HarvestRecord] = Field(default_factory=list, description="Individual harvest entries (most recent harvestDate first)")
 
 
 class StateTransition(BaseModel):
@@ -210,6 +250,7 @@ class BlockAnalyticsResponse(BaseModel):
     taskAnalytics: TaskAnalytics
     performanceMetrics: PerformanceMetrics
     alertAnalytics: AlertAnalytics
+    stateProgress: List[StateProgressStep] = Field(default_factory=list, description="Lifecycle progress steps (period-independent)")
 
     # Metadata
     generatedAt: datetime = Field(default_factory=datetime.utcnow)

@@ -22,6 +22,7 @@ import { BlockHarvestsTab } from './BlockHarvestsTab';
 import { BlockArchivesTab } from './BlockArchivesTab';
 import { AddVirtualCropModal } from './AddVirtualCropModal';
 import { EmptyVirtualBlockModal } from './EmptyVirtualBlockModal';
+import { BlockAnalyticsModal } from './BlockAnalyticsModal';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -418,6 +419,50 @@ const EmptyVirtualButton = styled.button`
   }
 `;
 
+// Plant data staleness banner
+const StaleBanner = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  margin-bottom: 24px;
+`;
+
+const StaleBannerText = styled.p`
+  margin: 0;
+  font-size: 14px;
+  color: #92400e;
+  line-height: 1.5;
+`;
+
+const StaleLockNote = styled.p`
+  margin: 0;
+  font-size: 13px;
+  color: #b45309;
+  font-style: italic;
+`;
+
+const UpdatePlantDataButton = styled.button<{ $loading: boolean }>`
+  align-self: flex-start;
+  padding: 8px 16px;
+  background: ${({ $loading }) => ($loading ? '#d97706' : '#f59e0b')};
+  color: #1c1917;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: ${({ $loading }) => ($loading ? 'not-allowed' : 'pointer')};
+  transition: background 150ms ease-in-out;
+  opacity: ${({ $loading }) => ($loading ? 0.7 : 1)};
+
+  &:hover:not(:disabled) {
+    background: #d97706;
+  }
+`;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -439,6 +484,13 @@ export function BlockDetail() {
   const [childBlocks, setChildBlocks] = useState<Block[]>([]);
   const [showAddVirtualCropModal, setShowAddVirtualCropModal] = useState(false);
   const [showEmptyVirtualModal, setShowEmptyVirtualModal] = useState(false);
+  // Virtual child block whose analytics ("Stats") modal is open, mirroring the
+  // dashboard virtual block card. Clicking a child opens this instead of navigating.
+  const [analyticsBlockId, setAnalyticsBlockId] = useState<string | null>(null);
+
+  // Plant-data version refresh
+  const [refreshingPlantData, setRefreshingPlantData] = useState(false);
+  const [refreshPlantDataError, setRefreshPlantDataError] = useState<string | null>(null);
 
   useEffect(() => {
     if (farmId && blockId) {
@@ -493,6 +545,35 @@ export function BlockDetail() {
       console.error('Error loading block data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefreshPlantData = async () => {
+    if (!farmId || !blockId) return;
+    setRefreshingPlantData(true);
+    setRefreshPlantDataError(null);
+    try {
+      await farmApi.refreshPlantData(farmId, blockId);
+      // Re-load the block to pick up the updated snapshot and reset staleness flag.
+      await loadBlockData();
+    } catch (err: unknown) {
+      // Surface the error without crashing. A 409 means the server denied the
+      // update (e.g., block is post-harvest). Show a human-readable message.
+      let message = 'Failed to update plant data. Please try again.';
+      if (
+        err !== null &&
+        typeof err === 'object' &&
+        'response' in err &&
+        err.response !== null &&
+        typeof err.response === 'object' &&
+        'status' in err.response &&
+        err.response.status === 409
+      ) {
+        message = 'Update not allowed: this block cannot be updated in its current state.';
+      }
+      setRefreshPlantDataError(message);
+    } finally {
+      setRefreshingPlantData(false);
     }
   };
 
@@ -611,6 +692,35 @@ export function BlockDetail() {
         <TabContent>
           {activeTab === 'overview' && (
             <>
+              {/* Plant-data version staleness banner */}
+              {block.plantDataIsStale && (
+                <StaleBanner role="alert">
+                  <StaleBannerText>
+                    This block uses plant data v{block.plantDataVersion ?? '?'}; the library now has
+                    v{block.latestPlantDataVersion ?? '?'}. Its predicted yield and timeline reflect
+                    the older data.
+                  </StaleBannerText>
+                  {(block.state === 'planned' || block.state === 'growing' || block.state === 'fruiting') ? (
+                    <>
+                      <UpdatePlantDataButton
+                        $loading={refreshingPlantData}
+                        disabled={refreshingPlantData}
+                        onClick={handleRefreshPlantData}
+                      >
+                        {refreshingPlantData ? 'Updating...' : 'Update to latest version'}
+                      </UpdatePlantDataButton>
+                      {refreshPlantDataError && (
+                        <StaleLockNote style={{ color: '#dc2626' }}>{refreshPlantDataError}</StaleLockNote>
+                      )}
+                    </>
+                  ) : (
+                    <StaleLockNote>
+                      Locked — this cycle keeps the data it was planted with.
+                    </StaleLockNote>
+                  )}
+                </StaleBanner>
+              )}
+
               {/* Multi-crop area budget section for physical blocks - only show when block is NOT empty */}
               {block.blockCategory !== 'virtual' && block.state !== 'empty' && (block.availableArea ?? 0) > 0 && (
                 <AreaBudgetSection>
@@ -635,7 +745,7 @@ export function BlockDetail() {
                   {childBlocks.map((child) => (
                     <VirtualChildCard
                       key={child.blockId}
-                      onClick={() => navigate(`/farm/farms/${farmId}/blocks/${child.blockId}`)}
+                      onClick={() => setAnalyticsBlockId(child.blockId)}
                     >
                       <span>{child.name || child.blockCode}</span>
                       <span>{child.targetCropName || 'No crop'}</span>
@@ -793,6 +903,17 @@ export function BlockDetail() {
               setShowAddVirtualCropModal(false);
             }}
           />
+
+          {/* Virtual child analytics ("Stats") modal — same modal as the
+              dashboard virtual block card, opened by clicking a child crop above. */}
+          {farmId && (
+            <BlockAnalyticsModal
+              isOpen={analyticsBlockId !== null}
+              onClose={() => setAnalyticsBlockId(null)}
+              blockId={analyticsBlockId ?? ''}
+              farmId={farmId}
+            />
+          )}
 
           <EmptyVirtualBlockModal
             isOpen={showEmptyVirtualModal}
