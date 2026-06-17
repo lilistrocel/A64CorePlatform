@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { PlantAssignmentModal } from './PlantAssignmentModal';
+import { AddVirtualCropModal } from './AddVirtualCropModal';
 import { PhysicalBlockPlantingsModal } from './PhysicalBlockPlantingsModal';
 import { deleteBlock } from '../../services/farmApi';
 import { formatNumber } from '../../utils';
@@ -517,9 +517,9 @@ export function PhysicalBlockCard({
         </ActionButton>
       </Actions>
 
-      {/* Plant Assignment Modal */}
+      {/* Add Virtual Crop Modal */}
       {createPortal(
-        <PlantAssignmentModal
+        <AddVirtualCropModal
           isOpen={showPlantModal}
           onClose={() => setShowPlantModal(false)}
           block={physicalBlock}

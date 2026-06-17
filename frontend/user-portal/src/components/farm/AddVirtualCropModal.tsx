@@ -11,7 +11,7 @@ import styled from 'styled-components';
 import { farmApi, calculatePlantCount } from '../../services/farmApi';
 import { getActivePlants } from '../../services/plantDataEnhancedApi';
 import type { Block, PlantDataEnhanced, AddVirtualCropRequest } from '../../types/farm';
-import { SPACING_CATEGORY_LABELS } from '../../types/farm';
+import { PlantCombobox } from './PlantCombobox';
 
 // ============================================================================
 // TYPES
@@ -31,6 +31,7 @@ interface VirtualCropPreview {
   plantingDate: string;
   // Calculated fields
   predictedYieldKg: number;
+  expectedWastePercent: number;
   predictedRevenue: number;
   harvestDate: string;
   totalCycleDays: number;
@@ -190,27 +191,6 @@ const Label = styled.label`
 const RequiredMark = styled.span`
   color: #f44336;
   margin-left: 4px;
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 8px;
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  background: ${({ theme }) => theme.colors.background};
-  transition: border-color 150ms ease-in-out;
-
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-  }
-
-  &:disabled {
-    background: ${({ theme }) => theme.colors.surface};
-    cursor: not-allowed;
-  }
 `;
 
 const Input = styled.input`
@@ -494,16 +474,20 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
       // Virtual blocks use square meters directly
       const result = await calculatePlantCount(areaSqm, 'sqm', plant.spacingCategory);
 
-      setCalculatedPlantCount(result.plantCount);
+      // Cap at block maxPlants
+      const cappedCount = Math.min(result.plantCount, block.maxPlants);
+
+      setCalculatedPlantCount(cappedCount);
       setIsAutoCalculated(true);
 
       setCalculationInfo(
-        `${result.plantsPerHundredSqm} plants/100m² × ${areaSqm.toFixed(0)}m² = ${result.plantCount} plants`
+        `${result.plantsPerHundredSqm} plants/100m² × ${areaSqm.toFixed(0)}m² = ${result.plantCount} plants` +
+        (cappedCount < result.plantCount ? ` (capped at ${cappedCount} max capacity)` : '')
       );
 
       // Only set if not manually overridden
       if (!isManualOverride) {
-        setPlantCount(String(result.plantCount));
+        setPlantCount(String(cappedCount));
       }
     } catch (error) {
       console.error('Error calculating plant count:', error);
@@ -572,7 +556,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
     const plantingDateObj = new Date(plantingDate);
 
     // Calculate predicted yield
-    const wastePercent = plant.yieldInfo.expectedWastePercent || 0;
+    const wastePercent = plant.yieldInfo.expectedWastePercentage || 0;
     const predictedYieldKg = plant.yieldInfo.yieldPerPlant * count * (1 - wastePercent / 100);
 
     // Calculate revenue if economic data exists
@@ -593,6 +577,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
       plantCount: count,
       plantingDate,
       predictedYieldKg,
+      expectedWastePercent: wastePercent,
       predictedRevenue,
       harvestDate: harvestDate.toISOString().split('T')[0],
       totalCycleDays,
@@ -617,6 +602,8 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
     const count = parseInt(plantCount);
     if (!plantCount || isNaN(count) || count <= 0) {
       newErrors.plantCount = 'Please enter a valid plant count';
+    } else if (count > block.maxPlants) {
+      newErrors.plantCount = `Cannot exceed block capacity of ${block.maxPlants} plants`;
     }
 
     if (!plantingDate) {
@@ -714,7 +701,9 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
     <Overlay $isOpen={isOpen}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <ModalTitle>Add Additional Crop to Block</ModalTitle>
+          <ModalTitle>
+            {block.state === 'empty' ? 'Add Planting to Block' : 'Add Additional Crop to Block'}
+          </ModalTitle>
           <CloseButton onClick={handleClose}>×</CloseButton>
         </ModalHeader>
 
@@ -766,21 +755,13 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                   <Label>
                     Select Crop<RequiredMark>*</RequiredMark>
                   </Label>
-                  <Select
+                  <PlantCombobox
+                    plants={plants}
                     value={selectedPlantId}
-                    onChange={(e) => handlePlantChange(e.target.value)}
+                    onChange={handlePlantChange}
+                    hasError={!!errors.plant}
                     disabled={submitting}
-                  >
-                    <option value="">-- Choose a crop --</option>
-                    {plants.map((plant) => (
-                      <option key={plant.plantDataId} value={plant.plantDataId}>
-                        {plant.plantName} ({plant.growthCycle.totalCycleDays} days cycle,{' '}
-                        {plant.yieldInfo.yieldPerPlant}
-                        {plant.yieldInfo.yieldUnit}/plant)
-                        {plant.spacingCategory && ` - ${SPACING_CATEGORY_LABELS[plant.spacingCategory]}`}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                   {errors.plant && <ErrorText>{errors.plant}</ErrorText>}
                 </FormGroup>
 
@@ -822,8 +803,10 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                     onChange={(e) => handlePlantCountChange(e.target.value)}
                     placeholder={isAutoCalculated ? 'Auto-calculated from area' : 'Enter plant count'}
                     min="1"
+                    max={block.maxPlants}
                     disabled={submitting}
                   />
+                  <HelpText>Maximum capacity: {block.maxPlants} plants</HelpText>
                   {errors.plantCount && <ErrorText>{errors.plantCount}</ErrorText>}
 
                   {/* Auto-calculation feedback */}
@@ -884,6 +867,11 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                           {preview.selectedPlant?.yieldInfo.yieldPerPlant}{' '}
                           {preview.selectedPlant?.yieldInfo.yieldUnit}/plant
                         </PreviewSubtext>
+                        {preview.expectedWastePercent > 0 && (
+                          <PreviewSubtext>
+                            after {preview.expectedWastePercent}% expected waste
+                          </PreviewSubtext>
+                        )}
                       </PreviewItem>
 
                       {preview.predictedRevenue > 0 && (

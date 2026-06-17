@@ -11,7 +11,7 @@ import styled from 'styled-components';
 import { farmApi } from '../../services/farmApi';
 import type { Block, BlockSummary, BlockState } from '../../types/farm';
 import { BLOCK_STATE_COLORS, BLOCK_STATE_LABELS } from '../../types/farm';
-import { PlantAssignmentModal } from './PlantAssignmentModal';
+import { AddVirtualCropModal } from './AddVirtualCropModal';
 import { PendingTasksWarningModal } from './PendingTasksWarningModal';
 import { BlockAnalyticsModal } from './BlockAnalyticsModal';
 import { formatNumber } from '../../utils';
@@ -483,7 +483,7 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
       {/* Render modals outside the Card using Portal to prevent mouse event issues */}
       {createPortal(
         <>
-          <PlantAssignmentModal
+          <AddVirtualCropModal
             isOpen={showPlantModal}
             onClose={() => setShowPlantModal(false)}
             block={block}
