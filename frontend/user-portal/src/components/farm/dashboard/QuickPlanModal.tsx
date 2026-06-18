@@ -60,11 +60,6 @@ export function QuickPlanModal({ isOpen, onClose, block, mode, onConfirm }: Quic
       return;
     }
 
-    if (plantCount > block.maxPlants) {
-      alert(`Plant count cannot exceed block capacity of ${block.maxPlants}`);
-      return;
-    }
-
     onConfirm(selectedPlantId, plantCount);
   };
 
@@ -84,11 +79,6 @@ export function QuickPlanModal({ isOpen, onClose, block, mode, onConfirm }: Quic
           <BlockInfo>
             <InfoLabel>Block:</InfoLabel>
             <InfoValue>{block.blockCode} - {block.name}</InfoValue>
-          </BlockInfo>
-
-          <BlockInfo>
-            <InfoLabel>Capacity:</InfoLabel>
-            <InfoValue>{block.maxPlants} plants</InfoValue>
           </BlockInfo>
 
           <FormGroup>
@@ -112,12 +102,10 @@ export function QuickPlanModal({ isOpen, onClose, block, mode, onConfirm }: Quic
             <Input
               type="number"
               min="1"
-              max={block.maxPlants}
               value={plantCount}
               onChange={(e) => setPlantCount(parseInt(e.target.value) || 0)}
               placeholder="Enter plant count"
             />
-            <Hint>Maximum: {block.maxPlants} plants</Hint>
           </FormGroup>
         </ModalBody>
 
@@ -267,11 +255,7 @@ const Input = styled.input`
   }
 `;
 
-const Hint = styled.div`
-  font-size: 12px;
-  color: #757575;
-  margin-top: 4px;
-`;
+
 
 const ModalFooter = styled.div`
   padding: 16px 24px;

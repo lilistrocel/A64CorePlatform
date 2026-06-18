@@ -161,7 +161,6 @@ export interface Block {
   state: BlockState;
   area?: number | null;
   areaUnit?: string;
-  maxPlants: number;
   currentPlantingId?: string;
   metadata?: Record<string, unknown>;
   boundary?: BlockBoundary; // Geo-fence polygon boundary
@@ -205,7 +204,6 @@ export interface BlockCreate {
   blockType: string;
   area: number;
   areaUnit?: string;
-  maxPlants: number;
   metadata?: Record<string, unknown>;
   boundary?: BlockBoundary; // Optional geo-fence polygon
 }
@@ -214,7 +212,6 @@ export interface BlockUpdate {
   name?: string;
   area?: number;
   areaUnit?: string;
-  maxPlants?: number;
   metadata?: Record<string, unknown>;
   boundary?: BlockBoundary; // Optional geo-fence polygon
 }
@@ -224,7 +221,6 @@ export interface BlockSummary {
   currentState: BlockState;
   utilizationPercent: number;
   currentPlantCount: number;
-  maxPlants: number;
   currentPlanting?: {
     plantingId: string;
     plantCount: number;
@@ -254,9 +250,14 @@ export interface ValidTransitionsResponse {
 
 export interface AddVirtualCropRequest {
   cropId: string;
-  allocatedArea: number;
+  /** Legacy field — no longer sent by the modal; backend ignores it when plantsPer100m2 is present. */
+  allocatedArea?: number;
   plantCount: number;
   plantingDate?: string;
+  /** Canonical density (plants per 100 m²). When present the backend DERIVES area = plantCount × 100 / plantsPer100m2. */
+  plantsPer100m2?: number;
+  /** Allow the virtual crop to be created even when the derived area exceeds availableArea. */
+  allowOverArea?: boolean;
 }
 
 export interface EmptyVirtualBlockPreview {
@@ -396,7 +397,7 @@ export interface BlockArchive {
   farmId: string;
   farmName: string;
   blockType: string;
-  maxPlants: number;
+  maxPlants?: number | null; // Legacy field — present on old archives, absent on new ones
   actualPlantCount: number;
   area?: number;
   areaUnit: string;
@@ -716,6 +717,8 @@ export interface PlantDataEnhanced {
 
   // Spacing category for auto plant count calculation
   spacingCategory?: SpacingCategory;
+  // Custom density override (plants per 100 m², integer). Resolution priority: custom → category → none.
+  customPlantsPer100m2?: number | null;
 
   // 2. Growth Cycle
   growthCycle: GrowthCycleInfo;
@@ -771,6 +774,8 @@ export interface PlantDataEnhancedCreate {
   farmTypeCompatibility: FarmTypeCompatibility[];
   tags?: string[];
   spacingCategory?: SpacingCategory;
+  // Custom density override (plants per 100 m², integer). Resolution priority: custom → category → none.
+  customPlantsPer100m2?: number | null;
 
   // 2. Growth Cycle
   growthCycle: GrowthCycleInfo;
@@ -800,6 +805,8 @@ export interface PlantDataEnhancedUpdate {
   farmTypeCompatibility?: FarmTypeCompatibility[];
   tags?: string[];
   spacingCategory?: SpacingCategory;
+  // Custom density override (plants per 100 m², integer). Resolution priority: custom → category → none.
+  customPlantsPer100m2?: number | null;
   growthCycle?: GrowthCycleInfo;
   yieldInfo?: YieldWasteInfo;
   environmentalRequirements?: EnvironmentalRequirements;
@@ -970,7 +977,6 @@ export interface CreateFarmFormData {
 export interface CreateBlockFormData {
   name: string;
   area: number;
-  maxPlants: number;
 }
 
 export interface CreatePlantingFormData {
@@ -1138,7 +1144,7 @@ export interface DashboardBlock {
   targetCrop: string | null;
   targetCropName: string | null;
   actualPlantCount: number | null;
-  maxPlants: number;
+  maxPlants?: number | null; // Legacy field — kept optional for historical dashboard data
 
   // Dates
   plantedDate: string | null;

@@ -395,10 +395,10 @@ export function BlockDetailsModal({ isOpen, block, farmId, onClose }: BlockDetai
                     </InfoItem>
                   )}
                   <InfoItem>
-                    <InfoLabel>Capacity:</InfoLabel>
+                    <InfoLabel>Plants:</InfoLabel>
                     <InfoValue>
-                      {block.actualPlantCount || 0} / {block.maxPlants} plants
-                      {' '}({block.calculated.capacityPercent.toFixed(0)}%)
+                      {block.actualPlantCount || 0} plants
+                      {' '}({block.calculated.capacityPercent.toFixed(0)}% capacity)
                     </InfoValue>
                   </InfoItem>
                   {block.plantedDate && (

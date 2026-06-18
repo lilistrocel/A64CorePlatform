@@ -143,9 +143,6 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
           <EmptyContent>
             <EmptyIcon>⚪</EmptyIcon>
             <EmptyText>Block is empty</EmptyText>
-            <Capacity>
-              Capacity: {formatNumber(block.maxPlants)} plants
-            </Capacity>
           </EmptyContent>
         )}
 
@@ -159,7 +156,7 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               </CropInfo>
             )}
             <Capacity>
-              Planned: {formatNumber(block.actualPlantCount || 0)} / {formatNumber(block.maxPlants)} plants
+              {formatNumber(block.actualPlantCount || 0)} plants · {formatNumber(block.kpi.predictedYieldKg, { decimals: 1 })} kg expected
             </Capacity>
             {block.calculated.daysUntilNextTransition !== null && block.calculated.daysUntilNextTransition !== undefined && (
               <Timeline>
@@ -186,20 +183,9 @@ export function CompactBlockCard({ block, farmId, config, onUpdate }: CompactBlo
               </CropInfo>
             )}
 
-            <CapacityBar>
-              <CapacityLabel>
-                Capacity: {formatNumber(block.actualPlantCount || 0)} / {formatNumber(block.maxPlants)}
-              </CapacityLabel>
-              <ProgressBar>
-                <ProgressFill
-                  $percent={block.calculated.capacityPercent}
-                  $color={stateColor}
-                />
-              </ProgressBar>
-              <CapacityPercent>
-                {formatNumber(block.calculated.capacityPercent, { decimals: 0 })}%
-              </CapacityPercent>
-            </CapacityBar>
+            <Capacity>
+              {formatNumber(block.actualPlantCount || 0)} plants · {formatNumber(block.kpi.predictedYieldKg, { decimals: 1 })} kg expected
+            </Capacity>
 
             <StateInfo>
               <InfoItem>
@@ -657,14 +643,6 @@ const Capacity = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
-const CapacityBar = styled.div``;
-
-const CapacityLabel = styled.div`
-  font-size: 11px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: 4px;
-`;
-
 const ProgressBar = styled.div`
   width: 100%;
   height: 6px;
@@ -679,12 +657,6 @@ const ProgressFill = styled.div<{ $percent: number; $color: string }>`
   width: ${(props) => Math.min(props.$percent, 100)}%;
   background: ${(props) => props.$color};
   transition: width 300ms ease-in-out;
-`;
-
-const CapacityPercent = styled.div`
-  font-size: 10px;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-align: right;
 `;
 
 const StateInfo = styled.div`

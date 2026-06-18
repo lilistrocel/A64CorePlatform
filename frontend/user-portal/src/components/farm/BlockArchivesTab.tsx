@@ -454,7 +454,7 @@ export function BlockArchivesTab({ farmId, blockId }: BlockArchivesTabProps) {
                 <StatItem>
                   <StatLabel>Plants</StatLabel>
                   <StatValue>
-                    {archive.actualPlantCount} / {archive.maxPlants}
+                    {archive.actualPlantCount}{archive.maxPlants ? ` / ${archive.maxPlants}` : ''}
                   </StatValue>
                 </StatItem>
 

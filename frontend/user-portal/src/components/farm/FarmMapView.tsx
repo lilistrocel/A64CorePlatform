@@ -447,7 +447,7 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
             state: block.state,
             color: BLOCK_STATE_COLORS[block.state] || '#6B7280',
             area: block.area,
-            maxPlants: block.maxPlants,
+            availableArea: block.availableArea,
             currentPlantingId: block.currentPlantingId,
             targetCrop: block.targetCropName || block.targetCrop,
           },
@@ -578,6 +578,8 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
       const stateColor = BLOCK_STATE_COLORS[block.state] || '#6B7280';
       const areaHectares = block.area ? (block.area / 10000).toFixed(2) : 'N/A';
 
+      const availableAreaHectares = block.availableArea != null ? (block.availableArea / 10000).toFixed(2) : 'N/A';
+
       const popupHtml = `
         <div style="min-width: 200px;">
           <div style="background: ${stateColor}; color: white; padding: 12px 16px;">
@@ -592,8 +594,8 @@ export function FarmMapView({ farm, blocks, onBlockClick, onEditFarmBoundary, he
               <span style="color: #1f2937; font-weight: 500;">${areaHectares} ha</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span style="color: #6b7280;">Max Plants</span>
-              <span style="color: #1f2937; font-weight: 500;">${block.maxPlants}</span>
+              <span style="color: #6b7280;">Available</span>
+              <span style="color: #1f2937; font-weight: 500;">${availableAreaHectares} ha</span>
             </div>
             ${block.targetCropName ? `
               <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">

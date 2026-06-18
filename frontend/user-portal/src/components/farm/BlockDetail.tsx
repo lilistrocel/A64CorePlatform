@@ -522,14 +522,17 @@ export function BlockDetail() {
       }
 
       // Use block data directly to build summary (most reliable source)
+      // Capacity utilization is area-based: (area - availableArea) / area * 100
+      const totalArea = blockData.area || 0;
+      const availableArea = blockData.availableArea ?? totalArea;
+      const usedArea = totalArea - availableArea;
+      const areaUtilizationPercent = totalArea > 0 ? (usedArea / totalArea) * 100 : 0;
+
       setSummary({
         blockId: blockData.blockId,
         currentState: blockData.state,
         currentPlantCount: blockData.actualPlantCount || 0,
-        maxPlants: blockData.maxPlants,
-        utilizationPercent: blockData.actualPlantCount && blockData.maxPlants
-          ? (blockData.actualPlantCount / blockData.maxPlants) * 100
-          : 0,
+        utilizationPercent: areaUtilizationPercent,
         currentPlanting: blockData.targetCrop ? {
           plantingId: blockData.targetCrop,
           plantCount: blockData.actualPlantCount || 0,
@@ -640,18 +643,18 @@ export function BlockDetail() {
         </TitleRow>
 
         <StatsGrid>
-          <StatCard>
-            <StatLabel>Capacity</StatLabel>
-            <StatValue>{formatNumber(block.maxPlants)}</StatValue>
-            <StatSubtext>max plants</StatSubtext>
-          </StatCard>
+          {block.blockCategory !== 'virtual' && (
+            <StatCard>
+              <StatLabel>Area Used</StatLabel>
+              <StatValue>{formatPercentage(summary.utilizationPercent ?? 0, 0)}</StatValue>
+              <StatSubtext>of total area</StatSubtext>
+            </StatCard>
+          )}
 
           <StatCard>
             <StatLabel>Current Plants</StatLabel>
             <StatValue>{formatNumber(summary.currentPlantCount ?? 0)}</StatValue>
-            <StatSubtext>
-              {formatPercentage(summary.utilizationPercent ?? 0, 0)} utilized
-            </StatSubtext>
+            <StatSubtext>plants in block</StatSubtext>
           </StatCard>
 
           <StatCard>
@@ -795,8 +798,8 @@ export function BlockDetail() {
                   <InfoValue>{formatNumber(block.area ?? 0, { decimals: 2 })} hectares</InfoValue>
                 </InfoItem>
                 <InfoItem>
-                  <InfoLabel>Max Plants</InfoLabel>
-                  <InfoValue>{formatNumber(block.maxPlants)}</InfoValue>
+                  <InfoLabel>Available Area</InfoLabel>
+                  <InfoValue>{formatNumber(block.availableArea ?? 0, { decimals: 2 })} m²</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Created</InfoLabel>

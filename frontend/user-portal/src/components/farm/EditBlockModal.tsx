@@ -251,7 +251,6 @@ export function EditBlockModal({ block, farmId, farmBoundary, farmLocation, onCl
   const [formData, setFormData] = useState<BlockUpdate>({
     name: block.name,
     area: convertToHectares(block.area, block.areaUnit), // Display in hectares
-    maxPlants: block.maxPlants,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -317,11 +316,6 @@ export function EditBlockModal({ block, farmId, farmBoundary, farmLocation, onCl
 
     if (formData.area !== undefined && formData.area <= 0) {
       setError('Area must be greater than 0');
-      return;
-    }
-
-    if (formData.maxPlants !== undefined && formData.maxPlants <= 0) {
-      setError('Max plants must be greater than 0');
       return;
     }
 
@@ -441,20 +435,6 @@ export function EditBlockModal({ block, farmId, farmBoundary, farmLocation, onCl
               value={formData.area ?? ''}
               onChange={(e) => setFormData({ ...formData, area: parseFloat(e.target.value) })}
               placeholder="e.g., 0.5"
-              disabled={loading}
-              required
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="maxPlants">Maximum Plant Capacity *</Label>
-            <Input
-              id="maxPlants"
-              type="number"
-              min="1"
-              value={formData.maxPlants ?? ''}
-              onChange={(e) => setFormData({ ...formData, maxPlants: parseInt(e.target.value, 10) })}
-              placeholder="e.g., 100"
               disabled={loading}
               required
             />

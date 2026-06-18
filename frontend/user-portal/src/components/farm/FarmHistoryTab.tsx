@@ -1081,7 +1081,7 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
                   <StatItem>
                     <StatLabel>Plants</StatLabel>
                     <StatValue>
-                      {archive.actualPlantCount} / {archive.maxPlants}
+                      {archive.actualPlantCount}{archive.maxPlants ? ` / ${archive.maxPlants}` : ''}
                     </StatValue>
                   </StatItem>
 
@@ -1258,7 +1258,7 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
                   <DetailItem>
                     <DetailItemLabel>Plants</DetailItemLabel>
                     <DetailItemValue>
-                      {selectedArchive.actualPlantCount} / {selectedArchive.maxPlants}
+                      {selectedArchive.actualPlantCount}{selectedArchive.maxPlants ? ` / ${selectedArchive.maxPlants}` : ''}
                     </DetailItemValue>
                   </DetailItem>
                   <DetailItem>
@@ -1419,10 +1419,12 @@ export function FarmHistoryTab({ farmId, farmingYear }: FarmHistoryTabProps) {
                       </DetailItemValue>
                     </DetailItem>
                   )}
-                  <DetailItem>
-                    <DetailItemLabel>Max Plants</DetailItemLabel>
-                    <DetailItemValue>{selectedArchive.maxPlants}</DetailItemValue>
-                  </DetailItem>
+                  {selectedArchive.maxPlants != null && (
+                    <DetailItem>
+                      <DetailItemLabel>Max Plants</DetailItemLabel>
+                      <DetailItemValue>{selectedArchive.maxPlants}</DetailItemValue>
+                    </DetailItem>
+                  )}
                   <DetailItem>
                     <DetailItemLabel>Farm</DetailItemLabel>
                     <DetailItemValue>{selectedArchive.farmName}</DetailItemValue>

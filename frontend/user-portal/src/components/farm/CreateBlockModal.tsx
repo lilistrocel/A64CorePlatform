@@ -247,7 +247,6 @@ export function CreateBlockModal({ farmId, farmBoundary, farmLocation, onClose, 
     name: '',
     blockType: 'greenhouse' as const,
     area: '',
-    maxPlants: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -303,12 +302,6 @@ export function CreateBlockModal({ farmId, farmBoundary, farmLocation, onClose, 
       return;
     }
 
-    const maxPlants = parseInt(formData.maxPlants, 10);
-    if (isNaN(maxPlants) || maxPlants <= 0) {
-      setError('Max plants must be a valid number greater than 0');
-      return;
-    }
-
     try {
       setLoading(true);
       // User enters area in hectares, convert to sqm for storage
@@ -322,7 +315,6 @@ export function CreateBlockModal({ farmId, farmBoundary, farmLocation, onClose, 
         blockType: formData.blockType,
         area: areaInSqm,
         areaUnit: 'sqm',
-        maxPlants,
         boundary: boundary || undefined,
       });
 
@@ -448,21 +440,6 @@ export function CreateBlockModal({ farmId, farmBoundary, farmLocation, onClose, 
               required
             />
             <HelpText>Total area of the block in hectares</HelpText>
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="maxPlants">Maximum Plant Capacity *</Label>
-            <Input
-              id="maxPlants"
-              type="number"
-              min="1"
-              value={formData.maxPlants}
-              onChange={(e) => setFormData({ ...formData, maxPlants: e.target.value })}
-              placeholder="e.g., 100"
-              disabled={loading}
-              required
-            />
-            <HelpText>Maximum number of plants this block can accommodate</HelpText>
           </FormGroup>
 
           <ButtonGroup>

@@ -909,13 +909,6 @@ export function calculateTotalPlants(plants: Array<{ quantity: number }>): numbe
 }
 
 /**
- * Check if planting plan exceeds block capacity
- */
-export function checkCapacityExceeded(totalPlants: number, maxPlants: number): boolean {
-  return totalPlants > maxPlants;
-}
-
-/**
  * Calculate estimated harvest date based on planted date and growth cycle
  */
 export function calculateHarvestDate(plantedDate: string, growthCycleDays: number): Date {
@@ -1412,7 +1405,6 @@ export const farmApi = {
 
   // Utilities
   calculateTotalPlants,
-  checkCapacityExceeded,
   calculateHarvestDate,
   formatDateForAPI,
   formatDateForDisplay,

@@ -11,6 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import styled from 'styled-components';
 import { plantDataEnhancedApi } from '../../services/plantDataEnhancedApi';
+import { getSpacingCategories } from '../../services/farmApi';
 import { positiveIntegerInputProps } from '../../utils';
 import type {
   PlantDataEnhanced,
@@ -19,8 +20,9 @@ import type {
   PlantTypeEnum,
   FarmTypeCompatibility,
   SpacingCategory,
+  SpacingCategoryInfo,
 } from '../../types/farm';
-import { SPACING_CATEGORY_LABELS, SPACING_CATEGORY_EXAMPLES } from '../../types/farm';
+import { SPACING_CATEGORY_LABELS } from '../../types/farm';
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -71,8 +73,7 @@ const createSchema = z.object({
   averageMarketValuePerKg: z.number().nonnegative().optional(),
   currency: z.string().optional(),
 
-  spacingBetweenPlantsCm: z.number().nonnegative().optional(),
-  spacingBetweenRowsCm: z.number().nonnegative().optional(),
+  customPlantsPer100m2: z.number().int('Must be a whole number').positive('Must be positive').optional(),
   notes: z.string().optional(),
 
   isActive: z.boolean().optional(),
@@ -123,8 +124,7 @@ const updateSchema = z.object({
   averageMarketValuePerKg: z.number().nonnegative().optional(),
   currency: z.string().optional(),
 
-  spacingBetweenPlantsCm: z.number().nonnegative().optional(),
-  spacingBetweenRowsCm: z.number().nonnegative().optional(),
+  customPlantsPer100m2: z.number().int('Must be a whole number').positive('Must be positive').optional(),
   notes: z.string().optional(),
 
   isActive: z.boolean().optional(),
@@ -576,6 +576,50 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 // COMPONENT
 // ============================================================================
 
+// ============================================================================
+// DENSITY CHOOSER TYPES
+// ============================================================================
+
+type DensityMode = 'none' | 'category' | 'custom';
+type DensityUnit = 'per100m2' | 'perm2';
+
+// ============================================================================
+// DENSITY CHOOSER STYLED COMPONENTS
+// ============================================================================
+
+const DensityCustomRow = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+`;
+
+const DensityUnitToggle = styled.div`
+  display: flex;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+`;
+
+const DensityUnitButton = styled.button<{ $active: boolean }>`
+  padding: 12px 14px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  white-space: nowrap;
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.primary[500] : theme.colors.background};
+  color: ${({ $active }) => ($active ? '#fff' : 'inherit')};
+
+  &:hover:not([disabled]) {
+    background: ${({ $active, theme }) =>
+      $active ? theme.colors.primary[700] : theme.colors.surface};
+  }
+`;
+
 export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: PlantDataFormModalProps) {
   const isEdit = !!plantData;
 
@@ -584,6 +628,13 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Density chooser local state — not in RHF because unit toggle is display-only
+  const [spacingCategories, setSpacingCategories] = useState<SpacingCategoryInfo[]>([]);
+  const [densityMode, setDensityMode] = useState<DensityMode>('none');
+  const [densityUnit, setDensityUnit] = useState<DensityUnit>('per100m2');
+  // Raw display value typed by the user in the custom input (string to avoid NaN on empty)
+  const [customDensityInput, setCustomDensityInput] = useState<string>('');
 
   const createDefaultValues = useMemo((): PlantDataFormData => ({
     plantType: 'vegetable',
@@ -625,6 +676,15 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
       (harvestDurationDays || 0);
     setValue('totalCycleDays', sum, { shouldValidate: true, shouldDirty: true });
   }, [germinationDays, vegetativeDays, floweringDays, fruitingDays, harvestDurationDays, setValue]);
+
+  // Fetch spacing category options once on mount
+  useEffect(() => {
+    getSpacingCategories()
+      .then((res) => setSpacingCategories(res.categories))
+      .catch(() => {
+        // Non-fatal: chooser falls back to static labels if fetch fails
+      });
+  }, []);
 
   useEffect(() => {
     if (plantData) {
@@ -670,12 +730,34 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
         averageMarketValuePerKg: plantData.economicsAndLabor?.averageMarketValuePerKg ?? undefined,
         currency: plantData.economicsAndLabor?.currency || '',
 
-        spacingBetweenPlantsCm: plantData.additionalInfo?.spacingBetweenPlantsCm ?? undefined,
-        spacingBetweenRowsCm: plantData.additionalInfo?.spacingBetweenRowsCm ?? undefined,
+        customPlantsPer100m2: plantData.customPlantsPer100m2 ?? undefined,
         notes: plantData.additionalInfo?.notes || '',
 
         isActive: plantData.isActive ?? true,
       });
+
+      // Prefill density chooser mode
+      if (plantData.customPlantsPer100m2 != null) {
+        const raw = plantData.customPlantsPer100m2;
+        // Show in plants/m² if it's divisible by 100 for a clean whole number, otherwise use per100m²
+        if (raw % 100 === 0) {
+          setDensityMode('custom');
+          setDensityUnit('perm2');
+          setCustomDensityInput(String(raw / 100));
+        } else {
+          setDensityMode('custom');
+          setDensityUnit('per100m2');
+          setCustomDensityInput(String(raw));
+        }
+      } else if (plantData.spacingCategory) {
+        setDensityMode('category');
+        setDensityUnit('per100m2');
+        setCustomDensityInput('');
+      } else {
+        setDensityMode('none');
+        setDensityUnit('per100m2');
+        setCustomDensityInput('');
+      }
     }
     // Depend on plantData.plantDataId rather than the whole object: if any
     // upstream auto-refresh produces a new plantData reference with the same
@@ -699,7 +781,8 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
           scientificName: data.scientificName,
           farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
           tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-          spacingCategory: data.spacingCategory as SpacingCategory,
+          spacingCategory: data.spacingCategory as SpacingCategory | undefined,
+          customPlantsPer100m2: data.customPlantsPer100m2 ?? null,
 
           growthCycle: {
             germinationDays: data.germinationDays ?? 0,
@@ -732,6 +815,7 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
           farmTypeCompatibility: data.farmTypeCompatibility as FarmTypeCompatibility[],
           tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
           spacingCategory: data.spacingCategory as SpacingCategory | undefined,
+          customPlantsPer100m2: data.customPlantsPer100m2 ?? undefined,
 
           growthCycle: {
             germinationDays: data.germinationDays ?? 0,
@@ -790,11 +874,7 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
             currency: data.currency,
           } : undefined,
 
-          additionalInfo: (
-            data.spacingBetweenPlantsCm !== undefined || data.spacingBetweenRowsCm !== undefined || data.notes
-          ) ? {
-            spacingBetweenPlantsCm: data.spacingBetweenPlantsCm,
-            spacingBetweenRowsCm: data.spacingBetweenRowsCm,
+          additionalInfo: data.notes ? {
             notes: data.notes,
           } : undefined,
         };
@@ -832,12 +912,95 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
     if (!submitting) {
       if (!isEdit) {
         reset();
+        setDensityMode('none');
+        setDensityUnit('per100m2');
+        setCustomDensityInput('');
       }
       setSuccessMessage(null);
       setErrorMessage(null);
       setShowAdvanced(false);
       onClose();
     }
+  };
+
+  /**
+   * Handle density chooser select change.
+   * value = '' → None, 'custom' → Custom, any SpacingCategory key → preset
+   */
+  const handleDensitySelectChange = (value: string) => {
+    if (value === '') {
+      setDensityMode('none');
+      setValue('spacingCategory', undefined);
+      setValue('customPlantsPer100m2', undefined);
+      setCustomDensityInput('');
+    } else if (value === 'custom') {
+      setDensityMode('custom');
+      setValue('spacingCategory', undefined);
+      setValue('customPlantsPer100m2', undefined);
+      setCustomDensityInput('');
+    } else {
+      setDensityMode('category');
+      setValue('spacingCategory', value as SpacingCategory);
+      setValue('customPlantsPer100m2', undefined);
+      setCustomDensityInput('');
+    }
+  };
+
+  /**
+   * Handle the custom density number input change.
+   * Converts the entered value to the canonical plants/100 m² integer
+   * and stores it in the form field.
+   */
+  const handleCustomDensityInputChange = (raw: string) => {
+    setCustomDensityInput(raw);
+    const num = parseFloat(raw);
+    if (!isNaN(num) && num > 0) {
+      const canonical = Math.round(densityUnit === 'perm2' ? num * 100 : num);
+      setValue('customPlantsPer100m2', canonical > 0 ? canonical : undefined, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    } else {
+      setValue('customPlantsPer100m2', undefined);
+    }
+  };
+
+  /**
+   * Switch unit display mode for the custom density input.
+   * Re-interprets the existing input value in the new unit
+   * so the canonical stored value stays consistent.
+   */
+  const handleDensityUnitToggle = (unit: DensityUnit) => {
+    setDensityUnit(unit);
+    // Convert the displayed value when switching units
+    const currentCanonical = watch('customPlantsPer100m2');
+    if (currentCanonical != null && currentCanonical > 0) {
+      if (unit === 'perm2') {
+        setCustomDensityInput(String(Math.round((currentCanonical / 100) * 10) / 10));
+      } else {
+        setCustomDensityInput(String(currentCanonical));
+      }
+    }
+  };
+
+  /**
+   * Build the density select value from current form state for controlled rendering.
+   */
+  const densitySelectValue =
+    densityMode === 'none' ? '' :
+    densityMode === 'custom' ? 'custom' :
+    (watch('spacingCategory') ?? '');
+
+  /**
+   * Format a category's density for the <option> label.
+   * If currentDensity/100 >= 1, show rounded plants/m²; otherwise plants/100m².
+   */
+  const formatCategoryDensity = (cat: SpacingCategoryInfo): string => {
+    const perM2 = cat.currentDensity / 100;
+    if (perM2 >= 1) {
+      return `${Math.round(perM2)} plants/m²`;
+    }
+    return `${cat.currentDensity} plants/100 m²`;
   };
 
   const toggleFarmType = (farmType: string) => {
@@ -922,24 +1085,90 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
                 </FormGroup>
 
                 <FormGroup>
-                  <Label htmlFor="spacingCategory">Spacing Category</Label>
+                  <Label htmlFor="densityChooser">Default Plant Density</Label>
+                  {/*
+                    Density chooser — mutually exclusive: None / preconfigured category / Custom.
+                    Selecting None means density is chosen at planting time.
+                    spacingCategory and customPlantsPer100m2 are kept mutually exclusive.
+                  */}
                   <Select
-                    id="spacingCategory"
-                    $hasError={!!errors.spacingCategory}
+                    id="densityChooser"
+                    value={densitySelectValue}
+                    onChange={(e) => handleDensitySelectChange(e.target.value)}
                     disabled={submitting}
-                    {...register('spacingCategory')}
                   >
-                    <option value="">-- Select --</option>
-                    {(Object.keys(SPACING_CATEGORY_LABELS) as SpacingCategory[]).map((key) => (
-                      <option key={key} value={key}>
-                        {SPACING_CATEGORY_LABELS[key]} ({SPACING_CATEGORY_EXAMPLES[key]})
-                      </option>
-                    ))}
+                    <option value="">— None (choose at planting) —</option>
+                    {spacingCategories.length > 0
+                      ? spacingCategories.map((cat) => (
+                          <option key={cat.value} value={cat.value}>
+                            {cat.name} — {formatCategoryDensity(cat)}
+                          </option>
+                        ))
+                      : (Object.keys(SPACING_CATEGORY_LABELS) as SpacingCategory[]).map((key) => (
+                          <option key={key} value={key}>
+                            {SPACING_CATEGORY_LABELS[key]}
+                          </option>
+                        ))}
+                    <option value="custom">Custom…</option>
                   </Select>
-                  <HelpText>Determines plant density for auto-calculations</HelpText>
+                  <HelpText>
+                    {densityMode === 'none' && 'Density will be chosen at planting time.'}
+                    {densityMode === 'category' && 'Uses the preconfigured density for this size category.'}
+                    {densityMode === 'custom' && 'Enter a custom density; stored as integer plants/100 m².'}
+                  </HelpText>
                   {errors.spacingCategory && <ErrorText>{errors.spacingCategory.message}</ErrorText>}
                 </FormGroup>
               </GridRow>
+
+              {/* Custom density input — only shown when Custom is selected */}
+              {densityMode === 'custom' && (
+                <FormGroup>
+                  <Label htmlFor="customDensityInput">Custom Density</Label>
+                  <DensityCustomRow>
+                    <Input
+                      id="customDensityInput"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder={densityUnit === 'perm2' ? 'e.g., 4' : 'e.g., 400'}
+                      value={customDensityInput}
+                      onChange={(e) => handleCustomDensityInputChange(e.target.value)}
+                      disabled={submitting}
+                      $hasError={!!errors.customPlantsPer100m2}
+                      style={{ flex: 1, minWidth: '120px' }}
+                    />
+                    <DensityUnitToggle>
+                      <DensityUnitButton
+                        type="button"
+                        $active={densityUnit === 'per100m2'}
+                        onClick={() => handleDensityUnitToggle('per100m2')}
+                        disabled={submitting}
+                        title="Plants per 100 m²"
+                      >
+                        /100 m²
+                      </DensityUnitButton>
+                      <DensityUnitButton
+                        type="button"
+                        $active={densityUnit === 'perm2'}
+                        onClick={() => handleDensityUnitToggle('perm2')}
+                        disabled={submitting}
+                        title="Plants per m²"
+                      >
+                        /m²
+                      </DensityUnitButton>
+                    </DensityUnitToggle>
+                  </DensityCustomRow>
+                  {errors.customPlantsPer100m2 && (
+                    <ErrorText>{errors.customPlantsPer100m2.message}</ErrorText>
+                  )}
+                  <HelpText>
+                    Stored canonically as integer plants/100 m². Current value:{' '}
+                    {watch('customPlantsPer100m2') != null
+                      ? `${watch('customPlantsPer100m2')} plants/100 m²`
+                      : '—'}
+                  </HelpText>
+                </FormGroup>
+              )}
 
               <FormGroup>
                 <Label>Farm Type Compatibility {!isEdit && '* (Select all that apply)'}</Label>
@@ -1522,38 +1751,6 @@ export function PlantDataFormModal({ isOpen, onClose, onSuccess, plantData }: Pl
                     <SectionTitle>Additional Information</SectionTitle>
                     <OptionalBadge>Optional</OptionalBadge>
                   </SectionHeader>
-
-                  <GridRow>
-                    <FormGroup>
-                      <Label htmlFor="spacingBetweenPlantsCm">Plant Spacing (cm)</Label>
-                      <Input
-                        id="spacingBetweenPlantsCm"
-                        type="number"
-                        min="0"
-                        step="1"
-                        placeholder="e.g., 30"
-                        disabled={submitting}
-                        {...register('spacingBetweenPlantsCm', {
-                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
-                        })}
-                      />
-                    </FormGroup>
-
-                    <FormGroup>
-                      <Label htmlFor="spacingBetweenRowsCm">Row Spacing (cm)</Label>
-                      <Input
-                        id="spacingBetweenRowsCm"
-                        type="number"
-                        min="0"
-                        step="1"
-                        placeholder="e.g., 60"
-                        disabled={submitting}
-                        {...register('spacingBetweenRowsCm', {
-                          setValueAs: v => v === '' || isNaN(v) ? undefined : Number(v),
-                        })}
-                      />
-                    </FormGroup>
-                  </GridRow>
 
                   <FormGroup>
                     <Label htmlFor="notes">Notes</Label>

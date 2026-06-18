@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { AddVirtualCropModal } from './AddVirtualCropModal';
+import { AreaBudgetBar } from './AreaBudgetBar';
 import { PhysicalBlockPlantingsModal } from './PhysicalBlockPlantingsModal';
 import { deleteBlock } from '../../services/farmApi';
 import { formatNumber } from '../../utils';
@@ -99,34 +100,6 @@ const PlantingCountBadge = styled.div<{ $count: number }>`
   white-space: nowrap;
 `;
 
-const StatsRow = styled.div`
-  display: flex;
-  gap: 24px;
-  margin-bottom: 16px;
-  padding: 12px 0;
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
-`;
-
-const StatItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const StatLabel = styled.span`
-  font-size: 11px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textDisabled};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const StatValue = styled.span`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textPrimary};
-`;
 
 const PlantingsSection = styled.div`
   margin-bottom: 16px;
@@ -234,13 +207,30 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
   }
 `;
 
-const AvailableAreaInfo = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 6px;
+const AddNewPlantingButton = styled.button`
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  border: none;
+  background: ${({ theme }) => theme.colors.success};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover {
+    filter: brightness(0.85);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.success};
+    outline-offset: 2px;
+  }
 `;
 
 const PhysicalBlockPlantingInfo = styled.div`
@@ -323,6 +313,7 @@ export function PhysicalBlockCard({
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [showPlantingsModal, setShowPlantingsModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showActions, setShowActions] = useState(false);
 
   const activePlantings = virtualBlocks.filter(
     (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
@@ -335,14 +326,14 @@ export function PhysicalBlockCard({
     physicalBlock.state !== 'cleaning' &&
     physicalBlock.state !== 'partial';
 
-  // Block is truly empty only if state is 'empty'
-  const isBlockEmpty = physicalBlock.state === 'empty';
   const isBlockCleaning = physicalBlock.state === 'cleaning';
-  const isBlockPartial = physicalBlock.state === 'partial';
 
-  // Can add planting if block is empty OR if it's partial and has available area
-  const canAddPlanting = isBlockEmpty ||
-    (isBlockPartial && (physicalBlock.availableArea || 0) > 0);
+  // Occupancy-based empty detection: state may lag behind reality (backend doesn't always
+  // reset partial → empty), so we check actual content rather than trusting state alone.
+  const isFullyEmpty = !physicalBlockHasPlanting && activePlantings.length === 0 && !isBlockCleaning;
+
+  // Can add planting if not cleaning AND either there is available area OR the block is fully empty
+  const canAddPlanting = !isBlockCleaning && ((physicalBlock.availableArea || 0) > 0 || isFullyEmpty);
 
   const handleBlockNameClick = () => {
     navigate(`/farm/farms/${farmId}/blocks/${physicalBlock.blockId}`);
@@ -382,7 +373,10 @@ export function PhysicalBlockCard({
   };
 
   return (
-    <Card>
+    <Card
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+    >
       <Header>
         <LeftSection>
           <BlockIcon>{getBlockTypeIcon()}</BlockIcon>
@@ -402,26 +396,11 @@ export function PhysicalBlockCard({
         </PlantingCountBadge>
       </Header>
 
-      <StatsRow>
-        <StatItem>
-          <StatLabel>Total Area</StatLabel>
-          <StatValue>
-            {formatNumber((physicalBlock.area || 0) / 10000, { decimals: 2 })} ha
-          </StatValue>
-        </StatItem>
-
-        <StatItem>
-          <StatLabel>Available</StatLabel>
-          <StatValue>
-            {formatNumber((physicalBlock.availableArea || 0) / 10000, { decimals: 2 })} ha
-          </StatValue>
-        </StatItem>
-
-        <StatItem>
-          <StatLabel>Capacity</StatLabel>
-          <StatValue>{formatNumber(physicalBlock.maxPlants)}</StatValue>
-        </StatItem>
-      </StatsRow>
+      <AreaBudgetBar
+        usedAreaM2={(physicalBlock.area || 0) - (physicalBlock.availableArea || 0)}
+        totalAreaM2={physicalBlock.area || 0}
+        displayUnit="ha"
+      />
 
       <PlantingsSection>
         <PlantingsSectionTitle>
@@ -466,56 +445,57 @@ export function PhysicalBlockCard({
           </ViewPlantingsButton>
         )}
 
-        {/* Show empty/cleaning state messages */}
+        {/* Show cleaning state message or empty-state CTA */}
         {!physicalBlockHasPlanting && activePlantings.length === 0 && (
-          <EmptyPlantingsMessage>
-            {isBlockCleaning
-              ? '🧹 This block is being cleaned and will be ready for planting soon'
-              : 'This block is empty and ready for planting'}
-          </EmptyPlantingsMessage>
+          isBlockCleaning ? (
+            <EmptyPlantingsMessage>
+              🧹 This block is being cleaned and will be ready for planting soon
+            </EmptyPlantingsMessage>
+          ) : (
+            <AddNewPlantingButton onClick={() => setShowPlantModal(true)}>
+              <span>🌱</span>
+              <span>Add New Planting</span>
+            </AddNewPlantingButton>
+          )
         )}
       </PlantingsSection>
 
-      {physicalBlock.availableArea !== undefined && physicalBlock.availableArea > 0 && (
-        <AvailableAreaInfo>
-          💡 {formatNumber((physicalBlock.availableArea || 0) / 10000, { decimals: 2 })} ha available for new plantings
-        </AvailableAreaInfo>
-      )}
+      {showActions && (
+        <Actions>
+          {/* Add Another Planting — only for non-empty blocks that still have capacity */}
+          {!isFullyEmpty && canAddPlanting && (
+            <ActionButton $variant="primary" onClick={() => setShowPlantModal(true)}>
+              <span>🌱</span>
+              <span>Add Another Planting</span>
+            </ActionButton>
+          )}
 
-      <Actions>
-        {/* Show Add New Planting for empty blocks or partial blocks with available area */}
-        {canAddPlanting && (
-          <ActionButton $variant="primary" onClick={() => setShowPlantModal(true)}>
-            <span>🌱</span>
-            <span>{isBlockEmpty ? 'Add New Planting' : 'Add Another Planting'}</span>
-          </ActionButton>
-        )}
+          {/* Cleaning in progress indicator */}
+          {isBlockCleaning && (
+            <ActionButton $variant="secondary" disabled>
+              <span>🧹</span>
+              <span>Cleaning in Progress</span>
+            </ActionButton>
+          )}
 
-        {/* Show status-appropriate action for non-empty blocks */}
-        {isBlockCleaning && (
-          <ActionButton $variant="secondary" disabled>
-            <span>🧹</span>
-            <span>Cleaning in Progress</span>
-          </ActionButton>
-        )}
+          {physicalBlockHasPlanting && (
+            <ActionButton $variant="secondary" onClick={handleBlockNameClick}>
+              <span>📈</span>
+              <span>Manage Planting</span>
+            </ActionButton>
+          )}
 
-        {physicalBlockHasPlanting && (
           <ActionButton $variant="secondary" onClick={handleBlockNameClick}>
-            <span>📈</span>
-            <span>Manage Planting</span>
+            <span>📊</span>
+            <span>View Details</span>
           </ActionButton>
-        )}
 
-        <ActionButton $variant="secondary" onClick={handleBlockNameClick}>
-          <span>📊</span>
-          <span>View Details</span>
-        </ActionButton>
-
-        <ActionButton $variant="danger" onClick={handleDeleteBlock} disabled={isDeleting}>
-          <span>🗑️</span>
-          <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
-        </ActionButton>
-      </Actions>
+          <ActionButton $variant="danger" onClick={handleDeleteBlock} disabled={isDeleting}>
+            <span>🗑️</span>
+            <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
+          </ActionButton>
+        </Actions>
+      )}
 
       {/* Add Virtual Crop Modal */}
       {createPortal(

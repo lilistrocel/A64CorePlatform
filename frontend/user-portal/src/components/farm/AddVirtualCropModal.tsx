@@ -1,17 +1,30 @@
 /**
  * AddVirtualCropModal Component
  *
- * Modal for adding virtual crops to a physical block with available area.
- * Shows area budget, plant selection, and preview of predicted outcomes.
+ * Modal for adding virtual crops to a physical block.
+ * Area is DERIVED from plant count × density — no manual area input.
+ * Supports over-budget planting with explicit user approval.
+ *
+ * Phase 3 redesign: density-first workflow.
+ *   - Crop → plant count → density chooser → derived area → budget bar → submit
+ *   - Soft budget: 409 from backend surfaces approval prompt; approval checkbox gates submit.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
-import { farmApi, calculatePlantCount } from '../../services/farmApi';
+import { farmApi, getSpacingCategories } from '../../services/farmApi';
 import { getActivePlants } from '../../services/plantDataEnhancedApi';
-import type { Block, PlantDataEnhanced, AddVirtualCropRequest } from '../../types/farm';
+import type {
+  Block,
+  PlantDataEnhanced,
+  AddVirtualCropRequest,
+  SpacingCategory,
+  SpacingCategoryInfo,
+} from '../../types/farm';
+import { SPACING_CATEGORY_LABELS } from '../../types/farm';
 import { PlantCombobox } from './PlantCombobox';
+import { AreaBudgetBar } from './AreaBudgetBar';
 
 // ============================================================================
 // TYPES
@@ -26,7 +39,7 @@ interface AddVirtualCropModalProps {
 
 interface VirtualCropPreview {
   selectedPlant: PlantDataEnhanced | null;
-  allocatedArea: number;
+  derivedAreaM2: number;
   plantCount: number;
   plantingDate: string;
   // Calculated fields
@@ -37,6 +50,17 @@ interface VirtualCropPreview {
   totalCycleDays: number;
   areaPercentage: number;
 }
+
+/** Structured payload from a 409 OVER_AREA_BUDGET backend response */
+interface OverAreaBudgetDetail {
+  code: 'OVER_AREA_BUDGET';
+  requiredAreaM2: number;
+  availableAreaM2: number;
+  overByM2: number;
+}
+
+type DensityMode = 'none' | 'category' | 'custom';
+type DensityUnit = 'per100m2' | 'perm2';
 
 // ============================================================================
 // STYLED COMPONENTS
@@ -123,6 +147,8 @@ const SectionTitle = styled.h3`
   margin: 0 0 16px 0;
 `;
 
+/* ---- Area Budget Bar ---- */
+
 const AreaBudgetSection = styled.div`
   background: ${({ theme }) => theme.colors.infoBg};
   border: 1px solid ${({ theme }) => theme.colors.primary[500]};
@@ -141,27 +167,6 @@ const AreaBudgetTitle = styled.h3`
   gap: 8px;
 `;
 
-const AreaBudgetBar = styled.div<{ $used: number; $total: number }>`
-  width: 100%;
-  height: 24px;
-  background: ${({ theme }) => theme.colors.neutral[300]};
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 8px;
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: ${({ $used, $total }) => ($total > 0 ? ($used / $total) * 100 : 0)}%;
-    background: linear-gradient(90deg, #3b82f6, #1976d2);
-    transition: width 300ms ease-in-out;
-  }
-`;
-
 const AreaBudgetText = styled.div`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textSecondary};
@@ -175,6 +180,57 @@ const AreaBudgetWarning = styled.div`
   text-align: center;
   font-weight: 500;
 `;
+
+const AreaBudgetError = styled.div`
+  font-size: 13px;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-top: 8px;
+  font-weight: 500;
+`;
+
+/* ---- Over-budget approval ---- */
+
+const ApprovalCheckboxRow = styled.label`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-weight: 500;
+  user-select: none;
+`;
+
+const ApprovalCheckbox = styled.input`
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: #dc2626;
+`;
+
+/* ---- Derived area preview ---- */
+
+const DerivedAreaPreview = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: ${({ theme }) => theme.colors.successBg};
+  border: 1px solid ${({ theme }) => theme.colors.success};
+  border-radius: 8px;
+  margin: 12px 0 20px;
+  font-size: 13px;
+  color: #2e7d32;
+`;
+
+/* ---- Form primitives ---- */
 
 const FormGroup = styled.div`
   margin-bottom: 20px;
@@ -218,6 +274,28 @@ const Input = styled.input`
   }
 `;
 
+const Select = styled.select`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
+  cursor: pointer;
+  transition: border-color 150ms ease-in-out;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+
+  &:disabled {
+    background: ${({ theme }) => theme.colors.surface};
+    cursor: not-allowed;
+  }
+`;
+
 const HelpText = styled.div`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.textDisabled};
@@ -229,6 +307,43 @@ const ErrorText = styled.div`
   color: ${({ theme }) => theme.colors.error};
   margin-top: 4px;
 `;
+
+/* ---- Density custom input row ---- */
+
+const DensityCustomRow = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+`;
+
+const DensityUnitToggle = styled.div`
+  display: flex;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+`;
+
+const DensityUnitButton = styled.button<{ $active: boolean }>`
+  padding: 12px 14px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  white-space: nowrap;
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.primary[500] : theme.colors.background};
+  color: ${({ $active }) => ($active ? '#fff' : 'inherit')};
+
+  &:hover:not([disabled]) {
+    background: ${({ $active, theme }) =>
+      $active ? theme.colors.primary[700] : theme.colors.surface};
+  }
+`;
+
+/* ---- Preview section ---- */
 
 const PreviewSection = styled.div<{ $visible: boolean }>`
   display: ${({ $visible }) => ($visible ? 'block' : 'none')};
@@ -281,6 +396,8 @@ const PreviewSubtext = styled.div`
   color: ${({ theme }) => theme.colors.textDisabled};
   margin-top: 4px;
 `;
+
+/* ---- Footer ---- */
 
 const ModalFooter = styled.div`
   padding: 20px 24px;
@@ -364,38 +481,6 @@ const CodeValue = styled.div`
   font-family: 'JetBrains Mono', monospace;
 `;
 
-const AutoCalculationInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: ${({ theme }) => theme.colors.successBg};
-  border: 1px solid ${({ theme }) => theme.colors.success};
-  border-radius: 8px;
-  margin-top: 8px;
-  font-size: 13px;
-  color: #2e7d32;
-`;
-
-const AutoCalcIcon = styled.span`
-  font-size: 16px;
-`;
-
-const ManualOverrideButton = styled.button`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.primary[700]};
-  cursor: pointer;
-  font-size: 12px;
-  text-decoration: underline;
-  padding: 0;
-  margin-left: auto;
-
-  &:hover {
-    color: #1565c0;
-  }
-`;
-
 const NoSpacingWarning = styled.div`
   display: flex;
   align-items: center;
@@ -404,10 +489,26 @@ const NoSpacingWarning = styled.div`
   background: ${({ theme }) => theme.colors.warningBg};
   border: 1px solid ${({ theme }) => theme.colors.warning};
   border-radius: 8px;
-  margin-top: 8px;
+  margin: 8px 0 20px;
   font-size: 12px;
   color: #e65100;
 `;
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Format a spacing category's density for the <option> label, mirroring
+ * the pattern in PlantDataFormModal.
+ */
+function formatCategoryDensityLabel(cat: SpacingCategoryInfo): string {
+  const perM2 = cat.currentDensity / 100;
+  if (perM2 >= 1) {
+    return `${cat.name} — ${Math.round(perM2)} plants/m²`;
+  }
+  return `${cat.name} — ${cat.currentDensity} plants/100 m²`;
+}
 
 // ============================================================================
 // COMPONENT
@@ -422,15 +523,20 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
 
   // Form state
   const [selectedPlantId, setSelectedPlantId] = useState<string>('');
-  const [allocatedArea, setAllocatedArea] = useState<string>('');
   const [plantCount, setPlantCount] = useState<string>('');
   const [plantingDate, setPlantingDate] = useState<string>('');
 
-  // Auto-calculation state
-  const [isAutoCalculated, setIsAutoCalculated] = useState(false);
-  const [calculatedPlantCount, setCalculatedPlantCount] = useState<number | null>(null);
-  const [isManualOverride, setIsManualOverride] = useState(false);
-  const [calculationInfo, setCalculationInfo] = useState<string>('');
+  // Density chooser state (mirrors PlantDataFormModal)
+  const [spacingCategories, setSpacingCategories] = useState<SpacingCategoryInfo[]>([]);
+  const [densityMode, setDensityMode] = useState<DensityMode>('none');
+  const [densityUnit, setDensityUnit] = useState<DensityUnit>('per100m2');
+  /** The raw string shown in the custom density input; kept separate to avoid NaN on empty. */
+  const [customDensityInput, setCustomDensityInput] = useState<string>('');
+  /** The canonical integer plants/100 m² resolved from chooser; undefined when unset. */
+  const [plantsPer100m2, setPlantsPer100m2] = useState<number | undefined>(undefined);
+
+  // Over-budget approval state
+  const [overBudgetApproved, setOverBudgetApproved] = useState(false);
 
   // Preview state
   const [preview, setPreview] = useState<VirtualCropPreview | null>(null);
@@ -438,11 +544,11 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load plant data on mount
+  // Load plant data and spacing categories on mount
   useEffect(() => {
     if (isOpen) {
       loadPlants();
-      // Set default planting date to today
+      loadSpacingCategories();
       setPlantingDate(new Date().toISOString().split('T')[0]);
     }
   }, [isOpen]);
@@ -450,130 +556,179 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
   const loadPlants = async () => {
     try {
       setLoadingPlants(true);
-      // Only load active plants for the dropdown
       const activePlants = await getActivePlants();
       setPlants(activePlants);
     } catch (error) {
-      console.error('Error loading plants:', error);
-      alert('Failed to load plant data. Please try again.');
+      // Non-fatal — combobox will be empty
+      setPlants([]);
     } finally {
       setLoadingPlants(false);
     }
   };
 
-  // Auto-calculate plant count when plant or area changes
-  const autoCalculatePlantCount = useCallback(async (plant: PlantDataEnhanced, areaSqm: number) => {
-    if (!plant.spacingCategory || areaSqm <= 0) {
-      setIsAutoCalculated(false);
-      setCalculatedPlantCount(null);
-      setCalculationInfo('');
-      return;
-    }
-
+  const loadSpacingCategories = async () => {
     try {
-      // Virtual blocks use square meters directly
-      const result = await calculatePlantCount(areaSqm, 'sqm', plant.spacingCategory);
-
-      // Cap at block maxPlants
-      const cappedCount = Math.min(result.plantCount, block.maxPlants);
-
-      setCalculatedPlantCount(cappedCount);
-      setIsAutoCalculated(true);
-
-      setCalculationInfo(
-        `${result.plantsPerHundredSqm} plants/100m² × ${areaSqm.toFixed(0)}m² = ${result.plantCount} plants` +
-        (cappedCount < result.plantCount ? ` (capped at ${cappedCount} max capacity)` : '')
-      );
-
-      // Only set if not manually overridden
-      if (!isManualOverride) {
-        setPlantCount(String(cappedCount));
-      }
-    } catch (error) {
-      console.error('Error calculating plant count:', error);
-      setIsAutoCalculated(false);
-      setCalculatedPlantCount(null);
-      setCalculationInfo('');
+      const res = await getSpacingCategories();
+      setSpacingCategories(res.categories);
+    } catch {
+      // Non-fatal: fall back to static labels
     }
-  }, [isManualOverride]);
+  };
 
-  // Effect to trigger auto-calculation when plant or area changes
-  useEffect(() => {
-    const area = parseFloat(allocatedArea);
-    if (selectedPlantId && !isNaN(area) && area > 0) {
-      const plant = plants.find((p) => p.plantDataId === selectedPlantId);
-      if (plant) {
-        autoCalculatePlantCount(plant, area);
+  // ---- Density chooser handlers ----
+
+  const handleDensitySelectChange = useCallback((value: string) => {
+    if (value === '') {
+      setDensityMode('none');
+      setPlantsPer100m2(undefined);
+      setCustomDensityInput('');
+    } else if (value === 'custom') {
+      setDensityMode('custom');
+      setPlantsPer100m2(undefined);
+      setCustomDensityInput('');
+    } else {
+      // Preset category: look up currentDensity
+      setDensityMode('category');
+      setCustomDensityInput('');
+      const cat = spacingCategories.find((c) => c.value === value);
+      if (cat) {
+        setPlantsPer100m2(cat.currentDensity);
       }
-    } else if (!selectedPlantId) {
-      // Reset when no plant selected
-      setIsAutoCalculated(false);
-      setCalculatedPlantCount(null);
-      setCalculationInfo('');
-      setIsManualOverride(false);
     }
-  }, [selectedPlantId, allocatedArea, plants, autoCalculatePlantCount]);
+  }, [spacingCategories]);
 
-  // Handle plant selection
-  const handlePlantChange = (plantId: string) => {
+  const handleCustomDensityInputChange = useCallback((raw: string) => {
+    setCustomDensityInput(raw);
+    const num = parseFloat(raw);
+    if (!isNaN(num) && num > 0) {
+      const canonical = Math.round(densityUnit === 'perm2' ? num * 100 : num);
+      setPlantsPer100m2(canonical > 0 ? canonical : undefined);
+    } else {
+      setPlantsPer100m2(undefined);
+    }
+  }, [densityUnit]);
+
+  const handleDensityUnitToggle = useCallback((unit: DensityUnit) => {
+    setDensityUnit(unit);
+    // Re-express the current canonical value in the new unit
+    if (plantsPer100m2 != null && plantsPer100m2 > 0) {
+      if (unit === 'perm2') {
+        setCustomDensityInput(String(Math.round((plantsPer100m2 / 100) * 10) / 10));
+      } else {
+        setCustomDensityInput(String(plantsPer100m2));
+      }
+    }
+  }, [plantsPer100m2]);
+
+  /** Controlled value for the density <select> */
+  const densitySelectValue =
+    densityMode === 'none' ? '' :
+    densityMode === 'custom' ? 'custom' :
+    // category: find matching category value from plantsPer100m2
+    (spacingCategories.find((c) => c.currentDensity === plantsPer100m2)?.value ?? '');
+
+  // ---- Prefill density from selected plant ----
+
+  const prefillDensityFromPlant = useCallback((plant: PlantDataEnhanced | undefined) => {
+    if (!plant) return;
+
+    if (plant.customPlantsPer100m2 != null && plant.customPlantsPer100m2 > 0) {
+      // Custom density on the plant record
+      const raw = plant.customPlantsPer100m2;
+      setDensityMode('custom');
+      if (raw % 100 === 0) {
+        setDensityUnit('perm2');
+        setCustomDensityInput(String(raw / 100));
+      } else {
+        setDensityUnit('per100m2');
+        setCustomDensityInput(String(raw));
+      }
+      setPlantsPer100m2(raw);
+    } else if (plant.spacingCategory) {
+      // Use the preset category
+      const cat = spacingCategories.find((c) => c.value === plant.spacingCategory);
+      setDensityMode('category');
+      setCustomDensityInput('');
+      setPlantsPer100m2(cat?.currentDensity);
+    }
+    // else: leave density unset — user must pick
+  }, [spacingCategories]);
+
+  // ---- Plant selection handler ----
+
+  const handlePlantChange = useCallback((plantId: string) => {
     setSelectedPlantId(plantId);
-    setIsManualOverride(false);
-  };
+    const plant = plants.find((p) => p.plantDataId === plantId);
+    if (plant) {
+      prefillDensityFromPlant(plant);
+    } else {
+      // Reset density when no plant
+      setDensityMode('none');
+      setPlantsPer100m2(undefined);
+      setCustomDensityInput('');
+    }
+    // Reset over-budget approval on plant change
+    setOverBudgetApproved(false);
+  }, [plants, prefillDensityFromPlant]);
 
-  // Handle area change
-  const handleAreaChange = (value: string) => {
-    setAllocatedArea(value);
-    setIsManualOverride(false); // Reset override when area changes
-  };
-
-  // Handle manual plant count change
-  const handlePlantCountChange = (value: string) => {
-    setPlantCount(value);
-    if (isAutoCalculated && calculatedPlantCount !== null) {
-      const numValue = parseInt(value);
-      if (!isNaN(numValue) && numValue !== calculatedPlantCount) {
-        setIsManualOverride(true);
+  // Re-prefill when spacingCategories loads after a plant is already selected
+  useEffect(() => {
+    if (spacingCategories.length > 0 && selectedPlantId) {
+      const plant = plants.find((p) => p.plantDataId === selectedPlantId);
+      if (plant && densityMode === 'none') {
+        prefillDensityFromPlant(plant);
       }
     }
-  };
+    // Only run when spacingCategories become available
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spacingCategories]);
 
-  // Reset to auto-calculated value
-  const handleResetToAuto = () => {
-    if (calculatedPlantCount !== null) {
-      setPlantCount(String(calculatedPlantCount));
-      setIsManualOverride(false);
-    }
-  };
+  // ---- Derived area calculation ----
+
+  /** Returns derived area in m², or null if inputs are incomplete/invalid. */
+  const derivedAreaM2: number | null = (() => {
+    const count = parseInt(plantCount, 10);
+    if (isNaN(count) || count <= 0) return null;
+    if (!plantsPer100m2 || plantsPer100m2 <= 0) return null;
+    return (count * 100) / plantsPer100m2;
+  })();
+
+  // ---- Budget computations ----
+
+  const totalArea = block.area ?? 0;
+  const usedArea = totalArea - (block.availableArea ?? 0);
+  const availableArea = block.availableArea ?? 0;
+
+  const overBudget: boolean = derivedAreaM2 != null && derivedAreaM2 > availableArea;
+  const overByM2: number = overBudget && derivedAreaM2 != null ? derivedAreaM2 - availableArea : 0;
+
+  // Overflow percentage — shown textually when used + new exceeds total bar width
+  const overflowPct = totalArea > 0 && derivedAreaM2 != null
+    ? Math.max(0, ((usedArea + derivedAreaM2) / totalArea) * 100 - 100)
+    : 0;
+
+  // ---- Preview calculation ----
 
   const calculatePreview = () => {
     const plant = plants.find((p) => p.plantDataId === selectedPlantId);
-    if (!plant) return;
+    if (!plant || derivedAreaM2 === null) return;
 
-    const area = parseFloat(allocatedArea);
-    const count = parseInt(plantCount);
-    if (isNaN(area) || area <= 0 || isNaN(count) || count <= 0) return;
+    const count = parseInt(plantCount, 10);
+    if (isNaN(count) || count <= 0) return;
 
     const plantingDateObj = new Date(plantingDate);
-
-    // Calculate predicted yield
     const wastePercent = plant.yieldInfo.expectedWastePercentage || 0;
     const predictedYieldKg = plant.yieldInfo.yieldPerPlant * count * (1 - wastePercent / 100);
-
-    // Calculate revenue if economic data exists
     const revenuePerKg = plant.economicsAndLabor?.averageMarketValuePerKg || 0;
     const predictedRevenue = predictedYieldKg * revenuePerKg;
-
-    // Calculate timeline
     const totalCycleDays = plant.growthCycle.totalCycleDays;
     const harvestDate = new Date(plantingDateObj);
     harvestDate.setDate(harvestDate.getDate() + totalCycleDays);
-
-    // Calculate area percentage
-    const areaPercentage = (area / (block.area || 1)) * 100;
+    const areaPercentage = totalArea > 0 ? (derivedAreaM2 / totalArea) * 100 : 0;
 
     setPreview({
       selectedPlant: plant,
-      allocatedArea: area,
+      derivedAreaM2,
       plantCount: count,
       plantingDate,
       predictedYieldKg,
@@ -585,6 +740,8 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
     });
   };
 
+  // ---- Validation ----
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -592,23 +749,20 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
       newErrors.plant = 'Please select a plant';
     }
 
-    const area = parseFloat(allocatedArea);
-    if (!allocatedArea || isNaN(area) || area <= 0) {
-      newErrors.allocatedArea = 'Please enter a valid area';
-    } else if (area > (block.availableArea || 0)) {
-      newErrors.allocatedArea = `Cannot exceed available area of ${block.availableArea?.toFixed(0)} m²`;
+    const count = parseInt(plantCount, 10);
+    if (!plantCount || isNaN(count) || count <= 0 || !Number.isInteger(count)) {
+      newErrors.plantCount = 'Please enter a valid whole number of plants (> 0)';
     }
 
-    const count = parseInt(plantCount);
-    if (!plantCount || isNaN(count) || count <= 0) {
-      newErrors.plantCount = 'Please enter a valid plant count';
-    } else if (count > block.maxPlants) {
-      newErrors.plantCount = `Cannot exceed block capacity of ${block.maxPlants} plants`;
+    if (!plantsPer100m2 || plantsPer100m2 <= 0) {
+      newErrors.density = 'Please select or enter a plant density';
     }
 
     if (!plantingDate) {
       newErrors.plantingDate = 'Please select a planting date';
     }
+
+    // Over-budget is allowed — no hard error here; approval checkbox gates submit.
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -621,50 +775,80 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
     }
   };
 
+  // ---- Submit ----
+
   const handleSubmit = async () => {
     if (!validateForm() || !preview) return;
-
-    // Synchronous ref guard prevents concurrent submissions (double-click protection)
     if (submittingRef.current) return;
     submittingRef.current = true;
 
     try {
       setSubmitting(true);
 
-      // Convert date from YYYY-MM-DD to ISO format for backend
       const isoPlantingDate = plantingDate ? `${plantingDate}T00:00:00Z` : undefined;
+      const count = parseInt(plantCount, 10);
 
       const requestData: AddVirtualCropRequest = {
         cropId: selectedPlantId,
-        allocatedArea: parseFloat(allocatedArea),
-        plantCount: parseInt(plantCount),
+        plantCount: count,
+        plantsPer100m2: plantsPer100m2,
         plantingDate: isoPlantingDate,
+        allowOverArea: overBudget && overBudgetApproved ? true : false,
       };
 
       const result = await farmApi.addVirtualCrop(block.farmId, block.blockId, requestData);
 
-      // Show success message with virtual block code
       const blockCode = result?.blockCode || 'N/A';
       alert(`Virtual crop added successfully! Virtual block code: ${blockCode}`);
 
       onSuccess();
       handleClose();
-    } catch (error: any) {
-      console.error('Error adding virtual crop:', error);
-      // Handle different error formats properly
+    } catch (error: unknown) {
+      const axiosError = error as {
+        response?: {
+          status?: number;
+          data?: {
+            detail?: string | OverAreaBudgetDetail | unknown;
+          };
+        };
+        message?: string;
+      };
+
+      // Safety net: backend returned 409 OVER_AREA_BUDGET after client-side approval check
+      if (axiosError.response?.status === 409) {
+        const detail = axiosError.response.data?.detail;
+        if (
+          detail &&
+          typeof detail === 'object' &&
+          (detail as OverAreaBudgetDetail).code === 'OVER_AREA_BUDGET'
+        ) {
+          const d = detail as OverAreaBudgetDetail;
+          setErrors((prev) => ({
+            ...prev,
+            overBudget:
+              `Required: ${d.requiredAreaM2.toFixed(1)} m² — Available: ${d.availableAreaM2.toFixed(1)} m² ` +
+              `— Over by: ${d.overByM2.toFixed(1)} m². Check the approval box to proceed.`,
+          }));
+          setOverBudgetApproved(false);
+          return;
+        }
+      }
+
+      // Generic error handling
       let errorMsg = 'Failed to add virtual crop. Please try again.';
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        // detail might be a string or an array of validation errors
+      if (axiosError.response?.data?.detail) {
+        const detail = axiosError.response.data.detail;
         if (typeof detail === 'string') {
           errorMsg = detail;
         } else if (Array.isArray(detail)) {
-          errorMsg = detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(', ');
+          errorMsg = (detail as Array<{ msg?: string; message?: string }>)
+            .map((e) => e.msg || e.message || JSON.stringify(e))
+            .join(', ');
         } else if (typeof detail === 'object') {
           errorMsg = JSON.stringify(detail);
         }
-      } else if (error.message) {
-        errorMsg = error.message;
+      } else if (axiosError.message) {
+        errorMsg = axiosError.message;
       }
       alert(errorMsg);
     } finally {
@@ -675,27 +859,27 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
 
   const handleClose = () => {
     setSelectedPlantId('');
-    setAllocatedArea('');
     setPlantCount('');
     setPlantingDate('');
     setErrors({});
     setPreview(null);
     setShowPreview(false);
-    // Reset auto-calculation state
-    setIsAutoCalculated(false);
-    setCalculatedPlantCount(null);
-    setIsManualOverride(false);
-    setCalculationInfo('');
+    setDensityMode('none');
+    setDensityUnit('per100m2');
+    setCustomDensityInput('');
+    setPlantsPer100m2(undefined);
+    setOverBudgetApproved(false);
     onClose();
   };
 
   if (!isOpen) return null;
 
-  const usedArea = (block.area || 0) - (block.availableArea || 0);
-  const totalArea = block.area || 0;
   const nextVirtualCode = block.blockCode
     ? `${block.blockCode}/${String((block.virtualBlockCounter || 0) + 1).padStart(3, '0')}`
     : 'N/A';
+
+  // Submit button: enabled when not over budget, OR over budget with approval checked
+  const submitEnabled = !overBudget || (overBudget && overBudgetApproved);
 
   const modalContent = (
     <Overlay $isOpen={isOpen}>
@@ -704,7 +888,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
           <ModalTitle>
             {block.state === 'empty' ? 'Add Planting to Block' : 'Add Additional Crop to Block'}
           </ModalTitle>
-          <CloseButton onClick={handleClose}>×</CloseButton>
+          <CloseButton onClick={handleClose} aria-label="Close modal">×</CloseButton>
         </ModalHeader>
 
         <ModalBody>
@@ -712,34 +896,36 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
             <LoadingText>Loading plants...</LoadingText>
           ) : (
             <>
+              {/* ---- Area Budget Bar ---- */}
               <AreaBudgetSection>
                 <AreaBudgetTitle>
                   <span>📊</span>
-                  <span>Area Budget</span>
+                  <span>Area Budget (Current)</span>
                 </AreaBudgetTitle>
-                <AreaBudgetBar $used={usedArea} $total={totalArea} />
-                <AreaBudgetText>
-                  {block.availableArea?.toFixed(0)} m² available of {totalArea.toFixed(0)} m² total
-                </AreaBudgetText>
-                {(block.availableArea || 0) < totalArea * 0.2 && (
+
+                {/* Green only: committed used area. The projected impact of the new planting
+                    is shown in the preview box below. Summary text is rendered by the bar. */}
+                <AreaBudgetBar
+                  usedAreaM2={usedArea}
+                  totalAreaM2={totalArea}
+                  displayUnit="m2"
+                />
+
+                {/* Low-area nudge */}
+                {availableArea < totalArea * 0.2 && totalArea > 0 && (
                   <AreaBudgetWarning>
-                    ⚠️ Limited area remaining - consider block utilization
+                    ⚠️ Limited area remaining — consider block utilization
                   </AreaBudgetWarning>
                 )}
               </AreaBudgetSection>
 
+              {/* ---- Parent Block Info ---- */}
               <FormSection>
                 <SectionTitle>Parent Block Information</SectionTitle>
                 <div style={{ fontSize: '14px', marginBottom: '16px' }}>
-                  <div>
-                    <strong>Block:</strong> {block.blockCode || block.name}
-                  </div>
-                  <div>
-                    <strong>Total Area:</strong> {totalArea.toFixed(0)} m²
-                  </div>
-                  <div>
-                    <strong>Current Crop:</strong> {block.targetCropName || 'None'}
-                  </div>
+                  <div><strong>Block:</strong> {block.blockCode || block.name}</div>
+                  <div><strong>Total Area:</strong> {totalArea.toFixed(1)} m²</div>
+                  <div><strong>Current Crop:</strong> {block.targetCropName || 'None'}</div>
                 </div>
 
                 <VirtualBlockCodePreview>
@@ -748,11 +934,13 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                 </VirtualBlockCodePreview>
               </FormSection>
 
+              {/* ---- Virtual Crop Details ---- */}
               <FormSection>
                 <SectionTitle>Virtual Crop Details</SectionTitle>
 
+                {/* Crop selector */}
                 <FormGroup>
-                  <Label>
+                  <Label htmlFor="cropSelect">
                     Select Crop<RequiredMark>*</RequiredMark>
                   </Label>
                   <PlantCombobox
@@ -765,83 +953,142 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                   {errors.plant && <ErrorText>{errors.plant}</ErrorText>}
                 </FormGroup>
 
+                {/* Plant count */}
                 <FormGroup>
-                  <Label>
-                    Allocated Area (m²)<RequiredMark>*</RequiredMark>
-                  </Label>
-                  <Input
-                    type="number"
-                    value={allocatedArea}
-                    onChange={(e) => handleAreaChange(e.target.value)}
-                    placeholder="Enter area in m²"
-                    min="1"
-                    max={block.availableArea || 0}
-                    step="0.1"
-                    disabled={submitting}
-                  />
-                  <HelpText>Maximum available: {block.availableArea?.toFixed(0)} m²</HelpText>
-                  {errors.allocatedArea && <ErrorText>{errors.allocatedArea}</ErrorText>}
-                </FormGroup>
-
-                <FormGroup>
-                  <Label>
+                  <Label htmlFor="plantCountInput">
                     Number of Plants<RequiredMark>*</RequiredMark>
-                    {isAutoCalculated && !isManualOverride && (
-                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#4caf50', fontWeight: 400 }}>
-                        (auto-calculated)
-                      </span>
-                    )}
-                    {isManualOverride && (
-                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#ff9800', fontWeight: 400 }}>
-                        (manual override)
-                      </span>
-                    )}
                   </Label>
                   <Input
+                    id="plantCountInput"
                     type="number"
                     value={plantCount}
-                    onChange={(e) => handlePlantCountChange(e.target.value)}
-                    placeholder={isAutoCalculated ? 'Auto-calculated from area' : 'Enter plant count'}
+                    onChange={(e) => {
+                      setPlantCount(e.target.value);
+                      setOverBudgetApproved(false);
+                    }}
+                    placeholder="Enter whole number of plants"
                     min="1"
-                    max={block.maxPlants}
+                    step="1"
                     disabled={submitting}
+                    aria-describedby="plantCountHelp"
                   />
-                  <HelpText>Maximum capacity: {block.maxPlants} plants</HelpText>
+                  <HelpText id="plantCountHelp">Whole integer plants only.</HelpText>
                   {errors.plantCount && <ErrorText>{errors.plantCount}</ErrorText>}
-
-                  {/* Auto-calculation feedback */}
-                  {isAutoCalculated && calculationInfo && (
-                    <AutoCalculationInfo>
-                      <AutoCalcIcon>📐</AutoCalcIcon>
-                      <div>
-                        <strong>Auto-calculated from spacing standards:</strong>
-                        <div style={{ marginTop: '4px' }}>{calculationInfo}</div>
-                      </div>
-                      {isManualOverride && (
-                        <ManualOverrideButton onClick={handleResetToAuto}>
-                          Reset to auto
-                        </ManualOverrideButton>
-                      )}
-                    </AutoCalculationInfo>
-                  )}
-
-                  {/* Warning if no spacing category */}
-                  {selectedPlantId && allocatedArea && !isAutoCalculated && (
-                    <NoSpacingWarning>
-                      <span>⚠️</span>
-                      <span>
-                        This plant doesn't have a spacing category configured.
-                        Enter plant count manually, or configure spacing in plant data settings.
-                      </span>
-                    </NoSpacingWarning>
-                  )}
                 </FormGroup>
 
+                {/* Density chooser */}
                 <FormGroup>
-                  <Label>
+                  <Label htmlFor="densityChooser">
+                    Plant Density<RequiredMark>*</RequiredMark>
+                  </Label>
+                  <Select
+                    id="densityChooser"
+                    value={densitySelectValue}
+                    onChange={(e) => {
+                      handleDensitySelectChange(e.target.value);
+                      setOverBudgetApproved(false);
+                    }}
+                    disabled={submitting}
+                    aria-describedby="densityHelp"
+                  >
+                    <option value="">— Select density —</option>
+                    {spacingCategories.length > 0
+                      ? spacingCategories.map((cat) => (
+                          <option key={cat.value} value={cat.value}>
+                            {formatCategoryDensityLabel(cat)}
+                          </option>
+                        ))
+                      : (Object.keys(SPACING_CATEGORY_LABELS) as SpacingCategory[]).map((key) => (
+                          <option key={key} value={key}>
+                            {SPACING_CATEGORY_LABELS[key]}
+                          </option>
+                        ))}
+                    <option value="custom">Custom…</option>
+                  </Select>
+                  <HelpText id="densityHelp">
+                    {densityMode === 'none' && 'Select a preset category or enter a custom density.'}
+                    {densityMode === 'category' && `Preset density: ${plantsPer100m2 ?? '—'} plants/100 m².`}
+                    {densityMode === 'custom' && 'Enter a custom density; stored as integer plants/100 m².'}
+                  </HelpText>
+                  {errors.density && <ErrorText>{errors.density}</ErrorText>}
+                </FormGroup>
+
+                {/* Custom density input row — only shown in custom mode */}
+                {densityMode === 'custom' && (
+                  <FormGroup>
+                    <Label htmlFor="customDensityInput">Custom Density Value</Label>
+                    <DensityCustomRow>
+                      <Input
+                        id="customDensityInput"
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder={densityUnit === 'perm2' ? 'e.g., 4' : 'e.g., 400'}
+                        value={customDensityInput}
+                        onChange={(e) => {
+                          handleCustomDensityInputChange(e.target.value);
+                          setOverBudgetApproved(false);
+                        }}
+                        disabled={submitting}
+                        style={{ flex: 1, minWidth: '120px' }}
+                      />
+                      <DensityUnitToggle>
+                        <DensityUnitButton
+                          type="button"
+                          $active={densityUnit === 'per100m2'}
+                          onClick={() => handleDensityUnitToggle('per100m2')}
+                          disabled={submitting}
+                          title="Plants per 100 m²"
+                        >
+                          /100 m²
+                        </DensityUnitButton>
+                        <DensityUnitButton
+                          type="button"
+                          $active={densityUnit === 'perm2'}
+                          onClick={() => handleDensityUnitToggle('perm2')}
+                          disabled={submitting}
+                          title="Plants per m²"
+                        >
+                          /m²
+                        </DensityUnitButton>
+                      </DensityUnitToggle>
+                    </DensityCustomRow>
+                    <HelpText>
+                      Canonical value:{' '}
+                      {plantsPer100m2 != null ? `${plantsPer100m2} plants/100 m²` : '—'}
+                    </HelpText>
+                  </FormGroup>
+                )}
+
+                {/* Warning if no density was prefilled from plant */}
+                {selectedPlantId && densityMode === 'none' && (
+                  <NoSpacingWarning>
+                    <span>⚠️</span>
+                    <span>
+                      This plant has no default density configured. Select a preset category or enter
+                      a custom value above.
+                    </span>
+                  </NoSpacingWarning>
+                )}
+
+                {/* Live derived area display */}
+                {derivedAreaM2 !== null && (
+                  <DerivedAreaPreview>
+                    <span>📐</span>
+                    <span>
+                      <strong>Derived area:</strong> {derivedAreaM2.toFixed(2)} m²
+                      {' '}({plantCount} plants ÷ {plantsPer100m2} plants/100 m² × 100)
+                    </span>
+                  </DerivedAreaPreview>
+                )}
+
+                {/* Planting date */}
+                <FormGroup>
+                  <Label htmlFor="plantingDateInput">
                     Planting Date<RequiredMark>*</RequiredMark>
                   </Label>
                   <Input
+                    id="plantingDateInput"
                     type="date"
                     value={plantingDate}
                     onChange={(e) => setPlantingDate(e.target.value)}
@@ -851,6 +1098,7 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                 </FormGroup>
               </FormSection>
 
+              {/* ---- Predicted yield / waste preview ---- */}
               <PreviewSection $visible={showPreview && preview !== null}>
                 {preview && (
                   <>
@@ -891,10 +1139,12 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                       </PreviewItem>
 
                       <PreviewItem>
-                        <PreviewLabel>Area Allocation</PreviewLabel>
-                        <PreviewValue>{preview.areaPercentage.toFixed(0)}%</PreviewValue>
+                        <PreviewLabel>Derived Area</PreviewLabel>
+                        <PreviewValue style={{ fontSize: '18px' }}>
+                          {preview.derivedAreaM2.toFixed(2)} m²
+                        </PreviewValue>
                         <PreviewSubtext>
-                          {preview.allocatedArea} m² of {block.area?.toFixed(0)} m²
+                          {preview.areaPercentage.toFixed(0)}% of {block.area?.toFixed(0)} m² total
                         </PreviewSubtext>
                       </PreviewItem>
 
@@ -906,6 +1156,67 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
                         <PreviewSubtext>Based on growth cycle</PreviewSubtext>
                       </PreviewItem>
                     </PreviewGrid>
+
+                    {/* Projected area budget — LIVE impact of THIS planting (green used +
+                        red new + overflow). The top widget shows current/committed only. */}
+                    <AreaBudgetSection style={{ marginTop: '20px', marginBottom: 0 }}>
+                      <AreaBudgetTitle>
+                        <span>📊</span>
+                        <span>Projected Area Budget</span>
+                      </AreaBudgetTitle>
+
+                      <AreaBudgetBar
+                        usedAreaM2={usedArea}
+                        totalAreaM2={totalArea}
+                        newAreaM2={preview.derivedAreaM2}
+                        displayUnit="m2"
+                        showSummary={false}
+                      />
+
+                      <AreaBudgetText>
+                        {availableArea.toFixed(1)} m² available · {usedArea.toFixed(1)} m² used ·{' '}
+                        {totalArea.toFixed(1)} m² total
+                        <span style={{ color: overBudget ? '#dc2626' : '#16a34a' }}>
+                          {' '}— new crop needs {preview.derivedAreaM2.toFixed(1)} m²
+                        </span>
+                      </AreaBudgetText>
+
+                      {overBudget && (
+                        <>
+                          <AreaBudgetError>
+                            ⚠️ Over budget by {overByM2.toFixed(1)} m² — required{' '}
+                            {preview.derivedAreaM2.toFixed(1)} m², only {availableArea.toFixed(1)} m² available.
+                            {overflowPct > 0 && ` (${overflowPct.toFixed(0)}% overflow)`}
+                          </AreaBudgetError>
+                          <ApprovalCheckboxRow>
+                            <ApprovalCheckbox
+                              type="checkbox"
+                              checked={overBudgetApproved}
+                              onChange={(e) => setOverBudgetApproved(e.target.checked)}
+                              id="overBudgetApproval"
+                            />
+                            <span>
+                              I understand this exceeds the available area and approve the over-budget allocation
+                            </span>
+                          </ApprovalCheckboxRow>
+                        </>
+                      )}
+
+                      {errors.overBudget && (
+                        <AreaBudgetError>
+                          {errors.overBudget}
+                          <ApprovalCheckboxRow style={{ marginTop: 8 }}>
+                            <ApprovalCheckbox
+                              type="checkbox"
+                              checked={overBudgetApproved}
+                              onChange={(e) => setOverBudgetApproved(e.target.checked)}
+                              id="overBudgetApprovalBackend"
+                            />
+                            <span>Allow exceeding the available area</span>
+                          </ApprovalCheckboxRow>
+                        </AreaBudgetError>
+                      )}
+                    </AreaBudgetSection>
                   </>
                 )}
               </PreviewSection>
@@ -922,13 +1233,29 @@ export function AddVirtualCropModal({ isOpen, onClose, block, onSuccess }: AddVi
             type="button"
             $variant="primary"
             onClick={handlePreview}
-            disabled={!selectedPlantId || !allocatedArea || !plantCount || !plantingDate || submitting}
+            disabled={
+              !selectedPlantId ||
+              !plantCount ||
+              !plantsPer100m2 ||
+              !plantingDate ||
+              submitting
+            }
           >
             📊 Preview
           </Button>
 
           {showPreview && (
-            <Button type="button" $variant="success" onClick={handleSubmit} disabled={submitting}>
+            <Button
+              type="button"
+              $variant="success"
+              onClick={handleSubmit}
+              disabled={submitting || !submitEnabled}
+              title={
+                overBudget && !overBudgetApproved
+                  ? 'Check the over-budget approval box to confirm'
+                  : undefined
+              }
+            >
               {submitting ? 'Adding...' : '✅ Confirm & Add Crop'}
             </Button>
           )}

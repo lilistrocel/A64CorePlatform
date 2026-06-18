@@ -408,18 +408,31 @@ export function BlockCard({ block, farmId, onEdit, onDelete, onStateChange }: Bl
           </StatValue>
         </StatItem>
         <StatItem>
-          <StatLabel>Capacity</StatLabel>
-          <StatValue>{formatNumber(block.maxPlants)}</StatValue>
+          {isVirtual ? (
+            <>
+              <StatLabel>Plants</StatLabel>
+              <StatValue>
+                {formatNumber(summary?.currentPlantCount ?? block.actualPlantCount ?? 0)}
+              </StatValue>
+            </>
+          ) : (
+            <>
+              <StatLabel>Used</StatLabel>
+              <StatValue>
+                {formatNumber(utilizationPercent, { decimals: 0 })}%
+              </StatValue>
+            </>
+          )}
         </StatItem>
       </StatsGrid>
 
-      {summary && summary.currentPlantCount > 0 && (
+      {!isVirtual && summary && summary.currentPlantCount > 0 && (
         <>
           <CapacityBar>
             <CapacityFill $percent={utilizationPercent} $color={stateColor} />
           </CapacityBar>
           <CapacityText>
-            {formatNumber(summary.currentPlantCount)} / {formatNumber(block.maxPlants)} plants ({formatNumber(utilizationPercent, { decimals: 0 })}%)
+            {formatNumber(utilizationPercent, { decimals: 0 })}% area used
           </CapacityText>
         </>
       )}
