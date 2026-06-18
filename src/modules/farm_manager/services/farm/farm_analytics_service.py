@@ -166,8 +166,8 @@ class FarmAnalyticsService:
             if block.state in active_states:
                 active_plantings += 1
 
-            # Sum capacity
-            total_capacity += block.maxPlants
+            # Reason: maxPlants removed in Phase 1; capacity tracking via area budget in Phase 3.
+            # total_capacity is kept at 0 for now.
 
             # Sum current plant count
             if block.actualPlantCount:

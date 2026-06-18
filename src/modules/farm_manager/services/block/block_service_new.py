@@ -865,7 +865,6 @@ class BlockService:
             farmId=block.farmId,
             farmName=farm_name,
             blockType=block.blockType,
-            maxPlants=block.maxPlants,
             actualPlantCount=block.actualPlantCount or 0,
             location=block.location,
             area=block.area,

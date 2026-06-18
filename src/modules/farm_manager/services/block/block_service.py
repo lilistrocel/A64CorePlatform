@@ -72,13 +72,6 @@ class BlockService:
                 detail=f"Block with name '{block_data.name}' already exists in this farm"
             )
 
-        # Validate maxPlants
-        if block_data.maxPlants <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="maxPlants must be greater than 0"
-            )
-
         # Create block
         block = await BlockRepository.create(block_data, farm_id)
 
@@ -189,13 +182,6 @@ class BlockService:
                     status_code=status.HTTP_409_CONFLICT,
                     detail=f"Block with name '{update_data.name}' already exists in this farm"
                 )
-
-        # Validate maxPlants
-        if update_data.maxPlants is not None and update_data.maxPlants <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="maxPlants must be greater than 0"
-            )
 
         # Update block
         updated_block = await BlockRepository.update(block_id, update_data)
@@ -339,7 +325,6 @@ class BlockService:
             },
             "statistics": {
                 "currentPlants": 0,  # TODO: Get from planting
-                "maxPlants": block.maxPlants,
                 "utilizationPercent": 0.0,  # TODO: Calculate
                 "daysPlanted": None,  # TODO: Calculate from plantedDate
                 "estimatedHarvestDate": block.estimatedHarvestDate,

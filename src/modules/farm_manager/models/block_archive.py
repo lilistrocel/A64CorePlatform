@@ -35,7 +35,9 @@ class BlockArchive(BaseModel):
 
     # Block Snapshot
     blockType: BlockType = Field(..., description="Type of cultivation block")
-    maxPlants: int = Field(..., gt=0, description="Maximum plants capacity")
+    # Reason: maxPlants removed from Block in Phase 1; kept as Optional so existing
+    # archive documents (which still carry the field) deserialise without error.
+    maxPlants: Optional[int] = Field(None, ge=0, description="Legacy capacity field (unused in Phase 1+; preserved for historical archives)")
     actualPlantCount: int = Field(..., ge=0, description="Actual plants in cycle")
     location: Optional[BlockLocation] = Field(None, description="Block location")
     area: Optional[float] = Field(None, gt=0, description="Block area")
@@ -87,7 +89,6 @@ class BlockArchive(BaseModel):
                 "farmId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
                 "farmName": "Green Valley Farm",
                 "blockType": "greenhouse",
-                "maxPlants": 100,
                 "actualPlantCount": 95,
                 "location": {
                     "latitude": 40.7128,

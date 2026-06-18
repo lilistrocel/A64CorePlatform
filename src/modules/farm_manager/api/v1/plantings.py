@@ -33,7 +33,7 @@ async def create_planting_plan(
     **Requirements:**
     - Requires **farm.manage** permission
     - Block must be in EMPTY state
-    - Total plants cannot exceed block maxPlants
+    - Plant data IDs must exist
     - All plant data IDs must exist
     - All plants must have the same yield unit
 

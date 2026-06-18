@@ -206,6 +206,51 @@ PLANT_TYPE_SPACING_SUGGESTIONS: Dict[str, SpacingCategory] = {
 }
 
 
+def get_density_for_category(
+    spacing_category: SpacingCategory,
+    densities: Optional[Dict[str, int]] = None
+) -> int:
+    """
+    Return the plants-per-100-m² density for a spacing category.
+
+    Args:
+        spacing_category: The SpacingCategory to look up.
+        densities: Optional custom density dict from SpacingStandardsConfig.
+                   Falls back to DEFAULT_SPACING_DENSITIES if not provided.
+
+    Returns:
+        Plants per 100 m² (positive integer).
+    """
+    if densities is not None:
+        return densities.get(spacing_category.value, DEFAULT_SPACING_DENSITIES[spacing_category])
+    return DEFAULT_SPACING_DENSITIES[spacing_category]
+
+
+def area_m2_from_plants(plant_count: int, plants_per_100m2: int) -> float:
+    """
+    Derive area (m²) from a plant count and a density.
+
+    Formula: area_m2 = plant_count * 100 / plants_per_100m2
+
+    Args:
+        plant_count: Number of whole plants (must be >= 1).
+        plants_per_100m2: Density in plants per 100 m² (must be > 0).
+
+    Returns:
+        Area in square metres as a float.
+
+    Raises:
+        ValueError: If plants_per_100m2 is not positive.
+    """
+    if plants_per_100m2 <= 0:
+        raise ValueError(
+            f"plants_per_100m2 must be > 0, got {plants_per_100m2}"
+        )
+    # Reason: canonical density unit is plantsPer100m2; plant_count is always
+    # a whole integer — floating-point area is intentional and fine here.
+    return plant_count * 100 / plants_per_100m2
+
+
 def suggest_spacing_category(plant_name: str, plant_type: Optional[str] = None) -> SpacingCategory:
     """
     Suggest a spacing category based on plant name or type.

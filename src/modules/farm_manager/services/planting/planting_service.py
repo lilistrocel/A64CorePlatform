@@ -56,12 +56,7 @@ class PlantingService:
                 detail=f"Block is not empty (current state: {block.state}). Cannot create planting plan."
             )
 
-        # 2. Validate total plants doesn't exceed block capacity
-        if planting_data.totalPlants > block.maxPlants:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Total plants ({planting_data.totalPlants}) exceeds block capacity ({block.maxPlants})"
-            )
+        # 2. (maxPlants removed in Phase 1 — no block capacity cap for plantings)
 
         # 3. Validate sum of individual plant quantities equals totalPlants
         actual_total = sum(plant.quantity for plant in planting_data.plants)

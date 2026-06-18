@@ -647,7 +647,8 @@ class BlockRepository:
         allocated_area: float,
         plant_count: int,
         user_id: UUID,
-        user_email: str
+        user_email: str,
+        plants_per_100m2: Optional[int] = None,
     ) -> Block:
         """
         Create a virtual block in the database.
@@ -659,6 +660,7 @@ class BlockRepository:
             plant_count: Number of plants for this virtual block
             user_id: User creating the block
             user_email: Email of user
+            plants_per_100m2: Density used to derive allocatedArea (recorded for reproducibility).
 
         Returns:
             Created virtual block (in EMPTY state initially)
@@ -697,9 +699,10 @@ class BlockRepository:
             allocatedArea=allocated_area,
             area=allocated_area,  # For display consistency
             areaUnit=parent.areaUnit,
-            maxPlants=plant_count,  # Set to plant count for virtual blocks
             blockType=parent.blockType,  # Inherit from parent
             location=parent.location,  # Inherit from parent
+            # Reason: record density so allocatedArea is always reproducible from plantCount.
+            plantsPer100m2=plants_per_100m2,
             state=BlockStatus.EMPTY,
             statusChanges=[initial_status_change]
         )

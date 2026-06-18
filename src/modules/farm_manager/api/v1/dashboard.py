@@ -683,7 +683,6 @@ async def get_farm_dashboard(
                 targetCrop=block.targetCrop,
                 targetCropName=block.targetCropName,
                 actualPlantCount=block.actualPlantCount,
-                maxPlants=block.maxPlants,
                 plantedDate=block.plantedDate,
                 expectedHarvestDate=block.expectedHarvestDate,
                 expectedStatusChanges=block.expectedStatusChanges,

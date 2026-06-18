@@ -17,6 +17,7 @@ from ...models.block import (
 from .block_repository_new import BlockRepository
 from ..plant_data.plant_data_enhanced_repository import PlantDataEnhancedRepository
 from .block_service_new import BlockService
+from ...models.spacing_standards import area_m2_from_plants
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +29,13 @@ class VirtualBlockService:
     async def create_virtual_block(
         parent_block_id: UUID,
         crop_id: UUID,
-        allocated_area: float,
+        allocated_area: Optional[float],
         plant_count: int,
         planting_date: Optional[datetime],
         user_id: UUID,
-        user_email: str
+        user_email: str,
+        plants_per_100m2: Optional[int] = None,
+        allow_over_area: bool = False,
     ) -> Block:
         """
         Create a virtual block as a child of a physical block.
@@ -40,28 +43,38 @@ class VirtualBlockService:
         Steps:
         1. Validate parent is physical and active
         2. Initialize parent's availableArea if first child
-        3. Validate allocated_area <= parent.availableArea
-        4. Get/increment parent's virtualBlockCounter
-        5. Generate blockCode as "{parentCode}/{counter:03d}"
-        6. Create virtual block with blockCategory='virtual'
-        7. Deduct allocatedArea from parent's availableArea
-        8. Add new block ID to parent's childBlockIds
-        9. Initiate planting on virtual block (transition to PLANNED or GROWING)
+        3. Derive allocatedArea from density when plantsPer100m2 is provided;
+           otherwise fall back to the passed allocated_area value.
+        4. SOFT budget check: if computed area > parent.availableArea AND
+           allow_over_area is False → raise 409 OVER_AREA_BUDGET.
+           If allow_over_area is True → proceed (availableArea may go negative).
+        5. Get/increment parent's virtualBlockCounter
+        6. Generate blockCode as "{parentCode}/{counter:03d}"
+        7. Create virtual block with blockCategory='virtual'
+        8. Deduct allocatedArea from parent's availableArea (may go negative — allowed)
+        9. Add new block ID to parent's childBlockIds
+        10. Initiate planting on virtual block (transition to PLANNED or GROWING)
 
         Args:
             parent_block_id: Parent physical block UUID
             crop_id: Plant data UUID for the crop
-            allocated_area: Area to allocate from parent's budget
-            plant_count: Number of plants
+            allocated_area: Area to allocate from parent's budget (backward compat;
+                            ignored when plants_per_100m2 is provided)
+            plant_count: Number of plants (always a whole integer)
             planting_date: Planned planting date (None = plant immediately)
             user_id: User creating the virtual block
             user_email: Email of user
+            plants_per_100m2: Density in plants per 100 m² — when provided, area is
+                              derived server-side as plant_count * 100 / plants_per_100m2.
+            allow_over_area: When True, permit creation even when area exceeds budget.
 
         Returns:
             Created virtual block
 
         Raises:
-            HTTPException: If validation fails
+            HTTPException 409 OVER_AREA_BUDGET: When computed area > availableArea
+                and allow_over_area is False.
+            HTTPException 404/400: Standard validation failures.
         """
         # Get parent block
         parent_block = await BlockRepository.get_by_id(parent_block_id)
@@ -89,12 +102,39 @@ class VirtualBlockService:
             # Refresh parent block after initialization
             parent_block = await BlockRepository.get_by_id(parent_block_id)
 
-        # Validate area budget
-        if allocated_area > parent_block.availableArea:
+        # Reason: when plantsPer100m2 is supplied, derive area server-side and record
+        # the density on the virtual block so allocatedArea is always reproducible.
+        density_used: Optional[int] = None
+        if plants_per_100m2 is not None:
+            allocated_area = area_m2_from_plants(plant_count, plants_per_100m2)
+            density_used = plants_per_100m2
+            logger.info(
+                f"[Virtual Block Service] Density-derived area: "
+                f"{plant_count} plants @ {plants_per_100m2}/100m² → {allocated_area:.4f} m²"
+            )
+        elif allocated_area is None:
             raise HTTPException(
                 400,
-                f"Insufficient area budget. Available: {parent_block.availableArea} {parent_block.areaUnit}, "
-                f"Requested: {allocated_area} {parent_block.areaUnit}"
+                "Either allocatedArea or plantsPer100m2 must be provided."
+            )
+
+        # SOFT budget check: 409 when over budget and caller has not approved
+        if parent_block.availableArea is not None and allocated_area > parent_block.availableArea:
+            if not allow_over_area:
+                over_by = allocated_area - parent_block.availableArea
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "OVER_AREA_BUDGET",
+                        "requiredAreaM2": round(allocated_area, 4),
+                        "availableAreaM2": round(parent_block.availableArea, 4),
+                        "overByM2": round(over_by, 4),
+                    },
+                )
+            logger.warning(
+                f"[Virtual Block Service] Over-budget creation approved: "
+                f"required={allocated_area:.4f} m², available={parent_block.availableArea:.4f} m² "
+                f"(allow_over_area=True)"
             )
 
         # Get crop data for validation
@@ -118,7 +158,8 @@ class VirtualBlockService:
             allocated_area=allocated_area,
             plant_count=plant_count,
             user_id=user_id,
-            user_email=user_email
+            user_email=user_email,
+            plants_per_100m2=density_used,
         )
 
         # Update parent (decrement availableArea, increment counter, add child ID)
@@ -219,7 +260,9 @@ class VirtualBlockService:
             plant_count=request.plantCount,
             planting_date=request.plantingDate,
             user_id=user_id,
-            user_email=user_email
+            user_email=user_email,
+            plants_per_100m2=request.plantsPer100m2,
+            allow_over_area=request.allowOverArea,
         )
 
     @staticmethod

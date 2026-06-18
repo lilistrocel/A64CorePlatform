@@ -42,7 +42,6 @@ async def create_block(
     **Validations**:
     - Farm must exist and be active
     - Block name must be unique within farm
-    - maxPlants must be greater than 0
     """
     block = await BlockService.create_block(
         farm_id,
@@ -186,7 +185,6 @@ async def update_block(
 
     **Validations**:
     - Block name must remain unique within farm
-    - maxPlants must be greater than 0 if provided
     """
     block = await BlockService.get_block(block_id)
 

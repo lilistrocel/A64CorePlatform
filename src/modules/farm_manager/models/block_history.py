@@ -34,7 +34,8 @@ class BlockHistoryArchive(BaseModel):
     # Block Physical Properties (snapshot at time of archival)
     name: Optional[str] = Field(None, description="Block name")
     blockType: Optional[BlockType] = Field(None, description="Type of cultivation block")
-    maxPlants: int = Field(..., description="Maximum plant capacity")
+    # Reason: maxPlants removed from Block in Phase 1; kept as Optional for backward compat with existing history records.
+    maxPlants: Optional[int] = Field(None, description="Legacy capacity field (unused in Phase 1+)")
     location: Optional[BlockLocation] = Field(None, description="GPS coordinates")
     area: Optional[float] = Field(None, description="Block area")
     areaUnit: str = Field("sqm", description="Area unit")
@@ -92,7 +93,6 @@ class BlockHistoryArchive(BaseModel):
                 "sequenceNumber": 5,
                 "name": "North Greenhouse A",
                 "blockType": "greenhouse",
-                "maxPlants": 100,
                 "area": 500.0,
                 "areaUnit": "sqm",
                 "targetCrop": "plant-uuid-here",

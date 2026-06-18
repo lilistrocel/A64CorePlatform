@@ -70,7 +70,9 @@ class DashboardBlock(BaseModel):
     targetCrop: Optional[UUID]
     targetCropName: Optional[str]
     actualPlantCount: Optional[int]
-    maxPlants: int
+    # Reason: maxPlants removed from Block in Phase 1; kept as Optional here for
+    # backward compat with existing dashboard consumers.
+    maxPlants: Optional[int] = None
 
     # Dates
     plantedDate: Optional[datetime]

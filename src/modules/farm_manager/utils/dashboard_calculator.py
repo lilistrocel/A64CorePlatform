@@ -110,11 +110,9 @@ async def calculate_block_metrics(
     # CAPACITY
     # ==================================================
 
-    capacity_percent = (
-        (block.actualPlantCount / block.maxPlants * 100)
-        if block.maxPlants > 0 and block.actualPlantCount
-        else 0.0
-    )
+    # Reason: maxPlants removed in Phase 1; capacity_percent is now always 0.0
+    # (the Area Budget widget in Phase 3 will replace this metric).
+    capacity_percent = 0.0
 
     # ==================================================
     # YIELD PERFORMANCE

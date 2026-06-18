@@ -237,7 +237,7 @@ def _build_set_crop_data_payload(
     timing.expected_harvest_date ← block.expectedHarvestDate (omitted if None)
     timing.growth_cycle_days ← plant_data_enhanced.growthCycle.totalCycleDays
     population.plant_count   ← block.actualPlantCount (omitted if None)
-    population.max_capacity  ← block.maxPlants
+    population.max_capacity  ← omitted (maxPlants removed in Phase 1)
     current_stage         ← current_stage.value (SenseHubStage enum)
     optimal_ranges        ← _build_optimal_ranges(plant_data_enhanced)
     stage_durations_days  ← _build_stage_durations(plant_data_enhanced)
@@ -274,7 +274,8 @@ def _build_set_crop_data_payload(
         timing["expected_harvest_date"] = _to_utc_z(block.expectedHarvestDate)
 
     # --- population sub-object ---
-    population: dict = {"max_capacity": block.maxPlants}
+    # Reason: maxPlants removed in Phase 1; omit max_capacity when not set on the block.
+    population: dict = {}
     if block.actualPlantCount is not None:
         population["plant_count"] = block.actualPlantCount
 

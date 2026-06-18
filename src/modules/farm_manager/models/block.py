@@ -202,7 +202,6 @@ class BlockBase(BaseModel):
     """Base block fields"""
     name: Optional[str] = Field(None, max_length=200, description="Optional block name")
     blockType: Optional[BlockType] = Field(None, description="Type of cultivation block")
-    maxPlants: int = Field(..., gt=0, description="Maximum number of plants")
     location: Optional[BlockLocation] = Field(None, description="GPS coordinates within farm")
     area: Optional[float] = Field(None, gt=0, description="Block area")
     areaUnit: str = Field("sqm", description="Area unit (sqm, hectares, acres)")
@@ -224,7 +223,6 @@ class BlockUpdate(BaseModel):
     """Schema for updating a block"""
     name: Optional[str] = Field(None, max_length=200)
     blockType: Optional[BlockType] = None
-    maxPlants: Optional[int] = Field(None, gt=0)
     location: Optional[BlockLocation] = None
     area: Optional[float] = Field(None, gt=0)
     areaUnit: Optional[str] = None
@@ -276,6 +274,9 @@ class Block(BlockBase):
 
     # Virtual block only fields
     allocatedArea: Optional[float] = Field(None, description="Virtual blocks: area allocated from parent's budget")
+    # Reason: records the density used when this virtual block was created so allocatedArea
+    # is always reproducible from plantCount alone.
+    plantsPer100m2: Optional[int] = Field(None, gt=0, description="Virtual blocks: density (plants per 100 m²) used to derive allocatedArea at creation time")
 
     # Current Status
     state: BlockStatus = Field(BlockStatus.EMPTY, description="Current block status")
@@ -328,7 +329,6 @@ class Block(BlockBase):
                 "sequenceNumber": 5,
                 "name": "North Greenhouse A",
                 "blockType": "greenhouse",
-                "maxPlants": 100,
                 "location": {
                     "latitude": 40.7128,
                     "longitude": -74.0060
@@ -371,9 +371,11 @@ class Block(BlockBase):
 class VirtualCropCreate(BaseModel):
     """Schema for creating a virtual block with a crop"""
     cropId: UUID = Field(..., description="Plant data ID for the crop")
-    allocatedArea: float = Field(..., gt=0, description="Area to allocate from parent's budget")
-    plantCount: int = Field(..., gt=0, description="Number of plants")
+    allocatedArea: Optional[float] = Field(None, gt=0, description="Area to allocate from parent's budget (backward compat; ignored when plantsPer100m2 is provided)")
+    plantCount: int = Field(..., gt=0, description="Number of plants (always a whole integer)")
     plantingDate: Optional[datetime] = Field(None, description="Planned planting date (defaults to now)")
+    plantsPer100m2: Optional[int] = Field(None, gt=0, description="Density (plants per 100 m²) used to derive allocatedArea server-side. When set, area = plantCount * 100 / plantsPer100m2.")
+    allowOverArea: bool = Field(False, description="When True, allows creating a virtual block even when the computed area exceeds the parent's availableArea budget.")
 
 
 class MultiCropPlantRequest(BaseModel):
@@ -385,9 +387,11 @@ class MultiCropPlantRequest(BaseModel):
 class AddVirtualCropRequest(BaseModel):
     """Schema for adding a virtual crop to an existing physical block"""
     cropId: UUID = Field(..., description="Plant data ID")
-    allocatedArea: float = Field(..., gt=0, description="Area to allocate")
-    plantCount: int = Field(..., gt=0, description="Number of plants")
+    allocatedArea: Optional[float] = Field(None, gt=0, description="Area to allocate (backward compat; ignored when plantsPer100m2 is provided)")
+    plantCount: int = Field(..., gt=0, description="Number of plants (always a whole integer)")
     plantingDate: Optional[datetime] = Field(None, description="Planned planting date")
+    plantsPer100m2: Optional[int] = Field(None, gt=0, description="Density (plants per 100 m²) used to derive allocatedArea server-side. When set, area = plantCount * 100 / plantsPer100m2.")
+    allowOverArea: bool = Field(False, description="When True, allows creating a virtual block even when the computed area exceeds the parent's availableArea budget.")
 
 
 class BlockWithStaleness(Block):

@@ -11,8 +11,8 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
-# Import spacing category from spacing_standards module
-from .spacing_standards import SpacingCategory
+# Import spacing category and density helpers from spacing_standards module
+from .spacing_standards import SpacingCategory, get_density_for_category
 # Import DataContributor from plant_data module
 from .plant_data import DataContributor
 
@@ -248,7 +248,10 @@ class SpacingRequirements(BaseModel):
 class AdditionalInformation(BaseModel):
     """Additional agronomic information"""
     growthHabit: GrowthHabitEnum = Field(..., description="Growth habit type")
-    spacing: SpacingRequirements
+    spacing: Optional[SpacingRequirements] = Field(
+        None,
+        description="Legacy cm-based spacing data (optional; density-first design uses spacingCategory/customPlantsPer100m2 instead)"
+    )
     supportRequirements: SupportTypeEnum = Field(SupportTypeEnum.NONE, description="Support structure needed")
     companionPlants: Optional[List[str]] = Field(None, description="Beneficial companion plants")
     incompatiblePlants: Optional[List[str]] = Field(None, description="Plants to avoid planting nearby")
@@ -388,10 +391,15 @@ class PlantDataEnhancedBase(BaseModel):
         description="Fertigation schedule with growth-stage cards and application rules. Dosages are per planting point."
     )
 
-    # ===== 13. Spacing Category =====
+    # ===== 13. Spacing Category & Custom Density =====
     spacingCategory: Optional[SpacingCategory] = Field(
         None,
-        description="Spacing category for quick density calculations (xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree). Overrides additionalInfo.spacing.plantsPerSquareMeter if set."
+        description="Preconfigured spacing category (xs, s, m, l, xl, bush, large_bush, small_tree, medium_tree, large_tree). Used as the plant's default density when customPlantsPer100m2 is not set."
+    )
+    customPlantsPer100m2: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Custom default density (plants per 100 m²) for this plant. Takes priority over spacingCategory when set. Use when the standard categories do not match the actual spacing."
     )
 
     # ===== 15. Data Attribution =====
@@ -432,6 +440,7 @@ class PlantDataEnhancedUpdate(BaseModel):
     additionalInfo: Optional[AdditionalInformation] = None
     fertigationSchedule: Optional[FertigationSchedule] = None
     spacingCategory: Optional[SpacingCategory] = None
+    customPlantsPer100m2: Optional[int] = Field(None, gt=0)
     contributor: Optional[str] = Field(None, max_length=100)
     targetRegion: Optional[str] = Field(None, max_length=100)
     tags: Optional[List[str]] = None
@@ -540,7 +549,7 @@ class PlantDataLegacy(BaseModel):
             expectedYieldPerPlant=enhanced.yieldInfo.yieldPerPlant,
             yieldUnit=enhanced.yieldInfo.yieldUnit,
             seedsPerPlantingPoint=enhanced.yieldInfo.seedsPerPlantingPoint,
-            notes=enhanced.additionalInfo.notes,
+            notes=enhanced.additionalInfo.notes if enhanced.additionalInfo else None,
             tags=enhanced.tags,
             dataVersion=enhanced.dataVersion,
             createdBy=enhanced.createdBy,
@@ -548,3 +557,37 @@ class PlantDataLegacy(BaseModel):
             createdAt=enhanced.createdAt,
             updatedAt=enhanced.updatedAt
         )
+
+
+# ==================== Density Resolution Helper ====================
+
+def resolve_default_plants_per_100m2(
+    plant: "PlantDataEnhanced",
+    densities: Optional[dict] = None,
+) -> Optional[int]:
+    """
+    Resolve the default planting density (plants per 100 m²) for a plant.
+
+    Resolution priority:
+    1. plant.customPlantsPer100m2  — explicit custom density (highest priority)
+    2. plant.spacingCategory       — looked up against densities / DEFAULT_SPACING_DENSITIES
+    3. None                        — no density configured
+
+    Args:
+        plant: A PlantDataEnhanced instance.
+        densities: Optional custom density dict from SpacingStandardsConfig
+                   (``{category_value: plants_per_100m2}``).
+                   Falls back to DEFAULT_SPACING_DENSITIES when not provided.
+
+    Returns:
+        Plants per 100 m² as an int, or None if no density is configured.
+    """
+    # Reason: custom density wins — it is the most specific configuration.
+    if plant.customPlantsPer100m2 is not None:
+        return plant.customPlantsPer100m2
+
+    # Reason: fall back to the preconfigured spacing category lookup.
+    if plant.spacingCategory is not None:
+        return get_density_for_category(plant.spacingCategory, densities)
+
+    return None
