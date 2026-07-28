@@ -155,9 +155,14 @@
     from the host — the default fails because Mongo advertises the `mongodb` hostname
     for replica-set discovery.
 - **Demo data:** ✅ Cleared 2026-07-28 (all six collections at zero).
+- **Tests:** ✅ `tests/unit/test_genetics/test_generation_rules.py` — 44 tests pinning
+  `derive_generations`, the enum contract and code/label formatting. Teeth verified by
+  five source mutations, each caught (12 / 16 / 5 / 4 / 1 failures respectively).
+  Note: `tests/` is not mounted into the api container, so run with
+  `docker cp tests a64coreplatform-api-1:/app/ && docker exec -w /app a64coreplatform-api-1 python -m pytest tests/unit/test_genetics`.
 - **Outstanding:**
-  - No automated tests yet — verification was live-stack + browser only. Highest-value
-    target is `PropagationService.derive_generations` (the G/F rule).
+  - Service-layer tests (propagate, split, promote_trait, lineage traversal) still rely on
+    live-stack verification only — they need DB fixtures, unlike the pure `derive_generations`.
   - ~~Strain Library overlap~~ — resolved by **T-801** (2026-07-28, see ARCHIVE.md).
     Lines now link to their `mushroom_strains` / `plant_data` growing profile in both
     directions, with taxonomy prefill so nothing is typed twice.
