@@ -1,6 +1,6 @@
 # Module Map
 
-> Generated: 2026-05-30 06:35 UTC  
+> Generated: 2026-07-28 11:30 UTC  
 > Source: MongoDB `mapper_nodes` (grouped by module)
 
 ## Backend Module Architecture
@@ -27,6 +27,7 @@ Each module contains API, service, and model layers.
 | `farm_manager` | 137 | api, config, infrastructure, model, repository, service |
 | `finance` | 51 | frontend |
 | `frontend` | 7 | config, frontend |
+| `genetics` | 52 | api, config, frontend, model, service |
 | `hr` | 32 | api, frontend, infrastructure, model, repository, service |
 | `inventory` | 7 | frontend |
 | `logistics` | 27 | api, frontend, infrastructure, model, repository, service |
@@ -478,6 +479,63 @@ Each module contains API, service, and model layers.
 | config | `theme` | frontend | `frontend/shared/src/theme/theme.ts` |
 | file | `utils/index` | frontend | `frontend/user-portal/src/utils/index.ts` |
 
+### `genetics` (52 nodes)
+
+| Type | Name | Layer | File |
+|------|------|-------|------|
+| api_endpoint | `CRUD /genetics/accessions` | api | `src/modules/genetics/api/v1/accessions.py` |
+| api_endpoint | `CRUD /genetics/lines` | api | `src/modules/genetics/api/v1/lines.py` |
+| api_endpoint | `CRUD /genetics/media` | api | `src/modules/genetics/api/v1/media.py` |
+| api_endpoint | `CRUD /genetics/observations` | api | `src/modules/genetics/api/v1/observations.py` |
+| api_endpoint | `CRUD /genetics/propagations` | api | `src/modules/genetics/api/v1/propagations.py` |
+| api_endpoint | `GET /genetics/dashboard` | api | `src/modules/genetics/api/v1/dashboard.py` |
+| api_endpoint | `GET /genetics/lineage` | api | `src/modules/genetics/api/v1/lineage.py` |
+| function | `genetics response envelopes` | api | `src/modules/genetics/utils/responses.py` |
+| config | `Genetics module settings` | config | `src/modules/genetics/config/settings.py` |
+| file | `genetics module registration` | config | `src/modules/genetics/register.py` |
+| component | `AccessionDetailPage` | frontend | `frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx` |
+| component | `BatchFormModal` | frontend | `frontend/user-portal/src/components/genetics/BatchFormModal.tsx` |
+| component | `GeneticsRepoPage` | frontend | `frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx` |
+| component | `GrowingProfilePanel` | frontend | `frontend/user-portal/src/components/genetics/GrowingProfilePanel.tsx` |
+| component | `LineDetailPage` | frontend | `frontend/user-portal/src/pages/genetics/LineDetailPage.tsx` |
+| component | `LineFormModal` | frontend | `frontend/user-portal/src/components/genetics/LineFormModal.tsx` |
+| component | `LineageTree` | frontend | `frontend/user-portal/src/components/genetics/LineageTree.tsx` |
+| component | `MediaLibraryPage` | frontend | `frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx` |
+| component | `Modal` | frontend | `frontend/user-portal/src/components/genetics/Modal.tsx` |
+| component | `ObservationModal` | frontend | `frontend/user-portal/src/components/genetics/ObservationModal.tsx` |
+| component | `PromoteTraitModal` | frontend | `frontend/user-portal/src/components/genetics/PromoteTraitModal.tsx` |
+| component | `PropagateModal` | frontend | `frontend/user-portal/src/components/genetics/PropagateModal.tsx` |
+| component | `RecipeFormModal` | frontend | `frontend/user-portal/src/components/genetics/RecipeFormModal.tsx` |
+| component | `RegisterAccessionModal` | frontend | `frontend/user-portal/src/components/genetics/RegisterAccessionModal.tsx` |
+| component | `SplitAccessionModal` | frontend | `frontend/user-portal/src/components/genetics/SplitAccessionModal.tsx` |
+| type | `genetics` | frontend | `frontend/user-portal/src/types/genetics.ts` |
+| component | `genetics styled primitives` | frontend | `frontend/user-portal/src/components/genetics/styled.ts` |
+| function | `geneticsApi` | frontend | `frontend/user-portal/src/services/geneticsApi.ts` |
+| hook | `useGenetics` | frontend | `frontend/user-portal/src/hooks/genetics/useGenetics.ts` |
+| hook | `useGrowingProfiles` | frontend | `frontend/user-portal/src/hooks/genetics/useGrowingProfiles.ts` |
+| pydantic_model | `Accession models` | model | `src/modules/genetics/models/accession.py` |
+| pydantic_model | `Genetic line models` | model | `src/modules/genetics/models/line.py` |
+| pydantic_model | `Genetics enumerations` | model | `src/modules/genetics/models/enums.py` |
+| pydantic_model | `Lineage graph models` | model | `src/modules/genetics/models/lineage.py` |
+| pydantic_model | `Medium recipe & batch models` | model | `src/modules/genetics/models/medium.py` |
+| pydantic_model | `Observation models` | model | `src/modules/genetics/models/observation.py` |
+| pydantic_model | `Propagation models` | model | `src/modules/genetics/models/propagation.py` |
+| db_model | `genetic_accessions` | model | `src/modules/genetics/services/database.py` |
+| db_model | `genetic_lines` | model | `src/modules/genetics/services/database.py` |
+| db_model | `genetic_observations` | model | `src/modules/genetics/services/database.py` |
+| db_model | `medium_batches` | model | `src/modules/genetics/services/database.py` |
+| db_model | `medium_recipes` | model | `src/modules/genetics/services/database.py` |
+| db_model | `propagation_events` | model | `src/modules/genetics/services/database.py` |
+| class | `AccessionService` | service | `src/modules/genetics/services/accession/accession_service.py` |
+| class | `DashboardService` | service | `src/modules/genetics/services/dashboard_service.py` |
+| class | `GeneticsDatabaseManager` | service | `src/modules/genetics/services/database.py` |
+| class | `LineService` | service | `src/modules/genetics/services/line/line_service.py` |
+| class | `LineageService` | service | `src/modules/genetics/services/lineage/lineage_service.py` |
+| class | `MediumService` | service | `src/modules/genetics/services/medium/medium_service.py` |
+| class | `ObservationService` | service | `src/modules/genetics/services/observation/observation_service.py` |
+| class | `PropagationService` | service | `src/modules/genetics/services/propagation/propagation_service.py` |
+| function | `genetics service helpers` | service | `src/modules/genetics/services/common.py` |
+
 ### `hr` (32 nodes)
 
 | Type | Name | Layer | File |
@@ -814,3 +872,12 @@ Each module contains API, service, and model layers.
 | `sales.service.legacy.return_service` | depends_on | `farm_manager.service.database` |
 | `sales.api.config` | depends_on | `farm_manager.service.farming_year_service` |
 | `sales.api.dashboard` | depends_on | `farm_manager.service.database` |
+| `genetics.service.propagation_service` | depends_on | `genetics.service.accession_service` |
+| `genetics.service.propagation_service` | depends_on | `genetics.service.line_service` |
+| `genetics.service.propagation_service` | depends_on | `genetics.model.enums` |
+| `genetics.service.accession_service` | depends_on | `genetics.service.line_service` |
+| `genetics.service.observation_service` | depends_on | `genetics.service.line_service` |
+| `genetics.service.observation_service` | depends_on | `genetics.service.accession_service` |
+| `genetics.service.lineage_service` | depends_on | `genetics.service.propagation_service` |
+| `genetics.service.lineage_service` | depends_on | `genetics.service.medium_service` |
+| `genetics.register` | depends_on | `core.middleware.auth` |

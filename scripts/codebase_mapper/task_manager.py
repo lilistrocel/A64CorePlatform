@@ -48,6 +48,12 @@ FILE_TO_TASK_MAP = [
     ("src/modules/logistics/", ["map_logistics_module", "gen_module_map"]),
     ("src/modules/marketing/", ["map_marketing_module", "gen_module_map"]),
     ("src/modules/ai_analytics/", ["map_ai_analytics_module", "gen_module_map"]),
+    # Modules added after the original seed. Without these prefixes, rerun.sh
+    # silently re-seeds nothing when their files change.
+    ("src/modules/genetics/", ["map_genetics_module", "gen_module_map", "gen_api_map", "gen_service_map", "gen_database_map"]),
+    ("src/modules/mushroom_manager/", ["map_mushroom_module", "gen_module_map"]),
+    ("src/modules/purchasing/", ["map_purchasing_module", "gen_module_map"]),
+    ("src/modules/finance/", ["map_finance_module", "gen_module_map"]),
     ("frontend/user-portal/src/components/farm/", ["map_frontend_farm", "gen_frontend_map"]),
     ("frontend/user-portal/src/pages/farm/", ["map_frontend_farm", "gen_frontend_map"]),
     ("frontend/user-portal/src/hooks/farm/", ["map_frontend_farm", "gen_frontend_map"]),

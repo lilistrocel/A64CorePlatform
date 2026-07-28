@@ -91,6 +91,79 @@
 
 ---
 
+### T-800 | Genetics Repo — cross-domain lab traceability module (lines, accessions, propagation, media, observations)
+- **Category:** Full-stack · **Priority:** P1
+- **Assigned:** main session · **Started:** 2026-07-28
+- **Depends on:** none
+- **Blocks:** none
+- **Description:** New shared `genetics` module tracking lab genetics across every
+  department (plants, fungi, animal bloodlines). Three-layer model: **genetic lines**
+  (named identity) → **accessions** (physical material) → **propagation events**
+  (the traceable clone/cross edge), plus versioned **medium recipes/batches** and
+  **observations** with novel-trait promotion.
+- **Key design decisions (agreed with user):**
+  - **Dual generation counters.** `cloneGeneration` (G, asexual, senescence signal)
+    and `filialGeneration` (F, sexual, trait-segregation signal) are orthogonal.
+    Asexual methods → G+1, F inherited. Sexual methods → F+1, **G resets to 0**
+    (a spore print off a G5 fruit is a fresh individual: F1-G0, not G6).
+    Single source of truth: `_SEXUAL_METHODS` in `models/enums.py`.
+  - **Batch-with-quantity accessions**, split out via `POST /accessions/{id}/split`
+    when one vessel diverges. Split copies generations + parents verbatim (not a
+    propagation).
+  - **Flexible parentage.** `parents[]` supports 0 (founding/unknown provenance),
+    1 (clone), or 2 (cross); each slot independently allows a null `accessionId`
+    so half-known ancestry (dam known, sire not) survives.
+  - **Novel traits promote to their own line** parented to the source line, with a
+    founding accession minted so the physical chain stays unbroken.
+  - **Additives are modelled separately from base ingredients** and snapshotted onto
+    each batch, so "everything ever grown on a medium containing X" is a direct query
+    that stays truthful after recipe edits.
+- **Module visibility:** `industries: ["all"]` / `industry_mode: "shared"` — the lab is
+  common to every division. Frontend nav uses a shared `GENETICS_NAV_GROUP`, not the
+  industry-gated arrays. Verified rendering in the **Vegetable** division.
+- **Status:** Implementation complete; verified end-to-end against the live stack.
+  Full scenario driven through the API (G0 → clone ×8 → split sector → observe →
+  promote to PO-BLU-S1 → spore print resetting G) and all four pages confirmed
+  rendering in the browser, including lineage DAG, ancestry breadcrumb and the
+  additive readout. Frontend `tsc -b` adds **0 new errors** (336 before and after —
+  all pre-existing, none in genetics files).
+- **Bugs found and fixed during verification:**
+  - `propagation_service._build_child` passed `location=None` into a non-optional
+    field → 500 on every propagation.
+  - `GET /lines` declared `response_model=PaginatedResponse[Line]`, which silently
+    stripped the `stats` rollups the repo cards depend on → now `LineWithStats`.
+  - Ancestry breadcrumb roles were off by one when a chain ended at a parentless
+    root (`roles` padded to `chain` length before reversing).
+  - Ancestor traversal depth cap never fired (counter decremented against a
+    less-than guard) → separate positive `steps_up` counter.
+- **Files changed:**
+  - `src/modules/genetics/**` (NEW — 6 models, 7 services, 7 route modules,
+    manifest, register; collections: `genetic_lines`, `genetic_accessions`,
+    `propagation_events`, `medium_recipes`, `medium_batches`, `genetic_observations`)
+  - `frontend/user-portal/src/types/genetics.ts`, `services/geneticsApi.ts`,
+    `hooks/genetics/useGenetics.ts` (NEW)
+  - `frontend/user-portal/src/components/genetics/**` (NEW — 9 components incl.
+    `LineageTree`, `PropagateModal`)
+  - `frontend/user-portal/src/pages/genetics/**` (NEW — 4 pages)
+  - `frontend/user-portal/src/App.tsx`, `components/layout/MainLayout.tsx` (modified)
+- **CodeMaps:** ✅ Regenerated 2026-07-28. Graph 610→660 nodes, 590→655 edges via
+  `scripts/codebase_mapper/batch_genetics.json`. Three mapper fixes made along the way:
+  - `FILE_TO_TASK_MAP` had no prefix for `genetics`, `mushroom_manager`, `purchasing`
+    or `finance` — `rerun.sh` silently re-seeded nothing when those modules changed.
+  - `gen_index` hardcoded a 7-module directory that was already stale; now lists all 10.
+  - Mapper scripts need `MONGO_URL="mongodb://localhost:27017/?directConnection=true"`
+    from the host — the default fails because Mongo advertises the `mongodb` hostname
+    for replica-set discovery.
+- **Demo data:** ✅ Cleared 2026-07-28 (all six collections at zero).
+- **Outstanding:**
+  - No automated tests yet — verification was live-stack + browser only. Highest-value
+    target is `PropagationService.derive_generations` (the G/F rule).
+  - ~~Strain Library overlap~~ — resolved by **T-801** (2026-07-28, see ARCHIVE.md).
+    Lines now link to their `mushroom_strains` / `plant_data` growing profile in both
+    directions, with taxonomy prefill so nothing is typed twice.
+
+---
+
 ### T-200.22 | Purchasing counter rollup + auto-close + chain cleanup via doc_chain_reconciler — Wave 4
 - **Category:** Backend · **Priority:** P1
 - **Assigned:** backend-dev-expert · **Started:** 2026-06-04

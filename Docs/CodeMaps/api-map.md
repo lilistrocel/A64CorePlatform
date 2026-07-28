@@ -1,6 +1,6 @@
 # API Map
 
-> Generated: 2026-05-30 06:35 UTC  
+> Generated: 2026-07-28 11:30 UTC  
 > Source: MongoDB `mapper_nodes` (layer=api, node_type=api_endpoint)
 
 ## Quick Reference
@@ -10,7 +10,7 @@ and their connections to frontend service calls.
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md) | [frontend-map.md](frontend-map.md)
 
-## API Endpoints (79 total)
+## API Endpoints (86 total)
 
 ### Module: `ai_analytics`
 
@@ -89,6 +89,18 @@ and their connections to frontend service calls.
 | `PUT /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:221` | Update task scheduling/status/priority (requires farm.manage). | update_task |
 | `tasks router` | `src/modules/farm_manager/api/v1/tasks.py:21` | Operations Task Manager endpoints under /tasks. v1.11.0: list/detail endpoints now return FarmTaskWithDetails (block + farm + crop context). | router |
 
+### Module: `genetics`
+
+| Endpoint | File | Description |
+|----------|------|-------------|
+| `CRUD /genetics/accessions` | `src/modules/genetics/api/v1/accessions.py:1` | T-800 Physical material CRUD, plus /by-code/{code} label lookup for scanning and POST /{id}/split to break vessels out of a batch record. Founding material only; clones and crosses go through /propagations. | router, SplitResult |
+| `CRUD /genetics/lines` | `src/modules/genetics/api/v1/lines.py:1` | T-800 Genetic line CRUD — the named identity (strain/variety/bloodline). List returns LineWithStats so accession rollups survive response-model filtering. DELETE is a soft deactivate; hard deletion is unsupported because accessions and propagation events reference the line. | router |
+| `CRUD /genetics/media` | `src/modules/genetics/api/v1/media.py:1` | T-800 Medium recipes and prepared batches, plus GET /additives/{name}/accessions — the experiment readout returning every accession ever grown on a medium containing an additive. | router, AdditiveReadout |
+| `CRUD /genetics/observations` | `src/modules/genetics/api/v1/observations.py:1` | T-800 Dated observations against accessions, plus POST /{id}/promote which turns a flagged novel trait into its own genetic line with a founding accession. | router, PromotionResult |
+| `CRUD /genetics/propagations` | `src/modules/genetics/api/v1/propagations.py:1` | T-800 Clone/cross execution and the transfer log. GET /methods exposes each method's reproduction mode, parent arity and generation effects, which drives the frontend's live G/F preview. | router, PropagationOutcome, MethodInfo |
+| `GET /genetics/dashboard` | `src/modules/genetics/api/v1/dashboard.py:1` | T-800 Repo-wide counters: lines by biological domain, live material, 30-day activity, novel traits awaiting promotion, and the senescence watch list. | router |
+| `GET /genetics/lineage` | `src/modules/genetics/api/v1/lineage.py:1` | T-800 Lineage DAG (/graph) and flattened ancestry breadcrumb (/ancestry/{id}). Returns flat nodes+edges rather than a nested tree because a cross gives a node two parents. | router |
+
 ### Module: `hr`
 
 | Endpoint | File | Description |
@@ -136,7 +148,7 @@ and their connections to frontend service calls.
 | `CRUD /sales/returns (legacy)` | `src/modules/sales/api/v1/returns.py:1` | Legacy Return Order CRUD with inventory restoration on process. | router |
 | `CRUD /sales/returns-v2` | `src/modules/sales/api/v1/returns_v2.py:1` | T-100.11 Return Note (RTN) CRUD + from-request copy + status transitions. Physical goods return. Emits return_posted to finance outbox. | router |
 
-## API Router Files (79 total)
+## API Router Files (87 total)
 
 | Name | File | Description |
 |------|------|-------------|
@@ -192,6 +204,14 @@ and their connections to frontend service calls.
 | `POST /tasks/{task_id}/harvest` | `src/modules/farm_manager/api/v1/tasks.py:299` | Append harvest entry to a daily_harvest task. | add_harvest_entry |
 | `PUT /tasks/{task_id}` | `src/modules/farm_manager/api/v1/tasks.py:221` | Update task scheduling/status/priority (requires farm.manage). | update_task |
 | `tasks router` | `src/modules/farm_manager/api/v1/tasks.py:21` | Operations Task Manager endpoints under /tasks. v1.11.0: list/detail endpoints now return FarmTaskWithDetails (block + farm + crop context). | router |
+| `CRUD /genetics/accessions` | `src/modules/genetics/api/v1/accessions.py:1` | T-800 Physical material CRUD, plus /by-code/{code} label lookup for scanning and POST /{id}/split to break vessels out of a batch record. Founding material only; clones and crosses go through /propagations. | router, SplitResult |
+| `CRUD /genetics/lines` | `src/modules/genetics/api/v1/lines.py:1` | T-800 Genetic line CRUD — the named identity (strain/variety/bloodline). List returns LineWithStats so accession rollups survive response-model filtering. DELETE is a soft deactivate; hard deletion is unsupported because accessions and propagation events reference the line. | router |
+| `CRUD /genetics/media` | `src/modules/genetics/api/v1/media.py:1` | T-800 Medium recipes and prepared batches, plus GET /additives/{name}/accessions — the experiment readout returning every accession ever grown on a medium containing an additive. | router, AdditiveReadout |
+| `CRUD /genetics/observations` | `src/modules/genetics/api/v1/observations.py:1` | T-800 Dated observations against accessions, plus POST /{id}/promote which turns a flagged novel trait into its own genetic line with a founding accession. | router, PromotionResult |
+| `CRUD /genetics/propagations` | `src/modules/genetics/api/v1/propagations.py:1` | T-800 Clone/cross execution and the transfer log. GET /methods exposes each method's reproduction mode, parent arity and generation effects, which drives the frontend's live G/F preview. | router, PropagationOutcome, MethodInfo |
+| `GET /genetics/dashboard` | `src/modules/genetics/api/v1/dashboard.py:1` | T-800 Repo-wide counters: lines by biological domain, live material, 30-day activity, novel traits awaiting promotion, and the senescence watch list. | router |
+| `GET /genetics/lineage` | `src/modules/genetics/api/v1/lineage.py:1` | T-800 Lineage DAG (/graph) and flattened ancestry breadcrumb (/ancestry/{id}). Returns flat nodes+edges rather than a nested tree because a cross gives a node two parents. | router |
+| `genetics response envelopes` | `src/modules/genetics/utils/responses.py:1` | T-800 Standard A64Core response envelopes for the genetics module. | SuccessResponse, PaginatedResponse, PaginationMeta, ErrorResponse, paginate |
 | `CRUD /hr/contracts` | `src/modules/hr/api/v1/contracts.py:1` | Employment contract management CRUD. | router |
 | `CRUD /hr/employees` | `src/modules/hr/api/v1/employees.py:1` | Employee CRUD with Arabic name support, Emirates ID handling, pagination. | router |
 | `CRUD /hr/insurance` | `src/modules/hr/api/v1/insurance.py:1` | Employee insurance policy management. | router |

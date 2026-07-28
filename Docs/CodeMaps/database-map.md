@@ -1,6 +1,6 @@
 # Database Map
 
-> Generated: 2026-05-30 06:35 UTC  
+> Generated: 2026-07-28 11:30 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=db_model, layer=model)
 
 ## Overview
@@ -10,7 +10,7 @@ This map covers all collections, document schemas, and inter-collection relation
 
 **Related Maps:** [module-map.md](module-map.md) | [service-map.md](service-map.md)
 
-## Collections by Module (50 models)
+## Collections by Module (56 models)
 
 ### Module: `ai_analytics`
 
@@ -79,6 +79,24 @@ This map covers all collections, document schemas, and inter-collection relation
 | `stock_inventory` | `src/modules/farm_manager/services/database.py` | MongoDB collection: stock_inventory - farm stock/harvest inventory for FIFO tracking |
 | `system_config` | `src/modules/farm_manager/services/config_service.py` | MongoDB collection: system_config - stores farming year config and spacing standards |
 | `weather_cache` | `src/modules/farm_manager/services/weather/weather_cache_service.py` | MongoDB collection: weather_cache - caches WeatherBit API responses |
+
+### Module: `genetics`
+
+| Collection/Model | File | Description |
+|------------------|------|-------------|
+| `Accession models` | `src/modules/genetics/models/accession.py:1` | T-800 Physical material carrying dual generation counters (cloneGeneration G, filialGeneration F) and a parents list supporting 0, 1 or 2 entries with independently nullable accessionIds for half-known ancestry. generationLabel is a computed field, never persisted. | Accession, AccessionCreate, AccessionUpdate, AccessionSplit, ParentRef, StorageL |
+| `Genetic line models` | `src/modules/genetics/models/line.py:1` | T-800 The named identity, spanning plants, fungi and animals. Provenance records unknown origin as a state rather than a blank field. | Line, LineCreate, LineUpdate, LineStats, LineWithStats, Provenance, Trait |
+| `Genetics enumerations` | `src/modules/genetics/models/enums.py:1` | T-800 Shared vocabulary. _SEXUAL_METHODS is the single source of truth for generation numbering; PropagationMethod.reproduction_mode and .max_parents derive from it. | OrganismKind, ProvenanceType, DerivationType, VesselForm, AccessionStatus, Paren |
+| `Lineage graph models` | `src/modules/genetics/models/lineage.py:1` | T-800 Flat nodes+edges response shape for the DAG, plus the linear ancestry breadcrumb with branching and unknown-origin flags. | LineageGraph, LineageNode, LineageEdge, AncestryChain, AncestryStep |
+| `Medium recipe & batch models` | `src/modules/genetics/models/medium.py:1` | T-800 Versioned formulations plus per-pour batches. Additives are modelled apart from base ingredients so trialled elements stay queryable; batches carry ingredientsSnapshot/additivesSnapshot. | Recipe, RecipeCreate, RecipeUpdate, Batch, BatchCreate, BatchUpdate, BatchQC, In |
+| `Observation models` | `src/modules/genetics/models/observation.py:1` | T-800 Dated notes with optional quantitative metrics. isNovelTrait is what makes an observation promotable into its own line. | Observation, ObservationCreate, ObservationUpdate, ObservationMetrics, PromoteTr |
+| `Propagation models` | `src/modules/genetics/models/propagation.py:1` | T-800 The traceability edge: method, operator, date and medium alongside the parent pointers. reproductionMode is stored so historic events survive enum changes. | PropagationEvent, PropagationCreate, PropagationTarget, PropagationResult |
+| `genetic_accessions` | `src/modules/genetics/services/database.py` | MongoDB collection: genetic_accessions - physical material with dual G/F generation counters, batch quantity and parents[]. Unique on accessionId and accessionCode; parents.accessionId indexed for lineage traversal. |
+| `genetic_lines` | `src/modules/genetics/services/database.py` | MongoDB collection: genetic_lines - named genetic identities (strain/variety/bloodline) across plants, fungi and animals. Unique on lineId and code; indexed on kind, parentLineId, tags. |
+| `genetic_observations` | `src/modules/genetics/services/database.py` | MongoDB collection: genetic_observations - dated notes per accession with metrics, novel-trait flag and promotedToLineId back-reference. |
+| `medium_batches` | `src/modules/genetics/services/database.py` | MongoDB collection: medium_batches - one document per pour, snapshotting the recipe formulation so later recipe edits never rewrite history. |
+| `medium_recipes` | `src/modules/genetics/services/database.py` | MongoDB collection: medium_recipes - versioned agar/substrate formulations. additives.name and ingredients.name indexed for the experiment readout. |
+| `propagation_events` | `src/modules/genetics/services/database.py` | MongoDB collection: propagation_events - the clone/cross audit edge recording method, reproduction mode, operator, date and medium batch. |
 
 ### Module: `hr`
 
@@ -169,6 +187,10 @@ This map covers all collections, document schemas, and inter-collection relation
 | `BudgetRepository` | reads_from | `collection_marketing_budgets` | self.collection_name = 'marketing_budgets' |
 | `ChannelRepository` | reads_from | `collection_marketing_channels` | self.collection_name = 'marketing_channels' |
 | `EventRepository` | reads_from | `collection_marketing_events` | self.collection_name = 'marketing_events' |
+| `genetics.service.line_service` | reads_from | `collection_genetic_accessions` | _bulk_stats aggregates accession rollups per line. |
+| `genetics.service.medium_service` | reads_from | `collection_genetic_accessions` | find_accessions_by_additive walks additive -> batches -> accessions. |
+| `genetics.service.lineage_service` | reads_from | `collection_genetic_accessions` | Breadth-first traversal over parents.accessionId, one query per depth level. |
+| `genetics.service.dashboard_service` | reads_from | `collection_genetic_accessions` | Counts live material, vessels and the senescence watch list. |
 | `farm_manager.service.FarmRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | FarmRepository reads/writes 'farms' collection via farm_db. |
 | `farm_manager.service.BlockRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | BlockRepository reads/writes 'blocks' collection via farm_db. |
 | `farm_manager.service.HarvestRepository` | stores_in | `farm_manager.service.FarmDatabaseManager` | HarvestRepository reads/writes 'block_harvests' collection via farm_db. |
@@ -183,3 +205,10 @@ This map covers all collections, document schemas, and inter-collection relation
 | `sales.service.customer_receipt_service` | stores_in | `finance_bridge.outbox_writer` | On DRAFT->OPEN transition, publishes customer_payment_received event via OutboxW |
 | `sales.service.rtn_service` | stores_in | `finance_bridge.outbox_writer` | On DRAFT->OPEN transition, publishes return_posted event via OutboxWriter (DR In |
 | `sales.service.ar_credit_note_service` | stores_in | `finance_bridge.outbox_writer` | On DRAFT->OPEN transition, publishes credit_note_posted event via OutboxWriter ( |
+| `genetics.service.line_service` | stores_in | `collection_genetic_lines` | CRUD against genetic_lines. |
+| `genetics.service.accession_service` | stores_in | `collection_genetic_accessions` | CRUD and split against genetic_accessions. |
+| `genetics.service.propagation_service` | stores_in | `collection_propagation_events` | Writes the propagation event after its child accessions. |
+| `genetics.service.propagation_service` | stores_in | `collection_genetic_accessions` | Bulk-inserts the child accessions produced by a propagation. |
+| `genetics.service.medium_service` | stores_in | `collection_medium_recipes` | Recipe CRUD with version bumping on formulation change. |
+| `genetics.service.medium_service` | stores_in | `collection_medium_batches` | Batch creation snapshots the recipe formulation. |
+| `genetics.service.observation_service` | stores_in | `collection_genetic_observations` | CRUD against genetic_observations plus promotedToLineId back-reference. |

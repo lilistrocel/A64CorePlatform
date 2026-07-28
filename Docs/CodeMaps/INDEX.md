@@ -1,7 +1,7 @@
 # A64 Core Platform — Codebase Knowledge Graph
 
-> **Generated:** 2026-05-30 06:35 UTC  
-> **Graph:** 610 nodes · 590 edges  
+> **Generated:** 2026-07-28 11:30 UTC  
+> **Graph:** 662 nodes · 661 edges  
 > **Tasks:** 16/26 mapping tasks completed
 
 ## What Is This?
@@ -17,7 +17,7 @@ architecture, dependencies, and relationships.
 A64 Core Platform is an agricultural management system with:
 - **Backend:** FastAPI (Python 3.11+), MongoDB 7.0, Redis 7
 - **Frontend:** React 18 + TypeScript, Vite, styled-components, TanStack Query
-- **Infrastructure:** Docker Compose, Nginx, 7 business modules
+- **Infrastructure:** Docker Compose, Nginx, 10 business modules (see Module Directory)
 - **AI:** Google Vertex AI (Gemini 2.5-flash) for Farm AI chat
 
 **Key ports:** API=8000 (nginx→80), Frontend=5173, MongoDB=27017, Redis=6379
@@ -36,10 +36,14 @@ A64 Core Platform is an agricultural management system with:
 
 | Module | Location | Purpose |
 |--------|----------|---------|
-| `farm_manager` | `src/modules/farm_manager/` | Farm blocks, harvests, plant data, analytics |
+| `farm_manager` | `src/modules/farm_manager/` | Farm blocks, harvests, plant data, analytics (industry: vegetable_fruits) |
+| `mushroom_manager` | `src/modules/mushroom_manager/` | Facilities, growing rooms, substrate, flush harvests, strain growing-profiles (industry: mushroom) |
+| `genetics` | `src/modules/genetics/` | Genetics Repo — lines, accessions with G/F generations, propagation events, medium recipes, observations (industry: all, shared) |
 | `hr` | `src/modules/hr/` | Employee management, Emirates ID, payroll |
 | `crm` | `src/modules/crm/` | Customer relationships, contacts, leads |
 | `sales` | `src/modules/sales/` | Sales orders, invoices, products |
+| `purchasing` | `src/modules/purchasing/` | PR→PO→GR→AP chain, vendors, approvals |
+| `finance` | `src/modules/finance/` | Journal entries, CoA, periods (MySQL microservice, profile-gated) |
 | `logistics` | `src/modules/logistics/` | Delivery, inventory, warehousing |
 | `marketing` | `src/modules/marketing/` | Campaigns, analytics |
 | `ai_analytics` | `src/modules/ai_analytics/` | Vertex AI integration, Farm AI chat |

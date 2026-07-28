@@ -16,6 +16,14 @@ interface StrainCardProps {
   strain: MushroomStrain;
   onClick?: (strain: MushroomStrain) => void;
   selected?: boolean;
+  /**
+   * How many Genetics Repo lines are linked to this strain (T-801).
+   * The strain holds the growing conditions; the linked lines hold the
+   * lineages actually being cultivated under them.
+   */
+  geneticLineCount?: number;
+  /** Open the Genetics Repo filtered to this strain's lines. */
+  onOpenGeneticLines?: (strain: MushroomStrain) => void;
 }
 
 const DIFFICULTY_BG: Record<MushroomDifficulty, string> = {
@@ -25,7 +33,13 @@ const DIFFICULTY_BG: Record<MushroomDifficulty, string> = {
   expert: '#FEE2E2',
 };
 
-export function StrainCard({ strain, onClick, selected = false }: StrainCardProps) {
+export function StrainCard({
+  strain,
+  onClick,
+  selected = false,
+  geneticLineCount,
+  onOpenGeneticLines,
+}: StrainCardProps) {
   return (
     <CardWrapper
       $selected={selected}
@@ -96,6 +110,21 @@ export function StrainCard({ strain, onClick, selected = false }: StrainCardProp
         </StatBox>
       </StatsGrid>
 
+      {geneticLineCount != null && geneticLineCount > 0 && (
+        <GeneticsLink
+          type="button"
+          onClick={(e) => {
+            // The whole card is a click target for edit, so the reverse link
+            // has to stop propagation or it would open the edit modal instead.
+            e.stopPropagation();
+            onOpenGeneticLines?.(strain);
+          }}
+          title="This strain holds the growing conditions; open the lineages cultivated under it"
+        >
+          🧬 {geneticLineCount} genetic line{geneticLineCount !== 1 ? 's' : ''} →
+        </GeneticsLink>
+      )}
+
       {!strain.isActive && (
         <InactiveBanner>Inactive / Archived</InactiveBanner>
       )}
@@ -106,6 +135,25 @@ export function StrainCard({ strain, onClick, selected = false }: StrainCardProp
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
+
+const GeneticsLink = styled.button`
+  margin-top: 12px;
+  width: 100%;
+  padding: 7px 10px;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary[400]};
+    color: ${({ theme }) => theme.colors.primary[700]};
+  }
+`;
 
 interface CardWrapperProps {
   $selected: boolean;

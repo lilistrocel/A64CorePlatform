@@ -51,6 +51,19 @@ const MUSHROOM_NAV: NavItemDef[] = [
   { to: '/mushroom/strains', icon: '🧬', label: 'Strain Library' },
 ];
 
+// Genetics Repo — shared across all industry types. The lab is common to every
+// department (vegetables, mushrooms, animals), so this sits outside the
+// industry-specific nav rather than inside MUSHROOM_NAV / VEGETABLE_FRUITS_NAV.
+const GENETICS_NAV_GROUP: NavItemDef = {
+  icon: '🧬',
+  label: 'Genetics Repo',
+  defaultExpanded: false,
+  children: [
+    { to: '/genetics', icon: '🧬', label: 'Lines' },
+    { to: '/genetics/media', icon: '🧪', label: 'Media & Recipes' },
+  ],
+};
+
 // Tools group — shared across all industry types
 const TOOLS_NAV_GROUP: NavItemDef = {
   icon: '🧰',
@@ -267,7 +280,7 @@ export function MainLayout() {
     // Reset window scroll too — on layouts where the window is the actual
     // scroll container (no overflow constraint on MainContent), this is the
     // only one that matters. Doesn't move the sidebar because it's
-    // position:fixed and its inner <nav> is its own scroll container.
+    // position:fixed and its inner SidebarScroll is its own scroll container.
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname, location.search]);
 
@@ -316,6 +329,8 @@ export function MainLayout() {
       return [
         ...SHARED_NAV_ITEMS,
         ...industryNavItems,
+        // Genetics Repo — shared lab, visible to every industry type
+        GENETICS_NAV_GROUP,
         // Tools group — available to all users
         TOOLS_NAV_GROUP,
         // Operations group — available to all users (Purchasing sub-group is role-gated inside)
@@ -421,51 +436,58 @@ export function MainLayout() {
 
       {/* Sidebar */}
       <Sidebar $isOpen={isMobileMenuOpen} aria-label="Sidebar">
-        <SidebarHeader>
-          <Logo>
-            <LogoImg src="/a64logo_dark.png" alt="A64 Core" />
-          </Logo>
-          <UserCard>
-            <UserCardTop>
-              <UserAvatar>
-                {user?.firstName?.[0] || ''}{user?.lastName?.[0] || ''}
-              </UserAvatar>
-              <UserCardInfo>
-                <UserName>{user?.firstName} {user?.lastName}</UserName>
-                <UserRole>{user?.role?.replace(/_/g, ' ') || 'User'}</UserRole>
-              </UserCardInfo>
-            </UserCardTop>
-            <UserCardActions>
-              <ThemeToggleSmall
-                onClick={toggleTheme}
-                aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                {mode === 'dark' ? '☀️' : '🌙'}
-              </ThemeToggleSmall>
-              <LogoutSmall onClick={handleLogout} title="Logout">
-                Logout
-              </LogoutSmall>
-            </UserCardActions>
-          </UserCard>
+        {/* Single scroll region for the whole sidebar column (header +
+            farming-year + nav). SidebarHeader is position:sticky inside it,
+            so on tall viewports it visually reads as "pinned" exactly like
+            before, while on short viewports the header simply scrolls back
+            into view like the rest of the content instead of being force-
+            squeezed against Nav — see SidebarScroll definition for details. */}
+        <SidebarScroll>
+          <SidebarHeader>
+            <Logo>
+              <LogoImg src="/a64logo_dark.png" alt="A64 Core" />
+            </Logo>
+            <UserCard>
+              <UserCardTop>
+                <UserAvatar>
+                  {user?.firstName?.[0] || ''}{user?.lastName?.[0] || ''}
+                </UserAvatar>
+                <UserCardInfo>
+                  <UserName>{user?.firstName} {user?.lastName}</UserName>
+                  <UserRole>{user?.role?.replace(/_/g, ' ') || 'User'}</UserRole>
+                </UserCardInfo>
+              </UserCardTop>
+              <UserCardActions>
+                <ThemeToggleSmall
+                  onClick={toggleTheme}
+                  aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                  {mode === 'dark' ? '☀️' : '🌙'}
+                </ThemeToggleSmall>
+                <LogoutSmall onClick={handleLogout} title="Logout">
+                  Logout
+                </LogoutSmall>
+              </UserCardActions>
+            </UserCard>
 
-          {/* Division switcher sits between user info and the main nav */}
-          <DivisionSwitcherWrapper>
-            <DivisionSwitcher />
-          </DivisionSwitcherWrapper>
-        </SidebarHeader>
+            {/* Division switcher sits between user info and the main nav */}
+            <DivisionSwitcherWrapper>
+              <DivisionSwitcher />
+            </DivisionSwitcherWrapper>
+          </SidebarHeader>
 
-        {/* Global farming year selector */}
-        <FarmingYearDropdown
-          years={farmingYearsData?.years ?? []}
-          selectedYear={selectedYear}
-          onSelect={setYear}
-        />
+          {/* Global farming year selector */}
+          <FarmingYearDropdown
+            years={farmingYearsData?.years ?? []}
+            selectedYear={selectedYear}
+            onSelect={setYear}
+          />
 
-        <Nav aria-label="Main navigation">
-          {navItems.map((item) => renderNavItem(item, 0))}
-        </Nav>
-
+          <Nav aria-label="Main navigation">
+            {navItems.map((item) => renderNavItem(item, 0))}
+          </Nav>
+        </SidebarScroll>
       </Sidebar>
 
       {/* Overlay for mobile menu */}
@@ -571,7 +593,9 @@ const Sidebar = styled.aside<SidebarProps>`
   z-index: 50;
   transform: translateX(${({ $isOpen }) => ($isOpen ? '0' : '-100%')});
   transition: transform 0.3s ease-in-out;
-  overflow-y: auto;
+  /* Reason: no overflow here — SidebarScroll (the sole child) is the ONLY
+     scroll container. Having overflow-y:auto on both this aside AND the
+     inner nav produced two competing/nested scrollbars on short viewports. */
 
   @media (min-width: 1024px) {
     /* Reason: was 'position: static' which made the sidebar scroll with the
@@ -580,15 +604,32 @@ const Sidebar = styled.aside<SidebarProps>`
        which visually scrolled the sidebar back to the top because it was
        part of the normal flow.
        Sticky + height:100vh + flex-shrink:0 pins the sidebar to the viewport.
-       The inner <Nav> has overflow-y:auto with flex:1 so the nav list scrolls
-       INSIDE the sidebar instead of pushing the whole sidebar down. Window
-       scroll only affects MainContent now. */
+       SidebarScroll (flex:1, min-height:0, overflow-y:auto) fills that
+       height and is the single scroll region. Window scroll only affects
+       MainContent now. */
     position: sticky;
     top: 0;
     height: 100vh;
     transform: translateX(0);
     flex-shrink: 0;
   }
+`;
+
+// Single scroll region for the sidebar column. SidebarHeader inside it is
+// position:sticky, so on tall/normal viewports (content shorter than the
+// available height, or the header hasn't scrolled past yet) it reads
+// identically to the old "pinned header" behavior. On short viewports it
+// guarantees every nav link is still reachable via ONE scroll gesture — the
+// header no longer force-shrinks Nav down to an unusable sliver, it simply
+// participates in the same scrollable flow. min-height:0 is required so
+// this flex child can actually shrink to fit inside Sidebar's height:100vh
+// rather than overflowing it (flex items default to min-height:auto).
+const SidebarScroll = styled.div`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 `;
 
 const Overlay = styled.div`
@@ -609,6 +650,13 @@ const SidebarHeader = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.sm};
+  /* Sticky within SidebarScroll — stays pinned at the top while Nav content
+     scrolls beneath it (matches the previous "pinned header" look). Needs
+     its own opaque background since scrolled nav content passes behind it. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const Logo = styled.div`
@@ -733,12 +781,12 @@ const DivisionSwitcherWrapper = styled.div`
 `;
 
 const Nav = styled.nav`
-  flex: 1;
+  /* No flex:1/overflow here — SidebarScroll (ancestor) is the single scroll
+     container and sizes this naturally within its scrollable content. */
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
   display: flex;
   flex-direction: column;
   gap: 2px;
-  overflow-y: auto;
 `;
 
 const NavItem = styled(NavLink)`

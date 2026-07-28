@@ -8,8 +8,10 @@
  */
 
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useMushroomStrains, useCreateStrain, useUpdateStrain } from '../../hooks/mushroom/useMushroomStrains';
+import { useLinkedProfileCounts } from '../../hooks/genetics/useGenetics';
 import { StrainCard } from '../../components/mushroom/StrainCard';
 import type {
   MushroomStrain,
@@ -137,7 +139,11 @@ export function MushroomStrainLibrary() {
   const [form, setForm] = useState<StrainFormState>(defaultForm);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const navigate = useNavigate();
   const { data: strains = [], isLoading } = useMushroomStrains();
+  // Reverse link into the Genetics Repo (T-801) — one request annotates every
+  // card with how many lineages are cultivated under that strain.
+  const { data: linkedCounts } = useLinkedProfileCounts();
   const createStrain = useCreateStrain();
   const updateStrain = useUpdateStrain(editingStrain?.id ?? '');
 
@@ -295,6 +301,10 @@ export function MushroomStrainLibrary() {
               key={strain.id}
               strain={strain}
               onClick={openEdit}
+              geneticLineCount={linkedCounts?.strains?.[strain.id]}
+              onOpenGeneticLines={(s) =>
+                navigate(`/genetics?linkedStrainId=${encodeURIComponent(s.id)}`)
+              }
             />
           ))}
         </StrainsGrid>

@@ -197,6 +197,20 @@ const MushroomRoomMonitor = lazy(() =>
   import('./pages/mushroom/MushroomRoomMonitor').then(m => ({ default: m.MushroomRoomMonitor }))
 );
 
+// Genetics Repo — shared across every industry (plants, fungi, animals)
+const GeneticsRepoPage = lazy(() =>
+  import('./pages/genetics/GeneticsRepoPage').then(m => ({ default: m.GeneticsRepoPage }))
+);
+const GeneticsLineDetailPage = lazy(() =>
+  import('./pages/genetics/LineDetailPage').then(m => ({ default: m.LineDetailPage }))
+);
+const GeneticsAccessionDetailPage = lazy(() =>
+  import('./pages/genetics/AccessionDetailPage').then(m => ({ default: m.AccessionDetailPage }))
+);
+const GeneticsMediaLibraryPage = lazy(() =>
+  import('./pages/genetics/MediaLibraryPage').then(m => ({ default: m.MediaLibraryPage }))
+);
+
 // Tools module (Fertilizer Cost Calculator + Chemicals Catalog)
 const FertilizerCostCalculator = lazy(() =>
   import('./pages/tools/FertilizerCostCalculator').then(m => ({ default: m.FertilizerCostCalculator }))
@@ -444,6 +458,15 @@ function App() {
                 <Route path="/mushroom/strains" element={<MushroomStrainLibrary />} />
                 <Route path="/mushroom/rooms" element={<MushroomRoomMonitor />} />
                 <Route path="/mushroom" element={<MushroomDashboardPage />} />
+
+                {/* Genetics Repo — shared across all industries */}
+                <Route path="/genetics" element={<GeneticsRepoPage />} />
+                <Route path="/genetics/media" element={<GeneticsMediaLibraryPage />} />
+                <Route path="/genetics/lines/:lineId" element={<GeneticsLineDetailPage />} />
+                <Route
+                  path="/genetics/accessions/:accessionId"
+                  element={<GeneticsAccessionDetailPage />}
+                />
 
                 {/* Tools module */}
                 <Route path="/tools" element={<Navigate to="/tools/fertilizer-calculator" replace />} />

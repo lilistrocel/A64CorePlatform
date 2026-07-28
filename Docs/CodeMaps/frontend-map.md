@@ -1,6 +1,6 @@
 # Frontend Map
 
-> Generated: 2026-05-30 06:35 UTC  
+> Generated: 2026-07-28 11:30 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=component|hook|store|type, layer=frontend)
 
 ## Overview
@@ -10,7 +10,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 
 **Related Maps:** [api-map.md](api-map.md) | [module-map.md](module-map.md)
 
-## React Components (221)
+## React Components (237)
 
 | Component | File | Description |
 |-----------|------|-------------|
@@ -24,6 +24,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `APInvoiceDetailPage` | `frontend/user-portal/src/pages/purchasing/APInvoiceDetailPage.tsx:1` | Page: AP invoice detail | default |
 | `APInvoiceFormPage` | `frontend/user-portal/src/pages/purchasing/APInvoiceFormPage.tsx:1` | Page: AP invoice form. Renders FinanceUnreachableBanner. Uses taxCodesService + apInvoicesService | default |
 | `APInvoicesPage` | `frontend/user-portal/src/pages/purchasing/APInvoicesPage.tsx:1` | Page: AP invoices list. Uses apInvoicesService | default |
+| `AccessionDetailPage` | `frontend/user-portal/src/pages/genetics/AccessionDetailPage.tsx:1` | T-800 /genetics/accessions/:accessionId — ancestry breadcrumb, material facts, the 'Grown on' medium panel (recipe version, sterilisation, ingredients, additives), observation timeline and local lineage graph. | AccessionDetailPage |
 | `AccountCombobox` | `frontend/user-portal/src/components/finance/AccountCombobox.tsx:1` | Combobox picker for finance GL accounts. Uses financeAccountsService types + useFinanceAccounts | AccountCombobox |
 | `AddOrderItemModal` | `frontend/user-portal/src/components/sales/AddOrderItemModal.tsx:1` | Modal to add a line item to a sales order | AddOrderItemModal |
 | `AddVirtualCropModal` | `frontend/user-portal/src/components/farm/AddVirtualCropModal.tsx:1` | Modal to add a virtual crop to a block. Uses farmApi + plantDataEnhancedApi | AddVirtualCropModal |
@@ -37,6 +38,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `AuditHistoryModal` | `frontend/user-portal/src/components/finance/AuditHistoryModal/AuditHistoryModal.tsx:1` | Modal showing per-document audit log with actor name resolution. T-064: uses useAdminUsers gated by viewerRole prop (only admin/super_admin call GET /v1/users) | AuditHistoryModal, AuditHistoryModalProps |
 | `BackupCodesModal` | `frontend/user-portal/src/components/auth/BackupCodesModal.tsx:1` | Modal that displays one-time MFA backup recovery codes after setup | BackupCodesModal |
 | `BalanceSheetPage` | `frontend/user-portal/src/pages/finance/BalanceSheetPage.tsx:1` | Page (T-060.8): Balance Sheet report. Uses FinanceReportPage shell, useBalanceSheet + useJournalEntries for drill-down. Two parallel queries for comparative dates | default |
+| `BatchFormModal` | `frontend/user-portal/src/components/genetics/BatchFormModal.tsx:1` | T-800 Records one pour, previewing which additives will be snapshotted onto the batch. | BatchFormModal |
 | `BiologicalEfficiencyGauge` | `frontend/user-portal/src/components/mushroom/BiologicalEfficiencyGauge.tsx:1` | Gauge widget for mushroom BE % indicator | BiologicalEfficiencyGauge |
 | `BlockAlertsTab` | `frontend/user-portal/src/components/farm/BlockAlertsTab.tsx:1` | Block-details Alerts tab | BlockAlertsTab |
 | `BlockAnalyticsModal` | `frontend/user-portal/src/components/farm/BlockAnalyticsModal.tsx:1` | Block analytics modal. Uses useBlockAnalytics | BlockAnalyticsModal |
@@ -118,10 +120,12 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `FinanceReportPage` | `frontend/user-portal/src/components/finance/FinanceReportPage/FinanceReportPage.tsx:1` | Shared finance report shell (filters bar, display options, drill-down) used by Balance Sheet, Income Statement, Cash Flow pages. Uses apiClient for drill-down | FinanceReportPage |
 | `FinanceUnreachableBanner` | `frontend/user-portal/src/components/finance/FinanceUnreachableBanner.tsx:1` | Banner shown on purchasing forms when finance service is unreachable (Wave 0 ops-only mode signal) | FinanceUnreachableBanner |
 | `ForecastCard` | `frontend/user-portal/src/components/farm/weather/ForecastCard.tsx:1` | Weather widget — forecast card | ForecastCard |
+| `GeneticsRepoPage` | `frontend/user-portal/src/pages/genetics/GeneticsRepoPage.tsx:1` | T-800 Repo home at /genetics — dashboard counters and line cards with accession rollups, filterable by biological kind. | GeneticsRepoPage |
 | `GlobalFarmAnalyticsModal` | `frontend/user-portal/src/components/farm/GlobalFarmAnalyticsModal.tsx:1` | Cross-farm analytics modal opened from FarmDashboard | GlobalFarmAnalyticsModal |
 | `GoodsReceiptDetailPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptDetailPage.tsx:1` | Page: goods receipt detail | default |
 | `GoodsReceiptFormPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptFormPage.tsx:1` | Page: goods receipt form. Renders FinanceUnreachableBanner. Uses goodsReceiptsService | default |
 | `GoodsReceiptsPage` | `frontend/user-portal/src/pages/purchasing/GoodsReceiptsPage.tsx:1` | Page: goods receipts list. Uses goodsReceiptsService | default |
+| `GrowingProfilePanel` | `frontend/user-portal/src/components/genetics/GrowingProfilePanel.tsx:1` | T-801 Renders the linked library record's cultivation targets on the line detail page, so temp/humidity setpoints sit beside the lineage. The join, not a merge: the library owns growing conditions, the line owns ancestry. | GrowingProfilePanel |
 | `GrowingRoomCard` | `frontend/user-portal/src/components/mushroom/GrowingRoomCard.tsx:1` | Growing room summary card | GrowingRoomCard |
 | `GrowingRoomGrid` | `frontend/user-portal/src/components/mushroom/GrowingRoomGrid.tsx:1` | Grid of growing-room cards | GrowingRoomGrid |
 | `HRDashboardPage` | `frontend/user-portal/src/pages/hr/HRDashboardPage.tsx:1` | Page: HR dashboard. Uses hrService | default |
@@ -137,6 +141,9 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `InventoryDashboard` | `frontend/user-portal/src/pages/inventory/InventoryDashboard.tsx:1` | Page: inventory dashboard. Uses inventoryApi getInventorySummary | default |
 | `ItemMappingPage` | `frontend/user-portal/src/pages/finance/ItemMappingPage.tsx:1` | Page: item-to-GL-account mapping editor. Uses itemMappingService + taxCodesService + financeAccountsService | default |
 | `JournalEntriesPage` | `frontend/user-portal/src/pages/finance/JournalEntriesPage.tsx:1` | Page: journal entries list. Uses journalEntriesService types | default |
+| `LineDetailPage` | `frontend/user-portal/src/pages/genetics/LineDetailPage.tsx:1` | T-800 /genetics/lines/:lineId — lineage tree as the hero, accession table, recent propagations, and a senescence warning past G5. | LineDetailPage |
+| `LineFormModal` | `frontend/user-portal/src/components/genetics/LineFormModal.tsx:1` | T-800 Create/edit a genetic line, including parent line, derivation and provenance. | LineFormModal |
+| `LineageTree` | `frontend/user-portal/src/components/genetics/LineageTree.tsx:1` | T-800 Renders the lineage DAG as generation rows joined by SVG curves. Layout is computed deterministically from fixed node dimensions, so no measurement pass is needed. Edge colour encodes reproduction mode; unidentified parents render as dashed stubs. | LineageTree |
 | `Login` | `frontend/user-portal/src/pages/auth/Login.tsx:1` | Page: login form | default |
 | `LogisticsDashboardPage` | `frontend/user-portal/src/pages/logistics/LogisticsDashboardPage.tsx:1` | Page: logistics dashboard. Uses logisticsService | default |
 | `MFARouteGuards` | `frontend/user-portal/src/components/common/MFARouteGuards.tsx:1` | MFA route guards: MFAVerifyGuard requires MFA pending token, MFASetupGuard blocks if MFA already enabled | MFAVerifyGuard, MFASetupGuard |
@@ -147,14 +154,17 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `MapContainer` | `frontend/user-portal/src/components/map/MapContainer.tsx:1` | MapLibre GL container wrapper | MapContainer |
 | `MapSearchBar` | `frontend/user-portal/src/components/map/MapSearchBar.tsx:1` | Map geocoder search bar | MapSearchBar |
 | `MarketingDashboardPage` | `frontend/user-portal/src/pages/marketing/MarketingDashboardPage.tsx:1` | Page: marketing dashboard. Uses marketingService | default |
+| `MediaLibraryPage` | `frontend/user-portal/src/pages/genetics/MediaLibraryPage.tsx:1` | T-800 /genetics/media — recipes, prepared batches, and the clickable additive chips that run the exposed-material readout. | MediaLibraryPage |
 | `MessageBubble` | `frontend/user-portal/src/components/ai-assistant/MessageBubble.tsx:1` | Rendered chat message bubble (user/assistant) with markdown + tool-call children | MessageBubble |
 | `MessageList` | `frontend/user-portal/src/components/ai-assistant/MessageList.tsx:1` | Scrollable list of MessageBubble entries for the AI assistant | MessageList |
+| `Modal` | `frontend/user-portal/src/components/genetics/Modal.tsx:1` | T-800 Shared modal shell for the genetics screens. Deliberately does not close on backdrop click — the X button or Cancel are the only exits, so half-filled propagation forms survive a stray click. NOTE: node_id is scoped to avoid a generic `component::Modal` collision; the actual export is `Modal`. | Modal |
 | `ModulesSettingsCard` | `frontend/user-portal/src/components/settings/ModulesSettingsCard.tsx:1` | Settings card for toggling tenant modules (financeEnabled flag — Wave 0) | ModulesSettingsCard |
 | `MushroomDashboardPage` | `frontend/user-portal/src/pages/mushroom/MushroomDashboardPage.tsx:1` | Page: mushroom dashboard | default |
 | `MushroomFacilityManager` | `frontend/user-portal/src/pages/mushroom/MushroomFacilityManager.tsx:1` | Page: mushroom facility manager | default |
 | `MushroomRoomMonitor` | `frontend/user-portal/src/pages/mushroom/MushroomRoomMonitor.tsx:1` | Page: mushroom room monitor. Uses apiClient | default |
 | `MushroomStrainLibrary` | `frontend/user-portal/src/pages/mushroom/MushroomStrainLibrary.tsx:1` | Page: mushroom strain library | default |
 | `NotFound` | `frontend/user-portal/src/pages/NotFound.tsx:1` | Page: 404 not-found | default |
+| `ObservationModal` | `frontend/user-portal/src/components/genetics/ObservationModal.tsx:1` | T-800 Records observations with optional metrics; the novel-trait flag is surfaced prominently since it gates promotion. | ObservationModal |
 | `OperationsDashboard` | `frontend/user-portal/src/pages/operations/OperationsDashboard.tsx:1` | Page: operations dashboard. Uses farmApi + tasksApi | default |
 | `OrderCard` | `frontend/user-portal/src/components/sales/OrderCard.tsx:1` | Sales order summary card | OrderCard |
 | `OrderForm` | `frontend/user-portal/src/components/sales/OrderForm.tsx:1` | Create/edit sales order form | OrderForm |
@@ -183,6 +193,8 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `PnlStatementTable` | `frontend/user-portal/src/components/pnl/PnlStatementTable.tsx:1` | P&L statement-style table | PnlStatementTable |
 | `PostingSetupPage` | `frontend/user-portal/src/pages/finance/PostingSetupPage.tsx:1` | Page: company posting-setup editor. Renders AccountCombobox. Uses postingSetupService + financeAccountsService + financeCompaniesService | default |
 | `Profile` | `frontend/user-portal/src/pages/profile/Profile.tsx:1` | Page: user profile + MFA management. Uses authService | default |
+| `PromoteTraitModal` | `frontend/user-portal/src/components/genetics/PromoteTraitModal.tsx:1` | T-800 Promotes a flagged observation into a new parent-linked line, optionally minting the founding accession. | PromoteTraitModal |
+| `PropagateModal` | `frontend/user-portal/src/components/genetics/PropagateModal.tsx:1` | T-800 One form for clones and crosses. Method choice drives parent-slot count, default roles and a live preview that mirrors derive_generations so the G/F numbering is never a black box. Supports an 'exists but unidentified' second parent. | PropagateModal |
 | `ProtectedRoute` | `frontend/user-portal/src/components/common/ProtectedRoute.tsx:1` | Auth guard component that checks useAuthStore and redirects unauthenticated users to /login | ProtectedRoute |
 | `PurchaseItemsPage` | `frontend/user-portal/src/pages/purchasing/PurchaseItemsPage.tsx:1` | Page: purchase items catalogue. Uses purchasingApi | default |
 | `PurchaseOrderDetailPage` | `frontend/user-portal/src/pages/purchasing/PurchaseOrderDetailPage.tsx:1` | Page: purchase order detail | default |
@@ -192,8 +204,10 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `PurchaseRequestFormPage` | `frontend/user-portal/src/pages/purchasing/PurchaseRequestFormPage.tsx:1` | Page: purchase request form. Renders FinanceUnreachableBanner. Uses taxCodesService + purchasingApi | default |
 | `PurchaseRequestsPage` | `frontend/user-portal/src/pages/purchasing/PurchaseRequestsPage.tsx:1` | Page: purchase requests list. Uses purchasingApi | default |
 | `QuickPlanModal` | `frontend/user-portal/src/components/farm/dashboard/QuickPlanModal.tsx:1` | Quick crop-plan creation modal | QuickPlanModal |
+| `RecipeFormModal` | `frontend/user-portal/src/components/genetics/RecipeFormModal.tsx:1` | T-800 Dynamic ingredient and additive lists; warns that editing a formulation bumps the recipe version. | RecipeFormModal |
 | `RecordPaymentPage` | `frontend/user-portal/src/pages/finance/RecordPaymentPage.tsx:1` | Page: record AP payment. Renders AccountCombobox. Uses paymentsService + apInvoicesService + financeReportsService | default |
 | `Register` | `frontend/user-portal/src/pages/auth/Register.tsx:1` | Page: user registration form | default |
+| `RegisterAccessionModal` | `frontend/user-portal/src/components/genetics/RegisterAccessionModal.tsx:1` | T-800 Registers founding material by hand with a live accession-code preview. | RegisterAccessionModal |
 | `ReportAlertModal` | `frontend/user-portal/src/components/operations/ReportAlertModal.tsx:1` | Modal for reporting a farm/block alert | ReportAlertModal |
 | `ReportReturnModal` | `frontend/user-portal/src/components/sales/ReportReturnModal.tsx:1` | Modal to report a sales return | ReportReturnModal |
 | `ResolveAlertModal` | `frontend/user-portal/src/components/farm/dashboard/ResolveAlertModal.tsx:1` | Modal to resolve a farm alert | ResolveAlertModal |
@@ -214,6 +228,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `ShipmentTrackingPage` | `frontend/user-portal/src/pages/logistics/ShipmentTrackingPage.tsx:1` | Page: shipment tracking. Uses logisticsService | default |
 | `SoilConditionsCard` | `frontend/user-portal/src/components/farm/weather/SoilConditionsCard.tsx:1` | Weather widget — soil conditions card. Uses weatherApi helpers | SoilConditionsCard |
 | `SolarLightCard` | `frontend/user-portal/src/components/farm/weather/SolarLightCard.tsx:1` | Weather widget — solar / light card | SolarLightCard |
+| `SplitAccessionModal` | `frontend/user-portal/src/components/genetics/SplitAccessionModal.tsx:1` | T-800 Splits vessels out of a batch record; mirrors the server rule that the whole batch cannot be split. | SplitAccessionModal |
 | `StockPage` | `frontend/user-portal/src/pages/sales/StockPage.tsx:1` | Page (T-070.0): sales stock view (sellable harvest + waste). Renders SalesActionTiles | default |
 | `StrainCard` | `frontend/user-portal/src/components/mushroom/StrainCard.tsx:1` | Mushroom strain summary card | StrainCard |
 | `TaskCompletionModal` | `frontend/user-portal/src/components/operations/TaskCompletionModal.tsx:1` | Modal for completing a task with notes/photos. Uses tasksApi completeTask | TaskCompletionModal |
@@ -235,8 +250,9 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `VisaTab` | `frontend/user-portal/src/components/hr/VisaTab.tsx:1` | Employee detail Visa tab. Uses hrService | VisaTab |
 | `VoiceControls` | `frontend/user-portal/src/components/ai/VoiceControls.tsx:1` | Voice input controls (record/stop) for the AI chat surface | VoiceControls |
 | `WasteInventoryList` | `frontend/user-portal/src/pages/inventory/WasteInventoryList.tsx:1` | Page: waste inventory list. Uses api client | default |
+| `genetics styled primitives` | `frontend/user-portal/src/components/genetics/styled.ts:1` | T-800 Shared styled-components for the genetics screens. GenerationBadge shades warmer as clone depth rises, making senescence a standing visual cue. | PageWrap, Card, Button, Input, Select, GenerationBadge, StatusBadge, KindBadge,  |
 
-## Custom Hooks (54)
+## Custom Hooks (56)
 
 | Hook | File | Description |
 |------|------|-------------|
@@ -267,8 +283,10 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `useFinancePnl` | `frontend/user-portal/src/hooks/useFinancePnl.ts:1` | Aggregated farm-P&L slices (summary / by-month / by-farm / by-crop) + AR aging + revenue sources. | useFinancePnlSummary, useFinancePnlByMonth, useFinancePnlByFarm, useFinancePnlBy |
 | `useFinanceReports` | `frontend/user-portal/src/hooks/queries/useFinanceReports.ts:1` | Finance reports: AP aging, Balance Sheet, Income Statement, Cash Flow (T-060.5 indirect), vendor sub-ledger. | useApAging, useBalanceSheet, useIncomeStatement, useCashFlow, useVendorSubLedger |
 | `useFiscalPeriods` | `frontend/user-portal/src/hooks/queries/useFiscalPeriods.ts:1` | Fiscal period CRUD + close/reopen + closing-JE preview. | useFiscalPeriods, useCreatePeriod, useClosePeriod, useReopenPeriod, useClosePeri |
+| `useGenetics` | `frontend/user-portal/src/hooks/genetics/useGenetics.ts:1` | T-800 TanStack Query hooks. Mutations invalidate the whole ['genetics'] root because a propagation touches lines, accessions, lineage and dashboard at once. | useGeneticLines, useGeneticLine, useCreateLine, useAccessions, useAccession, use |
 | `useGlobalAnalytics` | `frontend/user-portal/src/hooks/farm/useGlobalAnalytics.ts:1` | Global cross-farm analytics. | useGlobalAnalytics |
 | `useGoodsReceipts` | `frontend/user-portal/src/hooks/queries/useGoodsReceipts.ts:1` | GR list/detail + create-from-PO + update/post/delete mutations. | useGoodsReceipts, useGoodsReceipt, useCreateGRFromPO, useUpdateGoodsReceipt, use |
+| `useGrowingProfiles` | `frontend/user-portal/src/hooks/genetics/useGrowingProfiles.ts:1` | T-801 Joins a genetic line to its cultivation-parameters record — mushroom_strains for fungi, plant_data_enhanced for plants. profileSourceForKind returns null for animals, which have no growing-profile library. | useProfileOptions, useLinkedStrain, useLinkedPlantData, profileSourceForKind, PR |
 | `useIncomingDocs` | `frontend/user-portal/src/hooks/queries/useIncomingDocs.ts:1` | Inbound PR/PO list + detail queries (cross-org incoming documents view). | useIncomingPRs, useIncomingPOs, useIncomingPRDetail, useIncomingPODetail, incomi |
 | `useItemMappings` | `frontend/user-portal/src/hooks/queries/useItemMappings.ts:1` | Purchase-item to GL-account mapping list/detail + update. | useItemMappings, useItemMapping, useUpdateItemMapping, itemMappingQueryKeys |
 | `useItemMappingsMap` | `frontend/user-portal/src/hooks/queries/useItemMappingsMap.ts:1` | Memoised itemId to PurchaseItemFinanceExt Map built on top of useItemMappings. | useItemMappingsMap |
@@ -307,7 +325,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `useThemeStore` | `frontend/user-portal/src/stores/theme.store.ts:1` | Persisted light/dark theme toggle. | useThemeStore |
 | `useToastStore` | `frontend/user-portal/src/stores/toast.store.ts:1` | Global toast notification store + helper triggers used by mutations. | useToastStore, showToast, showErrorToast, showSuccessToast, showWarningToast, sh |
 
-## TypeScript Types (23)
+## TypeScript Types (24)
 
 | Type | File | Description |
 |------|------|-------------|
@@ -322,6 +340,7 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `farmAI types` | `frontend/user-portal/src/types/farmAI.ts:1` | Farm-scoped AI chat types: chat messages, request/response, pending actions, growth stage info, confirm-action flow, AI scope, farm/global response variants. | ChatMessage, FarmAIChatRequest, PendingAction, GrowthStageInfo, FarmAIChatRespon |
 | `farmAnalytics types` | `frontend/user-portal/src/types/farmAnalytics.ts:1` | Farm-level analytics (camelCase variant): FarmAnalytics root, aggregated metrics, state breakdown, block comparison, historical trends, yield timeline, state transitions. | FarmAnalytics, AggregatedMetrics, StateBreakdown, StateInfo, BlockState, BlockCo |
 | `finance types` | `frontend/user-portal/src/types/finance.ts:1` | Finance P&L and AR aging types: filter params, P&L periods/breakdowns (revenue/COGS/Opex/order-counts), summary, monthly/farm/crop dimensions, AR aging buckets, revenue sources. | PnlFilterParams, PnlPeriod, PnlRevenueBreakdown, PnlCOGSBreakdown, PnlOpexBreakd |
+| `genetics` | `frontend/user-portal/src/types/genetics.ts:1` | T-800 TypeScript mirror of the genetics Pydantic models plus display-label maps. SENESCENCE_WATCH_GENERATION mirrors the backend dashboard constant. | GeneticLine, Accession, PropagationEvent, MediumRecipe, MediumBatch, Observation |
 | `global-analytics types` | `frontend/user-portal/src/types/global-analytics.ts:1` | Cross-farm (global) analytics types: time period options, global aggregated metrics, state breakdown, farm summary, yield timeline, performance trend/insights, GlobalAnalyticsData root. | TimePeriod, TimePeriodOption, TIME_PERIOD_OPTIONS, GlobalAggregatedMetrics, Glob |
 | `hr types` | `frontend/user-portal/src/types/hr.ts:1` | HR domain types: employee status, emergency contact, Employee entity; contract type/status, Contract; visa status/Visa; insurance type/Insurance; performance reviews; CRUD payloads; search params; dashboard stats and department distribution. | EmployeeStatus, EmergencyContact, Employee, ContractType, ContractStatus, Contra |
 | `inventory types` | `frontend/user-portal/src/types/inventory.ts:1` | Inventory domain types: inventory/product/input/asset categories and statuses, quality grades, movement types, base/display units; harvest/input/asset inventory CRUD; movements; summary; pagination; farming-year config; returned inventory; unit options and label/color maps. | InventoryType, HarvestProductType, InputCategory, AssetCategory, AssetStatus, Qu |
@@ -407,3 +426,15 @@ Styling with styled-components. Charts with Recharts. Maps with MapLibre GL.
 | `component::StockPage` | renders | `component::SalesActionTiles` |
 | `component::SettingsPage` | renders | `component::ModulesSettingsCard` |
 | `component::SettingsPage` | renders | `component::TelegramBotSettings` |
+| `component::LineDetailPage` | renders | `component::LineageTree` |
+| `component::AccessionDetailPage` | renders | `component::LineageTree` |
+| `component::LineDetailPage` | renders | `component::PropagateModal` |
+| `component::LineDetailPage` | renders | `component::RegisterAccessionModal` |
+| `component::LineDetailPage` | renders | `component::LineFormModal` |
+| `component::GeneticsRepoPage` | renders | `component::LineFormModal` |
+| `component::AccessionDetailPage` | renders | `component::ObservationModal` |
+| `component::AccessionDetailPage` | renders | `component::SplitAccessionModal` |
+| `component::AccessionDetailPage` | renders | `component::PromoteTraitModal` |
+| `component::AccessionDetailPage` | renders | `component::PropagateModal` |
+| `component::MediaLibraryPage` | renders | `component::RecipeFormModal` |
+| `component::MediaLibraryPage` | renders | `component::BatchFormModal` |

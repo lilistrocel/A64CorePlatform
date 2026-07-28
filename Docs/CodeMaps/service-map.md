@@ -1,6 +1,6 @@
 # Service Map
 
-> Generated: 2026-05-30 06:35 UTC  
+> Generated: 2026-07-28 11:30 UTC  
 > Source: MongoDB `mapper_nodes` (layer=service)
 
 ## Overview
@@ -10,7 +10,7 @@ Services are injected into API endpoints via FastAPI dependency injection.
 
 **Related Maps:** [api-map.md](api-map.md) | [database-map.md](database-map.md) | [module-map.md](module-map.md)
 
-## Services by Module (62 total)
+## Services by Module (71 total)
 
 ### `ai_analytics`
 
@@ -62,6 +62,20 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `WeatherCacheService` | `src/modules/farm_manager/services/weather/weather_cache_service.py:22` | WeatherCacheService | Server-side weather response caching with TTL management. |
 | `WeatherService` | `src/modules/farm_manager/services/weather/weather_service.py:72` | WeatherService | Weather data retrieval via WeatherBit API with caching. |
 | `_enrich_tasks_with_block_farm` | `src/modules/farm_manager/services/task/task_repository.py:22` | _enrich_tasks_with_block_farm | v1.11.0 helper: batched $in lookup against blocks and farms collections to enrich FarmTask list into FarmTaskWithDetails (attaches blockCode, blockName, farmCode, farmName, targetCrop, targetCropName, actualPlantCount, expectedYieldKg). Single round-trip per collection regardless of task count. |
+
+### `genetics`
+
+| Service | File | Exports | Description |
+|---------|------|---------|-------------|
+| `AccessionService` | `src/modules/genetics/services/accession/accession_service.py:1` | mint_code, create_accession, get_accession, get_by_code, lis | T-800 Physical material CRUD, accession-code minting (sequence restarts per line+generation), and split_accession which copies generations and parents verbatim so a split is not mistaken for a propagation. |
+| `DashboardService` | `src/modules/genetics/services/dashboard_service.py:1` | get_dashboard, GeneticsDashboard, KindBreakdown, SENESCENCE_ | T-800 Repo-wide counters. SENESCENCE_WATCH_GENERATION (5) flags active accessions deep in a clone chain as re-isolation candidates. |
+| `GeneticsDatabaseManager` | `src/modules/genetics/services/database.py:1` | genetics_db, LINES, ACCESSIONS, PROPAGATIONS, RECIPES, BATCH | T-800 Collection-name constants and index creation. Delegates connection management to the core MongoDB manager. Indexes parents.accessionId for the lineage traversal hot path. |
+| `LineService` | `src/modules/genetics/services/line/line_service.py:1` | create_line, get_line, list_lines, get_line_with_stats, upda | T-800 Genetic line CRUD plus _bulk_stats — one aggregation for accession rollups across many lines, and a second for derived-line counts. |
+| `LineageService` | `src/modules/genetics/services/lineage/lineage_service.py:1` | build_graph, get_ancestry | T-800 Breadth-first DAG traversal, batched one query per depth level and capped by MAX_LINEAGE_DEPTH / MAX_LINEAGE_NODES. get_ancestry follows the primary parent per hop and flags branching plus unrecorded origins. |
+| `MediumService` | `src/modules/genetics/services/medium/medium_service.py:1` | create_recipe, get_recipe, list_recipes, update_recipe, crea | T-800 Recipes and batches. Editing any formulation field bumps recipe version; batches snapshot ingredients/additives at pour time so history is never rewritten. find_accessions_by_additive matches batch snapshots, not live recipes. |
+| `ObservationService` | `src/modules/genetics/services/observation/observation_service.py:1` | create_observation, get_observation, list_observations, upda | T-800 Observations plus promote_trait: creates a child line parented to the observed material's line and mints a founding accession whose parent is the observed accession, keeping the physical chain unbroken. |
+| `PropagationService` | `src/modules/genetics/services/propagation/propagation_service.py:1` | derive_generations, propagate, get_event, list_events, get_e | T-800 CORE RULE lives here. derive_generations: asexual method -> G+1 with F inherited; sexual method -> F+1 with G reset to 0. A spore print off a G5 fruit is F1-G0, not G6. Children are written before the event so an orphaned accession is recoverable but a dangling event is not. |
+| `genetics service helpers` | `src/modules/genetics/services/common.py:1` | doc_to_model, model_to_doc, slugify_code, generation_label,  | T-800 id<->{entity}Id renaming, code generation (PO-BLU-G2-014 / PO-BLU-F1-G2-003), and stripping computed fields such as generationLabel before persistence. |
 
 ### `hr`
 
@@ -200,3 +214,16 @@ Services are injected into API endpoints via FastAPI dependency injection.
 | `component::ManualJournalEntryPage` | uses | `hook::useFiscalPeriods` | ManualJournalEntryPage uses useFiscalPeriods |
 | `component::ManualJournalEntryPage` | uses | `hook::useCreateManualJournalEntry` | ManualJournalEntryPage uses useCreateManualJournalEntry muta |
 | `component::PeriodsPage` | uses | `hook::useFinanceCompanies` | PeriodsPage uses useFinanceCompanies |
+| `genetics.service.accession_service` | uses | `genetics.service.common` | Uses build_accession_code, generation_label and doc/model ma |
+| `genetics.service.database` | uses | `core.services.database` | Delegates connection pooling and health checks to the core M |
+| `service::geneticsApi` | uses | `service::apiClient` | All genetics calls go through the shared axios instance. |
+| `service::geneticsApi` | uses | `type::genetics` | Request and response typings. |
+| `hook::useGenetics` | uses | `service::geneticsApi` | All query and mutation functions wrap geneticsApi. |
+| `component::GeneticsRepoPage` | uses | `hook::useGenetics` | useGeneticLines and useGeneticsDashboard. |
+| `component::LineDetailPage` | uses | `hook::useGenetics` | useGeneticLine, useAccessions, useLineageGraph, usePropagati |
+| `component::AccessionDetailPage` | uses | `hook::useGenetics` | useAccession, useAncestry, useLineageGraph, useObservations, |
+| `component::MediaLibraryPage` | uses | `hook::useGenetics` | useMediumRecipes, useMediumBatches, useAccessionsByAdditive. |
+| `component::PropagateModal` | uses | `component::GeneticsModal` | All genetics modals share the no-backdrop-close shell. |
+| `component::LineageTree` | uses | `type::genetics` | LineageGraph / LineageNode typings and label maps. |
+| `component::MainLayout` | uses | `component::GeneticsRepoPage` | GENETICS_NAV_GROUP is a shared sidebar group rendered for ev |
+| `component::GrowingProfilePanel` | uses | `hook::useGrowingProfiles` | Reads the linked strain or plant record. |

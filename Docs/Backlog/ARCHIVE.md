@@ -1,6 +1,56 @@
 # A64 Core Platform — Completed Work
 
-> **Total completed:** 100 tasks
+> **Total completed:** 101 tasks
+
+## 2026-07
+
+### T-801 | Link Genetics lines to Strain Library / Plant Library growing profiles
+- **Category:** Full-stack · **Priority:** P2
+- **Completed:** 2026-07-28 · **Assigned:** main session (Viet Anh)
+- **Depends on:** T-800 ✅
+- **Summary:** Closes the apparent duplication between the mushroom "Strain Library" and the new
+  "Genetics Repo" in the sidebar. They answer different questions and both stay: `mushroom_strains`
+  / `plant_data` hold *what conditions a species wants* (temp, humidity, duration, yield),
+  `genetic_lines` hold *which lineage you are holding and where it came from*. Before this ticket
+  the two shared commonName/scientificName/species with no link, so the same taxonomy was typed
+  twice. `Line.linkedStrainId` / `Line.linkedPlantDataId` already existed in the T-800 schema but
+  were unreachable from the UI; this makes them real in both directions.
+- **Delivered:**
+  - Backend: `linkedStrainId` / `linkedPlantDataId` filters on `GET /genetics/lines`, plus
+    `GET /genetics/lines/linked-counts` returning two id->count maps so a library page annotates
+    every row from one request. Route declared before `/{line_id}` to avoid path shadowing.
+  - `LineService.count_by_linked_profile()` — two grouped aggregations.
+  - Forward link: kind-filtered growing-profile picker in `LineFormModal`
+    (fungus -> Strain Library, plant -> Plant Library, animal -> none, with an explanatory hint).
+    Selecting a profile prefills commonName/scientificName/species **only where still blank** —
+    never overwrites typed input.
+  - `GrowingProfilePanel` on the line detail page renders the linked record's real targets
+    (colonisation/fruiting temp + RH + days, CO2 tolerance, expected yield, max flushes for
+    strains; growth cycle + temp/humidity for plants), with a link into the owning library.
+  - Reverse link: `StrainCard` gained optional `geneticLineCount` + `onOpenGeneticLines`, rendering
+    a "🧬 N genetic lines →" button that navigates to `/genetics?linkedStrainId=...`. Click handler
+    stops propagation, since the whole card is already an edit target.
+  - `GeneticsRepoPage` honours `?linkedStrainId` / `?linkedPlantDataId` with a dismissable filter banner.
+- **Verified end-to-end on the live stack:** counts endpoint went `{}` -> `{strain: 1}` on linking;
+  `?linkedStrainId=` filter returned exactly the linked line; Strain Library card rendered
+  "🧬 1 genetic line →" and navigating from it landed on the filtered repo showing the right line;
+  the profile panel pulled Pink Oyster's real parameters (24–28°C colonisation, 18–24°C fruiting,
+  0.8 kg/kg, 3 flushes); the picker preselected the existing link. Frontend `tsc -b` unchanged at
+  336 pre-existing errors, none in touched files. Verification line deleted afterwards — all six
+  genetics collections back to 0, `mushroom_strains` untouched.
+- **Explicitly not done (by design):** no merge or deprecation of the Strain Library. Folding it
+  into Genetics would strand `growing_rooms.strainId` and `mushroom_harvests.strainId` and force a
+  migration, for two things that answer different questions.
+- **Files changed:**
+  - `src/modules/genetics/services/line/line_service.py`, `src/modules/genetics/api/v1/lines.py`
+  - `frontend/user-portal/src/hooks/genetics/useGrowingProfiles.ts` (NEW)
+  - `frontend/user-portal/src/components/genetics/GrowingProfilePanel.tsx` (NEW)
+  - `frontend/user-portal/src/components/genetics/LineFormModal.tsx`,
+    `pages/genetics/GeneticsRepoPage.tsx`, `pages/genetics/LineDetailPage.tsx`
+  - `frontend/user-portal/src/components/mushroom/StrainCard.tsx`,
+    `pages/mushroom/MushroomStrainLibrary.tsx`
+  - `frontend/user-portal/src/types/genetics.ts`, `services/geneticsApi.ts`, `hooks/genetics/useGenetics.ts`
+- **CodeMaps:** regenerated — graph now 662 nodes · 661 edges.
 
 ## 2026-06
 
