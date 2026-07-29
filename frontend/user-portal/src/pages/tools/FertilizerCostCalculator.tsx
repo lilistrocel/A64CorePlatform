@@ -1033,6 +1033,8 @@ function CropListPanel({
 
 interface OutputPanelProps {
   result: CalculateResponse | null;
+  /** True when the crop×points inputs changed after this result was calculated. */
+  isStale?: boolean;
   /**
    * Maps plantDataId → yieldInfo so the result panel can compute per-crop
    * estimated yield and a grand-total yield from the calculation rows.
@@ -1090,7 +1092,7 @@ function aggregatePerInput(result: CalculateResponse): PerInputAgg[] {
   );
 }
 
-function OutputPanel({ result, yieldInfoByPlant }: OutputPanelProps) {
+function OutputPanel({ result, isStale, yieldInfoByPlant }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<'perCrop' | 'perInput'>('perCrop');
   const [openCrops, setOpenCrops] = useState<Set<string>>(new Set());
 
@@ -1112,9 +1114,14 @@ function OutputPanel({ result, yieldInfoByPlant }: OutputPanelProps) {
   return (
     <Panel>
       <PanelHeader>
-        <PanelTitle>Calculation Results</PanelTitle>
+        <PanelTitle>Calculation Results{isStale && <StaleTag>Outdated</StaleTag>}</PanelTitle>
       </PanelHeader>
-      <PanelBody>
+      {isStale && (
+        <StaleBanner>
+          ⚠ Inputs changed since this was calculated — press <strong>Calculate</strong> to update the results below.
+        </StaleBanner>
+      )}
+      <PanelBody style={isStale ? { opacity: 0.45 } : undefined}>
         {/* Warnings */}
         {result.warnings.length > 0 && (
           <WarningsBanner>
@@ -1312,6 +1319,9 @@ export function FertilizerCostCalculator() {
   const { user } = useAuthStore();
   const [rows, setRows] = useState<CropListRow[]>([]);
   const [result, setResult] = useState<CalculateResponse | null>(null);
+  // Signature of the crop×points list at the moment `result` was calculated.
+  // Used to flag the Output panel as stale when the inputs change afterward.
+  const [calculatedSignature, setCalculatedSignature] = useState<string | null>(null);
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [activeListName, setActiveListName] = useState<string | null>(null);
   const [manageListsOpen, setManageListsOpen] = useState(false);
@@ -1386,6 +1396,11 @@ export function FertilizerCostCalculator() {
       // Reason: localStorage quota or disabled — silently ignore
     }
   }, [rows, activeListId, activeListName, draftLoadedForUser, user?.userId]);
+
+  // Prices feed the backend calculation too, so edits to them also stale the result.
+  // usePrices shares the React Query cache with the Price Book panel (no extra fetch),
+  // and price edits invalidate that query — so pricesData changes when a price is edited.
+  const { data: pricesData } = usePrices();
 
   const calculateMutation = useCalculate();
   const exportMutation = useExportXlsx();
@@ -1471,11 +1486,31 @@ export function FertilizerCostCalculator() {
     );
   };
 
+  // Signature of the exact inputs the backend calculates from (crop id + points).
+  // When this diverges from `calculatedSignature`, the shown result is stale.
+  const currentSignature = useMemo(
+    () =>
+      JSON.stringify({
+        rows: rows.map((r) => ({ plantDataId: r.plantDataId, points: r.points })),
+        prices: (pricesData ?? [])
+          .map((p) => [p.chemical.chemicalId, p.price ?? null] as const)
+          .sort((a, b) => a[0].localeCompare(b[0])),
+      }),
+    [rows, pricesData]
+  );
+  const resultStale =
+    result !== null && calculatedSignature !== null && currentSignature !== calculatedSignature;
+
   const handleCalculate = () => {
     if (rows.length === 0) return;
     calculateMutation.mutate(
       { items: rows.map((r) => ({ plantDataId: r.plantDataId, points: r.points })) },
-      { onSuccess: (data) => setResult(data) }
+      {
+        onSuccess: (data) => {
+          setResult(data);
+          setCalculatedSignature(currentSignature);
+        },
+      }
     );
   };
 
@@ -1534,6 +1569,7 @@ export function FertilizerCostCalculator() {
     setActiveListId(null);
     setActiveListName(null);
     setResult(null);
+    setCalculatedSignature(null);
   };
 
   const handleSaveList = (name: string) => {
@@ -1651,6 +1687,7 @@ export function FertilizerCostCalculator() {
 
       <OutputPanel
         result={result}
+        isStale={resultStale}
         yieldInfoByPlant={Object.fromEntries(
           rows.map((r) => [r.plantDataId, r.yieldInfo])
         )}
@@ -2047,6 +2084,27 @@ const WarningsBanner = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+`;
+
+const StaleBanner = styled.div`
+  margin: 0 0 16px;
+  padding: 10px 16px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #92400e;
+`;
+
+const StaleTag = styled.span`
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
 `;
 
 const InfoBanner = styled.div`
