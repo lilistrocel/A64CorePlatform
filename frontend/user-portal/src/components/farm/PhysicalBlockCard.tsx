@@ -315,8 +315,10 @@ export function PhysicalBlockCard({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showActions, setShowActions] = useState(false);
 
+  // Include 'cleaning' so a virtual block stays in the active list (and reachable
+  // via "View Active Plantings") until it is explicitly emptied.
   const activePlantings = virtualBlocks.filter(
-    (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
+    (vb) => vb.state !== 'empty'
   );
 
   // Check if the physical block itself has an active planting (not just virtual children)

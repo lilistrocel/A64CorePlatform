@@ -250,7 +250,7 @@ export function PhysicalBlockGrid({
           pb.state !== 'empty' && pb.state !== 'cleaning' && pb.state !== 'partial';
         const children = virtualBlocksByParent.get(pb.blockId) || [];
         const activePlantings = children.filter(
-          (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
+          (vb) => vb.state !== 'empty'
         );
         return physicalBlockHasPlanting || activePlantings.length > 0;
       });
@@ -259,7 +259,7 @@ export function PhysicalBlockGrid({
         const isPhysicalBlockEmpty = pb.state === 'empty';
         const children = virtualBlocksByParent.get(pb.blockId) || [];
         const activePlantings = children.filter(
-          (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
+          (vb) => vb.state !== 'empty'
         );
         return isPhysicalBlockEmpty && activePlantings.length === 0;
       });
@@ -286,7 +286,7 @@ export function PhysicalBlockGrid({
     // Check virtual block children
     const children = virtualBlocksByParent.get(pb.blockId) || [];
     const activePlantings = children.filter(
-      (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
+      (vb) => vb.state !== 'empty'
     );
     return physicalBlockHasPlanting || activePlantings.length > 0;
   }).length;
@@ -294,7 +294,7 @@ export function PhysicalBlockGrid({
     const isPhysicalBlockEmpty = pb.state === 'empty';
     const children = virtualBlocksByParent.get(pb.blockId) || [];
     const activePlantings = children.filter(
-      (vb) => vb.state !== 'empty' && vb.state !== 'cleaning'
+      (vb) => vb.state !== 'empty'
     );
     return isPhysicalBlockEmpty && activePlantings.length === 0;
   }).length;

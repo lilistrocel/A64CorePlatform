@@ -666,21 +666,13 @@ class BlockService:
         elif current_block.state == BlockStatus.CLEANING and new_status == BlockStatus.EMPTY:
             logger.info(f"[Block Service] Triggering archival for block {block_id}")
 
-            # Create archive before clearing data
-            await BlockService.archive_block_cycle(block_id, user_id, user_email)
-
-            # Now update status to empty (this clears data in repository)
-            block = await BlockRepository.update_status(
-                block_id,
-                new_status,
-                user_id,
-                user_email,
-                notes=status_update.notes or "Cycle completed and archived"
-            )
-
-            # NEW: Handle virtual block emptying
-            # If this is a virtual block transitioning to EMPTY, trigger cleanup
             if current_block.blockCategory == 'virtual':
+                # Virtual block path: VirtualBlockService is the single source of truth.
+                # It archives the cycle, transfers tasks/harvests, returns area to the
+                # parent, and hard-deletes the virtual block — all while the block data
+                # is still intact (cleaning state). Do NOT pre-archive or pre-clear here
+                # or the cycle data will be wiped before VirtualBlockService can use it,
+                # and the archive will be created twice.
                 logger.info(f"[Block Service] Virtual block {current_block.blockCode} is empty, triggering cleanup")
 
                 # Import here to avoid circular dependency
@@ -700,7 +692,7 @@ class BlockService:
                         f"Deleted {cleanup_result['tasksDeleted']} pending tasks."
                     )
 
-                    # Return the parent block since virtual block is deleted
+                    # Return the parent block since the virtual block has been deleted
                     parent_block = await BlockRepository.get_by_id(UUID(cleanup_result['parentBlockId']))
                     if not parent_block:
                         raise HTTPException(500, f"Parent block not found: {cleanup_result['parentBlockId']}")
@@ -714,6 +706,20 @@ class BlockService:
                         500,
                         f"Failed to complete virtual block cleanup: {str(e)}"
                     )
+
+            else:
+                # Physical block path: archive the cycle then clear the block data.
+                # Create archive before clearing data
+                await BlockService.archive_block_cycle(block_id, user_id, user_email)
+
+                # Now update status to empty (this clears data in repository)
+                block = await BlockRepository.update_status(
+                    block_id,
+                    new_status,
+                    user_id,
+                    user_email,
+                    notes=status_update.notes or "Cycle completed and archived"
+                )
 
         # Handle normal status transition
         else:
