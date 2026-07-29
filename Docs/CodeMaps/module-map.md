@@ -1,6 +1,6 @@
 # Module Map
 
-> Generated: 2026-07-28 11:30 UTC  
+> Generated: 2026-07-29 10:20 UTC  
 > Source: MongoDB `mapper_nodes` (grouped by module)
 
 ## Backend Module Architecture
@@ -27,7 +27,7 @@ Each module contains API, service, and model layers.
 | `farm_manager` | 137 | api, config, infrastructure, model, repository, service |
 | `finance` | 51 | frontend |
 | `frontend` | 7 | config, frontend |
-| `genetics` | 52 | api, config, frontend, model, service |
+| `genetics` | 53 | api, config, frontend, middleware, model, service |
 | `hr` | 32 | api, frontend, infrastructure, model, repository, service |
 | `inventory` | 7 | frontend |
 | `logistics` | 27 | api, frontend, infrastructure, model, repository, service |
@@ -479,7 +479,7 @@ Each module contains API, service, and model layers.
 | config | `theme` | frontend | `frontend/shared/src/theme/theme.ts` |
 | file | `utils/index` | frontend | `frontend/user-portal/src/utils/index.ts` |
 
-### `genetics` (52 nodes)
+### `genetics` (53 nodes)
 
 | Type | Name | Layer | File |
 |------|------|-------|------|
@@ -513,6 +513,7 @@ Each module contains API, service, and model layers.
 | function | `geneticsApi` | frontend | `frontend/user-portal/src/services/geneticsApi.ts` |
 | hook | `useGenetics` | frontend | `frontend/user-portal/src/hooks/genetics/useGenetics.ts` |
 | hook | `useGrowingProfiles` | frontend | `frontend/user-portal/src/hooks/genetics/useGrowingProfiles.ts` |
+| middleware | `genetics authorization` | middleware | `src/modules/genetics/middleware/auth.py` |
 | pydantic_model | `Accession models` | model | `src/modules/genetics/models/accession.py` |
 | pydantic_model | `Genetic line models` | model | `src/modules/genetics/models/line.py` |
 | pydantic_model | `Genetics enumerations` | model | `src/modules/genetics/models/enums.py` |
@@ -881,3 +882,4 @@ Each module contains API, service, and model layers.
 | `genetics.service.lineage_service` | depends_on | `genetics.service.propagation_service` |
 | `genetics.service.lineage_service` | depends_on | `genetics.service.medium_service` |
 | `genetics.register` | depends_on | `core.middleware.auth` |
+| `genetics.middleware.auth` | depends_on | `core.middleware.auth` |

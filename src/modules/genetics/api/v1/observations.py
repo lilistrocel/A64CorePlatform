@@ -22,10 +22,10 @@ from ...models.observation import (
 from ...services.observation.observation_service import ObservationService
 from ...utils.responses import PaginatedResponse, SuccessResponse, paginate
 
-from src.modules.farm_manager.middleware.auth import (
+from ...middleware.auth import (
     CurrentUser,
-    get_current_active_user,
     require_permission,
+    require_view,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class PromotionResult(BaseModel):
 )
 async def create_observation(
     payload: ObservationCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.observe")),
 ) -> SuccessResponse[Observation]:
     observation = await ObservationService.create_observation(payload, current_user)
     return SuccessResponse(data=observation, message="Observation recorded")
@@ -67,7 +67,7 @@ async def list_observations(
     lineId: Optional[str] = Query(None),
     type_: Optional[str] = Query(None, alias="type"),
     novelOnly: bool = Query(False, description="Only observations flagged as novel traits"),
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> PaginatedResponse[Observation]:
     observations, total = await ObservationService.list_observations(
         skip=(page - 1) * perPage,
@@ -87,7 +87,7 @@ async def list_observations(
 )
 async def get_observation(
     observation_id: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[Observation]:
     observation = await ObservationService.get_observation(observation_id)
     return SuccessResponse(data=observation)
@@ -101,7 +101,7 @@ async def get_observation(
 async def update_observation(
     observation_id: str,
     payload: ObservationUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.observe")),
 ) -> SuccessResponse[Observation]:
     observation = await ObservationService.update_observation(observation_id, payload)
     return SuccessResponse(data=observation, message="Observation updated")
@@ -122,7 +122,7 @@ async def update_observation(
 async def promote_trait(
     observation_id: str,
     payload: PromoteTraitRequest,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.promote")),
 ) -> SuccessResponse[PromotionResult]:
     line, founding = await ObservationService.promote_trait(
         observation_id, payload, current_user

@@ -16,10 +16,10 @@ from ...models.propagation import PropagationCreate, PropagationEvent
 from ...services.propagation.propagation_service import PropagationService
 from ...utils.responses import PaginatedResponse, SuccessResponse, paginate
 
-from src.modules.farm_manager.middleware.auth import (
+from ...middleware.auth import (
     CurrentUser,
-    get_current_active_user,
     require_permission,
+    require_view,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class MethodInfo(BaseModel):
     ),
 )
 async def list_methods(
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[List[MethodInfo]]:
     methods = [
         MethodInfo(
@@ -89,7 +89,7 @@ async def list_methods(
 )
 async def create_propagation(
     payload: PropagationCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.propagate")),
 ) -> SuccessResponse[PropagationOutcome]:
     event, accessions = await PropagationService.propagate(payload, current_user)
     return SuccessResponse(
@@ -114,7 +114,7 @@ async def list_propagations(
     accessionId: Optional[str] = Query(None, description="Events touching this accession"),
     method: Optional[str] = Query(None),
     mediumBatchId: Optional[str] = Query(None),
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> PaginatedResponse[PropagationEvent]:
     events, total = await PropagationService.list_events(
         skip=(page - 1) * perPage,
@@ -134,7 +134,7 @@ async def list_propagations(
 )
 async def get_propagation(
     event_id: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[PropagationEvent]:
     event = await PropagationService.get_event(event_id)
     return SuccessResponse(data=event)

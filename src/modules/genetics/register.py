@@ -7,6 +7,11 @@ register the genetics repository with the main FastAPI application.
 This module is declared ``industries: ["all"]`` / ``industry_mode: "shared"``
 in its manifest — the lab is shared across every department, so the repo is
 visible to vegetable, mushroom and animal divisions alike.
+
+Authorization for the ``genetics.*`` permissions declared in the manifest lives
+in this module's own ``middleware/auth.py``, matching how sales and farm_manager
+each own their namespace. Identity (JWT decode, user lookup) is reused from
+farm_manager rather than forked.
 """
 
 import logging

@@ -1,6 +1,6 @@
 # Frontend Map
 
-> Generated: 2026-07-28 11:30 UTC  
+> Generated: 2026-07-29 10:20 UTC  
 > Source: MongoDB `mapper_nodes` (node_type=component|hook|store|type, layer=frontend)
 
 ## Overview

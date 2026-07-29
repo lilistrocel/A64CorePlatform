@@ -20,11 +20,12 @@
     "genetics.view",
     "genetics.create",
     "genetics.edit",
-    "genetics.delete",
     "genetics.propagate",
-    "genetics.media.manage",
     "genetics.observe",
-    "genetics.promote"
+    "genetics.media.manage",
+    "genetics.line.manage",
+    "genetics.promote",
+    "genetics.delete"
   ],
   "license_required": true,
   "enabled_by_default": true,

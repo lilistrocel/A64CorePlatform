@@ -14,10 +14,10 @@ from ...models.line import Line, LineCreate, LineUpdate, LineWithStats
 from ...services.line.line_service import LineService
 from ...utils.responses import PaginatedResponse, SuccessResponse, paginate
 
-from src.modules.farm_manager.middleware.auth import (
+from ...middleware.auth import (
     CurrentUser,
-    get_current_active_user,
     require_permission,
+    require_view,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class LinkedProfileCounts(BaseModel):
 )
 async def create_line(
     payload: LineCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.line.manage")),
 ) -> SuccessResponse[Line]:
     line = await LineService.create_line(payload, current_user)
     return SuccessResponse(data=line, message="Genetic line created successfully")
@@ -74,7 +74,7 @@ async def list_lines(
     ),
     activeOnly: bool = Query(False),
     withStats: bool = Query(True, description="Include accession rollups"),
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> PaginatedResponse[LineWithStats]:
     lines, total = await LineService.list_lines(
         skip=(page - 1) * perPage,
@@ -104,7 +104,7 @@ async def list_lines(
     ),
 )
 async def get_linked_counts(
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[LinkedProfileCounts]:
     counts = await LineService.count_by_linked_profile()
     return SuccessResponse(data=LinkedProfileCounts(**counts))
@@ -118,7 +118,7 @@ async def get_linked_counts(
 )
 async def get_line(
     line_id: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[LineWithStats]:
     line = await LineService.get_line_with_stats(line_id)
     return SuccessResponse(data=line)
@@ -133,7 +133,7 @@ async def get_line(
 async def update_line(
     line_id: str,
     payload: LineUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.line.manage")),
 ) -> SuccessResponse[Line]:
     line = await LineService.update_line(line_id, payload)
     return SuccessResponse(data=line, message="Genetic line updated successfully")
@@ -151,7 +151,7 @@ async def update_line(
 )
 async def deactivate_line(
     line_id: str,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.delete")),
 ) -> SuccessResponse[Line]:
     line = await LineService.deactivate_line(line_id)
     return SuccessResponse(data=line, message="Genetic line deactivated")

@@ -13,9 +13,10 @@ from ...models.lineage import AncestryChain, LineageGraph
 from ...services.lineage.lineage_service import LineageService
 from ...utils.responses import SuccessResponse
 
-from src.modules.farm_manager.middleware.auth import (
+from ...middleware.auth import (
     CurrentUser,
-    get_current_active_user,
+    require_permission,
+    require_view,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ async def get_lineage_graph(
     includeAncestors: bool = Query(True),
     includeDescendants: bool = Query(True),
     maxDepth: Optional[int] = Query(None, ge=1, le=25),
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[LineageGraph]:
     graph = await LineageService.build_graph(
         root_accession_id=accessionId,
@@ -65,7 +66,7 @@ async def get_lineage_graph(
 )
 async def get_ancestry(
     accession_id: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[AncestryChain]:
     chain = await LineageService.get_ancestry(accession_id)
     return SuccessResponse(data=chain)

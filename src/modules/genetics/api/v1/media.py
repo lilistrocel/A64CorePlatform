@@ -28,10 +28,10 @@ from ...utils.responses import (
     paginate,
 )
 
-from src.modules.farm_manager.middleware.auth import (
+from ...middleware.auth import (
     CurrentUser,
-    get_current_active_user,
     require_permission,
+    require_view,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ class AdditiveReadout(BaseModel):
 )
 async def create_recipe(
     payload: RecipeCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.media.manage")),
 ) -> SuccessResponse[Recipe]:
     recipe = await MediumService.create_recipe(payload, current_user)
     return SuccessResponse(data=recipe, message="Recipe created successfully")
@@ -78,7 +78,7 @@ async def list_recipes(
     additive: Optional[str] = Query(None, description="Recipes containing this additive"),
     search: Optional[str] = Query(None),
     activeOnly: bool = Query(False),
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> PaginatedResponse[Recipe]:
     recipes, total = await MediumService.list_recipes(
         skip=(page - 1) * perPage,
@@ -98,7 +98,7 @@ async def list_recipes(
 )
 async def get_recipe(
     recipe_id: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[Recipe]:
     recipe = await MediumService.get_recipe(recipe_id)
     return SuccessResponse(data=recipe)
@@ -117,7 +117,7 @@ async def get_recipe(
 async def update_recipe(
     recipe_id: str,
     payload: RecipeUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.media.manage")),
 ) -> SuccessResponse[Recipe]:
     recipe = await MediumService.update_recipe(recipe_id, payload)
     return SuccessResponse(data=recipe, message="Recipe updated successfully")
@@ -136,7 +136,7 @@ async def update_recipe(
 )
 async def create_batch(
     payload: BatchCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.media.manage")),
 ) -> SuccessResponse[Batch]:
     batch = await MediumService.create_batch(payload, current_user)
     return SuccessResponse(data=batch, message="Batch recorded successfully")
@@ -154,7 +154,7 @@ async def list_batches(
     status_: Optional[str] = Query(None, alias="status"),
     additive: Optional[str] = Query(None, description="Batches whose snapshot contains this additive"),
     search: Optional[str] = Query(None, description="Match batch code"),
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> PaginatedResponse[Batch]:
     batches, total = await MediumService.list_batches(
         skip=(page - 1) * perPage,
@@ -174,7 +174,7 @@ async def list_batches(
 )
 async def get_batch(
     batch_id: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[Batch]:
     batch = await MediumService.get_batch(batch_id)
     return SuccessResponse(data=batch)
@@ -189,7 +189,7 @@ async def get_batch(
 async def update_batch(
     batch_id: str,
     payload: BatchUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.media.manage")),
 ) -> SuccessResponse[Batch]:
     batch = await MediumService.update_batch(batch_id, payload)
     return SuccessResponse(data=batch, message="Batch updated successfully")
@@ -213,7 +213,7 @@ async def accessions_by_additive(
     additive_name: str,
     page: int = Query(1, ge=1),
     perPage: int = Query(50, ge=1, le=100),
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[AdditiveReadout]:
     accessions, total, batches = await MediumService.find_accessions_by_additive(
         additive_name,

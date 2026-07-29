@@ -1,6 +1,6 @@
 # API Map
 
-> Generated: 2026-07-28 11:30 UTC  
+> Generated: 2026-07-29 10:20 UTC  
 > Source: MongoDB `mapper_nodes` (layer=api, node_type=api_endpoint)
 
 ## Quick Reference

@@ -20,10 +20,10 @@ from ...models.accession import (
 from ...services.accession.accession_service import AccessionService
 from ...utils.responses import PaginatedResponse, SuccessResponse, paginate
 
-from src.modules.farm_manager.middleware.auth import (
+from ...middleware.auth import (
     CurrentUser,
-    get_current_active_user,
     require_permission,
+    require_view,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ class SplitResult(BaseModel):
 )
 async def create_accession(
     payload: AccessionCreate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.create")),
 ) -> SuccessResponse[Accession]:
     accession = await AccessionService.create_accession(payload, current_user)
     return SuccessResponse(data=accession, message="Accession registered successfully")
@@ -73,7 +73,7 @@ async def list_accessions(
     generation: Optional[int] = Query(None, ge=0, description="Filter by clone generation (G)"),
     search: Optional[str] = Query(None, description="Match accession code or label"),
     activeOnly: bool = Query(False),
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> PaginatedResponse[Accession]:
     accessions, total = await AccessionService.list_accessions(
         skip=(page - 1) * perPage,
@@ -97,7 +97,7 @@ async def list_accessions(
 )
 async def get_accession_by_code(
     accession_code: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[Accession]:
     accession = await AccessionService.get_by_code(accession_code)
     return SuccessResponse(data=accession)
@@ -110,7 +110,7 @@ async def get_accession_by_code(
 )
 async def get_accession(
     accession_id: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[Accession]:
     accession = await AccessionService.get_accession(accession_id)
     return SuccessResponse(data=accession)
@@ -124,7 +124,7 @@ async def get_accession(
 )
 async def list_children(
     accession_id: str,
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[List[Accession]]:
     children = await AccessionService.list_children(accession_id)
     return SuccessResponse(data=children)
@@ -139,7 +139,7 @@ async def list_children(
 async def update_accession(
     accession_id: str,
     payload: AccessionUpdate,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.edit")),
 ) -> SuccessResponse[Accession]:
     accession = await AccessionService.update_accession(accession_id, payload)
     return SuccessResponse(data=accession, message="Accession updated successfully")
@@ -159,7 +159,7 @@ async def update_accession(
 async def split_accession(
     accession_id: str,
     payload: AccessionSplit,
-    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+    current_user: CurrentUser = Depends(require_permission("genetics.edit")),
 ) -> SuccessResponse[SplitResult]:
     source, split = await AccessionService.split_accession(
         accession_id, payload, current_user

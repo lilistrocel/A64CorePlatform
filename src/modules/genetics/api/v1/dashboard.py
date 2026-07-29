@@ -9,9 +9,10 @@ from fastapi import APIRouter, Depends
 from ...services.dashboard_service import DashboardService, GeneticsDashboard
 from ...utils.responses import SuccessResponse
 
-from src.modules.farm_manager.middleware.auth import (
+from ...middleware.auth import (
     CurrentUser,
-    get_current_active_user,
+    require_permission,
+    require_view,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ router = APIRouter()
     ),
 )
 async def get_dashboard(
-    current_user: CurrentUser = Depends(get_current_active_user),
+    current_user: CurrentUser = Depends(require_view),
 ) -> SuccessResponse[GeneticsDashboard]:
     summary = await DashboardService.get_dashboard()
     return SuccessResponse(data=summary)

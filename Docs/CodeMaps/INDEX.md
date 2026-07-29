@@ -1,7 +1,7 @@
 # A64 Core Platform — Codebase Knowledge Graph
 
-> **Generated:** 2026-07-28 11:30 UTC  
-> **Graph:** 662 nodes · 661 edges  
+> **Generated:** 2026-07-29 10:20 UTC  
+> **Graph:** 663 nodes · 667 edges  
 > **Tasks:** 16/26 mapping tasks completed
 
 ## What Is This?
