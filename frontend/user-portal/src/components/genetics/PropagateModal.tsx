@@ -73,6 +73,37 @@ const SEXUAL_METHODS: PropagationMethodValue[] = [
 
 const VESSEL_OPTIONS = Object.keys(VESSEL_LABELS) as VesselForm[];
 
+/**
+ * What each method normally produces. Without this the form kept whatever was
+ * selected last, so choosing "Grain transfer" would still preview "8 plates" —
+ * inviting a spawn run to be recorded as petri dishes.
+ *
+ * Only applied while the operator has not overridden the result form; once
+ * they have, their choice stands.
+ */
+const METHOD_DEFAULT_RESULT: Record<
+  PropagationMethodValue,
+  { form: VesselForm; unit: string }
+> = {
+  agar_to_agar: { form: 'petri_dish', unit: 'plates' },
+  tissue_clone: { form: 'petri_dish', unit: 'plates' },
+  cutting: { form: 'cutting', unit: 'cuttings' },
+  node_culture: { form: 'tissue_jar', unit: 'jars' },
+  division: { form: 'rooted_plant', unit: 'divisions' },
+  lc_inoculation: { form: 'liquid_culture', unit: 'jars' },
+  grain_transfer: { form: 'grain_spawn', unit: 'bags' },
+  bulk_inoculation: { form: 'fruiting_block', unit: 'blocks' },
+  cryo_revival: { form: 'petri_dish', unit: 'plates' },
+  spore_print: { form: 'spore_print', unit: 'prints' },
+  multispore: { form: 'petri_dish', unit: 'plates' },
+  single_spore: { form: 'petri_dish', unit: 'plates' },
+  seed_from_cross: { form: 'seed_lot', unit: 'seeds' },
+  self_pollination: { form: 'seed_lot', unit: 'seeds' },
+  breeding: { form: 'animal', unit: 'head' },
+  artificial_insemination: { form: 'animal', unit: 'head' },
+  embryo_transfer: { form: 'embryo', unit: 'embryos' },
+};
+
 const ROLE_OPTIONS: ParentRole[] = [
   'clone_source',
   'seed_parent',
@@ -163,6 +194,8 @@ export function PropagateModal({
   const [operatorName, setOperatorName] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Once the operator picks a result form themselves, stop re-suggesting.
+  const [formTouched, setFormTouched] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [cloneOverride, setCloneOverride] = useState('');
   const [filialOverride, setFilialOverride] = useState('');
@@ -196,7 +229,13 @@ export function PropagateModal({
       setParentBId('');
       setParentBUnknown(false);
     }
-  }, [method, isSexual, allowsTwoParents]);
+
+    const preset = METHOD_DEFAULT_RESULT[method];
+    if (preset && !formTouched) {
+      setForm(preset.form);
+      setUnit(preset.unit);
+    }
+  }, [method, isSexual, allowsTwoParents, formTouched]);
 
   const parentA = accessions.find((a) => a.id === parentAId) ?? sourceAccession;
   const parentB = accessions.find((a) => a.id === parentBId);
@@ -420,7 +459,13 @@ export function PropagateModal({
       <FormRow $cols={3}>
         <Field>
           <Label>Result form</Label>
-          <Select value={form} onChange={(e) => setForm(e.target.value as VesselForm)}>
+          <Select
+            value={form}
+            onChange={(e) => {
+              setForm(e.target.value as VesselForm);
+              setFormTouched(true);
+            }}
+          >
             {VESSEL_OPTIONS.map((v) => (
               <option key={v} value={v}>
                 {VESSEL_LABELS[v]}
