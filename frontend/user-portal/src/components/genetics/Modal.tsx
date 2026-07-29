@@ -8,6 +8,7 @@
  * Cancel) is the only way out.
  */
 
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
 
@@ -105,10 +106,61 @@ interface ModalProps {
   footer?: ReactNode;
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
+  'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ title, subtitle, width, onClose, children, footer }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // The overlay stops mouse clicks reaching the page, but nothing stopped Tab
+  // walking into the controls behind it — on the accession page that means
+  // reaching the live status dropdown and mutating the record you are in the
+  // middle of splitting. Trap focus inside the panel and lock body scroll.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+
+    // Focus the first real control so keyboard users start inside the dialog.
+    const first = panel?.querySelector<HTMLElement>(FOCUSABLE);
+    first?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !panel) return;
+      const items = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+        (el) => el.offsetParent !== null
+      );
+      if (items.length === 0) return;
+
+      const firstItem = items[0];
+      const lastItem = items[items.length - 1];
+      const active = document.activeElement;
+
+      // Wrap at both ends rather than letting focus escape to the page.
+      if (e.shiftKey && (active === firstItem || !panel.contains(active))) {
+        e.preventDefault();
+        lastItem.focus();
+      } else if (!e.shiftKey && active === lastItem) {
+        e.preventDefault();
+        firstItem.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus?.();
+    };
+    // Deliberately mount-only: re-running would steal focus mid-typing.
+  }, []);
+
   return (
     <Overlay>
-      <Panel $width={width} role="dialog" aria-modal="true" aria-label={title}>
+      <Panel ref={panelRef} $width={width} role="dialog" aria-modal="true" aria-label={title}>
         <Header>
           <TitleWrap>
             <Title>{title}</Title>
