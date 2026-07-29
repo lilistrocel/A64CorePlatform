@@ -182,6 +182,18 @@ export const ROOM_TYPE_ICONS: Record<RoomType, string> = {
   harvest_pack: '\u{1F4CB}',
 };
 
+/**
+ * Phases a container room may hold. Mirrors OPERATIONAL_PHASES on the backend —
+ * a lab is never "fruiting"; the dishes inside it have states, the room is just
+ * open, being cleaned, shut for maintenance or quarantined.
+ */
+export const OPERATIONAL_PHASES: RoomPhase[] = [
+  'empty',
+  'cleaning',
+  'quarantined',
+  'maintenance',
+];
+
 /** Room types that run a single-crop lifecycle. Mirrors BATCH_ROOM_TYPES. */
 export const BATCH_ROOM_TYPES: RoomType[] = ['fruiting'];
 

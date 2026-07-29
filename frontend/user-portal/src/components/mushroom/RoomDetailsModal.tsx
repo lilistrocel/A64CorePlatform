@@ -1,11 +1,17 @@
 /**
  * RoomDetailsModal Component
  *
- * Tabbed modal for room details with four tabs:
- * - Overview: strain info, phase, substrate info
- * - Environment: latest readings + historical chart
- * - Harvests: table of harvests with flush numbers
- * - Contamination: list of reports with resolve action
+ * Which tabs appear depends on what the room is for.
+ *
+ * A **batch room** (fruiting) runs one crop, so it gets the full set: overview
+ * with phase/strain/substrate and the crop lifecycle, harvests, environment and
+ * contamination.
+ *
+ * A **container room** (lab, spawn, incubation, storage) holds many
+ * independently tracked items at once. Strain, substrate, flush and the crop
+ * phase machine are all meaningless there — it has no single crop. Instead it
+ * opens on Contents: the actual dishes, jars and blocks in the room, which is
+ * what someone clicking a room holding "18 items" is looking for.
  */
 
 import { useState } from 'react';
@@ -21,6 +27,7 @@ import {
   Legend,
 } from 'recharts';
 import type { GrowingRoom, RoomPhase } from '../../types/mushroom';
+import { ROOM_TYPE_ICONS, ROOM_TYPE_LABELS, OPERATIONAL_PHASES, isBatchRoom } from '../../types/mushroom';
 import {
   PHASE_COLORS,
   PHASE_LABELS,
@@ -36,6 +43,9 @@ import { useMushroomStrains } from '../../hooks/mushroom/useMushroomStrains';
 import { useFacilitySubstrates } from '../../hooks/mushroom/useSubstrateBatches';
 import { BiologicalEfficiencyGauge } from './BiologicalEfficiencyGauge';
 import { HarvestEntryModal } from './HarvestEntryModal';
+import { useAccessions } from '../../hooks/genetics/useGenetics';
+import { VESSEL_LABELS, STATUS_LABELS } from '../../types/genetics';
+import { useNavigate } from 'react-router-dom';
 
 // Valid phase transitions — mirrors backend VALID_TRANSITIONS
 const VALID_TRANSITIONS: Record<RoomPhase, RoomPhase[]> = {
@@ -56,7 +66,7 @@ const VALID_TRANSITIONS: Record<RoomPhase, RoomPhase[]> = {
 // Phases where strain/substrate assignment makes sense
 const ASSIGNMENT_PHASES: RoomPhase[] = ['preparing', 'inoculated'];
 
-type TabType = 'overview' | 'environment' | 'harvests' | 'contamination';
+type TabType = 'contents' | 'overview' | 'environment' | 'harvests' | 'contamination';
 
 interface RoomDetailsModalProps {
   isOpen: boolean;
@@ -75,7 +85,21 @@ export function RoomDetailsModal({
   const { data: freshRoom } = useRoom(facilityId, roomProp.id);
   const room = freshRoom ?? roomProp;
 
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const navigate = useNavigate();
+  const batchRoom = isBatchRoom(room.roomType);
+
+  // Container rooms open on their contents; that is the question being asked
+  // when you click a room showing "18 items".
+  const [activeTab, setActiveTab] = useState<TabType>(
+    batchRoom ? 'overview' : 'contents'
+  );
+
+  // What is physically in this room, from the genetics repo.
+  const { data: contentsPage, isLoading: contentsLoading } = useAccessions({
+    roomId: room.id,
+    perPage: 100,
+  });
+  const contents = contentsPage?.data ?? [];
   const [showHarvestModal, setShowHarvestModal] = useState(false);
   const [showAdvanceForm, setShowAdvanceForm] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState<RoomPhase | null>(null);
@@ -218,7 +242,9 @@ export function RoomDetailsModal({
 
         {/* Tabs */}
         <TabBar role="tablist" aria-label="Room detail sections">
-          {(['overview', 'environment', 'harvests', 'contamination'] as TabType[]).map(
+          {((batchRoom
+            ? ['overview', 'environment', 'harvests', 'contamination']
+            : ['contents', 'environment', 'contamination']) as TabType[]).map(
             (tab) => (
               <TabButton
                 key={tab}
@@ -227,6 +253,7 @@ export function RoomDetailsModal({
                 $active={activeTab === tab}
                 onClick={() => setActiveTab(tab)}
               >
+                {tab === 'contents' && `Contents${contents.length ? ` (${contents.length})` : ''}`}
                 {tab === 'overview' && 'Overview'}
                 {tab === 'environment' && (
                   <>
@@ -253,6 +280,124 @@ export function RoomDetailsModal({
         {/* Tab Content */}
         <TabContent role="tabpanel">
           {/* ── OVERVIEW ── */}
+          {activeTab === 'contents' && (
+            <Section>
+              <ContentsHeader>
+                <ContentsIntro>
+                  {ROOM_TYPE_ICONS[room.roomType]} A{' '}
+                  {ROOM_TYPE_LABELS[room.roomType].toLowerCase()} room holds many
+                  independently tracked items — each carries its own generation and
+                  lineage, so the room itself has no single strain or crop phase.
+                </ContentsIntro>
+
+                {/* A container room has no crop lifecycle, but it still needs an
+                    operational state — shut for cleaning, quarantined, and so on. */}
+                <StatusRow>
+                  <StatusLabel htmlFor="room-op-status">Room status</StatusLabel>
+                  <StatusSelect
+                    id="room-op-status"
+                    value={room.currentPhase}
+                    disabled={advancePhase.isPending}
+                    onChange={(e) => {
+                      const target = e.target.value as RoomPhase;
+                      if (target !== room.currentPhase) {
+                        advancePhase.mutate({ targetPhase: target });
+                      }
+                    }}
+                  >
+                    {OPERATIONAL_PHASES.map((ph) => (
+                      <option key={ph} value={ph}>
+                        {PHASE_LABELS[ph] ?? ph}
+                      </option>
+                    ))}
+                  </StatusSelect>
+                  {advancePhase.isPending && <MutedText>saving…</MutedText>}
+                </StatusRow>
+              </ContentsHeader>
+
+              {contentsLoading && <MutedText>Loading contents…</MutedText>}
+
+              {!contentsLoading && contents.length === 0 && (
+                <EmptyBox>
+                  Nothing recorded in this room yet.
+                  <br />
+                  Material appears here once it is registered or propagated into the
+                  room from the Genetics Repo.
+                </EmptyBox>
+              )}
+
+              {!contentsLoading && contents.length > 0 && (
+                <>
+                  <ContentsSummary>
+                    {Object.entries(
+                      contents.reduce<Record<string, number>>((acc, a) => {
+                        acc[a.form] = (acc[a.form] ?? 0) + a.quantity;
+                        return acc;
+                      }, {})
+                    )
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([form, count]) => (
+                        <SummaryChip key={form}>
+                          <SummaryCount>{count}</SummaryCount>{' '}
+                          {VESSEL_LABELS[form as keyof typeof VESSEL_LABELS] ?? form}
+                        </SummaryChip>
+                      ))}
+                  </ContentsSummary>
+
+                  <ContentsTable>
+                    <thead>
+                      <tr>
+                        <ContentsTh>Accession</ContentsTh>
+                        <ContentsTh>Gen</ContentsTh>
+                        <ContentsTh>Form</ContentsTh>
+                        <ContentsTh>Qty</ContentsTh>
+                        <ContentsTh>Position</ContentsTh>
+                        <ContentsTh>Status</ContentsTh>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contents.map((a) => (
+                        <ContentsRow
+                          key={a.id}
+                          onClick={() => {
+                            onClose();
+                            navigate(`/genetics/accessions/${a.id}`);
+                          }}
+                          title="Open in the Genetics Repo"
+                        >
+                          <ContentsTd>
+                            <AccessionCode>{a.accessionCode}</AccessionCode>
+                          </ContentsTd>
+                          <ContentsTd>
+                            <GenPill $warm={a.cloneGeneration >= 5}>
+                              {a.generationLabel}
+                            </GenPill>
+                          </ContentsTd>
+                          <ContentsTd>
+                            {VESSEL_LABELS[a.form] ?? a.form}
+                          </ContentsTd>
+                          <ContentsTd>
+                            {a.quantity} {a.unit}
+                          </ContentsTd>
+                          <ContentsTd>
+                            <MutedText>
+                              {[a.location?.unit, a.location?.position]
+                                .filter(Boolean)
+                                .join(' / ') || '—'}
+                            </MutedText>
+                          </ContentsTd>
+                          <ContentsTd>
+                            <MutedText>{STATUS_LABELS[a.status] ?? a.status}</MutedText>
+                          </ContentsTd>
+                        </ContentsRow>
+                      ))}
+                    </tbody>
+                  </ContentsTable>
+                </>
+              )}
+            </Section>
+          )}
+
           {activeTab === 'overview' && (
             <Section>
               <TwoCol>
@@ -728,6 +873,126 @@ export function RoomDetailsModal({
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
+
+const ContentsHeader = styled.div`
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const StatusRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const StatusLabel = styled.label`
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const StatusSelect = styled.select`
+  padding: 6px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const ContentsIntro = styled.p`
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const ContentsSummary = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+`;
+
+const SummaryChip = styled.span`
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  background: ${({ theme }) => theme.colors.primary[50]};
+  color: ${({ theme }) => theme.colors.primary[800]};
+`;
+
+const SummaryCount = styled.strong`
+  font-weight: 700;
+`;
+
+const ContentsTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+`;
+
+const ContentsTh = styled.th`
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  white-space: nowrap;
+`;
+
+const ContentsTd = styled.td`
+  padding: 9px 10px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const ContentsRow = styled.tr`
+  cursor: pointer;
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface};
+  }
+`;
+
+const AccessionCode = styled.span`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-weight: 700;
+  font-size: 12.5px;
+`;
+
+const GenPill = styled.span<{ $warm: boolean }>`
+  font-family: ${({ theme }) => theme.typography.fontFamily.mono};
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: ${({ $warm, theme }) =>
+    $warm ? theme.colors.warningBg : theme.colors.primary[50]};
+  color: ${({ $warm, theme }) => ($warm ? '#92400e' : theme.colors.primary[800])};
+`;
+
+const MutedText = styled.span`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 12.5px;
+`;
+
+const EmptyBox = styled.div`
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border: 1px dashed ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+`;
 
 const Backdrop = styled.div`
   position: fixed;
