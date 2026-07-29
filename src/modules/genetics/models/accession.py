@@ -41,9 +41,22 @@ class ParentRef(BaseModel):
 
 
 class StorageLocation(BaseModel):
-    """Where the material physically sits."""
-    facility: Optional[str] = Field(None, max_length=120)
-    room: Optional[str] = Field(None, max_length=120)
+    """Where the material physically sits.
+
+    ``facilityId`` / ``roomId`` are real references into the mushroom module's
+    facilities and rooms, which is what makes "what is in my lab right now" a
+    query rather than a text search. They are deliberately plain strings and
+    not enforced foreign keys: the genetics repo is shared across every
+    division, and a plant or animal line may sit somewhere the mushroom module
+    knows nothing about.
+
+    ``facility`` / ``room`` remain as free text for exactly that case, and for
+    material recorded before rooms were modelled.
+    """
+    facilityId: Optional[str] = Field(None, description="mushroom_facilities facilityId")
+    roomId: Optional[str] = Field(None, description="growing_rooms roomId")
+    facility: Optional[str] = Field(None, max_length=120, description="Free-text fallback")
+    room: Optional[str] = Field(None, max_length=120, description="Free-text fallback")
     unit: Optional[str] = Field(None, max_length=120, description="Incubator, fridge, shelf, pen")
     position: Optional[str] = Field(None, max_length=120, description="Rack/row/slot")
     temperatureC: Optional[float] = Field(None, description="Holding temperature")

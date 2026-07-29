@@ -7,7 +7,7 @@
 
 import styled from 'styled-components';
 import { GrowingRoomCard } from './GrowingRoomCard';
-import type { GrowingRoom, RoomPhase } from '../../types/mushroom';
+import type { GrowingRoom, RoomOccupancy, RoomPhase } from '../../types/mushroom';
 import { PHASE_LABELS } from '../../types/mushroom';
 
 interface GrowingRoomGridProps {
@@ -15,6 +15,8 @@ interface GrowingRoomGridProps {
   onRoomClick?: (room: GrowingRoom) => void;
   filterPhase?: RoomPhase | null;
   compact?: boolean;
+  /** Live material per roomId, from the genetics repo. */
+  occupancy?: Record<string, RoomOccupancy>;
 }
 
 export function GrowingRoomGrid({
@@ -22,6 +24,7 @@ export function GrowingRoomGrid({
   onRoomClick,
   filterPhase,
   compact = false,
+  occupancy,
 }: GrowingRoomGridProps) {
   const filtered = filterPhase
     ? rooms.filter((r) => r.currentPhase === filterPhase)
@@ -53,6 +56,7 @@ export function GrowingRoomGrid({
           room={room}
           onClick={onRoomClick}
           compact={compact}
+          occupancy={occupancy?.[room.id]}
         />
       ))}
     </Grid>

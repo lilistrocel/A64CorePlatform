@@ -148,11 +148,60 @@ export interface UpdateFacilityPayload {
 // ROOM
 // ============================================================================
 
+/**
+ * What a room is for. Only a FRUITING room runs one crop through a lifecycle;
+ * every other type is a container holding independently tracked items (petri
+ * dishes, spawn jars, blocks), so it has no single strain or phase.
+ */
+export type RoomType =
+  | 'lab'
+  | 'spawn'
+  | 'substrate_prep'
+  | 'incubation'
+  | 'fruiting'
+  | 'storage'
+  | 'harvest_pack';
+
+export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
+  lab: 'Lab (agar / LC)',
+  spawn: 'Spawn incubation',
+  substrate_prep: 'Substrate prep',
+  incubation: 'Block incubation',
+  fruiting: 'Fruiting',
+  storage: 'Storage / culture library',
+  harvest_pack: 'Harvest & packing',
+};
+
+export const ROOM_TYPE_ICONS: Record<RoomType, string> = {
+  lab: '\u{1F9EB}',
+  spawn: '\u{1FAD9}',
+  substrate_prep: '\u{1F33E}',
+  incubation: '\u{1F4E6}',
+  fruiting: '\u{1F344}',
+  storage: '\u{2744}\u{FE0F}',
+  harvest_pack: '\u{1F4CB}',
+};
+
+/** Room types that run a single-crop lifecycle. Mirrors BATCH_ROOM_TYPES. */
+export const BATCH_ROOM_TYPES: RoomType[] = ['fruiting'];
+
+export function isBatchRoom(roomType?: RoomType): boolean {
+  return !!roomType && BATCH_ROOM_TYPES.includes(roomType);
+}
+
+/** Live material held in one room, from /genetics/accessions/room-occupancy. */
+export interface RoomOccupancy {
+  vessels: number;
+  records: number;
+  byForm: Record<string, number>;
+}
+
 export interface GrowingRoom {
   id: string;
   facilityId: string;
   roomCode: string;
   name?: string;
+  roomType: RoomType;
   capacity?: number;
   currentPhase: RoomPhase;
   strainId?: string;
@@ -173,6 +222,7 @@ export interface GrowingRoom {
 export interface CreateRoomPayload {
   roomCode: string;
   name?: string;
+  roomType?: RoomType;
   capacity?: number;
   notes?: string;
 }
@@ -180,6 +230,7 @@ export interface CreateRoomPayload {
 export interface UpdateRoomPayload {
   roomCode?: string;
   name?: string;
+  roomType?: RoomType;
   capacity?: number;
   notes?: string;
   strainId?: string;

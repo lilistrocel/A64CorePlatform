@@ -171,6 +171,8 @@ class AccessionService:
         status_filter: Optional[str] = None,
         form: Optional[str] = None,
         medium_batch_id: Optional[str] = None,
+        room_id: Optional[str] = None,
+        facility_id: Optional[str] = None,
         search: Optional[str] = None,
         generation: Optional[int] = None,
         active_only: bool = False,
@@ -188,6 +190,10 @@ class AccessionService:
             query["form"] = form
         if medium_batch_id:
             query["mediumBatchId"] = medium_batch_id
+        if room_id:
+            query["location.roomId"] = room_id
+        if facility_id:
+            query["location.facilityId"] = facility_id
         if generation is not None:
             query["cloneGeneration"] = generation
         if search:
@@ -336,6 +342,56 @@ class AccessionService:
 
         updated_source = await AccessionService.get_accession(accession_id)
         return updated_source, child
+
+    # -----------------------------------------------------------------------
+    # Room occupancy
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    async def room_occupancy(
+        facility_id: Optional[str] = None,
+    ) -> Dict[str, Dict[str, Any]]:
+        """Summarise what is physically held in each room.
+
+        Returns ``{roomId: {vessels, records, byForm: {...}}}`` in one
+        aggregation, so a facility page can annotate every room from a single
+        request rather than one per room.
+
+        Only live material is counted — discarded and consumed records would
+        otherwise make a long-running lab look permanently full.
+        """
+        db = genetics_db.get_database()
+
+        match: Dict[str, Any] = {
+            "location.roomId": {"$ne": None},
+            "status": {"$nin": [
+                AccessionStatus.DISCARDED.value,
+                AccessionStatus.CONSUMED.value,
+            ]},
+        }
+        if facility_id:
+            match["location.facilityId"] = facility_id
+
+        pipeline = [
+            {"$match": match},
+            {
+                "$group": {
+                    "_id": {"room": "$location.roomId", "form": "$form"},
+                    "vessels": {"$sum": "$quantity"},
+                    "records": {"$sum": 1},
+                }
+            },
+        ]
+
+        out: Dict[str, Dict[str, Any]] = {}
+        async for row in db[ACCESSIONS].aggregate(pipeline):
+            room_id = row["_id"]["room"]
+            form = row["_id"]["form"]
+            entry = out.setdefault(room_id, {"vessels": 0, "records": 0, "byForm": {}})
+            entry["vessels"] += row["vessels"]
+            entry["records"] += row["records"]
+            entry["byForm"][form] = entry["byForm"].get(form, 0) + row["vessels"]
+        return out
 
     # -----------------------------------------------------------------------
     # Helpers used by other services

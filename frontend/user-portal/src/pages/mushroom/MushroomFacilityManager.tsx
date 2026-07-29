@@ -11,6 +11,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { useFacilities, useCreateFacility } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms, useCreateRoom } from '../../hooks/mushroom/useRoomData';
+import { useRoomOccupancy } from '../../hooks/genetics/useGenetics';
 import { useFacilitySubstrates } from '../../hooks/mushroom/useSubstrateBatches';
 import { FacilityCard } from '../../components/mushroom/FacilityCard';
 import { GrowingRoomGrid } from '../../components/mushroom/GrowingRoomGrid';
@@ -22,6 +23,12 @@ import type {
   FacilityStatus,
   CreateFacilityPayload,
   CreateRoomPayload,
+  RoomType,
+} from '../../types/mushroom';
+import {
+  ROOM_TYPE_LABELS,
+  ROOM_TYPE_ICONS,
+  isBatchRoom,
 } from '../../types/mushroom';
 
 // ============================================================================
@@ -54,7 +61,7 @@ export function MushroomFacilityManager() {
   const [showCreateFacility, setShowCreateFacility] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [facilityForm, setFacilityForm] = useState<FacilityFormState>(defaultFacilityForm);
-  const [roomForm, setRoomForm] = useState<CreateRoomPayload>({ roomCode: '' });
+  const [roomForm, setRoomForm] = useState<CreateRoomPayload>({ roomCode: '', roomType: 'lab' });
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: facilities = [], isLoading: facilitiesLoading } = useFacilities();
@@ -65,6 +72,9 @@ export function MushroomFacilityManager() {
   );
   const { data: substrates = [] } = useFacilitySubstrates(selectedFacility?.id);
   const createRoom = useCreateRoom(selectedFacility?.id ?? '');
+  // What is physically held in each room, from the genetics repo — one request
+  // annotates every room rather than one per room.
+  const { data: roomOccupancy } = useRoomOccupancy(selectedFacility?.id);
 
   const handleFacilitySubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -105,10 +115,11 @@ export function MushroomFacilityManager() {
     try {
       await createRoom.mutateAsync({
         roomCode: roomForm.roomCode.trim(),
+        roomType: roomForm.roomType ?? 'lab',
         name: roomForm.name?.trim() || undefined,
         notes: roomForm.notes?.trim() || undefined,
       });
-      setRoomForm({ roomCode: '' });
+      setRoomForm({ roomCode: '', roomType: 'lab' });
       setShowCreateRoom(false);
     } catch {
       // Error handled by global interceptor
@@ -201,6 +212,7 @@ export function MushroomFacilityManager() {
               <GrowingRoomGrid
                 rooms={facilityRooms}
                 onRoomClick={setSelectedRoom}
+                occupancy={roomOccupancy}
               />
             )}
           </DetailSection>
@@ -384,6 +396,30 @@ export function MushroomFacilityManager() {
                   }
                   placeholder="e.g. Fruiting Chamber Alpha"
                 />
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="room-type">
+                  Room Type <Required>*</Required>
+                </Label>
+                <Select
+                  id="room-type"
+                  value={roomForm.roomType ?? 'lab'}
+                  onChange={(e) =>
+                    setRoomForm((p) => ({ ...p, roomType: e.target.value as RoomType }))
+                  }
+                >
+                  {(Object.keys(ROOM_TYPE_LABELS) as RoomType[]).map((rt) => (
+                    <option key={rt} value={rt}>
+                      {ROOM_TYPE_ICONS[rt]} {ROOM_TYPE_LABELS[rt]}
+                    </option>
+                  ))}
+                </Select>
+                <FieldHint>
+                  {isBatchRoom(roomForm.roomType)
+                    ? 'Runs one crop at a time through the full phase lifecycle.'
+                    : 'A container — holds many independently tracked items (dishes, jars, blocks) at once, so it has no crop phase of its own.'}
+                </FieldHint>
               </FormGroup>
 
               <FormGroup>
@@ -829,6 +865,30 @@ const SelectField = styled.select`
     border-color: #2196f3;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
   }
+`;
+
+const Select = styled.select`
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.background};
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms;
+
+  &:focus {
+    border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  }
+`;
+
+const FieldHint = styled.span`
+  font-size: 12px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin-top: 4px;
 `;
 
 const TextArea = styled.textarea`

@@ -29,6 +29,7 @@ import type {
   PromotionResult,
   PropagationEvent,
   PropagationOutcome,
+  RoomOccupancy,
   SplitAccessionPayload,
   SplitResult,
   UpdateAccessionPayload,
@@ -101,6 +102,8 @@ export interface ListAccessionsParams {
   status?: string;
   form?: string;
   mediumBatchId?: string;
+  roomId?: string;
+  facilityId?: string;
   generation?: number;
   search?: string;
   activeOnly?: boolean;
@@ -111,6 +114,19 @@ export async function listAccessions(
 ): Promise<Paginated<Accession>> {
   const { data } = await apiClient.get(`${BASE}/accessions`, { params });
   return data;
+}
+
+/**
+ * Live material per room, keyed by roomId. One request annotates every room on
+ * a facility page; excludes discarded and consumed records.
+ */
+export async function getRoomOccupancy(
+  facilityId?: string
+): Promise<Record<string, RoomOccupancy>> {
+  const { data } = await apiClient.get(`${BASE}/accessions/room-occupancy`, {
+    params: facilityId ? { facilityId } : {},
+  });
+  return data.data;
 }
 
 export async function getAccession(accessionId: string): Promise<Accession> {

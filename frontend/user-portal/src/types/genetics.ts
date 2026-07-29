@@ -34,8 +34,11 @@ export type VesselForm =
   | 'slant'
   | 'liquid_culture'
   | 'grain_spawn'
+  | 'bulk_spawn'
+  | 'fruiting_block'
   | 'agar_plug'
   | 'tissue_jar'
+  | 'sample'
   | 'spore_print'
   | 'spore_syringe'
   | 'seed_lot'
@@ -71,6 +74,7 @@ export type PropagationMethodValue =
   | 'tissue_clone'
   | 'lc_inoculation'
   | 'grain_transfer'
+  | 'bulk_inoculation'
   | 'cutting'
   | 'node_culture'
   | 'division'
@@ -198,6 +202,11 @@ export interface ParentRef {
 }
 
 export interface StorageLocation {
+  /** Real reference into mushroom_facilities. */
+  facilityId?: string | null;
+  /** Real reference into growing_rooms — what makes room contents queryable. */
+  roomId?: string | null;
+  /** Free-text fallback for material outside the mushroom module's world. */
   facility?: string | null;
   room?: string | null;
   unit?: string | null;
@@ -578,6 +587,13 @@ export interface LinkedProfileCounts {
   plants: Record<string, number>;
 }
 
+/** Live material held in one room. Mirrors the mushroom module's RoomOccupancy. */
+export interface RoomOccupancy {
+  vessels: number;
+  records: number;
+  byForm: Record<string, number>;
+}
+
 export interface KindBreakdown {
   plant: number;
   fungus: number;
@@ -635,8 +651,11 @@ export const VESSEL_LABELS: Record<VesselForm, string> = {
   slant: 'Slant',
   liquid_culture: 'Liquid culture',
   grain_spawn: 'Grain spawn',
+  bulk_spawn: 'Bulk spawn',
+  fruiting_block: 'Fruiting block',
   agar_plug: 'Agar plug',
   tissue_jar: 'Tissue jar',
+  sample: 'Sample',
   spore_print: 'Spore print',
   spore_syringe: 'Spore syringe',
   seed_lot: 'Seed lot',
@@ -663,6 +682,7 @@ export const METHOD_LABELS: Record<PropagationMethodValue, string> = {
   tissue_clone: 'Tissue clone',
   lc_inoculation: 'Liquid culture inoculation',
   grain_transfer: 'Grain transfer',
+  bulk_inoculation: 'Bulk inoculation (spawn to block)',
   cutting: 'Cutting',
   node_culture: 'Node culture',
   division: 'Division',

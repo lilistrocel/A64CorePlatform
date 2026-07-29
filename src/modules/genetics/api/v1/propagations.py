@@ -38,6 +38,7 @@ class MethodInfo(BaseModel):
     value: str
     reproductionMode: ReproductionMode
     maxParents: int
+    isExpansion: bool
     advancesCloneGeneration: bool
     advancesFilialGeneration: bool
     resetsCloneGeneration: bool
@@ -61,9 +62,13 @@ async def list_methods(
             value=method.value,
             reproductionMode=method.reproduction_mode,
             maxParents=method.max_parents,
-            advancesCloneGeneration=(
+            isExpansion=(
                 method.reproduction_mode == ReproductionMode.ASEXUAL
+                and not method.advances_generation
             ),
+            # NOT the same as "is asexual" — expansion methods are asexual but
+            # deliberately leave G alone.
+            advancesCloneGeneration=method.advances_generation,
             advancesFilialGeneration=(
                 method.reproduction_mode == ReproductionMode.SEXUAL
             ),

@@ -31,6 +31,7 @@ import type {
   PromotionResult,
   PropagationEvent,
   PropagationOutcome,
+  RoomOccupancy,
   SplitAccessionPayload,
   SplitResult,
   UpdateAccessionPayload,
@@ -102,6 +103,18 @@ export function useAccessions(params: api.ListAccessionsParams = {}) {
   return useQuery<Paginated<Accession>>({
     queryKey: [...ROOT, 'accessions', params],
     queryFn: () => api.listAccessions(params),
+  });
+}
+
+/**
+ * What is physically held in each room of a facility. Cheap and read-mostly,
+ * so it tolerates a short stale window.
+ */
+export function useRoomOccupancy(facilityId?: string) {
+  return useQuery<Record<string, RoomOccupancy>>({
+    queryKey: [...ROOT, 'room-occupancy', facilityId],
+    queryFn: () => api.getRoomOccupancy(facilityId),
+    staleTime: 30_000,
   });
 }
 

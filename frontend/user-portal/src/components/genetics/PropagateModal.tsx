@@ -43,14 +43,20 @@ import {
   TextArea,
 } from './styled';
 
-const ASEXUAL_METHODS: PropagationMethodValue[] = [
+// Split to match the backend rule: advancing methods create a new clonal
+// generation, expansion methods multiply the one you already have.
+const ADVANCING_METHODS: PropagationMethodValue[] = [
   'agar_to_agar',
   'tissue_clone',
-  'lc_inoculation',
-  'grain_transfer',
   'cutting',
   'node_culture',
   'division',
+];
+
+const EXPANSION_METHODS: PropagationMethodValue[] = [
+  'lc_inoculation',
+  'grain_transfer',
+  'bulk_inoculation',
   'cryo_revival',
 ];
 
@@ -197,13 +203,17 @@ export function PropagateModal({
 
   // Mirrors PropagationService.derive_generations so the preview matches what
   // the server will actually do.
+  const isExpansion = !!methodInfo && !methodInfo.advancesCloneGeneration && !isSexual;
+
   const derived = useMemo(() => {
     const involved = [parentA, parentB].filter(Boolean) as Accession[];
     const maxClone = involved.length ? Math.max(...involved.map((p) => p.cloneGeneration)) : 0;
     const maxFilial = involved.length ? Math.max(...involved.map((p) => p.filialGeneration)) : 0;
     if (isSexual) return { clone: 0, filial: maxFilial + 1 };
+    // Expansion multiplies a generation rather than advancing it.
+    if (isExpansion) return { clone: maxClone, filial: maxFilial };
     return { clone: maxClone + 1, filial: maxFilial };
-  }, [parentA, parentB, isSexual]);
+  }, [parentA, parentB, isSexual, isExpansion]);
 
   const effectiveClone = cloneOverride !== '' ? Number(cloneOverride) : derived.clone;
   const effectiveFilial = filialOverride !== '' ? Number(filialOverride) : derived.filial;
@@ -282,8 +292,15 @@ export function PropagateModal({
       <Field>
         <Label>Method</Label>
         <Select value={method} onChange={(e) => setMethod(e.target.value as PropagationMethodValue)}>
-          <optgroup label="Asexual — clone, G advances">
-            {ASEXUAL_METHODS.map((m) => (
+          <optgroup label="Clone — new generation, G advances">
+            {ADVANCING_METHODS.map((m) => (
+              <option key={m} value={m}>
+                {METHOD_LABELS[m]}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Expansion — same generation, G unchanged">
+            {EXPANSION_METHODS.map((m) => (
               <option key={m} value={m}>
                 {METHOD_LABELS[m]}
               </option>
@@ -300,7 +317,9 @@ export function PropagateModal({
         <Hint>
           {isSexual
             ? 'Recombines the genome — the result is a fresh genetic individual, so the clone counter restarts at G0 and the filial counter advances.'
-            : 'Preserves the genome — the clone counter advances, which is what tracks senescence in a serially transferred line.'}
+            : isExpansion
+            ? 'Scales up the same generation. Senescence tracks agar transfers, not production volume, so G is left alone.'
+            : 'Preserves the genome but counts as a transfer — the clone counter advances, which is what tracks senescence in a serially transferred line.'}
         </Hint>
       </Field>
 
@@ -375,7 +394,7 @@ export function PropagateModal({
       <Preview>
         <PreviewLine>
           <ModeBadge $mode={isSexual ? 'sexual' : 'asexual'}>
-            {isSexual ? 'sexual' : 'asexual'}
+            {isSexual ? 'sexual' : isExpansion ? 'expansion' : 'clone'}
           </ModeBadge>
           <span>will create</span>
           <Mono>
@@ -388,6 +407,8 @@ export function PropagateModal({
         <Hint>
           {isSexual
             ? `Filial generation advances to F${effectiveFilial}; clone generation restarts at G0.`
+            : isExpansion
+            ? `Expansion — this multiplies the culture rather than advancing it, so it stays at G${effectiveClone}. A full production run (LC → grain → block) does not age the strain.`
             : `Clone generation advances to G${effectiveClone}${
                 effectiveFilial > 0 ? `, filial generation stays at F${effectiveFilial}` : ''
               }.`}

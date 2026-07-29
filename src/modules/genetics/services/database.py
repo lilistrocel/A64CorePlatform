@@ -87,6 +87,11 @@ class GeneticsDatabaseManager:
             # Lineage traversal walks children by parent id — the hot path for
             # the graph endpoint, hence a dedicated index on the nested field.
             await db[ACCESSIONS].create_index("parents.accessionId")
+            # "What is in this room right now" — the inventory read path for
+            # lab / spawn / incubation rooms, which hold many items at once.
+            await db[ACCESSIONS].create_index("location.roomId")
+            await db[ACCESSIONS].create_index("location.facilityId")
+            await db[ACCESSIONS].create_index([("location.roomId", 1), ("status", 1)])
             await db[ACCESSIONS].create_index([("lineId", 1), ("cloneGeneration", 1)])
             await db[ACCESSIONS].create_index([("lineId", 1), ("status", 1)])
             await db[ACCESSIONS].create_index([("createdAt", -1)])

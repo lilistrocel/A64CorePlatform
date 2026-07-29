@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { useCreateAccession, useMediumBatches } from '../../hooks/genetics/useGenetics';
 import type { Accession, ProvenanceType, VesselForm } from '../../types/genetics';
 import { PROVENANCE_LABELS, VESSEL_LABELS } from '../../types/genetics';
+import { LocationPicker } from './LocationPicker';
 import { Modal } from './Modal';
 import {
   Banner,
@@ -52,6 +53,8 @@ export function RegisterAccessionModal({
   const [sourceNote, setSourceNote] = useState('');
   const [unitLocation, setUnitLocation] = useState('');
   const [position, setPosition] = useState('');
+  const [facilityId, setFacilityId] = useState('');
+  const [roomId, setRoomId] = useState('');
   const [label, setLabel] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -75,6 +78,8 @@ export function RegisterAccessionModal({
         sourceNote: sourceNote.trim() || undefined,
       },
       location: {
+        facilityId: facilityId || undefined,
+        roomId: roomId || undefined,
         unit: unitLocation.trim() || undefined,
         position: position.trim() || undefined,
       },
@@ -197,24 +202,19 @@ export function RegisterAccessionModal({
         </Field>
       </FormRow>
 
-      <FormRow $cols={2}>
-        <Field>
-          <Label>Location</Label>
-          <Input
-            value={unitLocation}
-            onChange={(e) => setUnitLocation(e.target.value)}
-            placeholder="incubator-2"
-          />
-        </Field>
-        <Field>
-          <Label>Position</Label>
-          <Input
-            value={position}
-            onChange={(e) => setPosition(e.target.value)}
-            placeholder="shelf-3"
-          />
-        </Field>
-      </FormRow>
+      <LocationPicker
+        facilityId={facilityId}
+        roomId={roomId}
+        form={form}
+        unit={unitLocation}
+        position={position}
+        onChange={(patch) => {
+          if (patch.facilityId !== undefined) setFacilityId(patch.facilityId);
+          if (patch.roomId !== undefined) setRoomId(patch.roomId);
+          if (patch.unit !== undefined) setUnitLocation(patch.unit);
+          if (patch.position !== undefined) setPosition(patch.position);
+        }}
+      />
 
       <Field>
         <Label>Vessel label</Label>

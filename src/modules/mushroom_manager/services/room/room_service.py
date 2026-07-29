@@ -20,6 +20,8 @@ from ...models.growing_room import (
     RoomPhase,
     VALID_TRANSITIONS,
     FlushInfo,
+    allowed_phases_for,
+    BATCH_ROOM_TYPES,
 )
 from ..database import mushroom_db
 
@@ -204,6 +206,30 @@ class RoomService:
         room = await RoomService.get_room(facility_id, room_id)
         current_phase = room.currentPhase
 
+        # Only a batch room runs a crop lifecycle. A lab, spawn or incubation
+        # room holds many independent items, so it has no single phase to
+        # advance — the items inside carry their own state.
+        permitted = allowed_phases_for(room.roomType)
+        if target_phase not in permitted:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"A '{room.roomType.value}' room has no crop lifecycle — it holds "
+                    f"independently tracked items. Allowed phases for this room type: "
+                    f"{sorted(p.value for p in permitted)}"
+                ),
+            )
+
+        if room.roomType not in BATCH_ROOM_TYPES:
+            # Container rooms are not walking a crop cycle, so the ordered
+            # transition table does not apply — a lab can go from empty to
+            # cleaning to maintenance in any order. Permission to hold the
+            # phase (checked above) is the only constraint.
+            return await RoomService._commit_phase(
+                facility_id, room_id, room, current_phase, target_phase,
+                notes, current_user,
+            )
+
         # Validate the transition
         allowed = VALID_TRANSITIONS.get(current_phase, [])
         if target_phase not in allowed:
@@ -215,7 +241,26 @@ class RoomService:
                 )
             )
 
-        # Build the history entry
+        return await RoomService._commit_phase(
+            facility_id, room_id, room, current_phase, target_phase,
+            notes, current_user,
+        )
+
+    @staticmethod
+    async def _commit_phase(
+        facility_id: str,
+        room_id: str,
+        room: GrowingRoom,
+        current_phase: RoomPhase,
+        target_phase: RoomPhase,
+        notes: str | None,
+        current_user,
+    ) -> GrowingRoom:
+        """Persist a phase change and its history entry.
+
+        Shared by both paths: batch rooms reach it after the crop transition
+        table is validated, container rooms after the simpler room-type check.
+        """
         history_entry = PhaseHistoryEntry(
             fromPhase=current_phase,
             toPhase=target_phase,
@@ -224,14 +269,12 @@ class RoomService:
             notes=notes,
         )
 
-        # Build the update payload
         update_fields: dict = {
             "currentPhase": target_phase.value,
             "updatedAt": datetime.utcnow(),
         }
 
-        # When transitioning INTO fruiting_initiation FROM resting,
-        # a new flush cycle begins. Increment currentFlush and totalFlushes.
+        # Entering fruiting_initiation from resting starts a new flush cycle.
         if (
             target_phase == RoomPhase.FRUITING_INITIATION
             and current_phase == RoomPhase.RESTING
@@ -239,9 +282,7 @@ class RoomService:
             new_flush = room.flushInfo.currentFlush + 1
             update_fields["flushInfo.currentFlush"] = new_flush
             update_fields["flushInfo.totalFlushes"] = room.flushInfo.totalFlushes + 1
-            logger.info(
-                f"[RoomService] Room {room_id} started flush #{new_flush}"
-            )
+            logger.info(f"[RoomService] Room {room_id} started flush #{new_flush}")
 
         db = mushroom_db.get_database()
         await db.growing_rooms.update_one(
@@ -249,7 +290,7 @@ class RoomService:
             {
                 "$set": update_fields,
                 "$push": {"phaseHistory": history_entry.model_dump()},
-            }
+            },
         )
 
         logger.info(

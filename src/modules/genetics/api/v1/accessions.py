@@ -6,10 +6,10 @@ code-lookup endpoint used by label scanning.
 """
 
 import logging
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ...models.accession import (
     Accession,
@@ -35,6 +35,15 @@ class SplitResult(BaseModel):
     """Both sides of a batch split."""
     source: Accession
     split: Accession
+
+
+class RoomOccupancy(BaseModel):
+    """Live material held in one room."""
+    vessels: int = Field(0, description="Total vessels/head across all records")
+    records: int = Field(0, description="Number of accession records")
+    byForm: Dict[str, int] = Field(
+        default_factory=dict, description="Vessel count per form, e.g. petri_dish -> 40"
+    )
 
 
 @router.post(
@@ -70,6 +79,8 @@ async def list_accessions(
     status_: Optional[str] = Query(None, alias="status"),
     form: Optional[str] = Query(None),
     mediumBatchId: Optional[str] = Query(None),
+    roomId: Optional[str] = Query(None, description="Material currently held in this room"),
+    facilityId: Optional[str] = Query(None, description="Material currently held in this facility"),
     generation: Optional[int] = Query(None, ge=0, description="Filter by clone generation (G)"),
     search: Optional[str] = Query(None, description="Match accession code or label"),
     activeOnly: bool = Query(False),
@@ -82,11 +93,31 @@ async def list_accessions(
         status_filter=status_,
         form=form,
         medium_batch_id=mediumBatchId,
+        room_id=roomId,
+        facility_id=facilityId,
         generation=generation,
         search=search,
         active_only=activeOnly,
     )
     return PaginatedResponse(data=accessions, meta=paginate(total, page, perPage))
+
+
+@router.get(
+    "/room-occupancy",
+    response_model=SuccessResponse[Dict[str, RoomOccupancy]],
+    summary="What is physically held in each room",
+    description=(
+        "Live material per room, keyed by roomId, in one aggregation — so a "
+        "facility page can annotate every room from a single request. Counts "
+        "exclude discarded and consumed records."
+    ),
+)
+async def get_room_occupancy(
+    facilityId: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(require_view),
+) -> SuccessResponse[Dict[str, RoomOccupancy]]:
+    raw = await AccessionService.room_occupancy(facility_id=facilityId)
+    return SuccessResponse(data={k: RoomOccupancy(**v) for k, v in raw.items()})
 
 
 @router.get(

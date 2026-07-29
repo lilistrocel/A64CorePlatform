@@ -13,6 +13,31 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
+class RoomType(str, Enum):
+    """What a room is for.
+
+    A mushroom facility is not made of interchangeable rooms. Only a fruiting
+    room runs one crop at a time; the lab, spawn and incubation rooms hold many
+    independent items simultaneously — dozens of dishes from different strains
+    at different ages — and cannot have a single strain or lifecycle phase.
+
+    Room type therefore decides which model applies (see ``BATCH_ROOM_TYPES``).
+    """
+    LAB = "lab"                          # Agar work, liquid culture — clean room
+    SPAWN = "spawn"                      # Grain spawn incubation
+    SUBSTRATE_PREP = "substrate_prep"    # Mixing, sterilisation, pasteurisation
+    INCUBATION = "incubation"            # Bulk block colonisation
+    FRUITING = "fruiting"                # Cropping — the single-crop model
+    STORAGE = "storage"                  # Cold storage, culture library
+    HARVEST_PACK = "harvest_pack"        # Post-harvest handling
+
+
+# Room types that run ONE crop through a lifecycle. Everything else is a
+# container holding independently-tracked items, and only ever carries an
+# operational status (see OPERATIONAL_PHASES).
+BATCH_ROOM_TYPES = frozenset({RoomType.FRUITING})
+
+
 class RoomPhase(str, Enum):
     """Growing room lifecycle phases (12 states)"""
     EMPTY = "empty"
@@ -46,6 +71,25 @@ VALID_TRANSITIONS: Dict[RoomPhase, List[RoomPhase]] = {
 }
 
 
+# Phases meaningful to a container room. A lab is never "fruiting" — the dishes
+# inside it have states, the room itself is just open, being cleaned, shut for
+# maintenance, or quarantined.
+OPERATIONAL_PHASES: frozenset = frozenset({
+    RoomPhase.EMPTY,
+    RoomPhase.CLEANING,
+    RoomPhase.QUARANTINED,
+    RoomPhase.MAINTENANCE,
+    RoomPhase.DECOMMISSIONED,
+})
+
+
+def allowed_phases_for(room_type: RoomType) -> frozenset:
+    """Phases a room of this type may legitimately hold."""
+    if room_type in BATCH_ROOM_TYPES:
+        return frozenset(RoomPhase)
+    return OPERATIONAL_PHASES
+
+
 class ClimateSettings(BaseModel):
     """Climate control settings for a specific phase"""
     tempMin: Optional[float] = Field(None, description="Min temperature (Celsius)")
@@ -77,6 +121,10 @@ class GrowingRoomBase(BaseModel):
     """Base growing room fields — mirrors CreateRoomPayload from the frontend"""
     roomCode: str = Field(..., min_length=1, max_length=20, description="Room identifier code")
     name: Optional[str] = Field(None, max_length=200, description="Room display name")
+    roomType: RoomType = Field(
+        RoomType.FRUITING,
+        description="What the room is for. Only FRUITING runs a single-crop lifecycle.",
+    )
     area: Optional[float] = Field(None, gt=0, description="Room area in sq meters")
     capacity: Optional[int] = Field(None, gt=0, description="Capacity in substrate bags/blocks")
     notes: Optional[str] = Field(None, max_length=500, description="Free-text notes")
@@ -98,6 +146,7 @@ class GrowingRoomUpdate(BaseModel):
     """Schema for updating a growing room"""
     roomCode: Optional[str] = Field(None, min_length=1, max_length=20)
     name: Optional[str] = Field(None, max_length=200)
+    roomType: Optional[RoomType] = None
     area: Optional[float] = Field(None, gt=0)
     capacity: Optional[int] = Field(None, gt=0)
     strainId: Optional[str] = None
