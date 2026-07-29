@@ -98,6 +98,10 @@ class MushroomDatabaseManager:
             await db.mushroom_harvests.create_index("flushNumber")
             await db.mushroom_harvests.create_index("qualityGrade")
             await db.mushroom_harvests.create_index([("harvestedAt", -1)])
+            # Lineage attribution — supports the yield-by-line rollup.
+            await db.mushroom_harvests.create_index("accessionId")
+            await db.mushroom_harvests.create_index("lineId")
+            await db.mushroom_harvests.create_index([("lineId", 1), ("cloneGeneration", 1)])
             await db.mushroom_harvests.create_index([("createdAt", -1)])
             # Compound index for room harvest queries
             await db.mushroom_harvests.create_index([("roomId", 1), ("flushNumber", 1)])

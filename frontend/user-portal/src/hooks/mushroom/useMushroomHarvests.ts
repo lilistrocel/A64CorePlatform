@@ -6,7 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../services/api';
-import type { MushroomHarvest, CreateHarvestPayload } from '../../types/mushroom';
+import type { MushroomHarvest, CreateHarvestPayload, LineYieldRow } from '../../types/mushroom';
 
 // ============================================================================
 // LIST ROOM HARVESTS
@@ -83,5 +83,29 @@ export function useCreateHarvest(facilityId: string, roomId: string) {
       // Invalidate dashboard summary
       queryClient.invalidateQueries({ queryKey: ['mushroom', 'dashboard'] });
     },
+  });
+}
+
+// ============================================================================
+// YIELD BY LINEAGE
+// ============================================================================
+
+/**
+ * Harvest performance grouped by genetic line and clone generation.
+ *
+ * Answers the question the genetics repo exists for: not "how does Blue Oyster
+ * do" but "how does *this* Blue Oyster culture do, and is it getting worse as I
+ * keep transferring it". Only harvests recorded against a specific block appear.
+ */
+export function useYieldByLine(facilityId?: string) {
+  return useQuery<LineYieldRow[]>({
+    queryKey: ['mushroom', 'yield-by-line', facilityId],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/v1/mushroom/harvests/by-line', {
+        params: facilityId ? { facilityId } : {},
+      });
+      return data.data;
+    },
+    staleTime: 30_000,
   });
 }

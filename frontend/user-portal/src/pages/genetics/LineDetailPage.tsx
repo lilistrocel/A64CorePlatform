@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { GrowingProfilePanel } from '../../components/genetics/GrowingProfilePanel';
+import { LineYieldPanel } from '../../components/genetics/LineYieldPanel';
 import { LineageTree } from '../../components/genetics/LineageTree';
 import { LineFormModal } from '../../components/genetics/LineFormModal';
 import { PropagateModal } from '../../components/genetics/PropagateModal';
@@ -79,6 +80,17 @@ const Meta = styled.div`
 
 const Section = styled.section`
   margin-top: 28px;
+`;
+
+const Columns = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const Sci = styled.span`
@@ -207,7 +219,10 @@ export function LineDetailPage() {
       )}
 
       <Section>
-        <GrowingProfilePanel line={line} />
+        <Columns>
+          <GrowingProfilePanel line={line} />
+          <LineYieldPanel lineId={line.id} lineCode={line.code} />
+        </Columns>
       </Section>
 
       <Section>

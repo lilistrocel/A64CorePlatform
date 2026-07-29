@@ -6,8 +6,10 @@ Harvests are flush-aware and scoped to a growing room within a facility.
 """
 
 import logging
-from typing import List
-from fastapi import APIRouter, Depends, status
+from datetime import datetime
+from typing import List, Optional
+from fastapi import APIRouter, Depends, Query, status
+from pydantic import BaseModel, Field
 
 from ...models.harvest import Harvest, HarvestCreate
 from ...services.harvest.harvest_service import HarvestService
@@ -22,6 +24,18 @@ from src.modules.farm_manager.middleware.auth import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class LineYieldRow(BaseModel):
+    """Harvest performance for one genetic line at one clone generation."""
+    lineId: str
+    lineCode: Optional[str] = None
+    cloneGeneration: Optional[int] = Field(None, description="G of the harvested block")
+    totalKg: float = 0
+    harvests: int = 0
+    avgBE: Optional[float] = Field(None, description="Mean biological efficiency %")
+    blockCount: int = Field(0, description="Distinct blocks contributing")
+    lastHarvestAt: Optional[datetime] = None
 
 
 # ---------------------------------------------------------------------------
@@ -105,3 +119,26 @@ async def list_harvests_for_facility(
     """
     harvests = await HarvestService.list_harvests_for_facility(facility_id=facility_id)
     return SuccessResponse(data=harvests)
+
+
+# ---------------------------------------------------------------------------
+# GET /harvests/by-line
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/harvests/by-line",
+    response_model=SuccessResponse[List[LineYieldRow]],
+    summary="Yield attributed to genetic lineage",
+    description=(
+        "Harvest performance grouped by genetic line and clone generation — "
+        "'which of my cultures yields best, and does it decline as I keep "
+        "transferring it'. Only harvests recorded against a specific block are "
+        "included; ones with no accession are excluded rather than guessed at."
+    ),
+)
+async def get_yield_by_line(
+    facilityId: Optional[str] = Query(None, description="Restrict to one facility"),
+    current_user: CurrentUser = Depends(get_current_active_user),
+) -> SuccessResponse[List[LineYieldRow]]:
+    rows = await HarvestService.yield_by_line(facility_id=facilityId)
+    return SuccessResponse(data=[LineYieldRow(**r) for r in rows])

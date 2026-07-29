@@ -29,6 +29,22 @@ class HarvestBase(BaseModel):
 class HarvestCreate(HarvestBase):
     """Schema for creating a harvest record"""
     flushNumber: Optional[int] = Field(None, ge=1, description="Flush number (auto-filled if omitted)")
+    accessionId: Optional[str] = Field(
+        None,
+        description=(
+            "The fruiting block this came off, as a genetic_accessions id. Supplying "
+            "it is what lets yield be attributed to a lineage rather than a species."
+        ),
+    )
+    substrateWeightKg: Optional[float] = Field(
+        None,
+        gt=0,
+        description=(
+            "Dry substrate weight for THIS block, overriding the room-level figure. "
+            "Needed for a meaningful per-block BE when a room holds blocks from "
+            "several batches."
+        ),
+    )
 
 
 class Harvest(HarvestBase):
@@ -36,7 +52,21 @@ class Harvest(HarvestBase):
     harvestId: str = Field(default_factory=lambda: str(uuid4()), description="Unique harvest ID")
     roomId: str = Field(..., description="Growing room ID")
     facilityId: str = Field(..., description="Facility ID")
-    strainId: Optional[str] = Field(None, description="Mushroom strain ID")
+    strainId: Optional[str] = Field(None, description="Mushroom strain ID (species-level)")
+
+    # Lineage attribution. strainId answers "what species was this"; these
+    # answer "which of my cultures produced it", which is the question the
+    # genetics repo exists to make answerable.
+    accessionId: Optional[str] = Field(None, description="genetic_accessions id of the harvested block")
+    accessionCode: Optional[str] = Field(None, description="Denormalised for display, e.g. PO-BLU-G2-014")
+    lineId: Optional[str] = Field(None, description="genetic_lines id, denormalised for grouping")
+    lineCode: Optional[str] = Field(None, description="Denormalised line code, e.g. PO-BLU")
+    cloneGeneration: Optional[int] = Field(None, ge=0, description="G at harvest — lets yield be compared across generations")
+    filialGeneration: Optional[int] = Field(None, ge=0, description="F at harvest")
+
+    substrateWeightKg: Optional[float] = Field(
+        None, gt=0, description="Dry substrate weight used for the BE calculation"
+    )
 
     # Flush tracking
     flushNumber: int = Field(1, ge=1, description="Which flush this harvest belongs to")

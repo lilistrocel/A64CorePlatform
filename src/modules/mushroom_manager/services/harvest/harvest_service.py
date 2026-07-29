@@ -79,25 +79,63 @@ class HarvestService:
             flush_info = room_doc.get("flushInfo", {})
             flush_number = flush_info.get("currentFlush", 1)
 
-        # Calculate biological efficiency when substrate weight is available
+        # Resolve the harvested block, if one was named, and denormalise its
+        # lineage onto the harvest.
+        #
+        # This reads genetic_accessions directly rather than importing the
+        # genetics service. The dependency direction is deliberate: genetics is
+        # a shared module (industries: all) and mushroom_manager is exclusive,
+        # so exclusive-depends-on-shared is the right way round. Denormalising
+        # rather than joining at read time means a harvest stays truthful about
+        # which generation produced it even if the accession is later split,
+        # consumed or re-labelled.
+        accession_fields: dict = {}
+        if data.accessionId:
+            accession_doc = await db.genetic_accessions.find_one(
+                {"accessionId": data.accessionId}
+            )
+            if not accession_doc:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Accession '{data.accessionId}' not found",
+                )
+
+            line_doc = await db.genetic_lines.find_one(
+                {"lineId": accession_doc.get("lineId")}
+            )
+            accession_fields = {
+                "accessionId": data.accessionId,
+                "accessionCode": accession_doc.get("accessionCode"),
+                "lineId": accession_doc.get("lineId"),
+                "lineCode": (line_doc or {}).get("code"),
+                "cloneGeneration": accession_doc.get("cloneGeneration"),
+                "filialGeneration": accession_doc.get("filialGeneration"),
+            }
+
+        # Biological efficiency. A per-block substrate weight wins over the
+        # room-level figure — a room may hold blocks from several batches, and
+        # attributing all of them the same denominator would make the BE
+        # comparison between lineages meaningless.
+        substrate_weight = data.substrateWeightKg or room_doc.get("substrateWeight")
         biological_efficiency: Optional[float] = None
-        substrate_weight = room_doc.get("substrateWeight")
         if substrate_weight and substrate_weight > 0:
             # Reason: BE = (fresh weight harvested / dry weight substrate) * 100
             biological_efficiency = round((data.weightKg / substrate_weight) * 100, 2)
 
         harvest = Harvest(
-            **data.model_dump(exclude={"flushNumber"}),
+            **data.model_dump(exclude={"flushNumber", "accessionId", "substrateWeightKg"}),
             harvestId=str(uuid4()),
             roomId=room_id,
             facilityId=facility_id,
             strainId=room_doc.get("strainId"),
             flushNumber=flush_number,
             biologicalEfficiency=biological_efficiency,
+            substrateWeightKg=substrate_weight,
             harvestedBy=current_user.userId,
             harvestedAt=datetime.utcnow(),
             createdAt=datetime.utcnow(),
             updatedAt=datetime.utcnow(),
+            **accession_fields,
         )
 
         doc = harvest.model_dump()
@@ -126,6 +164,62 @@ class HarvestService:
             f"by user {current_user.userId}"
         )
         return harvest
+
+
+    # ---------------------------------------------------------------------------
+    # Yield attribution by lineage
+    # ---------------------------------------------------------------------------
+
+    @staticmethod
+    async def yield_by_line(
+        facility_id: Optional[str] = None,
+    ) -> List[dict]:
+        """Aggregate harvest performance per genetic line and generation.
+
+        This is the question the genetics repo exists to answer: not "how did
+        Blue Oyster do" but "how did *this* Blue Oyster culture do, and did it
+        get worse as I kept transferring it".
+
+        Grouped by (lineId, cloneGeneration) so a decline across generations is
+        visible directly — the practical readout of senescence. Harvests with
+        no accession recorded are excluded rather than lumped together, since
+        attributing them to a line would be a guess.
+        """
+        db = mushroom_db.get_database()
+
+        match: dict = {"lineId": {"$ne": None}}
+        if facility_id:
+            match["facilityId"] = facility_id
+
+        pipeline = [
+            {"$match": match},
+            {
+                "$group": {
+                    "_id": {"lineId": "$lineId", "generation": "$cloneGeneration"},
+                    "lineCode": {"$first": "$lineCode"},
+                    "totalKg": {"$sum": "$weightKg"},
+                    "harvests": {"$sum": 1},
+                    "avgBE": {"$avg": "$biologicalEfficiency"},
+                    "blocks": {"$addToSet": "$accessionId"},
+                    "lastHarvestAt": {"$max": "$harvestedAt"},
+                }
+            },
+            {"$sort": {"_id.lineId": 1, "_id.generation": 1}},
+        ]
+
+        rows: List[dict] = []
+        async for row in db.mushroom_harvests.aggregate(pipeline):
+            rows.append({
+                "lineId": row["_id"]["lineId"],
+                "lineCode": row.get("lineCode"),
+                "cloneGeneration": row["_id"]["generation"],
+                "totalKg": round(row.get("totalKg") or 0, 3),
+                "harvests": row.get("harvests", 0),
+                "avgBE": round(row["avgBE"], 2) if row.get("avgBE") is not None else None,
+                "blockCount": len([b for b in row.get("blocks", []) if b]),
+                "lastHarvestAt": row.get("lastHarvestAt"),
+            })
+        return rows
 
     # ---------------------------------------------------------------------------
     # List for a specific room

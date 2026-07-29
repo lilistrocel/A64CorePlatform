@@ -190,6 +190,22 @@ export function isBatchRoom(roomType?: RoomType): boolean {
 }
 
 /** Live material held in one room, from /genetics/accessions/room-occupancy. */
+/**
+ * Harvest performance for one genetic line at one clone generation.
+ * The point of the grouping: a decline in avgBE as cloneGeneration climbs is
+ * senescence made measurable.
+ */
+export interface LineYieldRow {
+  lineId: string;
+  lineCode?: string | null;
+  cloneGeneration?: number | null;
+  totalKg: number;
+  harvests: number;
+  avgBE?: number | null;
+  blockCount: number;
+  lastHarvestAt?: string | null;
+}
+
 export interface RoomOccupancy {
   vessels: number;
   records: number;
