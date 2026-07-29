@@ -1300,6 +1300,19 @@
 ## 🟢 Ready
 
 
+### T-700 | Task Manager redesign — state-driven tasks, assignment UI & farmer portal
+- **Category:** Farm Manager (Operations) · Frontend-heavy + some backend · **Priority:** P2
+- **Status:** Audited, redesign not started (deferred 2026-06-29).
+- **Context:** Blocks already auto-generate lifecycle tasks from state transitions with
+  deadlines from `expectedStatusChanges` (backend is mature — `task_generator.py`,
+  `task_service.py`, `tasks.py`, 15 endpoints, daily-harvest aggregation). The FRONTEND is a
+  minimal per-block MVP (`pages/operations/`): no standalone Task Manager page, **no assignment
+  UI**, `/my-tasks` unused (no farmer portal), no task-creation form, status-only filters.
+- **Goal:** proper Task Manager surface (overview + filters + assignment user-picker), a
+  farmer-facing "My Tasks" portal (wire existing `/my-tasks`), and link the manager block-card
+  state buttons to auto-complete the matching task (reverse of the existing `triggerStateChange`).
+- **Full audit + open questions:** `Docs/2-Working-Progress/task-manager-redesign-audit.md`
+
 ### T-203 | CRM Customer detail — AR visibility (outstanding balance, open invoices, payment history, aging)
 - **Category:** Frontend + Backend (read-only aggregation endpoints) · **Priority:** P2
 - **Assigned:** — · **Started:** —
