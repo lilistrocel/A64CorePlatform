@@ -66,6 +66,12 @@ class PropagationService:
             # New genetic individual: filial advances, clone counter restarts.
             return 0, max_filial + 1
 
+        if not method.advances_generation:
+            # Expansion, not drift: culture -> LC -> grain -> bulk multiplies
+            # the same generation. Counting each step would push a G2 culture
+            # to G5 in one production run and flag healthy material as senescent.
+            return max_clone, max_filial
+
         return max_clone + 1, max_filial
 
     # -----------------------------------------------------------------------

@@ -51,8 +51,11 @@ class VesselForm(str, Enum):
     SLANT = "slant"
     LIQUID_CULTURE = "liquid_culture"
     GRAIN_SPAWN = "grain_spawn"
+    BULK_SPAWN = "bulk_spawn"
+    FRUITING_BLOCK = "fruiting_block"
     AGAR_PLUG = "agar_plug"
     TISSUE_JAR = "tissue_jar"
+    SAMPLE = "sample"
     SPORE_PRINT = "spore_print"
     SPORE_SYRINGE = "spore_syringe"
     SEED_LOT = "seed_lot"
@@ -98,14 +101,19 @@ class ReproductionMode(str, Enum):
 class PropagationMethod(str, Enum):
     """Technique used to create the child accession(s)."""
 
-    # --- Asexual: the child is genetically the parent -----------------------
+    # --- Asexual, generation-advancing: a new clonal generation -------------
     AGAR_TO_AGAR = "agar_to_agar"
     TISSUE_CLONE = "tissue_clone"
-    LC_INOCULATION = "lc_inoculation"
-    GRAIN_TRANSFER = "grain_transfer"
     CUTTING = "cutting"
     NODE_CULTURE = "node_culture"
     DIVISION = "division"
+
+    # --- Asexual, expansion: more of the SAME generation --------------------
+    # The production chain (culture -> LC -> grain spawn -> bulk block) is
+    # multiplication, not drift. See _EXPANSION_METHODS.
+    LC_INOCULATION = "lc_inoculation"
+    GRAIN_TRANSFER = "grain_transfer"
+    BULK_INOCULATION = "bulk_inoculation"
     CRYO_REVIVAL = "cryo_revival"
 
     # --- Sexual: the child is a new genetic individual ----------------------
@@ -117,6 +125,24 @@ class PropagationMethod(str, Enum):
     BREEDING = "breeding"
     ARTIFICIAL_INSEMINATION = "artificial_insemination"
     EMBRYO_TRANSFER = "embryo_transfer"
+
+    @property
+    def advances_generation(self) -> bool:
+        """Whether this method produces a NEW clonal generation.
+
+        The production chain — culture -> liquid culture -> grain spawn -> bulk
+        block — multiplies a culture rather than advancing it. Counting each
+        expansion step as a generation would take a G2 culture to G5 in a
+        single production run and fire the senescence warning on material that
+        has not drifted at all.
+
+        Mycological convention counts agar transfers: "a G3 culture" means
+        three agar-to-agar steps deep. Expansion steps carry G through
+        unchanged. Sexual methods are excluded here — they reset G entirely.
+        """
+        if self.reproduction_mode == ReproductionMode.SEXUAL:
+            return False
+        return self not in _EXPANSION_METHODS
 
     @property
     def reproduction_mode(self) -> ReproductionMode:
@@ -139,8 +165,22 @@ class PropagationMethod(str, Enum):
         return 2 if self in _TWO_PARENT_METHODS else 1
 
 
+# Asexual methods that multiply a culture without advancing its generation.
+# Membership here is the single source of truth for the G rule — an asexual
+# method NOT in this set advances G.
+#
+# CRYO_REVIVAL is included deliberately: the whole point of cryogenic storage
+# is to preserve a generation, so reviving material restores it at the depth it
+# went in rather than adding one.
+_EXPANSION_METHODS = frozenset({
+    PropagationMethod.LC_INOCULATION,
+    PropagationMethod.GRAIN_TRANSFER,
+    PropagationMethod.BULK_INOCULATION,
+    PropagationMethod.CRYO_REVIVAL,
+})
+
 # Methods that recombine the genome. Membership here is the single source of
-# truth for generation numbering — add new sexual methods to this set.
+# truth for sexual/asexual classification — add new sexual methods to this set.
 _SEXUAL_METHODS = frozenset({
     PropagationMethod.SPORE_PRINT,
     PropagationMethod.MULTISPORE,

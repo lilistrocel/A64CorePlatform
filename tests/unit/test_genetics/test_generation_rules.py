@@ -6,21 +6,38 @@ Repo depends on. A silent regression here does not raise; it writes wrong
 lineage data that looks plausible and is expensive to unpick months later, so
 this is the highest-value surface in the module to pin down.
 
-The rule:
-  - **asexual** method -> clone generation (G) + 1, filial generation (F) inherited
-  - **sexual**  method -> filial generation (F) + 1, clone generation **reset to 0**
+The rule has three branches:
+  - **asexual, generation-advancing** (agar-to-agar, tissue clone, cutting,
+    node culture, division) -> G + 1, F inherited
+  - **asexual, expansion** (LC inoculation, grain transfer, bulk inoculation,
+    cryo revival) -> both counters unchanged
+  - **sexual** (spore print, cross, breeding) -> F + 1, G **reset to 0**
 
-The reset is the substantive part. A spore print taken off a G5 fruit produces a
-fresh genetic individual with no accumulated senescence, so it is F1-G0 rather
-than G6. Tissue-cloning that same fruit *is* G6. The two counters are orthogonal:
-a cross that is then cloned four times reads F1 · G4.
+Two things are substantive here.
+
+The reset: a spore print taken off a G5 fruit produces a fresh genetic
+individual with no accumulated senescence, so it is F1-G0 rather than G6.
+Tissue-cloning that same fruit *is* G6.
+
+The expansion branch: culture -> liquid culture -> grain spawn -> bulk block is
+one production run that multiplies a culture rather than advancing it. Counting
+each step would take a G2 culture to G5 in a single run and trip the senescence
+warning on material that has not drifted at all. Mycological convention counts
+agar transfers — "a G3 culture" means three agar-to-agar steps deep.
+
+The counters are orthogonal: a cross then cloned four times reads F1 · G4.
 
 Test cases:
-  Asexual
+  Asexual (generation-advancing)
     1.  G0 clone -> G1, F untouched
     2.  G5 clone -> G6 (senescence keeps climbing)
     3.  F inherited unchanged across an asexual step
     4.  Repeated clones climb monotonically
+  Expansion
+    4a. Every expansion method leaves both counters untouched
+    4b. A full production run (LC -> grain -> bulk) stays at its start G
+    4c. Cryo revival restores rather than advances
+    4d. An agar transfer after expansion still advances
   Sexual
     5.  Spore print off G5 -> F1-G0 (the reset — the headline case)
     6.  Sexual step from an F2 parent -> F3, G0
@@ -61,6 +78,7 @@ from src.modules.genetics.models.enums import (
     ReproductionMode,
     VesselForm,
 )
+from src.modules.genetics.services.dashboard_service import SENESCENCE_WATCH_GENERATION
 from src.modules.genetics.services.common import (
     build_accession_code,
     generation_label,
@@ -92,6 +110,21 @@ TWO_PARENT_METHODS = {
     PropagationMethod.BREEDING,
     PropagationMethod.ARTIFICIAL_INSEMINATION,
     PropagationMethod.EMBRYO_TRANSFER,
+}
+
+# Asexual methods that multiply a culture without advancing its generation.
+# Redeclared rather than imported from _EXPANSION_METHODS for the same reason
+# as SEXUAL_METHODS above — editing that set should make these tests disagree.
+EXPANSION_METHODS = {
+    PropagationMethod.LC_INOCULATION,
+    PropagationMethod.GRAIN_TRANSFER,
+    PropagationMethod.BULK_INOCULATION,
+    PropagationMethod.CRYO_REVIVAL,
+}
+
+ADVANCING_METHODS = {
+    m for m in PropagationMethod
+    if m not in SEXUAL_METHODS and m not in EXPANSION_METHODS
 }
 
 
@@ -133,14 +166,52 @@ def test_repeated_clones_climb_monotonically():
         current = accession(clone_gen, filial_gen)
 
 
-@pytest.mark.parametrize(
-    "method",
-    [m for m in PropagationMethod if m not in SEXUAL_METHODS],
-)
-def test_every_asexual_method_advances_clone_generation(method: PropagationMethod):
+@pytest.mark.parametrize("method", sorted(ADVANCING_METHODS, key=lambda m: m.value))
+def test_generation_advancing_methods_climb_g(method: PropagationMethod):
     clone_gen, filial_gen = derive(method, [accession(3, 1)])
     assert clone_gen == 4, f"{method.value} should advance G"
     assert filial_gen == 1, f"{method.value} should inherit F"
+
+
+# ---------------------------------------------------------------------------
+# Expansion — multiplying a generation, not advancing it
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("method", sorted(EXPANSION_METHODS, key=lambda m: m.value))
+def test_expansion_methods_preserve_both_counters(method: PropagationMethod):
+    """Expansion makes more of the same generation, so nothing moves."""
+    assert derive(method, [accession(3, 1)]) == (3, 1), method.value
+
+
+def test_full_production_run_does_not_inflate_generation():
+    """The regression this rule exists to prevent.
+
+    culture -> liquid culture -> grain spawn -> bulk block is one production
+    run. Counting each step would take a G2 culture to G5 and trip the
+    senescence warning on material that has not drifted at all.
+    """
+    current = accession(2, 0)
+    for method in (
+        PropagationMethod.LC_INOCULATION,
+        PropagationMethod.GRAIN_TRANSFER,
+        PropagationMethod.BULK_INOCULATION,
+    ):
+        current = accession(*derive(method, [current]))
+
+    assert current.cloneGeneration == 2, "a production run must not advance G"
+    assert current.cloneGeneration < SENESCENCE_WATCH_GENERATION
+
+
+def test_cryo_revival_restores_rather_than_advances():
+    """Cryo storage exists to preserve a generation, so revival does not add one."""
+    assert derive(PropagationMethod.CRYO_REVIVAL, [accession(4, 0)]) == (4, 0)
+
+
+def test_agar_transfer_after_expansion_still_advances():
+    """Expansion must not disable drift tracking for genuine transfers."""
+    spawn = accession(*derive(PropagationMethod.GRAIN_TRANSFER, [accession(2, 0)]))
+    assert spawn.cloneGeneration == 2
+    assert derive(PropagationMethod.AGAR_TO_AGAR, [spawn]) == (3, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +315,17 @@ def test_reproduction_mode_partitions_every_method():
             else ReproductionMode.ASEXUAL
         )
         assert method.reproduction_mode is expected, method.value
+
+
+def test_advances_generation_partitions_asexual_methods():
+    """Every asexual method is either generation-advancing or expansion."""
+    for method in PropagationMethod:
+        if method in SEXUAL_METHODS:
+            assert not method.advances_generation, f"{method.value} is sexual"
+        elif method in EXPANSION_METHODS:
+            assert not method.advances_generation, f"{method.value} is expansion"
+        else:
+            assert method.advances_generation, f"{method.value} should advance G"
 
 
 def test_max_parents_is_two_only_for_true_cross_methods():
