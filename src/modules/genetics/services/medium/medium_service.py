@@ -34,6 +34,7 @@ from ..common import (
     slugify_code,
 )
 from ..database import ACCESSIONS, BATCHES, RECIPES, genetics_db
+from ..protocol_link import build_protocol_ref
 
 logger = logging.getLogger(__name__)
 
@@ -218,6 +219,7 @@ class MediumService:
             )
 
         scope = scope_fields(current_user)
+        protocol_ref = await build_protocol_ref(data.protocolId)
         batch = Batch(
             batchCode=code,
             recipeId=recipe.id,
@@ -232,6 +234,7 @@ class MediumService:
             vesselCount=data.vesselCount,
             vesselType=data.vesselType,
             sterilizerRun=data.sterilizerRun,
+            protocolRef=protocol_ref,
             notes=data.notes,
             divisionId=scope.get("divisionId"),
             organizationId=scope.get("organizationId"),

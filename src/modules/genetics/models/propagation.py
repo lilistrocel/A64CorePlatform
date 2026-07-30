@@ -72,6 +72,13 @@ class PropagationCreate(BaseModel):
     performedBy: Optional[str] = Field(None, description="userId; defaults to the caller")
     operatorName: Optional[str] = Field(None, max_length=200, description="Free-text technician name")
     mediumBatchId: Optional[str] = Field(None, description="Default medium batch for all targets")
+    protocolId: Optional[str] = Field(
+        None,
+        description=(
+            "The SOP followed. Must be an ACTIVE protocol; its code, title and "
+            "version are pinned onto the event so the trail survives later revisions."
+        ),
+    )
     notes: Optional[str] = Field(None, max_length=2000)
 
 
@@ -96,6 +103,9 @@ class PropagationEvent(BaseModel):
     vesselCount: int = Field(0, ge=0, description="Total vessels produced across all targets")
 
     mediumBatchId: Optional[str] = None
+    protocolRef: Optional[dict] = Field(
+        None, description="Pinned {protocolId, code, title, version, followedAt}"
+    )
     performedAt: datetime = Field(default_factory=datetime.utcnow)
     performedBy: Optional[str] = None
     operatorName: Optional[str] = None

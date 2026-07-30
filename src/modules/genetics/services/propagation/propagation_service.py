@@ -30,6 +30,7 @@ from ...models.propagation import (
 from ..accession.accession_service import AccessionService
 from ..common import doc_to_model, model_to_doc, scope_fields
 from ..database import ACCESSIONS, PROPAGATIONS, genetics_db
+from ..protocol_link import build_protocol_ref
 from ..line.line_service import LineService
 
 logger = logging.getLogger(__name__)
@@ -148,12 +149,14 @@ class PropagationService:
 
         performed_at = data.performedAt or datetime.utcnow()
         scope = scope_fields(current_user)
+        protocol_ref = await build_protocol_ref(data.protocolId)
 
         event = PropagationEvent(
             method=data.method,
             reproductionMode=data.method.reproduction_mode,
             parents=enriched_parents,
             mediumBatchId=data.mediumBatchId,
+            protocolRef=protocol_ref,
             performedAt=performed_at,
             performedBy=data.performedBy or scope.get("createdBy"),
             operatorName=data.operatorName,

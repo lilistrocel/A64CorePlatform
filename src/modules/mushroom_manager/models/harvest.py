@@ -45,6 +45,9 @@ class HarvestCreate(HarvestBase):
             "several batches."
         ),
     )
+    protocolId: Optional[str] = Field(
+        None, description="The SOP followed when harvesting (must be ACTIVE)"
+    )
 
 
 class Harvest(HarvestBase):
@@ -66,6 +69,9 @@ class Harvest(HarvestBase):
 
     substrateWeightKg: Optional[float] = Field(
         None, gt=0, description="Dry substrate weight used for the BE calculation"
+    )
+    protocolRef: Optional[dict] = Field(
+        None, description="Pinned {protocolId, code, title, version, followedAt}"
     )
 
     # Flush tracking

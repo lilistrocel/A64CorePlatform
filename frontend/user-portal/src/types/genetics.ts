@@ -360,6 +360,8 @@ export interface CreatePropagationPayload {
   performedAt?: string;
   operatorName?: string;
   mediumBatchId?: string;
+  /** SOP followed. Must be ACTIVE; pinned by version onto the event. */
+  protocolId?: string;
   notes?: string;
 }
 
@@ -486,6 +488,8 @@ export interface CreateBatchPayload {
   vesselCount: number;
   vesselType?: string;
   sterilizerRun?: string;
+  /** SOP followed. Must be ACTIVE; pinned by version onto the batch. */
+  protocolId?: string;
   notes?: string;
 }
 

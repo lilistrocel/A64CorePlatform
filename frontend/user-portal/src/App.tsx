@@ -211,6 +211,11 @@ const GeneticsMediaLibraryPage = lazy(() =>
   import('./pages/genetics/MediaLibraryPage').then(m => ({ default: m.MediaLibraryPage }))
 );
 
+// Protocols (SOPs) — shared across every industry
+const ProtocolsPage = lazy(() =>
+  import('./pages/protocols/ProtocolsPage').then(m => ({ default: m.ProtocolsPage }))
+);
+
 // Tools module (Fertilizer Cost Calculator + Chemicals Catalog)
 const FertilizerCostCalculator = lazy(() =>
   import('./pages/tools/FertilizerCostCalculator').then(m => ({ default: m.FertilizerCostCalculator }))
@@ -467,6 +472,9 @@ function App() {
                   path="/genetics/accessions/:accessionId"
                   element={<GeneticsAccessionDetailPage />}
                 />
+
+                {/* Protocols (SOPs) — shared across all industries */}
+                <Route path="/protocols" element={<ProtocolsPage />} />
 
                 {/* Tools module */}
                 <Route path="/tools" element={<Navigate to="/tools/fertilizer-calculator" replace />} />

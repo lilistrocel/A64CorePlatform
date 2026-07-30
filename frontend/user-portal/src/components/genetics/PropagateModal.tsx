@@ -30,6 +30,8 @@ import {
   VESSEL_LABELS,
 } from '../../types/genetics';
 import { Modal } from './Modal';
+import { ProtocolPicker } from '../protocols/ProtocolPicker';
+import { scopeForMethod } from '../../types/protocols';
 import {
   Banner,
   Button,
@@ -196,6 +198,7 @@ export function PropagateModal({
 
   // Once the operator picks a result form themselves, stop re-suggesting.
   const [formTouched, setFormTouched] = useState(false);
+  const [protocolId, setProtocolId] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [cloneOverride, setCloneOverride] = useState('');
   const [filialOverride, setFilialOverride] = useState('');
@@ -287,6 +290,7 @@ export function PropagateModal({
       parents,
       operatorName: operatorName || undefined,
       mediumBatchId: mediumBatchId || undefined,
+      protocolId: protocolId || undefined,
       notes: notes || undefined,
       targets: [
         {
@@ -509,6 +513,15 @@ export function PropagateModal({
           />
         </Field>
       </FormRow>
+
+      {/* Scope follows the method, so switching from a clone to a spore print
+          swaps which SOPs are offered. */}
+      <ProtocolPicker
+        scope={scopeForMethod(method)}
+        value={protocolId}
+        onChange={setProtocolId}
+        recordLabel="this propagation"
+      />
 
       <Field>
         <Label>Notes</Label>

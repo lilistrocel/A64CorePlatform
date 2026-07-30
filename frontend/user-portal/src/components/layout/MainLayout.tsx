@@ -64,6 +64,14 @@ const GENETICS_NAV_GROUP: NavItemDef = {
   ],
 };
 
+// Protocols (SOPs) — shared. Sits next to Genetics Repo because the two are
+// used together: the procedure and the record of having followed it.
+const PROTOCOLS_NAV_ITEM: NavItemDef = {
+  to: '/protocols',
+  icon: '📋',
+  label: 'Protocols',
+};
+
 // Tools group — shared across all industry types
 const TOOLS_NAV_GROUP: NavItemDef = {
   icon: '🧰',
@@ -331,6 +339,8 @@ export function MainLayout() {
         ...industryNavItems,
         // Genetics Repo — shared lab, visible to every industry type
         GENETICS_NAV_GROUP,
+        // Protocols — the written procedures behind that work
+        PROTOCOLS_NAV_ITEM,
         // Tools group — available to all users
         TOOLS_NAV_GROUP,
         // Operations group — available to all users (Purchasing sub-group is role-gated inside)

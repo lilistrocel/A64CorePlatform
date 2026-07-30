@@ -10,6 +10,8 @@ import { useState } from 'react';
 import { useCreateBatch, useMediumRecipes } from '../../hooks/genetics/useGenetics';
 import type { MediumBatch } from '../../types/genetics';
 import { Modal } from './Modal';
+import { ProtocolPicker } from '../protocols/ProtocolPicker';
+import { PROTOCOL_SCOPES } from '../../types/protocols';
 import { Banner, Button, Field, FormRow, Hint, Input, Label, Select, TextArea } from './styled';
 
 interface BatchFormModalProps {
@@ -27,6 +29,7 @@ export function BatchFormModal({ defaultRecipeId, onClose, onDone }: BatchFormMo
   const [vesselCount, setVesselCount] = useState('20');
   const [vesselType, setVesselType] = useState('90mm plates');
   const [sterilizerRun, setSterilizerRun] = useState('');
+  const [protocolId, setProtocolId] = useState('');
   const [notes, setNotes] = useState('');
 
   const selected = recipes.find((r) => r.id === recipeId);
@@ -38,6 +41,7 @@ export function BatchFormModal({ defaultRecipeId, onClose, onDone }: BatchFormMo
       vesselCount: Number(vesselCount),
       vesselType: vesselType.trim() || undefined,
       sterilizerRun: sterilizerRun.trim() || undefined,
+      protocolId: protocolId || undefined,
       notes: notes.trim() || undefined,
     });
     onDone?.(result);
@@ -110,6 +114,13 @@ export function BatchFormModal({ defaultRecipeId, onClose, onDone }: BatchFormMo
           placeholder="Autoclave run reference"
         />
       </Field>
+
+      <ProtocolPicker
+        scope={PROTOCOL_SCOPES.mediaPour}
+        value={protocolId}
+        onChange={setProtocolId}
+        recordLabel="this batch"
+      />
 
       <Field>
         <Label>Notes</Label>

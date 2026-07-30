@@ -112,6 +112,34 @@ class HarvestService:
                 "filialGeneration": accession_doc.get("filialGeneration"),
             }
 
+        # Pin the SOP followed, if one was cited. Reads the protocols collection
+        # directly for the same reason the accession lookup does — shared module,
+        # data-layer dependency, no service import cycle.
+        protocol_ref = None
+        if data.protocolId:
+            protocol_doc = await db.protocols.find_one({"protocolId": data.protocolId})
+            if not protocol_doc:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Protocol '{data.protocolId}' not found",
+                )
+            if protocol_doc.get("status") != "active":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Protocol '{protocol_doc.get('code')}' is "
+                        f"{protocol_doc.get('status')}, not active. Only an approved "
+                        f"procedure can be recorded as followed."
+                    ),
+                )
+            protocol_ref = {
+                "protocolId": data.protocolId,
+                "code": protocol_doc.get("code"),
+                "title": protocol_doc.get("title"),
+                "version": protocol_doc.get("version", 1),
+                "followedAt": datetime.utcnow(),
+            }
+
         # Biological efficiency. A per-block substrate weight wins over the
         # room-level figure — a room may hold blocks from several batches, and
         # attributing all of them the same denominator would make the BE
@@ -123,7 +151,9 @@ class HarvestService:
             biological_efficiency = round((data.weightKg / substrate_weight) * 100, 2)
 
         harvest = Harvest(
-            **data.model_dump(exclude={"flushNumber", "accessionId", "substrateWeightKg"}),
+            **data.model_dump(
+                exclude={"flushNumber", "accessionId", "substrateWeightKg", "protocolId"}
+            ),
             harvestId=str(uuid4()),
             roomId=room_id,
             facilityId=facility_id,
@@ -131,6 +161,7 @@ class HarvestService:
             flushNumber=flush_number,
             biologicalEfficiency=biological_efficiency,
             substrateWeightKg=substrate_weight,
+            protocolRef=protocol_ref,
             harvestedBy=current_user.userId,
             harvestedAt=datetime.utcnow(),
             createdAt=datetime.utcnow(),

@@ -140,6 +140,9 @@ class BatchCreate(BaseModel):
         None,
         description="Actual parameters when they differed from the recipe",
     )
+    protocolId: Optional[str] = Field(
+        None, description="The SOP followed when preparing this batch (must be ACTIVE)"
+    )
     notes: Optional[str] = Field(None, max_length=2000)
 
 
@@ -180,6 +183,9 @@ class Batch(BaseModel):
     sterilizerRun: Optional[str] = None
 
     status: MediumBatchStatus = Field(MediumBatchStatus.PREPARED)
+    protocolRef: Optional[dict] = Field(
+        None, description="Pinned {protocolId, code, title, version, followedAt}"
+    )
     qc: BatchQC = Field(default_factory=BatchQC)
     notes: Optional[str] = None
 
