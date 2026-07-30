@@ -75,7 +75,7 @@ export const TUTORIALS: Record<string, Tutorial> = {
     ],
     watchOut:
       'Watch the preview line before you commit. It shows exactly what will be created and why, so if the generation looks wrong you have picked the wrong method.',
-    protocols: ['SOP-LAB-007'],
+    protocols: ['SOP-LAB-002', 'SOP-LAB-004'],
   },
 
   'genetics.accession': {
@@ -118,7 +118,7 @@ export const TUTORIALS: Record<string, Tutorial> = {
     ],
     watchOut:
       'Yield figures across the app are biological efficiency on DRY substrate. The same crop reads roughly three times lower per kg of wet medium.',
-    protocols: ['SOP-LAB-004'],
+    protocols: ['SOP-LAB-001', 'SOP-LAB-005'],
   },
 
   'protocols.library': {

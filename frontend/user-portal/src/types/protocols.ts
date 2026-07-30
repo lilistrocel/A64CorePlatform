@@ -138,6 +138,7 @@ export const PROTOCOL_SCOPES = {
   harvestRecord: 'harvest:record',
   accessionRegister: 'accession:register',
   contamination: 'contamination:response',
+  roomFruiting: 'room:fruiting',
 } as const;
 
 /** Scope tag for a propagation method, e.g. agar_to_agar -> propagation:agar_to_agar. */

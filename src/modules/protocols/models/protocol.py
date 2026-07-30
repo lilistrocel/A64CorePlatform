@@ -23,6 +23,42 @@ from pydantic import BaseModel, Field
 from .enums import ProtocolCategory, ProtocolStatus
 
 
+class ProtocolImage(BaseModel):
+    """A visual reference for a step or for the procedure as a whole.
+
+    Two sources, in order of preference:
+
+    * ``attachmentId`` — a photo taken in THIS lab, uploaded through the
+      attachments module. Always better than a stock image: it shows your
+      substrate, your lighting, your strain, and it is unambiguously yours to
+      use.
+    * ``externalUrl`` — a cited published figure, for cases the lab has not
+      photographed yet. ``attribution`` is required in spirit here; embedding
+      someone else's photograph without crediting it is not acceptable, and an
+      uncredited image cannot be checked by whoever reads it later.
+
+    ``showsWhat`` is deliberately separate from ``caption``: a visual guide is
+    only useful if it states what the reader is supposed to be looking at, not
+    merely what the picture is of.
+    """
+
+    attachmentId: Optional[str] = Field(
+        None, description="Attachment id — a photo taken in this lab (preferred)"
+    )
+    externalUrl: Optional[str] = Field(
+        None, max_length=1000, description="Cited published figure, when no local photo exists"
+    )
+    caption: str = Field(..., min_length=1, max_length=300)
+    attribution: Optional[str] = Field(
+        None, max_length=300, description="Source and licence — required for externalUrl"
+    )
+    showsWhat: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="What the reader should be looking at, e.g. 'rhizomorphic strands, not tomentose fluff'",
+    )
+
+
 class ProtocolStep(BaseModel):
     """One numbered step in a procedure."""
 
@@ -37,6 +73,9 @@ class ProtocolStep(BaseModel):
             "Steps that get skipped under time pressure and cause the failure "
             "later — flame the loop, let the agar set, cool before inoculating."
         ),
+    )
+    images: List[ProtocolImage] = Field(
+        default_factory=list, description="Visual references for this step"
     )
     notes: Optional[str] = Field(None, max_length=1000)
 
@@ -92,6 +131,13 @@ class ProtocolBase(BaseModel):
     references: List[str] = Field(
         default_factory=list, description="Related protocol codes or external sources"
     )
+    referenceImages: List[ProtocolImage] = Field(
+        default_factory=list,
+        description=(
+            "Visual references for the procedure as a whole — the identification "
+            "gallery on a contamination protocol, for instance."
+        ),
+    )
     tags: List[str] = Field(default_factory=list)
     notes: Optional[str] = Field(None, max_length=2000)
 
@@ -121,6 +167,7 @@ class ProtocolUpdate(BaseModel):
     steps: Optional[List[ProtocolStep]] = None
     appliesTo: Optional[List[str]] = None
     references: Optional[List[str]] = None
+    referenceImages: Optional[List[ProtocolImage]] = None
     tags: Optional[List[str]] = None
     notes: Optional[str] = Field(None, max_length=2000)
     status: Optional[ProtocolStatus] = None

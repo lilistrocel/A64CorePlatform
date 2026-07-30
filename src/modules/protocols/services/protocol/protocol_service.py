@@ -37,6 +37,9 @@ _CONTENT_FIELDS = {
     "safetyNotes",
     "purpose",
     "scope",
+    # A changed reference photo changes what the reader is told to look for,
+    # which is as much a procedural change as a reworded step.
+    "referenceImages",
 }
 
 
