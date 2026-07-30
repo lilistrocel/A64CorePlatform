@@ -81,3 +81,18 @@ export function useUpdateFacility(facilityId: string) {
     },
   });
 }
+
+// ============================================================================
+// DELETE
+// ============================================================================
+
+export function useDeleteFacility() {
+  const queryClient = useQueryClient();
+  return useMutation<{ name: string; facilityId: string }, Error, string>({
+    mutationFn: async (facilityId) => {
+      const { data } = await apiClient.delete(`/v1/mushroom/facilities/${facilityId}`);
+      return data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mushroom'] }),
+  });
+}

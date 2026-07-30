@@ -11,6 +11,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { useFacilities, useCreateFacility } from '../../hooks/mushroom/useFacilityData';
 import { useFacilityRooms, useCreateRoom } from '../../hooks/mushroom/useRoomData';
+import { useDeleteFacility } from '../../hooks/mushroom/useFacilityData';
 import { useRoomOccupancy } from '../../hooks/genetics/useGenetics';
 import { useFacilitySubstrates } from '../../hooks/mushroom/useSubstrateBatches';
 import { FacilityCard } from '../../components/mushroom/FacilityCard';
@@ -75,6 +76,7 @@ export function MushroomFacilityManager() {
   // What is physically held in each room, from the genetics repo — one request
   // annotates every room rather than one per room.
   const { data: roomOccupancy } = useRoomOccupancy(selectedFacility?.id);
+  const deleteFacility = useDeleteFacility();
 
   const handleFacilitySubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -190,6 +192,24 @@ export function MushroomFacilityManager() {
               <AddRoomBtn onClick={() => setShowCreateRoom(true)}>
                 + Add Room
               </AddRoomBtn>
+              {/* Refused server-side while the facility still holds rooms or
+                  substrate batches, so emptying it runs each room's own
+                  dependency check rather than cascading past them. */}
+              <DeleteFacilityBtn
+                onClick={async () => {
+                  try {
+                    await deleteFacility.mutateAsync(selectedFacility.id);
+                    setSelectedFacility(null);
+                  } catch {
+                    // The 409 explains what is still inside; the global
+                    // interceptor surfaces it as a toast.
+                  }
+                }}
+                disabled={deleteFacility.isPending}
+                title="Delete this facility (only when empty)"
+              >
+                {deleteFacility.isPending ? 'Deleting…' : 'Delete'}
+              </DeleteFacilityBtn>
               <CloseDetailBtn
                 onClick={() => setSelectedFacility(null)}
                 aria-label="Close facility detail"
@@ -864,6 +884,29 @@ const SelectField = styled.select`
   &:focus {
     border-color: #2196f3;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  }
+`;
+
+const DeleteFacilityBtn = styled.button`
+  padding: 8px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    background: ${({ theme }) => theme.colors.errorBg};
+    border-color: ${({ theme }) => theme.colors.error};
+    color: #b91c1c;
   }
 `;
 

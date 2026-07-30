@@ -44,8 +44,10 @@ const VEGETABLE_FRUITS_NAV: NavItemDef[] = [
   { to: '/farm/plants', icon: '🌿', label: 'Plant Library' },
 ];
 
+// No dashboard entry here: /dashboard already resolves to the mushroom
+// dashboard for a mushroom division, so listing it again was two nav items for
+// one screen. The /mushroom/dashboard route still exists for direct links.
 const MUSHROOM_NAV: NavItemDef[] = [
-  { to: '/mushroom/dashboard', icon: '🍄', label: 'Mushroom Dashboard' },
   { to: '/mushroom/rooms', icon: '🏠', label: 'Room Monitor' },
   { to: '/mushroom/facilities', icon: '🏭', label: 'Facilities' },
   { to: '/mushroom/strains', icon: '🧬', label: 'Strain Library' },

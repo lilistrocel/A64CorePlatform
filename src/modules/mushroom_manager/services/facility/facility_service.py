@@ -145,3 +145,47 @@ class FacilityService:
 
         logger.info(f"[FacilityService] Updated facility {facility_id}: {list(update_fields.keys())}")
         return await FacilityService.get_facility(facility_id)
+
+    # ---------------------------------------------------------------------------
+    # Deletion
+    # ---------------------------------------------------------------------------
+
+    @staticmethod
+    async def delete_facility(facility_id: str, current_user) -> dict:
+        """Delete a facility, but only when it has no rooms.
+
+        Refuses rather than cascading, for the same reason room deletion does:
+        the rooms underneath may hold material and history, and a cascade would
+        take all of it without the operator seeing what they lost. Empty the
+        facility first — that forces each room's own dependency check to run.
+        """
+        facility = await FacilityService.get_facility(facility_id)
+
+        db = mushroom_db.get_database()
+        room_count = await db.growing_rooms.count_documents({"facilityId": facility_id})
+        substrate_count = await db.substrate_batches.count_documents(
+            {"facilityId": facility_id}
+        )
+
+        if room_count or substrate_count:
+            parts = []
+            if room_count:
+                parts.append(f"{room_count} room(s)")
+            if substrate_count:
+                parts.append(f"{substrate_count} substrate batch(es)")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Facility '{facility.name}' still contains {', '.join(parts)}. "
+                    f"Delete those first — each room runs its own check for attached "
+                    f"material, so emptying the facility this way cannot silently "
+                    f"discard lineage or harvest records."
+                ),
+            )
+
+        await db.mushroom_facilities.delete_one({"facilityId": facility_id})
+        logger.info(
+            f"[FacilityService] Deleted empty facility {facility.name} ({facility_id}) "
+            f"by user {current_user.userId}"
+        )
+        return {"name": facility.name, "facilityId": facility_id}

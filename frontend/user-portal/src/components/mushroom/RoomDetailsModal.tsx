@@ -43,6 +43,7 @@ import { useMushroomStrains } from '../../hooks/mushroom/useMushroomStrains';
 import { useFacilitySubstrates } from '../../hooks/mushroom/useSubstrateBatches';
 import { BiologicalEfficiencyGauge } from './BiologicalEfficiencyGauge';
 import { HarvestEntryModal } from './HarvestEntryModal';
+import { DeleteRoomDialog } from './DeleteRoomDialog';
 import { useAccessions } from '../../hooks/genetics/useGenetics';
 import { VESSEL_LABELS, STATUS_LABELS } from '../../types/genetics';
 import { useNavigate } from 'react-router-dom';
@@ -101,6 +102,7 @@ export function RoomDetailsModal({
   });
   const contents = contentsPage?.data ?? [];
   const [showHarvestModal, setShowHarvestModal] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const [showAdvanceForm, setShowAdvanceForm] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState<RoomPhase | null>(null);
   const [selectedStrainId, setSelectedStrainId] = useState<string>('');
@@ -219,8 +221,11 @@ export function RoomDetailsModal({
 
   if (!isOpen) return null;
 
+  // Deliberately no onClick={onClose} on the backdrop: this modal contains
+  // phase transitions and harvest entry, and a stray click should not discard a
+  // part-completed action. The X button is the way out.
   return (
-    <Backdrop onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="room-modal-title">
+    <Backdrop role="dialog" aria-modal="true" aria-labelledby="room-modal-title">
       <ModalBox onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <ModalHeader $bgColor={phaseColor}>
@@ -234,6 +239,13 @@ export function RoomDetailsModal({
               size="small"
               showLabel={false}
             />
+            <DangerButton
+              onClick={() => setShowDelete(true)}
+              aria-label={`Delete room ${room.roomCode}`}
+              title="Delete this room"
+            >
+              Delete
+            </DangerButton>
             <CloseButton onClick={onClose} aria-label="Close room details">
               &#10005;
             </CloseButton>
@@ -857,6 +869,15 @@ export function RoomDetailsModal({
         </TabContent>
       </ModalBox>
 
+      {showDelete && (
+        <DeleteRoomDialog
+          room={room}
+          facilityId={facilityId}
+          onClose={() => setShowDelete(false)}
+          onDeleted={onClose}
+        />
+      )}
+
       {showHarvestModal && (
         <HarvestEntryModal
           isOpen={showHarvestModal}
@@ -1061,6 +1082,24 @@ const PhaseBadge = styled.span<PhaseBadgeProps>`
   background: rgba(0, 0, 0, 0.12);
   border-radius: 20px;
   padding: 3px 10px;
+`;
+
+const DangerButton = styled.button`
+  background: none;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
+  border-radius: 6px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 11px;
+  transition: all 150ms;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.errorBg};
+    border-color: ${({ theme }) => theme.colors.error};
+    color: #b91c1c;
+  }
 `;
 
 const CloseButton = styled.button`

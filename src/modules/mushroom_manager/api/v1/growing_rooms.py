@@ -173,3 +173,44 @@ async def advance_phase(
         data=room,
         message=f"Room transitioned to phase '{transition.targetPhase}' successfully",
     )
+
+
+# ---------------------------------------------------------------------------
+# DELETE /facilities/{facility_id}/rooms/{room_id}
+# ---------------------------------------------------------------------------
+
+@router.delete(
+    "/facilities/{facility_id}/rooms/{room_id}",
+    response_model=SuccessResponse[dict],
+    summary="Delete an empty room",
+    description=(
+        "Deletes a room only when nothing references it. Refuses with 409 and a "
+        "breakdown when material, harvests, contamination reports or environment "
+        "logs are attached — deleting would orphan those records and destroy the "
+        "lineage and yield trails. To retire a room that has been used, set its "
+        "phase to 'decommissioned' instead, which keeps the history."
+    ),
+)
+async def delete_room(
+    facility_id: str,
+    room_id: str,
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+) -> SuccessResponse[dict]:
+    result = await RoomService.delete_room(facility_id, room_id, current_user)
+    return SuccessResponse(data=result, message=f"Room {result['roomCode']} deleted")
+
+
+@router.get(
+    "/facilities/{facility_id}/rooms/{room_id}/dependents",
+    response_model=SuccessResponse[dict],
+    summary="What would block deleting this room",
+    description="Counts attached records so the UI can warn before offering deletion.",
+)
+async def room_dependents(
+    facility_id: str,
+    room_id: str,
+    current_user: CurrentUser = Depends(get_current_active_user),
+) -> SuccessResponse[dict]:
+    return SuccessResponse(
+        data=await RoomService.room_dependents(facility_id, room_id)
+    )

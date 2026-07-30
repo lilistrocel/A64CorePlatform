@@ -36,7 +36,11 @@ const MFASetupPage = lazy(() => import('./pages/auth/MFASetupPage').then(m => ({
 const MFAVerifyPage = lazy(() => import('./pages/auth/MFAVerifyPage').then(m => ({ default: m.MFAVerifyPage })));
 
 // Core pages
-const Dashboard = lazy(() => import('./pages/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
+// /dashboard resolves to the dashboard matching the division's industry —
+// the farm one was previously shown to every industry, including mushroom.
+const IndustryDashboard = lazy(() =>
+  import('./pages/dashboard/IndustryDashboard').then(m => ({ default: m.IndustryDashboard }))
+);
 const Profile = lazy(() => import('./pages/profile/Profile').then(m => ({ default: m.Profile })));
 const Settings = lazy(() => import('./pages/settings/Settings').then(m => ({ default: m.Settings })));
 
@@ -361,7 +365,7 @@ function App() {
               <Route path="/ai" element={<AIHub />} />
 
               <Route element={<MainLayout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard" element={<IndustryDashboard />} />
                 <Route path="/farm/*" element={<FarmManager />} />
                 <Route path="/operations" element={<OperationsDashboard />} />
                 <Route path="/operations/:farmId" element={<FarmBlocksView />} />

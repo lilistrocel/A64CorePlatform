@@ -122,3 +122,48 @@ export function useAdvancePhase(facilityId: string, roomId: string) {
     },
   });
 }
+
+// ============================================================================
+// DELETE
+// ============================================================================
+
+/** What would be orphaned by deleting a room — drives the confirm dialog. */
+export interface RoomDependents {
+  accessions: number;
+  harvests: number;
+  contaminationReports: number;
+  environmentLogs: number;
+}
+
+export function useRoomDependents(
+  facilityId: string | undefined,
+  roomId: string | undefined
+) {
+  return useQuery<RoomDependents>({
+    queryKey: ['mushroom', 'rooms', facilityId, roomId, 'dependents'],
+    queryFn: async () => {
+      const { data } = await apiClient.get(
+        `/v1/mushroom/facilities/${facilityId}/rooms/${roomId}/dependents`
+      );
+      return data.data;
+    },
+    enabled: !!facilityId && !!roomId,
+  });
+}
+
+export function useDeleteRoom(facilityId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<{ roomCode: string; roomId: string }, Error, string>({
+    mutationFn: async (roomId) => {
+      const { data } = await apiClient.delete(
+        `/v1/mushroom/facilities/${facilityId}/rooms/${roomId}`
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mushroom'] });
+      // Occupancy is served by the genetics module, so it needs its own nudge.
+      queryClient.invalidateQueries({ queryKey: ['genetics'] });
+    },
+  });
+}

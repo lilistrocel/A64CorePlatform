@@ -127,3 +127,26 @@ async def update_facility(
     """
     facility = await FacilityService.update_facility(facility_id, update_data)
     return SuccessResponse(data=facility, message="Facility updated successfully")
+
+
+# ---------------------------------------------------------------------------
+# DELETE /facilities/{facility_id}
+# ---------------------------------------------------------------------------
+
+@router.delete(
+    "/{facility_id}",
+    response_model=SuccessResponse[dict],
+    summary="Delete an empty facility",
+    description=(
+        "Deletes a facility only when it has no rooms or substrate batches. "
+        "Refuses with 409 otherwise — emptying it room by room forces each "
+        "room's own dependency check, so a cascade cannot silently discard "
+        "lineage or harvest records."
+    ),
+)
+async def delete_facility(
+    facility_id: str,
+    current_user: CurrentUser = Depends(require_permission("farm.manage")),
+) -> SuccessResponse[dict]:
+    result = await FacilityService.delete_facility(facility_id, current_user)
+    return SuccessResponse(data=result, message=f"Facility {result['name']} deleted")

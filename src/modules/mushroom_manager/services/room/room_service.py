@@ -298,3 +298,62 @@ class RoomService:
             f"{current_phase} → {target_phase} by user {current_user.userId}"
         )
         return await RoomService.get_room(facility_id, room_id)
+
+    # ---------------------------------------------------------------------------
+    # Deletion
+    # ---------------------------------------------------------------------------
+
+    @staticmethod
+    async def room_dependents(facility_id: str, room_id: str) -> dict:
+        """Count everything that would be orphaned by deleting this room."""
+        db = mushroom_db.get_database()
+        return {
+            "accessions": await db.genetic_accessions.count_documents(
+                {"location.roomId": room_id}
+            ),
+            "harvests": await db.mushroom_harvests.count_documents({"roomId": room_id}),
+            "contaminationReports": await db.contamination_reports.count_documents(
+                {"roomId": room_id}
+            ),
+            "environmentLogs": await db.room_environment_logs.count_documents(
+                {"roomId": room_id}
+            ),
+        }
+
+    @staticmethod
+    async def delete_room(facility_id: str, room_id: str, current_user) -> dict:
+        """Delete a room, but only when nothing depends on it.
+
+        Deliberately refuses rather than cascading. A room holding 40 fruiting
+        blocks, or carrying a year of harvest history, is load-bearing for the
+        lineage and yield trails — silently removing it would destroy exactly
+        the traceability this system exists to provide, and the operator would
+        not find out until they needed the record.
+
+        A room that has been used but should no longer be is a job for the
+        DECOMMISSIONED phase, which keeps its history intact.
+        """
+        room = await RoomService.get_room(facility_id, room_id)
+        blocking = await RoomService.room_dependents(facility_id, room_id)
+
+        if any(blocking.values()):
+            parts = [f"{v} {k}" for k, v in blocking.items() if v]
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Room '{room.roomCode}' still has {', '.join(parts)} attached. "
+                    f"Deleting it would orphan those records. Move or discard the "
+                    f"material first, or set the room to 'decommissioned' to retire "
+                    f"it while keeping its history."
+                ),
+            )
+
+        db = mushroom_db.get_database()
+        await db.growing_rooms.delete_one(
+            {_MONGO_ID_KEY: room_id, "facilityId": facility_id}
+        )
+        logger.info(
+            f"[RoomService] Deleted empty room {room.roomCode} ({room_id}) "
+            f"by user {current_user.userId}"
+        )
+        return {"roomCode": room.roomCode, "roomId": room_id}
