@@ -12,6 +12,13 @@
  *  - Filters: facility selector, phase multi-select chips, room-code search
  *  - Dense compact grid grouped by facility
  *  - Phase distribution stacked bar chart
+ *
+ * Colours come from the theme, not hardcoded values. This page was originally
+ * built with a fixed dark palette for a "SCADA wall" look, which meant it
+ * ignored the light/dark toggle entirely and sat as a dark island in light
+ * mode. The dense at-a-glance layout is what makes it a monitor — the palette
+ * does not need to fight the rest of the app to achieve that. Phase colours
+ * (PHASE_COLORS) stay vivid and semantic in both modes.
  */
 
 import { useState, useMemo } from 'react';
@@ -451,7 +458,7 @@ const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: #111827;
+  background: ${({ theme }) => theme.colors.surface};
   padding: 0;
 `;
 
@@ -463,8 +470,8 @@ const Header = styled.header`
   justify-content: space-between;
   gap: 16px;
   padding: 20px 24px 16px;
-  background: #1a2235;
-  border-bottom: 1px solid #1f2d45;
+  background: ${({ theme }) => theme.colors.background};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-wrap: wrap;
 `;
 
@@ -473,14 +480,14 @@ const HeaderLeft = styled.div``;
 const PageTitle = styled.h1`
   font-size: 22px;
   font-weight: 700;
-  color: #f0f6ff;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0 0 4px 0;
   letter-spacing: -0.3px;
 `;
 
 const PageSubtitle = styled.p`
   font-size: 13px;
-  color: #6b8cba;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -495,8 +502,8 @@ const StatPill = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #1f2d45;
-  border: 1px solid #2a3d5a;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 10px;
   padding: 8px 16px;
   min-width: 80px;
@@ -505,13 +512,13 @@ const StatPill = styled.div`
 const StatPillNumber = styled.span`
   font-size: 20px;
   font-weight: 700;
-  color: #e2f0ff;
+  color: ${({ theme }) => theme.colors.textPrimary};
   line-height: 1;
 `;
 
 const StatPillLabel = styled.span`
   font-size: 10px;
-  color: #6b8cba;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -523,9 +530,9 @@ const LoadingPill = styled.div`
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #6b8cba;
-  background: #1f2d45;
-  border: 1px solid #2a3d5a;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 10px;
   padding: 8px 12px;
 `;
@@ -537,8 +544,8 @@ const LegendBar = styled.div`
   flex-wrap: wrap;
   gap: 6px;
   padding: 12px 24px;
-  background: #16202f;
-  border-bottom: 1px solid #1f2d45;
+  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
 
 interface LegendChipProps {
@@ -569,8 +576,8 @@ const LegendCount = styled.span`
 
 const DistributionSection = styled.div`
   padding: 10px 24px;
-  background: #16202f;
-  border-bottom: 1px solid #1f2d45;
+  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   display: flex;
   align-items: center;
   gap: 12px;
@@ -579,7 +586,7 @@ const DistributionSection = styled.div`
 const DistributionLabel = styled.span`
   font-size: 11px;
   font-weight: 600;
-  color: #6b8cba;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -591,7 +598,7 @@ const DistributionBar = styled.div`
   border-radius: 6px;
   overflow: hidden;
   flex: 1;
-  background: #1f2d45;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 interface DistributionSegmentProps {
@@ -613,8 +620,8 @@ const FiltersBar = styled.div`
   align-items: flex-end;
   gap: 16px;
   padding: 12px 24px;
-  background: #1a2235;
-  border-bottom: 1px solid #1f2d45;
+  background: ${({ theme }) => theme.colors.background};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
   flex-wrap: wrap;
 `;
 
@@ -633,51 +640,51 @@ const FilterGroup = styled.div<FilterGroupProps>`
 const FilterLabel = styled.label`
   font-size: 10px;
   font-weight: 600;
-  color: #6b8cba;
+  color: ${({ theme }) => theme.colors.textSecondary};
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const FilterSelect = styled.select`
   padding: 7px 10px;
-  border: 1px solid #2a3d5a;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 13px;
-  color: #d0e8ff;
-  background: #1f2d45;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface};
   cursor: pointer;
   outline: none;
   min-width: 180px;
   transition: border-color 150ms;
 
   option {
-    background: #1f2d45;
-    color: #d0e8ff;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
   }
 `;
 
 const FilterInput = styled.input`
   padding: 7px 10px;
-  border: 1px solid #2a3d5a;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   font-size: 13px;
-  color: #d0e8ff;
-  background: #1f2d45;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  background: ${({ theme }) => theme.colors.surface};
   outline: none;
   min-width: 160px;
   transition: border-color 150ms;
 
   &::placeholder {
-    color: #4a6080;
+    color: ${({ theme }) => theme.colors.textDisabled};
   }
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
   }
 `;
@@ -718,7 +725,7 @@ const PhaseFilterChip = styled.button<PhaseFilterChipProps>`
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -734,10 +741,10 @@ const PhaseChipCount = styled.span<PhaseChipCountProps>`
 
 const ClearBtn = styled.button`
   padding: 7px 14px;
-  border: 1px solid #2a3d5a;
+  border: 1px solid ${({ theme }) => theme.colors.neutral[300]};
   border-radius: 8px;
   background: transparent;
-  color: #6b8cba;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -746,12 +753,12 @@ const ClearBtn = styled.button`
   transition: all 150ms;
 
   &:hover {
-    background: #1f2d45;
-    color: #d0e8ff;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid ${({ theme }) => theme.colors.primary[500]};
     outline-offset: 2px;
   }
 `;
@@ -777,7 +784,7 @@ const FacilityHeader = styled.div`
   gap: 12px;
   margin-bottom: 10px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #1f2d45;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.neutral[200]};
 `;
 
 const FacilityMeta = styled.div`
@@ -790,7 +797,7 @@ const FacilityMeta = styled.div`
 const FacilityName = styled.h2`
   font-size: 14px;
   font-weight: 700;
-  color: #c0d8f0;
+  color: ${({ theme }) => theme.colors.textPrimary};
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -798,12 +805,12 @@ const FacilityName = styled.h2`
 
 const FacilityLocation = styled.span`
   font-size: 12px;
-  color: #4a6080;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const FacilityRoomCount = styled.span`
   font-size: 12px;
-  color: #4a6080;
+  color: ${({ theme }) => theme.colors.textDisabled};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -811,7 +818,7 @@ const FacilityRoomCount = styled.span`
 `;
 
 const TotalRoomHint = styled.span`
-  color: #3a5070;
+  color: ${({ theme }) => theme.colors.textDisabled};
 `;
 
 const CompactGrid = styled.div`
@@ -825,13 +832,13 @@ const FacilityLoadingRow = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #4a6080;
+  color: ${({ theme }) => theme.colors.textDisabled};
   padding: 16px 0;
 `;
 
 const FacilityEmptyMsg = styled.p`
   font-size: 13px;
-  color: #3a5070;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0;
   padding: 16px 0;
   font-style: italic;
@@ -850,7 +857,7 @@ const LoadingOverlay = styled.div`
 
 const LoadingMsg = styled.p`
   font-size: 14px;
-  color: #4a6080;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0;
 `;
 
@@ -866,13 +873,13 @@ const EmptyPage = styled.div`
 const EmptyPageTitle = styled.h3`
   font-size: 18px;
   font-weight: 600;
-  color: #4a6080;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0 0 8px 0;
 `;
 
 const EmptyPageText = styled.p`
   font-size: 14px;
-  color: #3a5070;
+  color: ${({ theme }) => theme.colors.textDisabled};
   margin: 0;
 `;
 
@@ -885,8 +892,8 @@ interface SpinnerProps {
 const Spinner = styled.div<SpinnerProps>`
   width: ${({ $small }) => ($small ? '16px' : '36px')};
   height: ${({ $small }) => ($small ? '16px' : '36px')};
-  border: ${({ $small }) => ($small ? '2px' : '3px')} solid #1f2d45;
-  border-top-color: #3b82f6;
+  border: ${({ $small }) => ($small ? '2px' : '3px')} solid ${({ theme }) => theme.colors.neutral[200]};
+  border-top-color: ${({ theme }) => theme.colors.primary[500]};
   border-radius: 50%;
   animation: spinAnim 0.9s linear infinite;
 

@@ -117,6 +117,17 @@ export function RegisterAccessionModal({
         Will be created as <strong>{previewCode}</strong>
       </Banner>
 
+      {/* The one ordering trap in the flow: a medium batch cannot be attached
+          retroactively, so material registered now will permanently have no
+          record of what it grew on. */}
+      {(batchPage?.data ?? []).length === 0 && (
+        <Banner $tone="warning">
+          No medium batches exist yet. You can register this material without one, but
+          it will have no record of what it grew on — and that cannot be added later.
+          Consider pouring a batch under <strong>Media &amp; recipes</strong> first.
+        </Banner>
+      )}
+
       <FormRow $cols={3}>
         <Field>
           <Label>Form</Label>

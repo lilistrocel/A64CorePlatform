@@ -128,6 +128,78 @@ const TagRow = styled.div`
   flex-wrap: wrap;
 `;
 
+const StartHere = styled.div`
+  text-align: left;
+  max-width: 640px;
+  margin: 0 auto;
+`;
+
+const StartTitle = styled.h3`
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const StartLead = styled.p`
+  margin: 0 0 16px 0;
+  font-size: 13.5px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const StartList = styled.ol`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+`;
+
+const StartStep = styled.li`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+`;
+
+const StepNum = styled.span`
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: ${({ theme }) => theme.colors.primary[600]};
+  color: #fff;
+`;
+
+const StepBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const StepName = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const StepWhy = styled.span`
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const StartActions = styled.div`
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+`;
+
 const SearchInput = styled(Input)`
   max-width: 280px;
 `;
@@ -269,12 +341,61 @@ export function GeneticsRepoPage() {
           {search || kind ? (
             <>No lines match that filter.</>
           ) : (
-            <>
-              Nothing in the repo yet.
-              <br />
-              Start by creating a line — the named identity — then register the physical
-              material against it.
-            </>
+            <StartHere>
+              <StartTitle>Nothing in the repo yet</StartTitle>
+              <StartLead>
+                The order matters — each step records what the next one needs.
+              </StartLead>
+              <StartList>
+                <StartStep>
+                  <StepNum>1</StepNum>
+                  <StepBody>
+                    <StepName>Media &amp; recipes</StepName>
+                    <StepWhy>
+                      Pour a batch <em>first</em>. Material registered before a batch
+                      exists has nothing to record as what it grew on, and that cannot
+                      be filled in afterwards.
+                    </StepWhy>
+                  </StepBody>
+                </StartStep>
+                <StartStep>
+                  <StepNum>2</StepNum>
+                  <StepBody>
+                    <StepName>New line</StepName>
+                    <StepWhy>
+                      The named identity — “Blue Oyster”. Link its growing profile here
+                      to pull temperature and humidity targets across.
+                    </StepWhy>
+                  </StepBody>
+                </StartStep>
+                <StartStep>
+                  <StepNum>3</StepNum>
+                  <StepBody>
+                    <StepName>Register material</StepName>
+                    <StepWhy>
+                      Your founding G0 dishes, placed in a room and on a medium batch.
+                    </StepWhy>
+                  </StepBody>
+                </StartStep>
+                <StartStep>
+                  <StepNum>4</StepNum>
+                  <StepBody>
+                    <StepName>Propagate</StepName>
+                    <StepWhy>
+                      <strong>Clone</strong> for a new generation (G+1), or{' '}
+                      <strong>Expansion</strong> to scale up for production (G
+                      unchanged). Same button — the method decides which.
+                    </StepWhy>
+                  </StepBody>
+                </StartStep>
+              </StartList>
+              <StartActions>
+                <Button $variant="ghost" onClick={() => navigate('/genetics/media')}>
+                  Start with media &amp; recipes
+                </Button>
+                <Button onClick={() => setShowCreate(true)}>+ New line</Button>
+              </StartActions>
+            </StartHere>
           )}
         </EmptyState>
       )}
