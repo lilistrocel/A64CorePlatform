@@ -123,6 +123,7 @@ const emptyStep = (order: number): ProtocolStep => ({
   text: '',
   durationMinutes: null,
   isCritical: false,
+  images: [],
   notes: null,
 });
 

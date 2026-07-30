@@ -47,12 +47,27 @@ export const PROTOCOL_STATUS_LABELS: Record<ProtocolStatus, string> = {
   retired: 'Retired',
 };
 
+/**
+ * A visual reference. `attachmentId` is a photo taken in this lab (preferred);
+ * `externalUrl` is a cited published figure and requires attribution.
+ * `showsWhat` is separate from `caption` because a visual guide has to say what
+ * the reader should be looking at, not just what the picture is of.
+ */
+export interface ProtocolImage {
+  attachmentId?: string | null;
+  externalUrl?: string | null;
+  caption: string;
+  attribution?: string | null;
+  showsWhat?: string | null;
+}
+
 export interface ProtocolStep {
   order: number;
   text: string;
   durationMinutes?: number | null;
   /** Steps that get skipped under time pressure and cause the failure later. */
   isCritical: boolean;
+  images: ProtocolImage[];
   notes?: string | null;
 }
 
@@ -77,6 +92,8 @@ export interface Protocol {
   /** Scope tags, e.g. 'propagation:agar_to_agar', 'media:pour'. */
   appliesTo: string[];
   references: string[];
+  /** Gallery for the procedure as a whole, e.g. contamination identification. */
+  referenceImages: ProtocolImage[];
   tags: string[];
   notes?: string | null;
   version: number;
@@ -101,6 +118,7 @@ export interface CreateProtocolPayload {
   steps?: ProtocolStep[];
   appliesTo?: string[];
   references?: string[];
+  referenceImages?: ProtocolImage[];
   tags?: string[];
   notes?: string;
 }

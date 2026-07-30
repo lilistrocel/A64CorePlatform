@@ -13,6 +13,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { HelpButton } from '../../components/tutorials/HelpButton';
 import { ProtocolFormModal } from '../../components/protocols/ProtocolFormModal';
+import { ProtocolViewModal } from '../../components/protocols/ProtocolViewModal';
 import {
   Banner,
   Button,
@@ -131,6 +132,7 @@ export function ProtocolsPage() {
   const [category, setCategory] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [editing, setEditing] = useState<Protocol | null>(null);
+  const [viewing, setViewing] = useState<Protocol | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   const { data: page, isLoading } = useProtocols({
@@ -209,9 +211,26 @@ export function ProtocolsPage() {
       {protocols.length > 0 && (
         <Grid $min="330px">
           {protocols.map((p) => (
-            <ProtocolRow key={p.id} protocol={p} onEdit={() => setEditing(p)} />
+            <ProtocolRow
+              key={p.id}
+              protocol={p}
+              onView={() => setViewing(p)}
+              onEdit={() => setEditing(p)}
+            />
           ))}
         </Grid>
+      )}
+
+      {viewing && (
+        <ProtocolViewModal
+          protocol={viewing}
+          onClose={() => setViewing(null)}
+          onEdit={() => {
+            const p = viewing;
+            setViewing(null);
+            setEditing(p);
+          }}
+        />
       )}
 
       {(showCreate || editing) && (
@@ -227,11 +246,31 @@ export function ProtocolsPage() {
   );
 }
 
-function ProtocolRow({ protocol, onEdit }: { protocol: Protocol; onEdit: () => void }) {
+function ProtocolRow({
+  protocol,
+  onView,
+  onEdit,
+}: {
+  protocol: Protocol;
+  onView: () => void;
+  onEdit: () => void;
+}) {
   const approve = useApproveProtocol(protocol.id);
 
   return (
-    <ProtocolCard>
+    <ProtocolCard
+      onClick={onView}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onView();
+        }
+      }}
+      title="Open the procedure"
+      style={{ cursor: 'pointer' }}
+    >
       <CardTop>
         <div>
           <Code>
@@ -268,14 +307,28 @@ function ProtocolRow({ protocol, onEdit }: { protocol: Protocol; onEdit: () => v
         {protocol.approvedByName && <span>✓ {protocol.approvedByName}</span>}
       </Meta>
 
-      <Actions>
+      <Actions onClick={(e) => e.stopPropagation()}>
         <Button
           $variant="ghost"
           style={{ padding: '5px 12px', fontSize: 13 }}
-          onClick={onEdit}
+          onClick={onView}
         >
-          {protocol.status === 'retired' ? 'View' : 'Edit'}
+          Read
         </Button>
+        {protocol.status !== 'retired' && (
+          <Button
+            $variant="ghost"
+            style={{ padding: '5px 12px', fontSize: 13 }}
+            onClick={onEdit}
+            title={
+              protocol.status === 'active'
+                ? 'Editing an approved procedure returns it to draft'
+                : undefined
+            }
+          >
+            Edit
+          </Button>
+        )}
         {protocol.status === 'draft' && (
           <Button
             style={{ padding: '5px 12px', fontSize: 13 }}
